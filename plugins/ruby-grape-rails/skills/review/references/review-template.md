@@ -1,0 +1,114 @@
+# Review Template Format
+
+## Full Review Template
+
+Write to `.claude/plans/{slug}/reviews/{feature}-review.md`:
+
+```markdown
+# Review: {Feature or Scope}
+
+**Date**: {date}
+**Files Reviewed**: {count}
+**Reviewers**: ruby-reviewer, testing-reviewer, security-analyzer, data-integrity-reviewer, migration-safety-reviewer
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | {n} |
+| Warnings | {n} |
+| Suggestions | {n} |
+
+**Verdict**: PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED
+
+## Blockers ({n})
+
+### 1. {Issue Title}
+
+**File**: {path}:{line}
+**Reviewer**: {agent}
+**Issue**: {description}
+**Why this matters**: {impact explanation}
+
+**Current code**:
+
+```ruby
+bad_code
+```
+
+**Recommended approach**:
+
+```ruby
+good_code
+```
+
+---
+
+### 2. {Issue Title}
+
+...
+
+## Warnings ({n})
+
+### 1. {Issue Title}
+
+**File**: {path}:{line}
+**Reviewer**: {agent}
+**Issue**: {description}
+**Recommendation**: {what to do}
+
+---
+
+## Suggestions ({n})
+
+### 1. {Suggestion Title}
+
+**File**: {path}
+**Suggestion**: {improvement idea}
+
+---
+
+## Next Steps
+
+How would you like to proceed?
+
+- `/rb:plan` — Replan the fixes (for complex/architectural issues)
+- `/rb:work` — Fix directly (for simple, clear fixes)
+- I'll handle it myself
+
+```
+
+## Verdict Decision Rules
+
+| Verdict | Conditions |
+|---------|-----------|
+| **PASS** | No blockers, no warnings, suggestions only |
+| **PASS WITH WARNINGS** | No blockers, warnings present but not test-coverage gaps |
+| **REQUIRES CHANGES** | No Iron Law blockers, but test coverage gaps detected (see below) |
+| **BLOCKED** | Iron Law violations or critical security/data issues |
+
+### REQUIRES CHANGES Triggers
+
+This verdict catches code that works but lacks adequate test coverage:
+
+- New public methods with zero tests
+- Removed tests without replacement coverage
+- New controller actions without corresponding tests
+- New Sidekiq jobs without `perform` tests
+- New Turbo Stream routes without basic render tests
+
+These are not blockers (code works) but should not merge without tests.
+
+## Mandatory Summary Table
+
+Every review MUST end with this at-a-glance table (even if only 1 finding):
+
+| # | Finding | Severity | Reviewer | File | New? |
+|---|---------|----------|----------|------|------|
+| 1 | {title} | BLOCKER/WARNING/SUGGESTION | {agent} | {path}:{line} | Yes/Pre-existing |
+
+**New?** column: "Yes" = finding on changed lines (this diff). "Pre-existing" = on unchanged code. Pre-existing issues appear in the report but do NOT affect the verdict.
+
+**IMPORTANT**: The review template does NOT include task lists (`- [ ]`),
+fix phases, or plan modifications. Review is findings-only. Task creation
+belongs in `/rb:plan`.

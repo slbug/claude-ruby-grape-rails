@@ -1,0 +1,23 @@
+{
+  "name": "slbug",
+  "owner": {
+    "name": "Alexander Grebennik"
+  },
+  "metadata": {
+    "description": "Claude Code plugins by Alexander Grebennik",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "ruby-grape-rails",
+      "description": "Ruby/Rails/Grape development with specialist agents, Iron Laws, and verification workflows",
+      "author": {
+        "name": "Alexander Grebennik",
+        "url": "https://github.com/slbug"
+      },
+      "source": "./plugins/ruby-grape-rails",
+      "category": "development",
+      "tags": ["ruby", "rails", "grape", "postgres", "redis", "sidekiq"]
+    }
+  ]
+}

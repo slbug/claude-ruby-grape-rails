@@ -1,0 +1,17 @@
+---
+name: rb:trace
+description: Trace a request, API call, background job, or service flow through Rails, Grape, and Sidekiq code. Use when you need to understand where a value changes or where a side effect comes from.
+argument-hint: <entry point>
+---
+
+# Trace Execution
+
+Follow the path from the entry point through:
+
+- routes and mounted Grape APIs
+- controllers/endpoints
+- service or command objects
+- models and queries
+- jobs, broadcasts, and cache writes
+
+Write the trace as a short step-by-step chain with file paths.

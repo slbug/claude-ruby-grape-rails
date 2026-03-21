@@ -1,0 +1,21 @@
+{
+  "name": "ruby-grape-rails-plugin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Claude Code plugin for Ruby, Rails, Grape, PostgreSQL, Redis, and Sidekiq development",
+  "scripts": {
+    "lint": "markdownlint \"**/*.md\" --ignore node_modules --ignore docs --ignore reports --ignore analysis --ignore scratchpad",
+    "lint:fix": "markdownlint \"**/*.md\" --fix --ignore node_modules --ignore docs --ignore reports --ignore analysis --ignore scratchpad",
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "husky": "^9.0.0",
+    "markdownlint-cli": "^0.48.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/slbug/claude-ruby-grape-rails.git"
+  },
+  "author": "Alexander Grebennik",
+  "license": "MIT"
+}

@@ -1,0 +1,42 @@
+{
+  "default": true,
+
+  "MD003": {
+    "style": "atx"
+  },
+
+  "MD052": false,
+
+  "MD056": false,
+
+  "MD013": {
+    "line_length": 200,
+    "code_blocks": false,
+    "tables": false,
+    "headings": false
+  },
+
+  "MD024": false,
+
+  "MD025": false,
+
+  "MD029": false,
+
+  "MD033": {
+    "allowed_elements": ["details", "summary", "kbd", "br", "sub", "sup"]
+  },
+
+  "MD036": false,
+
+  "MD040": false,
+
+  "MD041": false,
+
+  "MD046": {
+    "style": "fenced"
+  },
+
+  "MD048": false,
+
+  "MD060": false
+}

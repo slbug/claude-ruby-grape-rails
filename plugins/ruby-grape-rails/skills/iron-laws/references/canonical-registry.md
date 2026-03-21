@@ -1,0 +1,117 @@
+# Iron Laws Canonical Registry
+
+**Version**: 1.0.0
+**Last Updated**: 2026-03-22
+**Total Laws**: 21
+
+<!-- This file is a generated projection of iron-laws.yml — DO NOT EDIT DIRECTLY -->
+
+This file is the human-readable registry of all Iron Laws across the plugin.
+For programmatic use, see [iron-laws.yml](../iron-laws.yml).
+
+## The 21 Iron Laws
+
+### Active Record (7 laws)
+
+1. **Decimal for Money** — NEVER use float for money — use decimal or integer (cents)
+   *Floating point arithmetic causes rounding errors that compound in financial calculations*
+
+2. **Parameterized Queries** — ALWAYS use parameterized queries — never interpolate user input into SQL strings
+   *String interpolation in SQL creates injection vulnerabilities*
+
+3. **Eager Loading** — USE includes/preload for associations — avoids N+1 queries
+   *N+1 queries kill performance at scale*
+
+4. **after_commit for Jobs** — CALL after_commit not after_save when enqueueing jobs that depend on committed data
+   *Jobs may run before transaction commits, reading uncommitted or stale data*
+
+5. **Transaction Boundaries** — WRAP multi-step operations in transactions — use ActiveRecord::Base.transaction
+   *Partial failures leave data in inconsistent states*
+
+6. **No Validation Bypass** — NO update_columns, update_column, or save(validate: false) in normal flows
+   *Skipping validations bypasses business rules and can corrupt data*
+
+7. **No default_scope** — NO default_scope — use explicit named scopes only
+   *default_scope creates invisible query conditions that surprise developers*
+
+### Sidekiq (4 laws)
+
+8. **Idempotent Jobs** — Jobs MUST be idempotent — safe to retry
+   *Sidekiq retries failed jobs; non-idempotent jobs cause duplicate side effects*
+
+9. **JSON-Safe Arguments** — Args use JSON-safe types only — no symbols, no Ruby objects, no procs
+   *Sidekiq serializes args to JSON; complex objects don't serialize correctly*
+
+10. **No ActiveRecord Objects in Args** — NEVER store ActiveRecord objects in args — store IDs, not records
+   *AR objects are not JSON-serializable and create stale data risks*
+
+11. **after_commit Callback** — ALWAYS use after_commit callback — not after_save or inline
+   *Jobs must only run after data is persisted; after_save runs within transaction*
+
+### Security (4 laws)
+
+12. **No Eval** — NO eval with user input — code injection vulnerability
+   *eval executes arbitrary code; user input in eval is remote code execution*
+
+13. **Explicit Authorization** — AUTHORIZE in EVERY controller action — do not trust before_action alone
+   *before_action can be skipped; explicit authorization is harder to bypass*
+
+14. **No Unsafe HTML** — NEVER use html_safe or raw with untrusted content — XSS vulnerability
+   *html_safe bypasses Rails' XSS protection; untrusted content executes scripts*
+
+15. **No SQL Concatenation** — NO SQL string concatenation — always use parameterized queries
+   *String building in SQL creates injection vectors*
+
+### Ruby (3 laws)
+
+16. **method_missing Requires respond_to_missing?** — NO method_missing without respond_to_missing? — breaks introspection
+   *Libraries and developers expect respond_to? to match method behavior*
+
+17. **Supervise Background Processes** — SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers in production
+   *Unsupervised processes crash silently and don't restart*
+
+18. **Rescue StandardError** — DON'T RESCUE Exception — only rescue StandardError or specific classes
+   *Rescuing Exception catches system signals (SIGTERM, etc.) and SyntaxError*
+
+### Hotwire/Turbo (2 laws)
+
+19. **No DB Queries in Turbo Streams** — NEVER query DB in Turbo Stream responses — pre-compute everything before broadcast
+   *Turbo Streams render outside request cycle; DB queries cause errors or N+1*
+
+20. **Use turbo_frame_tag** — ALWAYS use turbo_frame_tag for partial updates — prevents full page reloads
+   *Without frames, Turbo Drive reloads the entire page*
+
+### Verification (1 laws)
+
+21. **Verify Before Claiming Done** — VERIFY BEFORE CLAIMING DONE — never say 'should work' or 'this fixes it.' Run bundle exec rspec or bin/rails test and show the result
+   *Claims without verification are assumptions; test output proves the fix*
+
+## Enforcement Tiers
+
+### Tier 1: Programmatic (Hook-Level)
+
+Enforced automatically by iron-law-verifier.sh on every .rb file edit:
+
+- Law 1 (Decimal for Money) — detector: float_for_money
+- Law 2 (Parameterized Queries) — detector: sql_interpolation
+- Law 6 (No Validation Bypass) — detector: validation_bypass
+- Law 7 (No default_scope) — detector: default_scope
+- Law 10 (No ActiveRecord Objects in Args) — detector: ar_objects_in_jobs
+- Law 14 (No Unsafe HTML) — detector: unsafe_html
+- Law 15 (No SQL Concatenation) — detector: sql_interpolation
+
+### Tier 2: Behavioral (Agent/Context)
+
+Enforced by loading skills and agent instructions (all 21 laws).
+
+### Tier 3: Review-Time (On-Demand)
+
+Checked during /rb:review by specialist agents.
+
+## Update Procedure
+
+Do not edit this file directly. Instead:
+
+1. Update plugins/ruby-grape-rails/references/iron-laws.yml
+2. Run: ./scripts/generate-iron-law-outputs.sh
+3. All projections will regenerate automatically

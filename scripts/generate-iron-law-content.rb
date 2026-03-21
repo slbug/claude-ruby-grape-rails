@@ -1,0 +1,257 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'json'
+require 'yaml'
+
+YAML_SOURCE = File.expand_path('../plugins/ruby-grape-rails/references/iron-laws.yml', __dir__)
+
+unless File.exist?(YAML_SOURCE)
+  puts "Error: YAML source not found: #{YAML_SOURCE}"
+  exit 1
+end
+
+yaml = YAML.load_file(YAML_SOURCE)
+
+# Generate CLAUDE.md section
+def generate_claude_section(yaml)
+  puts '## Iron Laws Enforcement (NON-NEGOTIABLE)'
+  puts ''
+  puts 'These rules are NEVER violated. If code would violate them, **STOP and explain** before proceeding:'
+  puts ''
+
+  yaml['categories'].each do |cat|
+    puts "### #{cat['name']} Iron Laws"
+    puts ''
+    yaml['laws'].select { |l| l['category'] == cat['id'] }.each do |law|
+      puts "#{law['id']}. **#{law['title']}** — #{law['rule']}"
+    end
+    puts ''
+  end
+
+  puts '### Violation Response'
+  puts ''
+  puts 'When detecting a potential Iron Law violation:'
+  puts ''
+  puts '```'
+  puts 'STOP: This code would violate Iron Law [number]: [description]'
+  puts ''
+  puts 'What you wrote:'
+  puts '[problematic code]'
+  puts ''
+  puts 'Correct pattern:'
+  puts '[fixed code]'
+  puts ''
+  puts 'Should I apply this fix?'
+  puts '```'
+end
+
+# Generate CHANGELOG section (same as CLAUDE but with ### instead of ##)
+def generate_changelog_section(yaml)
+  puts '#### 21 Iron Laws'
+  puts ''
+
+  yaml['categories'].each do |cat|
+    puts "**#{cat['name']} (#{cat['law_count']}):**"
+    puts ''
+    yaml['laws'].select { |l| l['category'] == cat['id'] }.each do |law|
+      puts "#{law['id']}. #{law['rule']}"
+    end
+    puts ''
+  end
+end
+
+# Generate injectable template section
+def generate_injectable_section(yaml)
+  puts '## IRON LAWS — STOP if violated'
+  puts ''
+  puts 'If code would violate ANY of these, you MUST:'
+  puts ''
+  puts '1. STOP immediately'
+  puts '2. Show the problematic code'
+  puts '3. Show the correct pattern'
+  puts '4. Ask permission to apply the fix'
+  puts ''
+
+  yaml['categories'].each do |cat|
+    puts "**#{cat['name']}:**"
+    puts ''
+    yaml['laws'].select { |l| l['category'] == cat['id'] }.each_with_index do |law, idx|
+      puts "#{idx + 1}. #{law['summary_text']}"
+    end
+    puts ''
+  end
+end
+
+# Generate tutorial section
+def generate_tutorial_section(_yaml)
+  puts '### Iron Laws (21 Rules, Always Enforced)'
+  puts ''
+  puts 'Iron Laws are non-negotiable rules that every agent enforces. If your code violates one, the plugin stops and explains before proceeding.'
+  puts ''
+  puts '**Key Laws:**'
+  puts ''
+  puts '| Law | Why |'
+  puts '|-----|-----|'
+
+  # Show first 7 key laws
+  key_laws = [
+    ['Use decimal for money', 'Floating point math loses precision'],
+    ['Parameterized queries', 'Prevents SQL injection'],
+    ['Jobs must be idempotent', 'Sidekiq retries on failure'],
+    ["Don't pass AR objects to jobs", 'Sidekiq uses JSON serialization'],
+    ['Authorize in EVERY controller action', 'Before_action alone is insufficient'],
+    ['Use includes/preload', 'Avoids N+1 queries'],
+    ['Verify before claiming done', 'Run tests, do not assume']
+  ]
+
+  key_laws.each do |law, reason|
+    puts "| #{law} | #{reason} |"
+  end
+end
+
+# Generate injector script
+def generate_injector_script(yaml)
+  output = "Ruby/Rails/Grape Iron Laws (NON-NEGOTIABLE) — 21 Total:\n\n"
+
+  yaml['categories'].each do |cat|
+    output += "#{cat['name']} (#{cat['law_count']}):\n"
+  end
+
+  output += "\n"
+
+  yaml['laws'].each do |law|
+    output += "#{law['subagent_text']}\n"
+  end
+
+  # Escape for shell: use single quotes and escape internal single quotes
+  # Shell single quote rule: end quote, insert escaped quote, start quote
+  escaped_content = output.gsub("'", "'\"'\"'")
+
+  puts '#!/usr/bin/env bash'
+  puts ''
+  puts '# GENERATED FROM iron-laws.yml — DO NOT EDIT'
+  puts "# Last generated: #{Time.now.utc.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+  puts ''
+  puts "additional_context='#{escaped_content}'"
+  puts ''
+  puts 'jq -n --arg ctx "$additional_context" \'{"hookSpecificOutput": {"hookEventName": "SubagentStart", "additionalContext": $ctx}}\''
+end
+
+# Generate canonical registry
+def generate_canonical_registry(yaml)
+  puts '# Iron Laws Canonical Registry'
+  puts ''
+  puts "**Version**: #{yaml['version']}"
+  puts "**Last Updated**: #{yaml['last_updated']}"
+  puts "**Total Laws**: #{yaml['total_laws']}"
+  puts ''
+  puts '<!-- This file is a generated projection of iron-laws.yml — DO NOT EDIT DIRECTLY -->'
+  puts ''
+  puts 'This file is the human-readable registry of all Iron Laws across the plugin.'
+  puts 'For programmatic use, see [iron-laws.yml](../iron-laws.yml).'
+  puts ''
+  puts '## The 21 Iron Laws'
+  puts ''
+
+  yaml['categories'].each do |cat|
+    puts "### #{cat['name']} (#{cat['law_count']} laws)"
+    puts ''
+    yaml['laws'].select { |l| l['category'] == cat['id'] }.each do |law|
+      puts "#{law['id']}. **#{law['title']}** — #{law['rule']}"
+      puts "   *#{law['rationale']}*"
+      puts ''
+    end
+  end
+
+  puts '## Enforcement Tiers'
+  puts ''
+  puts '### Tier 1: Programmatic (Hook-Level)'
+  puts ''
+  puts 'Enforced automatically by iron-law-verifier.sh on every .rb file edit:'
+  puts ''
+
+  yaml['laws'].select { |l| l['detector_id'] }.each do |law|
+    puts "- Law #{law['id']} (#{law['title']}) — detector: #{law['detector_id']}"
+  end
+
+  puts ''
+  puts '### Tier 2: Behavioral (Agent/Context)'
+  puts ''
+  puts 'Enforced by loading skills and agent instructions (all 21 laws).'
+  puts ''
+  puts '### Tier 3: Review-Time (On-Demand)'
+  puts ''
+  puts 'Checked during /rb:review by specialist agents.'
+  puts ''
+  puts '## Update Procedure'
+  puts ''
+  puts 'Do not edit this file directly. Instead:'
+  puts ''
+  puts '1. Update plugins/ruby-grape-rails/references/iron-laws.yml'
+  puts '2. Run: ./scripts/generate-iron-law-outputs.sh'
+  puts '3. All projections will regenerate automatically'
+end
+
+# Generate README section
+def generate_readme(yaml)
+  puts 'The plugin enforces **21 Iron Laws** that prevent common, costly mistakes:'
+  puts ''
+  puts '| Category | Count | Laws |'
+  puts '|----------|-------|------|'
+
+  yaml['categories'].each do |cat|
+    law_names = yaml['laws']
+                .select { |l| l['category'] == cat['id'] }
+                .map { |l| l['summary_text'] }
+                .join('; ')
+    puts "| #{cat['name']} | #{cat['law_count']} | #{law_names} |"
+  end
+
+  puts ''
+  puts '### Enforcement'
+  puts ''
+  puts '- **Programmatic**: 7 laws checked automatically on every file edit'
+  puts '- **Behavioral**: All 21 laws injected into subagent context'
+  puts '- **Review-time**: Full audit during `/rb:review`'
+  puts ''
+  puts 'See [full registry](plugins/ruby-grape-rails/references/iron-laws.yml) for details.'
+end
+
+# Generate iron-law-judge.md Iron Laws Overview section
+def generate_judge_section(yaml)
+  puts 'These are the 21 non-negotiable Iron Laws. Any violation must be flagged.'
+  puts ''
+
+  yaml['categories'].each do |cat|
+    puts "### #{cat['name']} (#{cat['law_count']} laws)"
+    puts ''
+    yaml['laws'].select { |l| l['category'] == cat['id'] }.each do |law|
+      puts "#{law['id']}. **#{law['title']}** — #{law['rule']}"
+    end
+    puts ''
+  end
+end
+
+# Main
+case ARGV[0]
+when 'claude'
+  generate_claude_section(yaml)
+when 'changelog'
+  generate_changelog_section(yaml)
+when 'injectable'
+  generate_injectable_section(yaml)
+when 'tutorial'
+  generate_tutorial_section(yaml)
+when 'injector'
+  generate_injector_script(yaml)
+when 'canonical'
+  generate_canonical_registry(yaml)
+when 'readme'
+  generate_readme(yaml)
+when 'judge'
+  generate_judge_section(yaml)
+else
+  puts "Usage: #{$0} [claude|changelog|injectable|tutorial|injector|canonical|readme|judge]"
+  exit 1
+end

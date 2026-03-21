@@ -1,0 +1,33 @@
+# OS
+.DS_Store
+
+# Temporary development files (research/analysis)
+/reports/
+/docs/
+/analysis/
+
+# Node.js (for linting tools)
+node_modules/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Git worktrees
+.worktrees/
+
+# Claude Code local files (user-specific)
+# Ignore contents but track agents and commands
+!.claude/
+.claude/*
+!.claude/agents/
+!.claude/commands/
+!.claude/skills/
+.claude/skills/analyze-sessions/references/session-index.json
+.claude/docs-check/  # Runtime artifacts (docs-cache, reports, summaries)
+scratchpad/
+
+.opencode/

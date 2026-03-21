@@ -1,0 +1,379 @@
+# Iron Laws Canonical Registry
+# Source of truth for all Iron Laws across the Ruby/Grape/Rails plugin
+# This file is the single source of truth; all other representations are generated from it
+#
+# Structure:
+#   id: unique number (1-21)
+#   category: active_record, sidekiq, security, ruby, hotwire, verification
+#   title: short human-readable name
+#   rule: the actual rule text
+#   rationale: why this matters
+#   severity: critical, high, medium
+#   applies_to: file patterns where relevant
+#   summary_text: short form for summaries/cheat sheets
+#   init_text: form for CLAUDE.md injection template
+#   subagent_text: form for subagent context injection
+#   detector_id: which programmatic detector checks this (null if behavioral only)
+#   reference_files: markdown files with detailed examples
+
+version: "1.0.0"
+last_updated: "2026-03-22"
+total_laws: 21
+
+categories:
+  - id: active_record
+    name: "Active Record"
+    description: "Database and ORM safety rules"
+    law_count: 7
+  - id: sidekiq
+    name: "Sidekiq"
+    description: "Background job safety rules"
+    law_count: 4
+  - id: security
+    name: "Security"
+    description: "Application security rules"
+    law_count: 4
+  - id: ruby
+    name: "Ruby"
+    description: "Ruby language and runtime rules"
+    law_count: 3
+  - id: hotwire
+    name: "Hotwire/Turbo"
+    description: "Hotwire and Turbo Stream rules"
+    law_count: 2
+  - id: verification
+    name: "Verification"
+    description: "Testing and verification rules"
+    law_count: 1
+
+laws:
+  # Active Record (7 laws)
+  - id: 1
+    category: active_record
+    title: "Decimal for Money"
+    rule: "NEVER use float for money — use decimal or integer (cents)"
+    rationale: "Floating point arithmetic causes rounding errors that compound in financial calculations"
+    severity: critical
+    applies_to: ["db/migrate/*.rb", "*model*.rb"]
+    summary_text: "Use decimal for money, never float"
+    init_text: "NEVER use float for money — use decimal or integer cents"
+    subagent_text: "Iron Law 1: NEVER use float for money — use decimal or integer cents"
+    detector_id: "float_for_money"
+    reference_files: ["active-record/money-columns.md"]
+
+  - id: 2
+    category: active_record
+    title: "Parameterized Queries"
+    rule: "ALWAYS use parameterized queries — never interpolate user input into SQL strings"
+    rationale: "String interpolation in SQL creates injection vulnerabilities"
+    severity: critical
+    applies_to: ["*.rb"]
+    summary_text: "Use parameterized queries, never SQL interpolation"
+    init_text: "ALWAYS use parameterized queries — never interpolate user input"
+    subagent_text: "Iron Law 2: ALWAYS use parameterized queries — never SQL string interpolation"
+    detector_id: "sql_interpolation"
+    reference_files: ["active-record/query-safety.md"]
+
+  - id: 3
+    category: active_record
+    title: "Eager Loading"
+    rule: "USE includes/preload for associations — avoids N+1 queries"
+    rationale: "N+1 queries kill performance at scale"
+    severity: high
+    applies_to: ["app/models/*.rb", "app/controllers/*.rb"]
+    summary_text: "Use includes/preload to prevent N+1 queries"
+    init_text: "USE includes/preload for associations — avoids N+1 queries"
+    subagent_text: "Iron Law 3: USE includes/preload for associations — never N+1 queries"
+    detector_id: null
+    reference_files: ["active-record/n-plus-one.md"]
+
+  - id: 4
+    category: active_record
+    title: "after_commit for Jobs"
+    rule: "CALL after_commit not after_save when enqueueing jobs that depend on committed data"
+    rationale: "Jobs may run before transaction commits, reading uncommitted or stale data"
+    severity: critical
+    applies_to: ["app/models/*.rb"]
+    summary_text: "Use after_commit, not after_save, when enqueueing jobs"
+    init_text: "CALL after_commit not after_save when enqueueing jobs"
+    subagent_text: "Iron Law 4: CALL after_commit not after_save when enqueueing jobs"
+    detector_id: null
+    reference_files: ["active-record/callbacks.md"]
+
+  - id: 5
+    category: active_record
+    title: "Transaction Boundaries"
+    rule: "WRAP multi-step operations in transactions — use ActiveRecord::Base.transaction"
+    rationale: "Partial failures leave data in inconsistent states"
+    severity: high
+    applies_to: ["app/models/*.rb", "app/services/*.rb"]
+    summary_text: "Wrap multi-step operations in transactions"
+    init_text: "WRAP multi-step operations in transactions"
+    subagent_text: "Iron Law 5: WRAP multi-step operations in ActiveRecord::Base.transaction"
+    detector_id: null
+    reference_files: ["active-record/transactions.md"]
+
+  - id: 6
+    category: active_record
+    title: "No Validation Bypass"
+    rule: "NO update_columns, update_column, or save(validate: false) in normal flows"
+    rationale: "Skipping validations bypasses business rules and can corrupt data"
+    severity: high
+    applies_to: ["app/models/*.rb", "app/services/*.rb"]
+    summary_text: "Never bypass validations in normal code"
+    init_text: "NO update_columns or save(validate: false) in normal flows"
+    subagent_text: "Iron Law 6: NO update_columns or save(validate: false) in normal flows"
+    detector_id: "validation_bypass"
+    reference_files: ["active-record/validation-bypass.md"]
+
+  - id: 7
+    category: active_record
+    title: "No default_scope"
+    rule: "NO default_scope — use explicit named scopes only"
+    rationale: "default_scope creates invisible query conditions that surprise developers"
+    severity: medium
+    applies_to: ["app/models/*.rb"]
+    summary_text: "Never use default_scope"
+    init_text: "NO default_scope — use explicit scopes only"
+    subagent_text: "Iron Law 7: NO default_scope — use explicit named scopes only"
+    detector_id: "default_scope"
+    reference_files: ["active-record/scopes.md"]
+
+  # Sidekiq (4 laws)
+  - id: 8
+    category: sidekiq
+    title: "Idempotent Jobs"
+    rule: "Jobs MUST be idempotent — safe to retry"
+    rationale: "Sidekiq retries failed jobs; non-idempotent jobs cause duplicate side effects"
+    severity: critical
+    applies_to: ["app/jobs/*.rb"]
+    summary_text: "Jobs must be idempotent (safe to retry)"
+    init_text: "Jobs MUST be idempotent — safe to retry"
+    subagent_text: "Iron Law 8: Jobs MUST be idempotent — safe to retry"
+    detector_id: null
+    reference_files: ["sidekiq/idempotency.md"]
+
+  - id: 9
+    category: sidekiq
+    title: "JSON-Safe Arguments"
+    rule: "Args use JSON-safe types only — no symbols, no Ruby objects, no procs"
+    rationale: "Sidekiq serializes args to JSON; complex objects don't serialize correctly"
+    severity: critical
+    applies_to: ["app/jobs/*.rb"]
+    summary_text: "Job args must be JSON-safe only"
+    init_text: "Args use JSON-safe types only — no symbols, no Ruby objects"
+    subagent_text: "Iron Law 9: Args use JSON-safe types only — no symbols, no Ruby objects, no procs"
+    detector_id: null
+    reference_files: ["sidekiq/job-arguments.md"]
+
+  - id: 10
+    category: sidekiq
+    title: "No ActiveRecord Objects in Args"
+    rule: "NEVER store ActiveRecord objects in args — store IDs, not records"
+    rationale: "AR objects are not JSON-serializable and create stale data risks"
+    severity: critical
+    applies_to: ["app/jobs/*.rb"]
+    summary_text: "Never pass AR objects to jobs — pass IDs"
+    init_text: "NEVER store ActiveRecord objects in args — store IDs"
+    subagent_text: "Iron Law 10: NEVER store ActiveRecord objects in args — store IDs, not records"
+    detector_id: "ar_objects_in_jobs"
+    reference_files: ["sidekiq/job-arguments.md"]
+
+  - id: 11
+    category: sidekiq
+    title: "after_commit Callback"
+    rule: "ALWAYS use after_commit callback — not after_save or inline"
+    rationale: "Jobs must only run after data is persisted; after_save runs within transaction"
+    severity: critical
+    applies_to: ["app/models/*.rb"]
+    summary_text: "Always use after_commit, not after_save"
+    init_text: "ALWAYS use after_commit callback — not after_save or inline"
+    subagent_text: "Iron Law 11: ALWAYS use after_commit callback — not after_save or inline"
+    detector_id: null
+    reference_files: ["sidekiq/enqueuing.md"]
+
+  # Security (4 laws)
+  - id: 12
+    category: security
+    title: "No Eval"
+    rule: "NO eval with user input — code injection vulnerability"
+    rationale: "eval executes arbitrary code; user input in eval is remote code execution"
+    severity: critical
+    applies_to: ["*.rb"]
+    summary_text: "Never use eval with user input"
+    init_text: "NO eval with user input — code injection vulnerability"
+    subagent_text: "Iron Law 12: NO eval with user input — code injection vulnerability"
+    detector_id: null
+    reference_files: ["security/code-injection.md"]
+
+  - id: 13
+    category: security
+    title: "Explicit Authorization"
+    rule: "AUTHORIZE in EVERY controller action — do not trust before_action alone"
+    rationale: "before_action can be skipped; explicit authorization is harder to bypass"
+    severity: critical
+    applies_to: ["app/controllers/*.rb"]
+    summary_text: "Authorize explicitly in every action"
+    init_text: "AUTHORIZE in EVERY controller action"
+    subagent_text: "Iron Law 13: AUTHORIZE in EVERY controller action — do not trust before_action alone"
+    detector_id: null
+    reference_files: ["security/authorization.md"]
+
+  - id: 14
+    category: security
+    title: "No Unsafe HTML"
+    rule: "NEVER use html_safe or raw with untrusted content — XSS vulnerability"
+    rationale: "html_safe bypasses Rails' XSS protection; untrusted content executes scripts"
+    severity: critical
+    applies_to: ["app/views/*.erb", "app/helpers/*.rb", "*.rb"]
+    summary_text: "Never use html_safe/raw on untrusted content"
+    init_text: "NEVER use html_safe or raw with untrusted content"
+    subagent_text: "Iron Law 14: NEVER use html_safe or raw with untrusted content — XSS vulnerability"
+    detector_id: "unsafe_html"
+    reference_files: ["security/xss-prevention.md"]
+
+  - id: 15
+    category: security
+    title: "No SQL Concatenation"
+    rule: "NO SQL string concatenation — always use parameterized queries"
+    rationale: "String building in SQL creates injection vectors"
+    severity: critical
+    applies_to: ["*.rb"]
+    summary_text: "Never concatenate SQL strings"
+    init_text: "NO SQL string concatenation — always use parameterized queries"
+    subagent_text: "Iron Law 15: NO SQL string concatenation — always use parameterized queries"
+    detector_id: "sql_interpolation"
+    reference_files: ["security/sql-injection.md"]
+
+  # Ruby (3 laws)
+  - id: 16
+    category: ruby
+    title: "method_missing Requires respond_to_missing?"
+    rule: "NO method_missing without respond_to_missing? — breaks introspection"
+    rationale: "Libraries and developers expect respond_to? to match method behavior"
+    severity: medium
+    applies_to: ["*.rb"]
+    summary_text: "Always pair method_missing with respond_to_missing?"
+    init_text: "NO method_missing without respond_to_missing?"
+    subagent_text: "Iron Law 16: NO method_missing without respond_to_missing? — breaks introspection"
+    detector_id: null
+    reference_files: ["ruby/metaprogramming.md"]
+
+  - id: 17
+    category: ruby
+    title: "Supervise Background Processes"
+    rule: "SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers in production"
+    rationale: "Unsupervised processes crash silently and don't restart"
+    severity: high
+    applies_to: ["config/puma.rb", "config/unicorn.rb", "Procfile", "*.rb"]
+    summary_text: "Always supervise background processes"
+    init_text: "SUPERVISE ALL BACKGROUND PROCESSES"
+    subagent_text: "Iron Law 17: SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers"
+    detector_id: null
+    reference_files: ["ruby/process-management.md"]
+
+  - id: 18
+    category: ruby
+    title: "Rescue StandardError"
+    rule: "DON'T RESCUE Exception — only rescue StandardError or specific classes"
+    rationale: "Rescuing Exception catches system signals (SIGTERM, etc.) and SyntaxError"
+    severity: high
+    applies_to: ["*.rb"]
+    summary_text: "Only rescue StandardError, never Exception"
+    init_text: "DON'T RESCUE Exception — only rescue StandardError"
+    subagent_text: "Iron Law 18: DON'T RESCUE Exception — only rescue StandardError or specific classes"
+    detector_id: null
+    reference_files: ["ruby/error-handling.md"]
+
+  # Hotwire/Turbo (2 laws)
+  - id: 19
+    category: hotwire
+    title: "No DB Queries in Turbo Streams"
+    rule: "NEVER query DB in Turbo Stream responses — pre-compute everything before broadcast"
+    rationale: "Turbo Streams render outside request cycle; DB queries cause errors or N+1"
+    severity: high
+    applies_to: ["app/views/*.turbo_stream.erb", "app/controllers/*.rb"]
+    summary_text: "Pre-compute all data before Turbo Stream broadcast"
+    init_text: "NEVER query DB in Turbo Stream responses"
+    subagent_text: "Iron Law 19: NEVER query DB in Turbo Stream responses — pre-compute everything"
+    detector_id: null
+    reference_files: ["hotwire/turbo-streams.md"]
+
+  - id: 20
+    category: hotwire
+    title: "Use turbo_frame_tag"
+    rule: "ALWAYS use turbo_frame_tag for partial updates — prevents full page reloads"
+    rationale: "Without frames, Turbo Drive reloads the entire page"
+    severity: medium
+    applies_to: ["app/views/**/*.erb"]
+    summary_text: "Use turbo_frame_tag for partial page updates"
+    init_text: "ALWAYS use turbo_frame_tag for partial updates"
+    subagent_text: "Iron Law 20: ALWAYS use turbo_frame_tag for partial updates"
+    detector_id: null
+    reference_files: ["hotwire/turbo-frames.md"]
+
+  # Verification (1 law)
+  - id: 21
+    category: verification
+    title: "Verify Before Claiming Done"
+    rule: "VERIFY BEFORE CLAIMING DONE — never say 'should work' or 'this fixes it.' Run bundle exec rspec or bin/rails test and show the result"
+    rationale: "Claims without verification are assumptions; test output proves the fix"
+    severity: critical
+    applies_to: ["*.rb"]
+    summary_text: "Always run tests and show results before claiming done"
+    init_text: "VERIFY BEFORE CLAIMING DONE — run tests and show results"
+    subagent_text: "Iron Law 21: VERIFY BEFORE CLAIMING DONE — never say 'should work' — run tests and show results"
+    detector_id: null
+    reference_files: ["verification/testing.md"]
+
+# Enforcement configuration
+enforcement:
+  programmatic:
+    description: "Hook-level automatic detection via pattern matching"
+    laws_with_detectors: [1, 2, 6, 7, 10, 14, 15]
+    script: "hooks/scripts/iron-law-verifier.sh"
+  
+  behavioral:
+    description: "Injected into subagent context, enforced via agent instructions"
+    all_laws: true
+    injection_script: "hooks/scripts/inject-iron-laws.sh"
+  
+  review_time:
+    description: "Checked during /rb:review by specialist agents"
+    agent: "iron-law-judge"
+    all_laws: true
+
+# Generation targets
+generation_targets:
+  - file: "README.md"
+    section: "Iron Laws summary"
+    marker: "<!-- IRON_LAWS_START -->"
+  
+  - file: "CLAUDE.md"
+    section: "Iron Laws enforcement rules"
+    marker: "<!-- IRON_LAWS_START -->"
+  
+  - file: "CHANGELOG.md"
+    section: "Initial release laws"
+    marker: "<!-- IRON_LAWS_START -->"
+  
+  - file: "plugins/ruby-grape-rails/skills/iron-laws/references/canonical-registry.md"
+    section: "Full human-readable registry"
+    format: "markdown_projection"
+  
+  - file: "plugins/ruby-grape-rails/skills/init/references/injectable-template.md"
+    section: "CLAUDE.md injection template"
+    marker: "<!-- IRON_LAWS_START -->"
+  
+  - file: "plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md"
+    section: "Tutorial Iron Laws section"
+    marker: "<!-- IRON_LAWS_START -->"
+  
+  - file: "hooks/scripts/inject-iron-laws.sh"
+    format: "shell_json_output"
+    template: "subagent_text format"
+  
+  - file: "agents/iron-law-judge.md"
+    section: "Iron Laws Overview"
+    format: "conditional"
+    condition: "Phase 0B decision = Option A or C"
