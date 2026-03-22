@@ -236,9 +236,9 @@ The resulting selection state should be summarized back to the user in a short c
 
 ### Step 5: Write Triage Output
 
-```markdown
-# .claude/plans/{slug}/plan.md
+The plan should be saved to `.claude/plans/{slug}/plan.md`:
 
+```markdown
 # Plan: Fix auth review findings
 
 ## Metadata
