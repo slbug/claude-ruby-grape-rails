@@ -20,3 +20,11 @@ Use this agent for:
 - Hotwire/Turbo interaction design
 - how mounted Grape APIs should relate to Rails application code
 - choosing between controller logic, service objects, jobs, and broadcasts
+
+## Review Artifact Contract
+
+When invoked by `/rb:review`:
+
+- Write `.claude/reviews/rails-architect/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

@@ -24,3 +24,11 @@ Review for:
 - unnecessary gem or abstraction usage
 
 Only report issues with real maintenance or behavior impact.
+
+## Review Artifact Contract
+
+When invoked by `/rb:review`:
+
+- Write `.claude/reviews/ruby-reviewer/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

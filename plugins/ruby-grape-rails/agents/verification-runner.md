@@ -21,3 +21,11 @@ skills:
 4. `bundle exec brakeman` if configured
 
 Stop on the first failure, summarize the key error, and suggest the narrowest rerun command.
+
+## Review Artifact Contract
+
+When invoked by `/rb:review`:
+
+- Write `.claude/reviews/verification-runner/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

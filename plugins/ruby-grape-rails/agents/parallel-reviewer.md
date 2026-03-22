@@ -38,3 +38,12 @@ skills:
 - Ask agents to distinguish new issues from pre-existing ones.
 - Deduplicate overlaps before presenting the final verdict.
 - Keep review read-only.
+
+## Artifact Contract
+
+- Derive a filesystem-safe `review-slug` from the current branch name when it is meaningful; otherwise use a scope slug from the reviewed target.
+- Slugify by lowercasing, replacing `/` and whitespace with `-`, stripping characters outside `[a-z0-9._-]`, and collapsing repeated `-`.
+- Every spawned reviewer MUST write an artifact to `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`.
+- Reviewers MUST write an artifact even when the result is clean.
+- Do not allow reviewers to write artifacts under `.claude/plans/...`.
+- Synthesize the final consolidated review to `.claude/reviews/{review-slug}.md`.

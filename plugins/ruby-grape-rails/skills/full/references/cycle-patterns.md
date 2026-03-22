@@ -21,7 +21,7 @@
 |------|------|
 | Plan | .claude/plans/{slug}/plan.md |
 | Progress | .claude/plans/{slug}/progress.md |
-| Review | .claude/plans/{slug}/reviews/{slug}-review.md |
+| Review | .claude/reviews/{slug}.md |
 
 ## Phase Progress
 
@@ -210,7 +210,7 @@ On completion, optionally trigger:
 
 ```bash
 # Create PR
-gh pr create --title "feat: {feature}" --body "$(cat .claude/plans/{slug}/reviews/{slug}-review.md)"
+gh pr create --title "feat: {feature}" --body "$(cat .claude/reviews/{slug}.md)"
 
 # Run CI
 gh workflow run ci.yml

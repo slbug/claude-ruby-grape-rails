@@ -26,3 +26,11 @@ Focus on high-signal risks:
 - security-sensitive jobs enqueued before commit
 
 Only report issues with practical security or correctness impact.
+
+## Review Artifact Contract
+
+When invoked by `/rb:review`:
+
+- Write `.claude/reviews/security-analyzer/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

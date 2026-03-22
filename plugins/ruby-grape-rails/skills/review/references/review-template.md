@@ -2,7 +2,11 @@
 
 ## Full Review Template
 
-Write to `.claude/plans/{slug}/reviews/{feature}-review.md`:
+Write the consolidated review to `.claude/reviews/{review-slug}.md`.
+
+Each reviewer also writes a per-agent artifact to:
+
+- `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
 
 ```markdown
 # Review: {Feature or Scope}
@@ -72,7 +76,7 @@ good_code
 
 How would you like to proceed?
 
-- `/rb:plan` — Replan the fixes (for complex/architectural issues)
+- `/rb:triage .claude/reviews/{review-slug}.md` — Select findings and create a fix plan
 - `/rb:work` — Fix directly (for simple, clear fixes)
 - I'll handle it myself
 
@@ -111,4 +115,4 @@ Every review MUST end with this at-a-glance table (even if only 1 finding):
 
 **IMPORTANT**: The review template does NOT include task lists (`- [ ]`),
 fix phases, or plan modifications. Review is findings-only. Task creation
-belongs in `/rb:plan`.
+belongs in `/rb:triage`.

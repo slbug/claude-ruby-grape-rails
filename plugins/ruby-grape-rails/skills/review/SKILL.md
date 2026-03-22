@@ -235,9 +235,23 @@ Focus: Migration safety and schema changes
 - [ ] No data loss in changes
 - [ ] Production-safe (no locking tables long)
 
-## Review Output Format
+## Review Artifact Contract
 
-Write findings to `.claude/plans/{slug}/reviews/{timestamp}-{track}.md`:
+Every `/rb:review` run produces two artifact layers:
+
+- Per-reviewer artifacts: `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
+- Consolidated review: `.claude/reviews/{review-slug}.md`
+
+Rules:
+
+- Every spawned reviewer MUST leave an artifact, even on a clean pass
+- Clean passes still write `PASS`, files reviewed, and why no findings were raised
+- Review artifacts never live under `.claude/plans/...`
+- If review is part of a plan, reference the consolidated review from the plan or progress log instead of nesting the report inside the plan namespace
+
+## Consolidated Review Format
+
+Write the synthesized review to `.claude/reviews/{review-slug}.md`:
 
 ```markdown
 # Review: {track}
@@ -322,9 +336,19 @@ When multiple agents find the same issue:
 
 ## Review Output Location
 
-Write findings to:
-- `.claude/plans/{slug}/reviews/{timestamp}-{track}.md` (if part of plan)
-- `.claude/reviews/{timestamp}-{track}.md` (standalone)
+Write artifacts to:
+
+- `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` for each reviewer
+- `.claude/reviews/{review-slug}.md` for the synthesized output
+
+`review-slug` must be filesystem-safe:
+
+- lowercase
+- replace `/` and whitespace with `-`
+- strip characters outside `[a-z0-9._-]`
+- collapse repeated `-`
+
+Use the current branch name only after slugifying it. If the branch name is not meaningful, derive the slug from the reviewed diff or user-supplied target.
 
 ## After Review
 
