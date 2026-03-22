@@ -28,7 +28,7 @@ plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
 | `/rb:brief` | Understanding | Plan file | Interactive walkthrough (ephemeral) |
 | `/rb:work` | Execution | Plan file | Updated checkboxes, `plans/{slug}/progress.md` |
 | `/rb:verify` | Verification | Plan namespace | Verification results |
-| `/rb:review` | Quality | Changed files | `plans/{slug}/reviews/` |
+| `/rb:review` | Quality | Changed files | `reviews/{review-slug}.md` + `reviews/{agent-slug}/...` |
 | `/rb:compound` | Knowledge | Solved problem | `solutions/{category}/{fix}.md` |
 | `/rb:full` | All | Feature description | Complete cycle with compounding |
 

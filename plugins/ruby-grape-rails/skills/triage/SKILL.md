@@ -249,13 +249,13 @@ The resulting selection state should be summarized back to the user in a short c
 
 ## Summary
 
-| Category | Total | Selected | Excluded |
-|----------|-------|----------|----------|
-| Critical | 3 | 3 | 0 |
-| High | 2 | 1 | 1 |
-| Medium | 2 | 0 | 2 |
-| Low | 1 | 0 | 1 |
-| **Total** | **8** | **4** | **4** |
+| Category | Total | Selected | Deferred | Excluded |
+|----------|-------|----------|----------|----------|
+| Critical | 3 | 3 | 0 | 0 |
+| High | 2 | 1 | 1 | 0 |
+| Medium | 2 | 0 | 2 | 0 |
+| Low | 1 | 0 | 0 | 1 |
+| **Total** | **8** | **4** | **3** | **1** |
 
 ## Phase 1: Critical Fixes
 

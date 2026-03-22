@@ -341,7 +341,14 @@ Write artifacts to:
 - `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` for each reviewer
 - `.claude/reviews/{review-slug}.md` for the synthesized output
 
-Use the current branch name as `review-slug` when it is meaningful. Otherwise use a scope slug derived from the reviewed diff or user-supplied target.
+`review-slug` must be filesystem-safe:
+
+- lowercase
+- replace `/` and whitespace with `-`
+- strip characters outside `[a-z0-9._-]`
+- collapse repeated `-`
+
+Use the current branch name only after slugifying it. If the branch name is not meaningful, derive the slug from the reviewed diff or user-supplied target.
 
 ## After Review
 

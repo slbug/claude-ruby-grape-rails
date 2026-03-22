@@ -338,11 +338,11 @@ When you run `/rb:review`:
    ├── testing-reviewer     → Test coverage, factory patterns
    └── verification-runner  → zeitwerk:check, format, test
    │
-3. Each writes to plans/{slug}/reviews/{track}.md
+3. Each reviewer writes to `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
    │
 4. context-supervisor deduplicates + consolidates
    │
-5. Output: plans/{slug}/summaries/review-consolidated.md
+5. Output: `.claude/reviews/{review-slug}.md`
 ```
 
 ## Usage Guide
