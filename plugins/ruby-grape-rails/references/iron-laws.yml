@@ -316,7 +316,9 @@ laws:
   - id: 21
     category: verification
     title: "Verify Before Claiming Done"
-    rule: "VERIFY BEFORE CLAIMING DONE — never say 'should work' or 'this fixes it.' Run bundle exec rspec or bin/rails test and show the result"
+    rule: >-
+      VERIFY BEFORE CLAIMING DONE — never say 'should work' or 'this fixes it.'
+      Run bundle exec rspec or bin/rails test and show the result
     rationale: "Claims without verification are assumptions; test output proves the fix"
     severity: critical
     applies_to: ["*.rb"]
@@ -332,12 +334,12 @@ enforcement:
     description: "Hook-level automatic detection via pattern matching"
     laws_with_detectors: [1, 2, 6, 7, 10, 14, 15]
     script: "hooks/scripts/iron-law-verifier.sh"
-  
+
   behavioral:
     description: "Injected into subagent context, enforced via agent instructions"
     all_laws: true
     injection_script: "hooks/scripts/inject-iron-laws.sh"
-  
+
   review_time:
     description: "Checked during /rb:review by specialist agents"
     agent: "iron-law-judge"
@@ -348,31 +350,31 @@ generation_targets:
   - file: "README.md"
     section: "Iron Laws summary"
     marker: "<!-- IRON_LAWS_START -->"
-  
+
   - file: "CLAUDE.md"
     section: "Iron Laws enforcement rules"
     marker: "<!-- IRON_LAWS_START -->"
-  
+
   - file: "CHANGELOG.md"
     section: "Initial release laws"
     marker: "<!-- IRON_LAWS_START -->"
-  
+
   - file: "plugins/ruby-grape-rails/skills/iron-laws/references/canonical-registry.md"
     section: "Full human-readable registry"
     format: "markdown_projection"
-  
+
   - file: "plugins/ruby-grape-rails/skills/init/references/injectable-template.md"
     section: "CLAUDE.md injection template"
     marker: "<!-- IRON_LAWS_START -->"
-  
+
   - file: "plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md"
     section: "Tutorial Iron Laws section"
     marker: "<!-- IRON_LAWS_START -->"
-  
+
   - file: "hooks/scripts/inject-iron-laws.sh"
     format: "shell_json_output"
     template: "subagent_text format"
-  
+
   - file: "agents/iron-law-judge.md"
     section: "Iron Laws Overview"
     format: "conditional"
