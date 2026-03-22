@@ -172,53 +172,6 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `check-pending-plans.sh` — Warns if plans have unchecked tasks on session end
 
-<!-- IRON_LAWS_START -->
-
-<!-- GENERATED FROM iron-laws.yml — DO NOT EDIT -->
-
-#### 21 Iron Laws
-
-**Active Record (7):**
-
-1. NEVER use float for money — use decimal or integer (cents)
-2. ALWAYS use parameterized queries — never interpolate user input into SQL strings
-3. USE includes/preload for associations — avoids N+1 queries
-4. CALL after_commit not after_save when enqueueing jobs that depend on committed data
-5. WRAP multi-step operations in transactions — use ActiveRecord::Base.transaction
-6. NO update_columns, update_column, or save(validate: false) in normal flows
-7. NO default_scope — use explicit named scopes only
-
-**Sidekiq (4):**
-
-8. Jobs MUST be idempotent — safe to retry
-9. Args use JSON-safe types only — no symbols, no Ruby objects, no procs
-10. NEVER store ActiveRecord objects in args — store IDs, not records
-11. ALWAYS use after_commit callback — not after_save or inline
-
-**Security (4):**
-
-12. NO eval with user input — code injection vulnerability
-13. AUTHORIZE in EVERY controller action — do not trust before_action alone
-14. NEVER use html_safe or raw with untrusted content — XSS vulnerability
-15. NO SQL string concatenation — always use parameterized queries
-
-**Ruby (3):**
-
-16. NO method_missing without respond_to_missing? — breaks introspection
-17. SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers in production
-18. DON'T RESCUE Exception — only rescue StandardError or specific classes
-
-**Hotwire/Turbo (2):**
-
-19. NEVER query DB in Turbo Stream responses — pre-compute everything before broadcast
-20. ALWAYS use turbo_frame_tag for partial updates — prevents full page reloads
-
-**Verification (1):**
-
-21. VERIFY BEFORE CLAIMING DONE — never say 'should work' or 'this fixes it.' Run bundle exec rspec or bin/rails test and show the result
-
-<!-- IRON_LAWS_END -->
-
 #### Key Features
 
 **Context Supervisor Pattern** — When orchestrators spawn multiple agents,

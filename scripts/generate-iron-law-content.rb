@@ -50,21 +50,6 @@ def generate_claude_section(yaml)
   puts '```'
 end
 
-# Generate CHANGELOG section (same as CLAUDE but with ### instead of ##)
-def generate_changelog_section(yaml)
-  puts '#### 21 Iron Laws'
-  puts ''
-
-  yaml['categories'].each do |cat|
-    puts "**#{cat['name']} (#{cat['law_count']}):**"
-    puts ''
-    yaml['laws'].select { |l| l['category'] == cat['id'] }.each do |law|
-      puts "#{law['id']}. #{law['rule']}"
-    end
-    puts ''
-  end
-end
-
 # Generate injectable template section
 def generate_injectable_section(yaml)
   puts '## IRON LAWS — STOP if violated'
@@ -244,8 +229,6 @@ end
 case ARGV[0]
 when 'claude'
   generate_claude_section(yaml)
-when 'changelog'
-  generate_changelog_section(yaml)
 when 'injectable'
   generate_injectable_section(yaml)
 when 'tutorial'
@@ -259,6 +242,6 @@ when 'readme'
 when 'judge'
   generate_judge_section(yaml)
 else
-  puts "Usage: #{$PROGRAM_NAME} [claude|changelog|injectable|tutorial|injector|canonical|readme|judge]"
+  puts "Usage: #{$PROGRAM_NAME} [claude|injectable|tutorial|injector|canonical|readme|judge]"
   exit 1
 end

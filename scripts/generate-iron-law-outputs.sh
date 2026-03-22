@@ -2,7 +2,7 @@
 #
 # Generate Iron Law outputs from canonical YAML source
 # Usage: ./generate-iron-law-outputs.sh [target]
-#   target: optional specific target to regenerate (readme|claude|changelog|canonical|init|tutorial|injector|all)
+#   target: optional specific target to regenerate (readme|claude|canonical|init|tutorial|injector|all)
 #
 # This script delegates to generate-iron-law-content.rb for actual content generation
 #
@@ -101,13 +101,6 @@ generate_all() {
     claude|all)
       log_info "Generating CLAUDE.md section..."
       update_file "${REPO_ROOT}/CLAUDE.md" "claude"
-      ;;
-  esac
-
-  case "$target" in
-    changelog|all)
-      log_info "Generating CHANGELOG.md section..."
-      update_file "${REPO_ROOT}/CHANGELOG.md" "changelog"
       ;;
   esac
 
