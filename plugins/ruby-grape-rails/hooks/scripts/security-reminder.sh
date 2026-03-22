@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
+set -o nounset
+set -o pipefail
 
-FILE_PATH=$(cat | jq -r '.tool_input.file_path // empty')
+command -v jq >/dev/null 2>&1 || exit 0
+
+FILE_PATH=$(jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
 [[ -n "$FILE_PATH" ]] || exit 0
 
-if echo "$FILE_PATH" | grep -qiE '(auth|session|password|token|permission|admin|payment|login|credential|secret|oauth|policy|ability|grape|api)'; then
+FILE_NAME="${FILE_PATH##*/}"
+if printf '%s' "$FILE_PATH" | grep -qiE '(auth|session|password|token|permission|admin|payment|login|credential|secret|oauth|policy|ability)'; then
   cat >&2 <<MSG
-SECURITY-SENSITIVE FILE: $(basename "$FILE_PATH")
+SECURITY-SENSITIVE FILE: ${FILE_NAME}
 Check these before moving on:
 - authorization/policy coverage
 - explicit params shaping (strong params or Grape declared params)

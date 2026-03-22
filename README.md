@@ -16,7 +16,7 @@ that catch the bugs your tests won't.
 # Then:
 
 /rb:work .claude/plans/comment-notifications/plan.md
-# Implements task by task. Runs zeitwerk:check after each change.
+# Implements task by task. Verification checkpoints at key milestones.
 # Stops cold if code violates an Iron Law.
 
 /rb:review
@@ -33,9 +33,9 @@ that prevent the mistakes Ruby developers actually make in production.
 ┌─────────────────────────────────────────────────────────────────────┐
 │  💎 Ruby/Rails/Grape Plugin for Claude Code                         │
 │                                                                     │
- │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
- │  │    22    │    49    │   100+   │    22    │    21    │           │
- │  │  Agents  │  Skills  │   Refs   │  Hooks   │Iron Laws │           │
+│  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
+│  │    22    │    49    │   100+   │    21    │    21    │           │
+│  │  Agents  │  Skills  │   Refs   │  Hooks   │Iron Laws │           │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘           │
 │                                                                     │
 │  AGENTS                          COMMANDS                           │
@@ -66,14 +66,14 @@ that prevent the mistakes Ruby developers actually make in production.
 │    verification-runner             testing   deploy   runtime       │
 │                                                                     │
 │  Domain (sonnet)                 Hooks                              │
-│    sidekiq-specialist              auto-format · zeitwerk-check     │
+│    sidekiq-specialist              auto-format · ruby-syntax-check  │
 │    deployment-validator            iron-law-verify · security-scan  │
 │    ruby-gem-researcher             debug-stmt-detect · error-critic │
 │    web-researcher                  progress-tracking · block-danger │
 │                                                                     │
- │  ───────────────────────────────────────────────────────────        │
- │  21 Iron Laws · Runtime Tooling · plan→work→verify→review→compound      │
- │  github.com/slbug/claude-ruby-grape-rails                           │
+│  ───────────────────────────────────────────────────────────        │
+│  21 Iron Laws · Runtime Tooling · plan→work→verify→review→compound  │
+│  github.com/slbug/claude-ruby-grape-rails                           │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -582,9 +582,9 @@ See [full registry](plugins/ruby-grape-rails/references/iron-laws.yml) for detai
 | **data-integrity-reviewer**       | sonnet | --      | Data consistency and constraint validation   |
 | **migration-safety-reviewer**     | sonnet | --      | Migration safety and rollback review         |
 
-Agents with `project` memory build up knowledge across sessions
-in `.claude/agent-memory/<agent-name>/`. Orchestrators remember
-architectural decisions; pattern analysts skip redundant discovery.
+Agents with `project` memory leverage Claude Code's built-in memory system
+to retain context across sessions. Orchestrators remember architectural
+decisions; pattern analysts skip redundant discovery.
 
 ## Reference Skills (Auto-Loaded)
 

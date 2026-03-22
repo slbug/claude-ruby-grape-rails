@@ -47,12 +47,6 @@ FROM users u
 LEFT JOIN posts p ON p.user_id = u.id
 GROUP BY u.id;
 
--- Check Sidekiq jobs
-SELECT id, class, args, status, scheduled_at
-FROM sidekiq_jobs  -- if using Sidekiq Pro or similar
-ORDER BY created_at DESC
-LIMIT 10;
-
 -- Table exists?
 SELECT EXISTS (
   SELECT FROM information_schema.tables

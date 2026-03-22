@@ -1,7 +1,7 @@
 ---
 name: rb:compound
 description: Capture a solved Ruby/Rails/Grape problem as reusable knowledge for future sessions.
-argument-hint: [path to fix|review|plan]
+argument-hint: "[path to fix|review|plan]"
 skills:
   - compound-docs
 ---

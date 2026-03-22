@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
+set -o nounset
+set -o pipefail
+
 # PreCompact hook: Detect active workflow phase and re-inject rules
 # Uses explicit active-plan marker with fallback to heuristic detection
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck disable=SC1091
-source "${SCRIPT_DIR}/active-plan-lib.sh"
+LIB="${SCRIPT_DIR}/active-plan-lib.sh"
+[[ -r "$LIB" && ! -L "$LIB" ]] || exit 0
+# shellcheck disable=SC1090,SC1091
+source "$LIB"
+command -v jq >/dev/null 2>&1 || exit 0
 
 # Main detection
 ACTIVE_PLAN_DIR=$(get_active_plan)
@@ -50,5 +56,5 @@ if [[ -n "$ACTIVE_PLAN_DIR" ]]; then
 fi
 
 if [[ -n "$CONTEXT" ]]; then
-  printf '%b' "$CONTEXT" | jq -Rs '{systemMessage: .}'
+  printf '%s' "$CONTEXT" | jq -Rs '{systemMessage: .}'
 fi

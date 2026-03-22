@@ -125,7 +125,14 @@ module JsonApiConcern
   end
 
   def jsonapi_params
-    params.require(:data).require(:attributes).permit!
+    # Explicitly permit only expected attributes
+    # NEVER use .permit! as it allows mass assignment of all attributes
+    params.require(:data).require(:attributes).permit(
+      :title, :body, :published, :status,
+      :email, :name, :password, :password_confirmation,
+      tags: [],
+      relationships: [:author, :comments]
+    )
   end
 end
 

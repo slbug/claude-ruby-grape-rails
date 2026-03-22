@@ -81,7 +81,7 @@ For programmatic use, see [iron-laws.yml](../iron-laws.yml).
 20. **Use turbo_frame_tag** — ALWAYS use turbo_frame_tag for partial updates — prevents full page reloads
    *Without frames, Turbo Drive reloads the entire page*
 
-### Verification (1 laws)
+### Verification (1 law)
 
 21. **Verify Before Claiming Done** — VERIFY BEFORE CLAIMING DONE — never say 'should work' or 'this fixes it.' Run bundle exec rspec or bin/rails test and show the result
    *Claims without verification are assumptions; test output proves the fix*

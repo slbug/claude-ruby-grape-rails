@@ -1,7 +1,7 @@
 ---
 name: rb:runtime
 description: Integrate with Tidewave Rails for enhanced runtime context, code execution, SQL queries, and introspection of your running Rails application.
-argument-hint: [inspect|execute|query|docs|logs|models|source]
+argument-hint: "[inspect|execute|query|docs|logs|models|source]"
 ---
 
 # Runtime Integration
@@ -16,7 +16,7 @@ Tidewave Rails must be installed in your project:
 bundle add tidewave --group development
 ```
 
-And ensure Tidewave is [installed](https://hexdocs.pm/tidewave/installation.html) and connected to your Rails app.
+And ensure Tidewave is [installed](https://github.com/tidewave-ai/tidewave_rails) and connected to your Rails app.
 
 **Note:** Runtime features require both:
 
@@ -165,14 +165,22 @@ When implementing:
 
 ## Configuration
 
-Tidewave is configured via your Rails application:
+Tidewave is configured via your Rails application. Common options:
 
 ```ruby
 # config/environments/development.rb
+
+# Allow remote access (default: localhost only)
+config.tidewave.allow_remote_access = true
+
+# Set your team ID
 config.tidewave.team = { id: "my-company" }
+
+# Specify preferred ORM (:active_record or :sequel)
+config.tidewave.preferred_orm = :active_record
 ```
 
-See [Tidewave Rails documentation](https://hexdocs.pm/tidewave) for full configuration options.
+See [Tidewave Rails README](https://github.com/tidewave-ai/tidewave_rails) for full configuration options.
 
 ## Security Considerations
 
@@ -194,7 +202,7 @@ Runtime features require Tidewave Rails:
    bundle add tidewave --group development
 
 2. Install and connect Tidewave:
-   https://hexdocs.pm/tidewave/installation.html
+   https://github.com/tidewave-ai/tidewave_rails
 
 3. Restart Claude Code with MCP tools enabled
 
@@ -235,8 +243,8 @@ Without Tidewave, use:
 # After implementing a job
 /rb:runtime execute "MyJob.perform_later(123)"
 
-# Check Sidekiq status
-/rb:runtime query "SELECT COUNT(*) FROM sidekiq_jobs WHERE queue = 'default'"
+# Check Sidekiq queue status via Ruby
+/rb:runtime execute "Sidekiq::Queue.new('default').size"
 ```
 
 ## References

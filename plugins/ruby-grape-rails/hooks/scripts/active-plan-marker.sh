@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+set -e
+set -o nounset
+set -o pipefail
+
 #
 # Active Plan Marker Management
 # 
@@ -11,12 +15,11 @@
 #   active-plan-marker.sh get                    # Get current active plan
 #   active-plan-marker.sh validate               # Validate marker is still valid
 #
-
-set -euo pipefail
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck disable=SC1091
-source "${SCRIPT_DIR}/active-plan-lib.sh"
+LIB="${SCRIPT_DIR}/active-plan-lib.sh"
+[[ -r "$LIB" && ! -L "$LIB" ]] || exit 1
+# shellcheck disable=SC1090,SC1091
+source "$LIB"
 
 COMMAND="${1:-}"
 ARG="${2:-}"
@@ -28,14 +31,14 @@ case "$COMMAND" in
       echo "Usage: $0 set <plan-directory>" >&2
       exit 1
     fi
-    
-    if [[ ! -d "$ARG" ]]; then
-      echo "Error: Not a directory: $ARG" >&2
+
+    if ! is_valid_plan_dir "$ARG"; then
+      echo "Error: Invalid plan directory: $ARG" >&2
       exit 1
     fi
-    
+
     set_active_plan "$ARG"
-    echo "Active plan set to: $ARG"
+    echo "Active plan set to: $(get_active_plan)"
     ;;
     
   clear)
@@ -44,7 +47,7 @@ case "$COMMAND" in
     ;;
     
   get)
-    ACTIVE=$(get_active_plan)
+    ACTIVE=$(get_active_plan || true)
     if [[ -n "$ACTIVE" ]]; then
       echo "$ACTIVE"
     else
@@ -54,7 +57,7 @@ case "$COMMAND" in
     ;;
     
   validate)
-    ACTIVE=$(get_active_plan)
+    ACTIVE=$(get_active_plan || true)
     if [[ -n "$ACTIVE" ]]; then
       echo "Active plan: $ACTIVE"
       exit 0

@@ -1,7 +1,7 @@
 ---
 name: rb:triage
 description: Interactive triage for review findings. Use after /rb:review when you want a human decision on what to fix now, skip, or defer. Prioritizes Iron Law violations and separates critical fixes from optional improvements.
-argument-hint: [path to review file]
+argument-hint: "[path to review file]"
 ---
 
 # Triage Review Findings

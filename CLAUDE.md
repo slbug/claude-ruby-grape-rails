@@ -243,7 +243,7 @@ Defined in `hooks/hooks.json`:
   - `detect-runtime.sh`: Detect Ruby version, Rails version, available tools
   - `detect-betterleaks.sh`: Informational — detects betterleaks availability (no current downstream usage)
   - `detect-rtk.sh`: Informational — detects RTK token optimizer (no current downstream usage)
-- `SessionStart` (startup|resume only): Scratchpad check + resume workflow detection + branch freshness + workflow hints
+- `SessionStart` (startup|resume only): Scratchpad check + resume workflow detection + workflow hints
 - `Stop`: Warn if plans have unchecked tasks
 
 **Active Plan Infrastructure:**
@@ -325,6 +325,15 @@ npm install  # Pre-commit hooks + linting
 ```bash
 npm run lint       # Check all markdown
 npm run lint:fix   # Auto-fix issues
+```
+
+### Validation
+
+```bash
+# Validate plugin structure and manifest
+claude plugin validate plugins/ruby-grape-rails
+
+# Should pass without errors before committing changes
 ```
 
 ## Size Guidelines

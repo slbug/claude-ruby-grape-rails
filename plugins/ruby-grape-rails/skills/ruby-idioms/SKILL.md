@@ -13,9 +13,9 @@ user-invocable: false
 3. Keep mutation narrow and obvious
 4. Wrap third-party APIs behind project-owned adapters
 5. Avoid global state and hidden thread-local coupling
-6. Use `it` keyword for simple single-argument blocks
+6. Consider `it` for simple single-argument blocks when clarity permits
 7. Prefer pattern matching for complex data destructuring
-8. Enable YJIT in production (Ruby 3.2+) for 15-30% performance boost
+8. Enable YJIT in production (Ruby 3.2+; Rails 7.2+ enables by default on Ruby 3.3+)
 
 ## Ruby 3.4+ Features
 
@@ -63,8 +63,12 @@ RubyVM::YJIT.enabled?  # => true
 # Or in code before app loads: RubyVM::YJIT.enable
 ```
 
-**Benefits:** 15-30% performance improvement for Rails apps  
-**Status:** Not enabled by default; must be explicitly enabled via RUBY_YJIT_ENABLE=1 or RubyVM::YJIT.enable
+**Benefits:** 15-30% performance improvement for Rails apps
+
+**Status:**
+
+- Bare Ruby: Not enabled by default; enable via `RUBY_YJIT_ENABLE=1` or `RubyVM::YJIT.enable`
+- Rails 7.2+: Enabled by default when running on Ruby 3.3+
 
 ### ZJIT (Ruby 4.0+) — Experimental
 
@@ -74,7 +78,7 @@ ZJIT is the next-generation JIT compiler in Ruby 4.0:
 # Verify ZJIT is enabled (Ruby 4.0+)
 puts RubyVM::ZJIT.enabled?  # => true
 
-# Enable: ruby --zjit or RUBY_ZJIT=1
+# Enable: ruby --zjit (CLI) or RubyVM::ZJIT.enable (runtime)
 ```
 
 **Status:** Experimental/not recommended for production; YJIT remains the recommended JIT for Ruby 3.2-4.0  
@@ -233,7 +237,7 @@ end
 
 ```ruby
 # Use symbols over strings for internal identifiers
-# Freeze string literals (enforced in Ruby 4.0)
+# Ruby 4.0 makes frozen string literals the default (no longer optional)
 # Use String#<< over String#+ for building strings
 # Use Hash#fetch for defaults
 # Use Set for O(1) membership testing

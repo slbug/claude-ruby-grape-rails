@@ -5,13 +5,13 @@ description: Run ad-hoc PostgreSQL analytics queries against dev/test database
 
 # PostgreSQL Analytics
 
-Run analytics queries against the local database using psql or `rails runner`.
+Run analytics queries against the local database using Tidewave Rails MCP tools.
 
 ## Rules
 
 - NEVER run against production
 - Use READ-ONLY queries (SELECT only)
-- For complex analysis, use ActiveRecord queries in `rails console` or `rails runner`
+- For complex analysis, use `mcp__tidewave__project_eval` with ActiveRecord
 - Format results as ASCII tables or pipe to `column -t`
 
 ## Runtime Tooling Integration

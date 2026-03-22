@@ -24,7 +24,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`/rb:brief`** — Interactive plan walkthrough with visual formatting
 - **`/rb:triage`** — Interactive review finding triage
 - **`/rb:quick`** — Fast implementation for small changes (<100 lines)
-- **`/rb:verify`** — Full verification: zeitwerk:check, rubocop, rspec/minitest
+- **`/rb:verify`** — Full verification: format (StandardRB or RuboCop), tests (RSpec/Minitest), and Rails-specific checks (zeitwerk:check)
 - **`/rb:init`** — Initialize plugin in project (injects rules into CLAUDE.md)
 
 #### Investigation & Debug Commands
@@ -128,7 +128,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 **Utility Skills:** rubydoc-fetcher
 
-#### 22 Automated Hooks
+#### 21 registered hook command invocations
 
 **PreToolUse:**
 
@@ -136,12 +136,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 **PostToolUse (on Edit/Write):**
 
-- `format-ruby.sh` — Runs `bundle exec rubocop`
-- `verify-ruby.sh` — Ruby syntax verification
+- `format-ruby.sh` — Runs `standardrb --fix` when configured, else `rubocop -a`
+- `verify-ruby.sh` — Ruby syntax verification via `ruby -c`
 - `iron-law-verifier.sh` — Programmatic Iron Law violation scanning
 - `security-reminder.sh` — Security Iron Laws for auth files
 - `log-progress.sh` — Async progress logging to `.claude/plans/{slug}/progress.md`
-- `plan-stop-reminder.sh` — Warns if plan has unchecked tasks
+- `plan-stop-reminder.sh` — STOP reminder when plan.md is written
 - `debug-statement-warning.sh` — Detects `puts`, `debugger`, `p` in production code
 - `secret-scan.sh` — Scans for accidentally committed secrets
 
@@ -157,12 +157,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 **SessionStart:**
 
 - `setup-dirs.sh` — Creates `.claude/` directory structure
-- `detect-runtime.sh` — Detects Tidewave runtime tooling
-- `detect-betterleaks.sh` — Detects betterleaks gem
-- `detect-rtk.sh` — Detects RTK tooling
+- `detect-runtime.sh` — Detects Ruby/Rails version, stack gems, Tidewave, and available tools
+- `detect-betterleaks.sh` — Detects betterleaks executable availability
+- `detect-rtk.sh` — Detects RTK executable availability
 - `check-scratchpad.sh` — Checks for existing scratchpad decisions
 - `check-resume.sh` — Detects resumable workflows
-- `check-branch-freshness.sh` — Warns if branch is behind main
+- `check-branch-freshness.sh` — Utility script (not currently wired in hooks.json) for branch freshness checks
 
 **PreCompact:**
 

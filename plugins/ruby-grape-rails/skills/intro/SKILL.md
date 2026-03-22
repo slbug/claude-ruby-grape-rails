@@ -1,7 +1,7 @@
 ---
 name: rb:intro
 description: Quick introduction to the Ruby/Rails/Grape plugin workflow and command set.
-argument-hint: [--section N]
+argument-hint: "[--section N]"
 ---
 
 # Intro

@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
+set -o nounset
+set -o pipefail
 
-FILE_PATH=$(cat | jq -r '.tool_input.file_path // empty')
+command -v jq >/dev/null 2>&1 || exit 0
+command -v grep >/dev/null 2>&1 || exit 0
+
+FILE_PATH=$(jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
 [[ -n "$FILE_PATH" ]] || exit 0
 [[ -f "$FILE_PATH" ]] || exit 0
+[[ ! -L "$FILE_PATH" ]] || exit 0
 
 case "$FILE_PATH" in
   *.rb|*.rake|Gemfile|Rakefile|config.ru) ;;
@@ -13,7 +19,8 @@ VIOLATIONS=""
 
 check_violation() {
   local pattern="$1"
-  grep -En "$pattern" "$FILE_PATH" 2>/dev/null | while IFS= read -r line; do
+  local line content trimmed
+  grep -En "$pattern" -- "$FILE_PATH" 2>/dev/null | while IFS= read -r line; do
     content="${line#*:}"
     trimmed="${content#"${content%%[! ]*}"}"
     if [[ "$trimmed" != \#* ]]; then
@@ -22,6 +29,8 @@ check_violation() {
     fi
   done
 }
+
+FILE_NAME="${FILE_PATH##*/}"
 
 MATCH=$(check_violation '(t|add_column)\.float[[:space:]]+:(price|amount|cost|total|balance|fee|rate|charge|payment|salary|wage|budget|revenue|discount)')
 if [[ -n "$MATCH" ]]; then
@@ -67,8 +76,8 @@ fi
 
 if [[ -n "$VIOLATIONS" ]]; then
   cat >&2 <<MSG
-RUBY IRON LAW VIOLATION(S) in $(basename "$FILE_PATH"):
-$(echo -e "$VIOLATIONS")
+RUBY IRON LAW VIOLATION(S) in ${FILE_NAME}:
+$(printf '%b' "$VIOLATIONS")
 
 Fix these before proceeding.
 MSG

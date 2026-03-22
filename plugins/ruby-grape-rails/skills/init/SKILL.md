@@ -1,7 +1,7 @@
 ---
 name: rb:init
 description: Initialize the Ruby/Rails/Grape plugin in a project. Installs auto-activation rules into CLAUDE.md for complexity detection, workflow routing, Iron Laws, and Ruby stack auto-loading.
-argument-hint: [--update]
+argument-hint: "[--update]"
 ---
 
 # Plugin Initialization
@@ -17,23 +17,32 @@ Install the Ruby/Rails/Grape behavioral instructions into the project `CLAUDE.md
 
 ## Detect the Stack
 
-Check the project before writing anything:
+Check the project before writing anything. Use Ruby for detection (avoids fragile shell pipelines):
 
 ```bash
-[ -f Gemfile ]
-[ -x bin/rails ] && bin/rails about | head -20
-ruby -e 'lock = File.exist?("Gemfile.lock") ? File.read("Gemfile.lock") : ""; puts lock[/
-    rails \(([^)]+)\)/, 1] || "unknown"'
-ruby -e 'lock = File.exist?("Gemfile.lock") ? File.read("Gemfile.lock") : ""; puts lock[/
-    grape \(([^)]+)\)/, 1] || "none"'
-ruby -e 'lock = File.exist?("Gemfile.lock") ? File.read("Gemfile.lock") : ""; puts lock[/
-    sidekiq \(([^)]+)\)/, 1] || "none"'
-grep -Eq "gem ['"]pg['"]" Gemfile && echo postgres
-grep -Eq "gem ['"]redis['"]|gem ['"]redis-client['"]" Gemfile && echo redis
+# Detect Ruby version and stack dependencies
+ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
 
-# External tools
-command -v rtk &> /dev/null && echo "RTK available"
-command -v betterleaks &> /dev/null && echo "Betterleaks available"
+# Or inline detection (fallback):
+ruby -e '
+  gemfile = File.read("Gemfile") rescue ""
+  lock = File.read("Gemfile.lock") rescue ""
+
+  puts "Ruby: #{RUBY_VERSION}"
+  puts "Rails: #{lock[/rails \(([^)]+)\)/, 1] || "?"}"
+  puts "Grape: #{lock[/grape \(([^)]+)\)/, 1] || "?"}"
+  puts "Sidekiq: #{lock[/sidekiq \(([^)]+)\)/, 1] || "?"}"
+  puts "Redis: detected" if gemfile.match?(/gem.*redis/)
+  puts "PostgreSQL: detected" if gemfile.match?(/gem.*pg/)
+  puts "Sidekiq: detected" if gemfile.match?(/gem.*sidekiq/)
+  puts "Hotwire: detected" if gemfile.match?(/gem.*hotwire-rails/)
+  puts "Karafka: detected" if gemfile.match?(/gem.*karafka/)
+  puts "Grape: detected" if gemfile.match?(/gem.*grape/)
+'
+
+# External tools (shell is fine here - simple commands)
+command -v rtk &> /dev/null && echo "RTK: available"
+command -v betterleaks &> /dev/null && echo "Betterleaks: available"
 ```
 
 ## Install Modes

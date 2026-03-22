@@ -31,7 +31,8 @@ These sections are included in CLAUDE.md based on detected project dependencies.
 
 - Consumers MUST be idempotent
 - Handle message duplication gracefully
-- Use `pause` for transient errors, not `raise`
+- Prefer raising errors for retry/backoff (Karafka handles retries automatically)
+- Use `pause` for specific partition throttling scenarios, not general error handling
 - Monitor lag via Karafka Web UI
 ```
 
@@ -101,24 +102,26 @@ Install: `brew install betterleaks`
 
 ## Detection Commands
 
+Use the Ruby detection script (avoids fragile shell pipelines):
+
 ```bash
-# Ruby version
-ruby --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "?"
+# Detect stack dependencies
+ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
 
-# Rails version
-ruby -e 'lock = File.exist?("Gemfile.lock") ? File.read("Gemfile.lock") : ""; puts lock[/rails \(([^)]+)\)/, 1] || "?"'
+# Or inline Ruby (if script unavailable):
+ruby -e '
+  gemfile = File.read("Gemfile") rescue ""
+  puts "sidekiq" if gemfile.match?(/gem.*sidekiq/)
+  puts "hotwire" if gemfile.match?(/gem.*hotwire-rails/)
+  puts "karafka" if gemfile.match?(/gem.*karafka/)
+  puts "grape" if gemfile.match?(/gem.*grape/)
+'
 
-# Grape version
-ruby -e 'lock = File.exist?("Gemfile.lock") ? File.read("Gemfile.lock") : ""; puts lock[/grape \(([^)]+)\)/, 1] || "?"'
-
-# Sidekiq version
-ruby -e 'lock = File.exist?("Gemfile.lock") ? File.read("Gemfile.lock") : ""; puts lock[/sidekiq \(([^)]+)\)/, 1] || "?"'
-
-# Optional dependencies
-grep -q 'gem ["'"'"]sidekiq["'"'"]' Gemfile && echo "sidekiq"
-grep -q 'gem ["'"'"]hotwire-rails["'"'"]' Gemfile && echo "hotwire"
-grep -q 'gem ["'"'"]karafka["'"'"]' Gemfile && echo "karafka"
-grep -q 'gem ["'"'"]grape["'"'"]' Gemfile && echo "grape"
+# Version detection (via Gemfile.lock)
+# Note: Matches only numeric versions, not constraints like ">= 3.0"
+ruby -e 'puts File.read("Gemfile.lock")[/^    rails \((\d+\.\d+\.?\d*)\)/, 1] || "?"'
+ruby -e 'puts File.read("Gemfile.lock")[/^    sidekiq \((\d+\.\d+\.?\d*)\)/, 1] || "?"'
+ruby -e 'puts File.read("Gemfile.lock")[/^    grape \((\d+\.\d+\.?\d*)\)/, 1] || "?"'
 
 # RTK detection
 command -v rtk &> /dev/null && echo "rtk"

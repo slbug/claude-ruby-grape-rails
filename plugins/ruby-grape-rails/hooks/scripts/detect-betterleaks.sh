@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -o nounset
+set -o pipefail
+
 # Detect if betterleaks is installed and available
 # Sets environment variable for other hooks to use
 #
@@ -7,22 +10,20 @@
 # or BETTERLEAKS_PATH. Future integration could use this for automatic
 # memory leak detection during test runs.
 
-set -e
-
 BETTERLEAKS_PATH=""
 
 # Check for betterleaks in common locations
-if command -v betterleaks &> /dev/null; then
+if command -v betterleaks >/dev/null 2>&1; then
   BETTERLEAKS_PATH=$(command -v betterleaks)
-elif [ -f "$HOME/.local/bin/betterleaks" ]; then
+elif [[ -x "$HOME/.local/bin/betterleaks" ]]; then
   BETTERLEAKS_PATH="$HOME/.local/bin/betterleaks"
-elif [ -f "/usr/local/bin/betterleaks" ]; then
+elif [[ -x "/usr/local/bin/betterleaks" ]]; then
   BETTERLEAKS_PATH="/usr/local/bin/betterleaks"
-elif [ -f "/opt/homebrew/bin/betterleaks" ]; then
+elif [[ -x "/opt/homebrew/bin/betterleaks" ]]; then
   BETTERLEAKS_PATH="/opt/homebrew/bin/betterleaks"
 fi
 
-if [ -n "$BETTERLEAKS_PATH" ]; then
+if [[ -n "$BETTERLEAKS_PATH" ]]; then
   echo "✓ Betterleaks detected at: $BETTERLEAKS_PATH"
   # Output for hook system to capture
   echo "BETTERLEAKS_AVAILABLE=true"

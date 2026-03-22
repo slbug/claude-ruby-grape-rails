@@ -150,15 +150,14 @@ end
 ## Runtime Queue Control
 
 ```ruby
-# Pause/resume queues (with sidekiq-pro or sidekiq-status)
-Sidekiq::Queue['mailers'].pause
-Sidekiq::Queue['mailers'].unpause
-
-# Clear specific queue
+# Clear specific queue (standard Sidekiq API)
 Sidekiq::Queue['imports'].clear
 
-# Get queue size
+# Get queue size (standard Sidekiq API)
 Sidekiq::Queue['mailers'].size
+
+# Note: Queue pause/resume requires Sidekiq Enterprise or custom middleware
+# Standard Sidekiq does not provide pause/unpause on Sidekiq::Queue
 ```
 
 ## Batch Jobs (with sidekiq-batch)

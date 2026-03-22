@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+set -o nounset
+set -o pipefail
+
 #
 # Active Plan Detection Library
 # Shared functions for determining which plan is currently active
@@ -12,7 +15,40 @@
 # - Cleared by: /rb:work (when all tasks complete)
 # - Read by: session resume detection, precompact-rules.sh, log-progress.sh
 
-ACTIVE_PLAN_MARKER=".claude/ACTIVE_PLAN"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
+  :
+else
+  REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+fi
+
+CLAUDE_DIR="${REPO_ROOT}/.claude"
+PLANS_DIR="${CLAUDE_DIR}/plans"
+ACTIVE_PLAN_MARKER="${CLAUDE_DIR}/ACTIVE_PLAN"
+
+resolve_plan_dir() {
+  local plan_dir="$1"
+  [[ -n "$plan_dir" ]] || return 1
+
+  if [[ "$plan_dir" == /* ]]; then
+    printf '%s\n' "$plan_dir"
+  else
+    printf '%s\n' "${REPO_ROOT}/${plan_dir#./}"
+  fi
+}
+
+is_valid_plan_dir() {
+  local input_plan_dir="$1"
+  local plan_dir
+
+  [[ -n "$input_plan_dir" ]] || return 1
+  [[ "$input_plan_dir" != *".."* ]] || return 1
+
+  plan_dir=$(resolve_plan_dir "$input_plan_dir") || return 1
+  [[ "$plan_dir" == "${PLANS_DIR}/"* ]] || return 1
+  [[ -d "$plan_dir" ]] || return 1
+  [[ ! -L "$plan_dir" ]] || return 1
+}
 
 get_file_mtime() {
   local file="$1"
@@ -29,11 +65,20 @@ get_file_mtime() {
 get_active_plan() {
   # Primary: Check explicit marker file
   if [[ -f "$ACTIVE_PLAN_MARKER" ]]; then
+    if [[ -L "$ACTIVE_PLAN_MARKER" ]]; then
+      rm -f -- "$ACTIVE_PLAN_MARKER"
+      return 1
+    fi
+
     local marked_plan
-    marked_plan=$(cat "$ACTIVE_PLAN_MARKER" 2>/dev/null | tr -d '[:space:]')
+    if ! IFS= read -r marked_plan < "$ACTIVE_PLAN_MARKER"; then
+      rm -f -- "$ACTIVE_PLAN_MARKER"
+      return 1
+    fi
+    marked_plan=$(resolve_plan_dir "$marked_plan") || marked_plan=""
 
     # Validate: plan directory must exist
-    if [[ -n "$marked_plan" && -d "$marked_plan" ]]; then
+    if is_valid_plan_dir "$marked_plan"; then
       # Check if in planning phase (research exists, plan.md doesn't yet)
       if [[ -d "$marked_plan/research" && ! -f "$marked_plan/plan.md" ]]; then
         echo "$marked_plan"
@@ -48,7 +93,7 @@ get_active_plan() {
     fi
 
     # Marker is stale (plan completed or invalid), remove it
-    rm -f "$ACTIVE_PLAN_MARKER"
+    rm -f -- "$ACTIVE_PLAN_MARKER"
   fi
   
   # Fallback: Find most recent plan with unchecked tasks
@@ -63,9 +108,10 @@ get_active_plan() {
     restore_nullglob=1
   fi
 
-  for plan_file in .claude/plans/*/plan.md; do
+  for plan_file in "${PLANS_DIR}"/*/plan.md; do
     [[ -f "$plan_file" ]] || continue
-    grep -q '^\- \[ \]' "$plan_file" 2>/dev/null || continue
+    [[ ! -L "$plan_file" ]] || continue
+    grep -q -- '^\- \[ \]' "$plan_file" 2>/dev/null || continue
 
     plan_mtime=$(get_file_mtime "$plan_file" 2>/dev/null || echo 0)
     if [[ "$plan_mtime" -gt "$newest_mtime" ]]; then
@@ -79,8 +125,12 @@ get_active_plan() {
   fi
 
   if [[ -n "$newest_plan" ]]; then
-    dirname "$newest_plan"
-    return 0
+    local newest_plan_dir
+    newest_plan_dir="${newest_plan%/plan.md}"
+    if is_valid_plan_dir "$newest_plan_dir"; then
+      printf '%s\n' "$newest_plan_dir"
+      return 0
+    fi
   fi
   
   return 1
@@ -89,16 +139,28 @@ get_active_plan() {
 # Set the active plan marker
 # Usage: set_active_plan /path/to/plans/slug
 set_active_plan() {
-  local plan_dir="$1"
-  [[ -n "$plan_dir" ]] || return 1
-  [[ -d "$plan_dir" ]] || return 1
-  
-  echo "$plan_dir" > "$ACTIVE_PLAN_MARKER"
+  local input_plan_dir="$1"
+  local plan_dir
+  local tmp_marker
+
+  is_valid_plan_dir "$input_plan_dir" || return 1
+  plan_dir=$(resolve_plan_dir "$input_plan_dir") || return 1
+
+  mkdir -p -- "$CLAUDE_DIR" || return 1
+  [[ ! -L "$ACTIVE_PLAN_MARKER" ]] || return 1
+
+  tmp_marker=$(mktemp "${CLAUDE_DIR}/ACTIVE_PLAN.XXXXXX") || return 1
+  [[ -n "$tmp_marker" ]] || return 1
+  trap 'rm -f -- "$tmp_marker"' EXIT HUP INT TERM
+
+  printf '%s\n' "$plan_dir" > "$tmp_marker" || return 1
+  mv -f -- "$tmp_marker" "$ACTIVE_PLAN_MARKER" || return 1
+  trap - EXIT HUP INT TERM
 }
 
 # Clear the active plan marker (called on plan completion)
 clear_active_plan() {
-  rm -f "$ACTIVE_PLAN_MARKER"
+  rm -f -- "$ACTIVE_PLAN_MARKER"
 }
 
 # Check if a plan is in full mode (autonomous cycle)
@@ -125,7 +187,7 @@ is_planning_phase() {
 get_plan_slug() {
   local plan_dir="$1"
   [[ -n "$plan_dir" ]] || return 1
-  basename "$plan_dir"
+  printf '%s\n' "${plan_dir##*/}"
 }
 
 # Get plan intent (first heading from plan.md)

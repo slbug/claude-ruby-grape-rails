@@ -13,6 +13,10 @@ end
 
 yaml = YAML.load_file(YAML_SOURCE)
 
+def law_count_label(count)
+  "#{count} #{count == 1 ? 'law' : 'laws'}"
+end
+
 # Generate CLAUDE.md section
 def generate_claude_section(yaml)
   puts '## Iron Laws Enforcement (NON-NEGOTIABLE)'
@@ -124,16 +128,19 @@ def generate_injector_script(yaml)
     output += "#{law['subagent_text']}\n"
   end
 
-  # Escape for shell: use single quotes and escape internal single quotes
-  # Shell single quote rule: end quote, insert escaped quote, start quote
-  escaped_content = output.gsub("'", "'\"'\"'")
-
   puts '#!/usr/bin/env bash'
+  puts 'set -o nounset'
+  puts 'set -o pipefail'
   puts ''
   puts '# GENERATED FROM iron-laws.yml — DO NOT EDIT'
   puts "# Last generated: #{Time.now.utc.strftime('%Y-%m-%dT%H:%M:%SZ')}"
   puts ''
-  puts "additional_context='#{escaped_content}'"
+  puts 'command -v jq >/dev/null 2>&1 || exit 0'
+  puts ''
+  puts "additional_context=$(cat <<'EOF'"
+  puts output
+  puts 'EOF'
+  puts ')'
   puts ''
   puts 'jq -n --arg ctx "$additional_context" \'{"hookSpecificOutput": {"hookEventName": "SubagentStart", "additionalContext": $ctx}}\''
 end
@@ -155,7 +162,7 @@ def generate_canonical_registry(yaml)
   puts ''
 
   yaml['categories'].each do |cat|
-    puts "### #{cat['name']} (#{cat['law_count']} laws)"
+    puts "### #{cat['name']} (#{law_count_label(cat['law_count'])})"
     puts ''
     yaml['laws'].select { |l| l['category'] == cat['id'] }.each do |law|
       puts "#{law['id']}. **#{law['title']}** — #{law['rule']}"
@@ -224,7 +231,7 @@ def generate_judge_section(yaml)
   puts ''
 
   yaml['categories'].each do |cat|
-    puts "### #{cat['name']} (#{cat['law_count']} laws)"
+    puts "### #{cat['name']} (#{law_count_label(cat['law_count'])})"
     puts ''
     yaml['laws'].select { |l| l['category'] == cat['id'] }.each do |law|
       puts "#{law['id']}. **#{law['title']}** — #{law['rule']}"
@@ -252,6 +259,6 @@ when 'readme'
 when 'judge'
   generate_judge_section(yaml)
 else
-  puts "Usage: #{$0} [claude|changelog|injectable|tutorial|injector|canonical|readme|judge]"
+  puts "Usage: #{$PROGRAM_NAME} [claude|changelog|injectable|tutorial|injector|canonical|readme|judge]"
   exit 1
 end

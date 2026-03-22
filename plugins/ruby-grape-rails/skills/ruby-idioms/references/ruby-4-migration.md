@@ -8,7 +8,7 @@ Ruby 4.0.0 was released on **2025-12-25**.
 |---------|--------|-------|
 | ZJIT | Experimental | Successor to YJIT, early benchmarks promising |
 | Prism parser | Default | Improved error messages |
-| Frozen strings | Enforced | No magical comment needed |
+| Frozen strings | Default | No magical comment needed; mutable strings require explicit creation |
 | `it` parameter | Stable | Preferred over numbered params |
 | `Ruby::Box` | Experimental | Not recommended yet |
 
@@ -21,8 +21,8 @@ Ruby 4.0.0 was released on **2025-12-25**.
 puts RubyVM::ZJIT.enabled?  # => true
 
 # Enable:
-# - At runtime: ruby --zjit
-# - Environment: RUBY_ZJIT=1
+# - CLI: ruby --zjit
+# - Runtime: RubyVM::ZJIT.enable
 
 # ZJIT goals (in development):
 # - Faster warmup compared to YJIT
@@ -48,7 +48,7 @@ recommendation for production workloads today.
 | Pattern matching | 3.0+ | Mature in 3.4+ |
 | YJIT | 3.2+ | Still recommended for production (3.2-4.0) |
 | Prism parser | 3.4+ | Default in 4.0 |
-| Frozen strings | 3.4+ | Enforced in 4.0 |
+| Frozen strings | 3.4+ | Default in 4.0 (mutable strings still possible with explicit String.new) |
 
 **Production Recommendation:** Use YJIT on Ruby 3.3+ or 4.0. Rails 7.2+ enables YJIT by default
 when available. ZJIT is experimental—test in staging only.

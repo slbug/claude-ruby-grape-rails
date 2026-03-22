@@ -1,6 +1,6 @@
 ---
 name: security
-description: Rails and Grape security patterns: authorization, parameter shaping, SQL safety, XSS prevention, secret handling, SSRF/open redirects, and secure background job workflows.
+description: "Rails and Grape security patterns: authorization, parameter shaping, SQL safety, XSS prevention, secret handling, SSRF/open redirects, and secure background job workflows."
 user-invocable: false
 ---
 

@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
+set -o nounset
+set -o pipefail
 
 # GENERATED FROM iron-laws.yml — DO NOT EDIT
-# Last generated: 2026-03-22T15:01:00Z
+# Last generated: 2026-03-22T21:06:02Z
 
-additional_context='Ruby/Rails/Grape Iron Laws (NON-NEGOTIABLE) — 21 Total:
+command -v jq >/dev/null 2>&1 || exit 0
+
+additional_context=$(cat <<'EOF'
+Ruby/Rails/Grape Iron Laws (NON-NEGOTIABLE) — 21 Total:
 
 Active Record (7):
 Sidekiq (4):
@@ -29,10 +34,11 @@ Iron Law 14: NEVER use html_safe or raw with untrusted content — XSS vulnerabi
 Iron Law 15: NO SQL string concatenation — always use parameterized queries
 Iron Law 16: NO method_missing without respond_to_missing? — breaks introspection
 Iron Law 17: SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers
-Iron Law 18: DON'"'"'T RESCUE Exception — only rescue StandardError or specific classes
+Iron Law 18: DON'T RESCUE Exception — only rescue StandardError or specific classes
 Iron Law 19: NEVER query DB in Turbo Stream responses — pre-compute everything
 Iron Law 20: ALWAYS use turbo_frame_tag for partial updates
-Iron Law 21: VERIFY BEFORE CLAIMING DONE — never say '"'"'should work'"'"' — run tests and show results
-'
+Iron Law 21: VERIFY BEFORE CLAIMING DONE — never say 'should work' — run tests and show results
+EOF
+)
 
 jq -n --arg ctx "$additional_context" '{"hookSpecificOutput": {"hookEventName": "SubagentStart", "additionalContext": $ctx}}'

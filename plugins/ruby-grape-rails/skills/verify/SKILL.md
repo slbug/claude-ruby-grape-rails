@@ -1,7 +1,7 @@
 ---
 name: rb:verify
 description: Run the project verification stack for Ruby/Rails/Grape work. Detects the project toolchain and uses the strongest available checks. Validates autoloading, linting, tests, security, and migrations.
-argument-hint: [--quick|--full]
+argument-hint: "[--quick|--full]"
 ---
 
 # Verify Ruby Work

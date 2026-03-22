@@ -1,7 +1,7 @@
 ---
 name: rb:state-audit
 description: Audit Rails request state, CurrentAttributes, Turbo stream flows, session usage, caching, and Redis-backed state for leaks, duplication, or confusion.
-argument-hint: [path|feature]
+argument-hint: "[path|feature]"
 ---
 
 # Request State Audit

@@ -30,7 +30,7 @@ Everything revolves around a 4-phase workflow cycle:
    |             |            |              |              |
    v             v            v              v              v
   Research &   Execute     Full check     Parallel       Capture what
-  plan tasks   tasks       zeitwerk/test  code review    you learned
+   plan tasks   tasks       verify/test    code review    you learned
 ```
 
 Each phase reads from the previous phase's output. Plans become checkboxes. Checkboxes track progress. Reviews catch mistakes. Compound knowledge makes future work faster.
@@ -60,7 +60,7 @@ For features that need planning and review:
 # 1b. Brief (optional) — understand the plan before starting
 /rb:brief .claude/plans/user-avatars/plan.md
 
-# 2. Work — executes plan, checks off tasks, runs rails zeitwerk:check
+# 2. Work — executes plan, checks off tasks, verification at checkpoints
 /rb:work .claude/plans/user-avatars/plan.md
 
 # 3. Review — parallel agents check Ruby idioms, security, tests
@@ -147,7 +147,7 @@ Iron Laws are non-negotiable rules that every agent enforces. If your code viola
 
 | Command | What It Does |
 |---------|-------------|
-| `/rb:verify` | Full check: zeitwerk, format (rubocop), test (rspec/minitest) |
+| `/rb:verify` | Full verification: format (StandardRB/RuboCop), test (RSpec/Minitest), and Rails-specific checks (zeitwerk:check when applicable) |
 | `/rb:audit` | 5-agent project health audit with scores |
 | `/rb:n1-check` | Detect N+1 query patterns |
 | `/rb:state-audit` | Audit Hotwire/Turbo stream state for memory |
@@ -184,7 +184,7 @@ The plugin uses **layered enforcement** — some things run automatically, some 
 | Hook | Trigger | What It Does |
 |------|---------|-------------|
 | Dangerous ops block | Before Bash command | Blocks `bin/rails db:reset/drop`, `git push --force`, `RAILS_ENV=prod` |
-| Format check | Every `.rb` edit | Runs `bundle exec rubocop`, warns via stderr + exit 2 |
+| Format check | Every `.rb` edit | Auto-fixes with StandardRB (if configured) or RuboCop |
 | Iron Law verifier | Every `.rb` edit | Scans code content for Iron Law violations with line numbers |
 | Debug stmt warning | Every `.rb` edit | Warns about `puts`/`debugger`/`p` in production code |
 | Security reminder | Editing auth/session/password files | Outputs relevant Iron Laws via stderr + exit 2 |
@@ -194,12 +194,14 @@ The plugin uses **layered enforcement** — some things run automatically, some 
 | Iron Laws injection | Any subagent spawns | Injects all 21 Iron Laws into subagents via `additionalContext` |
 | PreCompact rules | Before context compaction | Re-injects workflow rules via JSON `systemMessage` |
 
-Format check **warns only** — it doesn't auto-fix (that would cause race conditions with the editor).
+Format check **auto-fixes** — runs `standardrb --fix` when StandardRB is configured, otherwise `rubocop -a`.
 
 The PreCompact hook detects active workflow phases (`/rb:plan`, `/rb:work`, `/rb:full`) and re-injects their critical rules
 before context compaction. This prevents "rule amnesia" where Claude loses behavioral constraints after context is compressed.
 
-Note: `verify-ruby.sh` exists in hooks.json but is a **no-op** (`exit 0`). Zeitwerk check was moved to `/rb:work` phase checkpoints for speed. The hook remains as a placeholder.
+Note: `verify-ruby.sh` runs `ruby -c` syntax checks on Ruby files. Verification commands
+(`/rb:verify`, `/rb:full`) run full checks including format, tests, and Rails-specific validations
+(zeitwerk:check for Rails apps).
 
 ### Layer 2: Iron Laws in Skills (Behavioral)
 
@@ -239,7 +241,7 @@ What it adds:
 
 - **7-step mandatory procedure** — complexity scoring, interview questions before coding, reference loading
 - **Iron Laws with STOP protocol** — explicitly tells Claude to halt on violations
-- **Verification rules** — `bundle exec rails zeitwerk:check && bundle exec rubocop -A` after code changes
+- **Verification rules** — Format checks (StandardRB or RuboCop) run automatically; full verification (`/rb:verify`) includes format, tests, and Rails-specific checks (zeitwerk:check when applicable)
 - **Stack-specific rules** — detects Rails version, Sidekiq, Grape from `Gemfile`
 
 ```bash
@@ -274,8 +276,9 @@ Being honest about the gaps:
 
 | Check | Status | Why |
 |-------|--------|-----|
-| `bundle exec rails zeitwerk:check` | `/rb:work` checkpoints + `/rb:full` VERIFYING phase | `verify-ruby.sh` hook is a no-op — zeitwerk runs in workflow steps |
-| `bundle exec rubocop` | `/rb:full` VERIFYING phase + on-demand (`/rb:verify`) | Not run per-task edit, only between phases |
+| Ruby syntax check | PostToolUse hook on Edit/Write | `verify-ruby.sh` runs `ruby -c` on Ruby files |
+| Format check (StandardRB/RuboCop) | PostToolUse hook on Edit/Write | Auto-fixes with StandardRB when configured, else RuboCop |
+| Full verification | `/rb:verify`, `/rb:full` VERIFYING phase | Includes format, tests, and Rails-specific checks (zeitwerk:check for Rails) |
 | `bundle exec rspec` | `/rb:full` VERIFYING phase + on-demand (`/rb:verify`) | Not run per-task, only between phases |
 | Type checking (Steep/Sorbet) | On-demand (`/rb:verify`) | Takes minutes, not seconds |
 | Iron Law detection during coding | Behavioral only | `iron-law-judge` is review-time only |
@@ -286,7 +289,7 @@ Being honest about the gaps:
 AUTOMATIC (hooks):     Format check, security reminders, progress logging, failure hints,
                        Iron Laws in subagents, PreCompact rule preservation
 BEHAVIORAL (Claude):   Iron Laws, skill loading, stop-and-explain
-ON-DEMAND (commands):  /rb:review (iron-law-judge), /rb:verify (zeitwerk/rubocop/rspec)
+ON-DEMAND (commands):  /rb:review (iron-law-judge), /rb:verify (format/tests/zeitwerk for Rails)
 STRENGTHENED BY:       /rb:init (injects rules into project CLAUDE.md)
 ```
 
