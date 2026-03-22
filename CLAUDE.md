@@ -34,21 +34,20 @@ plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
 
 ### Artifact Directories
 
-Each plan owns all its artifacts in a namespace directory:
+Each plan owns its implementation-state artifacts in a namespace directory:
 
 ```
 .claude/
 ├── plans/{slug}/              # Everything for ONE plan
 │   ├── plan.md                # The plan itself
 │   ├── research/              # Research agent output
-│   ├── reviews/               # Review agent output (individual tracks)
 │   ├── summaries/             # Context-supervisor compressed output
 │   ├── progress.md            # Progress log
 │   └── scratchpad.md          # Auto-written decisions, dead-ends, handoffs
 ├── audit/                     # Audit namespace (not plan-specific)
 │   ├── reports/               # 5 specialist agent outputs
 │   └── summaries/             # Supervisor compressed output
-├── reviews/                   # Fallback for ad-hoc reviews (no plan)
+├── reviews/                   # Review artifacts (per-agent + consolidated)
 ├── skill-metrics/             # Skill effectiveness dashboards and recommendations
 │   ├── dashboard-{date}.json  # Per-skill aggregate metrics
 │   └── recommendations-{date}.md  # Improvement recommendations
@@ -674,7 +673,7 @@ When working on code, automatically consult relevant reference documentation bef
 
 **Workflow Commands**: `/rb:plan` -> `/rb:brief` (optional) -> `/rb:plan --existing` (optional) -> `/rb:work` -> `/rb:brief` (optional) -> `/rb:review` -> `/rb:triage` (optional) -> `/rb:compound`
 
-**Review → Follow-up Plan**: After `/rb:review`, if findings reveal scope gaps or missing coverage, use `/rb:plan .claude/plans/{slug}/reviews/{review}.md` to create a follow-up plan from review output.
+**Review → Follow-up Plan**: After `/rb:review`, if findings reveal scope gaps or missing coverage, use `/rb:triage .claude/reviews/{review-slug}.md` to turn selected findings into `.claude/plans/{slug}/plan.md`.
 
 **Standalone**: `/rb:quick`, `/rb:full`, `/rb:investigate`, `/rb:verify`, `/rb:research`
 

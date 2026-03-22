@@ -18,3 +18,11 @@ Review for:
 - Rails environment config and secrets handling
 - Sidekiq process sizing and Redis assumptions
 - health checks and release commands
+
+## Review Artifact Contract
+
+When invoked by `/rb:review`:
+
+- Write `.claude/reviews/deployment-validator/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

@@ -9,7 +9,7 @@ Detailed step-by-step execution for `/rb:full`.
 FEATURE_SLUG=$(echo "{feature}" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd 'a-z0-9-')
 
 # Create directories
-mkdir -p .claude/plans/${FEATURE_SLUG}/{research,reviews,summaries}
+mkdir -p .claude/plans/${FEATURE_SLUG}/{research,summaries}
 
 # Create feature branch (optional)
 git checkout -b feature/$FEATURE_SLUG
@@ -154,7 +154,7 @@ Then output completion:
 
 - Plan: .claude/plans/{feature}/plan.md
 - Progress: .claude/plans/{feature}/progress.md
-- Review: .claude/plans/{feature}/reviews/{feature}-review.md
+- Review: .claude/reviews/{feature}.md
 
 <promise>DONE</promise>
 ```

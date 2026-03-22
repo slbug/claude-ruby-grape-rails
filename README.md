@@ -195,29 +195,29 @@ plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
 ### Key Concepts
 
 - **Filesystem is the state machine.** Each phase reads from the previous phase's output. No hidden state.
-- **Plan namespaces.** Each plan owns all its artifacts in `.claude/plans/{slug}/` -- plan, research, reviews, progress, scratchpad.
+- **Plan namespaces.** Each plan owns its implementation-state artifacts in `.claude/plans/{slug}/` -- plan, research, summaries, progress, scratchpad.
+- **Reviews are standalone artifacts.** Reviewer outputs live under `.claude/reviews/`, not inside plan namespaces.
 - **Plan checkboxes track progress.** `[x]` = done, `[ ]` = pending. `/rb:work` finds the first unchecked task and continues.
 - **One plan = one work unit.** Large features get split into multiple plans. Each is self-contained.
 - **Agents are automatic.** The plugin spawns specialist agents behind the scenes. You don't manage them directly.
 
 ### Plan Namespaces
 
-Every plan gets its own directory with all related artifacts:
+Every plan gets its own directory with its implementation-state artifacts:
 
 ```
 .claude/
 ├── plans/{slug}/          # Everything for ONE plan
 │   ├── plan.md            # The plan itself (checkboxes = state)
 │   ├── research/          # Research agent output
-│   ├── reviews/           # Review findings (individual tracks)
 │   ├── summaries/         # Compressed multi-agent output
 │   ├── progress.md        # Session progress log
 │   └── scratchpad.md      # Auto-written decisions, dead-ends, handoffs
-├── reviews/               # Ad-hoc reviews (no plan context)
+├── reviews/               # Review artifacts (per-agent + consolidated)
 └── solutions/             # Compound knowledge (reusable across plans)
 ```
 
-No more scattered files across `.claude/planning/`, `.claude/progress/`, `.claude/reviews/`. One plan, one directory, everything together.
+Implementation state stays under one plan namespace; review artifacts stay consistently under `.claude/reviews/`.
 
 ## Architecture
 

@@ -137,6 +137,9 @@ grep -r "rescue\s*$\|rescue\s*=>" app/ | grep -v "StandardError"
 
 ## Output Format
 
+When invoked by `/rb:review`, write `.claude/reviews/iron-law-judge/{review-slug}-{datesuffix}.md`.
+Always write an artifact, even for a clean pass. Never write review artifacts under `.claude/plans/...`.
+
 ```markdown
 ### Iron Law Violations
 

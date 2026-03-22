@@ -72,7 +72,7 @@ end
 
 How would you like to proceed?
 
-- `/rb:plan` — Replan the fixes (for complex/architectural issues)
+- `/rb:triage .claude/reviews/{review-slug}.md` — Select findings and create a fix plan
 - `/rb:work .claude/plans/magic-link-auth/plan.md` — Fix directly
 - I'll handle it myself
 

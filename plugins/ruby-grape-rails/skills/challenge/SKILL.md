@@ -148,7 +148,7 @@ Session data confirms this happens without explicit dedup enforcement.
 
 Before running a challenge, **ALWAYS** check for prior review output:
 
-1. **Search** for existing reviews in `.claude/plans/*/reviews/` and `.claude/reviews/`
+1. **Search** for existing reviews in `.claude/reviews/` and `.claude/reviews/*/`
 2. If prior findings exist, **read ALL of them** before analyzing code
 3. Build a PRIOR_FINDINGS list with file:line references
 4. During analysis, check each potential finding against PRIOR_FINDINGS:

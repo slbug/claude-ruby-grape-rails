@@ -23,3 +23,11 @@ Review for:
 - missing regression tests for bugs fixed in this diff
 
 Escalate severe gaps when public behavior changed without tests.
+
+## Review Artifact Contract
+
+When invoked by `/rb:review`:
+
+- Write `.claude/reviews/testing-reviewer/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

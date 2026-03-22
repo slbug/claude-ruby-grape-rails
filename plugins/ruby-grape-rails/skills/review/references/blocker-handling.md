@@ -15,10 +15,10 @@ Review is **findings-only**. It does NOT:
 
 - Create task lists (`- [ ]`)
 - Add fix phases to plan files
-- Modify any files outside `.claude/plans/{slug}/reviews/`
+- Modify any files outside `.claude/reviews/`
 - Start fixing issues
 
-Task creation and planning happen in `/rb:plan` after the user decides.
+Task creation and planning happen in `/rb:triage` after the user decides.
 
 ## Review Outcomes
 
@@ -66,7 +66,7 @@ Review found {actual count} blockers ({actual count} warnings):
 
 How would you like to proceed?
 
-- `/rb:plan .claude/plans/{slug}/reviews/{file}.md` — Replan fixes
+- `/rb:triage .claude/reviews/{review-slug}.md` — Select findings and create a fix plan
   (best for complex or architectural issues)
 - `/rb:work` — Fix directly
   (best for simple, isolated fixes)

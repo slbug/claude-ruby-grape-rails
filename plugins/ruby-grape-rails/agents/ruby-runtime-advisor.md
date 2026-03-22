@@ -19,3 +19,11 @@ Use for questions about:
 - when work belongs in a request, a job, or a separate process
 - Redis and Sidekiq operational boundaries
 - runtime memory or concurrency risks in Ruby app code
+
+## Review Artifact Contract
+
+When invoked by `/rb:review`:
+
+- Write `.claude/reviews/ruby-runtime-advisor/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

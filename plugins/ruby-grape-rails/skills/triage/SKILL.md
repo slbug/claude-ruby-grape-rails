@@ -14,6 +14,7 @@ Batch-select findings from the review before creating follow-up work.
 2. **Separate safety fixes from style preferences** - prioritize data integrity
 3. **Group related findings** - fix together what belongs together
 4. **Defer performance optimizations** without profiling data
+5. **Use structured multi-select, not freeform chat prompts** — when asking the user which findings to keep, use a checkbox-style selection UI
 
 ## Workflow
 
@@ -130,23 +131,25 @@ def group_findings(findings)
 end
 ```
 
-### Step 4: Present to User
+### Step 4: Present to User with Structured Multi-Select
+
+Illustrative expected UI:
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
 ║  TRIAGE: Review Findings                                     ║
-║  Source: .claude/plans/fix-auth/reviews/auth-review.md       ║
+║  Source: .claude/reviews/fix-auth.md                         ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
 ║  🔴 CRITICAL (Auto-selected)                                 ║
 ║  ─────────────────────────────────────────────────────────   ║
-║  [✓] app/models/user.rb:45 - Missing transaction wrap       ║
+║  [✓] app/models/user.rb:45 - Missing transaction wrap        ║
 ║       Iron Law: Wrap related creates in transaction          ║
 ║                                                              ║
-║  [✓] app/jobs/email_job.rb:12 - Passing AR object to job    ║
+║  [✓] app/jobs/email_job.rb:12 - Passing AR object to job     ║
 ║       Iron Law: Pass IDs, not objects                        ║
 ║                                                              ║
-║  [✓] app/controllers/orders_controller.rb:23 - N+1 Query    ║
+║  [✓] app/controllers/orders_controller.rb:23 - N+1 Query     ║
 ║       50 queries where 2 would suffice                       ║
 ║                                                              ║
 ║  ─────────────────────────────────────────────────────────   ║
@@ -156,11 +159,11 @@ end
 ║                                                              ║
 ║  🟠 HIGH (Recommended)                                       ║
 ║  ─────────────────────────────────────────────────────────   ║
-║  [✓] app/services/payment.rb:34 - Bare rescue               ║
-║       Catches all exceptions including SystemExit            ║
+║  [✓] app/services/payment.rb:34 - Bare rescue                ║
+║       Catches broad exceptions                               ║
 ║                                                              ║
-║  [ ] app/models/order.rb:89 - Missing test for edge case    ║
-║       Refund logic has no test coverage                      ║
+║  [ ] app/models/order.rb:89 - Missing test for edge case     ║
+║       Refund logic has no regression coverage                ║
 ║                                                              ║
 ║  ─────────────────────────────────────────────────────────   ║
 ║  1 of 2 selected                                             ║
@@ -169,40 +172,70 @@ end
 ║                                                              ║
 ║  🟡 MEDIUM (Optional)                                        ║
 ║  ─────────────────────────────────────────────────────────   ║
-║  [ ] app/helpers/formatting.rb:12 - Method too long         ║
-║       45 lines (limit: 20)                                   ║
+║  [ ] app/helpers/formatting.rb:12 - Method too long          ║
+║       45 lines                                               ║
 ║                                                              ║
-║  [ ] app/models/user.rb:23 - Could use delegate             ║
+║  [ ] app/models/user.rb:23 - Could use delegate              ║
 ║       Redundant wrapper method                               ║
 ║                                                              ║
 ║  ─────────────────────────────────────────────────────────   ║
 ║  0 of 2 selected                                             ║
 ║                                                              ║
-╠══════════════════════════════════════════════════════════════╣
-║                                                              ║
-║  🟢 LOW (Defer)                                              ║
-║  ─────────────────────────────────────────────────────────   ║
-║  [ ] app/views/layouts/application.html.erb:5 - Quotes      ║
-║       Single vs double quotes                                ║
-║                                                              ║
-║  ─────────────────────────────────────────────────────────   ║
-║  0 of 1 selected (will be excluded)                          ║
-║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
-
-[Confirm Selection]  [Edit Selection]  [Cancel]
 ```
+
+Use `AskUserQuestion` with `multiSelect: true`.
+
+Do **not** ask the user to type `confirm`, `drop W2`, or other freeform selection commands if structured selection is available.
+
+Rules:
+
+- auto-include all Critical / Iron Law findings before asking
+- offer severity shortcuts first
+- then list individual findings
+- if there are more than 6 selectable items, batch them into multiple `AskUserQuestion` screens
+- each option description must include file, line, and a one-line reason
+
+Example:
+
+```yaml
+AskUserQuestion:
+  header: "Triage"
+  multiSelect: true
+  question: "Which non-critical findings do you want to fix now? Critical items are already included."
+  options:
+    - label: "All HIGH (2)"
+      description: "Include all high-priority findings"
+    - label: "All MEDIUM (2)"
+      description: "Include all medium-priority findings"
+    - label: "W1 Bare rescue"
+      description: "app/services/payment.rb:34 — catches broad exceptions"
+    - label: "W2 Missing edge-case test"
+      description: "app/models/order.rb:89 — refund path lacks regression coverage"
+    - label: "M1 Method too long"
+      description: "app/helpers/formatting.rb:12 — 45 lines"
+    - label: "M2 Could use delegate"
+      description: "app/models/user.rb:23 — redundant wrapper method"
+```
+
+The resulting selection state should be summarized back to the user in a short confirmation such as:
+
+- auto-included: `C1 C2 C3`
+- selected: `W1`
+- deferred: `W2 M1 M2`
 
 ### Step 5: Write Triage Output
 
-```yaml
-# .claude/plans/{slug}/reviews/{slug}-triage.md
----
-triage_date: 2024-01-15T10:30:00Z
-review_source: auth-review.md
-reviewer: rb:review
-triaged_by: user
----
+```markdown
+# .claude/plans/{slug}/plan.md
+
+# Plan: Fix auth review findings
+
+## Metadata
+- Created: 2024-01-15T10:30:00Z
+- Source Review: .claude/reviews/fix-auth.md
+- Generated By: /rb:triage
+- Triaged By: user
 
 ## Summary
 
@@ -214,33 +247,31 @@ triaged_by: user
 | Low | 1 | 0 | 1 |
 | **Total** | **8** | **4** | **4** |
 
-## Selected Findings
+## Phase 1: Critical Fixes
 
-### Critical
+- [ ] Fix transaction wrap in `app/models/user.rb:45`
+  - Rule: Iron Law - Transaction Safety
+  - Source: .claude/reviews/fix-auth.md
+  - Estimated effort: 15 minutes
 
-1. **app/models/user.rb:45** - Missing transaction wrap
-   - Rule: Iron Law - Transaction Safety
-   - Fix: Wrap user + profile creation in transaction
-   - Estimated effort: 15 minutes
+- [ ] Fix JSON-safe args in `app/jobs/email_job.rb:12`
+  - Rule: Iron Law - JSON-Safe Arguments
+  - Source: .claude/reviews/fix-auth.md
+  - Estimated effort: 10 minutes
 
-2. **app/jobs/email_job.rb:12** - Passing AR object to job
-   - Rule: Iron Law - JSON-Safe Arguments
-   - Fix: Pass user_id instead of user
-   - Estimated effort: 10 minutes
+- [ ] Fix N+1 query in `app/controllers/orders_controller.rb:23`
+  - Rule: Query Performance
+  - Source: .claude/reviews/fix-auth.md
+  - Estimated effort: 5 minutes
 
-3. **app/controllers/orders_controller.rb:23** - N+1 Query
-   - Rule: Query Performance
-   - Fix: Add includes(:items, :customer)
-   - Estimated effort: 5 minutes
+## Phase 2: High-Priority Fixes
 
-### High
+- [ ] Replace bare rescue in `app/services/payment.rb:34`
+  - Rule: Error Handling
+  - Source: .claude/reviews/fix-auth.md
+  - Estimated effort: 10 minutes
 
-4. **app/services/payment.rb:34** - Bare rescue
-   - Rule: Error Handling
-   - Fix: Rescue specific exceptions
-   - Estimated effort: 10 minutes
-
-## Excluded Findings
+## Deferred Findings
 
 ### High (Deferred)
 
@@ -261,7 +292,7 @@ triaged_by: user
 
 1. Run `/rb:work` to fix the 4 selected items
 2. Estimated time: 40 minutes
-3. Review excluded items in future sprint
+3. Review deferred items in future sprint
 ```
 
 ## Decision Tree
@@ -346,20 +377,20 @@ end
 # → Creates review file
 
 # Then triage
-/rb:triage .claude/plans/fix-user-model/reviews/user-review.md
-# → Interactive triage session
+/rb:triage .claude/reviews/fix-user-model.md
+# → Creates .claude/plans/fix-user-model/plan.md
 
 # Then work on selected items
-/rb:work .claude/plans/fix-user-model/reviews/user-triage.md
+/rb:work .claude/plans/fix-user-model/plan.md
 ```
 
 ### Direct to Work
 
-If triage file has auto-selected critical items:
+If triage generated a plan with selected critical items:
 
 ```bash
-/rb:work .claude/plans/fix-user-model/reviews/user-triage.md
-# → Works on all selected items without re-asking
+/rb:work .claude/plans/fix-user-model/plan.md
+# → Works on the selected findings as normal plan tasks
 ```
 
 ## Edge Cases
@@ -404,29 +435,13 @@ These may conflict. Review together?
 
 ### For Plan
 
-```yaml
-# Creates plan with selected findings as tasks
----
-name: Fix Auth Issues
-description: Address critical findings from auth review
----
-
-## Tasks
+```markdown
+# Creates `.claude/plans/{slug}/plan.md` with selected findings as tasks
 
 - [ ] Fix transaction wrap in User.create_with_profile
 - [ ] Fix JSON-safe args in EmailJob
 - [ ] Fix N+1 in OrdersController#index
 - [ ] Fix bare rescue in PaymentService
-```
-
-### For Work
-
-```yaml
-# Creates work session focused on selected items
-type: triage_work
-triage_source: auth-triage.md
-selected_findings: [1, 2, 3, 4]
-auto_verify: true
 ```
 
 ### For Compound

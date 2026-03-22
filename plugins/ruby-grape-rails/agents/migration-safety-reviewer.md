@@ -133,7 +133,8 @@ end
 
 ## Output Format
 
-Write findings to `.claude/plans/{slug}/reviews/schema-drift-{timestamp}.md`:
+Write findings to `.claude/reviews/migration-safety-reviewer/{review-slug}-{datesuffix}.md`.
+Always write an artifact, even for a clean pass. Never write review artifacts under `.claude/plans/...`.
 
 ```markdown
 # Schema Drift Review

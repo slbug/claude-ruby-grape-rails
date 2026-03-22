@@ -10,7 +10,7 @@ These rules govern ALL `/rb:*` command execution. Violations invalidate the sess
 
 1. **Skills are PROCEDURES, not suggestions.** Every numbered step MUST execute. Do not skip, reorder, or "optimize away" steps.
 2. **Agent spawning is MANDATORY when a skill says "spawn" or "always run".** Zero agents spawned when the skill requires them = skill failure.
-3. **Every skill MUST produce its required artifact file** (`.claude/plans/{slug}/`, `.claude/plans/{slug}/reviews/`, etc.). Chat-only output without the artifact = skill failure.
+3. **Every skill MUST produce its required artifact file** (`.claude/plans/{slug}/`, `.claude/reviews/`, etc.). Chat-only output without the artifact = skill failure.
 4. **"Already implemented" is a FINDING, not an exit.** If investigation reveals the feature exists, document that finding in the required artifact. Do not bail out of the workflow.
 5. **Read the SKILL.md BEFORE executing.** Parse the workflow steps and execute them sequentially. Do not improvise a different workflow.
 6. **No unauthorized judgment calls.** If the skill does not define an early-exit condition, there is no early exit.
