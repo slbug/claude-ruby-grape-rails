@@ -72,6 +72,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   where explicit local reference paths improve reliability across plugin cache
   and install contexts.
 
+### Fixed
+
+- Normalized `file_path` handling across remaining validation/warning hooks so
+  repo-relative hook payload paths resolve against the workspace root instead of
+  silently no-oping outside the repo cwd.
+- Hardened `/rb:document` pre-check guidance for shallow/new repos so the
+  “recent Ruby files” gate no longer relies on a brittle `HEAD~5` pipeline.
+- Made Iron Law regeneration fail when bounded replacement markers are malformed
+  instead of logging success on unchanged content.
+- Tightened explicit-root modular detection so supported roots require
+  package-shaped evidence while still recognizing lighter Ruby/Grape package
+  layouts.
+- Rebalanced active-plan fallback so actionable work plans beat stale
+  planning-phase directories when the `ACTIVE_PLAN` marker is missing.
+- Aligned SessionStart stack reporting with `detect-stack.rb`, eliminating raw
+  Gemfile grep false positives from commented-out gems.
+- Removed misleading `zeitwerk:check --resolve` guidance from `/rb:verify`.
+
 ## [1.0.4] - 2026-03-23
 
 ### Fixed

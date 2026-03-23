@@ -60,17 +60,9 @@ if [[ -f "$PROJECT_LOCKFILE" ]]; then
   FALLBACK_RAILS_VERSION=$(grep -m 1 -E "^    rails " "$PROJECT_LOCKFILE" | sed 's/.*(\(.*\)).*/\1/')
 fi
 
-# Detect stack gems
-[[ -f "$PROJECT_GEMFILE" ]] && grep -Eq "gem ['\"]grape['\"]" "$PROJECT_GEMFILE" && STACK+=("Grape")
-[[ -f "$PROJECT_GEMFILE" ]] && grep -Eq "gem ['\"]sidekiq['\"]" "$PROJECT_GEMFILE" && STACK+=("Sidekiq")
-[[ -f "$PROJECT_GEMFILE" ]] && grep -Eq "gem ['\"]redis['\"]|gem ['\"]redis-client['\"]" "$PROJECT_GEMFILE" && STACK+=("Redis")
-[[ -f "$PROJECT_GEMFILE" ]] && grep -Eq "gem ['\"]pg['\"]" "$PROJECT_GEMFILE" && STACK+=("PostgreSQL")
-[[ -f "$PROJECT_GEMFILE" ]] && grep -Eq "gem ['\"]mysql2['\"]" "$PROJECT_GEMFILE" && STACK+=("MySQL")
-[[ -f "$PROJECT_GEMFILE" ]] && grep -Eq "gem ['\"]solid_queue['\"]" "$PROJECT_GEMFILE" && STACK+=("SolidQueue")
-[[ -f "$PROJECT_GEMFILE" ]] && grep -Eq "gem ['\"]karafka['\"]" "$PROJECT_GEMFILE" && STACK+=("Karafka")
-
 # Detect richer stack/package signals via the shared init detector.
 STACK_DETECTOR="${SCRIPT_DIR}/../../scripts/detect-stack.rb"
+DETECTED_STACK_RAW=""
 if command -v ruby >/dev/null 2>&1 && [[ -f "$STACK_DETECTOR" && ! -L "$STACK_DETECTOR" ]]; then
   while IFS= read -r line; do
     [[ -n "$line" ]] || continue
@@ -79,6 +71,7 @@ if command -v ruby >/dev/null 2>&1 && [[ -f "$STACK_DETECTOR" && ! -L "$STACK_DE
     value="${line#*=}"
 
     case "$key" in
+      DETECTED_STACK) DETECTED_STACK_RAW="$value" ;;
       RAILS_VERSION) [[ -n "$value" ]] && RAILS_VERSION="$value" ;;
       ACTIVERECORD_VERSION) ACTIVERECORD_VERSION="$value" ;;
       SEQUEL_VERSION) SEQUEL_VERSION="$value" ;;
@@ -106,6 +99,20 @@ if [[ "$FULL_RAILS_APP" == "true" ]]; then
   fi
   STACK+=("Rails")
 fi
+
+for component in ${DETECTED_STACK_RAW//,/ }; do
+  case "$component" in
+    grape) STACK+=("Grape") ;;
+    sidekiq) STACK+=("Sidekiq") ;;
+    redis) STACK+=("Redis") ;;
+    postgres) STACK+=("PostgreSQL") ;;
+    mysql) STACK+=("MySQL") ;;
+    solid_queue) STACK+=("SolidQueue") ;;
+    karafka) STACK+=("Karafka") ;;
+    hotwire) STACK+=("Hotwire") ;;
+    rails) : ;;
+  esac
+done
 
 if [[ -n "$DETECTED_ORMS" ]]; then
   [[ "$DETECTED_ORMS" == *"active_record"* ]] && STACK+=("ActiveRecord")

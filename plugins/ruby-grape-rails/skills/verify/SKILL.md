@@ -56,11 +56,9 @@ bundle exec rails zeitwerk:check
    Fix: Move to app/models/concerns/validatable.rb
 ```
 
-**Auto-fix**: Some issues can be auto-corrected
-
-```bash
-bundle exec rails zeitwerk:check --resolve
-```
+**No generic auto-fix flag**: `zeitwerk:check` reports the mismatch, but you
+need to fix the file name, constant name, or inflector configuration yourself
+and rerun the check.
 
 ### 2. Linting
 

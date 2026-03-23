@@ -91,6 +91,23 @@ def package_content_markers
   ]
 end
 
+def soft_package_content_markers
+  %w[
+    query
+    queries
+    handler
+    handlers
+    adapter
+    adapters
+    consumer
+    consumers
+    event
+    events
+    client
+    clients
+  ]
+end
+
 def package_manifests
   package_root_patterns.flat_map { |root| Dir.glob("#{root}/*/package.yml") }
                        .select do |path|
@@ -107,6 +124,10 @@ def package_dir_candidate?(path)
     safe_directory?(File.join(path, entry))
   end
 
+  return true if soft_package_content_markers.any? do |entry|
+    safe_directory?(File.join(path, entry))
+  end
+
   # Inside explicit package roots, be softer but still require code/package-ish
   # evidence, not just any arbitrary directory.
   entries = Dir.children(path).reject { |entry| entry.start_with?('.') }
@@ -118,16 +139,7 @@ def package_dir_candidate?(path)
   end
   return true if ruby_file_present
 
-  dir_entries = entries.select do |entry|
-    next false if entry.start_with?('.')
-
-    child = File.join(path, entry)
-    safe_directory?(child)
-  end
-
-  return false if dir_entries.empty?
-
-  dir_entries.count >= 2
+  false
 rescue SystemCallError
   false
 end
@@ -155,6 +167,7 @@ orms = []
   'sidekiq' => 'sidekiq',
   'karafka' => 'karafka',
   'hotwire' => 'hotwire-rails',
+  'solid_queue' => 'solid_queue',
   'mysql' => 'mysql2',
   'postgres' => 'pg'
 }.each do |component, gem_name|
@@ -165,11 +178,16 @@ orms = []
   versions[component] = version if version
 end
 
+if gem_present?(gemfile, 'redis') || gem_present?(gemfile, 'redis-client')
+  detected << 'redis'
+  versions['redis'] = lock_version(lockfile, 'redis') || lock_version(lockfile, 'redis-client')
+end
+
 orms << 'active_record' if gem_present?(gemfile, 'rails') || gem_present?(gemfile, 'activerecord')
 orms << 'sequel' if gem_present?(gemfile, 'sequel') || gem_present?(gemfile, 'sequel-rails')
 orms.uniq!
 versions['activerecord'] = lock_version(lockfile, 'activerecord') if gem_present?(gemfile, 'activerecord')
-versions['sequel'] = lock_version(lockfile, 'sequel') if gem_present?(gemfile, 'sequel')
+versions['sequel'] = lock_version(lockfile, 'sequel') if orms.include?('sequel')
 
 rails_component_gems = %w[
   activesupport
@@ -186,6 +204,7 @@ rails_component_gems = %w[
 detected_rails_components = rails_component_gems.select { |gem_name| gem_present?(gemfile, gem_name) }
 rails_components = detected_rails_components.any?
 full_rails_app = gem_present?(gemfile, 'rails')
+detected.uniq!
 
 # Determine Rails version
 rails_version = if defined?(Rails::VERSION)

@@ -37,8 +37,11 @@ Generate documentation for newly implemented features.
 ### Step 0: Pre-check (avoid no-op runs)
 
 ```bash
-# Check if any NEW .rb files exist in recent commits
-git diff --name-only HEAD~5 | grep '\.rb$' | head -20
+# Check if any NEW .rb files exist in recent commits without assuming HEAD~5 exists
+BASE_REF=$(git rev-parse --verify HEAD~5 2>/dev/null || git rev-list --max-parents=0 HEAD 2>/dev/null | tail -1)
+if [[ -n "$BASE_REF" ]]; then
+  git diff --name-only "${BASE_REF}" HEAD -- '*.rb' | head -20
+fi
 ```
 
 If NO new `.rb` files were added (only modifications), skip the full
@@ -51,7 +54,7 @@ zero output (confirmed: session bb0a0454 wasted ~2K tokens on no-op).
 3. **Generate** missing docs using templates
 4. **Add** README section if user-facing feature
 5. **Create** ADR if architectural decision was made
-6. **Write** report to `.claude/plans/{slug}/reviews/{feature}-docs.md`
+6. **Write** report to `.claude/plans/{slug}/docs/{feature}.md`
 
 ## When to Generate ADRs
 

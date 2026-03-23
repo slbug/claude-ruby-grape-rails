@@ -8,8 +8,8 @@ set -o pipefail
 #
 # The active plan is determined by:
 # 1. Explicit marker file (.claude/ACTIVE_PLAN) - primary
-# 2. Fallback: most recent planning-phase plan (research exists, plan.md absent)
-# 3. Fallback: most recently modified plan with unchecked tasks
+# 2. Fallback: most recently modified plan with unchecked tasks
+# 3. Fallback: most recent planning-phase plan (research exists, plan.md absent)
 #
 # Marker file lifecycle:
 # - Written by: /rb:plan (after creating plan)
@@ -118,40 +118,8 @@ get_active_plan() {
     rm -f -- "$ACTIVE_PLAN_MARKER"
   fi
   
-  # Fallback 1: Find most recent planning-phase plan (research exists, plan.md absent)
+  # Fallback 1: Find most recent plan with unchecked tasks
   local restore_nullglob=0
-  local newest_planning_dir=""
-  local newest_planning_mtime=-1
-  local plan_dir
-  local planning_mtime
-
-  if ! shopt -q nullglob; then
-    shopt -s nullglob
-    restore_nullglob=1
-  fi
-
-  for plan_dir in "${PLANS_DIR}"/*; do
-    [[ -d "$plan_dir" ]] || continue
-    [[ ! -L "$plan_dir" ]] || continue
-    [[ -d "$plan_dir/research" ]] || continue
-    [[ ! -f "$plan_dir/plan.md" ]] || continue
-
-    planning_mtime=$(get_file_mtime "$plan_dir/research" 2>/dev/null || echo 0)
-    if [[ "$planning_mtime" -gt "$newest_planning_mtime" ]]; then
-      newest_planning_dir="$plan_dir"
-      newest_planning_mtime="$planning_mtime"
-    fi
-  done
-
-  if [[ -n "$newest_planning_dir" ]] && is_valid_plan_dir "$newest_planning_dir"; then
-    printf '%s\n' "$newest_planning_dir"
-    if [[ "$restore_nullglob" -eq 1 ]]; then
-      shopt -u nullglob
-    fi
-    return 0
-  fi
-
-  # Fallback 2: Find most recent plan with unchecked tasks
   local newest_plan=""
   local newest_mtime=-1
   local plan_file
@@ -185,6 +153,39 @@ get_active_plan() {
       printf '%s\n' "$newest_plan_dir"
       return 0
     fi
+  fi
+
+  # Fallback 2: Find most recent planning-phase plan (research exists, plan.md absent)
+  local newest_planning_dir=""
+  local newest_planning_mtime=-1
+  local plan_dir
+  local planning_mtime
+
+  if ! shopt -q nullglob; then
+    shopt -s nullglob
+    restore_nullglob=1
+  fi
+
+  for plan_dir in "${PLANS_DIR}"/*; do
+    [[ -d "$plan_dir" ]] || continue
+    [[ ! -L "$plan_dir" ]] || continue
+    [[ -d "$plan_dir/research" ]] || continue
+    [[ ! -f "$plan_dir/plan.md" ]] || continue
+
+    planning_mtime=$(get_file_mtime "$plan_dir/research" 2>/dev/null || echo 0)
+    if [[ "$planning_mtime" -gt "$newest_planning_mtime" ]]; then
+      newest_planning_dir="$plan_dir"
+      newest_planning_mtime="$planning_mtime"
+    fi
+  done
+
+  if [[ "$restore_nullglob" -eq 1 ]]; then
+    shopt -u nullglob
+  fi
+
+  if [[ -n "$newest_planning_dir" ]] && is_valid_plan_dir "$newest_planning_dir"; then
+    printf '%s\n' "$newest_planning_dir"
+    return 0
   fi
   
   return 1

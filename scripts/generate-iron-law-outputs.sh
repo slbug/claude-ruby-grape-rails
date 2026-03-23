@@ -64,6 +64,10 @@ update_file() {
 
     # Find and replace bounded section
     pattern = /(#{Regexp.escape(start_marker)}).*?(#{Regexp.escape(end_marker)})/m
+    unless content.match?(pattern)
+      warn "Bounded replacement markers not found or malformed in #{file}"
+      exit 1
+    end
     replacement = "#{start_marker}\n\n<!-- GENERATED FROM iron-laws.yml — DO NOT EDIT -->\n\n#{new_content}\n#{end_marker}"
 
     new_file_content = content.sub(pattern, replacement)
@@ -157,13 +161,17 @@ generate_all() {
           end_marker = ARGV[2]
           new_content = STDIN.read
 
-          content = File.read(file)
+	          content = File.read(file)
 
-          # Find and replace bounded section
-          pattern = /(#{Regexp.escape(start_marker)}).*?(#{Regexp.escape(end_marker)})/m
-          replacement = "#{start_marker}\n\n<!-- GENERATED FROM iron-laws.yml — DO NOT EDIT -->\n\n#{new_content}\n#{end_marker}"
+	          # Find and replace bounded section
+	          pattern = /(#{Regexp.escape(start_marker)}).*?(#{Regexp.escape(end_marker)})/m
+	          unless content.match?(pattern)
+	            warn "Bounded replacement markers not found or malformed in #{file}"
+	            exit 1
+	          end
+	          replacement = "#{start_marker}\n\n<!-- GENERATED FROM iron-laws.yml — DO NOT EDIT -->\n\n#{new_content}\n#{end_marker}"
 
-          new_file_content = content.sub(pattern, replacement)
+	          new_file_content = content.sub(pattern, replacement)
 
           File.write(file, new_file_content)
           puts "Updated #{file}"
