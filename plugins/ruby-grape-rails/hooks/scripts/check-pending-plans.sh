@@ -5,12 +5,12 @@ set -o pipefail
 # Stop hook: Warn about plans with uncompleted tasks
 # Guard against infinite loops per Claude Code docs
 command -v jq >/dev/null 2>&1 || exit 0
-INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
+INPUT=$(read_hook_input)
 REPO_ROOT=$(resolve_workspace_root "$INPUT")
 PLANS_DIR="${REPO_ROOT}/.claude/plans"
 

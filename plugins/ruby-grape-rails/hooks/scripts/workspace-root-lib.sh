@@ -6,6 +6,14 @@
 # 2. Hook payload .cwd (when hook input JSON is available)
 # 3. Current working directory
 
+read_hook_input() {
+  if [[ -t 0 ]]; then
+    printf '%s' ""
+  else
+    cat
+  fi
+}
+
 normalize_workspace_dir() {
   local dir="$1"
   [[ -n "$dir" ]] || return 1

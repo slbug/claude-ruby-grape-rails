@@ -3,14 +3,16 @@ set -o nounset
 set -o pipefail
 
 command -v jq >/dev/null 2>&1 || exit 0
-INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
+INPUT=$(read_hook_input)
 REPO_ROOT=$(resolve_workspace_root "$INPUT")
 CLAUDE_DIR="${REPO_ROOT}/.claude"
+HOOK_STATE_DIR="${CLAUDE_DIR}/.hook-state"
+FAILURES_ROOT="${HOOK_STATE_DIR}/failures"
 
 COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
 ERROR=$(printf '%s' "$INPUT" | jq -r '.error // empty' 2>/dev/null) || ERROR=""
@@ -24,7 +26,16 @@ esac
 SESSION_KEY=$(printf '%s' "$SESSION_ID" | tr -c '[:alnum:]_-' '_')
 CMD_KEY=$(printf '%s' "$COMMAND" | cksum | awk '{print $1}')
 [[ ! -L "$CLAUDE_DIR" ]] || exit 0
-FAILURE_DIR="${REPO_ROOT}/.claude/.hook-state/failures/${SESSION_KEY}"
+mkdir -p -- "$CLAUDE_DIR" || exit 0
+[[ -d "$CLAUDE_DIR" ]] || exit 0
+[[ ! -L "$HOOK_STATE_DIR" ]] || exit 0
+mkdir -p -- "$HOOK_STATE_DIR" || exit 0
+[[ -d "$HOOK_STATE_DIR" ]] || exit 0
+[[ ! -L "$FAILURES_ROOT" ]] || exit 0
+mkdir -p -- "$FAILURES_ROOT" || exit 0
+[[ -d "$FAILURES_ROOT" ]] || exit 0
+FAILURE_DIR="${FAILURES_ROOT}/${SESSION_KEY}"
+[[ ! -L "$FAILURE_DIR" ]] || exit 0
 mkdir -p -- "$FAILURE_DIR" || exit 0
 [[ -d "$FAILURE_DIR" && ! -L "$FAILURE_DIR" ]] || exit 0
 FAILURE_LOG="$FAILURE_DIR/${CMD_KEY}.log"
@@ -47,7 +58,7 @@ cleanup_error_critic() {
 trap cleanup_error_critic EXIT HUP INT TERM
 
 if [[ -f "$COUNT_FILE" ]]; then
-  COUNT=$(cat -- "$COUNT_FILE")
+  IFS= read -r COUNT < "$COUNT_FILE" || COUNT=0
   [[ "$COUNT" =~ ^[0-9]+$ ]] || COUNT=0
   COUNT=$((COUNT + 1))
 else
@@ -68,7 +79,8 @@ TMP_COUNT=""
 
 TRIMMED_LOG=$(mktemp "${FAILURE_DIR}/trimmed.XXXXXX") || exit 0
 [[ -n "$TRIMMED_LOG" ]] || exit 0
-tail -100 "$FAILURE_LOG" > "$TRIMMED_LOG" && mv -f -- "$TRIMMED_LOG" "$FAILURE_LOG"
+tail -100 "$FAILURE_LOG" > "$TRIMMED_LOG" || exit 0
+mv -f -- "$TRIMMED_LOG" "$FAILURE_LOG" || exit 0
 TRIMMED_LOG=""
 
 if [[ "$COUNT" -lt 2 ]]; then

@@ -9,12 +9,12 @@ set -o pipefail
 # Auto-fixes formatting issues when possible
 
 command -v jq >/dev/null 2>&1 || exit 0
-INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
+INPUT=$(read_hook_input)
 REPO_ROOT=$(resolve_workspace_root "$INPUT")
 PROJECT_GEMFILE="${REPO_ROOT}/Gemfile"
 PROJECT_LOCKFILE="${REPO_ROOT}/Gemfile.lock"

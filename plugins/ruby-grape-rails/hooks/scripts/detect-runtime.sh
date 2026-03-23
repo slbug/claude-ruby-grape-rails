@@ -14,7 +14,6 @@ REPO_ROOT=$(resolve_workspace_root)
 PROJECT_GEMFILE="${REPO_ROOT}/Gemfile"
 PROJECT_LOCKFILE="${REPO_ROOT}/Gemfile.lock"
 CLAUDE_DIR="${REPO_ROOT}/.claude"
-[[ ! -L "$REPO_ROOT" ]] || exit 0
 
 STACK=()
 TOOLS=()

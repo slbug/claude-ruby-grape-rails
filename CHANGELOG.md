@@ -11,6 +11,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Merged `detect-runtime.sh`, `detect-betterleaks.sh`, and `detect-rtk.sh` into one SessionStart detector that exports runtime, tool, and hook-mode state
 - Added hook modes: `default` for quieter startup / targeted secret scanning, `strict` for broader secret checks
+- Fixed hook workspace-root resolution so installed plugins use the active project workspace instead of the plugin cache for `.claude/` state, formatter detection, and resume/plan tracking
+- Expanded post-write hook coverage from `Edit|Write` to `Edit|MultiEdit|Write`
+- Hardened hook path handling, `.runtime_env` persistence, and sourceable runtime state generation
+- Clarified contributor testing guidance: `claude --plugin-dir ...` is the primary local working-tree workflow, while local marketplace install validates marketplace distribution behavior
+- Added MySQL detection (`mysql2`) alongside PostgreSQL in runtime and init stack detection
 - Switched marketplace plugin source to `git-subdir` so URL-based marketplace distribution can target `plugins/ruby-grape-rails/`
 
 ## [1.0.2] - 2026-03-23
