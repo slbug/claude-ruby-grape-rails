@@ -18,10 +18,8 @@ PLANS_DIR="${REPO_ROOT}/.claude/plans"
 
 FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
 [[ -n "$FILE_PATH" ]] || exit 0
-
-if [[ "$FILE_PATH" != /* ]]; then
-  FILE_PATH="${REPO_ROOT}/${FILE_PATH#./}"
-fi
+FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || exit 0
+is_path_within_root "$REPO_ROOT" "$FILE_PATH" || exit 0
 
 # Only trigger for plan.md files
 case "$FILE_PATH" in

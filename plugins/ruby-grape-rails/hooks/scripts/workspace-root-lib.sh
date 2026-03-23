@@ -10,12 +10,8 @@ normalize_workspace_dir() {
   local dir="$1"
   [[ -n "$dir" ]] || return 1
 
-  if [[ -d "$dir" ]]; then
-    (cd "$dir" >/dev/null 2>&1 && pwd -P) || printf '%s\n' "$dir"
-    return 0
-  fi
-
-  printf '%s\n' "$dir"
+  [[ -d "$dir" ]] || return 1
+  (cd "$dir" >/dev/null 2>&1 && pwd -P) || return 1
 }
 
 canonicalize_existing_path() {
@@ -67,15 +63,17 @@ resolve_workspace_root() {
   local root="${CLAUDE_PROJECT_DIR:-}"
 
   if [[ -n "$root" ]]; then
-    normalize_workspace_dir "$root"
-    return 0
+    if normalize_workspace_dir "$root"; then
+      return 0
+    fi
   fi
 
   if [[ -n "$input" ]] && command -v jq >/dev/null 2>&1; then
     root=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null) || root=""
     if [[ -n "$root" ]]; then
-      normalize_workspace_dir "$root"
-      return 0
+      if normalize_workspace_dir "$root"; then
+        return 0
+      fi
     fi
   fi
 

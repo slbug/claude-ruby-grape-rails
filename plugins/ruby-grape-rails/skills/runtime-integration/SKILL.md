@@ -41,11 +41,13 @@ The `detect-runtime.sh` hook runs automatically at session start and detects:
 TIDEWAVE_GEM_PRESENT=true
 TIDEWAVE_PROJECT_CAPABLE=true
 
-# Exported for hook coordination:
+# Persisted in .claude/.runtime_env for hook coordination:
 HOOK_MODE=default
 BETTERLEAKS_AVAILABLE=true
 RTK_AVAILABLE=true
 ```
+
+Other hooks must read or source `${REPO_ROOT}/.claude/.runtime_env` to consume these values; they are not automatically exported into every hook process environment.
 
 If Tidewave is not detected, runtime commands will provide setup guidance.
 
