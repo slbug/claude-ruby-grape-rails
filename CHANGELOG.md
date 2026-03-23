@@ -71,6 +71,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`${CLAUDE_SKILL_DIR}` adoption** was added selectively in workflow skills
   where explicit local reference paths improve reliability across plugin cache
   and install contexts.
+- **`/rb:intro` tutorial wording** now clearly separates hook-backed automation
+  from behavioral file-pattern guidance, so context-aware references are no
+  longer described like guaranteed plugin infrastructure.
 
 ### Fixed
 
@@ -86,9 +89,26 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   layouts.
 - Rebalanced active-plan fallback so actionable work plans beat stale
   planning-phase directories when the `ACTIVE_PLAN` marker is missing.
+- Improved planning-phase rediscovery recency so fallback uses real planning
+  activity under `research/` and `scratchpad.md`, not just the `research/`
+  directory node mtime.
 - Aligned SessionStart stack reporting with `detect-stack.rb`, eliminating raw
   Gemfile grep false positives from commented-out gems.
+- Added a minimal exact-Gemfile fallback in `detect-runtime.sh` so SessionStart
+  still reports obvious stack/ORM signals when the Ruby-based detector cannot
+  run.
 - Removed misleading `zeitwerk:check --resolve` guidance from `/rb:verify`.
+- Corrected `/rb:document` “new Ruby files” guidance to use added-file
+  detection (`--diff-filter=A`) instead of matching any modified Ruby file.
+- Expanded the float-for-money Iron Law detector to catch both `t.float` and
+  `add_column ..., :float` migration forms.
+- Narrowed `security-reminder.sh` path matching so security reminders trigger on
+  security-relevant path segments instead of broad substrings like
+  `tokenizer`/`administer`.
+- Fixed generated/documented Iron Law references and examples:
+  `generate-iron-law-outputs.sh` now supports `--help`, rejects unknown
+  targets, and the canonical registry now links to the real YAML source;
+  research/compound example docs no longer contain placeholder broken links.
 
 ## [1.0.4] - 2026-03-23
 

@@ -31,11 +31,10 @@ VIOLATIONS=""
 
 check_violation() {
   local pattern="$1"
-  local line content trimmed
+  local line content
   grep -En "$pattern" -- "$FILE_PATH" 2>/dev/null | while IFS= read -r line; do
     content="${line#*:}"
-    trimmed="${content#"${content%%[! ]*}"}"
-    if [[ "$trimmed" != \#* ]]; then
+    if [[ ! "$content" =~ ^[[:space:]]*# ]]; then
       echo "$line"
       break
     fi
