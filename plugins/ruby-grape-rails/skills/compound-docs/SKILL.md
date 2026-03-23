@@ -2,8 +2,8 @@
 name: compound-docs
 description: Schema for documenting solved Ruby/Rails/Grape problems as reusable solution notes.
 user-invocable: false
+effort: low
 ---
-
 # Compound Docs
 
 Each solution note should capture:

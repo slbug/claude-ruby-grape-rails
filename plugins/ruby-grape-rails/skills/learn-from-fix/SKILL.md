@@ -2,8 +2,8 @@
 name: rb:learn
 description: Turn a finished fix into reusable team knowledge. Use after a bug fix, review remediation, or tricky migration.
 argument-hint: "[context]"
+effort: low
 ---
-
 # Learn From the Fix
 
 Capture what changed the team’s understanding:

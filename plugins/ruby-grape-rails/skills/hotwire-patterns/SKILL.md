@@ -2,8 +2,8 @@
 name: hotwire-patterns
 description: Hotwire, Turbo, Stimulus, broadcasts, and server-rendered interaction patterns for Rails apps. Load for Turbo Frames, Turbo Streams, Stimulus controllers, Action Cable, and view update flows. Covers Rails 7+ and 8+ with modern Hotwire patterns.
 user-invocable: false
+effort: medium
 ---
-
 # Hotwire Patterns
 
 ## Iron Laws

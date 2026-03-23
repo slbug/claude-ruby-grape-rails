@@ -3,8 +3,8 @@ name: rb:review
 description: Review code with parallel specialist agents covering Ruby correctness, security, testing, Active Record, Rails/Grape boundaries, and Sidekiq behavior. Use after implementation before commit or PR.
 argument-hint: "[test|security|sidekiq|deploy|iron-laws|all]"
 disable-model-invocation: true
+effort: high
 ---
-
 # Review Ruby/Rails/Grape Code
 
 Review changed code by spawning specialist agents. Review is **read-only** - never fix during review.
@@ -75,6 +75,7 @@ Based on what changed, spawn appropriate reviewers:
 5. **Be specific** - cite line numbers, provide examples
 6. **Prioritize** - mark as critical/warning/info
 7. **Contextualize** - explain why it matters, not just what's wrong
+8. **Identify package + ORM first** - do not apply flat Rails / Active Record advice to Sequel or modular packages
 
 ## Agent Descriptions
 
@@ -114,7 +115,7 @@ Focus: Test quality and coverage
 Focus: Iron Law violations
 
 - Transaction safety
-- Enqueue-after-commit discipline
+- Commit-safe enqueue discipline for the active ORM
 - N+1 query prevention
 - Decimal for money
 - Safe HTML rendering
@@ -127,7 +128,7 @@ Focus: Background job correctness
 - Idempotency
 - Retry safety
 - Argument serialization
-- After-commit hooks
+- Commit-safe enqueueing for the active ORM
 - Error handling
 - Queue configuration
 
@@ -191,13 +192,14 @@ Focus: Migration safety and schema changes
 - [ ] Transaction boundaries
 - [ ] Proper redirects/renders
 
-### Models (Active Record)
+### Models (Active Record / Sequel)
 
 - [ ] Validations present and tested
 - [ ] Associations have correct dependent options
 - [ ] Scopes are chainable
 - [ ] Callbacks are necessary and safe
 - [ ] No business logic in callbacks
+- [ ] ORM-specific patterns match the owning package
 - [ ] Index hints for queries
 
 ### Sidekiq Jobs
@@ -229,6 +231,7 @@ Focus: Migration safety and schema changes
 
 ### Migrations
 
+- [ ] Migration framework identified first (Active Record vs Sequel)
 - [ ] Reversible (up/down or change)
 - [ ] Indexes added for foreign keys
 - [ ] Null constraints appropriate

@@ -2,8 +2,8 @@
 name: dry-rb-patterns
 description: Functional programming patterns with dry-rb gems for Rails. Covers validation, types, structs, monads, and transactions.
 user-invocable: false
+effort: medium
 ---
-
 # dry-rb Patterns
 
 Functional programming tools for Ruby with dry-rb.

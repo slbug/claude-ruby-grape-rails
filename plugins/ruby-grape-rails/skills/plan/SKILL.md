@@ -3,8 +3,8 @@ name: rb:plan
 description: Use for any multi-file feature, new boundary, risky refactor, background job workflow, API change, or database change that benefits from upfront design. Also accepts review files and existing plans.
 argument-hint: <feature description OR path to review/plan file>
 disable-model-invocation: true
+effort: high
 ---
-
 # Plan Ruby/Rails/Grape Work
 
 Plan a feature by spawning Ruby specialists, then write a structured plan with checkboxes.
@@ -12,9 +12,10 @@ Plan a feature by spawning Ruby specialists, then write a structured plan with c
 ## What Makes /rb:plan Different
 
 1. It routes research through Ruby/Rails/Grape specialists.
-2. It plans with `[rails]`, `[grape]`, `[ar]`, `[sidekiq]`, `[security]`, `[perf]`, `[ruby]` task hints.
-3. It bakes in verification gates for Zeitwerk, formatter, tests, and optional Brakeman.
-4. It understands Rails controllers, service objects, Active Record, Grape APIs, Redis, and Sidekiq jobs.
+2. It plans with `[rails]`, `[grape]`, `[ar]`, `[sequel]`, `[sidekiq]`, `[security]`, `[perf]`, `[ruby]` task hints.
+3. In mixed stacks, it identifies the owning package and ORM before planning changes.
+4. It bakes in verification gates for Zeitwerk, formatter, tests, and optional Brakeman.
+5. It understands Rails controllers, service objects, Active Record, Sequel, Grape APIs, Redis, and Sidekiq jobs.
 
 ## Workflow State Machine
 
@@ -35,6 +36,16 @@ Plan a feature by spawning Ruby specialists, then write a structured plan with c
 Each phase has entry/exit criteria. Do not skip phases.
 
 ## Research Phase
+
+Before finalizing tasks, identify:
+
+- the owning package/app root for the touched code
+- the active ORM for that package
+- whether the repo uses Packwerk or a similar modular-monolith layout
+
+If no explicit Packwerk signal is found but the repo appears modular, ask:
+
+`No Packwerk detected. Do you have something similar implemented? Where are the modules/packages and what stack/ORM does each use?`
 
 Spawn only what the request needs:
 
@@ -81,7 +92,7 @@ When planning Hotwire features, sketch the wireframe:
 ### Design Decisions to Document
 
 1. **Transaction Boundaries**: Where do transactions start/end?
-2. **Enqueue Timing**: `after_commit` vs `after_save` vs inline
+2. **Enqueue Timing**: commit-safe enqueueing for the active ORM
 3. **Error Handling**: What happens when things fail?
 4. **Idempotency**: Can this operation run multiple times safely?
 5. **Rollback Strategy**: How to undo if something goes wrong?
@@ -91,7 +102,7 @@ When planning Hotwire features, sketch the wireframe:
 1. Never auto-start `/rb:work` after writing the plan.
 2. Prefer the existing stack before adding a gem.
 3. Every review finding must become a task or an explicit defer decision.
-4. Record transaction boundaries, after-commit behavior, and verification strategy in the plan.
+4. Record transaction boundaries, commit-safe enqueue behavior, package ownership, and verification strategy in the plan.
 5. Use web research for unfamiliar gems, Rails features, or Grape behavior.
 6. Design for testability from the start - each task should be verifiable.
 7. Plan for the worst case: network failures, database locks, job retries.

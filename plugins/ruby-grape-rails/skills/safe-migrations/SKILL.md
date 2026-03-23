@@ -2,9 +2,25 @@
 name: safe-migrations
 description: Safe database migration patterns for Rails. Covers zero-downtime deployments, locking concerns, and backfilling strategies. Use strong_migrations gem or follow manual patterns.
 user-invocable: false
+effort: medium
 ---
-
 # Safe Migrations
+
+## Scope Check First
+
+This skill is Active Record-first unless the touched package clearly uses Sequel.
+
+Before giving migration advice, identify which migration system owns the file:
+
+- `class ... < ActiveRecord::Migration[...]` → Active Record migration
+- `Sequel.migration do` → Sequel migration
+- mixed repos may contain both
+
+If the repo is modular or mixed-ORM:
+
+- identify the owning package first
+- do not generate Rails migration templates for Sequel packages
+- do not assume one global migration strategy for the whole repository
 
 ## Iron Laws
 
@@ -219,6 +235,13 @@ end
 **MySQL:** No concurrent indexes. Use `pt-online-schema-change` for large tables.
 
 **SQLite:** Development/test only. No concurrent support needed.
+
+## Sequel Note
+
+For Sequel packages, apply the same zero-downtime principles but use Sequel
+migration syntax and package-local data access patterns. Avoid dropping raw
+Active Record migration classes into a Sequel package just because the
+top-level repo also contains Rails.
 
 ## Migration Checklist
 

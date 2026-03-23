@@ -2,8 +2,8 @@
 name: rails-contexts
 description: "Rails boundary design: controllers, services, forms, queries, policies, serializers, and mounted Grape APIs. Use for deciding where business logic belongs and how Rails layers should interact."
 user-invocable: false
+effort: medium
 ---
-
 # Rails Contexts
 
 ## Iron Laws

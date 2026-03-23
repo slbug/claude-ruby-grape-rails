@@ -34,7 +34,7 @@ These are the 21 non-negotiable Iron Laws. Any violation must be flagged.
 1. **Decimal for Money** — NEVER use float for money — use decimal or integer (cents)
 2. **Parameterized Queries** — ALWAYS use parameterized queries — never interpolate user input into SQL strings
 3. **Eager Loading** — USE includes/preload for associations — avoids N+1 queries
-4. **after_commit for Jobs** — CALL after_commit not after_save when enqueueing jobs that depend on committed data
+4. **Commit-Safe Enqueueing in Active Record** — IN Active Record code, use after_commit not after_save when enqueueing jobs that depend on committed data
 5. **Transaction Boundaries** — WRAP multi-step operations in transactions — use ActiveRecord::Base.transaction
 6. **No Validation Bypass** — NO update_columns, update_column, or save(validate: false) in normal flows
 7. **No default_scope** — NO default_scope — use explicit named scopes only
@@ -43,8 +43,8 @@ These are the 21 non-negotiable Iron Laws. Any violation must be flagged.
 
 8. **Idempotent Jobs** — Jobs MUST be idempotent — safe to retry
 9. **JSON-Safe Arguments** — Args use JSON-safe types only — no symbols, no Ruby objects, no procs
-10. **No ActiveRecord Objects in Args** — NEVER store ActiveRecord objects in args — store IDs, not records
-11. **after_commit Callback** — ALWAYS use after_commit callback — not after_save or inline
+10. **No ORM Objects in Args** — NEVER store ORM objects in args — store IDs, not records
+11. **Commit-Safe Enqueueing** — ALWAYS enqueue jobs after commit using the active ORM or transaction hook — not after_save or inline before commit
 
 ### Security (4 laws)
 

@@ -3,7 +3,7 @@ set -o nounset
 set -o pipefail
 
 # GENERATED FROM iron-laws.yml — DO NOT EDIT
-# Last generated: 2026-03-23T07:36:11Z
+# Last generated: 2026-03-23T16:38:30Z
 
 command -v jq >/dev/null 2>&1 || exit 0
 
@@ -20,14 +20,14 @@ Verification (1):
 Iron Law 1: NEVER use float for money — use decimal or integer cents
 Iron Law 2: ALWAYS use parameterized queries — never SQL string interpolation
 Iron Law 3: USE includes/preload for associations — never N+1 queries
-Iron Law 4: CALL after_commit not after_save when enqueueing jobs
+Iron Law 4: IN Active Record code, use after_commit not after_save when enqueueing jobs
 Iron Law 5: WRAP multi-step operations in ActiveRecord::Base.transaction
 Iron Law 6: NO update_columns or save(validate: false) in normal flows
 Iron Law 7: NO default_scope — use explicit named scopes only
 Iron Law 8: Jobs MUST be idempotent — safe to retry
 Iron Law 9: Args use JSON-safe types only — no symbols, no Ruby objects, no procs
-Iron Law 10: NEVER store ActiveRecord objects in args — store IDs, not records
-Iron Law 11: ALWAYS use after_commit callback — not after_save or inline
+Iron Law 10: NEVER store ORM objects in args — store IDs, not records
+Iron Law 11: ALWAYS enqueue jobs after commit using the active ORM or transaction hook
 Iron Law 12: NO eval with user input — code injection vulnerability
 Iron Law 13: AUTHORIZE in EVERY controller action — do not trust before_action alone
 Iron Law 14: NEVER use html_safe or raw with untrusted content — XSS vulnerability

@@ -89,14 +89,14 @@ laws:
 
   - id: 4
     category: active_record
-    title: "after_commit for Jobs"
-    rule: "CALL after_commit not after_save when enqueueing jobs that depend on committed data"
+    title: "Commit-Safe Enqueueing in Active Record"
+    rule: "IN Active Record code, use after_commit not after_save when enqueueing jobs that depend on committed data"
     rationale: "Jobs may run before transaction commits, reading uncommitted or stale data"
     severity: critical
     applies_to: ["app/models/*.rb"]
-    summary_text: "Use after_commit, not after_save, when enqueueing jobs"
-    init_text: "CALL after_commit not after_save when enqueueing jobs"
-    subagent_text: "Iron Law 4: CALL after_commit not after_save when enqueueing jobs"
+    summary_text: "In Active Record code, use after_commit when enqueueing jobs"
+    init_text: "IN Active Record code, use after_commit not after_save when enqueueing jobs"
+    subagent_text: "Iron Law 4: IN Active Record code, use after_commit not after_save when enqueueing jobs"
     detector_id: null
     reference_files: ["active-record/callbacks.md"]
 
@@ -168,27 +168,27 @@ laws:
 
   - id: 10
     category: sidekiq
-    title: "No ActiveRecord Objects in Args"
-    rule: "NEVER store ActiveRecord objects in args — store IDs, not records"
-    rationale: "AR objects are not JSON-serializable and create stale data risks"
+    title: "No ORM Objects in Args"
+    rule: "NEVER store ORM objects in args — store IDs, not records"
+    rationale: "ORM objects are not JSON-serializable and create stale data risks"
     severity: critical
     applies_to: ["app/jobs/*.rb"]
-    summary_text: "Never pass AR objects to jobs — pass IDs"
-    init_text: "NEVER store ActiveRecord objects in args — store IDs"
-    subagent_text: "Iron Law 10: NEVER store ActiveRecord objects in args — store IDs, not records"
+    summary_text: "Never pass ORM objects to jobs — pass IDs"
+    init_text: "NEVER store ORM objects in args — store IDs"
+    subagent_text: "Iron Law 10: NEVER store ORM objects in args — store IDs, not records"
     detector_id: "ar_objects_in_jobs"
     reference_files: ["sidekiq/job-arguments.md"]
 
   - id: 11
     category: sidekiq
-    title: "after_commit Callback"
-    rule: "ALWAYS use after_commit callback — not after_save or inline"
-    rationale: "Jobs must only run after data is persisted; after_save runs within transaction"
+    title: "Commit-Safe Enqueueing"
+    rule: "ALWAYS enqueue jobs after commit using the active ORM or transaction hook — not after_save or inline before commit"
+    rationale: "Jobs must only run after data is persisted; commit-safe hooks differ between Active Record and Sequel"
     severity: critical
     applies_to: ["app/models/*.rb"]
-    summary_text: "Always use after_commit, not after_save"
-    init_text: "ALWAYS use after_commit callback — not after_save or inline"
-    subagent_text: "Iron Law 11: ALWAYS use after_commit callback — not after_save or inline"
+    summary_text: "Always enqueue jobs after commit using the active ORM"
+    init_text: "ALWAYS enqueue jobs after commit using the active ORM or transaction hook"
+    subagent_text: "Iron Law 11: ALWAYS enqueue jobs after commit using the active ORM or transaction hook"
     detector_id: null
     reference_files: ["sidekiq/enqueuing.md"]
 

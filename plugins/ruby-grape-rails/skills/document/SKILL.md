@@ -2,8 +2,8 @@
 name: rb:document
 description: Generate documentation for implemented features — YARD/RDoc, README updates, ADRs. Use after implementing new modules or features to ensure proper documentation coverage. Run after /rb:review passes or whenever the user asks to document their code.
 argument-hint: "[plan-file OR feature-name]"
+effort: low
 ---
-
 # Document
 
 Generate documentation for newly implemented features.

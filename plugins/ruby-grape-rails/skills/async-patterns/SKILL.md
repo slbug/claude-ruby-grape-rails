@@ -2,8 +2,8 @@
 name: async-patterns
 description: Fiber-based concurrency with async gem for I/O-bound Ruby operations. Covers async jobs, Falcon server, concurrent HTTP requests.
 user-invocable: false
+effort: medium
 ---
-
 # Async Patterns
 
 Fiber-based concurrency for Ruby using the `async` gem.

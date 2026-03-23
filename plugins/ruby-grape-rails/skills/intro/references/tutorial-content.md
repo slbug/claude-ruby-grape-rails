@@ -23,7 +23,7 @@ This plugin adds **specialist Ruby/Rails/Grape agents**, **auto-loaded knowledge
 
 ### The Core Concept
 
-Everything revolves around a 4-phase workflow cycle:
+Everything revolves around a 5-phase workflow cycle:
 
 ```text
 /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
@@ -136,7 +136,7 @@ Iron Laws are non-negotiable rules that every agent enforces. If your code viola
 | Use decimal for money | Floating point math loses precision |
 | Parameterized queries | Prevents SQL injection |
 | Jobs must be idempotent | Sidekiq retries on failure |
-| Don't pass AR objects to jobs | Sidekiq uses JSON serialization |
+| Don't pass ORM objects to jobs | Sidekiq uses JSON serialization |
 | Authorize in EVERY controller action | Before_action alone is insufficient |
 | Use includes/preload | Avoids N+1 queries |
 | Verify before claiming done | Run tests, do not assume |

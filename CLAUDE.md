@@ -104,7 +104,7 @@ claude-ruby-grape-rails/
 │       │   ├── context-supervisor.md     # Generic output compressor (haiku)
 │       │   └── ...
 │       ├── hooks/
-│       │   └── hooks.json           # Format, progress tracking, Stop warning
+│       │   └── hooks.json           # Format, review-state, compaction, and failure hooks
 │       └── skills/                  # 49 skills
 │           ├── work/                # Execution phase
 │           ├── full/                # Autonomous cycle
@@ -216,7 +216,9 @@ Defined in `hooks/hooks.json`:
     "SubagentStart": [...],        // Iron Laws injection into all subagents
     "SessionStart": [...],         // Setup dirs + runtime tool detection + resume detection
     "PreCompact": [...],           // Re-inject workflow rules before compaction
-    "Stop": [...]                  // Warn if uncompleted tasks
+    "PostCompact": [...],          // Verify active plan context survived compaction
+    "Stop": [...],                 // Warn if uncompleted tasks
+    "StopFailure": [...]           // Persist API failure context for resume flows
   }
 }
 ```
@@ -238,10 +240,13 @@ Defined in `hooks/hooks.json`:
 - `SubagentStart`: Inject all Iron Laws into every spawned subagent via `additionalContext` (addresses zero skill auto-loading gap)
 - `PreCompact`: Re-inject workflow rules (plan/work/full) before compaction via JSON `systemMessage`,
   including `.claude/ACTIVE_PLAN` resolution for context-aware compaction
+- `PostCompact`: Re-check active plan state after compaction and tell Claude which
+  plan artifacts to re-read when unchecked tasks still exist
 - `SessionStart` (all): Setup `.claude/` directories + consolidated runtime detection
   - `detect-runtime.sh`: Detect Ruby/Rails version, stack gems, Tidewave, RTK, betterleaks, and active hook mode
 - `SessionStart` (startup|resume only): Scratchpad check + resume workflow detection + workflow hints
 - `Stop`: Warn if plans have unchecked tasks
+- `StopFailure`: Append normalized API-failure context to the active plan scratchpad for better resume continuity
 
 **Hook modes:**
 
@@ -528,7 +533,7 @@ These rules are NEVER violated. If code would violate them, **STOP and explain**
 1. **Decimal for Money** — NEVER use float for money — use decimal or integer (cents)
 2. **Parameterized Queries** — ALWAYS use parameterized queries — never interpolate user input into SQL strings
 3. **Eager Loading** — USE includes/preload for associations — avoids N+1 queries
-4. **after_commit for Jobs** — CALL after_commit not after_save when enqueueing jobs that depend on committed data
+4. **Commit-Safe Enqueueing in Active Record** — IN Active Record code, use after_commit not after_save when enqueueing jobs that depend on committed data
 5. **Transaction Boundaries** — WRAP multi-step operations in transactions — use ActiveRecord::Base.transaction
 6. **No Validation Bypass** — NO update_columns, update_column, or save(validate: false) in normal flows
 7. **No default_scope** — NO default_scope — use explicit named scopes only
@@ -537,8 +542,8 @@ These rules are NEVER violated. If code would violate them, **STOP and explain**
 
 8. **Idempotent Jobs** — Jobs MUST be idempotent — safe to retry
 9. **JSON-Safe Arguments** — Args use JSON-safe types only — no symbols, no Ruby objects, no procs
-10. **No ActiveRecord Objects in Args** — NEVER store ActiveRecord objects in args — store IDs, not records
-11. **after_commit Callback** — ALWAYS use after_commit callback — not after_save or inline
+10. **No ORM Objects in Args** — NEVER store ORM objects in args — store IDs, not records
+11. **Commit-Safe Enqueueing** — ALWAYS enqueue jobs after commit using the active ORM or transaction hook — not after_save or inline before commit
 
 ### Security Iron Laws
 
@@ -744,7 +749,7 @@ Based on `/docs-check` validation against latest Claude Code docs, the following
 
 ### Agent Features (Adopted)
 
-- [x] **`effort` field** — Added to 17 agents for cost optimization:
+- [x] **`effort` field** — Added to all 22 agents for cost optimization:
   - `low`: web-researcher, context-supervisor, verification-runner (mechanical tasks)
   - `medium`: dependency-analyzer, call-tracer, rails-patterns-analyst, rails-architect, ruby-reviewer,
     testing-reviewer, sidekiq-specialist, ruby-runtime-advisor, deployment-validator, iron-law-judge,
@@ -757,18 +762,24 @@ Based on `/docs-check` validation against latest Claude Code docs, the following
 - [ ] **`isolation: "worktree"`** — Run agents in isolated git worktrees for parallel execution.
   Potential use: `verification-runner` or parallel review tasks that modify files.
 
+### Hook Features (Adopted)
+
+- [x] **`PostCompact` event** — Added to verify active plan state after compaction
+- [x] **`StopFailure` event** — Added to persist API-failure context into plan scratchpads for resume flows
+
 ### Hook Features (Under Evaluation)
 
 - [ ] **`http` hook type** — Could enable external telemetry/logging endpoints
 - [ ] **`SubagentStop` event** — Could track specialist agent completion metrics
-- [ ] **`PostCompact` event** — Could verify context preservation after compaction
 - [ ] **`SessionEnd` event** — Could clean up temporary files
 - [ ] **`environment` field** — Could simplify hook script configuration
 
-### Skill Features (Under Evaluation)
+### Skill Features (Adopted)
 
-- [ ] **`${CLAUDE_SKILL_DIR}` variable** — Could reference bundled scripts in skills
-- [ ] **Skill `effort` field** — Could optimize cost for auto-loaded reference skills
+- [x] **Skill `effort` field** — Added across all shipped skills for lower-cost simple flows and higher-effort orchestration where needed
+- [x] **`${CLAUDE_SKILL_DIR}` variable** — Adopted selectively in workflow skills where explicit local reference paths improve reliability across install/cache contexts
+
+### Skill Features (Under Evaluation)
 
 ### Plugin Features (Under Evaluation)
 

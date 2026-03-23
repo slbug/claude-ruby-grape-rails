@@ -1,8 +1,8 @@
 ---
 name: rb:techdebt
 description: Identify Ruby/Rails/Grape technical debt patterns such as overgrown services, repeated queries, callback sprawl, stale abstractions, and weak boundaries.
+effort: medium
 ---
-
 # Technical Debt
 
 Look for:

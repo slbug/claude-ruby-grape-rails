@@ -2,8 +2,8 @@
 name: karafka
 description: Apache Kafka processing with Karafka for Ruby. Multi-threaded consumers, batch processing, error handling, Rails integration.
 user-invocable: false
+effort: medium
 ---
-
 # Karafka
 
 Apache Kafka for Ruby with high-performance multi-threaded processing.

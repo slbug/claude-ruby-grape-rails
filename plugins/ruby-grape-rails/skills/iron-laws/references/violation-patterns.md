@@ -67,7 +67,7 @@ user.save(validate: false)
 
 ### Law 10: Sidekiq with Objects
 
-**Pattern**: Passing ActiveRecord objects to jobs
+**Pattern**: Passing ORM objects to jobs
 
 ```ruby
 MyJob.perform_later(current_user)  # WRONG
@@ -81,16 +81,22 @@ MyJob.perform_later(current_user.id)  # CORRECT
 
 ### Laws 4, 11: after_save with Jobs
 
-**Pattern**: Using `after_save` instead of `after_commit` for job enqueueing
+**Pattern**: Using `after_save` or inline-before-commit enqueueing instead of a commit-safe ORM hook
 
 ```ruby
 after_save :enqueue_job  # WRONG
 ```
 
-**Fix**:
+**Fix (Active Record)**:
 
 ```ruby
 after_commit :enqueue_job, on: :create  # CORRECT
+```
+
+**Fix (Sequel transaction)**:
+
+```ruby
+DB.after_commit { MyJob.perform_async(record.id) }  # CORRECT
 ```
 
 ### Law 12: Eval with User Input

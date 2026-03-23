@@ -2,8 +2,8 @@
 name: testing
 description: Testing patterns for Ruby, Rails, Grape, and Sidekiq. Load for request specs, model/service tests, worker tests, factories, and anti-flake practices.
 user-invocable: false
+effort: medium
 ---
-
 # Testing
 
 ## Good Defaults

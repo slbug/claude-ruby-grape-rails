@@ -5,6 +5,52 @@ All notable changes to the Ruby/Rails/Grape Claude Code plugin.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.1.0] - 2026-03-23
+
+### Added
+
+- **Skill `effort` frontmatter across all 49 shipped skills** — Workflow
+  skills now use higher effort where orchestration matters, while lightweight
+  skills use lower effort for cheaper, faster execution.
+- **`PostCompact` hook (`postcompact-verify.sh`)** — Verifies that active plan
+  state survived context compaction and reminds Claude to re-read plan,
+  scratchpad, and progress artifacts when needed.
+- **`StopFailure` hook (`stop-failure-log.sh`)** — Persists normalized API
+  failure context into the active plan scratchpad so resume flows can recover
+  with better context.
+- **Mixed-ORM and package-layout detection** — `detect-stack.rb` and
+  `detect-runtime.sh` now emit and persist `DETECTED_ORMS`, `PRIMARY_ORM`,
+  `PACKAGE_LAYOUT`, `PACKAGE_LOCATIONS`, `PACKAGE_QUERY_NEEDED`, and
+  `HAS_PACKWERK` for init/workflow guidance.
+
+### Changed
+
+- **`/rb:init` stack detection** now relies on `detect-stack.rb` as the single
+  source of truth instead of ad-hoc inline parsing.
+- **Init / plan / research / work / review guidance** now identifies package
+  ownership and the active ORM before recommending migration, callback, review,
+  or enqueue behavior.
+- **Iron Laws and injected guidance are now ORM-aware** for commit-safe
+  enqueueing, distinguishing Active Record `after_commit` advice from Sequel
+  transaction-hook patterns.
+- **Packwerk and modular-monolith workflows** are now first-class in init and
+  planning flows, including explicit user questioning when a modular structure
+  is detected without explicit Packwerk signals.
+- **Stack detection now distinguishes Rails components from a full Rails app**
+  via `RAILS_COMPONENTS=true|false` and `FULL_RAILS_APP=true|false`, which
+  helps mixed Grape + Rails-component repos avoid being mislabeled as full
+  Rails apps.
+- **Modular package detection is broader and more generic** — package discovery
+  now recognizes common code-layout markers under roots like `packages/*` and
+  `app/packages/*` instead of only Rails-heavy `app/config/db` layouts, and
+  explicit Packwerk detection now depends on `packwerk.yml` rather than generic
+  package manifests.
+- **`${CLAUDE_SKILL_DIR}` adoption** was added selectively in workflow skills
+  where explicit local reference paths improve reliability across plugin cache
+  and install contexts.
+
 ## [1.0.4] - 2026-03-23
 
 ### Fixed

@@ -2,8 +2,8 @@
 name: rb:boundaries
 description: Analyze context and service boundaries in Rails applications. Detect coupling, misplaced logic, and violations of architectural boundaries. Use when refactoring services, splitting monoliths, or reviewing layer interactions.
 argument-hint: "[path|service|context] [--focus controllers|models|services|grape]"
+effort: medium
 ---
-
 # Rails Boundary Analysis
 
 Analyze coupling and boundary violations between Rails layers.

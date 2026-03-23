@@ -88,7 +88,7 @@ def generate_tutorial_section(_yaml)
     ['Use decimal for money', 'Floating point math loses precision'],
     ['Parameterized queries', 'Prevents SQL injection'],
     ['Jobs must be idempotent', 'Sidekiq retries on failure'],
-    ["Don't pass AR objects to jobs", 'Sidekiq uses JSON serialization'],
+    ["Don't pass ORM objects to jobs", 'Sidekiq uses JSON serialization'],
     ['Authorize in EVERY controller action', 'Before_action alone is insufficient'],
     ['Use includes/preload', 'Avoids N+1 queries'],
     ['Verify before claiming done', 'Run tests, do not assume']

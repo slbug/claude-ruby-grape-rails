@@ -2,8 +2,8 @@
 name: rb:intro
 description: Quick introduction to the Ruby/Rails/Grape plugin workflow and command set.
 argument-hint: "[--section N]"
+effort: low
 ---
-
 # Intro
 
 Interactive introduction to the Ruby/Rails/Grape plugin for new users.
@@ -38,7 +38,7 @@ See CLAUDE.md "Conventions → Agents" section for details.
 
 ## Detailed Tutorial
 
-See [references/tutorial-content.md](references/tutorial-content.md) for the complete walkthrough with:
+See `${CLAUDE_SKILL_DIR}/references/tutorial-content.md` for the complete walkthrough with:
 
 - Core workflow commands and decision guide
 - Knowledge & safety net (Iron Laws, auto-loading)

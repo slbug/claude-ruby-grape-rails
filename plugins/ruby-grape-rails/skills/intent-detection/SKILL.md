@@ -2,8 +2,8 @@
 name: intent-detection
 description: "Internal router for ambiguous work requests. Load when user says \"add/build/implement feature\", \"fix/debug/investigate bug\", \"review/audit code\", \"refactor/clean up\", \"slow/performance\", \"PR comments\", \"research/evaluate library\", or \"that fixed it\" — WITHOUT an explicit /rb: slash command."
 user-invocable: false
+effort: low
 ---
-
 # Intent Detection — Workflow Routing
 
 When user describes work WITHOUT specifying a `/rb:` command, analyze their intent and suggest the appropriate workflow BEFORE starting work.

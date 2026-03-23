@@ -22,7 +22,7 @@ For programmatic use, see [iron-laws.yml](../iron-laws.yml).
 3. **Eager Loading** — USE includes/preload for associations — avoids N+1 queries
    *N+1 queries kill performance at scale*
 
-4. **after_commit for Jobs** — CALL after_commit not after_save when enqueueing jobs that depend on committed data
+4. **Commit-Safe Enqueueing in Active Record** — IN Active Record code, use after_commit not after_save when enqueueing jobs that depend on committed data
    *Jobs may run before transaction commits, reading uncommitted or stale data*
 
 5. **Transaction Boundaries** — WRAP multi-step operations in transactions — use ActiveRecord::Base.transaction
@@ -42,11 +42,11 @@ For programmatic use, see [iron-laws.yml](../iron-laws.yml).
 9. **JSON-Safe Arguments** — Args use JSON-safe types only — no symbols, no Ruby objects, no procs
    *Sidekiq serializes args to JSON; complex objects don't serialize correctly*
 
-10. **No ActiveRecord Objects in Args** — NEVER store ActiveRecord objects in args — store IDs, not records
-   *AR objects are not JSON-serializable and create stale data risks*
+10. **No ORM Objects in Args** — NEVER store ORM objects in args — store IDs, not records
+   *ORM objects are not JSON-serializable and create stale data risks*
 
-11. **after_commit Callback** — ALWAYS use after_commit callback — not after_save or inline
-   *Jobs must only run after data is persisted; after_save runs within transaction*
+11. **Commit-Safe Enqueueing** — ALWAYS enqueue jobs after commit using the active ORM or transaction hook — not after_save or inline before commit
+   *Jobs must only run after data is persisted; commit-safe hooks differ between Active Record and Sequel*
 
 ### Security (4 laws)
 
@@ -96,7 +96,7 @@ Enforced automatically by iron-law-verifier.sh on every .rb file edit:
 - Law 2 (Parameterized Queries) — detector: sql_interpolation
 - Law 6 (No Validation Bypass) — detector: validation_bypass
 - Law 7 (No default_scope) — detector: default_scope
-- Law 10 (No ActiveRecord Objects in Args) — detector: ar_objects_in_jobs
+- Law 10 (No ORM Objects in Args) — detector: ar_objects_in_jobs
 - Law 14 (No Unsafe HTML) — detector: unsafe_html
 - Law 15 (No SQL Concatenation) — detector: sql_interpolation
 

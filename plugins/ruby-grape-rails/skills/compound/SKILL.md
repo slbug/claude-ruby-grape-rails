@@ -4,8 +4,8 @@ description: Capture a solved Ruby/Rails/Grape problem as reusable knowledge for
 argument-hint: "[path to fix|review|plan]"
 skills:
   - compound-docs
+effort: low
 ---
-
 # Compound Knowledge
 
 Capture a solved problem as reusable knowledge. This creates a knowledge base that helps future sessions solve similar problems faster.

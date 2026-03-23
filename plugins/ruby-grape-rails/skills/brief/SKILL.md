@@ -2,8 +2,8 @@
 name: rb:brief
 description: Explain a plan, implementation, or review outcome quickly. Use after /rb:plan, /rb:work, or /rb:review when the user wants a high-signal walkthrough.
 argument-hint: "[plan|diff|review path]"
+effort: low
 ---
-
 # Brief the Work
 
 Read the supplied artifact, then explain what matters in a concise summary.

@@ -1,8 +1,8 @@
 ---
 name: rb:examples
 description: Point users to example areas and representative patterns inside the current Ruby/Rails/Grape codebase.
+effort: low
 ---
-
 # Examples
 
 Show concrete examples from the local project for:
