@@ -182,7 +182,9 @@ laws:
   - id: 11
     category: sidekiq
     title: "Commit-Safe Enqueueing"
-    rule: "ALWAYS enqueue jobs after commit using the active ORM or transaction hook — not after_save or inline before commit"
+    rule: >-
+      ALWAYS enqueue jobs after commit using the active ORM or transaction hook — not after_save
+      or inline before commit
     rationale: "Jobs must only run after data is persisted; commit-safe hooks differ between Active Record and Sequel"
     severity: critical
     applies_to: ["app/models/*.rb"]
