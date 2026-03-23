@@ -28,7 +28,7 @@ if declare -F resolve_workspace_root >/dev/null 2>&1; then
     REPO_ROOT=$(resolve_workspace_root) || REPO_ROOT=""
   fi
 else
-  REPO_ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
+  REPO_ROOT="${CLAUDE_PROJECT_DIR:-${PWD:-.}}"
 fi
 [[ -n "$REPO_ROOT" ]] || library_safe_return 0
 
