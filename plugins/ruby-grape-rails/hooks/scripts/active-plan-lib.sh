@@ -73,6 +73,8 @@ get_file_mtime() {
 # Get the active plan directory
 # Returns: path to active plan directory, or empty if none
 get_active_plan() {
+  [[ ! -L "$CLAUDE_DIR" ]] || return 1
+
   # Primary: Check explicit marker file
   if [[ -f "$ACTIVE_PLAN_MARKER" ]]; then
     if [[ -L "$ACTIVE_PLAN_MARKER" ]]; then
@@ -171,6 +173,7 @@ set_active_plan() {
 
 # Clear the active plan marker (called on plan completion)
 clear_active_plan() {
+  [[ ! -L "$CLAUDE_DIR" ]] || return 1
   rm -f -- "$ACTIVE_PLAN_MARKER"
 }
 
