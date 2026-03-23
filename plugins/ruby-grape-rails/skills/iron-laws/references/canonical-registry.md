@@ -96,7 +96,7 @@ Enforced automatically by iron-law-verifier.sh on every .rb file edit:
 - Law 2 (Parameterized Queries) — detector: sql_interpolation
 - Law 6 (No Validation Bypass) — detector: validation_bypass
 - Law 7 (No default_scope) — detector: default_scope
-- Law 10 (No ORM Objects in Args) — detector: ar_objects_in_jobs
+- Law 10 (No ORM Objects in Args) — detector: orm_objects_in_jobs
 - Law 14 (No Unsafe HTML) — detector: unsafe_html
 - Law 15 (No SQL Concatenation) — detector: sql_interpolation
 

@@ -176,7 +176,7 @@ laws:
     summary_text: "Never pass ORM objects to jobs — pass IDs"
     init_text: "NEVER store ORM objects in args — store IDs"
     subagent_text: "Iron Law 10: NEVER store ORM objects in args — store IDs, not records"
-    detector_id: "ar_objects_in_jobs"
+    detector_id: "orm_objects_in_jobs"
     reference_files: ["sidekiq/job-arguments.md"]
 
   - id: 11
