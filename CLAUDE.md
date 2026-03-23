@@ -224,7 +224,7 @@ Defined in `hooks/hooks.json`:
 **Current hooks:**
 
 - `PreToolUse` (Bash): Block destructive operations (`rails db:drop`, `git push --force`, `RAILS_ENV=production`) before execution
-- `PostToolUse` (Edit|Write): Multiple scripts run in sequence:
+- `PostToolUse` (Edit|MultiEdit|Write): Multiple scripts run in sequence:
   - `format-ruby.sh`: Auto `bundle exec standardrb` or `bundle exec rubocop -a`
   - `verify-ruby.sh`: Syntax check via `ruby -c <file>` (catches broken Ruby before formatting)
   - `iron-law-verifier.sh`: **Programmatic Iron Law verification** (scans code for violations)
@@ -232,18 +232,22 @@ Defined in `hooks/hooks.json`:
   - `log-progress.sh`: Async progress logging
   - `plan-stop-reminder.sh`: Plan STOP reminder on plan.md write
   - `debug-statement-warning.sh`: Detect debug statements (`puts`, `binding.pry`, etc.) in production .rb files
-  - `secret-scan.sh`: Scan for accidentally committed secrets/credentials
+  - `secret-scan.sh`: Secret scanning with hook-mode gating
 - `PostToolUseFailure` (Bash): Ruby-specific debugging hints when bundle exec fails,
   **error critic** that detects repeated failures and escalates to structured analysis (both via `additionalContext`)
 - `SubagentStart`: Inject all Iron Laws into every spawned subagent via `additionalContext` (addresses zero skill auto-loading gap)
 - `PreCompact`: Re-inject workflow rules (plan/work/full) before compaction via JSON `systemMessage`,
   including `.claude/ACTIVE_PLAN` resolution for context-aware compaction
-- `SessionStart` (all): Setup `.claude/` directories + runtime tool detection
-  - `detect-runtime.sh`: Detect Ruby version, Rails version, available tools
-  - `detect-betterleaks.sh`: Informational — detects betterleaks availability (no current downstream usage)
-  - `detect-rtk.sh`: Informational — detects RTK token optimizer (no current downstream usage)
+- `SessionStart` (all): Setup `.claude/` directories + consolidated runtime detection
+  - `detect-runtime.sh`: Detect Ruby/Rails version, stack gems, Tidewave, RTK, betterleaks, and active hook mode
 - `SessionStart` (startup|resume only): Scratchpad check + resume workflow detection + workflow hints
 - `Stop`: Warn if plans have unchecked tasks
+
+**Hook modes:**
+
+- `default` (implicit): keep startup quieter, scan normal written text/source/config files, skip obvious binary/media files, and avoid recent-change fallback scans
+- `strict`: scan every written file and broaden secret scanning to recent changes when no specific file path is available
+- Configure via `${REPO_ROOT}/.claude/ruby-plugin-hook-mode` or `RUBY_PLUGIN_HOOK_MODE=strict`
 
 **Active Plan Infrastructure:**
 
@@ -282,10 +286,12 @@ The plugin integrates with Tidewave Rails for runtime operations:
 ### Testing locally
 
 ```bash
-# Option A: Test plugin directly
+# Option A: Test local working-tree changes directly
 claude --plugin-dir ./plugins/ruby-grape-rails
 
-# Option B: Add as local marketplace
+# Option B: Validate marketplace install flow
+# Note: marketplace.json now uses git-subdir source, so this installs the
+# published GitHub-backed plugin source, not your uncommitted working tree.
 /plugin marketplace add .
 /plugin install ruby-grape-rails
 ```

@@ -5,6 +5,24 @@ All notable changes to the Ruby/Rails/Grape Claude Code plugin.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-03-23
+
+### Changed
+
+- Merged `detect-runtime.sh`, `detect-betterleaks.sh`, and `detect-rtk.sh` into one SessionStart detector that exports runtime, tool, and hook-mode state
+- Added hook modes: `default` for quieter startup / targeted secret scanning, `strict` for broader secret checks
+- Fixed hook workspace-root resolution so installed plugins use the active project workspace instead of the plugin cache for `.claude/` state, formatter detection, and resume/plan tracking
+- Promoted nested launch directories to the actual project root via git/worktree detection, with `Gemfile` / `.claude` ancestor fallback for non-git cases
+- Refused filesystem root (`/`) as a valid workspace root and added non-empty root guards before `.claude` writes
+- Threaded hook stdin payloads consistently into workspace-root resolution so `.cwd` from hook JSON is honored across SessionStart, resume, formatting, and active-plan flows
+- Expanded post-write hook coverage from `Edit|Write` to `Edit|MultiEdit|Write`
+- Hardened hook path handling, `.runtime_env` persistence, and sourceable runtime state generation
+- Hardened active-plan state handling with tighter `.claude` confinement and safer marker access
+- Clarified contributor testing guidance: `claude --plugin-dir ...` is the primary local working-tree workflow, while local marketplace install validates marketplace distribution behavior
+- Added MySQL detection (`mysql2`) alongside PostgreSQL in runtime and init stack detection
+- Switched marketplace plugin source to `git-subdir` so URL-based marketplace distribution can target `plugins/ruby-grape-rails/`
+- Pinned the `git-subdir` marketplace source to `ref: v1.0.3` so marketplace installs fetch the released plugin revision instead of the moving default branch
+
 ## [1.0.2] - 2026-03-23
 
 ## [1.0.1] - 2026-03-23
@@ -236,6 +254,7 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
+[1.0.3]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.3
 [1.0.2]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.2
 [1.0.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.1
 [1.0.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.0

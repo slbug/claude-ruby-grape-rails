@@ -137,11 +137,26 @@ Check `hooks/hooks.json` against `hooks.md` docs.
 
 **Required:** `name`, `owner` (object with `name`), `plugins` (array)
 
-**Each plugin entry:** `name` (required), `source` (required — path to plugin dir).
-Optional: `description`, `version`, `author`, `category`.
+**Each plugin entry:** `name` (required), `source` (required), with optional `description`, `version`, `author`, `category`, `tags`.
 
-**Cross-checks:** `source` paths exist, each has `.claude-plugin/plugin.json`,
-names are unique.
+**Valid `source` forms:**
+
+- Relative path string to a plugin dir inside the marketplace repo
+- Source object, including at least:
+  - `git-subdir`
+  - `github`
+  - `url`
+  - `npm`
+
+**Cross-checks:**
+
+- Relative-path `source` values exist and each has `.claude-plugin/plugin.json`
+- `git-subdir` sources include `url` and `path`
+- `github` sources include `repo`
+- `url` sources include `url`
+- `npm` sources include `package`
+- Names are unique
+- Relative paths must stay within the marketplace root and must not contain `..`
 
 ## Priority Classification
 

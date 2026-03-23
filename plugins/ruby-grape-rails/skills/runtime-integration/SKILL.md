@@ -40,7 +40,18 @@ The `detect-runtime.sh` hook runs automatically at session start and detects:
 # Detected from Gemfile:
 TIDEWAVE_GEM_PRESENT=true
 TIDEWAVE_PROJECT_CAPABLE=true
+
+# Persisted in .claude/.runtime_env for hook coordination:
+HOOK_MODE=default
+BETTERLEAKS_AVAILABLE=true
+RTK_AVAILABLE=true
 ```
+
+These values are persisted in `${REPO_ROOT}/.claude/.runtime_env` as a
+sourceable cache of startup detection results. Contributor tooling and hooks
+may read or source that file when they want the cached values, but they are not
+automatically exported into every hook process environment and current hooks do
+not rely on it exclusively.
 
 If Tidewave is not detected, runtime commands will provide setup guidance.
 
@@ -250,6 +261,5 @@ Without Tidewave, use:
 ## References
 
 - [Tidewave Rails README](https://github.com/tidewave-ai/tidewave_rails)
-- [Tidewave Documentation](https://hexdocs.pm/tidewave)
 - [Proactive Patterns](references/proactive-patterns.md)
 - [Validation Checklist](references/validation-checklist.md)

@@ -16,8 +16,11 @@ gemfile = File.read('Gemfile')
 
 # Detection helpers
 def gem_present?(content, name)
-  # Match gem "name" or gem 'name' with optional version/options
-  content.match?(/gem\s+['"]?#{Regexp.escape(name)}['"]?/)
+  # Match exact Gemfile entries like:
+  # gem "pg"
+  # gem 'pg', '~> 1.5'
+  # gem 'pg' # needed for postgres
+  content.match?(/^\s*gem\s+['"]#{Regexp.escape(name)}['"](?=\s*(?:,|#|$))/)
 end
 
 # Detect stack components
@@ -27,6 +30,8 @@ detected << 'sidekiq' if gem_present?(gemfile, 'sidekiq')
 detected << 'hotwire' if gem_present?(gemfile, 'hotwire-rails')
 detected << 'karafka' if gem_present?(gemfile, 'karafka')
 detected << 'grape' if gem_present?(gemfile, 'grape')
+detected << 'mysql' if gem_present?(gemfile, 'mysql2')
+detected << 'postgres' if gem_present?(gemfile, 'pg')
 
 # Determine Rails version
 rails_version = if defined?(Rails::VERSION)

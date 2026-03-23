@@ -16,11 +16,21 @@ set -o pipefail
 # - Read by: session resume detection, precompact-rules.sh, log-progress.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
-  :
-else
-  REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+if [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]]; then
+  # shellcheck disable=SC1090,SC1091
+  source "$ROOT_LIB"
 fi
+if declare -F resolve_workspace_root >/dev/null 2>&1; then
+  if [[ -n "${INPUT:-}" ]]; then
+    REPO_ROOT=$(resolve_workspace_root "$INPUT") || REPO_ROOT=""
+  else
+    REPO_ROOT=$(resolve_workspace_root) || REPO_ROOT=""
+  fi
+else
+  REPO_ROOT="${CLAUDE_PROJECT_DIR:-${PWD:-.}}"
+fi
+[[ -n "$REPO_ROOT" ]] || library_safe_return 0
 
 CLAUDE_DIR="${REPO_ROOT}/.claude"
 PLANS_DIR="${CLAUDE_DIR}/plans"
@@ -63,6 +73,8 @@ get_file_mtime() {
 # Get the active plan directory
 # Returns: path to active plan directory, or empty if none
 get_active_plan() {
+  [[ ! -L "$CLAUDE_DIR" ]] || return 1
+
   # Primary: Check explicit marker file
   if [[ -f "$ACTIVE_PLAN_MARKER" ]]; then
     if [[ -L "$ACTIVE_PLAN_MARKER" ]]; then
@@ -146,6 +158,7 @@ set_active_plan() {
   is_valid_plan_dir "$input_plan_dir" || return 1
   plan_dir=$(resolve_plan_dir "$input_plan_dir") || return 1
 
+  [[ ! -L "$CLAUDE_DIR" ]] || return 1
   mkdir -p -- "$CLAUDE_DIR" || return 1
   [[ ! -L "$ACTIVE_PLAN_MARKER" ]] || return 1
 
@@ -160,6 +173,7 @@ set_active_plan() {
 
 # Clear the active plan marker (called on plan completion)
 clear_active_plan() {
+  [[ ! -L "$CLAUDE_DIR" ]] || return 1
   rm -f -- "$ACTIVE_PLAN_MARKER"
 }
 

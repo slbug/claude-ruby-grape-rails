@@ -4,8 +4,13 @@ set -o pipefail
 
 command -v jq >/dev/null 2>&1 || exit 0
 command -v grep >/dev/null 2>&1 || exit 0
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+# shellcheck disable=SC1090,SC1091
+source "$ROOT_LIB"
 
-INPUT=$(cat)
+INPUT=$(read_hook_input)
 TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null) || exit 0
 [[ "$TOOL" == "Bash" ]] || exit 0
 
