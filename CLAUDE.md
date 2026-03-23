@@ -109,7 +109,7 @@ claude-ruby-grape-rails/
 │           ├── work/                # Execution phase
 │           ├── full/                # Autonomous cycle
 │           ├── plan/                # Planning + deepening (--existing)
-│           ├── review/              # Enhanced: Todo creation
+│           ├── review/              # Findings-only review phase
 │           ├── compound/            # Knowledge capture phase
 │           ├── compound-docs/       # Solution documentation system
 │           ├── investigate/

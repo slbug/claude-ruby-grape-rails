@@ -140,7 +140,7 @@ forms), or involves navigation between multiple routes.
 
 If rails-architect was spawned, its report should include
 affordance tables. Use these to build a system map. See
-`references/breadboarding.md` for full details.
+`breadboarding.md` for full details.
 
 ## Completeness Check
 

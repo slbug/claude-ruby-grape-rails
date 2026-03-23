@@ -24,7 +24,7 @@ Solution documents are stored in `.claude/solutions/` with category subdirectori
     ├── active-record-issues/
     ├── build-issues/
     ├── deployment-issues/
-    ├── grapе-api-issues/
+    ├── grape-api-issues/
     ├── hotwire-issues/
     ├── performance-issues/
     ├── rails-issues/
@@ -47,8 +47,8 @@ Solution documents are stored in `.claude/solutions/` with category subdirectori
 
 All solution documents use YAML frontmatter followed by markdown content. See:
 
-- `skills/compound-docs/references/schema.md` for the field definitions
-- `skills/compound-docs/references/resolution-template.md` for the full template
+- `references/schema.md` for the field definitions
+- `references/resolution-template.md` for the full template
 
 ## Finding Solutions
 

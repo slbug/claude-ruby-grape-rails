@@ -41,7 +41,7 @@ START ──▶ VALIDATE AGAINST SCHEMA ──▶ USE RESOLUTION TEMPLATE ──
 
 ## Document Structure
 
-Solution documents use YAML frontmatter defined in `skills/compound-docs/references/schema.md` and follow the template in `skills/compound-docs/references/resolution-template.md`.
+Solution documents use YAML frontmatter defined in `../compound-docs/references/schema.md` and follow the template in `../compound-docs/references/resolution-template.md`.
 
 ### Required Frontmatter Fields
 
