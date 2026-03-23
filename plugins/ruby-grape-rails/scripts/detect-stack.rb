@@ -16,8 +16,10 @@ gemfile = File.read('Gemfile')
 
 # Detection helpers
 def gem_present?(content, name)
-  # Match gem "name" or gem 'name' with optional version/options
-  content.match?(/gem\s+['"]?#{Regexp.escape(name)}['"]?/)
+  # Match exact Gemfile entries like:
+  # gem "pg"
+  # gem 'pg', '~> 1.5'
+  content.match?(/^\s*gem\s+['"]#{Regexp.escape(name)}['"](?=\s*(?:,|$))/)
 end
 
 # Detect stack components

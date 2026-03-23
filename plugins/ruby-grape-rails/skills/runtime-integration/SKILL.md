@@ -47,7 +47,11 @@ BETTERLEAKS_AVAILABLE=true
 RTK_AVAILABLE=true
 ```
 
-Other hooks must read or source `${REPO_ROOT}/.claude/.runtime_env` to consume these values; they are not automatically exported into every hook process environment.
+These values are persisted in `${REPO_ROOT}/.claude/.runtime_env` as a
+sourceable cache of startup detection results. Contributor tooling and hooks
+may read or source that file when they want the cached values, but they are not
+automatically exported into every hook process environment and current hooks do
+not rely on it exclusively.
 
 If Tidewave is not detected, runtime commands will provide setup guidance.
 

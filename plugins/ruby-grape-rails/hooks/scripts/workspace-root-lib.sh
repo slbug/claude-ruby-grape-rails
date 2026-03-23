@@ -98,6 +98,7 @@ normalize_hook_mode() {
 resolve_hook_mode() {
   local root="${1:-$(resolve_workspace_root)}"
   local mode="${RUBY_PLUGIN_HOOK_MODE:-}"
+  local claude_dir
   local mode_file
 
   if [[ -n "$mode" ]]; then
@@ -105,7 +106,13 @@ resolve_hook_mode() {
     return 0
   fi
 
-  mode_file="${root}/.claude/ruby-plugin-hook-mode"
+  claude_dir="${root}/.claude"
+  [[ ! -L "$claude_dir" ]] || {
+    printf '%s\n' "default"
+    return 0
+  }
+
+  mode_file="${claude_dir}/ruby-plugin-hook-mode"
   if [[ -f "$mode_file" && ! -L "$mode_file" ]]; then
     if IFS= read -r mode < "$mode_file"; then
       normalize_hook_mode "$mode"

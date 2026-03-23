@@ -23,7 +23,7 @@ Uses Tidewave Rails MCP tools for database queries:
 
 ## Workflow
 
-1. Check if Tidewave is available via `.claude/.runtime_env`
+1. Check Tidewave availability from startup detection state (`.claude/.runtime_env`) if present, or from current runtime context
 2. If available, use `mcp__tidewave__execute_sql_query "YOUR QUERY"`
 3. If Tidewave is not available, explain setup requirements and stop
 4. Summarize results
