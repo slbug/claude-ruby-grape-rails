@@ -2,8 +2,8 @@
 name: deploy
 description: Ruby/Rails/Grape deployment guidance for Rails 8+ with Solid Trifecta, Thruster, Kamal 2, Docker, and cloud platforms. Covers migrations, assets, workers, and environment configuration.
 user-invocable: false
+effort: medium
 ---
-
 # Deploy
 
 Deployment guidance for Ruby/Rails/Grape applications in the Rails 8 era.

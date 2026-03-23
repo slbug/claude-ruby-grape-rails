@@ -2,8 +2,8 @@
 name: rb:trace
 description: Trace a request, API call, background job, or service flow through Rails, Grape, and Sidekiq code. Use when you need to understand where a value changes or where a side effect comes from.
 argument-hint: <entry point>
+effort: medium
 ---
-
 # Trace Execution
 
 Follow the path from the entry point through:

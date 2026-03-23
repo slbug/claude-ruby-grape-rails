@@ -3,8 +3,8 @@ name: rb:perf
 description: Analyze performance issues in Rails, Grape, Active Record, Redis, and Sidekiq. Use for slow endpoints, queue latency, cache misses, object churn, or N+1 reports.
 argument-hint: "[path|area] [--focus ar|rails|grape|sidekiq|redis]"
 disable-model-invocation: true
+effort: high
 ---
-
 # Performance Analysis
 
 Look for the highest-value improvements first.

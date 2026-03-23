@@ -4,13 +4,25 @@ set -o pipefail
 
 command -v jq >/dev/null 2>&1 || exit 0
 command -v grep >/dev/null 2>&1 || exit 0
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+# shellcheck disable=SC1090,SC1091
+source "$ROOT_LIB"
+INPUT=$(read_hook_input)
+REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
+[[ -n "$REPO_ROOT" ]] || exit 0
 
-FILE_PATH=$(jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
+FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
 [[ -n "$FILE_PATH" ]] || exit 0
+FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || exit 0
 [[ -f "$FILE_PATH" ]] || exit 0
 [[ ! -L "$FILE_PATH" ]] || exit 0
+is_path_within_root "$REPO_ROOT" "$FILE_PATH" || exit 0
 
-case "$FILE_PATH" in
+FILE_NAME=$(path_basename "$FILE_PATH")
+
+case "$FILE_NAME" in
   *.rb|*.rake|Gemfile|Rakefile|config.ru) ;;
   *) exit 0 ;;
 esac
@@ -19,20 +31,18 @@ VIOLATIONS=""
 
 check_violation() {
   local pattern="$1"
-  local line content trimmed
+  local line content
   grep -En "$pattern" -- "$FILE_PATH" 2>/dev/null | while IFS= read -r line; do
     content="${line#*:}"
-    trimmed="${content#"${content%%[! ]*}"}"
-    if [[ "$trimmed" != \#* ]]; then
+    if [[ ! "$content" =~ ^[[:space:]]*# ]]; then
       echo "$line"
       break
     fi
   done
 }
 
-FILE_NAME="${FILE_PATH##*/}"
-
-MATCH=$(check_violation '(t|add_column)\.float[[:space:]]+:(price|amount|cost|total|balance|fee|rate|charge|payment|salary|wage|budget|revenue|discount)')
+money_like_columns='(price|amount|cost|total|balance|fee|rate|charge|payment|salary|wage|budget|revenue|discount)'
+MATCH=$(check_violation "t\\.float[[:space:]]+:${money_like_columns}|add_column[[:space:]]*\\(?[[:space:]]*[^,]+,[[:space:]]*[:'\"]?${money_like_columns}['\"]?[[:space:]]*,[[:space:]]*:float")
 if [[ -n "$MATCH" ]]; then
   LINE=$(echo "$MATCH" | cut -d: -f1)
   VIOLATIONS+="

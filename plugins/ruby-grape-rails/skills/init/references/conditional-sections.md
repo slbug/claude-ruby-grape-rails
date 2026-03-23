@@ -9,8 +9,31 @@ These sections are included in CLAUDE.md based on detected project dependencies.
 
 - Workers MUST include `Sidekiq::Job`
 - Use `sidekiq_options queue: :default, retry: 3`
+- Enqueue only after commit using the active ORM's commit-safe mechanism
 - Dead letter queue for permanent failures
 - Monitor via Sidekiq Web UI
+```
+
+## SEQUEL_SECTION
+
+```markdown
+**Sequel Specifics**:
+
+- Identify `Sequel::Model` and `Sequel.migration` files before applying Rails / Active Record patterns
+- Prefer `DB.transaction` and Sequel transaction hooks for commit-safe Sidekiq enqueueing
+- Do not generate `ActiveRecord::Migration[...]` classes inside Sequel packages
+- Treat datasets, associations, and migrations as package-local when the repo mixes ORMs
+```
+
+## MIXED_ORM_SECTION
+
+```markdown
+**Mixed ORM Specifics**:
+
+- This repo uses both Active Record and Sequel
+- Before changing models, jobs, or migrations, identify which ORM owns the touched package
+- Sidekiq enqueue-after-commit rules must follow the package's ORM, not a global Rails default
+- Never assume all migrations in this repo are Active Record migrations
 ```
 
 ## HOTWIRE_SECTION
@@ -57,6 +80,17 @@ If RTK is installed, PREFER `rtk` prefixed commands for better token efficiency:
 **Note:** RTK availability is detected at session start for informational purposes. You must manually invoke `rtk` commands - they are not automatically substituted.
 ```
 
+## PACKWERK_SECTION
+
+```markdown
+**Modular Monolith / Packwerk Specifics**:
+
+- Identify the owning package before changing code
+- Respect package boundaries and public APIs
+- Avoid proposing cross-package changes as if this were one flat Rails app
+- If package ownership or stack differs across modules, ask before applying global guidance
+```
+
 ## BETTERLEAKS_SECTION
 
 ```markdown
@@ -95,8 +129,11 @@ Install: `brew install betterleaks`
 | `{SIDEKIQ_VERSION}` | Gemfile.lock | 7.2.0 |
 | `{OPTIONAL_STACK}` | Comma-prefixed extra versioned deps when available | , Karafka 2.5.7, Hotwire 2.0.0 |
 | `{SIDEKIQ_SECTION}` | If sidekiq in Gemfile | Include Sidekiq section |
+| `{SEQUEL_SECTION}` | If Sequel detected | Include Sequel section |
+| `{MIXED_ORM_SECTION}` | If Active Record and Sequel both detected | Include mixed ORM section |
 | `{HOTWIRE_SECTION}` | If hotwire-rails in Gemfile | Include Hotwire section |
 | `{KARAFKA_SECTION}` | If karafka in Gemfile | Include Karafka section |
+| `{PACKWERK_SECTION}` | If Packwerk or modular layout detected | Include package/boundary section |
 | `{RTK_SECTION}` | If rtk installed | Include RTK section |
 | `{BETTERLEAKS_SECTION}` | If betterleaks installed | Include Betterleaks section |
 
@@ -111,39 +148,12 @@ ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
 # Prefer exact *_VERSION outputs from the script when composing the header.
 # Only fall back to "detected" when the direct gem is present but no resolved
 # version is available from Gemfile.lock.
+# Read DETECTED_ORMS / PACKAGE_LAYOUT / PACKAGE_LOCATIONS too.
+# If PACKAGE_QUERY_NEEDED=true, ask the user for module/package locations and stack details.
 
-# Or inline Ruby (if script unavailable):
-ruby -e '
-  gemfile = File.read("Gemfile") rescue ""
-  lock = File.read("Gemfile.lock") rescue ""
-
-  def gem_present?(content, name)
-    content.match?(/^\s*gem\s+['\"]#{Regexp.escape(name)}['\"](?=\s*(?:,|#|$))/)
-  end
-
-  def lock_version(content, name)
-    content[/^\s{4}#{Regexp.escape(name)} \(([^)]+)\)$/, 1]
-  end
-
-  {
-    "rails" => "rails",
-    "sidekiq" => "sidekiq",
-    "hotwire" => "hotwire-rails",
-    "karafka" => "karafka",
-    "grape" => "grape"
-  }.each do |label, gem_name|
-    next unless gem_present?(gemfile, gem_name)
-    puts "#{label}=#{lock_version(lock, gem_name) || "detected"}"
-  end
-'
-
-# Version detection (via Gemfile.lock)
-# Use exact gem-name matches only; never use loose /rails \((...)\)/ style regexes
-# because they can falsely match gems such as rubocop-rails.
-ruby -e 'lock = File.read("Gemfile.lock"); puts lock[/^\s{4}rails \(([^)]+)\)$/, 1] || "?"'
-ruby -e 'lock = File.read("Gemfile.lock"); puts lock[/^\s{4}sidekiq \(([^)]+)\)$/, 1] || "?"'
-ruby -e 'lock = File.read("Gemfile.lock"); puts lock[/^\s{4}grape \(([^)]+)\)$/, 1] || "?"'
-ruby -e 'lock = File.read("Gemfile.lock"); puts lock[/^\s{4}karafka \(([^)]+)\)$/, 1] || "?"'
+# detect-stack.rb is the only supported stack detector.
+# Do not recreate its logic inline. If it is missing or fails, stop and
+# treat that as a plugin/detection issue rather than guessing.
 
 # RTK detection
 command -v rtk &> /dev/null && echo "rtk"

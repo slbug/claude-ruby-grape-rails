@@ -2,8 +2,8 @@
 name: hotwire-native
 description: Hotwire Native patterns for building native iOS/Android mobile apps using Turbo Native. Load when developing native mobile apps that reuse Rails views. Covers path configuration, bridge components, native screens, and web-to-native communication.
 user-invocable: false
+effort: medium
 ---
-
 # Hotwire Native
 
 ## Iron Laws

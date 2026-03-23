@@ -22,7 +22,7 @@ fi
 PENDING=0
 if [[ -d "$PLANS_DIR" ]]; then
   while IFS= read -r -d '' plan_file; do
-    if grep -q -- '\[ \]' "$plan_file" 2>/dev/null; then
+    if grep -q -- '^\- \[ \]' "$plan_file" 2>/dev/null; then
       PENDING=$((PENDING + 1))
     fi
   done < <(find "$PLANS_DIR" -name plan.md -type f -print0 2>/dev/null)

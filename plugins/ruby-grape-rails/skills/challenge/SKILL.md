@@ -2,8 +2,8 @@
 name: rb:challenge
 description: Challenge mode reviews - rigorous questioning before approving changes. Use when you want thorough scrutiny of Active Record changes, Hotwire/Turbo events, or PR readiness.
 argument-hint: active record | hotwire | pr
+effort: high
 ---
-
 # Challenge Mode Reviews
 
 Rigorous, critical review patterns. Push beyond first solutions to ensure quality.
@@ -94,7 +94,7 @@ Verify background job correctness:
 **Argument Safety**
 
 - Are all arguments JSON-safe? (no symbols, no Ruby objects)
-- Are you passing record IDs, not ActiveRecord objects?
+- Are you passing record IDs, not ORM objects?
 - What happens if arguments are malformed on retry?
 
 **Error Handling**

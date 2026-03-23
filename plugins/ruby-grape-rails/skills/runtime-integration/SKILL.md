@@ -2,8 +2,8 @@
 name: rb:runtime
 description: Integrate with Tidewave Rails for enhanced runtime context, code execution, SQL queries, and introspection of your running Rails application.
 argument-hint: "[inspect|execute|query|docs|logs|models|source]"
+effort: low
 ---
-
 # Runtime Integration
 
 Integrate with [Tidewave Rails](https://github.com/tidewave-ai/tidewave_rails) to enhance context with live system data from your running Rails application.

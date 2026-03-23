@@ -1,6 +1,6 @@
 # Documentation Output Format
 
-Write documentation report to `.claude/plans/{slug}/reviews/{feature}-docs.md`:
+Write documentation report to `.claude/plans/{slug}/docs/{feature}.md`:
 
 ```markdown
 # Documentation: {Feature}

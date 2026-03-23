@@ -2,8 +2,8 @@
 name: rb:verify
 description: Run the project verification stack for Ruby/Rails/Grape work. Detects the project toolchain and uses the strongest available checks. Validates autoloading, linting, tests, security, and migrations.
 argument-hint: "[--quick|--full]"
+effort: low
 ---
-
 # Verify Ruby Work
 
 Run verification in priority order, stopping at the first failure. Each step must pass before proceeding to the next.
@@ -56,11 +56,9 @@ bundle exec rails zeitwerk:check
    Fix: Move to app/models/concerns/validatable.rb
 ```
 
-**Auto-fix**: Some issues can be auto-corrected
-
-```bash
-bundle exec rails zeitwerk:check --resolve
-```
+**No generic auto-fix flag**: `zeitwerk:check` reports the mismatch, but you
+need to fix the file name, constant name, or inflector configuration yourself
+and rerun the check.
 
 ### 2. Linting
 

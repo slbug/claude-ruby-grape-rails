@@ -2,8 +2,8 @@
 name: grape-idioms
 description: Grape API patterns for versioning, param coercion, declared params, error handling, presentation, and Rails integration. Load for mounted APIs and request boundary design.
 user-invocable: false
+effort: medium
 ---
-
 # Grape Idioms
 
 ## Iron Laws

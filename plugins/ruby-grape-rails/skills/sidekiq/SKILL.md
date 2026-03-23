@@ -1,16 +1,16 @@
 ---
 name: sidekiq
-description: Sidekiq job design for Rails. JSON-safe args, idempotency, retries, testing, after_commit patterns. Sidekiq 6.x through 8.x and Solid Queue.
+description: Sidekiq job design for Ruby apps using Rails, Active Record, or Sequel. Covers JSON-safe args, idempotency, retries, testing, and commit-safe enqueue patterns. Sidekiq 6.x through 8.x and Solid Queue.
 user-invocable: false
+effort: medium
 ---
-
 # Sidekiq
 
 ## Iron Laws
 
 1. **Jobs are idempotent** - Safe to retry multiple times
-2. **Pass IDs and JSON primitives only** - Never pass ActiveRecord objects
-3. **Enqueue after commit** - Use `after_commit`, not `after_save`
+2. **Pass IDs and JSON primitives only** - Never pass ORM objects
+3. **Enqueue after commit** - Use the active ORM's commit-safe hook, not `after_save` or inline before commit
 4. **Keep queue names intentional** - Operationally meaningful
 5. **Use retries intentionally** - Don't hide permanent failures
 6. **Profile slow jobs** - Use Sidekiq 8 profiling
@@ -52,7 +52,7 @@ MyJob.perform_async(user.created_at.iso8601)    # Dates as strings
 **❌ Incorrect:**
 
 ```ruby
-MyJob.perform_async(user)              # ActiveRecord objects
+MyJob.perform_async(user)              # ORM objects
 MyJob.perform_async(Date.today)        # Date objects
 MyJob.perform_async(status: :active)   # Symbols
 ```
@@ -79,7 +79,57 @@ end
 
 **Strategies:** State check | Upsert | UUID dedup | Locking
 
+## Commit-Safe Enqueueing by ORM
+
+Always identify the ORM for the touched package before giving enqueue advice.
+
+### Active Record
+
+Use `after_commit` for model-driven enqueueing that depends on committed data:
+
+```ruby
+class User < ApplicationRecord
+  after_commit :enqueue_welcome_email, on: :create
+
+  private
+
+  def enqueue_welcome_email
+    WelcomeEmailJob.perform_async(id)
+  end
+end
+```
+
+### Sequel
+
+Prefer transaction-level hooks when the enqueue depends on an explicit transaction:
+
+```ruby
+DB.transaction do
+  user = User.create(name: 'Ada')
+  DB.after_commit { WelcomeEmailJob.perform_async(user.id) }
+end
+```
+
+Model-level hooks can work too, but they are still Sequel hooks, not Active Record callbacks:
+
+```ruby
+class User < Sequel::Model
+  def after_commit
+    super
+    WelcomeEmailJob.perform_async(id)
+  end
+end
+```
+
+### Mixed ORM Repos
+
+- identify the owning package first
+- do not recommend Active Record callbacks inside Sequel packages
+- do not assume every migration/job/model in the repo follows the same ORM lifecycle
+
 ## Enqueue After Commit
+
+Always scope this advice to the package's owning ORM.
 
 **Wrong:** Job may run before commit
 
@@ -90,12 +140,21 @@ def enqueue_welcome_email
 end
 ```
 
-**Correct:** Job runs after successful commit
+**Correct for Active Record:** Job runs after successful commit
 
 ```ruby
 after_commit :enqueue_welcome_email, on: :create
 def enqueue_welcome_email
   WelcomeEmailJob.perform_async(id)
+end
+```
+
+**Correct for Sequel:** Use a transaction-level or Sequel model commit hook, not Active Record callbacks
+
+```ruby
+DB.transaction do
+  user = User.create(name: 'Ada')
+  DB.after_commit { WelcomeEmailJob.perform_async(user.id) }
 end
 ```
 
@@ -304,9 +363,9 @@ See: [ActiveJob::Continuation Documentation](https://api.rubyonrails.org/classes
 
 1. Use IDs, not objects
 2. Make jobs idempotent
-3. Use `after_commit` callbacks
+3. Use the active ORM's commit-safe enqueue hook
 4. Limit concurrency for external APIs
-5. Enable `enqueue_after_transaction_commit`
+5. Enable `enqueue_after_transaction_commit` when using Rails Active Job
 6. Stringify hash keys
 7. Monitor queue depth
 8. Set appropriate retry counts

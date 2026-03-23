@@ -2,8 +2,8 @@
 name: ruby-idioms
 description: Core Ruby 3.4+/4.0-ready idioms for application code. Value objects, service objects, error handling, adapters. Load for plain Ruby objects and service boundaries.
 user-invocable: false
+effort: medium
 ---
-
 # Ruby Idioms
 
 ## Iron Laws

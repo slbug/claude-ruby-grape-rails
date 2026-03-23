@@ -3,13 +3,25 @@ name: rb:research
 description: Research Ruby gems, Rails/Grape patterns, upgrade paths, or architectural choices. Use when the team needs evidence before adding a gem or adopting a pattern.
 argument-hint: <topic>
 disable-model-invocation: true
+effort: high
 ---
-
 # Research Ruby Approaches
 
 Research with primary sources first, synthesize findings, and provide actionable recommendations.
 
 ## Research Process
+
+## Repository Topology Check
+
+Before deep research in an existing codebase, identify:
+
+- which package/app owns the code in question
+- which ORM that package uses
+- whether Packwerk or a similar modular-monolith structure is present
+
+If the repo appears modular but explicit Packwerk signals are absent, ask:
+
+`No Packwerk detected. Do you have something similar implemented? Where are the modules/packages and what stack/ORM does each use?`
 
 ```
 START ──▶ DECOMPOSE_QUERY ──▶ SPAWN_RESEARCHERS ──▶ PARALLEL_RESEARCH
@@ -45,6 +57,7 @@ Break complex research into sub-queries:
 | Upgrade path | Breaking changes, migration guide, timeline |
 | Pattern adoption | Best practices, anti-patterns, alternatives |
 | Architecture | Pros/cons, examples, community adoption |
+| Modular monolith | Package boundaries, public APIs, stack ownership |
 
 Example:
 
@@ -139,8 +152,8 @@ Write research to `.claude/research/{slug}.md`:
 **Question**: [what we researched]
 
 **Sources**:
-- [Source 1](link) - [relevance]
-- [Source 2](link) - [relevance]
+- Source 1 - <official-docs-url> - [relevance]
+- Source 2 - <source-code-or-changelog-url> - [relevance]
 
 **Key Points**:
 - [Finding 1]
@@ -207,3 +220,4 @@ Write research to `.claude/research/{slug}.md`:
 
 ## Sources
 - [Full citation list]
+```

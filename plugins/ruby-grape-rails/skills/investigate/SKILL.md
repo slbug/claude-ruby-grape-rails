@@ -3,8 +3,8 @@ name: rb:investigate
 description: Structured bug investigation for Rails, Grape, Active Record, Redis, and Sidekiq issues. Use for flaky tests, background job bugs, timeouts, missing records, stale cache, or race conditions.
 argument-hint: <bug description>
 disable-model-invocation: true
+effort: high
 ---
-
 # Investigate Ruby Bugs
 
 Run a structured investigation instead of guessing.

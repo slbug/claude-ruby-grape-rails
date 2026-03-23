@@ -2,8 +2,8 @@
 name: rb:full
 description: "Full autonomous workflow for Ruby/Rails/Grape work: plan, implement, verify, review, and compound learnings."
 argument-hint: "<feature description OR plan path>"
+effort: high
 ---
-
 # Full Workflow
 
 `/rb:full` runs:

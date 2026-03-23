@@ -80,6 +80,8 @@ Check file patterns being edited:
 | `app/jobs/*`, `*job.rb` | sidekiq, job-patterns.md |
 | `db/migrate/*`, `*migration.rb` | active-record-patterns, migrations.md |
 | `*model.rb`, `class.*ApplicationRecord` | active-record-patterns, queries.md |
+| `Sequel::Model`, `sequel-rails`, `db/migrations/*` | sequel-patterns, safe-migrations |
+| `packwerk.yml`, `packs/*`, `packages/*`, `app/packs/*`, `app/packages/*` | rb-boundaries, review, work |
 | `*auth*`, `*session*`, `*password*` | security, authentication.md, authorization.md |
 | `*_spec.rb`, `*_test.rb` | testing, rspec-patterns.md |
 | `app/views/*`, `turbo_frame_tag` | hotwire-patterns, components.md |
@@ -92,11 +94,12 @@ You MUST spawn these agents when triggers match. This is not optional.
 | Trigger | Agent | When |
 |---------|-------|------|
 | `/rb:plan` invoked | rails-patterns-analyst | ALWAYS |
-| `/rb:plan` invoked | ruby-library-researcher | If new gems |
+| `/rb:plan` invoked | ruby-gem-researcher | If new gems |
 | `app/jobs/*`, `*job.rb` | sidekiq-specialist | On edit/review |
-| `db/migrate/*`, schema changes | database-designer | On migration |
+| `db/migrate/*`, schema changes | active-record-schema-designer | On migration |
+| `packwerk.yml`, `packs/*`, `packages/*`, `app/packs/*`, `app/packages/*` | rails-architect | On architecture work |
 | auth, login, password, token, session | security-analyzer | ALWAYS |
-| `app/views/*`, Hotwire changes | hotwire-specialist | On UI work |
+| `app/views/*`, Hotwire changes | rails-architect | On UI work |
 
 ### STEP 7: PROCEED with response
 
@@ -122,7 +125,7 @@ If code would violate ANY of these, you MUST:
 1. Use decimal for money, never float
 2. Use parameterized queries, never SQL interpolation
 3. Use includes/preload to prevent N+1 queries
-4. Use after_commit, not after_save, when enqueueing jobs
+4. In Active Record code, use after_commit when enqueueing jobs
 5. Wrap multi-step operations in transactions
 6. Never bypass validations in normal code
 7. Never use default_scope
@@ -131,8 +134,8 @@ If code would violate ANY of these, you MUST:
 
 1. Jobs must be idempotent (safe to retry)
 2. Job args must be JSON-safe only
-3. Never pass AR objects to jobs — pass IDs
-4. Always use after_commit, not after_save
+3. Never pass ORM objects to jobs — pass IDs
+4. Always enqueue jobs after commit using the active ORM
 
 **Security:**
 
@@ -160,9 +163,15 @@ If code would violate ANY of these, you MUST:
 
 {SIDEKIQ_SECTION}
 
+{SEQUEL_SECTION}
+
+{MIXED_ORM_SECTION}
+
 {HOTWIRE_SECTION}
 
 {KARAFKA_SECTION}
+
+{PACKWERK_SECTION}
 
 {RTK_SECTION}
 

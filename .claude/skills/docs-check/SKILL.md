@@ -29,7 +29,7 @@ Claude Code documentation to catch breaking changes and discover new features.
 ┌─────────────────────────────────────────────────────────────────┐
 │  /docs-check (skill entry point)                                │
 │   │                                                             │
-│   ├─ Step 1: bash scripts/fetch-claude-docs.sh (zero tokens)    │
+│   ├─ Step 1: run repo-root scripts/fetch-claude-docs.sh          │
 │   │          Always fetches all 9 doc pages (~420KB)            │
 │   │                                                             │
 │   └─ Step 2: delegate to orchestrator (reads from cache only)   │
@@ -56,7 +56,8 @@ already cached within 24h. Zero token cost — pure curl.
 ```bash
 # --quick mode: skip this step entirely (structural checks only)
 # All other modes: always fetch
-bash scripts/fetch-claude-docs.sh
+# From the repository root, run the shared fetch script.
+bash ./scripts/fetch-claude-docs.sh
 ```
 
 ### Step 2: Delegate to Orchestrator
@@ -82,7 +83,7 @@ Pass the user's flags (--quick, --focus) in the prompt.
 ## Iron Laws
 
 1. **Fetch ALL docs upfront** — no conditional fetching, no partial downloads
-2. **Use `scripts/fetch-claude-docs.sh`** — single source of truth for doc fetching
+2. **Use repo-root `./scripts/fetch-claude-docs.sh`** — single source of truth for doc fetching
 3. **Workers get docs IN PROMPT** — no runtime fetching
 4. **Workers use sonnet** — opus is wasteful for comparison tasks
 5. **Structural checks always run** — even if docs fetch fails

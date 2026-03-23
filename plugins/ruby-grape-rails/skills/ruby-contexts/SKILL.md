@@ -2,8 +2,8 @@
 name: ruby-contexts
 description: General Ruby application boundaries outside framework glue. Load for service layers, command objects, adapters, value objects, and integration seams.
 user-invocable: false
+effort: medium
 ---
-
 # Ruby Contexts
 
 ## Principles

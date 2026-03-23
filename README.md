@@ -5,7 +5,9 @@
 This plugin does. It coordinates **22 specialist agents** and **49 skills** that plan, implement,
 review, and verify your Ruby/Rails/Grape code in parallel -- each with domain
 expertise, fresh context, and enforced [Iron Laws](#iron-laws-non-negotiable-rules)
-that catch the bugs your tests won't.
+that catch the bugs your tests won't. It is now stack-aware enough to handle
+mixed Active Record + Sequel repos and Packwerk-style modular monoliths
+without flattening everything into generic Rails advice.
 
 ```bash
 # You describe the feature. The plugin figures out the rest.
@@ -34,7 +36,7 @@ that prevent the mistakes Ruby developers actually make in production.
 │  💎 Ruby/Rails/Grape Plugin for Claude Code                         │
 │                                                                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
-│  │    22    │    49    │   100+   │    19    │    21    │           │
+│  │    22    │    49    │   100+   │    21    │    21    │           │
 │  │  Agents  │  Skills  │   Refs   │  Hooks   │Iron Laws │           │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘           │
 │                                                                     │
@@ -202,6 +204,11 @@ plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
 - **Plan checkboxes track progress.** `[x]` = done, `[ ]` = pending. `/rb:work` finds the first unchecked task and continues.
 - **One plan = one work unit.** Large features get split into multiple plans. Each is self-contained.
 - **Agents are automatic.** The plugin spawns specialist agents behind the scenes. You don't manage them directly.
+- **The stack is detected, not guessed.** `/rb:init` and SessionStart hooks identify Rails/Grape/Sidekiq/Karafka, Active Record vs Sequel, and Packwerk/modular package layouts before giving guidance.
+- **Workflow continuity is hook-backed.** `PreCompact`, `PostCompact`, and
+  `StopFailure` preserve rules, log failure context, and surface re-read
+  reminders after compaction or failed stops instead of relying only on chat
+  memory.
 
 ### Plan Namespaces
 
@@ -494,8 +501,8 @@ The plugin enforces **21 Iron Laws** that prevent common, costly mistakes:
 
 | Category | Count | Laws |
 |----------|-------|------|
-| Active Record | 7 | Use decimal for money, never float; Use parameterized queries, never SQL interpolation; Use includes/preload to prevent N+1 queries; Use after_commit, not after_save, when enqueueing jobs; Wrap multi-step operations in transactions; Never bypass validations in normal code; Never use default_scope |
-| Sidekiq | 4 | Jobs must be idempotent (safe to retry); Job args must be JSON-safe only; Never pass AR objects to jobs — pass IDs; Always use after_commit, not after_save |
+| Active Record | 7 | Use decimal for money, never float; Use parameterized queries, never SQL interpolation; Use includes/preload to prevent N+1 queries; In Active Record code, use after_commit when enqueueing jobs; Wrap multi-step operations in transactions; Never bypass validations in normal code; Never use default_scope |
+| Sidekiq | 4 | Jobs must be idempotent (safe to retry); Job args must be JSON-safe only; Never pass ORM objects to jobs — pass IDs; Always enqueue jobs after commit using the active ORM |
 | Security | 4 | Never use eval with user input; Authorize explicitly in every action; Never use html_safe/raw on untrusted content; Never concatenate SQL strings |
 | Ruby | 3 | Always pair method_missing with respond_to_missing?; Always supervise background processes; Only rescue StandardError, never Exception |
 | Hotwire/Turbo | 2 | Pre-compute all data before Turbo Stream broadcast; Use turbo_frame_tag for partial page updates |
@@ -507,7 +514,7 @@ The plugin enforces **21 Iron Laws** that prevent common, costly mistakes:
 - **Behavioral**: All 21 laws injected into subagent context
 - **Review-time**: Full audit during `/rb:review`
 
-See [full registry](plugins/ruby-grape-rails/references/iron-laws.yml) for details.
+See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonical-registry.md) for details.
 
 <!-- IRON_LAWS_END -->
 

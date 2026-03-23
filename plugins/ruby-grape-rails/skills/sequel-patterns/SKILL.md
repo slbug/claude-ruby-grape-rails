@@ -2,8 +2,8 @@
 name: sequel-patterns
 description: Sequel ORM patterns for high-performance Ruby/Rails applications. Covers datasets, migrations, associations, and when to choose Sequel over ActiveRecord.
 user-invocable: false
+effort: medium
 ---
-
 # Sequel Patterns
 
 Sequel is a flexible, high-performance ORM for Ruby.
@@ -241,6 +241,36 @@ DB.transaction(
   # Work here
 end
 ```
+
+## Sidekiq and Commit Hooks
+
+If Sidekiq is present in a Sequel package, do not blindly apply Active Record callback advice.
+
+Prefer transaction-aware enqueueing:
+
+```ruby
+DB.transaction do
+  payment = Payment.create(amount_cents: 1000)
+  DB.after_commit { ChargeCustomerJob.perform_async(payment.id) }
+end
+```
+
+Model hooks exist too:
+
+```ruby
+class Payment < Sequel::Model
+  def after_commit
+    super
+    ChargeCustomerJob.perform_async(id)
+  end
+end
+```
+
+In mixed Active Record + Sequel repos:
+
+- identify the package/ORM before applying callback guidance
+- do not recommend `after_commit` on `ApplicationRecord` when the touched model is `Sequel::Model`
+- do not assume the migration framework is Rails just because the repo contains Rails
 
 ## Validations
 

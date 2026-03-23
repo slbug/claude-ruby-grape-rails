@@ -3,8 +3,8 @@ name: rb:work
 description: Use after /rb:plan to implement tasks systematically with verification checkpoints and progress tracking. Can resume the newest active plan automatically.
 argument-hint: <path to plan file>
 disable-model-invocation: true
+effort: high
 ---
-
 # Work
 
 Execute the unchecked tasks from a plan file.
@@ -85,7 +85,9 @@ When starting work:
 
 6. **Identify next task** - first unchecked item
 
-7. **Load relevant context** - files, dependencies, tests
+7. **Identify package + ORM context** - in modular or mixed repos, determine which package owns the task and whether it uses Active Record or Sequel
+
+8. **Load relevant context** - files, dependencies, tests
 
 ## Routing Hints
 
@@ -94,6 +96,7 @@ Task hints indicate which domain expertise to apply:
 - `[rails]` controller/view/service wiring, routing, helpers
 - `[grape]` API params, versioning, endpoint behavior, serializers
 - `[ar]` schema, query, migration, locking, transaction work
+- `[sequel]` datasets, Sequel models, Sequel migrations, DB.transaction work
 - `[sidekiq]` jobs, queueing, retries, enqueue-after-commit
 - `[security]` authn/authz, parameter shaping, unsafe rendering, secrets
 - `[perf]` query plans, caching, Redis, hot paths, N+1 prevention
@@ -117,6 +120,7 @@ Task hints indicate which domain expertise to apply:
 3. **Load context**
    - Read existing files
    - Check related code
+   - Identify package boundary if repo is modular
    - Look at existing patterns
 
 ### During Implementation
@@ -168,7 +172,7 @@ Task hints indicate which domain expertise to apply:
 # - Includes Sidekiq::Job
 # - JSON-safe arguments only
 # - Idempotent implementation
-# - After_commit hook, not after_save
+# - Commit-safe enqueueing for the active ORM
 # - Retry strategy configured
 # - Dead letter queue considered
 ```

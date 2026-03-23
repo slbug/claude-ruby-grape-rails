@@ -23,7 +23,7 @@ This plugin adds **specialist Ruby/Rails/Grape agents**, **auto-loaded knowledge
 
 ### The Core Concept
 
-Everything revolves around a 4-phase workflow cycle:
+Everything revolves around a 5-phase workflow cycle:
 
 ```text
 /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
@@ -106,9 +106,9 @@ This spawns specialist agents to analyze your existing plan and enhance it with 
 
 ## Section 3: Knowledge & Safety Net
 
-### Auto-Loaded Knowledge
+### Context-Aware Knowledge
 
-The plugin loads relevant reference docs based on what you're editing:
+The plugin includes targeted references and guidance for common editing contexts:
 
 | You're editing... | Plugin loads... |
 |-------------------|----------------|
@@ -119,7 +119,10 @@ The plugin loads relevant reference docs based on what you're editing:
 | `config/routes.rb` | Routing patterns, controllers, scopes |
 | `*_job.rb`, `app/jobs/*` | Sidekiq patterns, idempotency rules |
 
-This means you don't need to explicitly load anything — open a Hotwire/Turbo file and the plugin already knows the patterns.
+These are the references Claude should use for those file types. In
+practice this is strongest after `/rb:init` and when you invoke the
+matching workflow command; most file-pattern loading is behavioral
+guidance, not a hook-backed auto-loader.
 
 <!-- IRON_LAWS_START -->
 
@@ -133,13 +136,13 @@ Iron Laws are non-negotiable rules that every agent enforces. If your code viola
 
 | Law | Why |
 |-----|-----|
-| Use decimal for money | Floating point math loses precision |
-| Parameterized queries | Prevents SQL injection |
-| Jobs must be idempotent | Sidekiq retries on failure |
-| Don't pass AR objects to jobs | Sidekiq uses JSON serialization |
-| Authorize in EVERY controller action | Before_action alone is insufficient |
-| Use includes/preload | Avoids N+1 queries |
-| Verify before claiming done | Run tests, do not assume |
+| Decimal for Money | Floating point arithmetic causes rounding errors that compound in financial calculations |
+| Parameterized Queries | String interpolation in SQL creates injection vulnerabilities |
+| Eager Loading | N+1 queries kill performance at scale |
+| Commit-Safe Enqueueing in Active Record | Jobs may run before transaction commits, reading uncommitted or stale data |
+| Transaction Boundaries | Partial failures leave data in inconsistent states |
+| No Validation Bypass | Skipping validations bypasses business rules and can corrupt data |
+| No default_scope | default_scope creates invisible query conditions that surprise developers |
 
 <!-- IRON_LAWS_END -->
 

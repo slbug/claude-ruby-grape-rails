@@ -5,6 +5,137 @@ All notable changes to the Ruby/Rails/Grape Claude Code plugin.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.1.0] - 2026-03-23
+
+### Added
+
+- **Skill `effort` frontmatter across all 49 shipped skills** — Workflow
+  skills now use higher effort where orchestration matters, while lightweight
+  skills use lower effort for cheaper, faster execution.
+- **`PostCompact` hook (`postcompact-verify.sh`)** — Adds an advisory
+  post-compaction reminder that points Claude back to active plan, scratchpad,
+  and progress artifacts when needed.
+- **`StopFailure` hook (`stop-failure-log.sh`)** — Persists normalized API
+  failure context into the active plan scratchpad so resume flows can recover
+  with better context.
+- **Mixed-ORM and package-layout detection** — `detect-stack.rb` and
+  `detect-runtime.sh` now emit and persist `DETECTED_ORMS`, `PRIMARY_ORM`,
+  `PACKAGE_LAYOUT`, `PACKAGE_LOCATIONS`, `PACKAGE_QUERY_NEEDED`, and
+  `HAS_PACKWERK` for init/workflow guidance.
+
+### Changed
+
+- **`/rb:init` stack detection** now relies on `detect-stack.rb` as the single
+  source of truth instead of ad-hoc inline parsing.
+- **Init / plan / research / work / review guidance** now identifies package
+  ownership and the active ORM before recommending migration, callback, review,
+  or enqueue behavior.
+- **Iron Laws and injected guidance are now ORM-aware** for commit-safe
+  enqueueing, distinguishing Active Record `after_commit` advice from Sequel
+  transaction-hook patterns.
+- **Packwerk and modular-monolith workflows** are now first-class in init and
+  planning flows, including explicit user questioning when explicit package
+  roots like `packages/*`, `packs/*`, `app/packages/*`, or `app/packs/*` are
+  detected without explicit Packwerk signals.
+- **Stack detection now distinguishes Rails components from a full Rails app**
+  via `RAILS_COMPONENTS=true|false` and `FULL_RAILS_APP=true|false`, which
+  helps mixed Grape + Rails-component repos avoid being mislabeled as full
+  Rails apps.
+- **Modular package detection is now more conservative and package-root
+  focused** — discovery now keys off explicit package roots like `packages/*`,
+  `packs/*`, `app/packages/*`, and `app/packs/*`, while avoiding broad nested
+  Rails namespacing roots that produced false positives in ordinary apps. Once
+  inside those explicit roots, detection is intentionally softer so lightweight
+  packages still trigger ownership/boundary questions. Explicit Packwerk
+  detection now depends on `packwerk.yml` rather than generic package
+  manifests.
+- **`StopFailure` recovery notes are phase-aware** — planning-phase failures now
+  point back to `research/` and `scratchpad.md`, while work-phase failures keep
+  the `plan.md` / `progress.md` resume flow.
+- **Planning-phase recovery no longer depends solely on `ACTIVE_PLAN`** —
+  active-plan fallback can now rediscover `research/`-only planning work when
+  the marker file is missing or stale.
+- **Sidekiq summary guidance is now ORM-scoped end-to-end** — the condensed
+  checklist no longer reverts to unconditional Active Record / Active Job
+  advice in mixed-ORM repos.
+- **Explicit-root package detection is softer but still package-shaped** —
+  supported roots now require actual code/package evidence instead of treating
+  any arbitrary child directory as a package candidate.
+- **Init template modular triggers now match detector policy** — generic
+  `package.yml` alone no longer implies modular-boundary support outside the
+  detector's explicit roots.
+- **Runtime detection now persists `PRIMARY_ORM`** in `.claude/.runtime_env`,
+  keeping the cached runtime state aligned with the detector output contract.
+- **`${CLAUDE_SKILL_DIR}` adoption** was added selectively in workflow skills
+  where explicit local reference paths improve reliability across plugin cache
+  and install contexts.
+- **`/rb:intro` tutorial wording** now clearly separates hook-backed automation
+  from behavioral file-pattern guidance, so context-aware references are no
+  longer described like guaranteed plugin infrastructure.
+- **Contributor authoring guidance** now treats skill/agent length limits as
+  targets rather than hard constraints, matching the practical size of some
+  shipped orchestrators and deep reference-heavy skills.
+
+### Fixed
+
+- Normalized `file_path` handling across remaining validation/warning hooks so
+  repo-relative hook payload paths resolve against the workspace root instead of
+  silently no-oping outside the repo cwd.
+- Hardened `/rb:document` pre-check guidance for shallow/new repos so the
+  “recent Ruby files” gate no longer relies on a brittle `HEAD~5` pipeline.
+- Made Iron Law regeneration fail when bounded replacement markers are malformed
+  instead of logging success on unchanged content.
+- Tightened explicit-root modular detection so supported roots require
+  package-shaped evidence while still recognizing lighter Ruby/Grape package
+  layouts.
+- Rebalanced active-plan fallback so actionable work plans beat stale
+  planning-phase directories when the `ACTIVE_PLAN` marker is missing.
+- Improved planning-phase rediscovery recency so fallback uses real planning
+  activity under `research/` and `scratchpad.md`, not just the `research/`
+  directory node mtime.
+- Aligned SessionStart stack reporting with `detect-stack.rb`, eliminating raw
+  Gemfile grep false positives from commented-out gems.
+- Added a minimal exact-Gemfile fallback in `detect-runtime.sh` so SessionStart
+  still reports obvious stack/ORM signals when the Ruby-based detector cannot
+  run.
+- Tightened degraded-mode Rails detection so `detect-runtime.sh` no longer
+  treats `gem 'rails'` alone as proof of a full Rails app when the Ruby
+  detector cannot run.
+- Removed misleading `zeitwerk:check --resolve` guidance from `/rb:verify`.
+- Corrected `/rb:document` “new Ruby files” guidance to use added-file
+  detection (`--diff-filter=A`) instead of matching any modified Ruby file.
+- Expanded the float-for-money Iron Law detector to catch both `t.float` and
+  `add_column ..., :float` migration forms, including parenthesized
+  `add_column(...)` style.
+- Rebalanced `security-reminder.sh` path matching so common security-sensitive
+  filenames like `access_token.rb`, `payment_*`, and `permission_*` still
+  trigger reminders while broad false positives like `tokenizer` /
+  `administer` no longer do.
+- Aligned pending-plan detection between startup and stop hooks by making
+  `check-pending-plans.sh` look for real unchecked task lines instead of any
+  unchecked checkbox text.
+- Removed duplicate generic startup messaging by dropping the extra
+  `check-resume.sh` fallback banner when SessionStart already prints the
+  standard plugin-loaded message.
+- Restored signal-safe cleanup for temporary `ACTIVE_PLAN.XXXXXX` marker files
+  during `set_active_plan()` writes.
+- Made `stop-failure-log.sh` self-heal stale lock directories after a short
+  TTL, preventing abandoned locks from suppressing future failure logging.
+- Scoped `debug-statement-warning.sh` away from the plugin's own generator and
+  detector script directories so intentional `puts`-based tool output is not
+  treated like production debug code.
+- Closed unbalanced Markdown fences in `rb:research` output examples and the
+  Ruby 3.4 features reference.
+- Fixed generated/documented Iron Law references and examples:
+  `generate-iron-law-outputs.sh` now supports `--help`, rejects unknown
+  targets, and the canonical registry now links to the real YAML source;
+  research/compound example docs no longer contain placeholder broken links;
+  generated injector output no longer churns on wall-clock timestamps; and the
+  generated README now points “full registry” at the canonical registry markdown
+  instead of raw YAML.
+
 ## [1.0.4] - 2026-03-23
 
 ### Fixed

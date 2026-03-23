@@ -73,8 +73,8 @@ def generate_injectable_section(yaml)
 end
 
 # Generate tutorial section
-def generate_tutorial_section(_yaml)
-  puts '### Iron Laws (21 Rules, Always Enforced)'
+def generate_tutorial_section(yaml)
+  puts "### Iron Laws (#{yaml['total_laws']} Rules, Always Enforced)"
   puts ''
   puts 'Iron Laws are non-negotiable rules that every agent enforces. If your code violates one, the plugin stops and explains before proceeding.'
   puts ''
@@ -83,25 +83,14 @@ def generate_tutorial_section(_yaml)
   puts '| Law | Why |'
   puts '|-----|-----|'
 
-  # Show first 7 key laws
-  key_laws = [
-    ['Use decimal for money', 'Floating point math loses precision'],
-    ['Parameterized queries', 'Prevents SQL injection'],
-    ['Jobs must be idempotent', 'Sidekiq retries on failure'],
-    ["Don't pass AR objects to jobs", 'Sidekiq uses JSON serialization'],
-    ['Authorize in EVERY controller action', 'Before_action alone is insufficient'],
-    ['Use includes/preload', 'Avoids N+1 queries'],
-    ['Verify before claiming done', 'Run tests, do not assume']
-  ]
-
-  key_laws.each do |law, reason|
-    puts "| #{law} | #{reason} |"
+  yaml['laws'].first(7).each do |law|
+    puts "| #{law['title']} | #{law['rationale']} |"
   end
 end
 
 # Generate injector script
 def generate_injector_script(yaml)
-  output = "Ruby/Rails/Grape Iron Laws (NON-NEGOTIABLE) — 21 Total:\n\n"
+  output = "Ruby/Rails/Grape Iron Laws (NON-NEGOTIABLE) — #{yaml['total_laws']} Total:\n\n"
 
   yaml['categories'].each do |cat|
     output += "#{cat['name']} (#{cat['law_count']}):\n"
@@ -118,7 +107,7 @@ def generate_injector_script(yaml)
   puts 'set -o pipefail'
   puts ''
   puts '# GENERATED FROM iron-laws.yml — DO NOT EDIT'
-  puts "# Last generated: #{Time.now.utc.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+  puts "# Source version: #{yaml['version']} (updated #{yaml['last_updated']})"
   puts ''
   puts 'command -v jq >/dev/null 2>&1 || exit 0'
   puts ''
@@ -141,9 +130,9 @@ def generate_canonical_registry(yaml)
   puts '<!-- This file is a generated projection of iron-laws.yml — DO NOT EDIT DIRECTLY -->'
   puts ''
   puts 'This file is the human-readable registry of all Iron Laws across the plugin.'
-  puts 'For programmatic use, see [iron-laws.yml](../iron-laws.yml).'
+  puts 'For programmatic use, see [iron-laws.yml](../../../references/iron-laws.yml).'
   puts ''
-  puts '## The 21 Iron Laws'
+  puts "## The #{yaml['total_laws']} Iron Laws"
   puts ''
 
   yaml['categories'].each do |cat|
@@ -170,7 +159,7 @@ def generate_canonical_registry(yaml)
   puts ''
   puts '### Tier 2: Behavioral (Agent/Context)'
   puts ''
-  puts 'Enforced by loading skills and agent instructions (all 21 laws).'
+  puts "Enforced by loading skills and agent instructions (all #{yaml['total_laws']} laws)."
   puts ''
   puts '### Tier 3: Review-Time (On-Demand)'
   puts ''
@@ -187,7 +176,7 @@ end
 
 # Generate README section
 def generate_readme(yaml)
-  puts 'The plugin enforces **21 Iron Laws** that prevent common, costly mistakes:'
+  puts "The plugin enforces **#{yaml['total_laws']} Iron Laws** that prevent common, costly mistakes:"
   puts ''
   puts '| Category | Count | Laws |'
   puts '|----------|-------|------|'
@@ -203,16 +192,17 @@ def generate_readme(yaml)
   puts ''
   puts '### Enforcement'
   puts ''
-  puts '- **Programmatic**: 7 laws checked automatically on every file edit'
-  puts '- **Behavioral**: All 21 laws injected into subagent context'
+  programmatic_count = yaml['laws'].count { |law| law['detector_id'] }
+  puts "- **Programmatic**: #{programmatic_count} laws checked automatically on every file edit"
+  puts "- **Behavioral**: All #{yaml['total_laws']} laws injected into subagent context"
   puts '- **Review-time**: Full audit during `/rb:review`'
   puts ''
-  puts 'See [full registry](plugins/ruby-grape-rails/references/iron-laws.yml) for details.'
+  puts 'See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonical-registry.md) for details.'
 end
 
 # Generate iron-law-judge.md Iron Laws Overview section
 def generate_judge_section(yaml)
-  puts 'These are the 21 non-negotiable Iron Laws. Any violation must be flagged.'
+  puts "These are the #{yaml['total_laws']} non-negotiable Iron Laws. Any violation must be flagged."
   puts ''
 
   yaml['categories'].each do |cat|

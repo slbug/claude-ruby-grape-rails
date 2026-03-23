@@ -67,7 +67,7 @@ user.save(validate: false)
 
 ### Law 10: Sidekiq with Objects
 
-**Pattern**: Passing ActiveRecord objects to jobs
+**Pattern**: Passing ORM objects to jobs
 
 ```ruby
 MyJob.perform_later(current_user)  # WRONG
@@ -81,17 +81,35 @@ MyJob.perform_later(current_user.id)  # CORRECT
 
 ### Laws 4, 11: after_save with Jobs
 
-**Pattern**: Using `after_save` instead of `after_commit` for job enqueueing
+**Pattern**: Using `after_save` or inline-before-commit enqueueing instead of a commit-safe ORM hook
 
 ```ruby
 after_save :enqueue_job  # WRONG
 ```
 
-**Fix**:
+**Fix (Active Record)**:
 
 ```ruby
 after_commit :enqueue_job, on: :create  # CORRECT
 ```
+
+**Fix (Sequel transaction)**:
+
+```ruby
+DB.transaction do
+  record = Order.create(...)
+  DB.after_commit { MyJob.perform_async(record.id) }  # CORRECT
+end
+```
+
+Use `DB.after_commit` when the job depends on an explicit transaction or on
+multiple writes committing together. If there is no surrounding transaction and
+the job only depends on the just-created row, `record = Order.create(...)`
+followed by `MyJob.perform_async(record.id)` can be acceptable, because Sequel
+uses autocommit by default and `Model#save` is one of the operations that uses
+an implicit transaction. Treat that as a narrow Sequel exception, not the
+default recommendation: the plugin's default guidance remains "prefer the
+active ORM's commit-safe hook when enqueue timing matters."
 
 ### Law 12: Eval with User Input
 

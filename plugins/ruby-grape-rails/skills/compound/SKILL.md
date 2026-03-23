@@ -4,8 +4,8 @@ description: Capture a solved Ruby/Rails/Grape problem as reusable knowledge for
 argument-hint: "[path to fix|review|plan]"
 skills:
   - compound-docs
+effort: low
 ---
-
 # Compound Knowledge
 
 Capture a solved problem as reusable knowledge. This creates a knowledge base that helps future sessions solve similar problems faster.
@@ -41,7 +41,7 @@ START ──▶ VALIDATE AGAINST SCHEMA ──▶ USE RESOLUTION TEMPLATE ──
 
 ## Document Structure
 
-Solution documents use YAML frontmatter defined in `skills/compound-docs/references/schema.md` and follow the template in `skills/compound-docs/references/resolution-template.md`.
+Solution documents use YAML frontmatter defined in `../compound-docs/references/schema.md` and follow the template in `../compound-docs/references/resolution-template.md`.
 
 ### Required Frontmatter Fields
 
@@ -147,20 +147,20 @@ Maintain `.claude/solutions/index.md`:
 # Knowledge Index
 
 ## Ruby
-- [Hash key symbol/string confusion](ruby/hash-keys.md)
-- [Memoization patterns](ruby/memoization.md)
+- `ruby/hash-keys.md`
+- `ruby/memoization.md`
 
 ## Rails
-- [Strong parameters gotchas](rails/strong-params.md)
-- [Turbo Stream broadcasts](rails/turbo-streams.md)
+- `rails/strong-params.md`
+- `rails/turbo-streams.md`
 
 ## Sidekiq
-- [Job not enqueuing](sidekiq/job-not-enqueuing.md)
-- [Idempotency patterns](sidekiq/idempotency.md)
+- `sidekiq/job-not-enqueuing.md`
+- `sidekiq/idempotency.md`
 
 ## Security
-- [SQL injection in scopes](security/sql-injection.md)
-- [Mass assignment risks](security/mass-assignment.md)
+- `security/sql-injection.md`
+- `security/mass-assignment.md`
 ```
 
 ## When to Update Index
@@ -183,8 +183,8 @@ Format:
 
 ```markdown
 ## Related Solutions
-- [Similar: X](path/to/x.md) - different root cause
-- [Prerequisite: Y](path/to/y.md) - setup needed first
+- `path/to/x.md` - Similar: X, different root cause
+- `path/to/y.md` - Prerequisite: Y, setup needed first
 ```
 
 ## Integration with Workflow
