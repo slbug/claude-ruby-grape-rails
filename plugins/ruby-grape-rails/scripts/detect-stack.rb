@@ -235,9 +235,17 @@ primary_orm =
   end
 
 # Output for skill consumption
+activerecord_version = versions['activerecord'] || rails_version
+
 puts "RUBY_VERSION=#{RUBY_VERSION}"
 puts "RAILS_VERSION=#{rails_version}" if rails_version
-puts "ACTIVERECORD_VERSION=#{versions['activerecord'] || rails_version}" if orms.include?('active_record')
+if orms.include?('active_record')
+  if activerecord_version && !activerecord_version.to_s.empty?
+    puts "ACTIVERECORD_VERSION=#{activerecord_version}"
+  else
+    puts 'ACTIVERECORD_VERSION=detected'
+  end
+end
 puts "SEQUEL_VERSION=#{versions['sequel']}" if versions['sequel']
 puts "GRAPE_VERSION=#{versions['grape']}" if versions['grape']
 puts "SIDEKIQ_VERSION=#{versions['sidekiq']}" if versions['sidekiq']
