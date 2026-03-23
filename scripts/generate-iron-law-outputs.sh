@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Generate Iron Law outputs from canonical YAML source
-# Usage: ./generate-iron-law-outputs.sh [target]
+# Usage: ./scripts/generate-iron-law-outputs.sh [target]
 #   target: optional specific target to regenerate
 #           (readme|claude|canonical|init|tutorial|injector|judge|all)
 #
