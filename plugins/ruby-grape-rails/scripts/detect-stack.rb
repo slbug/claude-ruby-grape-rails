@@ -13,6 +13,7 @@ unless File.exist?('Gemfile')
 end
 
 gemfile = File.read('Gemfile')
+lockfile = File.exist?('Gemfile.lock') ? File.read('Gemfile.lock') : ''
 
 # Detection helpers
 def gem_present?(content, name)
@@ -23,28 +24,44 @@ def gem_present?(content, name)
   content.match?(/^\s*gem\s+['"]#{Regexp.escape(name)}['"](?=\s*(?:,|#|$))/)
 end
 
+def lock_version(content, name)
+  content[/^\s{4}#{Regexp.escape(name)} \(([^)]+)\)$/, 1]
+end
+
 # Detect stack components
 detected = []
+versions = {}
 
-detected << 'sidekiq' if gem_present?(gemfile, 'sidekiq')
-detected << 'hotwire' if gem_present?(gemfile, 'hotwire-rails')
-detected << 'karafka' if gem_present?(gemfile, 'karafka')
-detected << 'grape' if gem_present?(gemfile, 'grape')
-detected << 'mysql' if gem_present?(gemfile, 'mysql2')
-detected << 'postgres' if gem_present?(gemfile, 'pg')
+{
+  'rails' => 'rails',
+  'grape' => 'grape',
+  'sidekiq' => 'sidekiq',
+  'karafka' => 'karafka',
+  'hotwire' => 'hotwire-rails',
+  'mysql' => 'mysql2',
+  'postgres' => 'pg'
+}.each do |component, gem_name|
+  next unless gem_present?(gemfile, gem_name)
+
+  detected << component
+  version = lock_version(lockfile, gem_name)
+  versions[component] = version if version
+end
 
 # Determine Rails version
 rails_version = if defined?(Rails::VERSION)
                   Rails::VERSION::STRING
-                elsif File.exist?('Gemfile.lock')
-                  # Parse Gemfile.lock as fallback
-                  lock_content = File.read('Gemfile.lock')
-                  lock_content[/^    rails \((\d+\.\d+\.?\d*)\)/, 1]
+                else
+                  versions['rails']
                 end
 
 # Output for skill consumption
 puts "RUBY_VERSION=#{RUBY_VERSION}"
 puts "RAILS_VERSION=#{rails_version}" if rails_version
+puts "GRAPE_VERSION=#{versions['grape']}" if versions['grape']
+puts "SIDEKIQ_VERSION=#{versions['sidekiq']}" if versions['sidekiq']
+puts "KARAFKA_VERSION=#{versions['karafka']}" if versions['karafka']
+puts "HOTWIRE_VERSION=#{versions['hotwire']}" if versions['hotwire']
 puts "DETECTED_STACK=#{detected.join(',')}"
 
 # Individual flags for easy conditional checks

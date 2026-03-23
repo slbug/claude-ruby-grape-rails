@@ -17,7 +17,16 @@ Install the Ruby/Rails/Grape behavioral instructions into the project `CLAUDE.md
 
 ## Detect the Stack
 
-Check the project before writing anything. Use Ruby for detection (avoids fragile shell pipelines):
+Check the project before writing anything.
+
+Detection rules:
+
+1. **Always run** `ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb` first.
+2. **Prefer exact `*_VERSION` values** from that script when writing the managed-block header.
+3. Use plain `detected` only as a last resort when a direct gem is present but no resolved lockfile version is available.
+4. **Never** use broad substring regexes like `/rails \(([^)]+)\)/` against raw `Gemfile.lock`; they can falsely match gems such as `rubocop-rails`.
+
+Use Ruby for detection (avoids fragile shell pipelines):
 
 ```bash
 # Detect Ruby version and stack dependencies
@@ -27,23 +36,44 @@ ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
 ruby -e '
   gemfile = File.read("Gemfile") rescue ""
   lock = File.read("Gemfile.lock") rescue ""
+  
+  def gem_present?(content, name)
+    content.match?(/^\s*gem\s+['\"]#{Regexp.escape(name)}['\"](?=\s*(?:,|#|$))/)
+  end
+  
+  def lock_version(content, name)
+    content[/^\s{4}#{Regexp.escape(name)} \(([^)]+)\)$/, 1]
+  end
 
   puts "Ruby: #{RUBY_VERSION}"
-  puts "Rails: #{lock[/rails \(([^)]+)\)/, 1] || "?"}"
-  puts "Grape: #{lock[/grape \(([^)]+)\)/, 1] || "?"}"
-  puts "Sidekiq: #{lock[/sidekiq \(([^)]+)\)/, 1] || "?"}"
-  puts "Redis: detected" if gemfile.match?(/gem.*redis/)
-  puts "PostgreSQL: detected" if gemfile.match?(/gem.*pg/)
-  puts "Sidekiq: detected" if gemfile.match?(/gem.*sidekiq/)
-  puts "Hotwire: detected" if gemfile.match?(/gem.*hotwire-rails/)
-  puts "Karafka: detected" if gemfile.match?(/gem.*karafka/)
-  puts "Grape: detected" if gemfile.match?(/gem.*grape/)
+  rails_version = lock_version(lock, "rails")
+  puts "Rails: #{rails_version}" if rails_version
+
+  {
+    "Grape" => "grape",
+    "Sidekiq" => "sidekiq",
+    "Karafka" => "karafka",
+    "Hotwire" => "hotwire-rails"
+  }.each do |label, gem_name|
+    next unless gem_present?(gemfile, gem_name)
+    puts "#{label}: #{lock_version(lock, gem_name) || "detected"}"
+  end
+
+  puts "PostgreSQL: detected" if gem_present?(gemfile, "pg")
+  puts "MySQL: detected" if gem_present?(gemfile, "mysql2")
+  puts "Redis: detected" if gem_present?(gemfile, "redis") || gem_present?(gemfile, "redis-client")
 '
 
 # External tools (shell is fine here - simple commands)
 command -v rtk &> /dev/null && echo "RTK: available"
 command -v betterleaks &> /dev/null && echo "Betterleaks: available"
 ```
+
+When building the injected header:
+
+- omit Rails entirely when `RAILS_VERSION` is absent
+- prefer `Grape 3.1.1`, `Sidekiq 6.5.12`, `Karafka 2.5.7`
+- avoid degrading locked versions to `detected`
 
 ## Install Modes
 
