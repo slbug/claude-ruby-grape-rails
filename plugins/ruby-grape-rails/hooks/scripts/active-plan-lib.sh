@@ -8,7 +8,8 @@ set -o pipefail
 #
 # The active plan is determined by:
 # 1. Explicit marker file (.claude/ACTIVE_PLAN) - primary
-# 2. Fallback: most recently modified plan with unchecked tasks
+# 2. Fallback: most recent planning-phase plan (research exists, plan.md absent)
+# 3. Fallback: most recently modified plan with unchecked tasks
 #
 # Marker file lifecycle:
 # - Written by: /rb:plan (after creating plan)
@@ -20,6 +21,15 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 if [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]]; then
   # shellcheck disable=SC1090,SC1091
   source "$ROOT_LIB"
+fi
+if ! declare -F library_safe_return >/dev/null 2>&1; then
+  library_safe_return() {
+    local status="${1:-0}"
+    if [[ "${BASH_SOURCE[0]:-}" != "${0:-}" ]]; then
+      return "$status"
+    fi
+    exit "$status"
+  }
 fi
 if declare -F resolve_workspace_root >/dev/null 2>&1; then
   if [[ -n "${INPUT:-}" ]]; then
@@ -108,8 +118,40 @@ get_active_plan() {
     rm -f -- "$ACTIVE_PLAN_MARKER"
   fi
   
-  # Fallback: Find most recent plan with unchecked tasks
+  # Fallback 1: Find most recent planning-phase plan (research exists, plan.md absent)
   local restore_nullglob=0
+  local newest_planning_dir=""
+  local newest_planning_mtime=-1
+  local plan_dir
+  local planning_mtime
+
+  if ! shopt -q nullglob; then
+    shopt -s nullglob
+    restore_nullglob=1
+  fi
+
+  for plan_dir in "${PLANS_DIR}"/*; do
+    [[ -d "$plan_dir" ]] || continue
+    [[ ! -L "$plan_dir" ]] || continue
+    [[ -d "$plan_dir/research" ]] || continue
+    [[ ! -f "$plan_dir/plan.md" ]] || continue
+
+    planning_mtime=$(get_file_mtime "$plan_dir/research" 2>/dev/null || echo 0)
+    if [[ "$planning_mtime" -gt "$newest_planning_mtime" ]]; then
+      newest_planning_dir="$plan_dir"
+      newest_planning_mtime="$planning_mtime"
+    fi
+  done
+
+  if [[ -n "$newest_planning_dir" ]] && is_valid_plan_dir "$newest_planning_dir"; then
+    printf '%s\n' "$newest_planning_dir"
+    if [[ "$restore_nullglob" -eq 1 ]]; then
+      shopt -u nullglob
+    fi
+    return 0
+  fi
+
+  # Fallback 2: Find most recent plan with unchecked tasks
   local newest_plan=""
   local newest_mtime=-1
   local plan_file
@@ -164,11 +206,16 @@ set_active_plan() {
 
   tmp_marker=$(mktemp "${CLAUDE_DIR}/ACTIVE_PLAN.XXXXXX") || return 1
   [[ -n "$tmp_marker" ]] || return 1
-  trap 'rm -f -- "$tmp_marker"' EXIT HUP INT TERM
 
-  printf '%s\n' "$plan_dir" > "$tmp_marker" || return 1
-  mv -f -- "$tmp_marker" "$ACTIVE_PLAN_MARKER" || return 1
-  trap - EXIT HUP INT TERM
+  if ! printf '%s\n' "$plan_dir" > "$tmp_marker"; then
+    rm -f -- "$tmp_marker"
+    return 1
+  fi
+
+  if ! mv -f -- "$tmp_marker" "$ACTIVE_PLAN_MARKER"; then
+    rm -f -- "$tmp_marker"
+    return 1
+  fi
 }
 
 # Clear the active plan marker (called on plan completion)

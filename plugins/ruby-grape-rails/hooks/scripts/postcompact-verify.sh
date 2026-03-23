@@ -28,8 +28,12 @@ SCRATCHPAD_FILE="${ACTIVE_PLAN_DIR}/scratchpad.md"
 PROGRESS_FILE="${ACTIVE_PLAN_DIR}/progress.md"
 
 if is_planning_phase "$ACTIVE_PLAN_DIR"; then
-  printf "POST-COMPACTION: Active /rb:plan state for '%s'. Re-read .claude/plans/%s/research/ and write plan.md before proceeding.\n" \
-    "$PLAN_SLUG" "$PLAN_SLUG" >&2
+  MESSAGE="POST-COMPACTION: Active /rb:plan state for '${PLAN_SLUG}'. Re-read .claude/plans/${PLAN_SLUG}/research/"
+  if [[ -f "$SCRATCHPAD_FILE" && ! -L "$SCRATCHPAD_FILE" ]]; then
+    MESSAGE+=", .claude/plans/${PLAN_SLUG}/scratchpad.md"
+  fi
+  MESSAGE+=" and write plan.md before proceeding."
+  printf '%s\n' "$MESSAGE" >&2
   exit 2
 fi
 

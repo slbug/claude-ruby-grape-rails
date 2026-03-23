@@ -22,6 +22,7 @@ TOOLS=()
 RUNTIME_INFO=()
 RUBY_VERSION=""
 RAILS_VERSION=""
+FALLBACK_RAILS_VERSION=""
 ACTIVERECORD_VERSION=""
 SEQUEL_VERSION=""
 DETECTED_ORMS=""
@@ -54,13 +55,9 @@ if command -v ruby >/dev/null 2>&1; then
   RUNTIME_INFO+=("Ruby $RUBY_VERSION")
 fi
 
-# Detect Rails version from Gemfile.lock
+# Detect Rails version from Gemfile.lock as a fallback only.
 if [[ -f "$PROJECT_LOCKFILE" ]]; then
-  RAILS_VERSION=$(grep -m 1 -E "^    rails " "$PROJECT_LOCKFILE" | sed 's/.*(\(.*\)).*/\1/')
-  if [[ -n "$RAILS_VERSION" ]]; then
-    RUNTIME_INFO+=("Rails $RAILS_VERSION")
-    STACK+=("Rails")
-  fi
+  FALLBACK_RAILS_VERSION=$(grep -m 1 -E "^    rails " "$PROJECT_LOCKFILE" | sed 's/.*(\(.*\)).*/\1/')
 fi
 
 # Detect stack gems
@@ -95,6 +92,19 @@ if command -v ruby >/dev/null 2>&1 && [[ -f "$STACK_DETECTOR" && ! -L "$STACK_DE
       HAS_PACKWERK) HAS_PACKWERK="$value" ;;
     esac
   done < <(cd "$REPO_ROOT" && ruby "$STACK_DETECTOR" 2>/dev/null)
+fi
+
+if [[ -z "$RAILS_VERSION" && "$FULL_RAILS_APP" == "true" && -n "$FALLBACK_RAILS_VERSION" ]]; then
+  RAILS_VERSION="$FALLBACK_RAILS_VERSION"
+fi
+
+if [[ "$FULL_RAILS_APP" == "true" ]]; then
+  if [[ -n "$RAILS_VERSION" ]]; then
+    RUNTIME_INFO+=("Rails $RAILS_VERSION")
+  else
+    RUNTIME_INFO+=("Rails")
+  fi
+  STACK+=("Rails")
 fi
 
 if [[ -n "$DETECTED_ORMS" ]]; then

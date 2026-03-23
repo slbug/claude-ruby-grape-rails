@@ -28,9 +28,29 @@ end
 
 def directory_glob(*patterns)
   patterns.flat_map { |pattern| Dir.glob(pattern) }
-          .select { |path| File.directory?(path) }
+          .select do |path|
+            begin
+              stat = File.lstat(path)
+              stat.directory? && !stat.symlink?
+            rescue SystemCallError
+              false
+            end
+          end
           .uniq
           .sort
+end
+
+def regular_file?(path)
+  File.lstat(path).file?
+rescue SystemCallError
+  false
+end
+
+def safe_directory?(path)
+  stat = File.lstat(path)
+  stat.directory? && !stat.symlink?
+rescue SystemCallError
+  false
 end
 
 def package_root_patterns
@@ -73,26 +93,43 @@ end
 
 def package_manifests
   package_root_patterns.flat_map { |root| Dir.glob("#{root}/*/package.yml") }
-                       .select { |path| File.file?(path) }
+                       .select do |path|
+                         regular_file?(path) && safe_directory?(File.dirname(path))
+                       end
                        .uniq
                        .sort
 end
 
 def package_dir_candidate?(path)
-  return true if File.exist?(File.join(path, 'Gemfile'))
+  return true if regular_file?(File.join(path, 'Gemfile'))
 
   return true if package_content_markers.any? do |entry|
-    File.directory?(File.join(path, entry))
+    safe_directory?(File.join(path, entry))
   end
 
-  # Inside explicit package roots, be softer: any direct child directory or
-  # Ruby-ish entry is enough to ask follow-up questions about ownership/boundaries.
-  Dir.children(path).any? do |entry|
+  # Inside explicit package roots, be softer but still require code/package-ish
+  # evidence, not just any arbitrary directory.
+  entries = Dir.children(path).reject { |entry| entry.start_with?('.') }
+  return false if entries.empty?
+
+  ruby_file_present = entries.any? do |entry|
+    child = File.join(path, entry)
+    regular_file?(child) && entry.end_with?('.rb', '.rake', '.ru', '.gemspec')
+  end
+  return true if ruby_file_present
+
+  dir_entries = entries.select do |entry|
     next false if entry.start_with?('.')
 
     child = File.join(path, entry)
-    File.directory?(child) || entry.end_with?('.rb', '.rake', '.ru', '.gemspec')
+    safe_directory?(child)
   end
+
+  return false if dir_entries.empty?
+
+  dir_entries.count >= 2
+rescue SystemCallError
+  false
 end
 
 def modular_package_dirs

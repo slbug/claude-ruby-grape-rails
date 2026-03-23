@@ -54,9 +54,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`StopFailure` recovery notes are phase-aware** — planning-phase failures now
   point back to `research/` and `scratchpad.md`, while work-phase failures keep
   the `plan.md` / `progress.md` resume flow.
+- **Planning-phase recovery no longer depends solely on `ACTIVE_PLAN`** —
+  active-plan fallback can now rediscover `research/`-only planning work when
+  the marker file is missing or stale.
 - **Sidekiq summary guidance is now ORM-scoped end-to-end** — the condensed
   checklist no longer reverts to unconditional Active Record / Active Job
   advice in mixed-ORM repos.
+- **Explicit-root package detection is softer but still package-shaped** —
+  supported roots now require actual code/package evidence instead of treating
+  any arbitrary child directory as a package candidate.
+- **Init template modular triggers now match detector policy** — generic
+  `package.yml` alone no longer implies modular-boundary support outside the
+  detector's explicit roots.
 - **Runtime detection now persists `PRIMARY_ORM`** in `.claude/.runtime_env`,
   keeping the cached runtime state aligned with the detector output contract.
 - **`${CLAUDE_SKILL_DIR}` adoption** was added selectively in workflow skills

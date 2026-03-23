@@ -107,7 +107,9 @@ multiple writes committing together. If there is no surrounding transaction and
 the job only depends on the just-created row, `record = Order.create(...)`
 followed by `MyJob.perform_async(record.id)` can be acceptable, because Sequel
 uses autocommit by default and `Model#save` is one of the operations that uses
-an implicit transaction.
+an implicit transaction. Treat that as a narrow Sequel exception, not the
+default recommendation: the plugin's default guidance remains "prefer the
+active ORM's commit-safe hook when enqueue timing matters."
 
 ### Law 12: Eval with User Input
 
