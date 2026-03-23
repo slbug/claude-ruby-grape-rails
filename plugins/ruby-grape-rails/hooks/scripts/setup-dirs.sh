@@ -7,7 +7,9 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
-REPO_ROOT=$(resolve_workspace_root)
+INPUT=$(read_hook_input)
+REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
+[[ -n "$REPO_ROOT" ]] || exit 0
 CLAUDE_DIR="${REPO_ROOT}/.claude"
 
 [[ ! -L "$CLAUDE_DIR" ]] || exit 0

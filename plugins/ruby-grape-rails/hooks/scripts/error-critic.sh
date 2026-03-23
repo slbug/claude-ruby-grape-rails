@@ -9,7 +9,8 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
 INPUT=$(read_hook_input)
-REPO_ROOT=$(resolve_workspace_root "$INPUT")
+REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
+[[ -n "$REPO_ROOT" ]] || exit 0
 CLAUDE_DIR="${REPO_ROOT}/.claude"
 HOOK_STATE_DIR="${CLAUDE_DIR}/.hook-state"
 FAILURES_ROOT="${HOOK_STATE_DIR}/failures"

@@ -19,7 +19,8 @@ def gem_present?(content, name)
   # Match exact Gemfile entries like:
   # gem "pg"
   # gem 'pg', '~> 1.5'
-  content.match?(/^\s*gem\s+['"]#{Regexp.escape(name)}['"](?=\s*(?:,|$))/)
+  # gem 'pg' # needed for postgres
+  content.match?(/^\s*gem\s+['"]#{Regexp.escape(name)}['"](?=\s*(?:,|#|$))/)
 end
 
 # Detect stack components

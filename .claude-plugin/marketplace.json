@@ -18,7 +18,8 @@
       "source": {
         "source": "git-subdir",
         "url": "slbug/claude-ruby-grape-rails",
-        "path": "plugins/ruby-grape-rails"
+        "path": "plugins/ruby-grape-rails",
+        "ref": "v1.0.3"
       },
       "category": "development",
       "tags": ["ruby", "rails", "grape", "postgres", "redis", "sidekiq"]

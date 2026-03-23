@@ -22,10 +22,15 @@ if [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]]; then
   source "$ROOT_LIB"
 fi
 if declare -F resolve_workspace_root >/dev/null 2>&1; then
-  REPO_ROOT=$(resolve_workspace_root)
+  if [[ -n "${INPUT:-}" ]]; then
+    REPO_ROOT=$(resolve_workspace_root "$INPUT") || REPO_ROOT=""
+  else
+    REPO_ROOT=$(resolve_workspace_root) || REPO_ROOT=""
+  fi
 else
   REPO_ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 fi
+[[ -n "$REPO_ROOT" ]] || exit 0
 
 CLAUDE_DIR="${REPO_ROOT}/.claude"
 PLANS_DIR="${CLAUDE_DIR}/plans"

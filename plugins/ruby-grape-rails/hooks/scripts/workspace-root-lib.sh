@@ -5,6 +5,11 @@
 # 1. CLAUDE_PROJECT_DIR environment variable
 # 2. Hook payload .cwd (when hook input JSON is available)
 # 3. Current working directory
+#
+# Candidate directories are promoted to the actual project root:
+# - git/worktree root when available
+# - otherwise nearest ancestor containing Gemfile or .claude
+# - otherwise the canonicalized candidate directory itself
 
 read_hook_input() {
   if [[ -t 0 ]]; then
@@ -20,6 +25,51 @@ normalize_workspace_dir() {
 
   [[ -d "$dir" ]] || return 1
   (cd "$dir" >/dev/null 2>&1 && pwd -P) || return 1
+}
+
+ensure_safe_workspace_root() {
+  local root="$1"
+  [[ -n "$root" ]] || return 1
+
+  if [[ "$root" == "/" ]]; then
+    echo "Warning: refusing to use filesystem root as workspace root" >&2
+    return 1
+  fi
+
+  printf '%s\n' "$root"
+}
+
+resolve_project_root_from_dir() {
+  local dir="$1"
+  local normalized_dir
+  local current
+  local git_root
+
+  normalized_dir=$(normalize_workspace_dir "$dir") || return 1
+
+  if command -v git >/dev/null 2>&1; then
+    git_root=$(git -C "$normalized_dir" rev-parse --show-toplevel 2>/dev/null) || git_root=""
+    if [[ -n "$git_root" ]]; then
+      normalize_workspace_dir "$git_root" | {
+        IFS= read -r resolved_git_root || exit 1
+        ensure_safe_workspace_root "$resolved_git_root"
+      }
+      return 0
+    fi
+  fi
+
+  current="$normalized_dir"
+  while [[ -n "$current" ]]; do
+    if [[ -f "${current}/Gemfile" || -d "${current}/.claude" ]]; then
+      ensure_safe_workspace_root "$current"
+      return 0
+    fi
+
+    [[ "$current" != "/" ]] || break
+    current=$(dirname -- "$current") || break
+  done
+
+  ensure_safe_workspace_root "$normalized_dir"
 }
 
 canonicalize_existing_path() {
@@ -71,7 +121,7 @@ resolve_workspace_root() {
   local root="${CLAUDE_PROJECT_DIR:-}"
 
   if [[ -n "$root" ]]; then
-    if normalize_workspace_dir "$root"; then
+    if resolve_project_root_from_dir "$root"; then
       return 0
     fi
   fi
@@ -79,13 +129,13 @@ resolve_workspace_root() {
   if [[ -n "$input" ]] && command -v jq >/dev/null 2>&1; then
     root=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null) || root=""
     if [[ -n "$root" ]]; then
-      if normalize_workspace_dir "$root"; then
+      if resolve_project_root_from_dir "$root"; then
         return 0
       fi
     fi
   fi
 
-  normalize_workspace_dir "${PWD:-.}"
+  resolve_project_root_from_dir "${PWD:-.}"
 }
 
 normalize_hook_mode() {
