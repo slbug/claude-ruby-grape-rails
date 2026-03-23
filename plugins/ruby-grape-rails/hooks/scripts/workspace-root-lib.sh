@@ -7,8 +7,8 @@
 # 3. Current working directory
 #
 # Candidate directories are promoted to the actual project root:
-# - git/worktree root when available
-# - otherwise nearest ancestor containing Gemfile or .claude
+# - nearest ancestor containing Gemfile or .claude
+# - otherwise git/worktree root when available
 # - otherwise the canonicalized candidate directory itself
 
 read_hook_input() {
@@ -17,6 +17,14 @@ read_hook_input() {
   else
     cat
   fi
+}
+
+library_safe_return() {
+  local status="${1:-0}"
+  if [[ "${BASH_SOURCE[0]:-}" != "${0:-}" ]]; then
+    return "$status"
+  fi
+  exit "$status"
 }
 
 normalize_workspace_dir() {
@@ -47,6 +55,17 @@ resolve_project_root_from_dir() {
 
   normalized_dir=$(normalize_workspace_dir "$dir") || return 1
 
+  current="$normalized_dir"
+  while [[ -n "$current" ]]; do
+    if [[ -f "${current}/Gemfile" || -d "${current}/.claude" ]]; then
+      ensure_safe_workspace_root "$current"
+      return 0
+    fi
+
+    [[ "$current" != "/" ]] || break
+    current=$(dirname "$current") || break
+  done
+
   if command -v git >/dev/null 2>&1; then
     git_root=$(git -C "$normalized_dir" rev-parse --show-toplevel 2>/dev/null) || git_root=""
     if [[ -n "$git_root" ]]; then
@@ -57,17 +76,6 @@ resolve_project_root_from_dir() {
       return 0
     fi
   fi
-
-  current="$normalized_dir"
-  while [[ -n "$current" ]]; do
-    if [[ -f "${current}/Gemfile" || -d "${current}/.claude" ]]; then
-      ensure_safe_workspace_root "$current"
-      return 0
-    fi
-
-    [[ "$current" != "/" ]] || break
-    current=$(dirname -- "$current") || break
-  done
 
   ensure_safe_workspace_root "$normalized_dir"
 }
@@ -81,8 +89,8 @@ canonicalize_existing_path() {
   [[ -n "$path" ]] || return 1
   [[ -e "$path" ]] || return 1
 
-  dir=$(dirname -- "$path") || return 1
-  base=$(basename -- "$path") || return 1
+  dir=$(dirname "$path") || return 1
+  base=$(basename "$path") || return 1
   [[ -d "$dir" ]] || return 1
 
   resolved_dir=$(cd "$dir" >/dev/null 2>&1 && pwd -P) || return 1

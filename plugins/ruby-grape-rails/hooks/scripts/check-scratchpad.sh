@@ -6,6 +6,12 @@ set -o pipefail
 # Prioritizes active plan from marker, shows all plans with scratchpads
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+# shellcheck disable=SC1090,SC1091
+source "$ROOT_LIB"
+# shellcheck disable=SC2034 # consumed by active-plan-lib during sourcing
+INPUT=$(read_hook_input)
 LIB="${SCRIPT_DIR}/active-plan-lib.sh"
 [[ -r "$LIB" && ! -L "$LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091
@@ -17,9 +23,9 @@ ACTIVE_SLUG=""
 
 scratchpads=()
 if [[ -d "$PLANS_DIR" ]]; then
-  while IFS= read -r file; do
+  while IFS= read -r -d '' file; do
     scratchpads+=("$file")
-  done < <(find "$PLANS_DIR" -name "scratchpad.md" -type f 2>/dev/null)
+  done < <(find "$PLANS_DIR" -name "scratchpad.md" -type f -print0 2>/dev/null)
 fi
 
 COUNT=${#scratchpads[@]}

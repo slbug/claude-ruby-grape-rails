@@ -15,7 +15,8 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
 INPUT=$(read_hook_input)
-REPO_ROOT=$(resolve_workspace_root "$INPUT")
+REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
+[[ -n "$REPO_ROOT" ]] || exit 0
 PROJECT_GEMFILE="${REPO_ROOT}/Gemfile"
 PROJECT_LOCKFILE="${REPO_ROOT}/Gemfile.lock"
 
@@ -26,7 +27,7 @@ FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || exit 0
 [[ ! -L "$FILE_PATH" ]] || exit 0
 is_path_within_root "$REPO_ROOT" "$FILE_PATH" || exit 0
 
-BASE_NAME=$(basename -- "$FILE_PATH")
+BASE_NAME=$(basename "$FILE_PATH")
 case "$BASE_NAME" in
   *.rb|*.rake|Gemfile|Rakefile|config.ru) ;;
   *) exit 0 ;;

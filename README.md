@@ -34,7 +34,7 @@ that prevent the mistakes Ruby developers actually make in production.
 │  💎 Ruby/Rails/Grape Plugin for Claude Code                         │
 │                                                                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
-│  │    22    │    49    │   100+   │    21    │    21    │           │
+│  │    22    │    49    │   100+   │    19    │    21    │           │
 │  │  Agents  │  Skills  │   Refs   │  Hooks   │Iron Laws │           │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘           │
 │                                                                     │

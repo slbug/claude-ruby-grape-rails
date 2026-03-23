@@ -261,6 +261,5 @@ Without Tidewave, use:
 ## References
 
 - [Tidewave Rails README](https://github.com/tidewave-ai/tidewave_rails)
-- [Tidewave Documentation](https://hexdocs.pm/tidewave)
 - [Proactive Patterns](references/proactive-patterns.md)
 - [Validation Checklist](references/validation-checklist.md)

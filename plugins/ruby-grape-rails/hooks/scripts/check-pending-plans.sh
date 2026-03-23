@@ -11,7 +11,8 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
 INPUT=$(read_hook_input)
-REPO_ROOT=$(resolve_workspace_root "$INPUT")
+REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
+[[ -n "$REPO_ROOT" ]] || exit 0
 PLANS_DIR="${REPO_ROOT}/.claude/plans"
 
 if [[ "$(printf '%s' "$INPUT" | jq -r '.stop_hook_active // empty' 2>/dev/null)" == "true" ]]; then
