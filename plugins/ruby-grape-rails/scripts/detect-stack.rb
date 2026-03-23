@@ -37,10 +37,6 @@ def package_root_patterns
   [
     'packs',
     'packages',
-    'components',
-    'apps',
-    'services',
-    'engines',
     'app/packs',
     'app/packages'
   ]

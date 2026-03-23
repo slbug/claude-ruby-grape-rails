@@ -129,6 +129,8 @@ end
 
 ## Enqueue After Commit
 
+Always scope this advice to the package's owning ORM.
+
 **Wrong:** Job may run before commit
 
 ```ruby
@@ -138,12 +140,21 @@ def enqueue_welcome_email
 end
 ```
 
-**Correct:** Job runs after successful commit
+**Correct for Active Record:** Job runs after successful commit
 
 ```ruby
 after_commit :enqueue_welcome_email, on: :create
 def enqueue_welcome_email
   WelcomeEmailJob.perform_async(id)
+end
+```
+
+**Correct for Sequel:** Use a transaction-level or Sequel model commit hook, not Active Record callbacks
+
+```ruby
+DB.transaction do
+  user = User.create(name: 'Ada')
+  DB.after_commit { WelcomeEmailJob.perform_async(user.id) }
 end
 ```
 

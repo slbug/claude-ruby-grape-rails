@@ -11,8 +11,6 @@ Research with primary sources first, synthesize findings, and provide actionable
 
 ## Research Process
 
-```
-
 ## Repository Topology Check
 
 Before deep research in an existing codebase, identify:
@@ -24,6 +22,8 @@ Before deep research in an existing codebase, identify:
 If the repo appears modular but explicit Packwerk signals are absent, ask:
 
 `No Packwerk detected. Do you have something similar implemented? Where are the modules/packages and what stack/ORM does each use?`
+
+```
 START ──▶ DECOMPOSE_QUERY ──▶ SPAWN_RESEARCHERS ──▶ PARALLEL_RESEARCH
                                                       │
                                                       ▼

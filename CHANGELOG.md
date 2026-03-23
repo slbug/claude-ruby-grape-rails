@@ -36,16 +36,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   enqueueing, distinguishing Active Record `after_commit` advice from Sequel
   transaction-hook patterns.
 - **Packwerk and modular-monolith workflows** are now first-class in init and
-  planning flows, including explicit user questioning when a modular structure
-  is detected without explicit Packwerk signals.
+  planning flows, including explicit user questioning when explicit package
+  roots like `packages/*`, `packs/*`, `app/packages/*`, or `app/packs/*` are
+  detected without explicit Packwerk signals.
 - **Stack detection now distinguishes Rails components from a full Rails app**
   via `RAILS_COMPONENTS=true|false` and `FULL_RAILS_APP=true|false`, which
   helps mixed Grape + Rails-component repos avoid being mislabeled as full
   Rails apps.
-- **Modular package detection is broader and more generic** — package discovery
-  now recognizes common code-layout markers under roots like `packages/*` and
-  `app/packages/*` instead of only Rails-heavy `app/config/db` layouts, and
-  explicit Packwerk detection now depends on `packwerk.yml` rather than generic
+- **Modular package detection is now more conservative and package-root
+  focused** — discovery now keys off explicit package roots like `packages/*`,
+  `packs/*`, `app/packages/*`, and `app/packs/*`, while avoiding broad nested
+  Rails namespacing roots that produced false positives in ordinary apps.
+  Explicit Packwerk detection now depends on `packwerk.yml` rather than generic
   package manifests.
 - **Runtime detection now persists `PRIMARY_ORM`** in `.claude/.runtime_env`,
   keeping the cached runtime state aligned with the detector output contract.

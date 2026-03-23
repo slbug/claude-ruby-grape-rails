@@ -81,7 +81,7 @@ Check file patterns being edited:
 | `db/migrate/*`, `*migration.rb` | active-record-patterns, migrations.md |
 | `*model.rb`, `class.*ApplicationRecord` | active-record-patterns, queries.md |
 | `Sequel::Model`, `sequel-rails`, `db/migrations/*` | sequel-patterns, safe-migrations |
-| `packwerk.yml`, `package.yml`, `packs/*`, `packages/*` | rb-boundaries, review, work |
+| `packwerk.yml`, `package.yml`, `packs/*`, `packages/*`, `app/packs/*`, `app/packages/*` | rb-boundaries, review, work |
 | `*auth*`, `*session*`, `*password*` | security, authentication.md, authorization.md |
 | `*_spec.rb`, `*_test.rb` | testing, rspec-patterns.md |
 | `app/views/*`, `turbo_frame_tag` | hotwire-patterns, components.md |
@@ -94,12 +94,12 @@ You MUST spawn these agents when triggers match. This is not optional.
 | Trigger | Agent | When |
 |---------|-------|------|
 | `/rb:plan` invoked | rails-patterns-analyst | ALWAYS |
-| `/rb:plan` invoked | ruby-library-researcher | If new gems |
+| `/rb:plan` invoked | ruby-gem-researcher | If new gems |
 | `app/jobs/*`, `*job.rb` | sidekiq-specialist | On edit/review |
-| `db/migrate/*`, schema changes | database-designer | On migration |
-| `packwerk.yml`, `package.yml`, modular layout | rails-architect | On architecture work |
+| `db/migrate/*`, schema changes | active-record-schema-designer | On migration |
+| `packwerk.yml`, `package.yml`, `packs/*`, `packages/*`, `app/packs/*`, `app/packages/*` | rails-architect | On architecture work |
 | auth, login, password, token, session | security-analyzer | ALWAYS |
-| `app/views/*`, Hotwire changes | hotwire-specialist | On UI work |
+| `app/views/*`, Hotwire changes | rails-architect | On UI work |
 
 ### STEP 7: PROCEED with response
 
