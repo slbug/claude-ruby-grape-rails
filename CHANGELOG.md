@@ -5,6 +5,17 @@ All notable changes to the Ruby/Rails/Grape Claude Code plugin.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-03-23
+
+### Fixed
+
+- **`/rb:init` stack detection** — Switched init stack/version parsing to exact
+  gem-name matches so Rails no longer falsely resolves from gems like
+  `rubocop-rails`. `detect-stack.rb` now emits resolved `GRAPE_VERSION`,
+  `SIDEKIQ_VERSION`, `KARAFKA_VERSION`, and related version fields so injected
+  `CLAUDE.md` headers prefer exact locked versions over degrading to plain
+  `detected`.
+
 ## [1.0.3] - 2026-03-23
 
 ### Changed
@@ -254,6 +265,7 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
+[1.0.4]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.4
 [1.0.3]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.3
 [1.0.2]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.2
 [1.0.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.1

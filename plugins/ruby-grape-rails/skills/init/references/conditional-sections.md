@@ -93,7 +93,7 @@ Install: `brew install betterleaks`
 | `{RAILS_VERSION}` | Gemfile.lock | 7.1.3 |
 | `{GRAPE_VERSION}` | Gemfile.lock | 2.0.0 |
 | `{SIDEKIQ_VERSION}` | Gemfile.lock | 7.2.0 |
-| `{OPTIONAL_STACK}` | Detected optional deps | , Sidekiq, Hotwire, RTK |
+| `{OPTIONAL_STACK}` | Comma-prefixed extra versioned deps when available | , Karafka 2.5.7, Hotwire 2.0.0 |
 | `{SIDEKIQ_SECTION}` | If sidekiq in Gemfile | Include Sidekiq section |
 | `{HOTWIRE_SECTION}` | If hotwire-rails in Gemfile | Include Hotwire section |
 | `{KARAFKA_SECTION}` | If karafka in Gemfile | Include Karafka section |
@@ -108,20 +108,42 @@ Use the Ruby detection script (avoids fragile shell pipelines):
 # Detect stack dependencies
 ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
 
+# Prefer exact *_VERSION outputs from the script when composing the header.
+# Only fall back to "detected" when the direct gem is present but no resolved
+# version is available from Gemfile.lock.
+
 # Or inline Ruby (if script unavailable):
 ruby -e '
   gemfile = File.read("Gemfile") rescue ""
-  puts "sidekiq" if gemfile.match?(/gem.*sidekiq/)
-  puts "hotwire" if gemfile.match?(/gem.*hotwire-rails/)
-  puts "karafka" if gemfile.match?(/gem.*karafka/)
-  puts "grape" if gemfile.match?(/gem.*grape/)
+  lock = File.read("Gemfile.lock") rescue ""
+
+  def gem_present?(content, name)
+    content.match?(/^\s*gem\s+['\"]#{Regexp.escape(name)}['\"](?=\s*(?:,|#|$))/)
+  end
+
+  def lock_version(content, name)
+    content[/^\s{4}#{Regexp.escape(name)} \(([^)]+)\)$/, 1]
+  end
+
+  {
+    "rails" => "rails",
+    "sidekiq" => "sidekiq",
+    "hotwire" => "hotwire-rails",
+    "karafka" => "karafka",
+    "grape" => "grape"
+  }.each do |label, gem_name|
+    next unless gem_present?(gemfile, gem_name)
+    puts "#{label}=#{lock_version(lock, gem_name) || "detected"}"
+  end
 '
 
 # Version detection (via Gemfile.lock)
-# Note: Matches only numeric versions, not constraints like ">= 3.0"
-ruby -e 'puts File.read("Gemfile.lock")[/^    rails \((\d+\.\d+\.?\d*)\)/, 1] || "?"'
-ruby -e 'puts File.read("Gemfile.lock")[/^    sidekiq \((\d+\.\d+\.?\d*)\)/, 1] || "?"'
-ruby -e 'puts File.read("Gemfile.lock")[/^    grape \((\d+\.\d+\.?\d*)\)/, 1] || "?"'
+# Use exact gem-name matches only; never use loose /rails \((...)\)/ style regexes
+# because they can falsely match gems such as rubocop-rails.
+ruby -e 'lock = File.read("Gemfile.lock"); puts lock[/^\s{4}rails \(([^)]+)\)$/, 1] || "?"'
+ruby -e 'lock = File.read("Gemfile.lock"); puts lock[/^\s{4}sidekiq \(([^)]+)\)$/, 1] || "?"'
+ruby -e 'lock = File.read("Gemfile.lock"); puts lock[/^\s{4}grape \(([^)]+)\)$/, 1] || "?"'
+ruby -e 'lock = File.read("Gemfile.lock"); puts lock[/^\s{4}karafka \(([^)]+)\)$/, 1] || "?"'
 
 # RTK detection
 command -v rtk &> /dev/null && echo "rtk"
