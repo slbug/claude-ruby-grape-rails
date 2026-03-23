@@ -34,8 +34,8 @@ if [[ "$COUNT" -gt 0 ]]; then
   echo "Scratchpad notes found in $COUNT plan(s):"
   for file in "${scratchpads[@]}"; do
     [[ -f "$file" ]] || continue
-    plan_dir=$(dirname "$file")
-    plan_slug=$(basename "$plan_dir")
+    plan_dir=$(path_dirname "$file")
+    plan_slug=$(path_basename "$plan_dir")
     
     # Mark active plan
     if [[ "$plan_slug" == "$ACTIVE_SLUG" ]]; then

@@ -87,7 +87,7 @@ copy_into_tmpdir() {
   esac
 
   mkdir -p -- "$target_dir" || return 1
-  target_file="${target_dir}/$(basename "$source_file")"
+  target_file="${target_dir}/$(path_basename "$source_file")"
   cp "$source_path" "$target_file"
 }
 

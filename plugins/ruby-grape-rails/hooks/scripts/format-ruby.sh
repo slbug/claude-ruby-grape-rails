@@ -27,7 +27,7 @@ FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || exit 0
 [[ ! -L "$FILE_PATH" ]] || exit 0
 is_path_within_root "$REPO_ROOT" "$FILE_PATH" || exit 0
 
-BASE_NAME=$(basename "$FILE_PATH")
+BASE_NAME=$(path_basename "$FILE_PATH")
 case "$BASE_NAME" in
   *.rb|*.rake|Gemfile|Rakefile|config.ru) ;;
   *) exit 0 ;;

@@ -27,6 +27,50 @@ library_safe_return() {
   exit "$status"
 }
 
+path_basename() {
+  local path="$1"
+  [[ -n "$path" ]] || {
+    printf '%s\n' "."
+    return 0
+  }
+
+  while [[ "$path" != "/" && "$path" == */ ]]; do
+    path="${path%/}"
+  done
+
+  if [[ "$path" == "/" ]]; then
+    printf '%s\n' "/"
+  else
+    printf '%s\n' "${path##*/}"
+  fi
+}
+
+path_dirname() {
+  local path="$1"
+  [[ -n "$path" ]] || {
+    printf '%s\n' "."
+    return 0
+  }
+
+  while [[ "$path" != "/" && "$path" == */ ]]; do
+    path="${path%/}"
+  done
+
+  case "$path" in
+    /)
+      printf '%s\n' "/"
+      ;;
+    */*)
+      path="${path%/*}"
+      [[ -n "$path" ]] || path="/"
+      printf '%s\n' "$path"
+      ;;
+    *)
+      printf '%s\n' "."
+      ;;
+  esac
+}
+
 normalize_workspace_dir() {
   local dir="$1"
   [[ -n "$dir" ]] || return 1
@@ -52,29 +96,43 @@ resolve_project_root_from_dir() {
   local normalized_dir
   local current
   local git_root
+  local home_dir
 
   normalized_dir=$(normalize_workspace_dir "$dir") || return 1
-
-  current="$normalized_dir"
-  while [[ -n "$current" ]]; do
-    if [[ -f "${current}/Gemfile" || -d "${current}/.claude" ]]; then
-      ensure_safe_workspace_root "$current"
-      return 0
-    fi
-
-    [[ "$current" != "/" ]] || break
-    current=$(dirname "$current") || break
-  done
+  home_dir="${HOME:-}"
 
   if command -v git >/dev/null 2>&1; then
     git_root=$(git -C "$normalized_dir" rev-parse --show-toplevel 2>/dev/null) || git_root=""
     if [[ -n "$git_root" ]]; then
-      normalize_workspace_dir "$git_root" | {
-        IFS= read -r resolved_git_root || exit 1
-        ensure_safe_workspace_root "$resolved_git_root"
-      }
-      return 0
+      git_root=$(normalize_workspace_dir "$git_root") || git_root=""
     fi
+  fi
+
+  current="$normalized_dir"
+  while [[ -n "$current" ]]; do
+    if [[ -f "${current}/Gemfile" || -d "${current}/.claude" ]]; then
+      if [[ -n "$git_root" ]]; then
+        [[ "$current" == "$git_root" || "$current" == "${git_root}/"* ]] || break
+      elif [[ -n "$home_dir" && "$current" == "$home_dir" && -d "${current}/.claude" && ! -f "${current}/Gemfile" ]]; then
+        break
+      fi
+      if current=$(ensure_safe_workspace_root "$current"); then
+        printf '%s\n' "$current"
+        return 0
+      fi
+      break
+    fi
+
+    if [[ -n "$git_root" && "$current" == "$git_root" ]]; then
+      break
+    fi
+    [[ "$current" != "/" ]] || break
+    current=$(path_dirname "$current") || break
+  done
+
+  if [[ -n "$git_root" ]]; then
+    ensure_safe_workspace_root "$git_root"
+    return $?
   fi
 
   ensure_safe_workspace_root "$normalized_dir"
@@ -89,11 +147,15 @@ canonicalize_existing_path() {
   [[ -n "$path" ]] || return 1
   [[ -e "$path" ]] || return 1
 
-  dir=$(dirname "$path") || return 1
-  base=$(basename "$path") || return 1
+  dir=$(path_dirname "$path") || return 1
+  base=$(path_basename "$path") || return 1
   [[ -d "$dir" ]] || return 1
 
   resolved_dir=$(cd "$dir" >/dev/null 2>&1 && pwd -P) || return 1
+  if [[ "$base" == "/" ]]; then
+    printf '%s\n' "$resolved_dir"
+    return 0
+  fi
   printf '%s/%s\n' "$resolved_dir" "$base"
 }
 
