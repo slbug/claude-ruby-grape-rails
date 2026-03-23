@@ -205,7 +205,10 @@ plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
 - **One plan = one work unit.** Large features get split into multiple plans. Each is self-contained.
 - **Agents are automatic.** The plugin spawns specialist agents behind the scenes. You don't manage them directly.
 - **The stack is detected, not guessed.** `/rb:init` and SessionStart hooks identify Rails/Grape/Sidekiq/Karafka, Active Record vs Sequel, and Packwerk/modular package layouts before giving guidance.
-- **Workflow continuity is hook-backed.** `PreCompact`, `PostCompact`, and `StopFailure` preserve plan context through compaction and failed stops instead of relying only on chat memory.
+- **Workflow continuity is hook-backed.** `PreCompact`, `PostCompact`, and
+  `StopFailure` preserve rules, log failure context, and surface re-read
+  reminders after compaction or failed stops instead of relying only on chat
+  memory.
 
 ### Plan Namespaces
 

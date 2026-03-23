@@ -25,6 +25,7 @@ RAILS_VERSION=""
 ACTIVERECORD_VERSION=""
 SEQUEL_VERSION=""
 DETECTED_ORMS=""
+PRIMARY_ORM="unknown"
 RAILS_COMPONENTS="false"
 FULL_RAILS_APP="false"
 PACKAGE_LAYOUT="single_app"
@@ -85,6 +86,7 @@ if command -v ruby >/dev/null 2>&1 && [[ -f "$STACK_DETECTOR" && ! -L "$STACK_DE
       ACTIVERECORD_VERSION) ACTIVERECORD_VERSION="$value" ;;
       SEQUEL_VERSION) SEQUEL_VERSION="$value" ;;
       DETECTED_ORMS) DETECTED_ORMS="$value" ;;
+      PRIMARY_ORM) [[ -n "$value" ]] && PRIMARY_ORM="$value" ;;
       RAILS_COMPONENTS) RAILS_COMPONENTS="$value" ;;
       FULL_RAILS_APP) FULL_RAILS_APP="$value" ;;
       PACKAGE_LAYOUT) [[ -n "$value" ]] && PACKAGE_LAYOUT="$value" ;;
@@ -200,6 +202,7 @@ trap 'rm -f -- "$TMP_RUNTIME_ENV"' EXIT HUP INT TERM
   [[ -n "$SEQUEL_VERSION" ]] && emit_shell_assignment "SEQUEL_VERSION" "$SEQUEL_VERSION"
   [[ ${#STACK[@]} -gt 0 ]] && emit_shell_assignment "STACK_GEMS" "${STACK[*]}"
   [[ -n "$DETECTED_ORMS" ]] && emit_shell_assignment "DETECTED_ORMS" "$DETECTED_ORMS"
+  emit_shell_assignment "PRIMARY_ORM" "$PRIMARY_ORM"
   emit_shell_assignment "RAILS_COMPONENTS" "$RAILS_COMPONENTS"
   emit_shell_assignment "FULL_RAILS_APP" "$FULL_RAILS_APP"
   emit_shell_assignment "PACKAGE_LAYOUT" "$PACKAGE_LAYOUT"

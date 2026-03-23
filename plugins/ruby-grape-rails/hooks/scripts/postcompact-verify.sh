@@ -2,8 +2,8 @@
 set -o nounset
 set -o pipefail
 
-# PostCompact hook: verify active workflow state survived compaction.
-# Uses stderr + exit 2 so Claude re-reads critical workflow artifacts.
+# PostCompact hook: surface a recovery reminder after compaction.
+# Uses stderr + exit 2 to advise Claude which workflow artifacts to re-read.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"

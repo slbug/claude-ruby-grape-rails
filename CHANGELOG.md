@@ -14,9 +14,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Skill `effort` frontmatter across all 49 shipped skills** — Workflow
   skills now use higher effort where orchestration matters, while lightweight
   skills use lower effort for cheaper, faster execution.
-- **`PostCompact` hook (`postcompact-verify.sh`)** — Verifies that active plan
-  state survived context compaction and reminds Claude to re-read plan,
-  scratchpad, and progress artifacts when needed.
+- **`PostCompact` hook (`postcompact-verify.sh`)** — Adds an advisory
+  post-compaction reminder that points Claude back to active plan, scratchpad,
+  and progress artifacts when needed.
 - **`StopFailure` hook (`stop-failure-log.sh`)** — Persists normalized API
   failure context into the active plan scratchpad so resume flows can recover
   with better context.
@@ -47,6 +47,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `app/packages/*` instead of only Rails-heavy `app/config/db` layouts, and
   explicit Packwerk detection now depends on `packwerk.yml` rather than generic
   package manifests.
+- **Runtime detection now persists `PRIMARY_ORM`** in `.claude/.runtime_env`,
+  keeping the cached runtime state aligned with the detector output contract.
 - **`${CLAUDE_SKILL_DIR}` adoption** was added selectively in workflow skills
   where explicit local reference paths improve reliability across plugin cache
   and install contexts.

@@ -216,7 +216,7 @@ Defined in `hooks/hooks.json`:
     "SubagentStart": [...],        // Iron Laws injection into all subagents
     "SessionStart": [...],         // Setup dirs + runtime tool detection + resume detection
     "PreCompact": [...],           // Re-inject workflow rules before compaction
-    "PostCompact": [...],          // Verify active plan context survived compaction
+    "PostCompact": [...],          // Advise re-reading active plan artifacts after compaction
     "Stop": [...],                 // Warn if uncompleted tasks
     "StopFailure": [...]           // Persist API failure context for resume flows
   }
@@ -240,8 +240,8 @@ Defined in `hooks/hooks.json`:
 - `SubagentStart`: Inject all Iron Laws into every spawned subagent via `additionalContext` (addresses zero skill auto-loading gap)
 - `PreCompact`: Re-inject workflow rules (plan/work/full) before compaction via JSON `systemMessage`,
   including `.claude/ACTIVE_PLAN` resolution for context-aware compaction
-- `PostCompact`: Re-check active plan state after compaction and tell Claude which
-  plan artifacts to re-read when unchecked tasks still exist
+- `PostCompact`: Advise Claude which active plan artifacts to re-read after
+  compaction when unchecked tasks still exist
 - `SessionStart` (all): Setup `.claude/` directories + consolidated runtime detection
   - `detect-runtime.sh`: Detect Ruby/Rails version, stack gems, Tidewave, RTK, betterleaks, and active hook mode
 - `SessionStart` (startup|resume only): Scratchpad check + resume workflow detection + workflow hints
@@ -764,7 +764,7 @@ Based on `/docs-check` validation against latest Claude Code docs, the following
 
 ### Hook Features (Adopted)
 
-- [x] **`PostCompact` event** — Added to verify active plan state after compaction
+- [x] **`PostCompact` event** — Added to surface active-plan recovery reminders after compaction
 - [x] **`StopFailure` event** — Added to persist API-failure context into plan scratchpads for resume flows
 
 ### Hook Features (Under Evaluation)

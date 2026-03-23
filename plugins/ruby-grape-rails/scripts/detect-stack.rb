@@ -42,11 +42,7 @@ def package_root_patterns
     'services',
     'engines',
     'app/packs',
-    'app/packages',
-    'app/components',
-    'app/apps',
-    'app/services',
-    'app/engines'
+    'app/packages'
   ]
 end
 
@@ -65,14 +61,6 @@ def package_content_markers
     jobs
     policies
     middleware
-    events
-    clients
-    inbound
-    outbound
-    handlers
-    adapters
-    consumers
-    queries
     public
     serializers
     presenters

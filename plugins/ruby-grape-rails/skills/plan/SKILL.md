@@ -135,7 +135,7 @@ Before finalizing the plan, verify:
 - [ ] `StandardError` caught, not `Exception`
 - [ ] Failed jobs can be retried safely (idempotent)
 - [ ] Database transactions wrap multi-step operations
-- [ ] Sidekiq jobs use `after_commit` not `after_save`
+- [ ] Sidekiq jobs use the active ORM's commit-safe hook, not `after_save` or inline before commit
 - [ ] N+1 queries prevented with `includes` or `preload`
 - [ ] Money uses `decimal`, not `float`
 - [ ] No sensitive data in logs
@@ -145,7 +145,7 @@ Before finalizing the plan, verify:
 
 | Failure Type | Strategy | Implementation |
 |--------------|----------|----------------|
-| DB Rollback | Transaction rescue | `rescue ActiveRecord::Rollback` |
+| DB Rollback | Transaction rescue | Use the ORM-specific rollback exception (`ActiveRecord::Rollback` / `Sequel::Rollback`) |
 | Job Fail | Retry with backoff | `sidekiq_options retry: 5` |
 | External API | Circuit breaker | `circuitbox` or custom |
 | Validation | Early return | Guard clauses, service objects |
