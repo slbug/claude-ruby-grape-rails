@@ -81,8 +81,17 @@ end
 def package_dir_candidate?(path)
   return true if File.exist?(File.join(path, 'Gemfile'))
 
-  package_content_markers.any? do |entry|
+  return true if package_content_markers.any? do |entry|
     File.directory?(File.join(path, entry))
+  end
+
+  # Inside explicit package roots, be softer: any direct child directory or
+  # Ruby-ish entry is enough to ask follow-up questions about ownership/boundaries.
+  Dir.children(path).any? do |entry|
+    next false if entry.start_with?('.')
+
+    child = File.join(path, entry)
+    File.directory?(child) || entry.end_with?('.rb', '.rake', '.ru', '.gemspec')
   end
 end
 

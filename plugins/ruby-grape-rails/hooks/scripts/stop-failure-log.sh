@@ -20,6 +20,11 @@ source "$LIB"
 ACTIVE_PLAN_DIR=$(get_active_plan) || exit 0
 [[ -n "$ACTIVE_PLAN_DIR" && -d "$ACTIVE_PLAN_DIR" ]] || exit 0
 
+PLANNING_PHASE=false
+if is_planning_phase "$ACTIVE_PLAN_DIR"; then
+  PLANNING_PHASE=true
+fi
+
 SCRATCHPAD_FILE="${ACTIVE_PLAN_DIR}/scratchpad.md"
 LOCK_DIR="${ACTIVE_PLAN_DIR}/.stop-failure.lock"
 
@@ -75,6 +80,11 @@ ERROR_MESSAGE=$(normalize_error_message "$ERROR_MESSAGE")
 [[ -n "$ERROR_TYPE" ]] || ERROR_TYPE="unknown"
 [[ -n "$ERROR_MESSAGE" ]] || ERROR_MESSAGE="Turn ended due to API error."
 
+RESUME_HINT="re-read \`plan.md\`, \`scratchpad.md\`, and \`progress.md\`, then continue with \`/rb:work\`"
+if [[ "$PLANNING_PHASE" == "true" ]]; then
+  RESUME_HINT="re-read \`research/\` and \`scratchpad.md\`, finish synthesizing \`plan.md\`, then continue with \`/rb:plan\`"
+fi
+
 if mkdir "$LOCK_DIR" 2>/dev/null; then
   trap 'rmdir -- "$LOCK_DIR" 2>/dev/null || true' EXIT HUP INT TERM
 
@@ -89,8 +99,8 @@ if mkdir "$LOCK_DIR" 2>/dev/null; then
     printf '## API Failure — %s\n' "$(date '+%Y-%m-%d %H:%M')"
     printf '\n'
     printf "%s\n" "- Error type: \`$ERROR_TYPE\`"
-    printf -- '- Last error: %s\n' "$ERROR_MESSAGE"
-    printf "%s\n" "- Resume hint: re-read \`plan.md\`, \`scratchpad.md\`, and \`progress.md\`, then continue with \`/rb:work\`"
+    printf -- '- Error message: %s\n' "$ERROR_MESSAGE"
+    printf "%s\n" "- Resume hint: $RESUME_HINT"
   } >> "$SCRATCHPAD_FILE"
 fi
 

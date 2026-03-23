@@ -363,9 +363,9 @@ See: [ActiveJob::Continuation Documentation](https://api.rubyonrails.org/classes
 
 1. Use IDs, not objects
 2. Make jobs idempotent
-3. Use `after_commit` callbacks
+3. Use the active ORM's commit-safe enqueue hook
 4. Limit concurrency for external APIs
-5. Enable `enqueue_after_transaction_commit`
+5. Enable `enqueue_after_transaction_commit` when using Rails Active Job
 6. Stringify hash keys
 7. Monitor queue depth
 8. Set appropriate retry counts

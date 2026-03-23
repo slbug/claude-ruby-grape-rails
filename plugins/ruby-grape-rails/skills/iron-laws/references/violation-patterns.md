@@ -96,8 +96,18 @@ after_commit :enqueue_job, on: :create  # CORRECT
 **Fix (Sequel transaction)**:
 
 ```ruby
-DB.after_commit { MyJob.perform_async(record.id) }  # CORRECT
+DB.transaction do
+  record = Order.create(...)
+  DB.after_commit { MyJob.perform_async(record.id) }  # CORRECT
+end
 ```
+
+Use `DB.after_commit` when the job depends on an explicit transaction or on
+multiple writes committing together. If there is no surrounding transaction and
+the job only depends on the just-created row, `record = Order.create(...)`
+followed by `MyJob.perform_async(record.id)` can be acceptable, because Sequel
+uses autocommit by default and `Model#save` is one of the operations that uses
+an implicit transaction.
 
 ### Law 12: Eval with User Input
 

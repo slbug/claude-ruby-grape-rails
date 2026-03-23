@@ -46,9 +46,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Modular package detection is now more conservative and package-root
   focused** — discovery now keys off explicit package roots like `packages/*`,
   `packs/*`, `app/packages/*`, and `app/packs/*`, while avoiding broad nested
-  Rails namespacing roots that produced false positives in ordinary apps.
-  Explicit Packwerk detection now depends on `packwerk.yml` rather than generic
-  package manifests.
+  Rails namespacing roots that produced false positives in ordinary apps. Once
+  inside those explicit roots, detection is intentionally softer so lightweight
+  packages still trigger ownership/boundary questions. Explicit Packwerk
+  detection now depends on `packwerk.yml` rather than generic package
+  manifests.
+- **`StopFailure` recovery notes are phase-aware** — planning-phase failures now
+  point back to `research/` and `scratchpad.md`, while work-phase failures keep
+  the `plan.md` / `progress.md` resume flow.
+- **Sidekiq summary guidance is now ORM-scoped end-to-end** — the condensed
+  checklist no longer reverts to unconditional Active Record / Active Job
+  advice in mixed-ORM repos.
 - **Runtime detection now persists `PRIMARY_ORM`** in `.claude/.runtime_env`,
   keeping the cached runtime state aligned with the detector output contract.
 - **`${CLAUDE_SKILL_DIR}` adoption** was added selectively in workflow skills
