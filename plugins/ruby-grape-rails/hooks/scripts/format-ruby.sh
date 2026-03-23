@@ -54,7 +54,7 @@ elif has_gem rubocop; then
   # Auto-fix with RuboCop
   if ! (cd "$REPO_ROOT" && bundle exec rubocop --force-exclusion -a -- "$FILE_PATH") 2>/dev/null; then
     # If auto-fix failed, report for manual fixing
-    echo "NEEDS FORMAT OR LINT FIX: $FILE_PATH — run 'bundle exec rubocop -A $QUOTED_PATH'" >&2
+    echo "NEEDS FORMAT OR LINT FIX: $FILE_PATH — run 'bundle exec rubocop --force-exclusion -a $QUOTED_PATH'" >&2
     exit 2
   fi
 fi
