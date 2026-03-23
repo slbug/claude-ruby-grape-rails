@@ -27,6 +27,8 @@ detected << 'sidekiq' if gem_present?(gemfile, 'sidekiq')
 detected << 'hotwire' if gem_present?(gemfile, 'hotwire-rails')
 detected << 'karafka' if gem_present?(gemfile, 'karafka')
 detected << 'grape' if gem_present?(gemfile, 'grape')
+detected << 'mysql' if gem_present?(gemfile, 'mysql2')
+detected << 'postgres' if gem_present?(gemfile, 'pg')
 
 # Determine Rails version
 rails_version = if defined?(Rails::VERSION)
