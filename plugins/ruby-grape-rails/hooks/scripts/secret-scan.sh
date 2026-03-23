@@ -9,11 +9,19 @@ set -o pipefail
 # Exit 2 with stderr message to surface warning to Claude
 
 command -v jq >/dev/null 2>&1 || exit 0
+INPUT=$(cat)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+# shellcheck disable=SC1090,SC1091
+source "$ROOT_LIB"
+REPO_ROOT=$(resolve_workspace_root "$INPUT")
+HOOK_MODE=$(resolve_hook_mode "$REPO_ROOT")
 
-# Parse hook input from stdin
 FILE_PATH=""
-if [[ ! -t 0 ]]; then
-  FILE_PATH=$(jq -r '.tool_input.file_path // empty' 2>/dev/null || printf '')
+FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || printf '')
+if [[ -n "$FILE_PATH" && "$FILE_PATH" != /* ]]; then
+  FILE_PATH="${REPO_ROOT}/${FILE_PATH#./}"
 fi
 
 # Check if betterleaks is available
@@ -26,6 +34,38 @@ if [[ -z "$BETTERLEAKS_PATH" || ! -x "$BETTERLEAKS_PATH" ]]; then
   # Betterleaks not available, skip silently
   exit 0
 fi
+
+is_secret_relevant_path() {
+  local path="$1"
+  case "$path" in
+    *.env|*.env.*|*.key|*.pem|*.p12|*.pfx|*.jks|*.crt|*.cer|*.csr|*.tfvars|*.tfvars.json|*.kubeconfig|*.properties|*.toml|*.ini|*.conf|*.yaml|*.yml|*.json|*.log|*secret*|*credential*|*token*|*api_key*|*apikey*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+input_has_secret_indicators() {
+  local snippet
+
+  snippet=$(printf '%s' "$INPUT" | jq -r '(.tool_input.content // .tool_input.new_string // empty)' 2>/dev/null) || snippet=""
+  [[ -n "$snippet" ]] || return 1
+
+  printf '%s' "$snippet" | grep -Eqi \
+    '(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|api[_-]?key|secret|token|client_secret|aws_secret_access_key|xox[baprs]-|ghp_[A-Za-z0-9]{20,})'
+}
+
+emit_secret_warning() {
+  local target="$1"
+  local result="$2"
+
+  echo "⚠️  Potential secret detected in $target"
+  printf '%s\n' "$result"
+  echo
+  echo "To ignore: add '#betterleaks:allow' comment to the line"
+}
 
 copy_into_tmpdir() {
   local source_file="$1"
@@ -51,38 +91,44 @@ copy_into_tmpdir() {
 }
 
 if [[ -z "$FILE_PATH" ]]; then
-  # No specific file, check if we're in a git repo and scan last commit
-  if git rev-parse --git-dir >/dev/null 2>&1; then
+  # No specific file: only strict mode does broader recent-change scans.
+  [[ "$HOOK_MODE" == "strict" ]] || exit 0
+
+  if (cd "$REPO_ROOT" && git rev-parse --git-dir >/dev/null 2>&1); then
     TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/rb-secret-scan.XXXXXX") || exit 0
     [[ -n "$TMP_DIR" ]] || exit 0
 
     trap 'rm -rf -- "$TMP_DIR"' EXIT HUP INT TERM
 
-    if git rev-parse --verify HEAD >/dev/null 2>&1; then
-      git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null | head -20 | while IFS= read -r file; do
-        copy_into_tmpdir "$file" "$TMP_DIR" 2>/dev/null || true
-      done
+    if (cd "$REPO_ROOT" && git rev-parse --verify HEAD >/dev/null 2>&1); then
+      while IFS= read -r file; do
+        [[ -n "$file" ]] || continue
+        copy_into_tmpdir "${REPO_ROOT}/${file#./}" "$TMP_DIR" 2>/dev/null || true
+      done < <(cd "$REPO_ROOT" && git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null | head -20)
     else
-      git ls-files 2>/dev/null | head -20 | while IFS= read -r file; do
-        copy_into_tmpdir "$file" "$TMP_DIR" 2>/dev/null || true
-      done
+      while IFS= read -r file; do
+        [[ -n "$file" ]] || continue
+        copy_into_tmpdir "${REPO_ROOT}/${file#./}" "$TMP_DIR" 2>/dev/null || true
+      done < <(cd "$REPO_ROOT" && git ls-files 2>/dev/null | head -20)
     fi
 
     if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
-      echo "🔒 Scanning recent changes for secrets..."
-      "$BETTERLEAKS_PATH" dir "$TMP_DIR" --no-banner --redact=100 >/dev/null 2>&1 || true
+      RESULT=$("$BETTERLEAKS_PATH" dir "$TMP_DIR" --no-banner --redact=100 2>/dev/null || true)
+      if [[ -n "$RESULT" ]]; then
+        emit_secret_warning "recent changes" "$RESULT"
+        exit 2
+      fi
     fi
   fi
 else
-  # Scan specific file that was just written
+  if [[ "$HOOK_MODE" != "strict" ]] && ! is_secret_relevant_path "$FILE_PATH" && ! input_has_secret_indicators; then
+    exit 0
+  fi
+
   if [[ -f "$FILE_PATH" && ! -L "$FILE_PATH" ]]; then
-    # Quick scan on the single file
     RESULT=$("$BETTERLEAKS_PATH" dir "$FILE_PATH" --no-banner --redact=100 2>/dev/null || true)
     if [[ -n "$RESULT" ]]; then
-      echo "⚠️  Potential secret detected in $FILE_PATH"
-      echo "$RESULT"
-      echo ""
-      echo "To ignore: add '#betterleaks:allow' comment to the line"
+      emit_secret_warning "$FILE_PATH" "$RESULT"
       exit 2
     fi
   fi

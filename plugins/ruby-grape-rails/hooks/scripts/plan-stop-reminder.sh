@@ -7,15 +7,15 @@ set -o pipefail
 # Skips in /rb:full autonomous mode (detected by progress.md with State).
 
 command -v jq >/dev/null 2>&1 || exit 0
+INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
-  :
-else
-  REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
-fi
+ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+# shellcheck disable=SC1090,SC1091
+source "$ROOT_LIB"
+REPO_ROOT=$(resolve_workspace_root "$INPUT")
 PLANS_DIR="${REPO_ROOT}/.claude/plans"
 
-INPUT=$(cat)
 FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
 [[ -n "$FILE_PATH" ]] || exit 0
 

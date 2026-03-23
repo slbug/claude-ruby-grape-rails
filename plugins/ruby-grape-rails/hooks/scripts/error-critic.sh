@@ -3,14 +3,15 @@ set -o nounset
 set -o pipefail
 
 command -v jq >/dev/null 2>&1 || exit 0
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
-  :
-else
-  REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
-fi
-
 INPUT=$(cat)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+# shellcheck disable=SC1090,SC1091
+source "$ROOT_LIB"
+REPO_ROOT=$(resolve_workspace_root "$INPUT")
+CLAUDE_DIR="${REPO_ROOT}/.claude"
+
 COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
 ERROR=$(printf '%s' "$INPUT" | jq -r '.error // empty' 2>/dev/null) || ERROR=""
 SESSION_ID=$(printf '%s' "$INPUT" | jq -r '.session_id // .sessionId // "default"' 2>/dev/null) || SESSION_ID="default"
@@ -22,6 +23,7 @@ esac
 
 SESSION_KEY=$(printf '%s' "$SESSION_ID" | tr -c '[:alnum:]_-' '_')
 CMD_KEY=$(printf '%s' "$COMMAND" | cksum | awk '{print $1}')
+[[ ! -L "$CLAUDE_DIR" ]] || exit 0
 FAILURE_DIR="${REPO_ROOT}/.claude/.hook-state/failures/${SESSION_KEY}"
 mkdir -p -- "$FAILURE_DIR" || exit 0
 [[ -d "$FAILURE_DIR" && ! -L "$FAILURE_DIR" ]] || exit 0
@@ -29,6 +31,7 @@ FAILURE_LOG="$FAILURE_DIR/${CMD_KEY}.log"
 COUNT_FILE="$FAILURE_DIR/${CMD_KEY}.count"
 LOCK_DIR="$FAILURE_DIR/${CMD_KEY}.lock"
 TRIMMED_LOG=""
+TMP_COUNT=""
 [[ ! -L "$FAILURE_LOG" ]] || exit 0
 [[ ! -L "$COUNT_FILE" ]] || exit 0
 [[ ! -e "$FAILURE_LOG" || -f "$FAILURE_LOG" ]] || exit 0
@@ -38,6 +41,7 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
 fi
 cleanup_error_critic() {
   [[ -n "$TRIMMED_LOG" ]] && rm -f -- "$TRIMMED_LOG" 2>/dev/null || true
+  [[ -n "$TMP_COUNT" ]] && rm -f -- "$TMP_COUNT" 2>/dev/null || true
   rmdir -- "$LOCK_DIR" 2>/dev/null || true
 }
 trap cleanup_error_critic EXIT HUP INT TERM
@@ -49,7 +53,11 @@ if [[ -f "$COUNT_FILE" ]]; then
 else
   COUNT=1
 fi
-echo "$COUNT" > "$COUNT_FILE"
+TMP_COUNT=$(mktemp "${FAILURE_DIR}/count.XXXXXX") || exit 0
+[[ -n "$TMP_COUNT" ]] || exit 0
+printf '%s\n' "$COUNT" > "$TMP_COUNT" || exit 0
+mv -f -- "$TMP_COUNT" "$COUNT_FILE" || exit 0
+TMP_COUNT=""
 
 {
   echo "--- Failure #${COUNT} at $(date +%H:%M:%S) ---"
@@ -84,4 +92,4 @@ Recovery:
 3. Narrow the reproduction.
 4. Fix the first real error, not the cascade.
 5. Consider /rb:investigate if the failure pattern is still unclear."
-printf '%b' "$CRITIC_ANALYSIS" | jq -Rs '{hookSpecificOutput: {hookEventName: "PostToolUseFailure", additionalContext: .}}'
+printf '%s' "$CRITIC_ANALYSIS" | jq -Rs '{hookSpecificOutput: {hookEventName: "PostToolUseFailure", additionalContext: .}}'

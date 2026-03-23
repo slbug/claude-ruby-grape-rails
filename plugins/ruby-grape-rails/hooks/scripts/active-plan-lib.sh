@@ -16,10 +16,15 @@ set -o pipefail
 # - Read by: session resume detection, precompact-rules.sh, log-progress.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
-  :
+ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+if [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]]; then
+  # shellcheck disable=SC1090,SC1091
+  source "$ROOT_LIB"
+fi
+if declare -F resolve_workspace_root >/dev/null 2>&1; then
+  REPO_ROOT=$(resolve_workspace_root)
 else
-  REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+  REPO_ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 fi
 
 CLAUDE_DIR="${REPO_ROOT}/.claude"
@@ -146,6 +151,7 @@ set_active_plan() {
   is_valid_plan_dir "$input_plan_dir" || return 1
   plan_dir=$(resolve_plan_dir "$input_plan_dir") || return 1
 
+  [[ ! -L "$CLAUDE_DIR" ]] || return 1
   mkdir -p -- "$CLAUDE_DIR" || return 1
   [[ ! -L "$ACTIVE_PLAN_MARKER" ]] || return 1
 

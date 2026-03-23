@@ -9,20 +9,22 @@ set -o pipefail
 # Auto-fixes formatting issues when possible
 
 command -v jq >/dev/null 2>&1 || exit 0
+INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
-  :
-else
-  REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
-fi
+ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+# shellcheck disable=SC1090,SC1091
+source "$ROOT_LIB"
+REPO_ROOT=$(resolve_workspace_root "$INPUT")
 PROJECT_GEMFILE="${REPO_ROOT}/Gemfile"
 PROJECT_LOCKFILE="${REPO_ROOT}/Gemfile.lock"
 
-FILE_PATH=$(jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
+FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
 [[ -n "$FILE_PATH" ]] || exit 0
 if [[ "$FILE_PATH" != /* ]]; then
   FILE_PATH="${REPO_ROOT}/${FILE_PATH#./}"
 fi
+[[ "$FILE_PATH" == "${REPO_ROOT}/"* ]] || exit 0
 [[ -f "$FILE_PATH" ]] || exit 0
 [[ ! -L "$FILE_PATH" ]] || exit 0
 

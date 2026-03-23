@@ -5,6 +5,14 @@ All notable changes to the Ruby/Rails/Grape Claude Code plugin.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-03-23
+
+### Changed
+
+- Merged `detect-runtime.sh`, `detect-betterleaks.sh`, and `detect-rtk.sh` into one SessionStart detector that exports runtime, tool, and hook-mode state
+- Added hook modes: `default` for quieter startup / targeted secret scanning, `strict` for broader secret checks
+- Switched marketplace plugin source to `git-subdir` so URL-based marketplace distribution can target `plugins/ruby-grape-rails/`
+
 ## [1.0.2] - 2026-03-23
 
 ## [1.0.1] - 2026-03-23
@@ -236,6 +244,7 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
+[1.0.3]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.3
 [1.0.2]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.2
 [1.0.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.1
 [1.0.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.0

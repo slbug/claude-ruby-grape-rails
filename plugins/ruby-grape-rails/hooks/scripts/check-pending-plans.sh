@@ -5,15 +5,15 @@ set -o pipefail
 # Stop hook: Warn about plans with uncompleted tasks
 # Guard against infinite loops per Claude Code docs
 command -v jq >/dev/null 2>&1 || exit 0
+INPUT=$(cat)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
-  :
-else
-  REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
-fi
+ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+# shellcheck disable=SC1090,SC1091
+source "$ROOT_LIB"
+REPO_ROOT=$(resolve_workspace_root "$INPUT")
 PLANS_DIR="${REPO_ROOT}/.claude/plans"
 
-INPUT=$(cat)
 if [[ "$(printf '%s' "$INPUT" | jq -r '.stop_hook_active // empty' 2>/dev/null)" == "true" ]]; then
   exit 0
 fi

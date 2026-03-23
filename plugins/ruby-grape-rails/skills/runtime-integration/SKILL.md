@@ -40,6 +40,11 @@ The `detect-runtime.sh` hook runs automatically at session start and detects:
 # Detected from Gemfile:
 TIDEWAVE_GEM_PRESENT=true
 TIDEWAVE_PROJECT_CAPABLE=true
+
+# Exported for hook coordination:
+HOOK_MODE=default
+BETTERLEAKS_AVAILABLE=true
+RTK_AVAILABLE=true
 ```
 
 If Tidewave is not detected, runtime commands will provide setup guidance.
