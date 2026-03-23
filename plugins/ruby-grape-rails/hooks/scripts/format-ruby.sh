@@ -21,14 +21,13 @@ PROJECT_LOCKFILE="${REPO_ROOT}/Gemfile.lock"
 
 FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
 [[ -n "$FILE_PATH" ]] || exit 0
-if [[ "$FILE_PATH" != /* ]]; then
-  FILE_PATH="${REPO_ROOT}/${FILE_PATH#./}"
-fi
-[[ "$FILE_PATH" == "${REPO_ROOT}/"* ]] || exit 0
+FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || exit 0
 [[ -f "$FILE_PATH" ]] || exit 0
 [[ ! -L "$FILE_PATH" ]] || exit 0
+is_path_within_root "$REPO_ROOT" "$FILE_PATH" || exit 0
 
-case "$FILE_PATH" in
+BASE_NAME=$(basename -- "$FILE_PATH")
+case "$BASE_NAME" in
   *.rb|*.rake|Gemfile|Rakefile|config.ru) ;;
   *) exit 0 ;;
 esac

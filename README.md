@@ -94,12 +94,14 @@ that prevent the mistakes Ruby developers actually make in production.
 ```bash
 git clone https://github.com/slbug/claude-ruby-grape-rails.git
 
-# Option A: Add as local marketplace
+# Option A: Test local working-tree changes directly
+claude --plugin-dir ./claude-ruby-grape-rails/plugins/ruby-grape-rails
+
+# Option B: Validate marketplace install flow
+# Note: marketplace.json now uses git-subdir source, so this installs the
+# published GitHub-backed plugin source, not your uncommitted working tree.
 /plugin marketplace add ./claude-ruby-grape-rails
 /plugin install ruby-grape-rails
-
-# Option B: Test plugin directly
-claude --plugin-dir ./claude-ruby-grape-rails/plugins/ruby-grape-rails
 ```
 
 ### Known Limitations

@@ -20,8 +20,8 @@ HOOK_MODE=$(resolve_hook_mode "$REPO_ROOT")
 
 FILE_PATH=""
 FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || printf '')
-if [[ -n "$FILE_PATH" && "$FILE_PATH" != /* ]]; then
-  FILE_PATH="${REPO_ROOT}/${FILE_PATH#./}"
+if [[ -n "$FILE_PATH" ]]; then
+  FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || FILE_PATH=""
 fi
 
 # Check if betterleaks is available
@@ -35,10 +35,10 @@ if [[ -z "$BETTERLEAKS_PATH" || ! -x "$BETTERLEAKS_PATH" ]]; then
   exit 0
 fi
 
-is_secret_relevant_path() {
+is_binaryish_path() {
   local path="$1"
   case "$path" in
-    *.env|*.env.*|*.key|*.pem|*.p12|*.pfx|*.jks|*.crt|*.cer|*.csr|*.tfvars|*.tfvars.json|*.kubeconfig|*.properties|*.toml|*.ini|*.conf|*.yaml|*.yml|*.json|*.log|*secret*|*credential*|*token*|*api_key*|*apikey*)
+    *.png|*.jpg|*.jpeg|*.gif|*.webp|*.ico|*.bmp|*.tif|*.tiff|*.mp3|*.mp4|*.mov|*.avi|*.mkv|*.wav|*.flac|*.zip|*.gz|*.tgz|*.bz2|*.xz|*.7z|*.rar|*.pdf|*.sqlite|*.sqlite3|*.db|*.bin|*.exe|*.dll|*.so|*.dylib|*.class|*.jar|*.war|*.ear|*.woff|*.woff2|*.ttf|*.eot)
       return 0
       ;;
     *)
@@ -61,10 +61,10 @@ emit_secret_warning() {
   local target="$1"
   local result="$2"
 
-  echo "⚠️  Potential secret detected in $target"
-  printf '%s\n' "$result"
-  echo
-  echo "To ignore: add '#betterleaks:allow' comment to the line"
+  echo "⚠️  Potential secret detected in $target" >&2
+  printf '%s\n' "$result" >&2
+  echo >&2
+  echo "To ignore: add '#betterleaks:allow' comment to the line" >&2
 }
 
 copy_into_tmpdir() {
@@ -102,13 +102,19 @@ if [[ -z "$FILE_PATH" ]]; then
 
     if (cd "$REPO_ROOT" && git rev-parse --verify HEAD >/dev/null 2>&1); then
       while IFS= read -r file; do
+        local_resolved=""
         [[ -n "$file" ]] || continue
-        copy_into_tmpdir "${REPO_ROOT}/${file#./}" "$TMP_DIR" 2>/dev/null || true
+        local_resolved=$(resolve_workspace_file_path "$REPO_ROOT" "$file") || continue
+        is_path_within_root "$REPO_ROOT" "$local_resolved" || continue
+        copy_into_tmpdir "$local_resolved" "$TMP_DIR" 2>/dev/null || true
       done < <(cd "$REPO_ROOT" && git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null | head -20)
     else
       while IFS= read -r file; do
+        local_resolved=""
         [[ -n "$file" ]] || continue
-        copy_into_tmpdir "${REPO_ROOT}/${file#./}" "$TMP_DIR" 2>/dev/null || true
+        local_resolved=$(resolve_workspace_file_path "$REPO_ROOT" "$file") || continue
+        is_path_within_root "$REPO_ROOT" "$local_resolved" || continue
+        copy_into_tmpdir "$local_resolved" "$TMP_DIR" 2>/dev/null || true
       done < <(cd "$REPO_ROOT" && git ls-files 2>/dev/null | head -20)
     fi
 
@@ -121,11 +127,11 @@ if [[ -z "$FILE_PATH" ]]; then
     fi
   fi
 else
-  if [[ "$HOOK_MODE" != "strict" ]] && ! is_secret_relevant_path "$FILE_PATH" && ! input_has_secret_indicators; then
+  if [[ "$HOOK_MODE" != "strict" ]] && is_binaryish_path "$FILE_PATH" && ! input_has_secret_indicators; then
     exit 0
   fi
 
-  if [[ -f "$FILE_PATH" && ! -L "$FILE_PATH" ]]; then
+  if [[ -f "$FILE_PATH" && ! -L "$FILE_PATH" ]] && is_path_within_root "$REPO_ROOT" "$FILE_PATH"; then
     RESULT=$("$BETTERLEAKS_PATH" dir "$FILE_PATH" --no-banner --redact=100 2>/dev/null || true)
     if [[ -n "$RESULT" ]]; then
       emit_secret_warning "$FILE_PATH" "$RESULT"

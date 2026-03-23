@@ -18,6 +18,50 @@ normalize_workspace_dir() {
   printf '%s\n' "$dir"
 }
 
+canonicalize_existing_path() {
+  local path="$1"
+  local dir
+  local base
+  local resolved_dir
+
+  [[ -n "$path" ]] || return 1
+  [[ -e "$path" ]] || return 1
+
+  dir=$(dirname -- "$path") || return 1
+  base=$(basename -- "$path") || return 1
+  [[ -d "$dir" ]] || return 1
+
+  resolved_dir=$(cd "$dir" >/dev/null 2>&1 && pwd -P) || return 1
+  printf '%s/%s\n' "$resolved_dir" "$base"
+}
+
+resolve_workspace_file_path() {
+  local root="$1"
+  local input_path="$2"
+  local candidate
+
+  [[ -n "$root" && -n "$input_path" ]] || return 1
+  if [[ "$input_path" == /* ]]; then
+    candidate="$input_path"
+  else
+    candidate="${root}/${input_path#./}"
+  fi
+
+  canonicalize_existing_path "$candidate"
+}
+
+is_path_within_root() {
+  local root="$1"
+  local path="$2"
+  local normalized_root
+  local normalized_path
+
+  normalized_root=$(normalize_workspace_dir "$root") || return 1
+  normalized_path=$(canonicalize_existing_path "$path") || return 1
+
+  [[ "$normalized_path" == "$normalized_root" || "$normalized_path" == "${normalized_root}/"* ]]
+}
+
 resolve_workspace_root() {
   local input="${1:-${CLAUDE_HOOK_INPUT:-}}"
   local root="${CLAUDE_PROJECT_DIR:-}"

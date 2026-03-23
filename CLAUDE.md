@@ -245,7 +245,7 @@ Defined in `hooks/hooks.json`:
 
 **Hook modes:**
 
-- `default` (implicit): keep startup quieter and limit `secret-scan.sh` to likely secret-bearing paths
+- `default` (implicit): keep startup quieter, scan normal written text/source/config files, skip obvious binary/media files, and avoid recent-change fallback scans
 - `strict`: scan every written file and broaden secret scanning to recent changes when no specific file path is available
 - Configure via `${REPO_ROOT}/.claude/ruby-plugin-hook-mode` or `RUBY_PLUGIN_HOOK_MODE=strict`
 
@@ -286,10 +286,12 @@ The plugin integrates with Tidewave Rails for runtime operations:
 ### Testing locally
 
 ```bash
-# Option A: Test plugin directly
+# Option A: Test local working-tree changes directly
 claude --plugin-dir ./plugins/ruby-grape-rails
 
-# Option B: Add as local marketplace
+# Option B: Validate marketplace install flow
+# Note: marketplace.json now uses git-subdir source, so this installs the
+# published GitHub-backed plugin source, not your uncommitted working tree.
 /plugin marketplace add .
 /plugin install ruby-grape-rails
 ```
