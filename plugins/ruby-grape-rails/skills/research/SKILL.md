@@ -152,8 +152,8 @@ Write research to `.claude/research/{slug}.md`:
 **Question**: [what we researched]
 
 **Sources**:
-- [Source 1](link) - [relevance]
-- [Source 2](link) - [relevance]
+- Source 1 - <official-docs-url> - [relevance]
+- Source 2 - <source-code-or-changelog-url> - [relevance]
 
 **Key Points**:
 - [Finding 1]

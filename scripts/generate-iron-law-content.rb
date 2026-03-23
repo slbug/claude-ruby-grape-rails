@@ -141,7 +141,7 @@ def generate_canonical_registry(yaml)
   puts '<!-- This file is a generated projection of iron-laws.yml — DO NOT EDIT DIRECTLY -->'
   puts ''
   puts 'This file is the human-readable registry of all Iron Laws across the plugin.'
-  puts 'For programmatic use, see [iron-laws.yml](../iron-laws.yml).'
+  puts 'For programmatic use, see [iron-laws.yml](../../../references/iron-laws.yml).'
   puts ''
   puts '## The 21 Iron Laws'
   puts ''

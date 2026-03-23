@@ -106,9 +106,9 @@ This spawns specialist agents to analyze your existing plan and enhance it with 
 
 ## Section 3: Knowledge & Safety Net
 
-### Auto-Loaded Knowledge
+### Context-Aware Knowledge
 
-The plugin loads relevant reference docs based on what you're editing:
+The plugin includes targeted references and guidance for common editing contexts:
 
 | You're editing... | Plugin loads... |
 |-------------------|----------------|
@@ -119,7 +119,10 @@ The plugin loads relevant reference docs based on what you're editing:
 | `config/routes.rb` | Routing patterns, controllers, scopes |
 | `*_job.rb`, `app/jobs/*` | Sidekiq patterns, idempotency rules |
 
-This means you don't need to explicitly load anything — open a Hotwire/Turbo file and the plugin already knows the patterns.
+These are the references Claude should use for those file types. In
+practice this is strongest after `/rb:init` and when you invoke the
+matching workflow command; most file-pattern loading is behavioral
+guidance, not a hook-backed auto-loader.
 
 <!-- IRON_LAWS_START -->
 

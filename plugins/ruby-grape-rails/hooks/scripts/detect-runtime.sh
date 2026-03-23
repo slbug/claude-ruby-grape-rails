@@ -49,6 +49,19 @@ emit_shell_assignment() {
   printf '%q\n' "$value"
 }
 
+escape_ere() {
+  printf '%s' "$1" | sed 's/[][(){}.^$?+*|\\/]/\\&/g'
+}
+
+gem_declared() {
+  local gem_name="$1"
+  local escaped_name
+
+  [[ -f "$PROJECT_GEMFILE" ]] || return 1
+  escaped_name=$(escape_ere "$gem_name")
+  grep -Eq "^[[:space:]]*gem[[:space:]]+['\"]${escaped_name}['\"]([[:space:]]*(,|#|$))" "$PROJECT_GEMFILE"
+}
+
 # Detect Ruby version
 if command -v ruby >/dev/null 2>&1; then
   RUBY_VERSION=$(ruby -v 2>/dev/null | awk '{print $2}')
@@ -63,7 +76,14 @@ fi
 # Detect richer stack/package signals via the shared init detector.
 STACK_DETECTOR="${SCRIPT_DIR}/../../scripts/detect-stack.rb"
 DETECTED_STACK_RAW=""
+STACK_DETECTOR_OK=false
 if command -v ruby >/dev/null 2>&1 && [[ -f "$STACK_DETECTOR" && ! -L "$STACK_DETECTOR" ]]; then
+  if STACK_DETECTOR_OUTPUT=$(cd "$REPO_ROOT" && ruby "$STACK_DETECTOR" 2>/dev/null); then
+    STACK_DETECTOR_OK=true
+  fi
+fi
+
+if [[ "$STACK_DETECTOR_OK" == "true" ]]; then
   while IFS= read -r line; do
     [[ -n "$line" ]] || continue
     [[ "$line" == \#* ]] && continue
@@ -84,7 +104,80 @@ if command -v ruby >/dev/null 2>&1 && [[ -f "$STACK_DETECTOR" && ! -L "$STACK_DE
       PACKAGE_QUERY_NEEDED) PACKAGE_QUERY_NEEDED="$value" ;;
       HAS_PACKWERK) HAS_PACKWERK="$value" ;;
     esac
-  done < <(cd "$REPO_ROOT" && ruby "$STACK_DETECTOR" 2>/dev/null)
+  done <<< "$STACK_DETECTOR_OUTPUT"
+else
+  fallback_stack=()
+  fallback_orms=()
+
+  if gem_declared 'rails'; then
+    FULL_RAILS_APP="true"
+    fallback_stack+=("rails")
+  fi
+
+  if gem_declared 'grape'; then
+    fallback_stack+=("grape")
+  fi
+
+  if gem_declared 'sidekiq'; then
+    fallback_stack+=("sidekiq")
+  fi
+
+  if gem_declared 'redis' || gem_declared 'redis-client'; then
+    fallback_stack+=("redis")
+  fi
+
+  if gem_declared 'pg'; then
+    fallback_stack+=("postgres")
+  fi
+
+  if gem_declared 'mysql2'; then
+    fallback_stack+=("mysql")
+  fi
+
+  if gem_declared 'solid_queue'; then
+    fallback_stack+=("solid_queue")
+  fi
+
+  if gem_declared 'karafka'; then
+    fallback_stack+=("karafka")
+  fi
+
+  if gem_declared 'hotwire-rails'; then
+    fallback_stack+=("hotwire")
+  fi
+
+  if gem_declared 'rails' || gem_declared 'activerecord'; then
+    fallback_orms+=("active_record")
+  fi
+
+  if gem_declared 'sequel' || gem_declared 'sequel-rails'; then
+    fallback_orms+=("sequel")
+  fi
+
+  rails_component_gems=(activesupport activemodel activerecord actionpack actionview actionmailer actioncable activejob railties)
+  for component_gem in "${rails_component_gems[@]}"; do
+    if gem_declared "$component_gem"; then
+      RAILS_COMPONENTS="true"
+      break
+    fi
+  done
+
+  if [[ "$FULL_RAILS_APP" == "true" ]]; then
+    RAILS_COMPONENTS="true"
+  fi
+
+  if [[ ${#fallback_stack[@]} -gt 0 ]]; then
+    DETECTED_STACK_RAW=$(IFS=,; printf '%s' "${fallback_stack[*]}")
+  fi
+
+  if [[ ${#fallback_orms[@]} -gt 0 ]]; then
+    DETECTED_ORMS=$(IFS=,; printf '%s' "${fallback_orms[*]}")
+    if [[ ${#fallback_orms[@]} -eq 1 ]]; then
+      PRIMARY_ORM="${fallback_orms[0]}"
+    else
+      PRIMARY_ORM="mixed"
+    fi
+  fi
 fi
 
 if [[ -z "$RAILS_VERSION" && "$FULL_RAILS_APP" == "true" && -n "$FALLBACK_RAILS_VERSION" ]]; then

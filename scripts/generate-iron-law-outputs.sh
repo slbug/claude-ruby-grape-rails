@@ -2,7 +2,8 @@
 #
 # Generate Iron Law outputs from canonical YAML source
 # Usage: ./generate-iron-law-outputs.sh [target]
-#   target: optional specific target to regenerate (readme|claude|canonical|init|tutorial|injector|all)
+#   target: optional specific target to regenerate
+#           (readme|claude|canonical|init|tutorial|injector|judge|all)
 #
 # This script delegates to generate-iron-law-content.rb for actual content generation
 #
@@ -30,6 +31,34 @@ log_warn() {
 
 log_error() {
   echo -e "${RED}[ERROR]${NC} $1"
+}
+
+show_usage() {
+  cat <<'EOF'
+Usage: ./scripts/generate-iron-law-outputs.sh [target]
+
+Regenerate Iron Law projections from plugins/ruby-grape-rails/references/iron-laws.yml.
+
+Targets:
+  readme     Update bounded Iron Laws section in README.md
+  claude     Update bounded Iron Laws section in CLAUDE.md
+  canonical  Regenerate canonical-registry.md
+  init       Update bounded Iron Laws section in init injectable template
+  tutorial   Update bounded Iron Laws section in intro tutorial content
+  injector   Regenerate inject-iron-laws.sh
+  judge      Update bounded Iron Laws section in iron-law-judge.md
+  all        Regenerate all supported targets
+
+Options:
+  -h, --help Show this help
+EOF
+}
+
+valid_target() {
+  case "$1" in
+    readme|claude|canonical|init|tutorial|injector|judge|all) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 # Update file with bounded replacement
@@ -197,4 +226,19 @@ if [[ ! -x "$RUBY_SCRIPT" ]]; then
 fi
 
 # Main
-generate_all "${1:-all}"
+TARGET="${1:-all}"
+
+case "$TARGET" in
+  -h|--help|help)
+    show_usage
+    exit 0
+    ;;
+esac
+
+if ! valid_target "$TARGET"; then
+  log_error "Unknown target: $TARGET"
+  show_usage
+  exit 1
+fi
+
+generate_all "$TARGET"

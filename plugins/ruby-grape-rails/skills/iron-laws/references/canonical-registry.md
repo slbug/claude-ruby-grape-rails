@@ -7,7 +7,7 @@
 <!-- This file is a generated projection of iron-laws.yml — DO NOT EDIT DIRECTLY -->
 
 This file is the human-readable registry of all Iron Laws across the plugin.
-For programmatic use, see [iron-laws.yml](../iron-laws.yml).
+For programmatic use, see [iron-laws.yml](../../../references/iron-laws.yml).
 
 ## The 21 Iron Laws
 

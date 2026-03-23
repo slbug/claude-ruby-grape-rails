@@ -18,7 +18,8 @@ FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || exit 0
 is_path_within_root "$REPO_ROOT" "$FILE_PATH" || exit 0
 
 FILE_NAME=$(path_basename "$FILE_PATH")
-if printf '%s' "$FILE_PATH" | grep -qiE '(auth|session|password|token|permission|admin|payment|login|credential|secret|oauth|policy|ability)'; then
+LOWER_PATH=$(printf '%s' "$FILE_PATH" | tr '[:upper:]' '[:lower:]')
+if printf '%s' "$LOWER_PATH" | grep -qiE '(^|/)(auth|authentication|session|sessions|password|passwords|token|tokens|login|credential|credentials|secret|secrets|oauth|policy|policies|ability|abilities|admin)(/|[._-])'; then
   cat >&2 <<MSG
 SECURITY-SENSITIVE FILE: ${FILE_NAME}
 Check these before moving on:

@@ -40,7 +40,7 @@ Generate documentation for newly implemented features.
 # Check if any NEW .rb files exist in recent commits without assuming HEAD~5 exists
 BASE_REF=$(git rev-parse --verify HEAD~5 2>/dev/null || git rev-list --max-parents=0 HEAD 2>/dev/null | tail -1)
 if [[ -n "$BASE_REF" ]]; then
-  git diff --name-only "${BASE_REF}" HEAD -- '*.rb' | head -20
+  git diff --name-only --diff-filter=A "${BASE_REF}" HEAD -- '*.rb' | head -20
 fi
 ```
 

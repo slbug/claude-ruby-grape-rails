@@ -80,6 +80,36 @@ get_file_mtime() {
   fi
 }
 
+get_planning_activity_mtime() {
+  local plan_dir="$1"
+  local newest_mtime=0
+  local current_mtime
+  local candidate
+
+  if [[ -f "$plan_dir/scratchpad.md" && ! -L "$plan_dir/scratchpad.md" ]]; then
+    current_mtime=$(get_file_mtime "$plan_dir/scratchpad.md" 2>/dev/null || echo 0)
+    if [[ "$current_mtime" -gt "$newest_mtime" ]]; then
+      newest_mtime="$current_mtime"
+    fi
+  fi
+
+  if [[ -d "$plan_dir/research" && ! -L "$plan_dir/research" ]]; then
+    while IFS= read -r -d '' candidate; do
+      [[ ! -L "$candidate" ]] || continue
+      current_mtime=$(get_file_mtime "$candidate" 2>/dev/null || echo 0)
+      if [[ "$current_mtime" -gt "$newest_mtime" ]]; then
+        newest_mtime="$current_mtime"
+      fi
+    done < <(find "$plan_dir/research" -type f -print0 2>/dev/null)
+
+    if [[ "$newest_mtime" -eq 0 ]]; then
+      newest_mtime=$(get_file_mtime "$plan_dir/research" 2>/dev/null || echo 0)
+    fi
+  fi
+
+  printf '%s\n' "$newest_mtime"
+}
+
 # Get the active plan directory
 # Returns: path to active plan directory, or empty if none
 get_active_plan() {
@@ -172,7 +202,7 @@ get_active_plan() {
     [[ -d "$plan_dir/research" ]] || continue
     [[ ! -f "$plan_dir/plan.md" ]] || continue
 
-    planning_mtime=$(get_file_mtime "$plan_dir/research" 2>/dev/null || echo 0)
+    planning_mtime=$(get_planning_activity_mtime "$plan_dir")
     if [[ "$planning_mtime" -gt "$newest_planning_mtime" ]]; then
       newest_planning_dir="$plan_dir"
       newest_planning_mtime="$planning_mtime"
