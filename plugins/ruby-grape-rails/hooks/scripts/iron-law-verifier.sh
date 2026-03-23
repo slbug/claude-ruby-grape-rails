@@ -42,7 +42,7 @@ check_violation() {
 }
 
 money_like_columns='(price|amount|cost|total|balance|fee|rate|charge|payment|salary|wage|budget|revenue|discount)'
-MATCH=$(check_violation "t\\.float[[:space:]]+:${money_like_columns}|add_column[[:space:]]+[^,]+,[[:space:]]+:${money_like_columns}[[:space:]]*,[[:space:]]*:float")
+MATCH=$(check_violation "t\\.float[[:space:]]+:${money_like_columns}|add_column[[:space:]]*\\(?[[:space:]]*[^,]+,[[:space:]]*[:'\"]?${money_like_columns}['\"]?[[:space:]]*,[[:space:]]*:float")
 if [[ -n "$MATCH" ]]; then
   LINE=$(echo "$MATCH" | cut -d: -f1)
   VIOLATIONS+="

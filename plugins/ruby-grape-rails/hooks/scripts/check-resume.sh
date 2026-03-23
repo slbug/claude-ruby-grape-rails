@@ -13,7 +13,6 @@ REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 PLANS_DIR="${REPO_ROOT}/.claude/plans"
 
-FOUND_PLAN=false
 shopt -s nullglob
 for dir in "${PLANS_DIR}"/*/; do
   [[ -d "$dir" && ! -L "$dir" ]] || continue
@@ -25,10 +24,6 @@ for dir in "${PLANS_DIR}"/*/; do
   if [[ "$UNCHECKED" -gt 0 ]]; then
     SLUG="$(basename "$dir")"
     echo "↻ Plan '${SLUG}' has ${UNCHECKED} remaining tasks (${CHECKED} done). Resume with: /rb:work .claude/plans/${SLUG}/plan.md"
-    FOUND_PLAN=true
   fi
 done
 shopt -u nullglob
-if [[ "$FOUND_PLAN" == false ]]; then
-  echo "Ruby/Rails/Grape plugin loaded"
-fi

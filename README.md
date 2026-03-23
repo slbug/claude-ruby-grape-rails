@@ -514,7 +514,7 @@ The plugin enforces **21 Iron Laws** that prevent common, costly mistakes:
 - **Behavioral**: All 21 laws injected into subagent context
 - **Review-time**: Full audit during `/rb:review`
 
-See [full registry](plugins/ruby-grape-rails/references/iron-laws.yml) for details.
+See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonical-registry.md) for details.
 
 <!-- IRON_LAWS_END -->
 

@@ -220,3 +220,4 @@ Write research to `.claude/research/{slug}.md`:
 
 ## Sources
 - [Full citation list]
+```

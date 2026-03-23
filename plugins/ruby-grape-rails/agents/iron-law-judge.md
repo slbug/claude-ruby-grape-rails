@@ -21,7 +21,7 @@ skills:
 
 Enforce the Iron Laws of Ruby/Rails/Grape development. These are non-negotiable rules that prevent common, costly mistakes.
 
-## Iron Laws Overview (Canonical 21)
+## Iron Laws Overview (Canonical Registry)
 
 <!-- IRON_LAWS_JUDGE_START -->
 

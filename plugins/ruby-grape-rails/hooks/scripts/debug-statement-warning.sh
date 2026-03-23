@@ -29,6 +29,8 @@ esac
 
 [[ "$FILE_PATH" != */spec/* ]] || exit 0
 [[ "$FILE_PATH" != */test/* ]] || exit 0
+[[ "$FILE_PATH" != "${REPO_ROOT}/scripts/"* ]] || exit 0
+[[ "$FILE_PATH" != "${REPO_ROOT}/plugins/ruby-grape-rails/scripts/"* ]] || exit 0
 
 FILE_NAME="$BASE_NAME"
 DEBUGS=""

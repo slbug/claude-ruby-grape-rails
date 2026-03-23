@@ -19,7 +19,7 @@ is_path_within_root "$REPO_ROOT" "$FILE_PATH" || exit 0
 
 FILE_NAME=$(path_basename "$FILE_PATH")
 LOWER_PATH=$(printf '%s' "$FILE_PATH" | tr '[:upper:]' '[:lower:]')
-if printf '%s' "$LOWER_PATH" | grep -qiE '(^|/)(auth|authentication|session|sessions|password|passwords|token|tokens|login|credential|credentials|secret|secrets|oauth|policy|policies|ability|abilities|admin)(/|[._-])'; then
+if printf '%s' "$LOWER_PATH" | grep -qiE '(^|/|[._-])(auth|authentication|session|sessions|password|passwords|token|tokens|login|credential|credentials|secret|secrets|oauth|policy|policies|ability|abilities|admin|payment|payments|permission|permissions)(/|[._-]|$)'; then
   cat >&2 <<MSG
 SECURITY-SENSITIVE FILE: ${FILE_NAME}
 Check these before moving on:

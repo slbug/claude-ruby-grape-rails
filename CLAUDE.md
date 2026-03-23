@@ -154,7 +154,7 @@ skills:
 - Use `memory: project` for agents that benefit from cross-session learning (orchestrators, pattern analysts).
   Note: `memory` auto-enables Read, Write, Edit — only add to agents that already have Write access
 - Preload relevant skills via `skills:` field
-- Keep under 300 lines
+- Target under 300 lines when practical
 
 ### Skills
 
@@ -164,14 +164,14 @@ Skills provide domain knowledge with progressive disclosure.
 
 ```
 skills/{name}/
-├── SKILL.md           # ~100 lines max
+├── SKILL.md           # target ~100 lines; move detail to references/
 └── references/        # Detailed content
     └── *.md
 ```
 
 **Rules:**
 
-- SKILL.md: ~100 lines max (~500 tokens)
+- SKILL.md: target ~100 lines (~500 tokens) when practical
 - Include "Iron Laws" section for critical rules
 - Move detailed examples to `references/`
 - No `triggers:` field (use `description` for auto-loading)
@@ -316,11 +316,11 @@ claude --plugin-dir ./plugins/ruby-grape-rails
 
 1. Create `plugins/ruby-grape-rails/agents/{name}.md`
 2. Add frontmatter with all required fields
-3. Keep under 300 lines
+3. Target under 300 lines when practical
 
 ### Adding new skill
 
-1. Create `plugins/ruby-grape-rails/skills/{name}/SKILL.md` (~100 lines)
+1. Create `plugins/ruby-grape-rails/skills/{name}/SKILL.md` (target ~100 lines)
 2. Create `references/` with detailed content
 3. For workflow skills, document integration with cycle
 

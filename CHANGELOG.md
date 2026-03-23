@@ -74,6 +74,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`/rb:intro` tutorial wording** now clearly separates hook-backed automation
   from behavioral file-pattern guidance, so context-aware references are no
   longer described like guaranteed plugin infrastructure.
+- **Contributor authoring guidance** now treats skill/agent length limits as
+  targets rather than hard constraints, matching the practical size of some
+  shipped orchestrators and deep reference-heavy skills.
 
 ### Fixed
 
@@ -97,18 +100,41 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Added a minimal exact-Gemfile fallback in `detect-runtime.sh` so SessionStart
   still reports obvious stack/ORM signals when the Ruby-based detector cannot
   run.
+- Tightened degraded-mode Rails detection so `detect-runtime.sh` no longer
+  treats `gem 'rails'` alone as proof of a full Rails app when the Ruby
+  detector cannot run.
 - Removed misleading `zeitwerk:check --resolve` guidance from `/rb:verify`.
 - Corrected `/rb:document` “new Ruby files” guidance to use added-file
   detection (`--diff-filter=A`) instead of matching any modified Ruby file.
 - Expanded the float-for-money Iron Law detector to catch both `t.float` and
-  `add_column ..., :float` migration forms.
-- Narrowed `security-reminder.sh` path matching so security reminders trigger on
-  security-relevant path segments instead of broad substrings like
-  `tokenizer`/`administer`.
+  `add_column ..., :float` migration forms, including parenthesized
+  `add_column(...)` style.
+- Rebalanced `security-reminder.sh` path matching so common security-sensitive
+  filenames like `access_token.rb`, `payment_*`, and `permission_*` still
+  trigger reminders while broad false positives like `tokenizer` /
+  `administer` no longer do.
+- Aligned pending-plan detection between startup and stop hooks by making
+  `check-pending-plans.sh` look for real unchecked task lines instead of any
+  unchecked checkbox text.
+- Removed duplicate generic startup messaging by dropping the extra
+  `check-resume.sh` fallback banner when SessionStart already prints the
+  standard plugin-loaded message.
+- Restored signal-safe cleanup for temporary `ACTIVE_PLAN.XXXXXX` marker files
+  during `set_active_plan()` writes.
+- Made `stop-failure-log.sh` self-heal stale lock directories after a short
+  TTL, preventing abandoned locks from suppressing future failure logging.
+- Scoped `debug-statement-warning.sh` away from the plugin's own generator and
+  detector script directories so intentional `puts`-based tool output is not
+  treated like production debug code.
+- Closed unbalanced Markdown fences in `rb:research` output examples and the
+  Ruby 3.4 features reference.
 - Fixed generated/documented Iron Law references and examples:
   `generate-iron-law-outputs.sh` now supports `--help`, rejects unknown
   targets, and the canonical registry now links to the real YAML source;
-  research/compound example docs no longer contain placeholder broken links.
+  research/compound example docs no longer contain placeholder broken links;
+  generated injector output no longer churns on wall-clock timestamps; and the
+  generated README now points “full registry” at the canonical registry markdown
+  instead of raw YAML.
 
 ## [1.0.4] - 2026-03-23
 

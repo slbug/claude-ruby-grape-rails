@@ -68,6 +68,31 @@ normalize_error_type() {
   printf '%s\n' "$value"
 }
 
+get_file_mtime() {
+  local file="$1"
+
+  if stat -f '%m' "$file" >/dev/null 2>&1; then
+    stat -f '%m' "$file"
+  else
+    stat -c '%Y' "$file"
+  fi
+}
+
+clear_stale_lock() {
+  local lock_dir="$1"
+  local now
+  local lock_mtime
+
+  [[ -d "$lock_dir" && ! -L "$lock_dir" ]] || return 0
+  now=$(date +%s 2>/dev/null || echo 0)
+  lock_mtime=$(get_file_mtime "$lock_dir" 2>/dev/null || echo 0)
+  [[ "$now" -gt 0 && "$lock_mtime" -gt 0 ]] || return 0
+
+  if (( now - lock_mtime > 600 )); then
+    rmdir -- "$lock_dir" 2>/dev/null || true
+  fi
+}
+
 if command -v jq >/dev/null 2>&1; then
   ERROR_TYPE=$(printf '%s' "$INPUT" | jq -r '.error // empty' 2>/dev/null) || ERROR_TYPE="unknown"
   ERROR_MESSAGE=$(printf '%s' "$INPUT" | jq -r '.last_assistant_message // empty' 2>/dev/null) || ERROR_MESSAGE=""
@@ -85,6 +110,7 @@ if [[ "$PLANNING_PHASE" == "true" ]]; then
   RESUME_HINT="re-read \`research/\` and \`scratchpad.md\`, finish synthesizing \`plan.md\`, then continue with \`/rb:plan\`"
 fi
 
+clear_stale_lock "$LOCK_DIR"
 if mkdir "$LOCK_DIR" 2>/dev/null; then
   trap 'rmdir -- "$LOCK_DIR" 2>/dev/null || true' EXIT HUP INT TERM
 

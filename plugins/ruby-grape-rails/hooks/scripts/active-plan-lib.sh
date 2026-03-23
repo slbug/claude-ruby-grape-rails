@@ -238,12 +238,11 @@ set_active_plan() {
   tmp_marker=$(mktemp "${CLAUDE_DIR}/ACTIVE_PLAN.XXXXXX") || return 1
   [[ -n "$tmp_marker" ]] || return 1
 
-  if ! printf '%s\n' "$plan_dir" > "$tmp_marker"; then
-    rm -f -- "$tmp_marker"
-    return 1
-  fi
-
-  if ! mv -f -- "$tmp_marker" "$ACTIVE_PLAN_MARKER"; then
+  if ! (
+    trap 'rm -f -- "$tmp_marker"' EXIT HUP INT TERM
+    printf '%s\n' "$plan_dir" > "$tmp_marker" &&
+      mv -f -- "$tmp_marker" "$ACTIVE_PLAN_MARKER"
+  ); then
     rm -f -- "$tmp_marker"
     return 1
   fi

@@ -3,7 +3,7 @@ set -o nounset
 set -o pipefail
 
 # GENERATED FROM iron-laws.yml — DO NOT EDIT
-# Last generated: 2026-03-23T19:12:49Z
+# Source version: 1.0.0 (updated 2026-03-22)
 
 command -v jq >/dev/null 2>&1 || exit 0
 

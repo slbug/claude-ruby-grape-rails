@@ -136,13 +136,13 @@ Iron Laws are non-negotiable rules that every agent enforces. If your code viola
 
 | Law | Why |
 |-----|-----|
-| Use decimal for money | Floating point math loses precision |
-| Parameterized queries | Prevents SQL injection |
-| Jobs must be idempotent | Sidekiq retries on failure |
-| Don't pass ORM objects to jobs | Sidekiq uses JSON serialization |
-| Authorize in EVERY controller action | Before_action alone is insufficient |
-| Use includes/preload | Avoids N+1 queries |
-| Verify before claiming done | Run tests, do not assume |
+| Decimal for Money | Floating point arithmetic causes rounding errors that compound in financial calculations |
+| Parameterized Queries | String interpolation in SQL creates injection vulnerabilities |
+| Eager Loading | N+1 queries kill performance at scale |
+| Commit-Safe Enqueueing in Active Record | Jobs may run before transaction commits, reading uncommitted or stale data |
+| Transaction Boundaries | Partial failures leave data in inconsistent states |
+| No Validation Bypass | Skipping validations bypasses business rules and can corrupt data |
+| No default_scope | default_scope creates invisible query conditions that surprise developers |
 
 <!-- IRON_LAWS_END -->
 

@@ -122,6 +122,7 @@ users.map { posts.map { it.title } }  # Which "it"?
 
 # ✅ Good: Named params for nested blocks
 users.map { |u| u.posts.map { |p| p.title } }
+```
 
 ## Argument Forwarding (2.7+ Enhanced)
 

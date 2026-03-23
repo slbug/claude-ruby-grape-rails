@@ -108,9 +108,9 @@ if [[ "$STACK_DETECTOR_OK" == "true" ]]; then
 else
   fallback_stack=()
   fallback_orms=()
+  full_rails_markers=(config/application.rb config/environment.rb bin/rails)
 
   if gem_declared 'rails'; then
-    FULL_RAILS_APP="true"
     fallback_stack+=("rails")
   fi
 
@@ -162,7 +162,14 @@ else
     fi
   done
 
-  if [[ "$FULL_RAILS_APP" == "true" ]]; then
+  for marker in "${full_rails_markers[@]}"; do
+    if [[ -e "${REPO_ROOT}/${marker}" ]]; then
+      FULL_RAILS_APP="true"
+      break
+    fi
+  done
+
+  if gem_declared 'rails'; then
     RAILS_COMPONENTS="true"
   fi
 
