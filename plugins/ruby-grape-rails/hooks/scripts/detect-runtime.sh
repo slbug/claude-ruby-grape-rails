@@ -370,7 +370,7 @@ if [[ -n "$LEFTHOOK_CONFIG_PATH" ]]; then
     LEFTHOOK_LINT_COVERED=true
   fi
 
-  if grep -Eq '\bpronto\b' "$LEFTHOOK_CONFIG_PATH" && { lock_has_gem 'pronto-rubocop' || gemfile_declares_pattern "^[[:space:]]*gem[[:space:]]+['\"]pronto-rubocop['\"]"; }; then
+  if grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH" && { lock_has_gem 'pronto-rubocop' || gemfile_declares_pattern "^[[:space:]]*gem[[:space:]]+['\"]pronto-rubocop['\"]"; }; then
     LEFTHOOK_DIFF_LINT_COVERED=true
   fi
 
@@ -378,7 +378,7 @@ if [[ -n "$LEFTHOOK_CONFIG_PATH" ]]; then
     LEFTHOOK_SECURITY_COVERED=true
   fi
 
-  if grep -Eq '\bpronto\b' "$LEFTHOOK_CONFIG_PATH"; then
+  if grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH"; then
     LEFTHOOK_PRONTO_COVERED=true
   fi
 fi

@@ -310,7 +310,17 @@ if [[ "$BRAKEMAN_AVAILABLE" == "true" ]]; then
 fi
 
 echo "=== Tests ==="
-bundle exec rspec --format progress
+if [[ -d "spec" ]]; then
+  bundle exec rspec --format progress
+elif [[ -d "test" ]]; then
+  if [[ "$FULL_RAILS_APP" == "true" ]]; then
+    bundle exec rails test
+  else
+    bundle exec rake test
+  fi
+else
+  echo "No spec/ or test/ directory found, skipping tests."
+fi
 
 echo "=== Diff Review (optional) ==="
 BASE_REF=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo origin/main || \
@@ -352,7 +362,17 @@ echo "5/6 Database..."
 bundle exec rails db:migrate:status
 
 echo "6/6 Tests..."
-bundle exec rspec --format documentation
+if [[ -d "spec" ]]; then
+  bundle exec rspec --format documentation
+elif [[ -d "test" ]]; then
+  if [[ "$FULL_RAILS_APP" == "true" ]]; then
+    bundle exec rails test
+  else
+    bundle exec rake test
+  fi
+else
+  echo "No spec/ or test/ directory found, skipping tests."
+fi
 
 echo "7/7 Diff Review (optional)..."
 BASE_REF=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo origin/main || \
