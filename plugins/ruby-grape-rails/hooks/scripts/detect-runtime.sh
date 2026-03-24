@@ -366,7 +366,7 @@ LEFTHOOK_CONFIG_PATH=$(find_first_repo_file \
 if [[ -n "$LEFTHOOK_CONFIG_PATH" ]]; then
   LEFTHOOK_CONFIG_PRESENT=true
 
-  if grep -Eq '(standardrb|rubocop)' "$LEFTHOOK_CONFIG_PATH"; then
+  if grep -Eq '(^|[^[:alnum:]_])(standard|standardrb|rubocop)([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH"; then
     LEFTHOOK_LINT_COVERED=true
   fi
 

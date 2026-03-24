@@ -29,10 +29,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `/rb:verify`, `verification-runner`, and the injected template now key their
   command-selection guidance off `.claude/.runtime_env` booleans instead of
   vague “if configured” phrasing alone.
+- **Verification examples now degrade more safely without runtime cache** —
+  the injected template and `/rb:verify` example scripts fall back to repo
+  detection when `.claude/.runtime_env` is missing, guard Rails-only database
+  checks, and only run Pronto when it is actually configured.
 - **Lefthook diff-lint coverage is now modeled separately** —
   `LEFTHOOK_DIFF_LINT_COVERED=true` captures Pronto + `pronto-rubocop` style
   diff-scoped lint coverage without pretending that it replaces full direct
   lint execution.
+- **Lefthook lint coverage detection now recognizes `standard`** — configs that
+  invoke StandardRB via `standard` are now treated as lint-covered, not just
+  those using `standardrb` or `rubocop`.
 - **Verification enforcement text is now conditional instead of universal** —
   injected/init/plan/work/review orchestration docs no longer imply that
   `zeitwerk:check`, `standardrb`, `rubocop`, or `brakeman` are always

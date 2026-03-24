@@ -189,10 +189,49 @@ runtime_flag() {
   grep -E "^${key}=" "$RUNTIME_ENV_FILE" | tail -n 1 | cut -d= -f2-
 }
 
+gem_or_lock_has() {
+  local gem_name="$1"
+  grep -Eq "gem ['\"]${gem_name}['\"]|^[[:space:]]{4}${gem_name} " \
+    "$REPO_ROOT/Gemfile" "$REPO_ROOT/Gemfile.lock" 2>/dev/null
+}
+
+gem_prefix_has() {
+  local gem_prefix="$1"
+  grep -Eq "gem ['\"]${gem_prefix}-|^[[:space:]]{4}${gem_prefix}-" \
+    "$REPO_ROOT/Gemfile" "$REPO_ROOT/Gemfile.lock" 2>/dev/null
+}
+
 FULL_RAILS_APP=$(runtime_flag FULL_RAILS_APP)
 STANDARDRB_AVAILABLE=$(runtime_flag STANDARDRB_AVAILABLE)
 RUBOCOP_AVAILABLE=$(runtime_flag RUBOCOP_AVAILABLE)
 BRAKEMAN_AVAILABLE=$(runtime_flag BRAKEMAN_AVAILABLE)
+
+if [[ ! -f "$RUNTIME_ENV_FILE" || -L "$RUNTIME_ENV_FILE" ]]; then
+  echo "Runtime cache missing, falling back to repo detection."
+fi
+
+if [[ -z "$FULL_RAILS_APP" ]]; then
+  if [[ -x "$REPO_ROOT/bin/rails" ]] || \
+     [[ -f "$REPO_ROOT/config/application.rb" && -f "$REPO_ROOT/config/environment.rb" ]]; then
+    FULL_RAILS_APP=true
+  else
+    FULL_RAILS_APP=false
+  fi
+fi
+
+if [[ -z "$STANDARDRB_AVAILABLE" ]] && gem_or_lock_has standard; then
+  STANDARDRB_AVAILABLE=true
+fi
+
+if [[ -z "$RUBOCOP_AVAILABLE" ]]; then
+  if gem_or_lock_has rubocop || gem_prefix_has rubocop; then
+    RUBOCOP_AVAILABLE=true
+  fi
+fi
+
+if [[ -z "$BRAKEMAN_AVAILABLE" ]] && gem_or_lock_has brakeman; then
+  BRAKEMAN_AVAILABLE=true
+fi
 
 if [[ "$FULL_RAILS_APP" == "true" ]]; then
   bundle exec rails zeitwerk:check
