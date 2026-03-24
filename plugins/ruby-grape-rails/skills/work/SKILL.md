@@ -193,19 +193,20 @@ Task hints indicate which domain expertise to apply:
 ### Per Task (Immediate)
 
 - Syntax check: `ruby -c file.rb`
-- Formatter: `bundle exec standardrb --fix file.rb` or `rubocop -a`
+- Formatter: direct `bundle exec standardrb --fix file.rb` or `bundle exec rubocop -a`; Lefthook is only acceptable when its config covers lint + security/static-analysis checks
 - Type check if available: `bundle exec srb tc`
 
 ### Per Phase (Checkpoint)
 
-- Zeitwerk check: `bundle exec rails zeitwerk:check`
+- Zeitwerk check: `bundle exec rails zeitwerk:check` only for full Rails apps
 - Targeted tests: `bundle exec rspec spec/models/user_spec.rb`
-- Linter full pass: `bundle exec standardrb` or `bundle exec rubocop`
+- Linter full pass: whichever configured direct linter is available (`standardrb` first, otherwise `rubocop`)
 
 ### Final Gate (Completion)
 
 - Full test suite: `bundle exec rspec` or `bin/rails test`
 - Security scan: `bundle exec brakeman` (if available)
+- Optional final diff-scoped review: `bundle exec pronto run -c origin/main` (fallback `main` / `origin/master` / `master`)
 - Static analysis: `bundle exec rails_best_practices`
 
 ## Error Handling & Recovery

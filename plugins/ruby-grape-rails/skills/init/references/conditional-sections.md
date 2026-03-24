@@ -106,7 +106,7 @@ Install: `brew install betterleaks`
 | `{RAILS_VERSION}` | Gemfile.lock | 7.1.3 |
 | `{GRAPE_VERSION}` | Gemfile.lock | 2.0.0 |
 | `{SIDEKIQ_VERSION}` | Gemfile.lock | 7.2.0 |
-| `{OPTIONAL_STACK}` | Comma-prefixed extra versioned deps when available | , Karafka 2.5.7, Hotwire 2.0.0 |
+| `{OPTIONAL_STACK}` | Comma-prefixed extra versioned deps from detector output when available | , Karafka <detected>, Hotwire <detected> |
 | `{SIDEKIQ_SECTION}` | If sidekiq in Gemfile | Include Sidekiq section |
 | `{SEQUEL_SECTION}` | If Sequel detected | Include Sequel section |
 | `{MIXED_ORM_SECTION}` | If Active Record and Sequel both detected | Include mixed ORM section |

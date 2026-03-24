@@ -546,7 +546,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | `/rb:quick <task>`       | Fast implementation, skip ceremony                         |
 | `/rb:investigate <bug>`  | Systematic bug debugging (4 parallel investigation tracks) |
 | `/rb:research <topic>`   | Research Ruby topics on the web                            |
-| `/rb:verify`             | Run full verification (zeitwerk, format, test)             |
+| `/rb:verify`             | Run full verification (zeitwerk, lint, security, test)     |
 | `/rb:trace <method>`     | Build call trees to trace method flow                      |
 | `/rb:boundaries`         | Analyze Rails service boundaries                           |
 | `/rb:examples`           | Practical examples and pattern walkthroughs                |

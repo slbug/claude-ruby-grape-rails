@@ -91,7 +91,10 @@ Present ALL draft responses to the user for review:
 If `--fix` flag provided AND user approves:
 
 1. Apply code changes from approved code-change responses
-2. Run `bundle exec rails zeitwerk:check && bundle exec rspec`
+2. Run the narrowest correct verification set:
+   - `bundle exec rails zeitwerk:check` only for full Rails apps
+   - the configured direct linter (`standardrb` or `rubocop`)
+   - targeted or full tests as appropriate
 3. If tests pass, present the changes
 4. Do NOT commit or push — leave that to the user
 

@@ -180,8 +180,21 @@ If code would violate ANY of these, you MUST:
 After ANY code change, you MUST run before presenting results:
 
 ```
-bundle exec rails zeitwerk:check && (bundle exec standardrb || bundle exec rubocop)
+# Select commands from .claude/.runtime_env when present.
+# Required checks are conditional, not universal:
+# - run `bundle exec rails zeitwerk:check` only for full Rails apps
+# - run `bundle exec standardrb` if StandardRB is configured
+# - otherwise run `bundle exec rubocop` if RuboCop is configured
+# - run `bundle exec brakeman` when Brakeman is configured
 ```
+
+Use `lefthook run <hook>` only when Lefthook clearly covers both lint and
+security/static-analysis checks. Tests remain separate. `pronto run` is an
+optional final diff-scoped pass, not a substitute for direct lint/security
+verification.
+
+If `.claude/.runtime_env` exists, use its cached booleans to decide which
+direct tools are configured before picking commands.
 
 Do NOT present code as complete until verification passes.
 Offer `bundle exec rspec` after significant changes.

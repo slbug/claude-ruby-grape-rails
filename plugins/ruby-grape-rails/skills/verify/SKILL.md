@@ -15,6 +15,32 @@ Run verification in priority order, stopping at the first failure. Each step mus
 3. **Always verify autoloading after structural changes.**
 4. **Never ignore Zeitwerk check failures.**
 
+## Tool Selection Policy
+
+- Read `${REPO_ROOT}/.claude/.runtime_env` when present and non-symlinked; use
+  its tool booleans as the primary command-selection source of truth.
+- Prefer direct tools as the source of truth:
+  - `bundle exec standardrb` or `bundle exec rubocop`
+  - `bundle exec brakeman`
+- Use `lefthook run <hook>` only when cached runtime detection shows:
+  - `LEFTHOOK_AVAILABLE=true`
+  - `LEFTHOOK_CONFIG_PRESENT=true`
+  - `LEFTHOOK_LINT_SECURITY_COVERED=true`
+- If Lefthook is available but no config is detected, ask the user where the config lives before treating it as authoritative.
+- `LEFTHOOK_DIFF_LINT_COVERED=true` means Lefthook covers diff-scoped Pronto/RuboCop review only; it does not replace full direct linting.
+- Tests are separate from Lefthook policy and should stay targeted/full based on change scope.
+- Treat `pronto` as an optional final diff-scoped pass:
+  - run it after direct lint/security checks
+  - do not use it as a substitute for StandardRB/RuboCop or Brakeman
+
+When cached runtime state is available:
+
+- `STANDARDRB_AVAILABLE=true` → prefer `bundle exec standardrb`
+- else `RUBOCOP_AVAILABLE=true` → prefer `bundle exec rubocop`
+- `BRAKEMAN_AVAILABLE=true` → run `bundle exec brakeman`
+- `PRONTO_AVAILABLE=true` → allow optional final `bundle exec pronto run -c <base>`
+- `LEFTHOOK_*` booleans control whether Lefthook is an acceptable wrapper, not whether direct checks disappear
+
 ## Verification Stack
 
 ```
@@ -22,19 +48,23 @@ Run verification in priority order, stopping at the first failure. Each step mus
 │  VERIFICATION ORDER                                       │
 ├─────────────────────────────────────────────────────────┤
 │  1. Zeitwerk Check     → File naming & autoloading      │
-│  2. RuboCop/Standard   → Style & lint                   │
-│  3. Brakeman           → Security scan                  │
+│  2. Lint               → StandardRB / RuboCop           │
+│  3. Security           → Brakeman / static analysis     │
 │  4. Tests              → RSpec/Minitest                 │
 │  5. Type Check         → Sorbet/Steep (if present)      │
 │  6. Database           → Pending migrations             │
+│  7. Pronto (optional)  → Diff-scoped final pass         │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 1. Zeitwerk Check
+### 1. Zeitwerk Check (full Rails apps)
 
 ```bash
 bundle exec rails zeitwerk:check
 ```
+
+Run this only when cached runtime state shows `FULL_RAILS_APP=true` or the repo
+clearly has `bin/rails`.
 
 **Purpose**: Verify all files can be autoloaded correctly.
 
@@ -62,7 +92,7 @@ and rerun the check.
 
 ### 2. Linting
 
-#### StandardRB (preferred)
+#### StandardRB (preferred when `STANDARDRB_AVAILABLE=true`)
 
 ```bash
 # Check only
@@ -75,7 +105,7 @@ bundle exec standardrb --fix
 bundle exec standardrb app/models/user.rb app/services/
 ```
 
-#### RuboCop
+#### RuboCop (use when `STANDARDRB_AVAILABLE!=true` and `RUBOCOP_AVAILABLE=true`)
 
 ```bash
 # Check only
@@ -105,6 +135,10 @@ bundle exec rubocop --only Layout/LineLength
 - `Layout/` - Formatting (auto-fixable)
 - `Style/` - Style preferences
 
+If `LEFTHOOK_LINT_SECURITY_COVERED=true`, you may run the appropriate
+`lefthook run <hook>` entrypoint instead of separate lint/security commands,
+but only when the config clearly covers both categories.
+
 ### 3. Security Scan (Brakeman)
 
 ```bash
@@ -131,6 +165,9 @@ bundle exec brakeman -I
 - Mass Assignment
 - Remote Code Execution
 - File Access vulnerabilities
+
+If Lefthook is detected but only covers lint or only covers security/static
+analysis, keep running the missing direct tool yourself.
 
 ### 4. Tests
 
@@ -229,6 +266,22 @@ bundle exec rails db:schema:dump
 git diff db/schema.rb
 ```
 
+### 7. Diff-Scoped Review (Optional Pronto)
+
+Run this only after direct lint/security checks pass:
+
+```bash
+BASE_REF=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo origin/main || \
+  git rev-parse --verify main >/dev/null 2>&1 && echo main || \
+  git rev-parse --verify origin/master >/dev/null 2>&1 && echo origin/master || \
+  git rev-parse --verify master >/dev/null 2>&1 && echo master)
+
+[[ -n "$BASE_REF" ]] && bundle exec pronto run -c "$BASE_REF"
+```
+
+Use the first base ref that exists. Pronto is a last-step changed-files pass,
+not a replacement for StandardRB/RuboCop or Brakeman.
+
 ## Verification Profiles
 
 ### Quick Check (CI)
@@ -240,16 +293,31 @@ git diff db/schema.rb
 set -e
 
 echo "=== Zeitwerk Check ==="
-bundle exec rails zeitwerk:check
+if [[ "$FULL_RAILS_APP" == "true" ]]; then
+  bundle exec rails zeitwerk:check
+fi
 
 echo "=== Linting ==="
-bundle exec standardrb
+if [[ "$STANDARDRB_AVAILABLE" == "true" ]]; then
+  bundle exec standardrb
+elif [[ "$RUBOCOP_AVAILABLE" == "true" ]]; then
+  bundle exec rubocop
+fi
 
 echo "=== Security ==="
-bundle exec brakeman -q -w2 --no-pager
+if [[ "$BRAKEMAN_AVAILABLE" == "true" ]]; then
+  bundle exec brakeman -q -w2 --no-pager
+fi
 
 echo "=== Tests ==="
 bundle exec rspec --format progress
+
+echo "=== Diff Review (optional) ==="
+BASE_REF=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo origin/main || \
+  git rev-parse --verify main >/dev/null 2>&1 && echo main || \
+  git rev-parse --verify origin/master >/dev/null 2>&1 && echo origin/master || \
+  git rev-parse --verify master >/dev/null 2>&1 && echo master)
+[[ -n "$BASE_REF" ]] && bundle exec pronto run -c "$BASE_REF" || true
 ```
 
 ### Full Verification
@@ -261,13 +329,21 @@ bundle exec rspec --format progress
 set -e
 
 echo "1/6 Zeitwerk Check..."
-bundle exec rails zeitwerk:check
+if [[ "$FULL_RAILS_APP" == "true" ]]; then
+  bundle exec rails zeitwerk:check
+fi
 
 echo "2/6 Linting..."
-bundle exec standardrb --format progress
+if [[ "$STANDARDRB_AVAILABLE" == "true" ]]; then
+  bundle exec standardrb --format progress
+elif [[ "$RUBOCOP_AVAILABLE" == "true" ]]; then
+  bundle exec rubocop
+fi
 
 echo "3/6 Security Scan..."
-bundle exec brakeman -q --no-pager
+if [[ "$BRAKEMAN_AVAILABLE" == "true" ]]; then
+  bundle exec brakeman -q --no-pager
+fi
 
 echo "4/6 Type Check..."
 bundle exec srb tc 2>/dev/null || echo "No Sorbet configured"
@@ -277,6 +353,13 @@ bundle exec rails db:migrate:status
 
 echo "6/6 Tests..."
 bundle exec rspec --format documentation
+
+echo "7/7 Diff Review (optional)..."
+BASE_REF=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo origin/main || \
+  git rev-parse --verify main >/dev/null 2>&1 && echo main || \
+  git rev-parse --verify origin/master >/dev/null 2>&1 && echo origin/master || \
+  git rev-parse --verify master >/dev/null 2>&1 && echo master)
+[[ -n "$BASE_REF" ]] && bundle exec pronto run -c "$BASE_REF" || true
 
 echo "✅ All checks passed!"
 ```
@@ -360,6 +443,7 @@ bundle exec rspec --backtrace spec/failing_spec.rb
 | Security | Address vulnerability or add to ignore list with reason |
 | Tests | Fix failing test or implementation |
 | Types | Add/update type signatures |
+| Pronto | Fix the changed-file issue, then rerun direct lint/security if needed |
 
 ### Step 3: Re-verify
 
@@ -391,10 +475,12 @@ See: [references/ci-cd-troubleshooting.md](references/ci-cd-troubleshooting.md) 
 | Command | Purpose |
 |---------|---------|
 | `/rb:verify` | Run full verification stack |
-| `bundle exec rails zeitwerk:check` | Verify autoloading |
-| `bundle exec standardrb` | Check style |
-| `bundle exec standardrb --fix` | Auto-fix style |
-| `bundle exec brakeman` | Security scan |
+| `bundle exec rails zeitwerk:check` | Verify autoloading for full Rails apps |
+| `bundle exec standardrb` | Check style when StandardRB is configured |
+| `bundle exec standardrb --fix` | Auto-fix style when StandardRB is configured |
+| `bundle exec rubocop` | Check style when RuboCop is configured |
+| `bundle exec brakeman` | Security scan when Brakeman is configured |
+| `bundle exec pronto run -c <base>` | Diff-scoped final pass |
 | `bundle exec rspec` | Run tests |
 | `bundle exec rails test` | Run Minitest |
 | `bundle exec rails db:migrate:status` | Check migrations |

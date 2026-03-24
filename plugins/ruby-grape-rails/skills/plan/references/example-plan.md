@@ -122,8 +122,8 @@ end
 
 ## Verification Checklist
 
-- [ ] `bundle exec rails zeitwerk:check` passes
-- [ ] `bundle exec rubocop` passes
+- [ ] `bundle exec rails zeitwerk:check` passes (if full Rails app)
+- [ ] Configured direct linter passes
 - [ ] `bundle exec rspec` passes
 - [ ] Upload works in browser
 - [ ] Images resize correctly
@@ -328,8 +328,8 @@ add_column :tasks, :position, :integer
 
 ## Verification Checklist
 
-- [ ] `bundle exec rails zeitwerk:check` passes
-- [ ] `bundle exec rubocop` passes
+- [ ] `bundle exec rails zeitwerk:check` passes (if full Rails app)
+- [ ] Configured direct linter passes
 - [ ] `bundle exec rspec` passes
 - [ ] Drag-drop works across columns
 - [ ] Two browsers see real-time updates
