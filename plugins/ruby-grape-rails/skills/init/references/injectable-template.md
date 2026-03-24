@@ -180,12 +180,33 @@ If code would violate ANY of these, you MUST:
 After ANY code change, you MUST run before presenting results:
 
 ```
-# Select commands from .claude/.runtime_env when present.
-# Required checks are conditional, not universal:
-# - run `bundle exec rails zeitwerk:check` only for full Rails apps
-# - run `bundle exec standardrb` if StandardRB is configured
-# - otherwise run `bundle exec rubocop` if RuboCop is configured
-# - run `bundle exec brakeman` when Brakeman is configured
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+RUNTIME_ENV_FILE="$REPO_ROOT/.claude/.runtime_env"
+
+runtime_flag() {
+  local key="$1"
+  [[ -f "$RUNTIME_ENV_FILE" && ! -L "$RUNTIME_ENV_FILE" ]] || return 0
+  grep -E "^${key}=" "$RUNTIME_ENV_FILE" | tail -n 1 | cut -d= -f2-
+}
+
+FULL_RAILS_APP=$(runtime_flag FULL_RAILS_APP)
+STANDARDRB_AVAILABLE=$(runtime_flag STANDARDRB_AVAILABLE)
+RUBOCOP_AVAILABLE=$(runtime_flag RUBOCOP_AVAILABLE)
+BRAKEMAN_AVAILABLE=$(runtime_flag BRAKEMAN_AVAILABLE)
+
+if [[ "$FULL_RAILS_APP" == "true" ]]; then
+  bundle exec rails zeitwerk:check
+fi
+
+if [[ "$STANDARDRB_AVAILABLE" == "true" ]]; then
+  bundle exec standardrb
+elif [[ "$RUBOCOP_AVAILABLE" == "true" ]]; then
+  bundle exec rubocop
+fi
+
+if [[ "$BRAKEMAN_AVAILABLE" == "true" ]]; then
+  bundle exec brakeman -q --no-pager
+fi
 ```
 
 Use `lefthook run <hook>` only when Lefthook clearly covers both lint and

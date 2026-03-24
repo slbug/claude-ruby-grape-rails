@@ -292,6 +292,21 @@ not a replacement for StandardRB/RuboCop or Brakeman.
 
 set -e
 
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+RUNTIME_ENV_FILE="$REPO_ROOT/.claude/.runtime_env"
+
+runtime_flag() {
+  local key="$1"
+  [[ -f "$RUNTIME_ENV_FILE" && ! -L "$RUNTIME_ENV_FILE" ]] || return 0
+  grep -E "^${key}=" "$RUNTIME_ENV_FILE" | tail -n 1 | cut -d= -f2-
+}
+
+FULL_RAILS_APP=$(runtime_flag FULL_RAILS_APP)
+STANDARDRB_AVAILABLE=$(runtime_flag STANDARDRB_AVAILABLE)
+RUBOCOP_AVAILABLE=$(runtime_flag RUBOCOP_AVAILABLE)
+BRAKEMAN_AVAILABLE=$(runtime_flag BRAKEMAN_AVAILABLE)
+PRONTO_AVAILABLE=$(runtime_flag PRONTO_AVAILABLE)
+
 echo "=== Zeitwerk Check ==="
 if [[ "$FULL_RAILS_APP" == "true" ]]; then
   bundle exec rails zeitwerk:check
@@ -323,11 +338,15 @@ else
 fi
 
 echo "=== Diff Review (optional) ==="
-BASE_REF=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo origin/main || \
-  git rev-parse --verify main >/dev/null 2>&1 && echo main || \
-  git rev-parse --verify origin/master >/dev/null 2>&1 && echo origin/master || \
-  git rev-parse --verify master >/dev/null 2>&1 && echo master)
-[[ -n "$BASE_REF" ]] && bundle exec pronto run -c "$BASE_REF" || true
+if [[ "$PRONTO_AVAILABLE" == "true" ]]; then
+  BASE_REF=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo origin/main || \
+    git rev-parse --verify main >/dev/null 2>&1 && echo main || \
+    git rev-parse --verify origin/master >/dev/null 2>&1 && echo origin/master || \
+    git rev-parse --verify master >/dev/null 2>&1 && echo master)
+  [[ -n "$BASE_REF" ]] && bundle exec pronto run -c "$BASE_REF" || true
+else
+  echo "Pronto not available, skipping diff review."
+fi
 ```
 
 ### Full Verification
@@ -338,30 +357,45 @@ BASE_REF=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo origin/mai
 
 set -e
 
-echo "1/6 Zeitwerk Check..."
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+RUNTIME_ENV_FILE="$REPO_ROOT/.claude/.runtime_env"
+
+runtime_flag() {
+  local key="$1"
+  [[ -f "$RUNTIME_ENV_FILE" && ! -L "$RUNTIME_ENV_FILE" ]] || return 0
+  grep -E "^${key}=" "$RUNTIME_ENV_FILE" | tail -n 1 | cut -d= -f2-
+}
+
+FULL_RAILS_APP=$(runtime_flag FULL_RAILS_APP)
+STANDARDRB_AVAILABLE=$(runtime_flag STANDARDRB_AVAILABLE)
+RUBOCOP_AVAILABLE=$(runtime_flag RUBOCOP_AVAILABLE)
+BRAKEMAN_AVAILABLE=$(runtime_flag BRAKEMAN_AVAILABLE)
+PRONTO_AVAILABLE=$(runtime_flag PRONTO_AVAILABLE)
+
+echo "1/7 Zeitwerk Check..."
 if [[ "$FULL_RAILS_APP" == "true" ]]; then
   bundle exec rails zeitwerk:check
 fi
 
-echo "2/6 Linting..."
+echo "2/7 Linting..."
 if [[ "$STANDARDRB_AVAILABLE" == "true" ]]; then
   bundle exec standardrb --format progress
 elif [[ "$RUBOCOP_AVAILABLE" == "true" ]]; then
   bundle exec rubocop
 fi
 
-echo "3/6 Security Scan..."
+echo "3/7 Security Scan..."
 if [[ "$BRAKEMAN_AVAILABLE" == "true" ]]; then
   bundle exec brakeman -q --no-pager
 fi
 
-echo "4/6 Type Check..."
+echo "4/7 Type Check..."
 bundle exec srb tc 2>/dev/null || echo "No Sorbet configured"
 
-echo "5/6 Database..."
+echo "5/7 Database..."
 bundle exec rails db:migrate:status
 
-echo "6/6 Tests..."
+echo "6/7 Tests..."
 if [[ -d "spec" ]]; then
   bundle exec rspec --format documentation
 elif [[ -d "test" ]]; then
@@ -375,11 +409,15 @@ else
 fi
 
 echo "7/7 Diff Review (optional)..."
-BASE_REF=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo origin/main || \
-  git rev-parse --verify main >/dev/null 2>&1 && echo main || \
-  git rev-parse --verify origin/master >/dev/null 2>&1 && echo origin/master || \
-  git rev-parse --verify master >/dev/null 2>&1 && echo master)
-[[ -n "$BASE_REF" ]] && bundle exec pronto run -c "$BASE_REF" || true
+if [[ "$PRONTO_AVAILABLE" == "true" ]]; then
+  BASE_REF=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo origin/main || \
+    git rev-parse --verify main >/dev/null 2>&1 && echo main || \
+    git rev-parse --verify origin/master >/dev/null 2>&1 && echo origin/master || \
+    git rev-parse --verify master >/dev/null 2>&1 && echo master)
+  [[ -n "$BASE_REF" ]] && bundle exec pronto run -c "$BASE_REF" || true
+else
+  echo "Pronto not available, skipping diff review."
+fi
 
 echo "✅ All checks passed!"
 ```

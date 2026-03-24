@@ -341,7 +341,7 @@ fi
 
 if command -v lefthook >/dev/null 2>&1; then
   LEFTHOOK_AVAILABLE=true
-  LEFTHOOK_COMMAND="lefthook"
+  [[ -n "$LEFTHOOK_COMMAND" ]] || LEFTHOOK_COMMAND="lefthook"
   add_tool "lefthook"
   if [[ -z "$LEFTHOOK_VERSION" ]]; then
     LEFTHOOK_VERSION=$(lefthook version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
