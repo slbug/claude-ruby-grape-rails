@@ -44,7 +44,6 @@ TIDEWAVE_PROJECT_CAPABLE=true
 # Persisted in .claude/.runtime_env for hook coordination:
 HOOK_MODE=default
 BETTERLEAKS_AVAILABLE=true
-RTK_AVAILABLE=true
 ```
 
 These values are persisted in `${REPO_ROOT}/.claude/.runtime_env` as a

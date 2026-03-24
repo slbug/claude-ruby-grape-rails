@@ -59,27 +59,6 @@ These sections are included in CLAUDE.md based on detected project dependencies.
 - Monitor lag via Karafka Web UI
 ```
 
-## RTK_SECTION
-
-```markdown
-**RTK (Token Optimization)**:
-
-If RTK is installed, PREFER `rtk` prefixed commands for better token efficiency:
-
-| Instead of | Use | Savings |
-|------------|-----|---------|
-| `git status` | `rtk git status` | 80% |
-| `git log` | `rtk git log` | 80% |
-| `git diff` | `rtk git diff` | 75% |
-| `ls` | `rtk ls` | 80% |
-| `cat file` | `rtk read file` | 70% |
-| `grep pattern` | `rtk grep pattern` | 80% |
-| `bundle exec rspec` | `rtk test bundle exec rspec` | 90% |
-| `docker ps` | `rtk docker ps` | 80% |
-
-**Note:** RTK availability is detected at session start for informational purposes. You must manually invoke `rtk` commands - they are not automatically substituted.
-```
-
 ## PACKWERK_SECTION
 
 ```markdown
@@ -134,7 +113,6 @@ Install: `brew install betterleaks`
 | `{HOTWIRE_SECTION}` | If hotwire-rails in Gemfile | Include Hotwire section |
 | `{KARAFKA_SECTION}` | If karafka in Gemfile | Include Karafka section |
 | `{PACKWERK_SECTION}` | If Packwerk or modular layout detected | Include package/boundary section |
-| `{RTK_SECTION}` | If rtk installed | Include RTK section |
 | `{BETTERLEAKS_SECTION}` | If betterleaks installed | Include Betterleaks section |
 
 ## Detection Commands
@@ -154,9 +132,6 @@ ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
 # detect-stack.rb is the only supported stack detector.
 # Do not recreate its logic inline. If it is missing or fails, stop and
 # treat that as a plugin/detection issue rather than guessing.
-
-# RTK detection
-command -v rtk &> /dev/null && echo "rtk"
 
 # Betterleaks detection
 command -v betterleaks &> /dev/null && echo "betterleaks"

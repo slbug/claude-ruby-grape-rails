@@ -36,12 +36,4 @@ Produce a short report with evidence, likely root cause, confidence, and safest 
 
 ## Tool Integration Notes
 
-**RTK Available**: If RTK is detected, suggest using it for supported commands to reduce token usage:
-
-- `rtk git` instead of `git` (compact git output)
-- `rtk docker` instead of `docker` (compact container output)
-- `rtk psql` instead of `psql` (compressed table output)
-- `rtk grep` instead of `grep` (truncated, grouped results)
-- `rtk aws` instead of `aws` (force JSON, compact output)
-
 **Betterleaks Available**: If betterleaks is detected and investigating production logs or memory issues, suggest using it for stdin secrets filtering.

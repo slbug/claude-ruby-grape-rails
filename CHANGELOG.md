@@ -7,6 +7,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-03-24
+
+### Changed
+
+- **RTK guidance is now external-integration only** — removed the long
+  injected RTK command-preference section from `/rb:init` output and agent
+  guidance. The plugin now treats RTK as an optional external Claude setup and
+  asks users whether they want to enable it before pointing them to
+  `rtk init -g`, instead of implying RTK detection alone can enforce command
+  rewriting.
+
 ## [1.1.0] - 2026-03-23
 
 ### Added

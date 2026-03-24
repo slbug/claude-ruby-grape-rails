@@ -36,9 +36,10 @@ Use Ruby for detection (avoids fragile shell pipelines):
 # Detect Ruby version and stack dependencies
 ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
 
-# External tools (shell is fine here - simple commands)
-command -v rtk &> /dev/null && echo "RTK: available"
+# External tools / cached runtime hints
+[[ -f .claude/.runtime_env ]] && source .claude/.runtime_env
 command -v betterleaks &> /dev/null && echo "Betterleaks: available"
+command -v rtk &> /dev/null && echo "RTK: available"
 ```
 
 When building the injected header:
@@ -48,6 +49,14 @@ When building the injected header:
 - avoid degrading locked versions to `detected`
 - use `DETECTED_ORMS` to distinguish Active Record, Sequel, and mixed ORM repositories
 - use `PACKAGE_LAYOUT` / `PACKAGE_LOCATIONS` to decide whether package-boundary guidance belongs in the injected block
+
+Optional external integration:
+
+- if `.claude/.runtime_env` reports `RTK_AVAILABLE=true`, trust that cached result; otherwise fall back to `command -v rtk`
+- if RTK is available, ask the user whether they want to enable RTK for Claude Code
+- if they say yes, tell them: `For automatic Claude command rewriting, run: rtk init -g`
+- do **not** inject long RTK command-preference rules into the project
+- RTK hook installation is external to this plugin; detection alone does not make Claude use RTK
 
 ## Install Modes
 
@@ -84,7 +93,6 @@ Include based on detected stack and installed tools:
 - `{HOTWIRE_SECTION}` — If Hotwire/Turbo detected
 - `{KARAFKA_SECTION}` — If Karafka detected
 - `{PACKWERK_SECTION}` — If Packwerk or modular monolith structure detected
-- `{RTK_SECTION}` — If RTK installed (token optimization tool)
 - `{BETTERLEAKS_SECTION}` — If Betterleaks installed (secrets scanning)
 
 See `${CLAUDE_SKILL_DIR}/references/conditional-sections.md` for full content of each section.
