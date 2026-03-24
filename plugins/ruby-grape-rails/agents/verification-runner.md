@@ -31,7 +31,8 @@ Before choosing commands:
 
 ## Order
 
-1. `bundle exec rails zeitwerk:check` if `bin/rails` exists
+1. `bundle exec rails zeitwerk:check` if `FULL_RAILS_APP=true`; if the cache is absent, fall back to repo detection consistent with `/rb:verify`:
+   `bin/rails` exists, or `rails` is configured and both `config/application.rb` and `config/environment.rb` exist
 2. Prefer direct linting: `bundle exec standardrb` if configured, else `bundle exec rubocop` if configured
 3. Prefer direct security scanning: `bundle exec brakeman` if configured
 4. `bundle exec rspec` if `spec/` exists, else `bin/rails test`

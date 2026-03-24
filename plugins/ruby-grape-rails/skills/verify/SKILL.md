@@ -294,6 +294,7 @@ set -e
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 RUNTIME_ENV_FILE="$REPO_ROOT/.claude/.runtime_env"
+cd "$REPO_ROOT"
 
 runtime_flag() {
   local key="$1"
@@ -410,6 +411,7 @@ set -e
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 RUNTIME_ENV_FILE="$REPO_ROOT/.claude/.runtime_env"
+cd "$REPO_ROOT"
 
 runtime_flag() {
   local key="$1"
