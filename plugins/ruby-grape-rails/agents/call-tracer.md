@@ -19,7 +19,3 @@ Start from the provided entry point and build a concrete chain through:
 - jobs, cache writes, and broadcasts
 
 Prefer `rg` and direct code reads over abstract guesses. Output a short step-by-step trace with file paths.
-
-## Tool Integration
-
-**RTK Available**: If RTK is detected and you need to run git commands (e.g., checking file history), use `rtk git` for compact output.

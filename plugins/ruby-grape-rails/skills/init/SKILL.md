@@ -36,9 +36,19 @@ Use Ruby for detection (avoids fragile shell pipelines):
 # Detect Ruby version and stack dependencies
 ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
 
-# External tools (shell is fine here - simple commands)
-command -v rtk &> /dev/null && echo "RTK: available"
+# External tools / cached runtime hints
+REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+RUNTIME_ENV_PATH="${REPO_ROOT}/.claude/.runtime_env"
+RTK_AVAILABLE_CACHED=""
+if [[ -f "$RUNTIME_ENV_PATH" && ! -L "$RUNTIME_ENV_PATH" ]]; then
+  RTK_AVAILABLE_CACHED=$(grep -E '^RTK_AVAILABLE=' "$RUNTIME_ENV_PATH" | tail -n 1 | cut -d= -f2-)
+fi
 command -v betterleaks &> /dev/null && echo "Betterleaks: available"
+if [[ "$RTK_AVAILABLE_CACHED" == "true" ]]; then
+  echo "RTK: available (cached)"
+elif command -v rtk &> /dev/null; then
+  echo "RTK: available"
+fi
 ```
 
 When building the injected header:
@@ -48,6 +58,15 @@ When building the injected header:
 - avoid degrading locked versions to `detected`
 - use `DETECTED_ORMS` to distinguish Active Record, Sequel, and mixed ORM repositories
 - use `PACKAGE_LAYOUT` / `PACKAGE_LOCATIONS` to decide whether package-boundary guidance belongs in the injected block
+- set `BETTERLEAKS_STATUS` to `available` when `command -v betterleaks` succeeds; otherwise use `missing`
+
+Optional external integration:
+
+- prefer `RTK_AVAILABLE=true` from a non-symlink `.claude/.runtime_env` when present; otherwise fall back to `command -v rtk`
+- if RTK is available, ask the user whether they want to enable RTK for Claude Code
+- if they say yes, tell them: `For automatic Claude command rewriting, run: rtk init -g`
+- do **not** inject long RTK command-preference rules into the project
+- RTK hook installation is external to this plugin; detection alone does not make Claude use RTK
 
 ## Install Modes
 
@@ -84,7 +103,6 @@ Include based on detected stack and installed tools:
 - `{HOTWIRE_SECTION}` — If Hotwire/Turbo detected
 - `{KARAFKA_SECTION}` — If Karafka detected
 - `{PACKWERK_SECTION}` — If Packwerk or modular monolith structure detected
-- `{RTK_SECTION}` — If RTK installed (token optimization tool)
 - `{BETTERLEAKS_SECTION}` — If Betterleaks installed (secrets scanning)
 
 See `${CLAUDE_SKILL_DIR}/references/conditional-sections.md` for full content of each section.

@@ -243,7 +243,7 @@ Defined in `hooks/hooks.json`:
 - `PostCompact`: Advise Claude which active plan artifacts to re-read after
   compaction when unchecked tasks still exist
 - `SessionStart` (all): Setup `.claude/` directories + consolidated runtime detection
-  - `detect-runtime.sh`: Detect Ruby/Rails version, stack gems, Tidewave, RTK, betterleaks, and active hook mode
+  - `detect-runtime.sh`: Detect Ruby/Rails version, stack gems, local helper tools, and active hook mode
 - `SessionStart` (startup|resume only): Scratchpad check + resume workflow detection + workflow hints
 - `Stop`: Warn if plans have unchecked tasks
 - `StopFailure`: Append normalized API-failure context to the active plan scratchpad for better resume continuity
