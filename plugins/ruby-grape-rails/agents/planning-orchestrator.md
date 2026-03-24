@@ -251,13 +251,13 @@ Write `.claude/plans/{slug}/plan.md` with:
 - [ ] {task} [ruby]
 
 ### Phase 3: Verification
-- [ ] Run zeitwerk:check
-- [ ] Run formatter
+- [ ] Run zeitwerk:check if full Rails app
+- [ ] Run configured formatter/linter
 - [ ] Run tests
 
 ## Verification Checklist
-- [ ] Zeitwerk: `bundle exec rails zeitwerk:check`
-- [ ] Formatter: `bundle exec standardrb`
+- [ ] Zeitwerk: `bundle exec rails zeitwerk:check` if full Rails app
+- [ ] Formatter: configured direct linter (`bundle exec standardrb` or `bundle exec rubocop`)
 - [ ] Tests: `bundle exec rspec`
 - [ ] Security: `bundle exec brakeman` (if applicable)
 

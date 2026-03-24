@@ -160,8 +160,8 @@ Key context from planning session for `/rb:work` to use:
 
 ## Verification Checklist
 
-- [ ] `bundle exec rails zeitwerk:check` passes
-- [ ] `bundle exec rubocop` passes (or `bundle exec standardrb`)
+- [ ] `bundle exec rails zeitwerk:check` passes (if full Rails app)
+- [ ] Configured direct linter passes (`bundle exec standardrb` or `bundle exec rubocop`)
 - [ ] `bundle exec rspec` passes
 
 ```

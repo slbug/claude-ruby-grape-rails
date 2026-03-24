@@ -41,6 +41,24 @@ RTK_GAIN_AVAILABLE=false
 PSQL_AVAILABLE=false
 REDIS_CLI_AVAILABLE=false
 BUNDLE_AVAILABLE=false
+STANDARDRB_AVAILABLE=false
+STANDARDRB_VERSION=""
+RUBOCOP_AVAILABLE=false
+RUBOCOP_VERSION=""
+BRAKEMAN_AVAILABLE=false
+BRAKEMAN_VERSION=""
+PRONTO_AVAILABLE=false
+PRONTO_VERSION=""
+LEFTHOOK_AVAILABLE=false
+LEFTHOOK_VERSION=""
+LEFTHOOK_CONFIG_PRESENT=false
+LEFTHOOK_CONFIG_PATH=""
+LEFTHOOK_LINT_COVERED=false
+LEFTHOOK_DIFF_LINT_COVERED=false
+LEFTHOOK_SECURITY_COVERED=false
+LEFTHOOK_LINT_SECURITY_COVERED=false
+LEFTHOOK_PRONTO_COVERED=false
+LEFTHOOK_COMMAND=""
 
 emit_shell_assignment() {
   local key="$1"
@@ -60,6 +78,49 @@ gem_declared() {
   [[ -f "$PROJECT_GEMFILE" ]] || return 1
   escaped_name=$(escape_ere "$gem_name")
   grep -Eq "^[[:space:]]*gem[[:space:]]+['\"]${escaped_name}['\"]([[:space:]]*(,|#|$))" "$PROJECT_GEMFILE"
+}
+
+gemfile_declares_pattern() {
+  local pattern="$1"
+
+  [[ -f "$PROJECT_GEMFILE" ]] || return 1
+  grep -Eq "$pattern" "$PROJECT_GEMFILE"
+}
+
+lock_version() {
+  local gem_name="$1"
+  local escaped_name
+
+  [[ -f "$PROJECT_LOCKFILE" ]] || return 1
+  escaped_name=$(escape_ere "$gem_name")
+  grep -m 1 -E "^[[:space:]]{4}${escaped_name} \([^)]+\)$" "$PROJECT_LOCKFILE" |
+    sed -E 's/.*\(([^)]+)\).*/\1/'
+}
+
+lock_has_gem() {
+  local gem_name="$1"
+  local version
+
+  version=$(lock_version "$gem_name" || true)
+  [[ -n "$version" ]]
+}
+
+add_tool() {
+  local tool_name="$1"
+  [[ " ${TOOLS[*]} " == *" ${tool_name} "* ]] || TOOLS+=("$tool_name")
+}
+
+find_first_repo_file() {
+  local candidate
+
+  for candidate in "$@"; do
+    if [[ -f "${REPO_ROOT}/${candidate}" && ! -L "${REPO_ROOT}/${candidate}" ]]; then
+      printf '%s' "${REPO_ROOT}/${candidate}"
+      return 0
+    fi
+  done
+
+  return 1
 }
 
 # Detect Ruby version
@@ -236,7 +297,7 @@ if command -v redis-cli >/dev/null 2>&1; then
 fi
 if command -v bundle >/dev/null 2>&1; then
   BUNDLE_AVAILABLE=true
-  TOOLS+=("bundle")
+  add_tool "bundle"
 fi
 
 # Detect Tidewave Rails gem (MCP-based runtime integration)
@@ -246,25 +307,105 @@ if [[ -f "$PROJECT_GEMFILE" ]] && grep -Eq "gem ['\"]tidewave['\"]" "$PROJECT_GE
   STACK+=("Tidewave")
 fi
 
+# Detect project verification tools
+if gem_declared 'standard' || lock_has_gem 'standard'; then
+  STANDARDRB_AVAILABLE=true
+  STANDARDRB_VERSION=$(lock_version 'standard' || true)
+  add_tool "standardrb"
+fi
+
+if gem_declared 'rubocop' || lock_has_gem 'rubocop' || gemfile_declares_pattern "^[[:space:]]*gem[[:space:]]+['\"]rubocop-" ; then
+  RUBOCOP_AVAILABLE=true
+  RUBOCOP_VERSION=$(lock_version 'rubocop' || true)
+  add_tool "rubocop"
+fi
+
+if gem_declared 'brakeman' || lock_has_gem 'brakeman'; then
+  BRAKEMAN_AVAILABLE=true
+  BRAKEMAN_VERSION=$(lock_version 'brakeman' || true)
+  add_tool "brakeman"
+fi
+
+if gem_declared 'pronto' || lock_has_gem 'pronto' || gemfile_declares_pattern "^[[:space:]]*gem[[:space:]]+['\"]pronto-" ; then
+  PRONTO_AVAILABLE=true
+  PRONTO_VERSION=$(lock_version 'pronto' || true)
+  add_tool "pronto"
+fi
+
+# Detect Lefthook as either a configured project gem or an installed command.
+if gem_declared 'lefthook' || lock_has_gem 'lefthook'; then
+  LEFTHOOK_AVAILABLE=true
+  LEFTHOOK_VERSION=$(lock_version 'lefthook' || true)
+  LEFTHOOK_COMMAND="bundle exec lefthook"
+fi
+
+if command -v lefthook >/dev/null 2>&1; then
+  LEFTHOOK_AVAILABLE=true
+  [[ -n "$LEFTHOOK_COMMAND" ]] || LEFTHOOK_COMMAND="lefthook"
+  add_tool "lefthook"
+  if [[ -z "$LEFTHOOK_VERSION" ]]; then
+    LEFTHOOK_VERSION=$(lefthook version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
+    [[ -n "$LEFTHOOK_VERSION" ]] || LEFTHOOK_VERSION=$(lefthook --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
+  fi
+fi
+
+if [[ "$LEFTHOOK_AVAILABLE" == "true" ]]; then
+  add_tool "lefthook"
+fi
+
+LEFTHOOK_CONFIG_PATH=$(find_first_repo_file \
+  lefthook.yml \
+  lefthook.yaml \
+  .lefthook.yml \
+  .lefthook.yaml \
+  lefthook-local.yml \
+  lefthook-local.yaml \
+  .lefthook-local.yml \
+  .lefthook-local.yaml || true)
+
+if [[ -n "$LEFTHOOK_CONFIG_PATH" ]]; then
+  LEFTHOOK_CONFIG_PRESENT=true
+
+  if grep -Eq '(^|[^[:alnum:]_])(standard|standardrb|rubocop)([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH"; then
+    LEFTHOOK_LINT_COVERED=true
+  fi
+
+  if grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH" && { lock_has_gem 'pronto-rubocop' || gemfile_declares_pattern "^[[:space:]]*gem[[:space:]]+['\"]pronto-rubocop['\"]"; }; then
+    LEFTHOOK_DIFF_LINT_COVERED=true
+  fi
+
+  if grep -Eq '(brakeman|betterleaks|bundler[ -]?audit|flog|debride)' "$LEFTHOOK_CONFIG_PATH"; then
+    LEFTHOOK_SECURITY_COVERED=true
+  fi
+
+  if grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH"; then
+    LEFTHOOK_PRONTO_COVERED=true
+  fi
+fi
+
+if [[ "$LEFTHOOK_LINT_COVERED" == "true" && "$LEFTHOOK_SECURITY_COVERED" == "true" ]]; then
+  LEFTHOOK_LINT_SECURITY_COVERED=true
+fi
+
 # Detect RTK (CLI proxy for LLM token optimization)
 if command -v rtk >/dev/null 2>&1; then
   RTK_PATH=$(command -v rtk)
-  TOOLS+=("rtk")
+  add_tool "rtk"
 fi
 
 # Detect Betterleaks executable
 if command -v betterleaks >/dev/null 2>&1; then
   BETTERLEAKS_PATH=$(command -v betterleaks)
-  TOOLS+=("betterleaks")
+  add_tool "betterleaks"
 elif [[ -x "$HOME/.local/bin/betterleaks" ]]; then
   BETTERLEAKS_PATH="$HOME/.local/bin/betterleaks"
-  TOOLS+=("betterleaks")
+  add_tool "betterleaks"
 elif [[ -x "/usr/local/bin/betterleaks" ]]; then
   BETTERLEAKS_PATH="/usr/local/bin/betterleaks"
-  TOOLS+=("betterleaks")
+  add_tool "betterleaks"
 elif [[ -x "/opt/homebrew/bin/betterleaks" ]]; then
   BETTERLEAKS_PATH="/opt/homebrew/bin/betterleaks"
-  TOOLS+=("betterleaks")
+  add_tool "betterleaks"
 fi
 
 if [[ -n "$RTK_PATH" ]]; then
@@ -356,6 +497,55 @@ trap 'rm -f -- "$TMP_RUNTIME_ENV"' EXIT HUP INT TERM
   else
     emit_shell_assignment "BETTERLEAKS_AVAILABLE" "false"
   fi
+
+  if [[ "$STANDARDRB_AVAILABLE" == "true" ]]; then
+    emit_shell_assignment "STANDARDRB_AVAILABLE" "true"
+    [[ -n "$STANDARDRB_VERSION" ]] && emit_shell_assignment "STANDARDRB_VERSION" "$STANDARDRB_VERSION"
+  else
+    emit_shell_assignment "STANDARDRB_AVAILABLE" "false"
+  fi
+
+  if [[ "$RUBOCOP_AVAILABLE" == "true" ]]; then
+    emit_shell_assignment "RUBOCOP_AVAILABLE" "true"
+    [[ -n "$RUBOCOP_VERSION" ]] && emit_shell_assignment "RUBOCOP_VERSION" "$RUBOCOP_VERSION"
+  else
+    emit_shell_assignment "RUBOCOP_AVAILABLE" "false"
+  fi
+
+  if [[ "$BRAKEMAN_AVAILABLE" == "true" ]]; then
+    emit_shell_assignment "BRAKEMAN_AVAILABLE" "true"
+    [[ -n "$BRAKEMAN_VERSION" ]] && emit_shell_assignment "BRAKEMAN_VERSION" "$BRAKEMAN_VERSION"
+  else
+    emit_shell_assignment "BRAKEMAN_AVAILABLE" "false"
+  fi
+
+  if [[ "$PRONTO_AVAILABLE" == "true" ]]; then
+    emit_shell_assignment "PRONTO_AVAILABLE" "true"
+    [[ -n "$PRONTO_VERSION" ]] && emit_shell_assignment "PRONTO_VERSION" "$PRONTO_VERSION"
+  else
+    emit_shell_assignment "PRONTO_AVAILABLE" "false"
+  fi
+
+  if [[ "$LEFTHOOK_AVAILABLE" == "true" ]]; then
+    emit_shell_assignment "LEFTHOOK_AVAILABLE" "true"
+    [[ -n "$LEFTHOOK_VERSION" ]] && emit_shell_assignment "LEFTHOOK_VERSION" "$LEFTHOOK_VERSION"
+    [[ -n "$LEFTHOOK_COMMAND" ]] && emit_shell_assignment "LEFTHOOK_COMMAND" "$LEFTHOOK_COMMAND"
+  else
+    emit_shell_assignment "LEFTHOOK_AVAILABLE" "false"
+  fi
+
+  if [[ "$LEFTHOOK_CONFIG_PRESENT" == "true" ]]; then
+    emit_shell_assignment "LEFTHOOK_CONFIG_PRESENT" "true"
+    emit_shell_assignment "LEFTHOOK_CONFIG_PATH" "$LEFTHOOK_CONFIG_PATH"
+  else
+    emit_shell_assignment "LEFTHOOK_CONFIG_PRESENT" "false"
+  fi
+
+  emit_shell_assignment "LEFTHOOK_LINT_COVERED" "$LEFTHOOK_LINT_COVERED"
+  emit_shell_assignment "LEFTHOOK_DIFF_LINT_COVERED" "$LEFTHOOK_DIFF_LINT_COVERED"
+  emit_shell_assignment "LEFTHOOK_SECURITY_COVERED" "$LEFTHOOK_SECURITY_COVERED"
+  emit_shell_assignment "LEFTHOOK_LINT_SECURITY_COVERED" "$LEFTHOOK_LINT_SECURITY_COVERED"
+  emit_shell_assignment "LEFTHOOK_PRONTO_COVERED" "$LEFTHOOK_PRONTO_COVERED"
 
   if [[ "$PSQL_AVAILABLE" == "true" ]]; then
     emit_shell_assignment "PSQL_AVAILABLE" "true"

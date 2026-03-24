@@ -196,20 +196,21 @@ When resuming:
 
 Run in this order when available:
 
-### 1. Zeitwerk Check
+### 1. Zeitwerk Check (full Rails apps)
 
 ```bash
 bundle exec rails zeitwerk:check
 ```
 
-**Must pass** before proceeding
+Run only for full Rails apps. It **must pass** when applicable before
+proceeding.
 
 ### 2. Formatter
 
 ```bash
-bundle exec standardrb
+bundle exec standardrb   # when StandardRB is configured
 # OR
-bundle exec rubocop
+bundle exec rubocop      # when RuboCop is configured
 ```
 
 **Should pass** - fix auto-correctable issues
@@ -227,7 +228,7 @@ bin/rails test
 ### 4. Security Scan
 
 ```bash
-bundle exec brakeman
+bundle exec brakeman     # when Brakeman is configured
 ```
 
 **Required** for sensitive changes (auth, payments, admin)

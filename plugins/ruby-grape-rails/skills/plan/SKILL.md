@@ -154,9 +154,10 @@ Before finalizing the plan, verify:
 ## Verification Checklist to Include in Plans
 
 - `bundle exec rails zeitwerk:check` if Rails is present
-- formatter/linter if configured (`standardrb` or `rubocop`)
+- formatter/linter if configured (`standardrb` or `rubocop`); use Lefthook only when its config covers lint + security/static-analysis checks
 - targeted specs or tests for changed behavior
 - `bundle exec brakeman` if present for security-sensitive work
+- optional final diff-scoped `pronto run` against `origin/main` / `main` / `origin/master` / `master`
 - `bundle exec rspec` or `bin/rails test` - full test suite
 - Migration safety check (for production deployments)
 
@@ -220,10 +221,10 @@ Track progress:
 - [ ] {task with [sidekiq] hint}
 
 ### Phase 3: Verification
-- [ ] Run zeitwerk:check
-- [ ] Run formatter
+- [ ] Run zeitwerk:check if full Rails app
+- [ ] Run configured formatter/linter
 - [ ] Run tests
-- [ ] Run brakeman
+- [ ] Run brakeman if configured
 
 ## Risks & Mitigations
 | Risk | Likelihood | Mitigation |

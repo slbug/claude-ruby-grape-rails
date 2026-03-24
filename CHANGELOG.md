@@ -7,6 +7,48 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-03-24
+
+### Changed
+
+- **Verification tool detection is now first-class** — `detect-runtime.sh`
+  now exports dedicated state for `standardrb`, `rubocop`, `brakeman`,
+  `lefthook`, and `pronto`, instead of treating verification only as an
+  implicit docs-level convention.
+- **Lefthook policy is now explicit** — the plugin keeps direct tools as the
+  source of truth and only treats Lefthook as a wrapper when its detected
+  config covers both lint and security/static-analysis checks. Tests remain
+  separate.
+- **Pronto policy is now explicit** — Pronto is treated as an optional final
+  diff-scoped pass, not as a replacement for direct lint or security
+  verification.
+- **Init docs no longer hardcode stale tool version examples** — `/rb:init`
+  now prefers detector/runtime output instead of frozen sample versions for
+  stack/tool guidance.
+- **Verification workflows now consume cached tool state more explicitly** —
+  `/rb:verify`, `verification-runner`, and the injected template now key their
+  command-selection guidance off `.claude/.runtime_env` booleans instead of
+  vague “if configured” phrasing alone.
+- **Verification examples now degrade more safely without runtime cache** —
+  the injected template and `/rb:verify` example scripts fall back to repo
+  detection when `.claude/.runtime_env` is missing, guard Rails-only database
+  checks, and only run Pronto when it is actually configured.
+- **Verification examples now handle optional checks more explicitly** —
+  fallback full-Rails detection no longer depends on executable `bin/rails`,
+  Sorbet is skipped only when it truly appears unconfigured, and optional
+  Pronto runs now log non-blocking failures instead of silently masking them.
+- **Lefthook diff-lint coverage is now modeled separately** —
+  `LEFTHOOK_DIFF_LINT_COVERED=true` captures Pronto + `pronto-rubocop` style
+  diff-scoped lint coverage without pretending that it replaces full direct
+  lint execution.
+- **Lefthook lint coverage detection now recognizes `standard`** — configs that
+  invoke StandardRB via `standard` are now treated as lint-covered, not just
+  those using `standardrb` or `rubocop`.
+- **Verification enforcement text is now conditional instead of universal** —
+  injected/init/plan/work/review orchestration docs no longer imply that
+  `zeitwerk:check`, `standardrb`, `rubocop`, or `brakeman` are always
+  available in every repo.
+
 ## [1.1.1] - 2026-03-24
 
 ### Changed

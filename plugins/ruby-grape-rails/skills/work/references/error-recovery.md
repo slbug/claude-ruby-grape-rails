@@ -8,16 +8,16 @@ Verification is tiered to balance speed and safety:
 
 | Change Type | Verification Steps |
 |-------------|-------------------|
-| Any .rb file | `bundle exec rubocop -A` + `bundle exec rails zeitwerk:check` |
+| Any .rb file | Configured direct linter (`bundle exec standardrb --fix` or `bundle exec rubocop -A`) + `bundle exec rails zeitwerk:check` when full Rails app |
 | Schema/migration | Above + `bin/rails db:migrate` (dev) |
 
 **Per-phase** (after all tasks in a phase):
 
 | Scope | Verification Steps |
 |-------|-------------------|
-| Always | `bundle exec rails zeitwerk:check` |
+| Full Rails app | `bundle exec rails zeitwerk:check` |
 | Always | `bundle exec rspec <affected_test_files>` |
-| Always | `bundle exec rubocop` |
+| Always | Configured direct linter (`bundle exec standardrb` or `bundle exec rubocop`) |
 
 **Final gate** (after all phases): `bundle exec rspec` (full suite)
 

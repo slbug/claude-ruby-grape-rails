@@ -54,11 +54,12 @@ fi
 When building the injected header:
 
 - omit Rails entirely when `RAILS_VERSION` is absent
-- prefer `Grape 3.1.1`, `Sidekiq 6.5.12`, `Karafka 2.5.7`
+- prefer detected version values from `detect-stack.rb` / cached runtime state instead of hardcoded examples
 - avoid degrading locked versions to `detected`
 - use `DETECTED_ORMS` to distinguish Active Record, Sequel, and mixed ORM repositories
 - use `PACKAGE_LAYOUT` / `PACKAGE_LOCATIONS` to decide whether package-boundary guidance belongs in the injected block
 - set `BETTERLEAKS_STATUS` to `available` when `command -v betterleaks` succeeds; otherwise use `missing`
+- when `.claude/.runtime_env` is present, use its tool booleans to understand whether the project has `standardrb`, `rubocop`, `brakeman`, `lefthook`, and `pronto`
 
 Optional external integration:
 
@@ -67,6 +68,19 @@ Optional external integration:
 - if they say yes, tell them: `For automatic Claude command rewriting, run: rtk init -g`
 - do **not** inject long RTK command-preference rules into the project
 - RTK hook installation is external to this plugin; detection alone does not make Claude use RTK
+
+Verification/tooling policy:
+
+- direct tools remain the source of truth:
+  - `standardrb` or `rubocop` for lint/format
+  - `brakeman` for security scanning
+- `lefthook` is only preferred as a wrapper when its detected config covers both lint and security/static-analysis checks
+- `LEFTHOOK_DIFF_LINT_COVERED=true` means Lefthook covers diff-scoped lint via Pronto/RuboCop, not full direct lint coverage
+- if `LEFTHOOK_AVAILABLE=true` but no config path is detected, ask the user whether Lefthook is used and where its config lives
+- tests stay separate from Lefthook policy; keep them targeted or full based on the actual change scope
+- `pronto` is optional diff-scoped review tooling:
+  - use it after direct lint/security checks
+  - do not use it as a substitute for full lint or security verification
 
 ## Install Modes
 
