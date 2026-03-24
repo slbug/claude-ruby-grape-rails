@@ -37,9 +37,16 @@ Use Ruby for detection (avoids fragile shell pipelines):
 ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
 
 # External tools / cached runtime hints
-[[ -f .claude/.runtime_env ]] && source .claude/.runtime_env
+RTK_AVAILABLE_CACHED=""
+if [[ -f .claude/.runtime_env && ! -L .claude/.runtime_env ]]; then
+  RTK_AVAILABLE_CACHED=$(grep -E '^RTK_AVAILABLE=' .claude/.runtime_env | tail -n 1 | cut -d= -f2-)
+fi
 command -v betterleaks &> /dev/null && echo "Betterleaks: available"
-command -v rtk &> /dev/null && echo "RTK: available"
+if [[ "$RTK_AVAILABLE_CACHED" == "true" ]]; then
+  echo "RTK: available (cached)"
+elif command -v rtk &> /dev/null; then
+  echo "RTK: available"
+fi
 ```
 
 When building the injected header:
@@ -52,7 +59,7 @@ When building the injected header:
 
 Optional external integration:
 
-- if `.claude/.runtime_env` reports `RTK_AVAILABLE=true`, trust that cached result; otherwise fall back to `command -v rtk`
+- prefer `RTK_AVAILABLE=true` from a non-symlink `.claude/.runtime_env` when present; otherwise fall back to `command -v rtk`
 - if RTK is available, ask the user whether they want to enable RTK for Claude Code
 - if they say yes, tell them: `For automatic Claude command rewriting, run: rtk init -g`
 - do **not** inject long RTK command-preference rules into the project
