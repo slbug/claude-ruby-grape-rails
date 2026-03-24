@@ -114,6 +114,7 @@ Install: `brew install betterleaks`
 | `{KARAFKA_SECTION}` | If karafka in Gemfile | Include Karafka section |
 | `{PACKWERK_SECTION}` | If Packwerk or modular layout detected | Include package/boundary section |
 | `{BETTERLEAKS_SECTION}` | If betterleaks installed | Include Betterleaks section |
+| `{BETTERLEAKS_STATUS}` | `command -v betterleaks` result | available / missing |
 
 ## Detection Commands
 

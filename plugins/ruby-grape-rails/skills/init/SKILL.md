@@ -37,9 +37,11 @@ Use Ruby for detection (avoids fragile shell pipelines):
 ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
 
 # External tools / cached runtime hints
+REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+RUNTIME_ENV_PATH="${REPO_ROOT}/.claude/.runtime_env"
 RTK_AVAILABLE_CACHED=""
-if [[ -f .claude/.runtime_env && ! -L .claude/.runtime_env ]]; then
-  RTK_AVAILABLE_CACHED=$(grep -E '^RTK_AVAILABLE=' .claude/.runtime_env | tail -n 1 | cut -d= -f2-)
+if [[ -f "$RUNTIME_ENV_PATH" && ! -L "$RUNTIME_ENV_PATH" ]]; then
+  RTK_AVAILABLE_CACHED=$(grep -E '^RTK_AVAILABLE=' "$RUNTIME_ENV_PATH" | tail -n 1 | cut -d= -f2-)
 fi
 command -v betterleaks &> /dev/null && echo "Betterleaks: available"
 if [[ "$RTK_AVAILABLE_CACHED" == "true" ]]; then
@@ -56,6 +58,7 @@ When building the injected header:
 - avoid degrading locked versions to `detected`
 - use `DETECTED_ORMS` to distinguish Active Record, Sequel, and mixed ORM repositories
 - use `PACKAGE_LAYOUT` / `PACKAGE_LOCATIONS` to decide whether package-boundary guidance belongs in the injected block
+- set `BETTERLEAKS_STATUS` to `available` when `command -v betterleaks` succeeds; otherwise use `missing`
 
 Optional external integration:
 
