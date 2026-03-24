@@ -324,8 +324,8 @@ if [[ ! -f "$RUNTIME_ENV_FILE" || -L "$RUNTIME_ENV_FILE" ]]; then
 fi
 
 if [[ -z "$FULL_RAILS_APP" ]]; then
-  if [[ -x "$REPO_ROOT/bin/rails" ]] || \
-     [[ -f "$REPO_ROOT/config/application.rb" && -f "$REPO_ROOT/config/environment.rb" ]]; then
+  if [[ -e "$REPO_ROOT/bin/rails" ]] || \
+     { gem_or_lock_has rails && [[ -f "$REPO_ROOT/config/application.rb" && -f "$REPO_ROOT/config/environment.rb" ]]; }; then
     FULL_RAILS_APP=true
   else
     FULL_RAILS_APP=false
@@ -388,7 +388,13 @@ if [[ "$PRONTO_AVAILABLE" == "true" ]]; then
     git rev-parse --verify main >/dev/null 2>&1 && echo main || \
     git rev-parse --verify origin/master >/dev/null 2>&1 && echo origin/master || \
     git rev-parse --verify master >/dev/null 2>&1 && echo master)
-  [[ -n "$BASE_REF" ]] && bundle exec pronto run -c "$BASE_REF" || true
+  if [[ -n "$BASE_REF" ]]; then
+    if ! bundle exec pronto run -c "$BASE_REF"; then
+      echo "Pronto diff review reported issues (non-blocking); review the output above."
+    fi
+  else
+    echo "No suitable base ref found for Pronto diff review, skipping."
+  fi
 else
   echo "Pronto not available, skipping diff review."
 fi
@@ -434,8 +440,8 @@ if [[ ! -f "$RUNTIME_ENV_FILE" || -L "$RUNTIME_ENV_FILE" ]]; then
 fi
 
 if [[ -z "$FULL_RAILS_APP" ]]; then
-  if [[ -x "$REPO_ROOT/bin/rails" ]] || \
-     [[ -f "$REPO_ROOT/config/application.rb" && -f "$REPO_ROOT/config/environment.rb" ]]; then
+  if [[ -e "$REPO_ROOT/bin/rails" ]] || \
+     { gem_or_lock_has rails && [[ -f "$REPO_ROOT/config/application.rb" && -f "$REPO_ROOT/config/environment.rb" ]]; }; then
     FULL_RAILS_APP=true
   else
     FULL_RAILS_APP=false
@@ -480,7 +486,11 @@ if [[ "$BRAKEMAN_AVAILABLE" == "true" ]]; then
 fi
 
 echo "4/7 Type Check..."
-bundle exec srb tc 2>/dev/null || echo "No Sorbet configured"
+if [[ -f "$REPO_ROOT/sorbet/config" ]] || gem_or_lock_has sorbet || gem_prefix_has sorbet; then
+  bundle exec srb tc
+else
+  echo "No Sorbet configured"
+fi
 
 echo "5/7 Database..."
 if [[ "$FULL_RAILS_APP" == "true" ]]; then
@@ -508,7 +518,13 @@ if [[ "$PRONTO_AVAILABLE" == "true" ]]; then
     git rev-parse --verify main >/dev/null 2>&1 && echo main || \
     git rev-parse --verify origin/master >/dev/null 2>&1 && echo origin/master || \
     git rev-parse --verify master >/dev/null 2>&1 && echo master)
-  [[ -n "$BASE_REF" ]] && bundle exec pronto run -c "$BASE_REF" || true
+  if [[ -n "$BASE_REF" ]]; then
+    if ! bundle exec pronto run -c "$BASE_REF"; then
+      echo "Pronto diff review reported issues (non-blocking); review the output above."
+    fi
+  else
+    echo "No suitable base ref found for Pronto diff review, skipping."
+  fi
 else
   echo "Pronto not available, skipping diff review."
 fi

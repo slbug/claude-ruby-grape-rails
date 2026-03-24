@@ -33,6 +33,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the injected template and `/rb:verify` example scripts fall back to repo
   detection when `.claude/.runtime_env` is missing, guard Rails-only database
   checks, and only run Pronto when it is actually configured.
+- **Verification examples now handle optional checks more explicitly** —
+  fallback full-Rails detection no longer depends on executable `bin/rails`,
+  Sorbet is skipped only when it truly appears unconfigured, and optional
+  Pronto runs now log non-blocking failures instead of silently masking them.
 - **Lefthook diff-lint coverage is now modeled separately** —
   `LEFTHOOK_DIFF_LINT_COVERED=true` captures Pronto + `pronto-rubocop` style
   diff-scoped lint coverage without pretending that it replaces full direct
