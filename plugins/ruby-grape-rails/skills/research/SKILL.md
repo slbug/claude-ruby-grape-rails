@@ -134,12 +134,12 @@ Research in this order:
 
 ## File-First Output Pattern
 
-Write research to `.claude/research/{slug}.md`:
+Write reusable cross-plan research to `.claude/research/{topic-slug}.md`:
 
 ```markdown
 # Research: [Topic]
 
-**Date**: 2026-03-21
+Last Updated: {YYYY-MM-DD}
 **Requested by**: [context]
 **Researcher**: [agent name]
 
@@ -221,3 +221,33 @@ Write research to `.claude/research/{slug}.md`:
 ## Sources
 - [Full citation list]
 ```
+
+## Reuse Rules
+
+Use the research filesystem deliberately:
+
+- `{topic-slug}` = stable kebab-case identifier for the research topic
+  (example: `sidekiq-vs-solid-queue`)
+- `{slug}` = plan slug for one `/rb:plan` namespace
+
+- `.claude/research/{topic-slug}.md`
+  - cross-plan research that may be reused by future `/rb:plan` runs
+  - best for gem evaluations, upgrade paths, framework/tooling
+    comparisons, and community research
+- `.claude/plans/{slug}/research/*.md`
+  - feature-specific research scoped to a single plan namespace
+    (it remains associated with that plan even after the plan is no
+    longer active)
+  - best for current codebase findings, architecture decisions, and
+    plan-local agent output
+
+Planning reuses fresh research conservatively:
+
+- files with a parseable in-file `Date:`, `Last Updated:`,
+  `**Date**:`, or `**Last Updated**:` value within the last 48 hours
+  can suppress duplicate
+  `web-researcher` / `ruby-gem-researcher` work when the topic clearly
+  matches
+- stale files are background context only
+- files without parseable freshness metadata are background context only
+- current-code agents still need to inspect the live repo

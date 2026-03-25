@@ -47,6 +47,30 @@ If no explicit Packwerk signal is found but the repo appears modular, ask:
 
 `No Packwerk detected. Do you have something similar implemented? Where are the modules/packages and what stack/ORM does each use?`
 
+Before spawning topic research, reuse fresh planning research when it
+is clearly relevant:
+
+- check `.claude/research/*.md` and `.claude/plans/*/research/*.md`
+- treat research docs as reusable only when they contain a parseable
+  in-file freshness header within the last 48 hours
+- accepted header keys:
+  `Last Updated:`, `Date:`, `**Last Updated**:`, `**Date**:`
+- preferred write format for new research:
+  `Last Updated: YYYY-MM-DD` or ISO datetime
+- require 2+ keyword/topic matches before reuse
+- reuse prior gem/tool/community research to narrow or skip repeated
+  `ruby-gem-researcher` / `web-researcher` work
+- do **not** skip current-code discovery agents like
+  `rails-patterns-analyst`, `call-tracer`, or security/schema/job
+  specialists just because a prior feature researched something
+  similar
+- log reuse decisions in `.claude/plans/{slug}/scratchpad.md` as
+  `REUSED: {filename} -> skipped {agent}`
+- after fresh research completes, compress both new and reused inputs
+  with `context-supervisor` into
+  `.claude/plans/{slug}/summaries/consolidated.md` before synthesizing
+  the final plan
+
 Spawn only what the request needs:
 
 ### Core Research Agents
@@ -240,6 +264,17 @@ Track progress:
 ## Output
 
 Write the plan to `.claude/plans/{slug}/plan.md`.
+
+Create the planning namespace at the start of planning, not only at
+plan-write time:
+
+- `.claude/plans/{slug}/research/`
+- `.claude/plans/{slug}/summaries/`
+- `.claude/plans/{slug}/scratchpad.md`
+
+Use the scratchpad to capture clarification answers, infrastructure
+discoveries, and research-cache reuse decisions before `plan.md`
+exists.
 
 **After creating the plan, set the active plan marker:**
 

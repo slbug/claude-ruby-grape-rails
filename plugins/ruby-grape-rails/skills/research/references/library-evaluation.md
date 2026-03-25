@@ -17,6 +17,8 @@ Write to `.claude/research/{library-name}-evaluation.md`:
 ```markdown
 # Library Evaluation: {name}
 
+Last Updated: {YYYY-MM-DD}
+
 ## Quick Facts
 
 | Metric | Value |
@@ -75,6 +77,9 @@ If adopting:
 - {Gotcha 1}
 - {Gotcha 2}
 ```
+
+Keep `Last Updated:` current. Planning may reuse fresh evaluation docs
+to avoid respawning duplicate gem-research work.
 
 ## Size Target
 

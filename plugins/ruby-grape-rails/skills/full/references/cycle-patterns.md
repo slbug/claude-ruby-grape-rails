@@ -9,7 +9,7 @@
 
 ## Metadata
 - **Feature**: {feature description}
-- **Slug**: {feature-slug}
+- **Slug**: {slug}
 - **State**: WORKING
 - **Cycle**: 2/10
 - **Started**: 2024-01-15 10:30:00

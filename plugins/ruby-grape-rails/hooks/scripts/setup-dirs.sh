@@ -17,6 +17,7 @@ CLAUDE_DIR="${REPO_ROOT}/.claude"
 # SessionStart hook: Create core workflow directories (other dirs created by skills on demand)
 if ! mkdir -p -- \
   "${CLAUDE_DIR}/plans" \
+  "${CLAUDE_DIR}/research" \
   "${CLAUDE_DIR}/reviews" \
   "${CLAUDE_DIR}/solutions" \
   "${CLAUDE_DIR}/audit" \
