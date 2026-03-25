@@ -51,8 +51,12 @@ Before spawning topic research, reuse fresh planning research when it
 is clearly relevant:
 
 - check `.claude/research/*.md` and `.claude/plans/*/research/*.md`
-- treat research docs as reusable only when their in-file `Date:` or
-  `Last Updated:` value is within the last 48 hours
+- treat research docs as reusable only when they contain a parseable
+  in-file freshness header within the last 48 hours
+- accepted header keys:
+  `Last Updated:`, `Date:`, `**Last Updated**:`, `**Date**:`
+- preferred write format for new research:
+  `Last Updated: YYYY-MM-DD` or ISO datetime
 - require 2+ keyword/topic matches before reuse
 - reuse prior gem/tool/community research to narrow or skip repeated
   `ruby-gem-researcher` / `web-researcher` work

@@ -118,8 +118,13 @@ whether fresh research already exists:
    - `.claude/plans/*/research/*.md`
 3. Compare the feature description or review against candidate
    filenames/content. Treat 2+ keyword matches as relevant.
-4. Reuse only files whose in-file `Date:` or `Last Updated:` value is
-   parseable and within the last 48 hours.
+4. Reuse only files whose in-file freshness metadata meets all of the
+   following:
+   - the file contains one of:
+     `Last Updated:`, `Date:`, `**Last Updated**:`, `**Date**:`
+   - the value after the colon is parseable as `YYYY-MM-DD` or an ISO
+     datetime
+   - the parsed timestamp is within the last 48 hours
 5. Fresh file types you can reuse:
    - `*-evaluation.md` → skip `ruby-gem-researcher` for that topic
    - `research-*.md` or clearly topical global research → skip

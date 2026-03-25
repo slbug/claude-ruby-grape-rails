@@ -134,12 +134,12 @@ Research in this order:
 
 ## File-First Output Pattern
 
-Write research to `.claude/research/{slug}.md`:
+Write reusable cross-plan research to `.claude/research/{topic-slug}.md`:
 
 ```markdown
 # Research: [Topic]
 
-**Date**: 2026-03-21
+Last Updated: 2026-03-21
 **Requested by**: [context]
 **Researcher**: [agent name]
 
@@ -226,6 +226,10 @@ Write research to `.claude/research/{slug}.md`:
 
 Use the research filesystem deliberately:
 
+- `{topic-slug}` = stable kebab-case identifier for the research topic
+  (example: `sidekiq-vs-solid-queue`)
+- `{slug}` = plan slug for one `/rb:plan` namespace
+
 - `.claude/research/{topic-slug}.md`
   - cross-plan research that may be reused by future `/rb:plan` runs
   - best for gem evaluations, upgrade paths, framework/tooling
@@ -239,8 +243,9 @@ Use the research filesystem deliberately:
 
 Planning reuses fresh research conservatively:
 
-- files with a parseable in-file `Date:` or `Last Updated:` value
-  within the last 48 hours can suppress duplicate
+- files with a parseable in-file `Date:`, `Last Updated:`,
+  `**Date**:`, or `**Last Updated**:` value within the last 48 hours
+  can suppress duplicate
   `web-researcher` / `ruby-gem-researcher` work when the topic clearly
   matches
 - stale files are background context only

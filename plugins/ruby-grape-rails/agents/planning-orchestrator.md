@@ -109,8 +109,10 @@ research:
    - Treat files with 2+ keyword matches as relevant candidates
 3. **Freshness**
    - Determine freshness only from in-file metadata you can read
-   - Expect a `Date:` or `Last Updated:` line near the top of reusable
-     research files
+   - Reusable research should be written with a canonical
+     `Last Updated: YYYY-MM-DD` or ISO datetime line near the top
+   - When reading, accept any of:
+     `Last Updated:`, `Date:`, `**Last Updated**:`, `**Date**:`
    - Reuse only files whose parseable in-file date is within the last
      48 hours
    - Older or undated files may inform context, but must not suppress
