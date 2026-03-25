@@ -228,7 +228,7 @@ If the feature is large, present OPTIONS with concrete numbers:
 
 ## Plan Generation
 
-Create plan(s) at `.claude/plans/{feature-slug}/plan.md`.
+Create plan(s) at `.claude/plans/{slug}/plan.md`.
 
 Key requirements:
 
