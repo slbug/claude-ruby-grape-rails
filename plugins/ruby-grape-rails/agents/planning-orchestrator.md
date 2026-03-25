@@ -85,7 +85,7 @@ Select agents based on request characteristics:
 
 Before any agent work starts:
 
-1. Resolve the feature slug.
+1. Resolve the plan slug.
 2. Create:
    - `.claude/plans/{slug}/research/`
    - `.claude/plans/{slug}/summaries/`
@@ -95,7 +95,7 @@ Before any agent work starts:
    - plan path
    - a `## Research Cache Reuse` heading
 
-### Phase 1c: Research Cache Reuse
+### Phase 1: Research Cache Reuse
 
 Before spawning topic research agents, check for fresh prior
 research that can narrow or replace repeated gem/tool/community

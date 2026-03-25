@@ -127,8 +127,8 @@ whether fresh research already exists:
    - the parsed timestamp is within the last 48 hours
 5. Fresh file types you can reuse:
    - `*-evaluation.md` → skip `ruby-gem-researcher` for that topic
-   - `research-*.md` or clearly topical global research → skip
-     `web-researcher` for that topic
+   - `.claude/research/{topic-slug}.md` or `research-*.md` →
+     skip `web-researcher` for that topic
 6. Record every reuse in
    `.claude/plans/{slug}/scratchpad.md`:
 
