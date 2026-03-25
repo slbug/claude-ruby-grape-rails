@@ -205,6 +205,9 @@ plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
 - **One plan = one work unit.** Large features get split into multiple plans. Each is self-contained.
 - **Agents are automatic.** The plugin spawns specialist agents behind the scenes. You don't manage them directly.
 - **The stack is detected, not guessed.** `/rb:init` and SessionStart hooks identify Rails/Grape/Sidekiq/Karafka, Active Record vs Sequel, and Packwerk/modular package layouts before giving guidance.
+- **Fresh research is reused, not re-bought.** `/rb:plan` checks
+  `.claude/research/` and prior plan research before respawning
+  duplicate topic-research agents.
 - **Workflow continuity is hook-backed.** `PreCompact`, `PostCompact`, and
   `StopFailure` preserve rules, log failure context, and surface re-read
   reminders after compaction or failed stops instead of relying only on chat
@@ -222,6 +225,7 @@ Every plan gets its own directory with its implementation-state artifacts:
 │   ├── summaries/         # Compressed multi-agent output
 │   ├── progress.md        # Session progress log
 │   └── scratchpad.md      # Auto-written decisions, dead-ends, handoffs
+├── research/              # Reusable cross-plan topic research
 ├── reviews/               # Review artifacts (per-agent + consolidated)
 └── solutions/             # Compound knowledge (reusable across plans)
 ```

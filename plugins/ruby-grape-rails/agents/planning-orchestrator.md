@@ -39,6 +39,12 @@ RECEIVE_REQUEST ──▶ ANALYZE_SCOPE ──▶ SELECT_AGENTS ──▶ SPAWN_
                                                        │
                                                        ▼
                                               ┌─────────────────┐
+                                              │   COMPRESS      │
+                                              │   RESEARCH      │
+                                              └────────┬────────┘
+                                                       │
+                                                       ▼
+                                              ┌─────────────────┐
                                               │  SYNTHESIZE     │
                                               │  FINDINGS       │
                                               └────────┬────────┘
@@ -74,6 +80,50 @@ Select agents based on request characteristics:
 | API changes | `rails-patterns-analyst` + security |
 
 ## Parallel Agent Coordination
+
+### Phase 0: Initialize Plan Namespace
+
+Before any agent work starts:
+
+1. Resolve the feature slug.
+2. Create:
+   - `.claude/plans/{slug}/research/`
+   - `.claude/plans/{slug}/summaries/`
+   - `.claude/plans/{slug}/scratchpad.md`
+3. Seed `scratchpad.md` with:
+   - feature name / request summary
+   - plan path
+   - a `## Research Cache Reuse` heading
+
+### Phase 1c: Research Cache Reuse
+
+Before spawning topic research agents, check for fresh prior
+research that can narrow or replace repeated gem/tool/community
+research:
+
+1. **Discover**
+   - Glob `.claude/research/*.md`
+   - Glob `.claude/plans/*/research/*.md`
+2. **Relevance**
+   - Extract focused keywords from the feature description or review
+   - Treat files with 2+ keyword matches as relevant candidates
+3. **Freshness**
+   - Reuse only files updated within the last 48 hours
+   - Older files may inform context, but must not suppress new research
+4. **Apply fresh reusable findings**
+   - Pull key findings into the synthesis context
+   - Skip only duplicate topic agents:
+     - `*-evaluation.md` → skip `ruby-gem-researcher` for that topic
+     - `research-*.md` or clearly topical global research → skip
+       `web-researcher` for that topic
+   - Append `REUSED: {filename} -> skipped {agent}` to
+     `.claude/plans/{slug}/scratchpad.md`
+5. **Do not over-reuse**
+   - Never skip current-code agents such as `rails-patterns-analyst`,
+     `call-tracer`, `security-analyzer`, or schema/job specialists
+     just because a prior plan exists
+   - Cache reuse is for external/topic research, not live code
+     ownership or architecture discovery
 
 ### Spawning Strategy
 
@@ -125,6 +175,27 @@ Track agent progress:
 - Security: [awaiting]
 - Jobs: [pending]
 ```
+
+### Phase 2b: Context Compression
+
+After all specialist agents finish, compress both fresh and reused
+research before plan synthesis:
+
+1. Spawn `context-supervisor`.
+2. Input:
+   - `.claude/plans/{slug}/research/`
+   - any reused files logged in `scratchpad.md`
+3. Output:
+   - `.claude/plans/{slug}/summaries/consolidated.md`
+4. Compression priorities:
+   - key decisions with rationale
+   - concrete file paths and package ownership
+   - risks, unknowns, and contested choices
+   - a short `Reused context` section listing which cached files were
+     incorporated
+
+Use `summaries/consolidated.md` as the primary synthesis input. Read
+raw research files only when the summary points to unresolved detail.
 
 ## Task Decomposition
 

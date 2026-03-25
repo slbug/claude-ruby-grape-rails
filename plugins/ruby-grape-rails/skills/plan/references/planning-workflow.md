@@ -104,6 +104,41 @@ agents' job -- let them handle pattern discovery.
 relevant directories, files, and patterns. Do NOT give vague
 prompts like "analyze the codebase."
 
+## Research Cache Reuse
+
+Before spawning `web-researcher` or `ruby-gem-researcher`, check
+whether fresh research already exists:
+
+1. Create the planning namespace early:
+   - `.claude/plans/{slug}/research/`
+   - `.claude/plans/{slug}/summaries/`
+   - `.claude/plans/{slug}/scratchpad.md`
+2. Glob both:
+   - `.claude/research/*.md`
+   - `.claude/plans/*/research/*.md`
+3. Compare the feature description or review against candidate
+   filenames/content. Treat 2+ keyword matches as relevant.
+4. Reuse only files updated within the last 48 hours.
+5. Fresh file types you can reuse:
+   - `*-evaluation.md` → skip `ruby-gem-researcher` for that topic
+   - `research-*.md` or clearly topical global research → skip
+     `web-researcher` for that topic
+6. Record every reuse in
+   `.claude/plans/{slug}/scratchpad.md`:
+
+   ```markdown
+   ## Research Cache Reuse
+   - REUSED: .claude/research/sidekiq-vs-solid-queue.md -> skipped web-researcher
+   ```
+
+**Do NOT reuse blindly.**
+
+- Old/stale files may inform context, but they do not suppress fresh
+  research.
+- Never skip current-code discovery agents such as
+  `rails-patterns-analyst`, `call-tracer`, or
+  schema/security/job specialists based only on cached research.
+
 ## Waiting for Agents
 
 Call TaskOutput for each background agent. If TaskOutput shows
@@ -111,7 +146,17 @@ the agent is still running, **wait and check again**. Do NOT
 proceed to plan generation until every agent status is
 "completed" (not "still running").
 
-Then read reports from `.claude/plans/{slug}/research/`.
+Then run `context-supervisor` over:
+
+- `.claude/plans/{slug}/research/`
+- any reused files recorded in `scratchpad.md`
+
+Write the compressed result to:
+
+- `.claude/plans/{slug}/summaries/consolidated.md`
+
+Read `summaries/consolidated.md` first. Only open raw research files
+when the compressed summary leaves an important question unresolved.
 
 If an agent fails, do the research yourself with Read/Grep
 instead of re-spawning.
@@ -206,9 +251,10 @@ Example: "Extract `UserService#currency_options` from
 Never write vague tasks like "extract existing pattern" without
 specifying the method signature — this causes issues.
 
-**Scratchpad**: Also create `.claude/plans/{feature-slug}/scratchpad.md`
-with initial context (feature name, brief description, plan file
-path). This captures planning decisions for future sessions.
+**Scratchpad**: Create `.claude/plans/{feature-slug}/scratchpad.md`
+at the start of planning with initial context (feature name, brief
+description, plan file path). Use it throughout planning for
+clarifications, infrastructure notes, and `REUSED:` cache entries.
 
 **Do NOT read any reference files.** The plan template is inlined
 in the planning-orchestrator agent.

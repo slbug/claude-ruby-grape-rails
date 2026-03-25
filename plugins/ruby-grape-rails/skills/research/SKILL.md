@@ -221,3 +221,24 @@ Write research to `.claude/research/{slug}.md`:
 ## Sources
 - [Full citation list]
 ```
+
+## Reuse Rules
+
+Use the research filesystem deliberately:
+
+- `.claude/research/{topic-slug}.md`
+  - cross-plan research that may be reused by future `/rb:plan` runs
+  - best for gem evaluations, upgrade paths, framework/tooling
+    comparisons, and community research
+- `.claude/plans/{slug}/research/*.md`
+  - feature-specific research scoped to one active plan
+  - best for current codebase findings, architecture decisions, and
+    plan-local agent output
+
+Planning reuses fresh research conservatively:
+
+- files updated within the last 48 hours can suppress duplicate
+  `web-researcher` / `ruby-gem-researcher` work when the topic clearly
+  matches
+- stale files are background context only
+- current-code agents still need to inspect the live repo

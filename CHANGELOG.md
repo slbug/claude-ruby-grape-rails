@@ -7,6 +7,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-03-25
+
+### Changed
+
+- **Planning now reuses fresh research cache more deliberately** —
+  `/rb:plan` and `planning-orchestrator` now check `.claude/research/`
+  and prior plan research before respawning duplicate gem/tool/community
+  research, while still requiring live code-discovery agents for the
+  current repo.
+- **Planning now compresses reused and fresh research before
+  synthesis** — `planning-orchestrator` runs `context-supervisor`
+  against plan-local research plus any reused cached files, then plans
+  from `summaries/consolidated.md` instead of pulling every raw report
+  into context.
+- **SessionStart now pre-creates `.claude/research/`** — reusable
+  research has a stable top-level home instead of depending on each plan
+  namespace to exist first.
+
 ## [1.2.0] - 2026-03-24
 
 ### Changed
