@@ -118,7 +118,8 @@ whether fresh research already exists:
    - `.claude/plans/*/research/*.md`
 3. Compare the feature description or review against candidate
    filenames/content. Treat 2+ keyword matches as relevant.
-4. Reuse only files updated within the last 48 hours.
+4. Reuse only files whose in-file `Date:` or `Last Updated:` value is
+   parseable and within the last 48 hours.
 5. Fresh file types you can reuse:
    - `*-evaluation.md` → skip `ruby-gem-researcher` for that topic
    - `research-*.md` or clearly topical global research → skip
@@ -135,6 +136,8 @@ whether fresh research already exists:
 
 - Old/stale files may inform context, but they do not suppress fresh
   research.
+- Files without parseable in-file freshness metadata may inform
+  context, but they do not suppress fresh research.
 - Never skip current-code discovery agents such as
   `rails-patterns-analyst`, `call-tracer`, or
   schema/security/job specialists based only on cached research.
@@ -251,7 +254,7 @@ Example: "Extract `UserService#currency_options` from
 Never write vague tasks like "extract existing pattern" without
 specifying the method signature — this causes issues.
 
-**Scratchpad**: Create `.claude/plans/{feature-slug}/scratchpad.md`
+**Scratchpad**: Create `.claude/plans/{slug}/scratchpad.md`
 at the start of planning with initial context (feature name, brief
 description, plan file path). Use it throughout planning for
 clarifications, infrastructure notes, and `REUSED:` cache entries.

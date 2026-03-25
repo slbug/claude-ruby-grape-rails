@@ -14,8 +14,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Planning now reuses fresh research cache more deliberately** —
   `/rb:plan` and `planning-orchestrator` now check `.claude/research/`
   and prior plan research before respawning duplicate gem/tool/community
-  research, while still requiring live code-discovery agents for the
-  current repo.
+  research, using in-file `Date:` / `Last Updated:` metadata for
+  deterministic freshness checks, while still requiring live
+  code-discovery agents for the current repo.
 - **Planning now compresses reused and fresh research before
   synthesis** — `planning-orchestrator` runs `context-supervisor`
   against plan-local research plus any reused cached files, then plans

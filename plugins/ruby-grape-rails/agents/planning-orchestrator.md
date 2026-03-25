@@ -108,8 +108,13 @@ research:
    - Extract focused keywords from the feature description or review
    - Treat files with 2+ keyword matches as relevant candidates
 3. **Freshness**
-   - Reuse only files updated within the last 48 hours
-   - Older files may inform context, but must not suppress new research
+   - Determine freshness only from in-file metadata you can read
+   - Expect a `Date:` or `Last Updated:` line near the top of reusable
+     research files
+   - Reuse only files whose parseable in-file date is within the last
+     48 hours
+   - Older or undated files may inform context, but must not suppress
+     new research
 4. **Apply fresh reusable findings**
    - Pull key findings into the synthesis context
    - Skip only duplicate topic agents:
