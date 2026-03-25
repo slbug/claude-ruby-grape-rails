@@ -317,7 +317,7 @@ plan with deeper research instead of creating a new one.
 3. **Spawn research agents** -- Use SPECIALIST agents (same
    selection rules as main flow), NOT Explore agents. Each agent
    MUST write detailed output to
-   `.claude/plans/{slug}/research/{topic}.md` and return ONLY a
+   `.claude/plans/{slug}/research/{topic-slug}.md` and return ONLY a
    500-word summary. Spawn all in ONE Tool Use block with
    `run_in_background: true`
 4. **Wait for ALL agents** -- Call `TaskOutput(task_id, block: true)`
