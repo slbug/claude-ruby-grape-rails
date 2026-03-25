@@ -139,7 +139,7 @@ Write reusable cross-plan research to `.claude/research/{topic-slug}.md`:
 ```markdown
 # Research: [Topic]
 
-Last Updated: 2026-03-21
+Last Updated: {YYYY-MM-DD}
 **Requested by**: [context]
 **Researcher**: [agent name]
 

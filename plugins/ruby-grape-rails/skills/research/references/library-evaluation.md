@@ -17,7 +17,7 @@ Write to `.claude/research/{library-name}-evaluation.md`:
 ```markdown
 # Library Evaluation: {name}
 
-Last Updated: 2026-03-25
+Last Updated: {YYYY-MM-DD}
 
 ## Quick Facts
 
