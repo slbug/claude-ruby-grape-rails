@@ -29,6 +29,15 @@ Before choosing commands:
    - `LEFTHOOK_COMMAND`
 3. If the cache is absent, fall back to reading the repo directly.
 
+When parsing JSON, YAML, text, or command output during verification:
+
+- Prefer CLI tools first when already available:
+  `jq`, `yq`, `rg`, `ag`, `awk`, `sed`, `sort`, `cut`, `uniq`
+- If CLI tools would be awkward or brittle, prefer Ruby one-liners or small
+  Ruby scripts next
+- Use ad-hoc Python only as a last resort, or when an existing project script
+  is already the canonical tool
+
 ## Order
 
 1. `bundle exec rails zeitwerk:check` if `FULL_RAILS_APP=true`; if the cache is absent, fall back to repo detection consistent with `/rb:verify`:

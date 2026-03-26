@@ -113,6 +113,17 @@ INITIALIZING ──▶ DISCOVERING ──▶ PLANNING ──▶ WORKING ──�
 6. **Capture learnings** - with `/rb:compound` when cycle succeeds
 7. **Maintain state** - in `progress.md` for resumption
 
+## Tooling Recommendations
+
+When you need to parse JSON, YAML, text, or command output during orchestration:
+
+- Prefer CLI tools first when already available:
+  `jq`, `yq`, `rg`, `ag`, `awk`, `sed`, `sort`, `cut`, `uniq`
+- If CLI tools would be awkward or brittle, prefer Ruby one-liners or small
+  Ruby scripts next
+- Use ad-hoc Python only as a last resort, or when an existing project script
+  is already the canonical tool
+
 ## Phase Transitions
 
 ### INITIALIZING → DISCOVERING

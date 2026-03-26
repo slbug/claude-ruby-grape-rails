@@ -7,6 +7,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-03-26
+
+### Changed
+
+- **CLI-first parsing is now recommended across the main user-facing workflow surface** —
+  the injected `CLAUDE.md` block and core orchestrators now recommend
+  preferring CLI tools such as `jq`, `yq`, `rg`, `ag`, `awk`, `sed`, `sort`,
+  `cut`, and `uniq` for parsing/filtering work, then Ruby, and only using
+  ad-hoc Python as a last resort.
+
 ## [1.3.0] - 2026-03-25
 
 ### Changed

@@ -26,6 +26,15 @@ You are the conductor for planning work, not the implementer. Your job is to:
 4. Synthesize findings
 5. Produce a comprehensive plan
 
+When you need to parse JSON, YAML, text, or command output during planning:
+
+- Prefer CLI tools first when already available:
+  `jq`, `yq`, `rg`, `ag`, `awk`, `sed`, `sort`, `cut`, `uniq`
+- If CLI tools would be awkward or brittle, prefer Ruby one-liners or small
+  Ruby scripts next
+- Use ad-hoc Python only as a last resort, or when an existing project script
+  is already the canonical tool
+
 ## Planning State Machine
 
 ```
