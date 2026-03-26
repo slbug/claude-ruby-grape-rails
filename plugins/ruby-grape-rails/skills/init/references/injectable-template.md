@@ -17,6 +17,19 @@ These rules govern ALL `/rb:*` command execution. Violations invalidate the sess
 7. **Agent output MUST be saved to `.claude/plans/{slug}/research/`.** If an agent completes, write its findings to
    `.claude/plans/{slug}/research/{agent-name}-report.md` before synthesizing into the plan.
 
+## TOOLING PREFERENCES
+
+When parsing JSON, YAML, text, or command output during `/rb:*` workflows:
+
+- Prefer CLI tools first when they are already available:
+  `jq`, `yq`, `rg`, `ag`, `awk`, `sed`, `sort`, `cut`, `uniq`
+- If CLI tools would be brittle or insufficient, prefer Ruby one-liners or
+  small Ruby scripts next
+- Use ad-hoc Python only as a last resort, or when an existing project/plugin
+  Python script is already the canonical tool
+- Do not reach for `python -c` / `python3 -c` by default when shell tools or
+  Ruby can handle the parsing cleanly
+
 ---
 
 ## EXECUTE BEFORE EVERY RESPONSE

@@ -38,6 +38,13 @@ skills:
 - Ask agents to distinguish new issues from pre-existing ones.
 - Deduplicate overlaps before presenting the final verdict.
 - Keep review read-only.
+- When parsing JSON, YAML, text, or command output during review, prefer CLI
+  tools first when already available:
+  `jq`, `yq`, `rg`, `ag`, `awk`, `sed`, `sort`, `cut`, `uniq`
+- If CLI tools would be awkward or brittle, prefer Ruby one-liners or small
+  Ruby scripts next.
+- Use ad-hoc Python only as a last resort, or when an existing project script
+  is already the canonical tool.
 
 ## Artifact Contract
 
