@@ -148,22 +148,28 @@ ignored_denied = 0
 
 recent_files.each do |session_file|
   File.foreach(session_file) do |line|
-    entry = JSON.parse(line)
+    begin
+      entry = JSON.parse(line)
+    rescue JSON::ParserError
+      next
+    end
+
     extract_bash_commands(entry).each do |command|
       total_bash_commands += 1
-      next if covered_by_patterns?(command, allow_globs)
 
       if covered_by_patterns?(command, deny_globs)
         ignored_denied += 1
         next
       end
 
+      next if covered_by_patterns?(command, allow_globs)
+
       group = command_group(command)
       group_counts[group] += 1
       examples[group] ||= command
     end
   end
-rescue JSON::ParserError, Errno::ENOENT
+rescue Errno::ENOENT
   next
 end
 

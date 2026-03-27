@@ -496,18 +496,19 @@ if [[ "$VERIFY_COMPOSITE_AVAILABLE" == "true" && -n "$VERIFY_COMPOSITE_COMMAND" 
   echo "=== Project-native Verification ==="
   echo "Trying: $VERIFY_COMPOSITE_COMMAND"
 
-  set +e
-  WRAPPER_OUTPUT=$(bash -lc "$VERIFY_COMPOSITE_COMMAND" 2>&1)
-  WRAPPER_STATUS=$?
-  set -e
+  WRAPPER_LOG=$(mktemp)
+  trap 'rm -f "$WRAPPER_LOG"' EXIT
 
-  printf '%s\n' "$WRAPPER_OUTPUT"
+  set +e
+  bash -lc "$VERIFY_COMPOSITE_COMMAND" 2>&1 | tee "$WRAPPER_LOG"
+  WRAPPER_STATUS=${PIPESTATUS[0]}
+  set -e
 
   if [[ $WRAPPER_STATUS -eq 0 ]]; then
     exit 0
   fi
 
-  if printf '%s\n' "$WRAPPER_OUTPUT" | wrapper_failure_is_fallback; then
+  if wrapper_failure_is_fallback < "$WRAPPER_LOG"; then
     echo "Project-native wrapper unavailable locally, falling back to direct checks."
   else
     exit "$WRAPPER_STATUS"
@@ -745,19 +746,20 @@ if [[ "$VERIFY_COMPOSITE_AVAILABLE" == "true" && -n "$VERIFY_COMPOSITE_COMMAND" 
   echo "0/7 Project-native Verification..."
   echo "Trying: $VERIFY_COMPOSITE_COMMAND"
 
-  set +e
-  WRAPPER_OUTPUT=$(bash -lc "$VERIFY_COMPOSITE_COMMAND" 2>&1)
-  WRAPPER_STATUS=$?
-  set -e
+  WRAPPER_LOG=$(mktemp)
+  trap 'rm -f "$WRAPPER_LOG"' EXIT
 
-  printf '%s\n' "$WRAPPER_OUTPUT"
+  set +e
+  bash -lc "$VERIFY_COMPOSITE_COMMAND" 2>&1 | tee "$WRAPPER_LOG"
+  WRAPPER_STATUS=${PIPESTATUS[0]}
+  set -e
 
   if [[ $WRAPPER_STATUS -eq 0 ]]; then
     echo "✅ Project-native verification wrapper passed!"
     exit 0
   fi
 
-  if printf '%s\n' "$WRAPPER_OUTPUT" | wrapper_failure_is_fallback; then
+  if wrapper_failure_is_fallback < "$WRAPPER_LOG"; then
     echo "Project-native wrapper unavailable locally, falling back to direct checks."
   else
     exit "$WRAPPER_STATUS"
