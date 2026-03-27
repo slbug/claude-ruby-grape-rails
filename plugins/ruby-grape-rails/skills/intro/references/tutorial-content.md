@@ -40,7 +40,7 @@ Each phase reads from the previous phase's output. Plans become checkboxes. Chec
 | Feature | What It Does |
 |---------|-------------|
 | 22 specialist agents | ActiveRecord, Hotwire, security, Sidekiq, deployment experts |
-| 49 skills | Commands for every phase of development |
+| 50 skills | Commands for every phase of development |
 | 21 Iron Laws | Non-negotiable rules enforced automatically |
 | Auto-loaded references | Context-aware docs loaded when you edit relevant files |
 | Runtime tooling integration | Runtime debugging when runtime tooling is connected |
@@ -150,7 +150,8 @@ Iron Laws are non-negotiable rules that every agent enforces. If your code viola
 
 | Command | What It Does |
 |---------|-------------|
-| `/rb:verify` | Full verification: format (StandardRB/RuboCop), test (RSpec/Minitest), and Rails-specific checks (zeitwerk:check when applicable) |
+| `/rb:verify` | Prefer project-native verify wrappers when present; otherwise run full direct verification (format, tests, and Rails-specific checks when applicable) |
+| `/rb:permissions` | Analyze recent permission prompts and suggest safer Claude settings entries |
 | `/rb:audit` | 5-agent project health audit with scores |
 | `/rb:n1-check` | Detect N+1 query patterns |
 | `/rb:state-audit` | Audit Hotwire/Turbo stream state for memory |
@@ -324,6 +325,7 @@ The plugin works best when all layers are active: `/rb:init` for persistent rule
 | `/rb:full <feature>` | Autonomous plan-work-review cycle |
 | `/rb:investigate <bug>` | Structured bug investigation |
 | `/rb:verify` | Run all quality checks |
+| `/rb:permissions` | Tune Claude Bash permissions from real session evidence |
 | `/rb:research <topic>` | Research with parallel workers, runtime tooling-first |
 | `/rb:pr-review <PR#>` | Address PR review comments |
 

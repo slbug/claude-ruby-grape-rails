@@ -1,6 +1,6 @@
 ---
 name: intent-detection
-description: "Internal router for ambiguous work requests. Load when user says \"add/build/implement feature\", \"fix/debug/investigate bug\", \"review/audit code\", \"refactor/clean up\", \"slow/performance\", \"PR comments\", \"research/evaluate library\", or \"that fixed it\" — WITHOUT an explicit /rb: slash command."
+description: "Internal router for ambiguous work requests. Load when user says \"add/build/implement feature\", \"fix/debug/investigate bug\", \"review/audit code\", \"refactor/clean up\", \"slow/performance\", \"PR comments\", \"research/evaluate library\", \"permission fatigue/settings.json\", or \"that fixed it\" — WITHOUT an explicit /rb: slash command."
 user-invocable: false
 effort: low
 ---
@@ -24,6 +24,7 @@ When user describes work WITHOUT specifying a `/rb:` command, analyze their inte
 | "deploy", "release", "production" | Deployment | `/rb:verify` then deploy |
 | "performance", "slow", "N+1", "memory" | Performance | `/rb:perf` |
 | "PR review", "review comments", "address feedback", "respond to PR" | PR response | `/rb:pr-review` |
+| "permission prompts", "stop asking", "settings.json", "allow commands", "permission fatigue" | Permission tuning | `/rb:permissions` |
 | "that worked", "fixed it", "problem solved" | Knowledge capture | `/rb:compound` |
 | "enhance plan", "more detail", "deepen" | Plan enhancement | `/rb:plan --existing` |
 | "triage", "which findings", "prioritize fixes" | Finding triage | `/rb:triage` |

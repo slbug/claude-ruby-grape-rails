@@ -105,7 +105,7 @@ claude-ruby-grape-rails/
 │       │   └── ...
 │       ├── hooks/
 │       │   └── hooks.json           # Format, review-state, compaction, and failure hooks
-│       └── skills/                  # 49 skills
+│       └── skills/                  # 50 skills
 │           ├── work/                # Execution phase
 │           ├── full/                # Autonomous cycle
 │           ├── plan/                # Planning + deepening (--existing)
@@ -660,6 +660,7 @@ When working on code, automatically consult relevant reference documentation bef
 | Triage review findings | `/rb:triage` |
 | Capture solved problem | `/rb:compound` |
 | Run checks | `/rb:verify` |
+| Reduce permission prompts | `/rb:permissions` |
 | Research topic | `/rb:research` |
 | Evaluate a Ruby gem | `/rb:research --library` |
 | Resume work | `/rb:work --continue` |
@@ -686,7 +687,7 @@ When working on code, automatically consult relevant reference documentation bef
 
 **Review → Follow-up Plan**: After `/rb:review`, if findings reveal scope gaps or missing coverage, use `/rb:triage .claude/reviews/{review-slug}.md` to turn selected findings into `.claude/plans/{slug}/plan.md`.
 
-**Standalone**: `/rb:quick`, `/rb:full`, `/rb:investigate`, `/rb:verify`, `/rb:research`
+**Standalone**: `/rb:quick`, `/rb:full`, `/rb:investigate`, `/rb:verify`, `/rb:research`, `/rb:permissions`
 
 **Analysis**: `/rb:n1-check`, `/rb:state-audit`, `/rb:boundaries`, `/rb:trace`, `/rb:techdebt`
 

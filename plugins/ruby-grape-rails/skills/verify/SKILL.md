@@ -1,6 +1,6 @@
 ---
 name: rb:verify
-description: Run the project verification stack for Ruby/Rails/Grape work. Detects the project toolchain and uses the strongest available checks. Validates autoloading, linting, tests, security, and migrations.
+description: Run the project verification stack for Ruby/Rails/Grape work. Detects the project toolchain, prefers a repo-native composite verify wrapper when one exists, and otherwise uses the strongest available direct checks. Validates autoloading, linting, tests, security, and migrations.
 argument-hint: "[--quick|--full]"
 effort: low
 ---
@@ -39,7 +39,36 @@ When cached runtime state is available:
 - else `RUBOCOP_AVAILABLE=true` → prefer `bundle exec rubocop`
 - `BRAKEMAN_AVAILABLE=true` → run `bundle exec brakeman`
 - `PRONTO_AVAILABLE=true` → allow optional final `bundle exec pronto run -c <base>`
+- `VERIFY_COMPOSITE_AVAILABLE=true` with `VERIFY_COMPOSITE_COMMAND=<cmd>` →
+  prefer that repo-native composite verifier first when it clearly represents
+  the project's check flow
 - `LEFTHOOK_*` booleans control whether Lefthook is an acceptable wrapper, not whether direct checks disappear
+
+## Project-Native Composite Runners
+
+Some Ruby repos already define a canonical verification entrypoint. When cached
+runtime state exposes:
+
+- `VERIFY_COMPOSITE_AVAILABLE=true`
+- `VERIFY_COMPOSITE_COMMAND=<cmd>`
+
+try that wrapper first before the direct-tool sequence.
+
+Examples:
+
+- `./bin/check`
+- `./bin/ci`
+- `make ci`
+- `make check`
+- `bundle exec rake ci`
+
+Fallback rule:
+
+- if the wrapper fails because the wrapper itself is unavailable or broken
+  locally (`command not found`, missing task, permission denied, missing
+  dependency), log the fallback and run the direct checks below
+- if the wrapper runs and surfaces real lint/test/security failures, stop there
+  and fix them instead of hiding them behind fallback
 
 ## Verification Stack
 
@@ -302,6 +331,19 @@ runtime_flag() {
   grep -E "^${key}=" "$RUNTIME_ENV_FILE" | tail -n 1 | cut -d= -f2-
 }
 
+find_first_repo_file() {
+  local candidate
+
+  for candidate in "$@"; do
+    if [[ -f "$REPO_ROOT/$candidate" && ! -L "$REPO_ROOT/$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 gem_or_lock_has() {
   local gem_name="$1"
   grep -Eq "gem ['\"]${gem_name}['\"]|^[[:space:]]{4}${gem_name} " \
@@ -314,11 +356,101 @@ gem_prefix_has() {
     "$REPO_ROOT/Gemfile" "$REPO_ROOT/Gemfile.lock" 2>/dev/null
 }
 
+makefile_has_target() {
+  local target_name="$1"
+  local makefile_path
+
+  makefile_path=$(find_first_repo_file GNUmakefile Makefile makefile || true)
+  [[ -n "$makefile_path" ]] || return 1
+  grep -Eq "^[[:space:]]*${target_name}[[:space:]]*:" "$REPO_ROOT/$makefile_path"
+}
+
+rake_task_declared() {
+  local task_name="$1"
+
+  grep -REq "task[[:space:]]*(\\(|:|['\"])${task_name}([[:space:][:punct:]]|$)|${task_name}:[[:space:]]" \
+    "$REPO_ROOT/Rakefile" "$REPO_ROOT/lib/tasks" 2>/dev/null
+}
+
+justfile_has_recipe() {
+  local recipe_name="$1"
+  local justfile_path
+
+  command -v just >/dev/null 2>&1 || return 1
+  justfile_path=$(find_first_repo_file justfile .justfile Justfile || true)
+  [[ -n "$justfile_path" ]] || return 1
+  grep -Eq "^[[:space:]]*${recipe_name}[[:space:]]*:" "$REPO_ROOT/$justfile_path"
+}
+
+detect_verify_composite() {
+  local candidate
+
+  for candidate in bin/check bin/ci bin/verify script/check script/ci script/verify; do
+    if [[ -f "$REPO_ROOT/$candidate" && ! -L "$REPO_ROOT/$candidate" ]]; then
+      printf './%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  if makefile_has_target ci; then
+    echo "make ci"
+    return 0
+  fi
+
+  if makefile_has_target check; then
+    echo "make check"
+    return 0
+  fi
+
+  if makefile_has_target verify; then
+    echo "make verify"
+    return 0
+  fi
+
+  if justfile_has_recipe ci; then
+    echo "just ci"
+    return 0
+  fi
+
+  if justfile_has_recipe check; then
+    echo "just check"
+    return 0
+  fi
+
+  if justfile_has_recipe verify; then
+    echo "just verify"
+    return 0
+  fi
+
+  if rake_task_declared ci; then
+    echo "bundle exec rake ci"
+    return 0
+  fi
+
+  if rake_task_declared check; then
+    echo "bundle exec rake check"
+    return 0
+  fi
+
+  if rake_task_declared verify; then
+    echo "bundle exec rake verify"
+    return 0
+  fi
+
+  return 1
+}
+
+wrapper_failure_is_fallback() {
+  grep -Eq "command not found|No such file or directory|Permission denied|No rule to make target|Don't know how to build task|Could not find command|Could not find gem|bundler: command not found"
+}
+
 FULL_RAILS_APP=$(runtime_flag FULL_RAILS_APP)
 STANDARDRB_AVAILABLE=$(runtime_flag STANDARDRB_AVAILABLE)
 RUBOCOP_AVAILABLE=$(runtime_flag RUBOCOP_AVAILABLE)
 BRAKEMAN_AVAILABLE=$(runtime_flag BRAKEMAN_AVAILABLE)
 PRONTO_AVAILABLE=$(runtime_flag PRONTO_AVAILABLE)
+VERIFY_COMPOSITE_AVAILABLE=$(runtime_flag VERIFY_COMPOSITE_AVAILABLE)
+VERIFY_COMPOSITE_COMMAND=$(runtime_flag VERIFY_COMPOSITE_COMMAND)
 
 if [[ ! -f "$RUNTIME_ENV_FILE" || -L "$RUNTIME_ENV_FILE" ]]; then
   echo "Runtime cache missing, falling back to repo detection."
@@ -350,6 +482,35 @@ fi
 if [[ -z "$PRONTO_AVAILABLE" ]]; then
   if gem_or_lock_has pronto || gem_prefix_has pronto; then
     PRONTO_AVAILABLE=true
+  fi
+fi
+
+if [[ -z "$VERIFY_COMPOSITE_COMMAND" ]]; then
+  VERIFY_COMPOSITE_COMMAND=$(detect_verify_composite || true)
+  if [[ -n "$VERIFY_COMPOSITE_COMMAND" ]]; then
+    VERIFY_COMPOSITE_AVAILABLE=true
+  fi
+fi
+
+if [[ "$VERIFY_COMPOSITE_AVAILABLE" == "true" && -n "$VERIFY_COMPOSITE_COMMAND" ]]; then
+  echo "=== Project-native Verification ==="
+  echo "Trying: $VERIFY_COMPOSITE_COMMAND"
+
+  set +e
+  WRAPPER_OUTPUT=$(bash -lc "$VERIFY_COMPOSITE_COMMAND" 2>&1)
+  WRAPPER_STATUS=$?
+  set -e
+
+  printf '%s\n' "$WRAPPER_OUTPUT"
+
+  if [[ $WRAPPER_STATUS -eq 0 ]]; then
+    exit 0
+  fi
+
+  if printf '%s\n' "$WRAPPER_OUTPUT" | wrapper_failure_is_fallback; then
+    echo "Project-native wrapper unavailable locally, falling back to direct checks."
+  else
+    exit "$WRAPPER_STATUS"
   fi
 fi
 
@@ -419,6 +580,19 @@ runtime_flag() {
   grep -E "^${key}=" "$RUNTIME_ENV_FILE" | tail -n 1 | cut -d= -f2-
 }
 
+find_first_repo_file() {
+  local candidate
+
+  for candidate in "$@"; do
+    if [[ -f "$REPO_ROOT/$candidate" && ! -L "$REPO_ROOT/$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 gem_or_lock_has() {
   local gem_name="$1"
   grep -Eq "gem ['\"]${gem_name}['\"]|^[[:space:]]{4}${gem_name} " \
@@ -431,11 +605,101 @@ gem_prefix_has() {
     "$REPO_ROOT/Gemfile" "$REPO_ROOT/Gemfile.lock" 2>/dev/null
 }
 
+makefile_has_target() {
+  local target_name="$1"
+  local makefile_path
+
+  makefile_path=$(find_first_repo_file GNUmakefile Makefile makefile || true)
+  [[ -n "$makefile_path" ]] || return 1
+  grep -Eq "^[[:space:]]*${target_name}[[:space:]]*:" "$REPO_ROOT/$makefile_path"
+}
+
+rake_task_declared() {
+  local task_name="$1"
+
+  grep -REq "task[[:space:]]*(\\(|:|['\"])${task_name}([[:space:][:punct:]]|$)|${task_name}:[[:space:]]" \
+    "$REPO_ROOT/Rakefile" "$REPO_ROOT/lib/tasks" 2>/dev/null
+}
+
+justfile_has_recipe() {
+  local recipe_name="$1"
+  local justfile_path
+
+  command -v just >/dev/null 2>&1 || return 1
+  justfile_path=$(find_first_repo_file justfile .justfile Justfile || true)
+  [[ -n "$justfile_path" ]] || return 1
+  grep -Eq "^[[:space:]]*${recipe_name}[[:space:]]*:" "$REPO_ROOT/$justfile_path"
+}
+
+detect_verify_composite() {
+  local candidate
+
+  for candidate in bin/check bin/ci bin/verify script/check script/ci script/verify; do
+    if [[ -f "$REPO_ROOT/$candidate" && ! -L "$REPO_ROOT/$candidate" ]]; then
+      printf './%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  if makefile_has_target ci; then
+    echo "make ci"
+    return 0
+  fi
+
+  if makefile_has_target check; then
+    echo "make check"
+    return 0
+  fi
+
+  if makefile_has_target verify; then
+    echo "make verify"
+    return 0
+  fi
+
+  if justfile_has_recipe ci; then
+    echo "just ci"
+    return 0
+  fi
+
+  if justfile_has_recipe check; then
+    echo "just check"
+    return 0
+  fi
+
+  if justfile_has_recipe verify; then
+    echo "just verify"
+    return 0
+  fi
+
+  if rake_task_declared ci; then
+    echo "bundle exec rake ci"
+    return 0
+  fi
+
+  if rake_task_declared check; then
+    echo "bundle exec rake check"
+    return 0
+  fi
+
+  if rake_task_declared verify; then
+    echo "bundle exec rake verify"
+    return 0
+  fi
+
+  return 1
+}
+
+wrapper_failure_is_fallback() {
+  grep -Eq "command not found|No such file or directory|Permission denied|No rule to make target|Don't know how to build task|Could not find command|Could not find gem|bundler: command not found"
+}
+
 FULL_RAILS_APP=$(runtime_flag FULL_RAILS_APP)
 STANDARDRB_AVAILABLE=$(runtime_flag STANDARDRB_AVAILABLE)
 RUBOCOP_AVAILABLE=$(runtime_flag RUBOCOP_AVAILABLE)
 BRAKEMAN_AVAILABLE=$(runtime_flag BRAKEMAN_AVAILABLE)
 PRONTO_AVAILABLE=$(runtime_flag PRONTO_AVAILABLE)
+VERIFY_COMPOSITE_AVAILABLE=$(runtime_flag VERIFY_COMPOSITE_AVAILABLE)
+VERIFY_COMPOSITE_COMMAND=$(runtime_flag VERIFY_COMPOSITE_COMMAND)
 
 if [[ ! -f "$RUNTIME_ENV_FILE" || -L "$RUNTIME_ENV_FILE" ]]; then
   echo "Runtime cache missing, falling back to repo detection."
@@ -467,6 +731,36 @@ fi
 if [[ -z "$PRONTO_AVAILABLE" ]]; then
   if gem_or_lock_has pronto || gem_prefix_has pronto; then
     PRONTO_AVAILABLE=true
+  fi
+fi
+
+if [[ -z "$VERIFY_COMPOSITE_COMMAND" ]]; then
+  VERIFY_COMPOSITE_COMMAND=$(detect_verify_composite || true)
+  if [[ -n "$VERIFY_COMPOSITE_COMMAND" ]]; then
+    VERIFY_COMPOSITE_AVAILABLE=true
+  fi
+fi
+
+if [[ "$VERIFY_COMPOSITE_AVAILABLE" == "true" && -n "$VERIFY_COMPOSITE_COMMAND" ]]; then
+  echo "0/7 Project-native Verification..."
+  echo "Trying: $VERIFY_COMPOSITE_COMMAND"
+
+  set +e
+  WRAPPER_OUTPUT=$(bash -lc "$VERIFY_COMPOSITE_COMMAND" 2>&1)
+  WRAPPER_STATUS=$?
+  set -e
+
+  printf '%s\n' "$WRAPPER_OUTPUT"
+
+  if [[ $WRAPPER_STATUS -eq 0 ]]; then
+    echo "✅ Project-native verification wrapper passed!"
+    exit 0
+  fi
+
+  if printf '%s\n' "$WRAPPER_OUTPUT" | wrapper_failure_is_fallback; then
+    echo "Project-native wrapper unavailable locally, falling back to direct checks."
+  else
+    exit "$WRAPPER_STATUS"
   fi
 fi
 
@@ -645,6 +939,7 @@ See: [references/ci-cd-troubleshooting.md](references/ci-cd-troubleshooting.md) 
 | Command | Purpose |
 |---------|---------|
 | `/rb:verify` | Run full verification stack |
+| `./bin/check` / `./bin/ci` / `make ci` / `bundle exec rake ci` | Prefer project-native composite verification when present |
 | `bundle exec rails zeitwerk:check` | Verify autoloading for full Rails apps |
 | `bundle exec standardrb` | Check style when StandardRB is configured |
 | `bundle exec standardrb --fix` | Auto-fix style when StandardRB is configured |
