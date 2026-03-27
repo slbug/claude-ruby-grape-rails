@@ -113,7 +113,7 @@ def extract_bash_commands(entry)
     command = block.dig('input', 'command').to_s.strip
     next if command.empty?
 
-    command.lines.first.to_s.strip[0, 300]
+    command.lines.first.to_s.strip
   end
 end
 
@@ -201,7 +201,7 @@ report = {
     {
       group: group,
       count: count,
-      example: examples[group]
+      example: examples[group].to_s[0, 300]
     }
   end,
   deprecated_patterns: deprecated_patterns,

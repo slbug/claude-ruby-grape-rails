@@ -441,7 +441,7 @@ detect_verify_composite() {
 }
 
 wrapper_failure_is_fallback() {
-  grep -Eq "command not found|No such file or directory|Permission denied|No rule to make target|Don't know how to build task|Could not find command|Could not find gem|bundler: command not found"
+  grep -Eq '(^[^:]+: .*: command not found$)|(^[^:]+: .*: No such file or directory$)|(^[^:]+: .*: Permission denied$)|(^make(\[[0-9]+\])?: \*\*\* No rule to make target)|(^make(\[[0-9]+\])?: \*\*\* Don'\''t know how to build target)|(^rake aborted! Don'\''t know how to build task)|(^Could not find command )|(^Could not find gem )|(^bundler: command not found: )|(^bundle: command not found: )'
 }
 
 FULL_RAILS_APP=$(runtime_flag FULL_RAILS_APP)
@@ -693,7 +693,7 @@ detect_verify_composite() {
 }
 
 wrapper_failure_is_fallback() {
-  grep -Eq "command not found|No such file or directory|Permission denied|No rule to make target|Don't know how to build task|Could not find command|Could not find gem|bundler: command not found"
+  grep -Eq '(^[^:]+: .*: command not found$)|(^[^:]+: .*: No such file or directory$)|(^[^:]+: .*: Permission denied$)|(^make(\[[0-9]+\])?: \*\*\* No rule to make target)|(^make(\[[0-9]+\])?: \*\*\* Don'\''t know how to build target)|(^rake aborted! Don'\''t know how to build task)|(^Could not find command )|(^Could not find gem )|(^bundler: command not found: )|(^bundle: command not found: )'
 }
 
 FULL_RAILS_APP=$(runtime_flag FULL_RAILS_APP)
