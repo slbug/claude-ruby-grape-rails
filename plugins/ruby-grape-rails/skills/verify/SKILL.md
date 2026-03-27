@@ -39,9 +39,9 @@ When cached runtime state is available:
 - else `RUBOCOP_AVAILABLE=true` → prefer `bundle exec rubocop`
 - `BRAKEMAN_AVAILABLE=true` → run `bundle exec brakeman`
 - `PRONTO_AVAILABLE=true` → allow optional final `bundle exec pronto run -c <base>`
-- `VERIFY_COMPOSITE_AVAILABLE=true` with `VERIFY_COMPOSITE_COMMAND=<cmd>` →
-  prefer that repo-native composite verifier first when it clearly represents
-  the project's check flow
+- `VERIFY_COMPOSITE_AVAILABLE=true` → treat that as a hint that a repo-native
+  composite verifier may exist, then re-detect it from the working tree before
+  running it
 - `LEFTHOOK_*` booleans control whether Lefthook is an acceptable wrapper, not whether direct checks disappear
 
 ## Project-Native Composite Runners
@@ -50,9 +50,9 @@ Some Ruby repos already define a canonical verification entrypoint. When cached
 runtime state exposes:
 
 - `VERIFY_COMPOSITE_AVAILABLE=true`
-- `VERIFY_COMPOSITE_COMMAND=<cmd>`
 
-try that wrapper first before the direct-tool sequence.
+re-detect the wrapper from the working tree before trying it. Do not execute a
+raw command string taken from `.claude/.runtime_env`.
 
 Examples:
 
@@ -449,8 +449,7 @@ STANDARDRB_AVAILABLE=$(runtime_flag STANDARDRB_AVAILABLE)
 RUBOCOP_AVAILABLE=$(runtime_flag RUBOCOP_AVAILABLE)
 BRAKEMAN_AVAILABLE=$(runtime_flag BRAKEMAN_AVAILABLE)
 PRONTO_AVAILABLE=$(runtime_flag PRONTO_AVAILABLE)
-VERIFY_COMPOSITE_AVAILABLE=$(runtime_flag VERIFY_COMPOSITE_AVAILABLE)
-VERIFY_COMPOSITE_COMMAND=$(runtime_flag VERIFY_COMPOSITE_COMMAND)
+VERIFY_COMPOSITE_HINT=$(runtime_flag VERIFY_COMPOSITE_AVAILABLE)
 
 if [[ ! -f "$RUNTIME_ENV_FILE" || -L "$RUNTIME_ENV_FILE" ]]; then
   echo "Runtime cache missing, falling back to repo detection."
@@ -485,10 +484,13 @@ if [[ -z "$PRONTO_AVAILABLE" ]]; then
   fi
 fi
 
-if [[ -z "$VERIFY_COMPOSITE_COMMAND" ]]; then
-  VERIFY_COMPOSITE_COMMAND=$(detect_verify_composite || true)
-  if [[ -n "$VERIFY_COMPOSITE_COMMAND" ]]; then
-    VERIFY_COMPOSITE_AVAILABLE=true
+VERIFY_COMPOSITE_COMMAND=$(detect_verify_composite || true)
+if [[ -n "$VERIFY_COMPOSITE_COMMAND" ]]; then
+  VERIFY_COMPOSITE_AVAILABLE=true
+else
+  VERIFY_COMPOSITE_AVAILABLE=false
+  if [[ "$VERIFY_COMPOSITE_HINT" == "true" ]]; then
+    echo "Runtime cache suggested a project-native verification wrapper, but no supported wrapper was re-detected from the working tree."
   fi
 fi
 
@@ -699,8 +701,7 @@ STANDARDRB_AVAILABLE=$(runtime_flag STANDARDRB_AVAILABLE)
 RUBOCOP_AVAILABLE=$(runtime_flag RUBOCOP_AVAILABLE)
 BRAKEMAN_AVAILABLE=$(runtime_flag BRAKEMAN_AVAILABLE)
 PRONTO_AVAILABLE=$(runtime_flag PRONTO_AVAILABLE)
-VERIFY_COMPOSITE_AVAILABLE=$(runtime_flag VERIFY_COMPOSITE_AVAILABLE)
-VERIFY_COMPOSITE_COMMAND=$(runtime_flag VERIFY_COMPOSITE_COMMAND)
+VERIFY_COMPOSITE_HINT=$(runtime_flag VERIFY_COMPOSITE_AVAILABLE)
 
 if [[ ! -f "$RUNTIME_ENV_FILE" || -L "$RUNTIME_ENV_FILE" ]]; then
   echo "Runtime cache missing, falling back to repo detection."
@@ -735,10 +736,13 @@ if [[ -z "$PRONTO_AVAILABLE" ]]; then
   fi
 fi
 
-if [[ -z "$VERIFY_COMPOSITE_COMMAND" ]]; then
-  VERIFY_COMPOSITE_COMMAND=$(detect_verify_composite || true)
-  if [[ -n "$VERIFY_COMPOSITE_COMMAND" ]]; then
-    VERIFY_COMPOSITE_AVAILABLE=true
+VERIFY_COMPOSITE_COMMAND=$(detect_verify_composite || true)
+if [[ -n "$VERIFY_COMPOSITE_COMMAND" ]]; then
+  VERIFY_COMPOSITE_AVAILABLE=true
+else
+  VERIFY_COMPOSITE_AVAILABLE=false
+  if [[ "$VERIFY_COMPOSITE_HINT" == "true" ]]; then
+    echo "Runtime cache suggested a project-native verification wrapper, but no supported wrapper was re-detected from the working tree."
   fi
 fi
 

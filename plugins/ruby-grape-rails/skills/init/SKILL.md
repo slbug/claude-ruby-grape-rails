@@ -60,7 +60,8 @@ When building the injected header:
 - use `PACKAGE_LAYOUT` / `PACKAGE_LOCATIONS` to decide whether package-boundary guidance belongs in the injected block
 - set `BETTERLEAKS_STATUS` to `available` when `command -v betterleaks` succeeds; otherwise use `missing`
 - when `.claude/.runtime_env` is present, use its tool booleans to understand whether the project has `standardrb`, `rubocop`, `brakeman`, `lefthook`, and `pronto`
-- when `.claude/.runtime_env` exposes `VERIFY_COMPOSITE_AVAILABLE=true`, use `VERIFY_COMPOSITE_COMMAND` as a hint that the repo has a canonical composite verify entrypoint
+- when `.claude/.runtime_env` exposes `VERIFY_COMPOSITE_AVAILABLE=true`, treat that as a hint that the repo may have a canonical composite verify entrypoint
+- re-detect any composite verify command from the working tree before running it; do not execute a raw command string from `.claude/.runtime_env`
 
 Optional external integration:
 
@@ -83,9 +84,9 @@ Verification/tooling policy:
   - use it after direct lint/security checks
   - do not use it as a substitute for full lint or security verification
 - if runtime detection found a project-native verify wrapper
-  (`VERIFY_COMPOSITE_COMMAND`), prefer that first in `/rb:verify`; fall back
-  to direct checks only when the wrapper itself is unavailable or broken
-  locally
+  (`VERIFY_COMPOSITE_AVAILABLE=true`), re-detect it from the repo and prefer it
+  first in `/rb:verify`; fall back to direct checks only when the wrapper
+  itself is unavailable or broken locally
 
 ## Install Modes
 

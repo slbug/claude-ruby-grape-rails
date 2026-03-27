@@ -25,7 +25,8 @@ ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 14 --json
 
 - total session files scanned in the requested window
 - uncovered Bash command groups not currently covered by `permissions.allow`
-- example full commands for each uncovered group
+- example first-line command snippets (truncated to 300 characters) for each
+  uncovered group
 - deprecated `Bash(name:*)` patterns that should be rewritten
 - obvious garbage permission entries
 - duplicate permission entries

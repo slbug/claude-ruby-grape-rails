@@ -33,6 +33,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   — README, intro/tutorial content, injected template quick reference, and
   contributor command guidance now point users to `/rb:permissions` when
   approval prompts become noisy.
+- **`/rb:verify` now treats cached verify-wrapper commands as untrusted hints**
+  — user-facing verification guidance and agent instructions now re-detect any
+  repo-native composite wrapper from the working tree before execution instead
+  of running a raw command string from `.claude/.runtime_env`.
+- **`/rb:permissions` extractor docs now match actual output** — the extractor
+  reports first-line command snippets truncated to 300 characters, and the
+  reference docs now say so explicitly.
 
 ## [1.3.1] - 2026-03-26
 
