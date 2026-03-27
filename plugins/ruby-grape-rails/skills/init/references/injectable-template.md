@@ -218,6 +218,7 @@ FULL_RAILS_APP=$(runtime_flag FULL_RAILS_APP)
 STANDARDRB_AVAILABLE=$(runtime_flag STANDARDRB_AVAILABLE)
 RUBOCOP_AVAILABLE=$(runtime_flag RUBOCOP_AVAILABLE)
 BRAKEMAN_AVAILABLE=$(runtime_flag BRAKEMAN_AVAILABLE)
+VERIFY_COMPOSITE_AVAILABLE=$(runtime_flag VERIFY_COMPOSITE_AVAILABLE)
 
 if [[ ! -f "$RUNTIME_ENV_FILE" || -L "$RUNTIME_ENV_FILE" ]]; then
   echo "Runtime cache missing, falling back to repo detection."
@@ -244,6 +245,11 @@ fi
 
 if [[ -z "$BRAKEMAN_AVAILABLE" ]] && gem_or_lock_has brakeman; then
   BRAKEMAN_AVAILABLE=true
+fi
+
+if [[ "$VERIFY_COMPOSITE_AVAILABLE" == "true" ]]; then
+  echo "A project-native verification wrapper may exist."
+  echo "Re-detect it from the working tree before running it, then fall back to the direct checks below if it is unavailable or broken locally."
 fi
 
 if [[ "$FULL_RAILS_APP" == "true" ]]; then
@@ -288,6 +294,7 @@ Offer `bundle exec rspec` after significant changes.
 | Complex feature | `/rb:plan` → `/rb:work` → `/rb:review` |
 | Debug bug | `/rb:investigate` |
 | Review code | `/rb:review` |
+| Reduce permission prompts | `/rb:permissions` |
 | Project health | `/rb:audit` |
 | Scan for secrets | `/rb:secrets` |
 | Check N+1 queries | `/rb:n1-check` |

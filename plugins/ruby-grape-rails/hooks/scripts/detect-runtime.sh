@@ -59,6 +59,9 @@ LEFTHOOK_SECURITY_COVERED=false
 LEFTHOOK_LINT_SECURITY_COVERED=false
 LEFTHOOK_PRONTO_COVERED=false
 LEFTHOOK_COMMAND=""
+VERIFY_COMPOSITE_AVAILABLE=false
+VERIFY_COMPOSITE_COMMAND=""
+VERIFY_COMPOSITE_SOURCE=""
 
 emit_shell_assignment() {
   local key="$1"
@@ -119,6 +122,139 @@ find_first_repo_file() {
       return 0
     fi
   done
+
+  return 1
+}
+
+makefile_has_target() {
+  local target_name="$1"
+  local makefile_path
+  local escaped_target
+
+  makefile_path=$(find_first_repo_file GNUmakefile Makefile makefile || true)
+  [[ -n "$makefile_path" ]] || return 1
+
+  escaped_target=$(escape_ere "$target_name")
+  grep -Eq "^[[:space:]]*${escaped_target}[[:space:]]*:" "$makefile_path"
+}
+
+rake_task_declared_in_file() {
+  local task_name="$1"
+  local target_file="$2"
+  local escaped_task
+
+  [[ -f "$target_file" && ! -L "$target_file" ]] || return 1
+
+  escaped_task=$(escape_ere "$task_name")
+  grep -Eq "task[[:space:]]*(\\(|:|['\"])${escaped_task}([[:space:][:punct:]]|$)|${escaped_task}:[[:space:]]" "$target_file"
+}
+
+rake_task_declared() {
+  local task_name="$1"
+  local task_file
+
+  if rake_task_declared_in_file "$task_name" "${REPO_ROOT}/Rakefile"; then
+    return 0
+  fi
+
+  [[ -d "${REPO_ROOT}/lib/tasks" ]] || return 1
+
+  while IFS= read -r task_file; do
+    if rake_task_declared_in_file "$task_name" "$task_file"; then
+      return 0
+    fi
+  done < <(find "${REPO_ROOT}/lib/tasks" -type f -name '*.rake' ! -lname '*' 2>/dev/null)
+
+  return 1
+}
+
+justfile_has_recipe() {
+  local recipe_name="$1"
+  local justfile_path
+  local escaped_recipe
+
+  justfile_path=$(find_first_repo_file justfile .justfile Justfile || true)
+  [[ -n "$justfile_path" ]] || return 1
+  command -v just >/dev/null 2>&1 || return 1
+
+  escaped_recipe=$(escape_ere "$recipe_name")
+  grep -Eq "^[[:space:]]*${escaped_recipe}[[:space:]]*:" "$justfile_path"
+}
+
+detect_verify_composite() {
+  local candidate
+
+  for candidate in bin/check bin/ci bin/verify script/check script/ci script/verify; do
+    if [[ -f "${REPO_ROOT}/${candidate}" && ! -L "${REPO_ROOT}/${candidate}" ]]; then
+      VERIFY_COMPOSITE_AVAILABLE=true
+      VERIFY_COMPOSITE_COMMAND="./${candidate}"
+      VERIFY_COMPOSITE_SOURCE="$candidate"
+      return 0
+    fi
+  done
+
+  if makefile_has_target ci; then
+    VERIFY_COMPOSITE_AVAILABLE=true
+    VERIFY_COMPOSITE_COMMAND="make ci"
+    VERIFY_COMPOSITE_SOURCE="Makefile:ci"
+    return 0
+  fi
+
+  if makefile_has_target check; then
+    VERIFY_COMPOSITE_AVAILABLE=true
+    VERIFY_COMPOSITE_COMMAND="make check"
+    VERIFY_COMPOSITE_SOURCE="Makefile:check"
+    return 0
+  fi
+
+  if makefile_has_target verify; then
+    VERIFY_COMPOSITE_AVAILABLE=true
+    VERIFY_COMPOSITE_COMMAND="make verify"
+    VERIFY_COMPOSITE_SOURCE="Makefile:verify"
+    return 0
+  fi
+
+  if justfile_has_recipe ci; then
+    VERIFY_COMPOSITE_AVAILABLE=true
+    VERIFY_COMPOSITE_COMMAND="just ci"
+    VERIFY_COMPOSITE_SOURCE="justfile:ci"
+    return 0
+  fi
+
+  if justfile_has_recipe check; then
+    VERIFY_COMPOSITE_AVAILABLE=true
+    VERIFY_COMPOSITE_COMMAND="just check"
+    VERIFY_COMPOSITE_SOURCE="justfile:check"
+    return 0
+  fi
+
+  if justfile_has_recipe verify; then
+    VERIFY_COMPOSITE_AVAILABLE=true
+    VERIFY_COMPOSITE_COMMAND="just verify"
+    VERIFY_COMPOSITE_SOURCE="justfile:verify"
+    return 0
+  fi
+
+  if rake_task_declared ci; then
+    VERIFY_COMPOSITE_AVAILABLE=true
+    VERIFY_COMPOSITE_COMMAND="bundle exec rake ci"
+    VERIFY_COMPOSITE_SOURCE="rake:ci"
+    return 0
+  fi
+
+  if rake_task_declared check; then
+    VERIFY_COMPOSITE_AVAILABLE=true
+    VERIFY_COMPOSITE_COMMAND="bundle exec rake check"
+    VERIFY_COMPOSITE_SOURCE="rake:check"
+    return 0
+  fi
+
+  if rake_task_declared verify; then
+    VERIFY_COMPOSITE_AVAILABLE=true
+    VERIFY_COMPOSITE_COMMAND="bundle exec rake verify"
+    VERIFY_COMPOSITE_SOURCE="rake:verify"
+    return 0
+  fi
 
   return 1
 }
@@ -387,6 +523,8 @@ if [[ "$LEFTHOOK_LINT_COVERED" == "true" && "$LEFTHOOK_SECURITY_COVERED" == "tru
   LEFTHOOK_LINT_SECURITY_COVERED=true
 fi
 
+detect_verify_composite || true
+
 # Detect RTK (CLI proxy for LLM token optimization)
 if command -v rtk >/dev/null 2>&1; then
   RTK_PATH=$(command -v rtk)
@@ -428,6 +566,10 @@ fi
 
 if [[ ${#TOOLS[@]} -gt 0 ]]; then
   echo "✓ Tools: ${TOOLS[*]}"
+fi
+
+if [[ "$VERIFY_COMPOSITE_AVAILABLE" == "true" && -n "$VERIFY_COMPOSITE_COMMAND" ]]; then
+  echo "✓ Verify wrapper: ${VERIFY_COMPOSITE_COMMAND}"
 fi
 
 if [[ ${#RUNTIME_INFO[@]} -eq 0 && ${#STACK[@]} -eq 0 ]]; then
@@ -546,6 +688,14 @@ trap 'rm -f -- "$TMP_RUNTIME_ENV"' EXIT HUP INT TERM
   emit_shell_assignment "LEFTHOOK_SECURITY_COVERED" "$LEFTHOOK_SECURITY_COVERED"
   emit_shell_assignment "LEFTHOOK_LINT_SECURITY_COVERED" "$LEFTHOOK_LINT_SECURITY_COVERED"
   emit_shell_assignment "LEFTHOOK_PRONTO_COVERED" "$LEFTHOOK_PRONTO_COVERED"
+
+  if [[ "$VERIFY_COMPOSITE_AVAILABLE" == "true" ]]; then
+    emit_shell_assignment "VERIFY_COMPOSITE_AVAILABLE" "true"
+    [[ -n "$VERIFY_COMPOSITE_COMMAND" ]] && emit_shell_assignment "VERIFY_COMPOSITE_COMMAND" "$VERIFY_COMPOSITE_COMMAND"
+    [[ -n "$VERIFY_COMPOSITE_SOURCE" ]] && emit_shell_assignment "VERIFY_COMPOSITE_SOURCE" "$VERIFY_COMPOSITE_SOURCE"
+  else
+    emit_shell_assignment "VERIFY_COMPOSITE_AVAILABLE" "false"
+  fi
 
   if [[ "$PSQL_AVAILABLE" == "true" ]]; then
     emit_shell_assignment "PSQL_AVAILABLE" "true"

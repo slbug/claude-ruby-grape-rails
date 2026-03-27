@@ -2,7 +2,7 @@
 
 **Claude Code is great. But it doesn't know that `default_scope` will bite you later, that `t.float` will corrupt your money fields, or that your Sidekiq job isn't idempotent.**
 
-This plugin does. It coordinates **22 specialist agents** and **49 skills** that plan, implement,
+This plugin does. It coordinates **22 specialist agents** and **50 skills** that plan, implement,
 review, and verify your Ruby/Rails/Grape code in parallel -- each with domain
 expertise, fresh context, and enforced [Iron Laws](#iron-laws-non-negotiable-rules)
 that catch the bugs your tests won't. It is now stack-aware enough to handle
@@ -36,7 +36,7 @@ that prevent the mistakes Ruby developers actually make in production.
 │  💎 Ruby/Rails/Grape Plugin for Claude Code                         │
 │                                                                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
-│  │    22    │    49    │   100+   │    21    │    21    │           │
+│  │    22    │    50    │   100+   │    21    │    21    │           │
 │  │  Agents  │  Skills  │   Refs   │  Hooks   │Iron Laws │           │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘           │
 │                                                                     │
@@ -133,6 +133,8 @@ via marketplace, Claude Code strips this field, which may cause "permission chec
    ```
 
 3. Use `--plugin-dir` for local development (development mode honors `permissionMode`)
+4. Run `/rb:permissions` to scan recent prompts and propose safer
+   `settings.json` allowlists instead of growing them blindly
 
 We are working on a marketplace-compatible redesign (Phase 3B in plan).
 
@@ -192,7 +194,7 @@ plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
 
 - **Plan** -- Research agents analyze your codebase in parallel, then synthesize a structured implementation plan
 - **Work** -- Execute the plan task-by-task with quick verification checks after each change
-- **Verify** -- Full verification loop (zeitwerk, format, test) before review
+- **Verify** -- Prefer the repo's native verify wrapper when present; otherwise run the full direct verification loop before review
 - **Review** -- Four specialist agents audit your code in parallel (idioms, security, tests, static analysis)
 - **Compound** -- Capture what you learned as reusable knowledge for future sessions
 
@@ -540,6 +542,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | `/rb:brief <plan>`      | Interactive plan walkthrough                                 |
 | `/rb:perf`              | Performance analysis with specialist agents                  |
 | `/rb:pr-review`         | Address PR review comments                                   |
+| `/rb:permissions`       | Analyze permission prompts and suggest safe settings entries  |
 
 ### Utility
 
@@ -550,7 +553,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | `/rb:quick <task>`       | Fast implementation, skip ceremony                         |
 | `/rb:investigate <bug>`  | Systematic bug debugging (4 parallel investigation tracks) |
 | `/rb:research <topic>`   | Research Ruby topics on the web                            |
-| `/rb:verify`             | Run full verification (zeitwerk, lint, security, test)     |
+| `/rb:verify`             | Prefer project-native verify wrapper, else run full direct verification |
 | `/rb:trace <method>`     | Build call trees to trace method flow                      |
 | `/rb:boundaries`         | Analyze Rails service boundaries                           |
 | `/rb:examples`           | Practical examples and pattern walkthroughs                |

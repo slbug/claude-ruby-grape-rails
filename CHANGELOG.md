@@ -7,6 +7,40 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-03-27
+
+### Added
+
+- **`/rb:permissions`** — new permission-analysis skill that scans recent
+  Claude session JSONL files, compares real Bash usage against current
+  `settings.json` rules, classifies risk, and recommends safer Ruby-project
+  permission entries instead of broad guesswork. The skill now ships with a
+  canonical Ruby extractor under
+  `skills/permissions/scripts/extract_permissions.rb`.
+
+### Changed
+
+- **`/rb:verify` is now more project-aware** — runtime detection and
+  verification guidance now surface and prefer clear repo-native composite
+  verification entrypoints such as `./bin/check`, `./bin/ci`, `make ci`, and
+  `bundle exec rake ci` before falling back to the direct lint/security/test
+  sequence.
+- **Runtime state now persists verify-wrapper hints** —
+  `.claude/.runtime_env` can now expose `VERIFY_COMPOSITE_AVAILABLE`,
+  `VERIFY_COMPOSITE_COMMAND`, and `VERIFY_COMPOSITE_SOURCE` alongside the
+  existing direct-tool booleans.
+- **User-facing docs now include permission tuning as a first-class workflow**
+  — README, intro/tutorial content, injected template quick reference, and
+  contributor command guidance now point users to `/rb:permissions` when
+  approval prompts become noisy.
+- **`/rb:verify` now treats cached verify-wrapper commands as untrusted hints**
+  — user-facing verification guidance and agent instructions now re-detect any
+  repo-native composite wrapper from the working tree before execution instead
+  of running a raw command string from `.claude/.runtime_env`.
+- **`/rb:permissions` extractor docs now match actual output** — the extractor
+  reports first-line command snippets truncated to 300 characters, and the
+  reference docs now say so explicitly.
+
 ## [1.3.1] - 2026-03-26
 
 ### Changed
