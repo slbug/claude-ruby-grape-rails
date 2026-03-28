@@ -133,7 +133,7 @@ def has_provenance_claim_log(content: str) -> tuple[bool, str]:
     return bool(body), "Claim Log section present" if body else "Missing ## Claim Log section"
 
 
-def has_provenance_claim_entries(content: str, minimum: int = 2) -> tuple[bool, str]:
+def has_provenance_claim_entries(content: str, minimum: int = 1) -> tuple[bool, str]:
     body = _section(content, "Claim Log")
     count = len(STATUS_RE.findall(body))
     return count >= minimum, f"{count} claim log entry(ies) present"

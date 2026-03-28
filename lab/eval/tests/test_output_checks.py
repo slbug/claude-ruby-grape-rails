@@ -39,6 +39,22 @@ No actual entries here.
         passed, _ = output_checks.has_provenance_claim_entries(content, minimum=1)
         self.assertFalse(passed)
 
+    def test_has_provenance_claim_entries_allows_single_entry_by_default(self) -> None:
+        content = """# Provenance: sample
+
+## Claim Log
+
+1. [VERIFIED] "single supported claim"
+   - Evidence: app/models/user.rb:14
+   - Notes: Proven by local code.
+
+## Required Fixes
+
+- None.
+"""
+        passed, _ = output_checks.has_provenance_claim_entries(content)
+        self.assertTrue(passed)
+
     def test_has_provenance_local_evidence_scopes_to_claim_log_and_requires_file_ref(self) -> None:
         content = """# Provenance: sample
 

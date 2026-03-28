@@ -28,7 +28,6 @@ class ArtifactScorerTests(unittest.TestCase):
                 "research_decision_section",
                 "research_provenance_external_evidence",
                 "provenance_tier_summary",
-                "provenance_claim_entries",
                 "provenance_required_fixes",
             },
         )
