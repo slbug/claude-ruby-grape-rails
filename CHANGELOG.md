@@ -60,6 +60,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and trend output now exposes `immature_ledger`, `distinct_dates`, and
   `time_series_signal` so early snapshots are not misread as meaningful
   time-series trends.
+- **Contributor session-scan metrics now handle more real transcript shapes**
+  — plugin opportunity checks now tolerate both bare and prefixed command
+  forms, nested `edits` payloads contribute to edited-file metrics, and
+  same-message Bash `tool_result` failures are recognized when scoring retry
+  loops.
 
 ## [1.6.0] - 2026-03-28
 

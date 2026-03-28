@@ -97,6 +97,20 @@ def normalize_plugin_command(command):
     return command
 
 
+def normalize_plugin_command_name(command):
+    """Normalize a plugin command to its bare command name."""
+    if not isinstance(command, str):
+        return None
+    normalized = normalize_plugin_command(command)
+    if not normalized:
+        return None
+    if normalized.startswith("/rb:"):
+        return normalized.split(":", 1)[1]
+    if normalized.startswith("/"):
+        return normalized[1:]
+    return normalized
+
+
 def extract_plugin_commands(user_msgs):
     """Extract shipped plugin commands while ignoring contributor analyzers."""
     commands = []
@@ -184,6 +198,12 @@ def extract_file_paths(tool_input):
         value = tool_input.get(key)
         if isinstance(value, list):
             paths.extend(p for p in value if isinstance(p, str) and p)
+
+    edits = tool_input.get("edits")
+    if isinstance(edits, list):
+        for edit in edits:
+            if isinstance(edit, dict):
+                paths.extend(extract_file_paths(edit))
 
     return paths
 
@@ -395,7 +415,7 @@ def extract_bash_runs(messages):
             if not signature:
                 continue
 
-            lookahead = messages[index + 1 : index + 4]
+            lookahead = messages[index : index + 4]
             failed = any(message_has_failure_signal(candidate) for candidate in lookahead)
             runs.append({"signature": signature, "failed": failed})
 
@@ -568,6 +588,11 @@ def compute_fingerprint(user_msgs, tool_calls, files_edited):
 def compute_plugin_opportunity(user_msgs, tool_calls, rb_commands):
     """Compute plugin opportunity score (0.0-1.0)."""
     could_use = []
+    used_commands = {
+        name
+        for name in (normalize_plugin_command_name(command) for command in rb_commands)
+        if name
+    }
 
     tool_names = [tc.get("name", "") for tc in tool_calls]
     tool_count = len(tool_names)
@@ -593,7 +618,7 @@ def compute_plugin_opportunity(user_msgs, tool_calls, rb_commands):
             consecutive = 0
 
     # Many tools without plan suggest /rb:plan
-    if tool_count > 50 and "plan" not in rb_commands:
+    if tool_count > 50 and "plan" not in used_commands:
         could_use.append("plan")
 
     # Multiple test runs suggest /rb:verify
@@ -605,19 +630,19 @@ def compute_plugin_opportunity(user_msgs, tool_calls, rb_commands):
         or "bundle exec rails test" in c
         or "rails zeitwerk:check" in c
     )
-    if test_runs >= 3 and "verify" not in rb_commands:
+    if test_runs >= 3 and "verify" not in used_commands:
         could_use.append("verify")
 
     # PR commands suggest /rb:pr-review
     pr_cmds = sum(1 for c in bash_cmds if "gh pr" in c)
-    if pr_cmds >= 2 and "pr-review" not in rb_commands:
+    if pr_cmds >= 2 and "pr-review" not in used_commands:
         could_use.append("pr-review")
 
     # Many edits without review suggest /rb:review
     edit_count = sum(
         1 for n in tool_names if n in ("Edit", "Write", "MultiEdit", "NotebookEdit")
     )
-    if edit_count > 10 and "review" not in rb_commands:
+    if edit_count > 10 and "review" not in used_commands:
         could_use.append("review")
 
     score = min(len(could_use) * 0.2, 1.0)
