@@ -30,7 +30,7 @@ def _extract_prompt(item: Any) -> str:
 
 
 def normalize_prompt(prompt: str) -> str:
-    return " ".join(tokenize(prompt))
+    return " ".join(sorted(tokenize(prompt)))
 
 
 def load_all_descriptions() -> dict[str, str]:

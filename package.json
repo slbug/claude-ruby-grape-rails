@@ -22,7 +22,7 @@
     "eval:test:pytest": "python3 -m pytest lab/eval/tests -v",
     "eval:test:unittest": "python3 -m unittest discover -s lab/eval/tests -p 'test_*.py' -v",
     "security:injection": "bash scripts/check-dynamic-injection.sh",
-    "ci": "npm run lint && npm run security:injection && npm run eval:test && npm run eval:ci",
+    "ci": "npm run eval:test && npm run eval:ci",
     "prepare": "husky || true"
   },
   "devDependencies": {

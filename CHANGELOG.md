@@ -68,6 +68,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   generator now uses `YAML.safe_load` with explicit top-level shape checks, the
   secret-scan hook no longer calls helper logic before it is defined, and the
   eval-test wrapper is directly executable as well as callable via `bash`.
+- **Eval contributor tooling is now more deterministic and less redundant** —
+  trigger prompt normalization now sorts tokens before duplicate comparison,
+  and contributor `ci` entrypoints no longer run lint and injection checks
+  twice when `eval:ci` already covers them.
 
 ## [1.5.0] - 2026-03-28
 

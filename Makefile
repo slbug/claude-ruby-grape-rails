@@ -51,4 +51,4 @@ eval-tests-pytest:
 eval-tests-unittest:
 	python3 -m unittest discover -s lab/eval/tests -p 'test_*.py' -v
 
-ci: lint security-injection eval-tests eval-ci
+ci: eval-tests eval-ci
