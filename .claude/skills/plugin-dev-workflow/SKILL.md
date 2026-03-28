@@ -13,6 +13,11 @@ This repo contains both:
 
 Keep those surfaces separate in both implementation and validation.
 
+Contributor tooling in this repo assumes a Unix-like environment:
+
+- supported: macOS, Linux, WSL
+- not currently supported: native Windows
+
 ## Scope Check
 
 Before editing, decide which surface you are changing:

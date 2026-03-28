@@ -2,6 +2,9 @@
 
 Development documentation for the Ruby/Rails/Grape Claude Code plugin.
 
+Contributor tooling and shipped hook workflows are validated on macOS, Linux,
+and WSL. Native Windows is not currently supported.
+
 ## Overview
 
 This plugin provides **agentic workflow orchestration** with specialist agents and reference skills for Ruby/Rails/Grape development.

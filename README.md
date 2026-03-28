@@ -108,6 +108,9 @@ claude --plugin-dir ./claude-ruby-grape-rails/plugins/ruby-grape-rails
 
 ### Known Limitations
 
+**Supported Environments**: This plugin is validated on macOS, Linux, and WSL.
+Native Windows is not currently supported.
+
 **Marketplace Install & Agent Permissions**: This plugin's specialist agents require
 `permissionMode: bypassPermissions` to run Bash commands in the background. When installed
 via marketplace, Claude Code strips this field, which may cause "permission check failed" errors.
