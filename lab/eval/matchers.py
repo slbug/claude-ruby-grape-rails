@@ -91,8 +91,8 @@ def get_sections(content: str) -> dict[str, str]:
     sections: dict[str, list[str]] = {}
     current: str | None = None
     for line in body.splitlines():
-        if line.startswith("## ") or line.startswith("### "):
-            current = line.lstrip("#").strip()
+        if line.startswith("## "):
+            current = line[3:].strip()
             sections[current] = []
             continue
         if current is not None:

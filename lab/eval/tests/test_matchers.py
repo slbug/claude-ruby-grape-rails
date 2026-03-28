@@ -62,6 +62,26 @@ skills:
         passed, _ = matchers.has_iron_laws(SAMPLE, min_count=1)
         self.assertTrue(passed)
 
+    def test_get_sections_ignores_nested_headings_in_parent_sections(self) -> None:
+        content = """---
+name: rb:sample
+description: Sample skill
+---
+# Sample
+
+## Workflow
+Top-level workflow guidance.
+
+### Details
+Nested detail that should stay inside Workflow.
+
+## Notes
+Additional notes.
+"""
+        sections = matchers.get_sections(content)
+        self.assertEqual(set(sections), {"Workflow", "Notes"})
+        self.assertIn("Nested detail", sections["Workflow"])
+
     def test_description_structure(self) -> None:
         passed, _ = matchers.description_structure(SAMPLE)
         self.assertTrue(passed)

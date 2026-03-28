@@ -57,7 +57,7 @@ report_formatter_failure() {
     err_preview=$(sed -n '1,5p' "$err_file" 2>/dev/null || true)
   fi
 
-  echo "${label}: $FILE_PATH — run '${command_hint}'" >&2
+  echo "${label}: $FILE_PATH — run ${command_hint}" >&2
   if [[ -n "$err_preview" ]]; then
     printf 'Formatter output:\n%s\n' "$err_preview" >&2
   fi

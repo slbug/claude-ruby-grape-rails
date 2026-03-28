@@ -90,10 +90,10 @@ def score_trigger_file(skill_name: str, data: dict[str, Any]) -> dict[str, Any]:
 def build_confusable_pairs(descriptions: dict[str, str], limit: int = 10) -> list[dict[str, Any]]:
     bundle: dict[str, set[str]] = {}
     for skill, desc in descriptions.items():
-        if load_trigger_file(skill) is None:
+        data = load_trigger_file(skill)
+        if data is None:
             continue
         tokens = set(tokenize(desc))
-        data = load_trigger_file(skill) or {}
         for bucket in ("should_trigger", "hard_should_trigger"):
             for item in data.get(bucket, []):
                 tokens.update(tokenize(_extract_prompt(item)))

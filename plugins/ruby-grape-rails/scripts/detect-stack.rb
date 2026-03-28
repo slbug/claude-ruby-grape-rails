@@ -206,12 +206,7 @@ rails_components = detected_rails_components.any?
 full_rails_app = gem_present?(gemfile, 'rails')
 detected.uniq!
 
-# Determine Rails version
-rails_version = if defined?(Rails::VERSION)
-                  Rails::VERSION::STRING
-                else
-                  versions['rails']
-                end
+rails_version = versions['rails']
 
 package_dirs = modular_package_dirs
 packwerk = File.exist?('packwerk.yml')

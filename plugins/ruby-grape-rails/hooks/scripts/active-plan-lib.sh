@@ -73,10 +73,10 @@ is_valid_plan_dir() {
 get_file_mtime() {
   local file="$1"
 
-  if stat -f '%m' "$file" >/dev/null 2>&1; then
-    stat -f '%m' "$file"
-  else
+  if stat -c '%Y' "$file" >/dev/null 2>&1; then
     stat -c '%Y' "$file"
+  else
+    stat -f '%m' "$file"
   fi
 }
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from lab.eval.agent_scorer import find_all_agents, score_agent
 from lab.eval.compare import compare_snapshots
@@ -27,6 +28,24 @@ class ScorerTests(unittest.TestCase):
         self.assertIn("plan", trigger_results["skills"])
         pairs = build_confusable_pairs(load_all_descriptions(), limit=5)
         self.assertLessEqual(len(pairs), 5)
+
+    def test_build_confusable_pairs_reuses_loaded_trigger_data(self) -> None:
+        descriptions = {"plan": "Plan work", "verify": "Verify changes"}
+        trigger_payloads = {
+            "plan": {"should_trigger": ["plan a migration"], "hard_should_trigger": []},
+            "verify": {"should_trigger": ["verify a fix"], "hard_should_trigger": []},
+        }
+        calls: list[str] = []
+
+        def fake_load_trigger_file(skill: str) -> dict[str, object] | None:
+            calls.append(skill)
+            return trigger_payloads.get(skill)
+
+        with patch("lab.eval.trigger_scorer.load_trigger_file", side_effect=fake_load_trigger_file):
+            pairs = build_confusable_pairs(descriptions, limit=5)
+
+        self.assertEqual(calls, ["plan", "verify"])
+        self.assertEqual(pairs, [])
 
     def test_score_skill_reports_unknown_check_types_clearly(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
