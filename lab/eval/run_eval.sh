@@ -337,13 +337,13 @@ case "$MODE" in
     ;;
 esac
 
-persist_last_eval_marker
-
 if [[ $FAILURES -gt 0 ]]; then
   echo
   echo "Eval finished with ${FAILURES} failing section(s)."
   exit 1
 fi
+
+persist_last_eval_marker
 
 echo
 echo "Eval passed."

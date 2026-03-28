@@ -758,6 +758,8 @@ Quick check: does the cheat sheet in Section 4 still match reality?
 For contributor-facing plugin quality work, prefer the deterministic eval
 entrypoints before broader experimentation:
 
+Minimum runtime: `python3` 3.10+ for `lab/eval/`.
+
 - `make eval` / `npm run eval` for lint + injection check + changed surfaces
 - `make eval-all` / `npm run eval:all` for the full `1.6.0` eval snapshot
 - `make eval-ci` / `npm run eval:ci` for the contributor CI gate

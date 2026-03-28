@@ -72,6 +72,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   trigger prompt normalization now sorts tokens before duplicate comparison,
   and contributor `ci` entrypoints no longer run lint and injection checks
   twice when `eval:ci` already covers them.
+- **Eval contributor flows now fail and document prerequisites more cleanly** —
+  the changed-surface eval marker only persists after a successful run, review
+  guidance now points to the real `/rb:learn` command, and contributor docs now
+  state that `lab/eval/` requires Python 3.10+.
+- **Internal skill layout is now more consistent for `/rb:learn`** — the
+  shipped skill directory was renamed from `learn-from-fix` to `learn` while
+  keeping the user-facing command as `/rb:learn`.
 
 ## [1.5.0] - 2026-03-28
 

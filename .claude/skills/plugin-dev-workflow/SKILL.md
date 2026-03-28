@@ -57,6 +57,7 @@ file-type-specific checks.
 
 When `lab/eval/` changes, also run:
 
+- use `python3` 3.10+ for the eval tooling
 - `python3 -m compileall lab/eval`
 - `bash scripts/run-eval-tests.sh`
 - `python3 -m pytest lab/eval/tests -v` when `pytest` is installed

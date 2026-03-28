@@ -221,7 +221,7 @@ Based on findings severity:
 
 ### Clean Review (0 critical, 0-2 warnings)
 - Suggest `/rb:compound` - for knowledge synthesis
-- Suggest `/rb:learn-from-fix` - for pattern extraction
+- Suggest `/rb:learn` - for pattern extraction
 - User can proceed with confidence
 
 ### Warning Review (0 critical, 3+ warnings)

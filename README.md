@@ -674,6 +674,8 @@ PRs welcome! See [CLAUDE.md](CLAUDE.md) for development conventions.
 ### Eval workflow
 
 `1.6.0` adds a deterministic contributor eval foundation under `lab/eval/`.
+It requires `python3` 3.10+ for the stdlib typing syntax used by the eval
+tooling.
 
 Primary entrypoints:
 
