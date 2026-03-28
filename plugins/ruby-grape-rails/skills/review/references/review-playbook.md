@@ -128,7 +128,7 @@ file-type-specific checklists without bloating the main routing surface.
 
 | Anti-pattern | Issue | Better approach |
 |--------------|-------|-----------------|
-| `rescue => e` | Catches too broadly | `rescue StandardError => e` |
+| `rescue Exception => e` | Catches too broadly, including interrupts and exits | `rescue SpecificError => e` or a deliberate `rescue StandardError => e` boundary |
 | `!user.nil?` | Double negative | `user.present?` |
 | `if condition; return x; end` | Unnecessary control flow | `return x if condition` |
 | `ary.map { |x| x.name }` | Redundant block param | `ary.map(&:name)` or `ary.map { it.name }` |
