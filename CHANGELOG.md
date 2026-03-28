@@ -54,9 +54,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the active-plan marker now refuses existing directory/FIFO-style targets
   before replacing the marker file.
 - **Shell cleanup paths are now more defensive** — shipped hook scripts now
-  validate temp-file/temp-dir prefixes before deleting, prefer exact-path
-  cleanup for plugin-owned markers, and the verification examples now show the
-  same safer cleanup style.
+  validate temp-file/temp-dir prefixes before deleting, refuse non-regular
+  existing targets for exact/temp file cleanup, prefer exact-path cleanup for
+  plugin-owned markers, and the verification examples now show the same safer
+  cleanup style.
 - **Cleanup hardening now avoids brittle trap quoting** — temp cleanup traps
   now use local cleanup functions instead of embedded quoted path patterns, and
   symlinked `ACTIVE_PLAN` markers are surfaced as manual-cleanup warnings

@@ -245,7 +245,7 @@ safe_remove_exact_file() {
   [[ -n "$path" && -n "$expected" ]] || return 0
   [[ "$path" == "$expected" ]] || return 1
   [[ ! -e "$path" ]] && return 0
-  [[ ! -L "$path" ]] || return 1
+  [[ -f "$path" && ! -L "$path" ]] || return 1
 
   rm -f -- "${path:?}"
 }
@@ -261,7 +261,7 @@ safe_remove_temp_file() {
     *) return 1 ;;
   esac
   [[ ! -e "$path" ]] && return 0
-  [[ ! -L "$path" ]] || return 1
+  [[ -f "$path" && ! -L "$path" ]] || return 1
 
   rm -f -- "${path:?}"
 }
