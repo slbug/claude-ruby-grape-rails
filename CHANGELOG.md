@@ -65,6 +65,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   forms, nested `edits` payloads contribute to edited-file metrics, and
   same-message Bash `tool_result` failures are recognized when scoring retry
   loops.
+- **Broad raw `rm` examples were reduced further** — the docs-cache fetcher now
+  validates cache-file cleanup before deleting failed downloads, and the deploy
+  docs now prefer `apt-get clean`, `bundle clean --force`, and Rails cleanup
+  tasks over broad recursive `rm -rf` examples.
+- **Session-scan now sees Bash activity in ccrider-style text transcripts**
+  — text-mode shell commands are now inferred into real Bash command entries,
+  which lets plugin-opportunity heuristics and retry-loop friction scoring work
+  even when transcripts do not preserve structured `tool_use` blocks.
 
 ## [1.6.0] - 2026-03-28
 

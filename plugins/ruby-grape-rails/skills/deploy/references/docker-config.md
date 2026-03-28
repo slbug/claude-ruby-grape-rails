@@ -9,7 +9,7 @@ FROM ruby:3.3-slim-bookworm AS builder
 # Install build dependencies
 RUN apt-get update -qq && \
     apt-get install -y build-essential libpq-dev libvips git && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get clean
 
 WORKDIR /rails
 
@@ -28,8 +28,9 @@ COPY . .
 # Precompile assets
 RUN SECRET_KEY_BASE=dummy RAILS_ENV=production bundle exec rails assets:precompile
 
-# Cleanup
-RUN rm -rf node_modules tmp/cache vendor/bundle/ruby/*/cache
+# Prefer targeted cleanup to broad recursive deletion
+RUN bundle clean --force && \
+    bundle exec rails tmp:clear
 
 # Runner stage
 FROM ruby:3.3-slim-bookworm AS runner
@@ -37,7 +38,7 @@ FROM ruby:3.3-slim-bookworm AS runner
 # Install runtime dependencies
 RUN apt-get update -qq && \
     apt-get install -y libpq-dev libvips curl && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get clean
 
 # Create non-root user
 RUN groupadd -r rails && useradd -r -g rails rails

@@ -214,8 +214,10 @@ TOOL_MENTION_RE = re.compile(
     r"|WebFetch|WebSearch|Skill|AskUserQuestion|ExitPlanMode|KillShell"
     r"|MCPSearch|mcp__[A-Za-z0-9_]+)\b"
 )
-BASH_CMD_RE = re.compile(
-    r"(?:^|\n)\s*(?:\$|>)\s*(bundle\s|rails\s|rake\s|git\s|npm\s|python3?\s|cd\s|rm\s)"
+SHELL_FENCE_RE = re.compile(r"```(?:bash|sh|zsh|shell)\s*\n(.*?)```", re.DOTALL | re.I)
+PROMPT_COMMAND_RE = re.compile(r"^\s*(?:\$|>)\s+(.+?)\s*$")
+KNOWN_BASH_PREFIX_RE = re.compile(
+    r"^(bundle\s|rails\s|rake\s|git\s|npm\s|python3?\s|cd\s|rm\s)"
 )
 FAILURE_SIGNAL_RE = re.compile(
     r"\b(error|failed|failure|exception|traceback|command not found|"
@@ -245,12 +247,14 @@ def extract_tool_calls(messages):
 
         # ccrider format: infer tools from assistant text
         elif isinstance(content, str) and role == "assistant":
+            inferred_bash_commands = _infer_bash_commands_from_text(content)
             mentioned = TOOL_MENTION_RE.findall(content)
             for name in mentioned:
+                if name == "Bash" and inferred_bash_commands:
+                    continue
                 tools.append({"name": name, "input": {}})
-            # Detect bash commands in text
-            if BASH_CMD_RE.search(content):
-                tools.append({"name": "Bash", "input": {}})
+            for command in inferred_bash_commands:
+                tools.append({"name": "Bash", "input": {"command": command}})
 
     return tools
 
@@ -344,6 +348,52 @@ def _text_blocks(content):
                         yield text
 
 
+def _normalize_inferred_bash_line(line, allow_bare=False):
+    """Normalize a shell-like line extracted from transcript text."""
+    if not isinstance(line, str):
+        return ""
+
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return ""
+
+    prompt_match = PROMPT_COMMAND_RE.match(stripped)
+    if prompt_match:
+        return prompt_match.group(1).strip()
+
+    if allow_bare and KNOWN_BASH_PREFIX_RE.match(stripped):
+        return stripped
+
+    return ""
+
+
+def _infer_bash_commands_from_text(content):
+    """Best-effort extraction of Bash commands from text-only assistant output."""
+    commands = []
+    seen = set()
+
+    for text in _text_blocks(content):
+        if not isinstance(text, str):
+            continue
+
+        for match in SHELL_FENCE_RE.finditer(text):
+            block = match.group(1)
+            for line in block.splitlines():
+                command = _normalize_inferred_bash_line(line, allow_bare=True)
+                if command and command not in seen:
+                    seen.add(command)
+                    commands.append(command)
+
+        text_without_fences = SHELL_FENCE_RE.sub("", text)
+        for line in text_without_fences.splitlines():
+            command = _normalize_inferred_bash_line(line, allow_bare=False)
+            if command and command not in seen:
+                seen.add(command)
+                commands.append(command)
+
+    return commands
+
+
 def message_has_failure_signal(msg):
     """Detect whether a message contains explicit failure evidence."""
     if not isinstance(msg, dict):
@@ -401,22 +451,33 @@ def extract_bash_runs(messages):
             continue
 
         content = _get_content(msg)
-        if not isinstance(content, list):
+        role = _get_role(msg)
+        signatures = []
+
+        if isinstance(content, list):
+            for block in content:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") != "tool_use" or block.get("name") != "Bash":
+                    continue
+
+                command = block.get("input", {}).get("command", "")
+                signature = normalize_bash_signature(command)
+                if signature:
+                    signatures.append(signature)
+
+        if not signatures and role == "assistant":
+            for command in _infer_bash_commands_from_text(content):
+                signature = normalize_bash_signature(command)
+                if signature:
+                    signatures.append(signature)
+
+        if not signatures:
             continue
 
-        for block in content:
-            if not isinstance(block, dict):
-                continue
-            if block.get("type") != "tool_use" or block.get("name") != "Bash":
-                continue
-
-            command = block.get("input", {}).get("command", "")
-            signature = normalize_bash_signature(command)
-            if not signature:
-                continue
-
-            lookahead = messages[index : index + 4]
-            failed = any(message_has_failure_signal(candidate) for candidate in lookahead)
+        lookahead = messages[index : index + 4]
+        failed = any(message_has_failure_signal(candidate) for candidate in lookahead)
+        for signature in signatures:
             runs.append({"signature": signature, "failed": failed})
 
     return runs
