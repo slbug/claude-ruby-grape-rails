@@ -72,16 +72,6 @@ normalize_error_type() {
   printf '%s\n' "$value"
 }
 
-get_file_mtime() {
-  local file="$1"
-
-  if stat -c '%Y' "$file" >/dev/null 2>&1; then
-    stat -c '%Y' "$file"
-  else
-    stat -f '%m' "$file"
-  fi
-}
-
 clear_stale_lock() {
   local lock_dir="$1"
   local now

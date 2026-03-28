@@ -51,6 +51,9 @@ Keep those surfaces separate.
   - required fixes
 - prefer local code evidence for review findings
 - prefer T1/T2 sources for research claims
+- T4/T5 evidence is allowed in claim logs when it explains why a source was
+  treated as weak or rejected, but the summary line should stay focused on
+  T1/T2/T3
 - soften or remove unsupported claims instead of leaving them implicit
 
 ## Contributor Validation

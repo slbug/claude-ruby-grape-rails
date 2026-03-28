@@ -54,3 +54,6 @@ Preferred paths:
   always exist.
 - `Source Tiers` is currently summarized as `T1`, `T2`, and `T3` because Ruby
   research guidance treats `T4/T5` as too weak for decisive recommendations.
+- `T4/T5` evidence may still appear in the claim log when it explains why a
+  claim was downgraded, softened, or rejected. Keep the summary focused on the
+  trusted `T1/T2/T3` mix that informed the final artifact.
