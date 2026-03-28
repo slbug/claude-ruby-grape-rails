@@ -68,7 +68,10 @@ def parse_frontmatter(content: str) -> dict[str, Any]:
         while j < len(body) and re.match(r"^\s*-\s+", body[j]):
             items.append(_coerce_scalar(re.sub(r"^\s*-\s+", "", body[j], count=1)))
             j += 1
-        data[key] = items if items else ""
+        if items:
+            data[key] = items
+        else:
+            data[key] = [] if key in LIST_LIKE_FRONTMATTER_KEYS else ""
         i = j
     return data
 

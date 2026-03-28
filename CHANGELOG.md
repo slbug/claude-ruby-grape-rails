@@ -83,6 +83,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   eval parser now understands inline comma-separated list fields used in agent
   frontmatter, coverage includes that form explicitly, and both eval entrypoint
   scripts now fail fast with a clear Python 3.10+ requirement message.
+- **Eval frontmatter parsing now treats empty list-like keys correctly** —
+  empty `tools`, `disallowedTools`, and `skills` fields now parse as empty
+  lists instead of empty strings, so agent checks do not miscount blank
+  frontmatter as present configuration.
 - **Environment support is now stated explicitly** — README and contributor
   docs now say the plugin/tooling is validated on macOS, Linux, and WSL, and
   that native Windows is not currently supported.

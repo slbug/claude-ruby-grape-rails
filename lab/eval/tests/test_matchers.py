@@ -45,6 +45,19 @@ skills: testing, review
         self.assertEqual(data["disallowedTools"], ["Write", "Edit", "NotebookEdit"])
         self.assertEqual(data["skills"], ["testing", "review"])
 
+    def test_parse_frontmatter_empty_list_like_keys_return_lists(self) -> None:
+        content = """---
+name: sample-agent
+tools:
+disallowedTools:
+skills:
+---
+"""
+        data = matchers.parse_frontmatter(content)
+        self.assertEqual(data["tools"], [])
+        self.assertEqual(data["disallowedTools"], [])
+        self.assertEqual(data["skills"], [])
+
     def test_has_iron_laws(self) -> None:
         passed, _ = matchers.has_iron_laws(SAMPLE, min_count=1)
         self.assertTrue(passed)
