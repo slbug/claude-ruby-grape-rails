@@ -78,6 +78,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   fetch flow under `set -e`, and session-scan now avoids counting generic
   assistant prose like “if you see an error” as real failure evidence while
   still catching stronger signals such as exit codes and explicit error lines.
+- **User-side failure detection is narrower, and docs-check wording is more
+  explicit about ignored agent fields** — session-scan no longer treats generic
+  user phrases like “without error” as real failure evidence, and docs-check
+  now states that `hooks`, `mcpServers`, and `permissionMode` are unsupported
+  and ignored for plugin-shipped agents.
 
 ## [1.6.0] - 2026-03-28
 

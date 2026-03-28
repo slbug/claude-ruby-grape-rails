@@ -47,7 +47,8 @@ Current plugin-agent frontmatter supported by docs:
 Important current constraints:
 
 - `isolation` only documents `worktree`
-- plugin-shipped agents do not support:
+- plugin-shipped agents do not support these frontmatter fields; if present,
+  Claude currently ignores them when loading agents from a plugin:
   - `hooks`
   - `mcpServers`
   - `permissionMode`

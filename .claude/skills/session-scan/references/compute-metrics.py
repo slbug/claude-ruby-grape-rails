@@ -224,6 +224,12 @@ FAILURE_SIGNAL_RE = re.compile(
     r"permission denied|no such file|syntaxerror|exit code)\b",
     re.IGNORECASE,
 )
+USER_FAILURE_SIGNAL_RE = re.compile(
+    r"(?im)(?:\btraceback\b|\bcommand not found\b|\bpermission denied\b|"
+    r"\bno such file(?: or directory)?\b|\bsyntaxerror\b|\bexit code\s+\d+\b|"
+    r"^\s*(?:error|failed|failure|exception):|\bi got an error\b|"
+    r"\bit failed\b|\bit errored\b)"
+)
 ASSISTANT_FAILURE_SIGNAL_RE = re.compile(
     r"(?im)(?:\btraceback\b|\bcommand not found\b|\bpermission denied\b|"
     r"\bno such file(?: or directory)?\b|\bsyntaxerror\b|\bexit code\s+\d+\b|"
@@ -426,7 +432,7 @@ def message_has_failure_signal(msg):
                 return True
     else:
         for text in _text_blocks(content):
-            if FAILURE_SIGNAL_RE.search(text):
+            if USER_FAILURE_SIGNAL_RE.search(text):
                 return True
     return False
 
