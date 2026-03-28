@@ -4,6 +4,11 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+import sys
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from lab.eval.agent_scorer import score_all as score_all_agents
 from lab.eval.scorer import score_core

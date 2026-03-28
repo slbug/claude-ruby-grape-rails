@@ -33,27 +33,34 @@ def compare_snapshots(baseline: dict, current: dict) -> dict:
     results: dict[str, dict] = {}
     for subject in ("skills", "agents"):
         entries = {}
-        for name, current_score in current[subject].items():
-            baseline_score = baseline.get(subject, {}).get(name, {})
+        baseline_subject = baseline.get(subject, {})
+        current_subject = current.get(subject, {})
+        for name in sorted(set(baseline_subject) | set(current_subject)):
+            baseline_score = baseline_subject.get(name, {})
+            current_score = current_subject.get(name, {})
             before = float(baseline_score.get("composite", 0.0))
             after = float(current_score.get("composite", 0.0))
             entries[name] = {
                 "baseline": round(before, 4),
                 "current": round(after, 4),
                 "delta": round(after - before, 4),
+                "removed": name in baseline_subject and name not in current_subject,
             }
         results[subject] = entries
 
     trigger_entries = {}
     baseline_triggers = baseline.get("triggers", {}).get("skills", {})
     current_triggers = current.get("triggers", {}).get("skills", {})
-    for name, current_score in current_triggers.items():
-        before = float(baseline_triggers.get(name, {}).get("score", 0.0))
+    for name in sorted(set(baseline_triggers) | set(current_triggers)):
+        baseline_score = baseline_triggers.get(name, {})
+        current_score = current_triggers.get(name, {})
+        before = float(baseline_score.get("score", 0.0))
         after = float(current_score.get("score", 0.0))
         trigger_entries[name] = {
             "baseline": round(before, 4),
             "current": round(after, 4),
             "delta": round(after - before, 4),
+            "removed": name in baseline_triggers and name not in current_triggers,
         }
     results["triggers"] = trigger_entries
     results["confusable_pairs"] = current.get("triggers", {}).get("confusable_pairs", [])

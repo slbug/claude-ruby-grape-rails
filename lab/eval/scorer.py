@@ -79,7 +79,10 @@ def default_eval(skill_path: str) -> EvalDefinition:
 
 
 def _run_check(content: str, check: EvalCheck, skill_path: str) -> AssertionResult:
-    fn = matchers.MATCHERS[check.check_type]
+    fn = matchers.MATCHERS.get(check.check_type)
+    if fn is None:
+        available = ", ".join(sorted(matchers.MATCHERS))
+        raise ValueError(f"Unknown check type: {check.check_type!r}. Available: {available}")
     passed, evidence = fn(
         content,
         skill_path=skill_path,
@@ -96,6 +99,8 @@ def _run_check(content: str, check: EvalCheck, skill_path: str) -> AssertionResu
 
 def score_skill(skill_path: str, eval_def: EvalDefinition | None = None) -> SubjectScore:
     path = Path(skill_path).resolve()
+    if not path.is_file():
+        raise FileNotFoundError(f"Missing skill file: {path}")
     content = path.read_text(encoding="utf-8")
     definition = eval_def or default_eval(str(path))
     dimensions: dict[str, DimensionResult] = {}
@@ -142,6 +147,8 @@ def score_core() -> dict[str, dict]:
     results: dict[str, dict] = {}
     for skill_name in CORE_SKILLS:
         skill_path = SKILLS_DIR / skill_name / "SKILL.md"
+        if not skill_path.is_file():
+            raise FileNotFoundError(f"Missing core skill file: {skill_path}")
         eval_path = find_eval(skill_name)
         eval_def = EvalDefinition.from_file(eval_path) if eval_path else None
         results[skill_name] = score_skill(str(skill_path), eval_def).to_dict()

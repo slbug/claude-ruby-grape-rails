@@ -35,27 +35,52 @@ esac
 
 has_gem() {
   local gem_name="$1"
-  if [[ -f "$PROJECT_LOCKFILE" ]] && grep -Eq "^[[:space:]]{4}${gem_name} " "$PROJECT_LOCKFILE"; then
+  if [[ -f "$PROJECT_LOCKFILE" ]] && grep -Fq "    ${gem_name} " "$PROJECT_LOCKFILE"; then
     return 0
   fi
-  [[ -f "$PROJECT_GEMFILE" ]] && grep -Eq "gem ['\"]${gem_name}['\"]" "$PROJECT_GEMFILE"
+  [[ -f "$PROJECT_GEMFILE" ]] && (
+    grep -Fq "gem \"${gem_name}\"" "$PROJECT_GEMFILE" ||
+      grep -Fq "gem '${gem_name}'" "$PROJECT_GEMFILE"
+  )
 }
 
 command -v bundle >/dev/null 2>&1 || exit 0
 printf -v QUOTED_PATH '%q' "$FILE_PATH"
 
+report_formatter_failure() {
+  local label="$1"
+  local command_hint="$2"
+  local err_file="$3"
+  local err_preview=""
+
+  if [[ -f "$err_file" && ! -L "$err_file" ]]; then
+    err_preview=$(sed -n '1,5p' "$err_file" 2>/dev/null || true)
+  fi
+
+  echo "${label}: $FILE_PATH — run '${command_hint}'" >&2
+  if [[ -n "$err_preview" ]]; then
+    printf 'Formatter output:\n%s\n' "$err_preview" >&2
+  fi
+}
+
 if has_gem standard; then
   # Auto-fix with StandardRB
-  if ! (cd "$REPO_ROOT" && bundle exec standardrb --fix -- "$FILE_PATH") 2>/dev/null; then
+  ERR_FILE=$(mktemp "${TMPDIR:-/tmp}/ruby-format.XXXXXX") || exit 0
+  if ! (cd "$REPO_ROOT" && bundle exec standardrb --fix -- "$FILE_PATH") 2>"$ERR_FILE"; then
     # If auto-fix failed, report for manual fixing
-    echo "NEEDS FORMAT: $FILE_PATH — run 'bundle exec standardrb --fix $QUOTED_PATH'" >&2
+    report_formatter_failure "NEEDS FORMAT" "bundle exec standardrb --fix $QUOTED_PATH" "$ERR_FILE"
+    rm -f -- "$ERR_FILE"
     exit 2
   fi
+  rm -f -- "$ERR_FILE"
 elif has_gem rubocop; then
   # Auto-fix with RuboCop
-  if ! (cd "$REPO_ROOT" && bundle exec rubocop --force-exclusion -a -- "$FILE_PATH") 2>/dev/null; then
+  ERR_FILE=$(mktemp "${TMPDIR:-/tmp}/ruby-format.XXXXXX") || exit 0
+  if ! (cd "$REPO_ROOT" && bundle exec rubocop --force-exclusion -a -- "$FILE_PATH") 2>"$ERR_FILE"; then
     # If auto-fix failed, report for manual fixing
-    echo "NEEDS FORMAT OR LINT FIX: $FILE_PATH — run 'bundle exec rubocop --force-exclusion -a $QUOTED_PATH'" >&2
+    report_formatter_failure "NEEDS FORMAT OR LINT FIX" "bundle exec rubocop --force-exclusion -a $QUOTED_PATH" "$ERR_FILE"
+    rm -f -- "$ERR_FILE"
     exit 2
   fi
+  rm -f -- "$ERR_FILE"
 fi

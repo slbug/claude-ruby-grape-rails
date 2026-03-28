@@ -677,7 +677,7 @@ When working on code, automatically consult relevant reference documentation bef
 | New to the plugin | `/rb:intro` |
 | Bug fix, debug | `/rb:investigate` |
 | Small UI fix, CSS tweak, config change | `/rb:quick` |
-| Small change (<50 lines) | `/rb:quick` |
+| Small change (<100 lines) | `/rb:quick` |
 | New feature (clear scope) | `/rb:plan` then `/rb:work` |
 | Understand a plan | `/rb:brief` |
 | Enhance existing plan | `/rb:plan --existing` |

@@ -398,19 +398,22 @@ if [[ "$FULL_RAILS_APP" == "true" ]]; then
   STACK+=("Rails")
 fi
 
-for component in ${DETECTED_STACK_RAW//,/ }; do
-  case "$component" in
-    grape) STACK+=("Grape") ;;
-    sidekiq) STACK+=("Sidekiq") ;;
-    redis) STACK+=("Redis") ;;
-    postgres) STACK+=("PostgreSQL") ;;
-    mysql) STACK+=("MySQL") ;;
-    solid_queue) STACK+=("SolidQueue") ;;
-    karafka) STACK+=("Karafka") ;;
-    hotwire) STACK+=("Hotwire") ;;
-    rails) : ;;
-  esac
-done
+if [[ -n "$DETECTED_STACK_RAW" ]]; then
+  IFS=',' read -r -a detected_components <<< "$DETECTED_STACK_RAW"
+  for component in "${detected_components[@]}"; do
+    case "$component" in
+      grape) STACK+=("Grape") ;;
+      sidekiq) STACK+=("Sidekiq") ;;
+      redis) STACK+=("Redis") ;;
+      postgres) STACK+=("PostgreSQL") ;;
+      mysql) STACK+=("MySQL") ;;
+      solid_queue) STACK+=("SolidQueue") ;;
+      karafka) STACK+=("Karafka") ;;
+      hotwire) STACK+=("Hotwire") ;;
+      rails) : ;;
+    esac
+  done
+fi
 
 if [[ -n "$DETECTED_ORMS" ]]; then
   [[ "$DETECTED_ORMS" == *"active_record"* ]] && STACK+=("ActiveRecord")

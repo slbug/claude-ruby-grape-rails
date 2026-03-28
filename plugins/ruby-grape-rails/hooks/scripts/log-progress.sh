@@ -18,6 +18,31 @@ source "$LIB"
 
 command -v jq >/dev/null 2>&1 || exit 0
 
+get_file_mtime() {
+  local file="$1"
+
+  if stat -f '%m' "$file" >/dev/null 2>&1; then
+    stat -f '%m' "$file"
+  else
+    stat -c '%Y' "$file"
+  fi
+}
+
+clear_stale_lock() {
+  local lock_dir="$1"
+  local now
+  local lock_mtime
+
+  [[ -d "$lock_dir" && ! -L "$lock_dir" ]] || return 0
+  now=$(date +%s 2>/dev/null || echo 0)
+  lock_mtime=$(get_file_mtime "$lock_dir" 2>/dev/null || echo 0)
+  [[ "$now" -gt 0 && "$lock_mtime" -gt 0 ]] || return 0
+
+  if (( now - lock_mtime > 600 )); then
+    rmdir -- "$lock_dir" 2>/dev/null || true
+  fi
+}
+
 FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
 [[ -n "$FILE_PATH" ]] || exit 0
 
@@ -30,6 +55,7 @@ if [[ -n "$ACTIVE_PLAN" && -d "$ACTIVE_PLAN" ]]; then
   [[ ! -L "$PROGRESS_LOCK_DIR" ]] || exit 0
   [[ ! -e "$PROGRESS_FILE" || -f "$PROGRESS_FILE" ]] || exit 0
   printf -v LOGGED_PATH '%q' "$FILE_PATH"
+  clear_stale_lock "$PROGRESS_LOCK_DIR"
   if mkdir "$PROGRESS_LOCK_DIR" 2>/dev/null; then
     cleanup_log_progress() {
       rmdir -- "$PROGRESS_LOCK_DIR" 2>/dev/null || true
