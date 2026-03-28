@@ -3,7 +3,6 @@ name: testing-reviewer
 description: Reviews Ruby/Rails/Grape test code for spec quality, fixture/factory discipline, request coverage, worker coverage, and anti-flake patterns.
 tools: Read, Grep, Glob
 disallowedTools: Write, Edit, NotebookEdit
-permissionMode: bypassPermissions
 model: sonnet
 effort: medium
 skills:

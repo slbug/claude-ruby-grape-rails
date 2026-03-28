@@ -3,7 +3,6 @@ name: rails-architect
 description: Advises on Rails and Grape interaction architecture, user-facing workflows, Hotwire patterns, and service-layer fit.
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
-permissionMode: bypassPermissions
 model: sonnet
 effort: medium
 skills:

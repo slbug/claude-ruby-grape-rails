@@ -3,7 +3,6 @@ name: output-verifier
 description: Verify factual claims in research briefs and review findings before the user acts on them. Use for version-specific, externally sourced, or policy-heavy claims that need provenance checks.
 tools: Read, Grep, Glob, WebFetch, WebSearch
 disallowedTools: Write, Edit, NotebookEdit
-permissionMode: bypassPermissions
 model: sonnet
 effort: medium
 ---

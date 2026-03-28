@@ -134,7 +134,6 @@ name: my-agent
 description: Description with "Use proactively when..." guidance
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
-permissionMode: bypassPermissions
 model: sonnet
 memory: project
 skills:
@@ -149,10 +148,10 @@ skills:
 - Use `sonnet` for secondary orchestrators (investigation, tracing) and judgment-heavy tasks
 - Use `haiku` for mechanical tasks: compression, verification, dependency analysis
 - Review agents are **read-only** (`disallowedTools: Write, Edit, NotebookEdit`)
-- Use `permissionMode: bypassPermissions` for all agents — **required for local development with `--plugin-dir`**
-  - **Local dev (`--plugin-dir`)**: Field is honored, prevents "Bash command permission check failed" errors
-  - **Marketplace install**: Claude Code **ignores** `permissionMode` on plugin agents — agents fall back to session default permissions
-    - **Workaround**: Copy agents to `~/.claude/agents/` or add `permissions.allow` rules to `settings.json`
+- Do **not** rely on `permissionMode` in shipped plugin agents
+  - **Marketplace install**: Claude Code ignores `permissionMode` on plugin agents
+  - **Workaround**: document `permissions.allow` rules in `.claude/settings.json` for required tools such as `Bash(bundle *)`, `Bash(rails *)`, `Bash(rake *)`, `Read(*)`, `Grep(*)`, and `Glob(*)`
+  - **Local dev (`--plugin-dir`)**: you may still experiment with `permissionMode` while iterating locally, but do not ship it in plugin agent frontmatter
 - Use `memory: project` for agents that benefit from cross-session learning (orchestrators, pattern analysts).
   Note: `memory` auto-enables Read, Write, Edit — only add to agents that already have Write access
 - Preload relevant skills via `skills:` field
@@ -228,7 +227,7 @@ Defined in `hooks/hooks.json`:
 **Current hooks:**
 
 - `PreToolUse` (Bash): Block destructive operations (`rails db:drop`, `git push --force`, `RAILS_ENV=production`) before execution
-- `PostToolUse` (Edit|MultiEdit|Write): Multiple scripts run in sequence:
+- `PostToolUse` (Edit|Write): Multiple scripts run in sequence:
   - `format-ruby.sh`: Auto `bundle exec standardrb` or `bundle exec rubocop -a`
   - `verify-ruby.sh`: Syntax check via `ruby -c <file>` (catches broken Ruby before formatting)
   - `iron-law-verifier.sh`: **Programmatic Iron Law verification** (scans code for violations)
@@ -368,8 +367,9 @@ claude plugin validate plugins/ruby-grape-rails
 
 ### Why orchestrators and command skills exceed targets
 
-Even with `permissionMode: bypassPermissions`, plugin files live in `~/.claude/plugins/cache/` — outside the project.
-This means agents **cannot reliably read** skill `references/*.md` at runtime.
+Marketplace-installed plugin files live in `~/.claude/plugins/cache/` and agent
+tool access still follows the session permission policy. This means agents
+**cannot reliably read** skill `references/*.md` at runtime.
 
 Content must be inline (in agent prompt or preloaded SKILL.md) to be available:
 
@@ -390,7 +390,6 @@ Only trim when content is purely informational and not execution-critical.
 - [ ] Frontmatter complete
 - [ ] `disallowedTools: Write, Edit, NotebookEdit` for review agents
 - [ ] `Write` allowed for agents that output reports (e.g., research agents, context-supervisor)
-- [ ] `permissionMode: bypassPermissions`
 - [ ] Skills preloaded
 - [ ] Under target (300 lines), hard limit only if justified by inline subagent prompts
 

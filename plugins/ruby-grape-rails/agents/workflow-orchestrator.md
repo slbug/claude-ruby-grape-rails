@@ -3,7 +3,6 @@ name: workflow-orchestrator
 description: Orchestrates the full Ruby/Rails/Grape workflow cycle (plan → work → verify → review → compound). Internal use by /rb:full.
 tools: Read, Write, Grep, Glob, Bash, Agent
 disallowedTools: NotebookEdit
-permissionMode: bypassPermissions
 model: opus
 maxTurns: 50
 memory: project

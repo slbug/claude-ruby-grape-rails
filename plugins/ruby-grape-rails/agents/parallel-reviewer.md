@@ -3,7 +3,6 @@ name: parallel-reviewer
 description: Parallel review orchestrator for Ruby/Rails/Grape changes. Delegates to specialist reviewers instead of doing all analysis directly.
 tools: Read, Grep, Glob, Bash, Agent
 disallowedTools: Write, Edit, NotebookEdit
-permissionMode: bypassPermissions
 model: opus
 effort: high
 maxTurns: 25

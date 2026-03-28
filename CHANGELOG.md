@@ -7,6 +7,31 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-03-28
+
+### Changed
+
+- **Marketplace-installed specialist agents now rely on explicit permission
+  allowlists instead of ignored plugin-agent `permissionMode` fields** — all
+  shipped plugin agents dropped `permissionMode: bypassPermissions`, and the
+  user-facing docs now point users to project `permissions.allow` rules such as
+  `Bash(bundle *)`, `Bash(rails *)`, `Bash(rake *)`, `Read(*)`, `Grep(*)`, and
+  `Glob(*)`.
+- **Runtime detection now refreshes on directory changes too** — `CwdChanged`
+  now reuses the same quiet runtime refresh wrapper as `FileChanged`, so
+  `.claude/.runtime_env` stays aligned when the session moves between repos or
+  package roots mid-run.
+- **Compound knowledge flow now relies on explicit references instead of an
+  undocumented skill-to-skill preload** — `/rb:compound` now points directly to
+  the `compound-docs` schema/template references, `compound-docs` is framed as
+  a reusable background reference skill, and `/rb:plan` / `planning-orchestrator`
+  now consult `.claude/solutions/` explicitly instead of referring to a
+  nonexistent `compound-docs` agent.
+- **Dead `MultiEdit` branches were removed from the current shipped hook
+  surface** — hook matchers now target `Edit|Write`, stale `MultiEdit` handler
+  groups are gone, and current-facing contributor docs no longer describe it as
+  an active edit tool in the shipped runtime surface.
+
 ## [1.6.2] - 2026-03-28
 
 ### Changed

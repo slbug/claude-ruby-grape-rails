@@ -3,7 +3,6 @@ name: sidekiq-specialist
 description: Reviews Sidekiq job classes, queueing strategy, retries, idempotency, payload shape, and enqueue timing. Use when implementing or reviewing async workflows.
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
-permissionMode: bypassPermissions
 model: sonnet
 effort: medium
 skills:
