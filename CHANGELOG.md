@@ -7,6 +7,34 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-03-28
+
+### Changed
+
+- **Docs-check stale-warning handling is tighter** — contributor docs-check
+  guidance now treats dated reports as historical snapshots, and the archived
+  `report-2026-03-28` explicitly marks its old `MultiEdit` warning as
+  superseded by newer Claude docs.
+- **Post-edit hook spawning is narrower on the hottest Ruby paths** —
+  `format-ruby`, `verify-ruby`, and `debug-statement-warning` now use
+  handler-level `if` filters so they only spawn for Ruby-ish file edits instead
+  of every `Edit|MultiEdit|Write`.
+- **Runtime detection now refreshes mid-session when core project files
+  change** — `FileChanged` now reruns `detect-runtime.sh` for `Gemfile`,
+  `Gemfile.lock`, `Rakefile`, `lefthook.yml`, `justfile`, and `*.gemspec`,
+  while using a dedicated quiet wrapper for refreshes instead of branching on
+  untrusted hook input.
+- **Hook narrowing now applies consistently across Ruby-ish file edits** —
+  quiet runtime refreshes no longer leak status output, `debug-statement-warning`
+  no longer runs twice from both broad and filtered hook groups, `config.ru`
+  now gets the same debug-statement coverage as the other Ruby-ish targets, and
+  the `FileChanged` lefthook matcher now covers the same config variants that
+  runtime detection already recognizes.
+- **Selective skill `paths:` adoption started conservatively** —
+  `safe-migrations` now narrows to migration/schema files and `testing` narrows
+  to `spec/**` and `test/**`, while broader auto-loading constraints remain
+  deferred.
+
 ## [1.6.1] - 2026-03-28
 
 ### Added

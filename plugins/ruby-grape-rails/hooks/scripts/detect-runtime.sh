@@ -2,8 +2,9 @@
 set -o nounset
 set -o pipefail
 
-# Detect Ruby runtime environment and available tooling
-# This hook runs at SessionStart to populate context
+# Detect Ruby runtime environment and available tooling.
+# This hook populates context at SessionStart and refreshes .runtime_env when
+# watched files change.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
@@ -553,27 +554,28 @@ if [[ -n "$RTK_PATH" ]]; then
   fi
 fi
 
-# Report runtime info
-if [[ ${#RUNTIME_INFO[@]} -gt 0 ]]; then
-  echo "✓ Runtime: ${RUNTIME_INFO[*]}"
-fi
+if [[ "${RUBY_PLUGIN_DETECT_RUNTIME_QUIET:-0}" != "1" ]]; then
+  if [[ ${#RUNTIME_INFO[@]} -gt 0 ]]; then
+    echo "✓ Runtime: ${RUNTIME_INFO[*]}"
+  fi
 
-echo "✓ Hook mode: $HOOK_MODE"
+  echo "✓ Hook mode: $HOOK_MODE"
 
-if [[ ${#STACK[@]} -gt 0 ]]; then
-  echo "✓ Stack: ${STACK[*]}"
-fi
+  if [[ ${#STACK[@]} -gt 0 ]]; then
+    echo "✓ Stack: ${STACK[*]}"
+  fi
 
-if [[ ${#TOOLS[@]} -gt 0 ]]; then
-  echo "✓ Tools: ${TOOLS[*]}"
-fi
+  if [[ ${#TOOLS[@]} -gt 0 ]]; then
+    echo "✓ Tools: ${TOOLS[*]}"
+  fi
 
-if [[ "$VERIFY_COMPOSITE_AVAILABLE" == "true" && -n "$VERIFY_COMPOSITE_COMMAND" ]]; then
-  echo "✓ Verify wrapper: ${VERIFY_COMPOSITE_COMMAND}"
-fi
+  if [[ "$VERIFY_COMPOSITE_AVAILABLE" == "true" && -n "$VERIFY_COMPOSITE_COMMAND" ]]; then
+    echo "✓ Verify wrapper: ${VERIFY_COMPOSITE_COMMAND}"
+  fi
 
-if [[ ${#RUNTIME_INFO[@]} -eq 0 && ${#STACK[@]} -eq 0 ]]; then
-  echo "○ Ruby plugin loaded — minimal stack detected"
+  if [[ ${#RUNTIME_INFO[@]} -eq 0 && ${#STACK[@]} -eq 0 ]]; then
+    echo "○ Ruby plugin loaded — minimal stack detected"
+  fi
 fi
 
 # Export runtime environment to file for other scripts

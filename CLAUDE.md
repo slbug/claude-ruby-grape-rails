@@ -797,47 +797,31 @@ For contributor workflows under `.claude/`, use this order:
 ## Claude Code Features Under Evaluation
 
 Based on `/docs-check` validation against the current cached Claude Code docs,
-the following features are available but not yet adopted:
+these are the main still-unadopted features worth tracking:
 
-### Agent Features (Adopted)
+### Agents
 
-- [x] **`effort` field** — Added to all 23 agents for cost optimization:
-  - `low`: web-researcher, context-supervisor, verification-runner (mechanical tasks)
-  - `medium`: dependency-analyzer, call-tracer, rails-patterns-analyst, rails-architect, ruby-reviewer,
-    testing-reviewer, sidekiq-specialist, ruby-runtime-advisor, deployment-validator, iron-law-judge,
-    data-integrity-reviewer, migration-safety-reviewer, active-record-schema-designer,
-    deep-bug-investigator, ruby-gem-researcher, output-verifier (specialist analysis)
-  - `high`: planning-orchestrator, workflow-orchestrator, security-analyzer, parallel-reviewer (orchestrators, security-critical)
+- `isolation: "worktree"` for agents that modify files, such as
+  `verification-runner` or parallel review tasks
 
-### Agent Features (Under Evaluation)
+### Hooks
 
-- [ ] **`isolation: "worktree"`** — Run agents in isolated git worktrees for parallel execution.
-  Potential use: `verification-runner` or parallel review tasks that modify files.
+- `http` hook type for external telemetry/logging
+- `SubagentStop` for specialist completion metrics
+- `SessionEnd` for cleanup of temporary artifacts
+- hook `environment` field if it materially simplifies script wiring
 
-### Hook Features (Adopted)
+### Skills
 
-- [x] **`PostCompact` event** — Added to surface active-plan recovery reminders after compaction
-- [x] **`StopFailure` event** — Added to persist API-failure context into plan scratchpads for resume flows
+- broader `paths:` adoption, especially whether `hotwire-patterns` should be
+  path-scoped or left semantic-only
 
-### Hook Features (Under Evaluation)
+### Plugin
 
-- [ ] **`http` hook type** — Could enable external telemetry/logging endpoints
-- [ ] **`SubagentStop` event** — Could track specialist agent completion metrics
-- [ ] **`SessionEnd` event** — Could clean up temporary files
-- [ ] **`environment` field** — Could simplify hook script configuration
-
-### Skill Features (Adopted)
-
-- [x] **Skill `effort` field** — Added across all shipped skills for lower-cost simple flows and higher-effort orchestration where needed
-- [x] **`${CLAUDE_SKILL_DIR}` variable** — Adopted selectively in workflow skills where explicit local reference paths improve reliability across install/cache contexts
-
-### Skill Features (Under Evaluation)
-
-### Plugin Features (Under Evaluation)
-
-- [ ] **`${CLAUDE_PLUGIN_DATA}` directory** — Could cache plugin dependencies across updates
-- [ ] **`settings.json` at plugin root** — Plugin-level default settings. Currently only `agent` key supported.
-- [ ] **`.lsp.json` LSP server configuration** — Could bundle Ruby LSP (ruby-lsp/solargraph) for code intelligence.
+- `${CLAUDE_PLUGIN_DATA}` for persistent plugin-managed state or caches
+- plugin-root `settings.json` expansion beyond the currently supported `agent`
+  behavior
+- `.lsp.json` LSP configuration, with Ruby LSP preferred if this is ever added
   Requires users to install LSP binary separately.
 
 ### Adoption Criteria

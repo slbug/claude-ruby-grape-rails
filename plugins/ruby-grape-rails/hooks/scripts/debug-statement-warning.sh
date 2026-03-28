@@ -23,7 +23,7 @@ is_path_within_root "$REPO_ROOT" "$FILE_PATH" || exit 0
 BASE_NAME=$(path_basename "$FILE_PATH")
 
 case "$BASE_NAME" in
-  *.rb|*.rake|Gemfile|Rakefile) ;;
+  *.rb|*.rake|Gemfile|Rakefile|config.ru) ;;
   *) exit 0 ;;
 esac
 
