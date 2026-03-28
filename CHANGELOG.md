@@ -83,6 +83,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   eval parser now understands inline comma-separated list fields used in agent
   frontmatter, coverage includes that form explicitly, and both eval entrypoint
   scripts now fail fast with a clear Python 3.10+ requirement message.
+- **Eval test execution is now less cwd-sensitive** — the eval-test wrapper now
+  resolves the repo root before running and uses an explicit unittest top-level
+  path, so the non-pytest fallback works more reliably outside the repository
+  root.
 
 ## [1.5.0] - 2026-03-28
 
