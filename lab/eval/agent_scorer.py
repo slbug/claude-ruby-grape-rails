@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Score Ruby plugin agents with deterministic structural checks."""
 
 from __future__ import annotations

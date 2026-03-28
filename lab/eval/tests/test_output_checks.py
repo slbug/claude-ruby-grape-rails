@@ -109,6 +109,16 @@ No actual entries here.
         passed, _ = output_checks.has_provenance_external_evidence(content)
         self.assertFalse(passed)
 
+    def test_has_research_decision_section_accepts_executive_summary(self) -> None:
+        content = """# Research: sample
+
+## Executive Summary
+
+Use the maintained upstream path.
+"""
+        passed, _ = output_checks.has_research_decision_section(content)
+        self.assertTrue(passed)
+
 
 if __name__ == "__main__":
     unittest.main()

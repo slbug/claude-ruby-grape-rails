@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Score research/review output fixtures with deterministic checks."""
 
 from __future__ import annotations

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Validate and analyze deterministic trigger corpora."""
 
 from __future__ import annotations

@@ -62,7 +62,7 @@ def has_inline_tier_markers(content: str, minimum: int = 2) -> tuple[bool, str]:
 
 def has_research_decision_section(content: str) -> tuple[bool, str]:
     match = re.search(
-        r"(?m)^## (Recommendation|Summary|Takeaways|Quick Facts|Risks|Migration path)$",
+        r"(?m)^## (Recommendation|Summary|Executive Summary|Takeaways|Quick Facts|Risks|Migration path)$",
         content,
     )
     return bool(match), "Decision-oriented section present" if match else "Missing summary/recommendation section"

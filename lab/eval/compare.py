@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Compare current deterministic eval results with a stored baseline."""
 
 from __future__ import annotations
