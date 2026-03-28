@@ -116,11 +116,12 @@ get_active_plan() {
   [[ ! -L "$CLAUDE_DIR" ]] || return 1
 
   # Primary: Check explicit marker file
+  if [[ -L "$ACTIVE_PLAN_MARKER" ]]; then
+    printf '%s\n' "Warning: ${ACTIVE_PLAN_MARKER} is a symlink. Clean up yourself." >&2
+    return 1
+  fi
+
   if [[ -f "$ACTIVE_PLAN_MARKER" ]]; then
-    if [[ -L "$ACTIVE_PLAN_MARKER" ]]; then
-      safe_remove_exact_file "$ACTIVE_PLAN_MARKER" "${CLAUDE_DIR}/ACTIVE_PLAN" || true
-      return 1
-    fi
 
     local marked_plan
     if ! IFS= read -r marked_plan < "$ACTIVE_PLAN_MARKER"; then
@@ -240,7 +241,11 @@ set_active_plan() {
   [[ "$tmp_marker" == "${CLAUDE_DIR}/ACTIVE_PLAN."* ]] || return 1
 
   if ! (
-    trap 'safe_remove_temp_file "${tmp_marker:-}" "'"${CLAUDE_DIR}"'/ACTIVE_PLAN.*" || true' EXIT HUP INT TERM
+    # shellcheck disable=SC2329 # invoked via trap
+    cleanup_active_plan_tmp() {
+      safe_remove_temp_file "${tmp_marker:-}" "${CLAUDE_DIR}/ACTIVE_PLAN.*" || true
+    }
+    trap cleanup_active_plan_tmp EXIT HUP INT TERM
     printf '%s\n' "$plan_dir" > "$tmp_marker" &&
       mv -f -- "$tmp_marker" "$ACTIVE_PLAN_MARKER"
   ); then

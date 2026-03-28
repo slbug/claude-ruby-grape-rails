@@ -50,6 +50,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   validate temp-file/temp-dir prefixes before deleting, prefer exact-path
   cleanup for plugin-owned markers, and the verification examples now show the
   same safer cleanup style.
+- **Cleanup hardening now avoids brittle trap quoting** — temp cleanup traps
+  now use local cleanup functions instead of embedded quoted path patterns, and
+  symlinked `ACTIVE_PLAN` markers are surfaced as manual-cleanup warnings
+  rather than silently mishandled.
 - **Debug references no longer default to nuclear rebuilds** — investigate
   quick-command docs now prefer staged cache-clear / install / precompile
   steps instead of recommending broad `rm -rf` cleanup by default.
