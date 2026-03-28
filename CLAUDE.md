@@ -83,12 +83,8 @@ claude-ruby-grape-rails/
 │   └── marketplace.json
 ├── .claude/                         # Contributor tooling (NOT distributed)
 │   ├── agents/
-│   │   ├── rails-project-analyzer.md    # Analyze external codebases
 │   │   ├── docs-validation-orchestrator.md  # Plugin docs compatibility
 │   │   └── skill-effectiveness-analyzer.md  # Per-skill metrics analysis
-│   ├── commands/
-│   │   ├── psql-query.md
-│   │   └── techdebt.md
 │   └── skills/
 │       ├── docs-check/              # /docs-check — validate against Claude Code docs
 │       ├── plugin-dev-workflow/     # Contributor workflow for this repo
