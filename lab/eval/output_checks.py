@@ -6,10 +6,11 @@ import re
 
 
 STATUS_RE = re.compile(r"^\d+\.\s+\[(VERIFIED|UNSUPPORTED|CONFLICT|WEAK|OPINION|REMOVED)\]", re.MULTILINE)
-FILE_REF_RE = re.compile(
-    r"(?:^|[\s`])((?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+\.(?:rb|ru|rake|erb|haml|slim|yml|yaml|json|md|txt|sql|js|ts|tsx|jsx|py|sh):\d+)",
+LOCAL_EVIDENCE_RE = re.compile(
+    r"^\s*-\s*Evidence:\s+((?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+\.(?:rb|ru|rake|erb|haml|slim|yml|yaml|json|md|txt|sql|js|ts|tsx|jsx|py|sh):\d+)$",
     re.MULTILINE,
 )
+EXTERNAL_EVIDENCE_RE = re.compile(r"^\s*-\s*Evidence:\s+<?https?://[^ >]+>?\s+\[T[1-5]\]$", re.MULTILINE)
 
 
 def _section(content: str, heading: str) -> str:
@@ -19,8 +20,20 @@ def _section(content: str, heading: str) -> str:
 
 
 def has_h1(content: str) -> tuple[bool, str]:
-    match = re.search(r"(?m)^# .+", content)
-    return bool(match), "Top-level heading present" if match else "Missing top-level heading"
+    in_fence = False
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            in_fence = not in_fence
+            continue
+        if in_fence or not stripped:
+            continue
+        return (
+            (True, "Top-level heading present")
+            if stripped.startswith("# ")
+            else (False, "Missing top-level heading")
+        )
+    return False, "Missing top-level heading"
 
 
 def has_research_metadata(content: str) -> tuple[bool, str]:
@@ -121,7 +134,8 @@ def has_provenance_claim_log(content: str) -> tuple[bool, str]:
 
 
 def has_provenance_claim_entries(content: str, minimum: int = 2) -> tuple[bool, str]:
-    count = len(STATUS_RE.findall(content))
+    body = _section(content, "Claim Log")
+    count = len(STATUS_RE.findall(body))
     return count >= minimum, f"{count} claim log entry(ies) present"
 
 
@@ -131,10 +145,12 @@ def has_provenance_required_fixes(content: str) -> tuple[bool, str]:
 
 
 def has_provenance_external_evidence(content: str) -> tuple[bool, str]:
-    count = len(re.findall(r"(?m)^\s*-\s*Evidence:\s+<?https?://[^ >]+>?\s+\[T[1-5]\]$", content))
+    body = _section(content, "Claim Log")
+    count = len(EXTERNAL_EVIDENCE_RE.findall(body))
     return count >= 1, f"{count} external evidence line(s) present"
 
 
 def has_provenance_local_evidence(content: str) -> tuple[bool, str]:
-    count = len(re.findall(r"(?m)^\s*-\s*Evidence:\s+.+:\d+$", content))
+    body = _section(content, "Claim Log")
+    count = len(LOCAL_EVIDENCE_RE.findall(body))
     return count >= 1, f"{count} local-evidence line(s) present"
