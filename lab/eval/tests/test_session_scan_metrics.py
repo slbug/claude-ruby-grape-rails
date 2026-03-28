@@ -14,11 +14,17 @@ MODULE_PATH = (
     / "compute-metrics.py"
 )
 
+if not MODULE_PATH.exists():
+    raise ImportError(f"Cannot find 'session_scan_metrics' at {MODULE_PATH}")
+
 SPEC = importlib.util.spec_from_file_location("session_scan_metrics", MODULE_PATH)
 if SPEC is None or SPEC.loader is None:
     raise ImportError(f"Cannot load 'session_scan_metrics' from {MODULE_PATH}")
 session_scan_metrics = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(session_scan_metrics)
+try:
+    SPEC.loader.exec_module(session_scan_metrics)
+except OSError as exc:
+    raise ImportError(f"Cannot execute 'session_scan_metrics' from {MODULE_PATH}") from exc
 
 
 class SessionScanMetricTests(unittest.TestCase):
@@ -204,6 +210,28 @@ class SessionScanMetricTests(unittest.TestCase):
 
         self.assertIn("/rb:verify", results)
         self.assertEqual(results["/rb:verify"]["total_post_test_runs"], 1)
+
+    def test_extract_tool_positions_ignores_plain_agent_prose(self) -> None:
+        messages = [{"role": "assistant", "content": "We should ask the Agent to summarize this."}]
+
+        tool_positions = session_scan_metrics.extract_tool_positions(messages)
+
+        self.assertEqual(tool_positions, [])
+
+    def test_extract_tool_positions_matches_tool_like_text_forms(self) -> None:
+        messages = [
+            {
+                "role": "assistant",
+                "content": "Use `Task` for discovery, then Agent(task=\"scan\") and tool:Bash if needed.",
+            }
+        ]
+
+        tool_positions = session_scan_metrics.extract_tool_positions(messages)
+
+        self.assertEqual(
+            [item["tc"]["name"] for item in tool_positions],
+            ["Task", "Agent", "Bash"],
+        )
 
 
 if __name__ == "__main__":

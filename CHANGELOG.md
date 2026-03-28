@@ -100,6 +100,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   trends `rg` example no longer over-escapes JSON brackets, and the Docker
   cleanup example now runs `rails tmp:clear` under `RAILS_ENV=production` with
   a dummy secret key so it still boots correctly in deployment-mode bundles.
+- **Session-scan tool inference is stricter and less prose-sensitive** —
+  ccrider-style text transcripts now infer tools only from tool-like forms such
+  as backticked names, `tool:Name`, or `Name(...)`, so ordinary English uses of
+  words like `Agent` and `Task` no longer inflate tool counts, while the
+  focused session-scan tests now fail earlier with a clearer import error if the
+  metrics module is missing.
 
 ## [1.6.0] - 2026-03-28
 

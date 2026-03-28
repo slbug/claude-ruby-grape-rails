@@ -208,11 +208,18 @@ def extract_file_paths(tool_input):
     return paths
 
 
-# Tool name detection from assistant text (ccrider may not preserve tool_use blocks)
+# Tool name detection from assistant text (ccrider may not preserve tool_use blocks).
+# Restrict this to tool-like syntax so ordinary prose like "ask the Agent" does not
+# inflate tool counts.
+TOOL_NAME_PATTERN = (
+    r"Read|Edit|MultiEdit|Write|Bash|Grep|Glob|Task|Agent|NotebookEdit|"
+    r"WebFetch|WebSearch|Skill|AskUserQuestion|ExitPlanMode|KillShell|"
+    r"MCPSearch|mcp__[A-Za-z0-9_]+"
+)
 TOOL_MENTION_RE = re.compile(
-    r"\b(Read|Edit|MultiEdit|Write|Bash|Grep|Glob|Task|Agent|NotebookEdit"
-    r"|WebFetch|WebSearch|Skill|AskUserQuestion|ExitPlanMode|KillShell"
-    r"|MCPSearch|mcp__[A-Za-z0-9_]+)\b"
+    rf"(?:`(?P<backtick>{TOOL_NAME_PATTERN})`|"
+    rf"\btool:(?P<prefixed>{TOOL_NAME_PATTERN})\b|"
+    rf"\b(?P<call>{TOOL_NAME_PATTERN})\s*\()"
 )
 SHELL_FENCE_RE = re.compile(r"```(?:bash|sh|zsh|shell)\s*\n(.*?)```", re.DOTALL | re.I)
 PROMPT_COMMAND_RE = re.compile(r"^\s*(?:\$|>)\s+(.+?)\s*$")
@@ -264,7 +271,13 @@ def extract_tool_positions(messages):
         # ccrider format: infer tools from assistant text
         elif isinstance(content, str) and role == "assistant":
             inferred_bash_commands = _infer_bash_commands_from_text(content)
-            mentioned = TOOL_MENTION_RE.findall(content)
+            mentioned = []
+            for match in TOOL_MENTION_RE.finditer(content):
+                name = match.group("backtick") or match.group("prefixed") or match.group(
+                    "call"
+                )
+                if name:
+                    mentioned.append(name)
             for name in mentioned:
                 if name == "Bash" and inferred_bash_commands:
                     continue

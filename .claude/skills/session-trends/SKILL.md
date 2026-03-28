@@ -50,12 +50,11 @@ Use:
 
 ```bash
 python3 ${CLAUDE_SKILL_DIR}/../session-scan/references/compute-metrics.py \
-  --trends .claude/session-metrics/metrics.jsonl \
-  --project "$PROJECT_FILTER" \
-  --provider "$PROVIDER_FILTER"
+  --trends .claude/session-metrics/metrics.jsonl
 ```
 
-Only pass `--project` or `--provider` when the contributor requested them.
+Only add `--project "$PROJECT_FILTER"` or `--provider "$PROVIDER_FILTER"` when
+the contributor requested those filters.
 
 ### 4. Read Comparison Notes Separately
 
