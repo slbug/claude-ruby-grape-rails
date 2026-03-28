@@ -13,13 +13,19 @@ LOCAL_EVIDENCE_RE = re.compile(
 EXTERNAL_EVIDENCE_RE = re.compile(r"^\s*-\s*Evidence:\s+<?https?://[^ >]+>?\s+\[T[1-5]\]$", re.MULTILINE)
 
 
+def _normalize_newlines(content: str) -> str:
+    return content.replace("\r\n", "\n").replace("\r", "\n")
+
+
 def _section(content: str, heading: str) -> str:
+    content = _normalize_newlines(content)
     pattern = re.compile(rf"(?ms)^## {re.escape(heading)}\n(.*?)(?=^## |\Z)")
     match = pattern.search(content)
     return match.group(1).strip() if match else ""
 
 
 def has_h1(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
     in_fence = False
     for line in content.splitlines():
         stripped = line.strip()
@@ -37,6 +43,7 @@ def has_h1(content: str) -> tuple[bool, str]:
 
 
 def has_research_metadata(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
     match = re.search(r"(?m)^(Last Updated|Date):\s+\d{4}-\d{2}-\d{2}$", content)
     return bool(match), "Date metadata present" if match else "Missing Date: or Last Updated: metadata"
 
@@ -55,12 +62,15 @@ def has_tiered_sources(content: str, minimum: int = 2) -> tuple[bool, str]:
 
 
 def has_inline_tier_markers(content: str, minimum: int = 2) -> tuple[bool, str]:
-    body_without_sources = content.split("\n## Sources", 1)[0]
+    content = _normalize_newlines(content)
+    sources_heading_match = re.search(r"(?m)^##\s+Sources\s*$", content)
+    body_without_sources = content[: sources_heading_match.start()] if sources_heading_match else content
     count = len(re.findall(r"\[T[1-5]\]", body_without_sources))
     return count >= minimum, f"{count} inline tier marker(s) before Sources"
 
 
 def has_research_decision_section(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
     match = re.search(
         r"(?m)^## (Recommendation|Summary|Executive Summary|Takeaways|Quick Facts|Risks|Migration path)$",
         content,
@@ -69,11 +79,13 @@ def has_research_decision_section(content: str) -> tuple[bool, str]:
 
 
 def has_review_title(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
     match = re.search(r"(?m)^# Review: .+", content)
     return bool(match), "Review title present" if match else "Missing # Review: heading"
 
 
 def has_review_verdict(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
     match = re.search(r"(?m)^\*\*Verdict\*\*:\s+.+$", content)
     return bool(match), "Verdict present" if match else "Missing **Verdict** line"
 
@@ -85,11 +97,13 @@ def has_review_summary_table(content: str) -> tuple[bool, str]:
 
 
 def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
     matches = re.findall(r"(?m)^\*\*File\*\*:\s+`?.+:\d+`?$", content)
     return len(matches) >= minimum, f"{len(matches)} finding file ref(s) present"
 
 
 def has_review_mandatory_table(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
     match = re.search(
         r"(?m)^\|\s*#\s*\|\s*Finding\s*\|\s*Severity\s*\|\s*Reviewer\s*\|\s*File\s*\|\s*New\?\s*\|$",
         content,
@@ -98,21 +112,25 @@ def has_review_mandatory_table(content: str) -> tuple[bool, str]:
 
 
 def review_has_no_task_lists(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
     match = re.search(r"(?m)^\s*-\s+\[[ xX]\]\s+", content)
     return not bool(match), "No task lists present" if not match else "Review should not contain task lists"
 
 
 def has_provenance_header(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
     match = re.search(r"(?m)^# Provenance: .+", content)
     return bool(match), "Provenance heading present" if match else "Missing # Provenance: heading"
 
 
 def has_provenance_artifact_pointer(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
     match = re.search(r"(?m)^\*\*Artifact\*\*:\s+.+$", content)
     return bool(match), "Artifact pointer present" if match else "Missing **Artifact** pointer"
 
 
 def has_provenance_summary_counts(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
     patterns = (
         r"(?m)^\*\*Verified\*\*:\s+\d+$",
         r"(?m)^\*\*Unsupported\*\*:\s+\d+$",
@@ -124,6 +142,7 @@ def has_provenance_summary_counts(content: str) -> tuple[bool, str]:
 
 
 def has_provenance_tier_summary(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
     match = re.search(r"(?m)^\*\*Source Tiers\*\*:\s+T1:\d+\s+T2:\d+\s+T3:\d+$", content)
     return bool(match), "Source tier summary present" if match else "Missing **Source Tiers** summary"
 

@@ -119,6 +119,25 @@ Use the maintained upstream path.
         passed, _ = output_checks.has_research_decision_section(content)
         self.assertTrue(passed)
 
+    def test_has_sources_section_accepts_crlf_input(self) -> None:
+        content = "# Research: sample\r\n\r\n## Sources\r\n\r\n- [T1] <https://example.com>\r\n"
+        passed, _ = output_checks.has_sources_section(content)
+        self.assertTrue(passed)
+
+    def test_has_inline_tier_markers_accepts_crlf_sources_heading(self) -> None:
+        content = (
+            "# Research: sample\r\n"
+            "\r\n"
+            "Claim one [T1]\r\n"
+            "Claim two [T2]\r\n"
+            "\r\n"
+            "## Sources\r\n"
+            "\r\n"
+            "- [T1] <https://example.com>\r\n"
+        )
+        passed, _ = output_checks.has_inline_tier_markers(content, minimum=2)
+        self.assertTrue(passed)
+
 
 if __name__ == "__main__":
     unittest.main()
