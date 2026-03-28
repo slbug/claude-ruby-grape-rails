@@ -124,16 +124,16 @@ rules for the tools they need.
    {
      "permissions": {
        "defaultMode": "acceptEdits",
-        "allow": [
+       "allow": [
           "Bash(bundle *)",
           "Bash(rails *)",
           "Bash(rake *)",
           "Grep(*)",
           "Read(*)",
           "Glob(*)"
-        ]
-      }
-    }
+       ]
+     }
+   }
    ```
 
 2. Run `/rb:permissions` to scan recent prompts and propose safer
