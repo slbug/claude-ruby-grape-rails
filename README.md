@@ -649,7 +649,7 @@ bundle add tidewave --group development
 ### Optional
 
 - **Runtime tooling** (Tidewave) for runtime debugging
-- **ccrider** for session analysis (see Contributing)
+- **ccrider** for contributor-only session analysis (see Contributing)
 
 ## Inspired By
 
@@ -701,6 +701,27 @@ Current scope:
   `permissions`, `research`
 - structural scoring for all shipped agents
 - deterministic trigger corpora plus confusable-pair / hard-corpus generation
+
+### Docs-check and session analytics
+
+Contributor-only maintenance tooling under `.claude/` now has two distinct
+roles:
+
+- `/docs-check` validates the plugin against the current cached Claude Code
+  docs and should be treated as a docs-compatibility workflow, not a generic
+  style lint
+- `/session-scan`, `/session-deep-dive`, `/session-trends`, and
+  `/skill-monitor` are exploratory analytics workflows for contributors using
+  `ccrider`
+
+Practical guidance:
+
+- prefer `claude plugin validate`, `make eval`, and `/docs-check` before
+  trusting session-derived conclusions
+- when using session analytics, prefer provider-scoped runs such as
+  `--provider claude-code`
+- treat transcript-derived metrics as heuristic triage signals, not release
+  proof
 
 ## License
 

@@ -86,12 +86,12 @@ claude-ruby-grape-rails/
 │   │   ├── docs-validation-orchestrator.md  # Plugin docs compatibility
 │   │   └── skill-effectiveness-analyzer.md  # Per-skill metrics analysis
 │   └── skills/
-│       ├── docs-check/              # /docs-check — validate against Claude Code docs
+│       ├── docs-check/              # /docs-check — validate against cached Claude Code docs
 │       ├── plugin-dev-workflow/     # Contributor workflow for this repo
-│       ├── session-scan/            # /session-scan — Tier 1 metrics
-│       ├── session-deep-dive/       # /session-deep-dive — Tier 2 analysis
-│       ├── session-trends/          # /session-trends — trend reporting
-│       └── skill-monitor/           # /skill-monitor — skill effectiveness dashboards
+│       ├── session-scan/            # /session-scan — exploratory Tier 1 metrics
+│       ├── session-deep-dive/       # /session-deep-dive — transcript review
+│       ├── session-trends/          # /session-trends — provider-scoped trend reporting
+│       └── skill-monitor/           # /skill-monitor — observational dashboards
 ├── scripts/
 │   └── fetch-claude-docs.sh         # Download Claude Code docs for validation
 ├── plugins/
@@ -687,11 +687,11 @@ When working on code, automatically consult relevant reference documentation bef
 | Secrets scanning | `/rb:secrets` |
 | Performance analysis | `/rb:perf` |
 | Project health | `/rb:audit` |
-| Scan sessions for metrics | `/session-scan` |
-| Deep-analyze sessions | `/session-deep-dive` |
-| View session trends | `/session-trends` |
-| Monitor skill effectiveness | `/skill-monitor` |
-| Validate plugin against docs | `/docs-check` |
+| Scan sessions for exploratory metrics | `/session-scan` |
+| Deep-review session transcripts | `/session-deep-dive` |
+| View provider-scoped trends | `/session-trends` |
+| Monitor observational skill signals | `/skill-monitor` |
+| Validate plugin against cached docs | `/docs-check` |
 
 **Workflow Commands**: `/rb:plan` -> `/rb:brief` (optional) -> `/rb:plan --existing` (optional) -> `/rb:work` -> `/rb:brief` (optional) -> `/rb:review` -> `/rb:triage` (optional) -> `/rb:compound`
 
@@ -702,10 +702,15 @@ When working on code, automatically consult relevant reference documentation bef
 **Analysis**: `/rb:n1-check`, `/rb:state-audit`, `/rb:boundaries`, `/rb:trace`, `/rb:techdebt`
 
 **Session Analytics (dev-only, requires ccrider MCP)**: `/session-scan`, `/session-deep-dive`, `/session-trends`
+Use these as exploratory workflows. Prefer a single provider per run when you
+care about comparisons.
 
-**Skill Monitoring (dev-only)**: `/skill-monitor` — per-skill effectiveness dashboard and improvement recommendations
+**Skill Monitoring (dev-only)**: `/skill-monitor` — observational per-skill
+signals and recommendation triage, not release-grade proof
 
-**Plugin Maintenance (dev-only)**: `/docs-check` — validate plugin against latest Claude Code documentation
+**Plugin Maintenance (dev-only)**: `/docs-check` — validate plugin against the
+current cached Claude Code docs and separate real schema drift from stale local
+guidance
 
 ## Workflow Patterns (from Claude Code team)
 
@@ -780,11 +785,19 @@ Current `lab/eval/` scope:
 - deterministic trigger corpora and confusable-pair analysis
 - no model-judged behavioral routing yet
 
+For contributor workflows under `.claude/`, use this order:
+
+1. `claude plugin validate plugins/ruby-grape-rails`
+2. `make eval` or `make eval-all`
+3. `/docs-check` when Claude docs or local schema assumptions may have drifted
+4. session analytics only as corroborating, provider-scoped evidence
+
 ---
 
 ## Claude Code Features Under Evaluation
 
-Based on `/docs-check` validation against latest Claude Code docs, the following features are available but not yet adopted:
+Based on `/docs-check` validation against the current cached Claude Code docs,
+the following features are available but not yet adopted:
 
 ### Agent Features (Adopted)
 

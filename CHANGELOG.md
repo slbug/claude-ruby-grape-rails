@@ -41,6 +41,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   agents now score `1.0`, and the hottest overlap pairs dropped materially:
   `plan` vs `work` (`0.1739 -> 0.1209`), `review` vs `verify`
   (`0.1717 -> 0.1319`), and `verify` vs `work` (`0.1648 -> 0.1059`).
+- **Contributor docs-check now tracks the real cached Claude feature surface
+  more closely** — local docs-check guidance now uses `claude plugin validate`
+  as the baseline, prefers targeted cached-doc snippets over pasted megacontext,
+  prefers `Agent(...)` terminology, and recognizes current fields/events such
+  as skill `paths` / `shell`, hook `FileChanged`, and plugin `userConfig` /
+  `channels`.
+- **Contributor session analytics are now framed more honestly and scoped more
+  cleanly** — session-scan, deep-dive, trends, and skill-monitor now treat
+  transcript-derived metrics as exploratory, remove stale `MEMORY.md` /
+  historical-report dependencies, support provider-scoped analysis guidance,
+  and stop implying session chaining or fixed adoption baselines that the
+  current tooling does not actually implement.
 
 ## [1.6.0] - 2026-03-28
 
