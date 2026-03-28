@@ -79,6 +79,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **PreCompact no longer injects raw scratchpad dead-end text into system context** —
   compaction hints now reference dead-end counts and the scratchpad path while
   explicitly treating scratchpad content as untrusted repo notes.
+- **`scratchpad-lib.sh` now requires `workspace-root-lib.sh` explicitly** —
+  the shared scratchpad library no longer pretends to support standalone
+  temp-cleanup fallbacks when the root helper library is unavailable.
 - **Debug references no longer default to nuclear rebuilds** — investigate
   quick-command docs now prefer staged cache-clear / install / precompile
   steps instead of recommending broad `rm -rf` cleanup by default.

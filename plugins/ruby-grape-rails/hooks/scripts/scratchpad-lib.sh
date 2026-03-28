@@ -2,12 +2,6 @@
 set -o nounset
 set -o pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
-if [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]]; then
-  # shellcheck disable=SC1090,SC1091
-  source "$ROOT_LIB"
-fi
 if ! declare -F library_safe_return >/dev/null 2>&1; then
   library_safe_return() {
     local status="${1:-0}"
@@ -17,6 +11,12 @@ if ! declare -F library_safe_return >/dev/null 2>&1; then
     exit "$status"
   }
 fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || library_safe_return 0
+# shellcheck disable=SC1090,SC1091
+source "$ROOT_LIB"
 if [[ -z "${REPO_ROOT:-}" ]]; then
   if declare -F resolve_workspace_root >/dev/null 2>&1; then
     if [[ -n "${INPUT:-}" ]]; then
