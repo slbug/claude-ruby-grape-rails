@@ -61,12 +61,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   now use local cleanup functions instead of embedded quoted path patterns, and
   symlinked `ACTIVE_PLAN` markers are surfaced as manual-cleanup warnings
   rather than silently mishandled.
-- **Strict secret scans no longer truncate after 20 files** — the no-file-path
-  strict-mode secret scan now checks the full changed/tracked file set instead
-  of silently capping coverage.
+- **Strict secret scans now use a visible file budget instead of silent truncation** —
+  the no-file-path strict-mode secret scan now uses a configurable file cap
+  (`RUBY_PLUGIN_SECRET_SCAN_MAX_FILES`, default `200`) and emits a warning
+  when coverage is truncated.
 - **Workspace path canonicalization now follows symlink targets fully** —
   helper path checks now resolve the actual target path instead of only
   normalizing the parent directory.
+- **Active-plan marker read failures now fall back correctly** — transient
+  `.claude/ACTIVE_PLAN` read issues no longer suppress the normal plan-state
+  fallback heuristics.
+- **Resume progress summaries now count both `- [x]` and `- [X]`** —
+  checked-task reporting no longer undercounts uppercase Markdown checkboxes.
 - **SessionStart scratchpad checks are now read-only** — startup/resume no
   longer auto-creates missing `scratchpad.md` files just to report plan state.
 - **PreCompact no longer injects raw scratchpad dead-end text into system context** —

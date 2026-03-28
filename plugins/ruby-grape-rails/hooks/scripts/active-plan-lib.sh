@@ -126,27 +126,28 @@ get_active_plan() {
     local marked_plan
     if ! IFS= read -r marked_plan < "$ACTIVE_PLAN_MARKER"; then
       safe_remove_exact_file "$ACTIVE_PLAN_MARKER" "${CLAUDE_DIR}/ACTIVE_PLAN" || true
-      return 1
-    fi
-    marked_plan=$(resolve_plan_dir "$marked_plan") || marked_plan=""
+      marked_plan=""
+    else
+      marked_plan=$(resolve_plan_dir "$marked_plan") || marked_plan=""
 
-    # Validate: plan directory must exist
-    if is_valid_plan_dir "$marked_plan"; then
-      # Check if in planning phase (research exists, plan.md doesn't yet)
-      if [[ -d "$marked_plan/research" && ! -f "$marked_plan/plan.md" ]]; then
-        echo "$marked_plan"
-        return 0
+      # Validate: plan directory must exist
+      if is_valid_plan_dir "$marked_plan"; then
+        # Check if in planning phase (research exists, plan.md doesn't yet)
+        if [[ -d "$marked_plan/research" && ! -f "$marked_plan/plan.md" ]]; then
+          echo "$marked_plan"
+          return 0
+        fi
+
+        # Check if plan.md exists with unchecked tasks (work phase)
+        if [[ -f "$marked_plan/plan.md" ]] && grep -q '^\- \[ \]' "$marked_plan/plan.md" 2>/dev/null; then
+          echo "$marked_plan"
+          return 0
+        fi
       fi
 
-      # Check if plan.md exists with unchecked tasks (work phase)
-      if [[ -f "$marked_plan/plan.md" ]] && grep -q '^\- \[ \]' "$marked_plan/plan.md" 2>/dev/null; then
-        echo "$marked_plan"
-        return 0
-      fi
+      # Marker is stale (plan completed or invalid), remove it
+      safe_remove_exact_file "$ACTIVE_PLAN_MARKER" "${CLAUDE_DIR}/ACTIVE_PLAN" || true
     fi
-
-    # Marker is stale (plan completed or invalid), remove it
-    safe_remove_exact_file "$ACTIVE_PLAN_MARKER" "${CLAUDE_DIR}/ACTIVE_PLAN" || true
   fi
   
   # Fallback 1: Find most recent plan with unchecked tasks
