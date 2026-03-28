@@ -43,7 +43,7 @@ Each plan owns its implementation-state artifacts in a namespace directory:
 │   ├── research/              # Research agent output
 │   ├── summaries/             # Context-supervisor compressed output
 │   ├── progress.md            # Progress log
-│   └── scratchpad.md          # Auto-written decisions, dead-ends, handoffs
+│   └── scratchpad.md          # Structured dead ends, decisions, hypotheses, handoffs
 ├── audit/                     # Audit namespace (not plan-specific)
 │   ├── reports/               # 5 specialist agent outputs
 │   └── summaries/             # Supervisor compressed output
@@ -88,6 +88,7 @@ claude-ruby-grape-rails/
 │   │   └── techdebt.md
 │   └── skills/
 │       ├── docs-check/              # /docs-check — validate against Claude Code docs
+│       ├── plugin-dev-workflow/     # Contributor workflow for this repo
 │       ├── session-scan/            # /session-scan — Tier 1 metrics
 │       ├── session-deep-dive/       # /session-deep-dive — Tier 2 analysis
 │       ├── session-trends/          # /session-trends — trend reporting
@@ -98,7 +99,7 @@ claude-ruby-grape-rails/
 │   └── ruby-grape-rails/
 │       ├── .claude-plugin/
 │       │   └── plugin.json
-│       ├── agents/                  # 22 specialist agents
+│       ├── agents/                  # 23 specialist agents
 │       │   ├── workflow-orchestrator.md   # Full cycle coordination
 │       │   ├── planning-orchestrator.md
 │       │   ├── context-supervisor.md     # Generic output compressor (haiku)
@@ -247,6 +248,14 @@ Defined in `hooks/hooks.json`:
 - `SessionStart` (startup|resume only): Scratchpad check + resume workflow detection + workflow hints
 - `Stop`: Warn if plans have unchecked tasks
 - `StopFailure`: Append normalized API-failure context to the active plan scratchpad for better resume continuity
+
+**Deletion safety rule:**
+
+- use `rm -f` only for `mktemp` outputs or exact fixed plugin-owned paths
+- use `rm -rf` only for validated `mktemp -d` outputs
+- prefer `rmdir` for expected-empty lock directories
+- for variable-based cleanup, validate the path/prefix first and use
+  `${var:?}` in the final delete
 
 **Hook modes:**
 
@@ -750,12 +759,12 @@ Based on `/docs-check` validation against latest Claude Code docs, the following
 
 ### Agent Features (Adopted)
 
-- [x] **`effort` field** — Added to all 22 agents for cost optimization:
+- [x] **`effort` field** — Added to all 23 agents for cost optimization:
   - `low`: web-researcher, context-supervisor, verification-runner (mechanical tasks)
   - `medium`: dependency-analyzer, call-tracer, rails-patterns-analyst, rails-architect, ruby-reviewer,
     testing-reviewer, sidekiq-specialist, ruby-runtime-advisor, deployment-validator, iron-law-judge,
     data-integrity-reviewer, migration-safety-reviewer, active-record-schema-designer,
-    deep-bug-investigator, ruby-gem-researcher (specialist analysis)
+    deep-bug-investigator, ruby-gem-researcher, output-verifier (specialist analysis)
   - `high`: planning-orchestrator, workflow-orchestrator, security-analyzer, parallel-reviewer (orchestrators, security-critical)
 
 ### Agent Features (Under Evaluation)

@@ -498,8 +498,8 @@ if [[ "$VERIFY_COMPOSITE_AVAILABLE" == "true" && -n "$VERIFY_COMPOSITE_COMMAND" 
   echo "=== Project-native Verification ==="
   echo "Trying: $VERIFY_COMPOSITE_COMMAND"
 
-  WRAPPER_LOG=$(mktemp)
-  trap 'rm -f "$WRAPPER_LOG"' EXIT
+  WRAPPER_LOG=$(mktemp "${TMPDIR:-/tmp}/rb-verify-wrapper.XXXXXX")
+  trap 'rm -f -- "${WRAPPER_LOG:?}"' EXIT
 
   set +e
   bash -lc "$VERIFY_COMPOSITE_COMMAND" 2>&1 | tee "$WRAPPER_LOG"
@@ -750,8 +750,8 @@ if [[ "$VERIFY_COMPOSITE_AVAILABLE" == "true" && -n "$VERIFY_COMPOSITE_COMMAND" 
   echo "0/7 Project-native Verification..."
   echo "Trying: $VERIFY_COMPOSITE_COMMAND"
 
-  WRAPPER_LOG=$(mktemp)
-  trap 'rm -f "$WRAPPER_LOG"' EXIT
+  WRAPPER_LOG=$(mktemp "${TMPDIR:-/tmp}/rb-verify-wrapper.XXXXXX")
+  trap 'rm -f -- "${WRAPPER_LOG:?}"' EXIT
 
   set +e
   bash -lc "$VERIFY_COMPOSITE_COMMAND" 2>&1 | tee "$WRAPPER_LOG"

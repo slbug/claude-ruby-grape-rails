@@ -591,7 +591,12 @@ fi
 
 TMP_RUNTIME_ENV=$(mktemp "${CLAUDE_DIR}/.runtime_env.XXXXXX") || exit 0
 [[ -n "$TMP_RUNTIME_ENV" ]] || exit 0
-trap 'rm -f -- "$TMP_RUNTIME_ENV"' EXIT HUP INT TERM
+[[ "$TMP_RUNTIME_ENV" == "${CLAUDE_DIR}/.runtime_env."* ]] || exit 0
+# shellcheck disable=SC2329 # invoked via trap
+cleanup_runtime_env_tmp() {
+  safe_remove_temp_file "${TMP_RUNTIME_ENV:-}" "${CLAUDE_DIR}/.runtime_env.*" || true
+}
+trap cleanup_runtime_env_tmp EXIT HUP INT TERM
 
 {
   # Export detected values

@@ -18,6 +18,11 @@ INPUT=$(read_hook_input)
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 HOOK_MODE=$(resolve_hook_mode "$REPO_ROOT")
+STRICT_SCAN_MAX_FILES="${RUBY_PLUGIN_SECRET_SCAN_MAX_FILES:-200}"
+
+if [[ ! "$STRICT_SCAN_MAX_FILES" =~ ^[0-9]+$ ]] || [[ "$STRICT_SCAN_MAX_FILES" -le 0 ]]; then
+  STRICT_SCAN_MAX_FILES=200
+fi
 
 FILE_PATH=""
 FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || printf '')
@@ -68,6 +73,14 @@ emit_secret_warning() {
   echo "To ignore: add '#betterleaks:allow' comment to the line" >&2
 }
 
+emit_truncation_warning() {
+  local source_label="$1"
+  local limit="$2"
+
+  echo "⚠️  Strict secret scan truncated after ${limit} files from ${source_label}" >&2
+  echo "Run betterleaks manually for full coverage if needed." >&2
+}
+
 copy_into_tmpdir() {
   local source_file="$1"
   local tmp_dir="$2"
@@ -91,6 +104,32 @@ copy_into_tmpdir() {
   cp "$source_path" "$target_file"
 }
 
+copy_strict_scan_input() {
+  local tmp_dir="$1"
+  local source_label="$2"
+  local file
+  local local_resolved
+  local scanned=0
+  local truncated=false
+
+  while IFS= read -r file; do
+    [[ -n "$file" ]] || continue
+    scanned=$((scanned + 1))
+    if [[ "$scanned" -gt "$STRICT_SCAN_MAX_FILES" ]]; then
+      truncated=true
+      break
+    fi
+
+    local_resolved=$(resolve_workspace_file_path "$REPO_ROOT" "$file") || continue
+    is_path_within_root "$REPO_ROOT" "$local_resolved" || continue
+    copy_into_tmpdir "$local_resolved" "$tmp_dir" 2>/dev/null || true
+  done
+
+  if [[ "$truncated" == "true" ]]; then
+    emit_truncation_warning "$source_label" "$STRICT_SCAN_MAX_FILES"
+  fi
+}
+
 if [[ -z "$FILE_PATH" ]]; then
   # No specific file: only strict mode does broader recent-change scans.
   [[ "$HOOK_MODE" == "strict" ]] || exit 0
@@ -98,25 +137,18 @@ if [[ -z "$FILE_PATH" ]]; then
   if (cd "$REPO_ROOT" && git rev-parse --git-dir >/dev/null 2>&1); then
     TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/rb-secret-scan.XXXXXX") || exit 0
     [[ -n "$TMP_DIR" ]] || exit 0
+    [[ "$TMP_DIR" == "${TMPDIR:-/tmp}/rb-secret-scan."* ]] || exit 0
 
-    trap 'rm -rf -- "$TMP_DIR"' EXIT HUP INT TERM
+    # shellcheck disable=SC2329 # invoked via trap
+    cleanup_secret_scan_tmpdir() {
+      safe_remove_temp_dir "${TMP_DIR:-}" "${TMPDIR:-/tmp}/rb-secret-scan.*" || true
+    }
+    trap cleanup_secret_scan_tmpdir EXIT HUP INT TERM
 
     if (cd "$REPO_ROOT" && git rev-parse --verify HEAD >/dev/null 2>&1); then
-      while IFS= read -r file; do
-        local_resolved=""
-        [[ -n "$file" ]] || continue
-        local_resolved=$(resolve_workspace_file_path "$REPO_ROOT" "$file") || continue
-        is_path_within_root "$REPO_ROOT" "$local_resolved" || continue
-        copy_into_tmpdir "$local_resolved" "$TMP_DIR" 2>/dev/null || true
-      done < <(cd "$REPO_ROOT" && git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null | head -20)
+      copy_strict_scan_input "$TMP_DIR" "changed files" < <(cd "$REPO_ROOT" && git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null)
     else
-      while IFS= read -r file; do
-        local_resolved=""
-        [[ -n "$file" ]] || continue
-        local_resolved=$(resolve_workspace_file_path "$REPO_ROOT" "$file") || continue
-        is_path_within_root "$REPO_ROOT" "$local_resolved" || continue
-        copy_into_tmpdir "$local_resolved" "$TMP_DIR" 2>/dev/null || true
-      done < <(cd "$REPO_ROOT" && git ls-files 2>/dev/null | head -20)
+      copy_strict_scan_input "$TMP_DIR" "tracked files" < <(cd "$REPO_ROOT" && git ls-files 2>/dev/null)
     fi
 
     if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then

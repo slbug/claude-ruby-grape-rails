@@ -43,16 +43,19 @@ Verification is tiered to balance speed and safety:
 **Resume**: `/rb:work plan.md --from P2-T3`
 ```
 
-**Also write a DEAD-END entry** to the scratchpad so future
+**Also write a Dead Ends note** to the scratchpad so future
 sessions don't re-try the same failed approach:
 
 ```markdown
-### [HH:MM] DEAD-END: {task description}
-Tried: {approach attempted}. Failed because: {root cause}.
-Attempts: 3. See BLOCKER in progress.md for full error.
+- [HH:MM] {task description}
+  - Tried: {approach attempted}
+  - Failed because: {root cause}
+  - Attempts: 3
+  - See BLOCKER in progress.md for full error
 ```
 
-Append to `.claude/plans/{slug}/scratchpad.md`.
+Append under the existing `## Dead Ends` section in
+`.claude/plans/{slug}/scratchpad.md`.
 
 ## Recovery After BLOCKER
 

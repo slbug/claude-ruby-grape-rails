@@ -7,6 +7,91 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-03-28
+
+### Added
+
+- **Structured scratchpad template + hook support** — active plans now use a
+  canonical scratchpad structure with `Dead Ends`, `Decisions`,
+  `Hypotheses`, `Open Questions`, and `Handoff`, and the hook layer now
+  initializes missing scratchpads, highlights dead ends on resume, and
+  preserves dead-end context across compaction.
+- **T1-T5 source-quality tiers for web research** — `web-researcher` and
+  `/rb:research` now classify sources from authoritative (`T1`) through
+  rejected (`T5`), require visible tier tags in research output, and call out
+  source-quality mix in synthesis.
+- **`output-verifier` agent** — new internal verifier agent for
+  provenance-checking research briefs and review findings when they rely on
+  external or version-specific claims.
+- **Contributor `plugin-dev-workflow` skill** — new local `.claude` skill
+  documenting how to validate shipped plugin changes, keep release metadata
+  aligned, and maintain audit/roadmap files in this repo.
+
+### Changed
+
+- **Research and review workflows now support provenance sidecars** —
+  high-impact research and externally sourced review claims can now be checked
+  with `output-verifier` and saved as adjacent `.provenance.md` reports.
+- **Scratchpad guidance is now canonical across planning/workflow docs** —
+  planning, work, brief, and compound guidance now use the same section model
+  instead of mixed ad-hoc `DEAD-END` / `DECISION` entry styles.
+- **Scratchpad dead-end handling is now more precise** — hook-level dead-end
+  counts now track top-level entries instead of nested detail bullets, and the
+  compound/planning docs now point to the correct scratchpad template and a
+  working section-extraction example.
+- **Scratchpad examples are now less ambiguous** — multi-plan scratchpad
+  extraction examples label which file a block came from, and dead-end
+  examples now show only the entry body to reinforce appending under the
+  existing `## Dead Ends` section.
+- **Scratchpad handoff insertion now preserves literal note content** —
+  hook-written handoff notes no longer route arbitrary text through `awk -v`,
+  avoiding backslash escape corruption in persisted scratchpad context.
+- **Scratchpad creation now refuses non-regular existing targets** —
+  `ensure_scratchpad_file()` now bails if `scratchpad.md` already exists as a
+  directory, FIFO, or other non-file path instead of letting `mv -f` behave
+  unexpectedly.
+- **`ACTIVE_PLAN` marker writes now apply the same non-regular-path guard** —
+  the active-plan marker now refuses existing directory/FIFO-style targets
+  before replacing the marker file.
+- **Shell cleanup paths are now more defensive** — shipped hook scripts now
+  validate temp-file/temp-dir prefixes before deleting, refuse non-regular
+  existing targets for exact/temp file cleanup, prefer exact-path cleanup for
+  plugin-owned markers, and the verification examples now show the same safer
+  cleanup style.
+- **Cleanup hardening now avoids brittle trap quoting** — temp cleanup traps
+  now use local cleanup functions instead of embedded quoted path patterns, and
+  symlinked `ACTIVE_PLAN` markers are surfaced as manual-cleanup warnings
+  rather than silently mishandled.
+- **Strict secret scans now use a visible file budget instead of silent truncation** —
+  the no-file-path strict-mode secret scan now uses a configurable file cap
+  (`RUBY_PLUGIN_SECRET_SCAN_MAX_FILES`, default `200`) and emits a warning
+  when coverage is truncated.
+- **Workspace path canonicalization now follows symlink targets fully** —
+  helper path checks now resolve the actual target path instead of only
+  normalizing the parent directory.
+- **Active-plan marker read failures now fall back correctly** — transient
+  `.claude/ACTIVE_PLAN` read issues no longer suppress the normal plan-state
+  fallback heuristics.
+- **Symlinked `ACTIVE_PLAN` markers no longer disable plan auto-detection** —
+  the hook layer still warns about manual cleanup, but now continues into the
+  normal fallback heuristics instead of short-circuiting active-plan lookup.
+- **Resume progress summaries now count both `- [x]` and `- [X]`** —
+  checked-task reporting no longer undercounts uppercase Markdown checkboxes.
+- **SessionStart scratchpad checks are now read-only** — startup/resume no
+  longer auto-creates missing `scratchpad.md` files just to report plan state.
+- **PreCompact no longer injects raw scratchpad dead-end text into system context** —
+  compaction hints now reference dead-end counts and the scratchpad path while
+  explicitly treating scratchpad content as untrusted repo notes.
+- **`scratchpad-lib.sh` now requires `workspace-root-lib.sh` explicitly** —
+  the shared scratchpad library no longer pretends to support standalone
+  temp-cleanup fallbacks when the root helper library is unavailable.
+- **Debug references no longer default to nuclear rebuilds** — investigate
+  quick-command docs now prefer staged cache-clear / install / precompile
+  steps instead of recommending broad `rm -rf` cleanup by default.
+- **Release/docs metadata now reflects the expanded shipped surface** — the
+  plugin now ships `23` agents, `50` skills, `152` skill references, and `25`
+  hook scripts, and README / CLAUDE / intro content were updated to match.
+
 ## [1.4.0] - 2026-03-27
 
 ### Added

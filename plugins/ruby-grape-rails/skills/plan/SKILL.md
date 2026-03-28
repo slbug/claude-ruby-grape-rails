@@ -64,7 +64,8 @@ is clearly relevant:
   `rails-patterns-analyst`, `call-tracer`, or security/schema/job
   specialists just because a prior feature researched something
   similar
-- log reuse decisions in `.claude/plans/{slug}/scratchpad.md` as
+- log reuse decisions in `.claude/plans/{slug}/scratchpad.md` under
+  `## Decisions` → `### Research Cache Reuse` as
   `REUSED: {filename} -> skipped {agent}`
 - after fresh research completes, compress both new and reused inputs
   with `context-supervisor` into
@@ -274,7 +275,19 @@ plan-write time:
 
 Use the scratchpad to capture clarification answers, infrastructure
 discoveries, and research-cache reuse decisions before `plan.md`
-exists.
+exists. Use the canonical structure from
+`${CLAUDE_SKILL_DIR}/references/scratchpad-template.md`:
+
+- `## Decisions` → `### Clarifications`
+  - clarification answers and confirmed constraints
+- `## Decisions` → `### Research Cache Reuse`
+  - `REUSED:` entries for skipped duplicate research
+- `## Decisions` → `### Infrastructure`
+  - reusable project-setup discoveries
+- `## Hypotheses`
+  - ideas still being tested
+- `## Open Questions`
+  - unresolved issues that still block the plan
 
 **After creating the plan, set the active plan marker:**
 

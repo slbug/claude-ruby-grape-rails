@@ -16,6 +16,10 @@ LIB="${SCRIPT_DIR}/active-plan-lib.sh"
 [[ -r "$LIB" && ! -L "$LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091
 source "$LIB"
+SCRATCHPAD_LIB="${SCRIPT_DIR}/scratchpad-lib.sh"
+[[ -r "$SCRATCHPAD_LIB" && ! -L "$SCRATCHPAD_LIB" ]] || exit 0
+# shellcheck disable=SC1090,SC1091
+source "$SCRATCHPAD_LIB"
 
 ACTIVE_PLAN_DIR=$(get_active_plan) || exit 0
 [[ -n "$ACTIVE_PLAN_DIR" && -d "$ACTIVE_PLAN_DIR" ]] || exit 0
@@ -114,20 +118,17 @@ clear_stale_lock "$LOCK_DIR"
 if mkdir "$LOCK_DIR" 2>/dev/null; then
   trap 'rmdir -- "$LOCK_DIR" 2>/dev/null || true' EXIT HUP INT TERM
 
-  if [[ ! -e "$SCRATCHPAD_FILE" ]]; then
-    : > "$SCRATCHPAD_FILE" || exit 0
-  fi
-
+  ensure_scratchpad_file "$ACTIVE_PLAN_DIR" "$(get_plan_intent "$ACTIVE_PLAN_DIR" 2>/dev/null || true)" || exit 0
   [[ -f "$SCRATCHPAD_FILE" && ! -L "$SCRATCHPAD_FILE" ]] || exit 0
 
-  {
-    printf '\n'
-    printf '## API Failure — %s\n' "$(date '+%Y-%m-%d %H:%M')"
-    printf '\n'
-    printf "%s\n" "- Error type: \`$ERROR_TYPE\`"
-    printf -- '- Error message: %s\n' "$ERROR_MESSAGE"
-    printf "%s\n" "- Resume hint: $RESUME_HINT"
-  } >> "$SCRATCHPAD_FILE"
+  NOTE=$(cat <<EOF
+### $(date '+%Y-%m-%d %H:%M') API Failure
+- Error type: \`$ERROR_TYPE\`
+- Error message: $ERROR_MESSAGE
+- Resume hint: $RESUME_HINT
+EOF
+)
+  append_handoff_note "$SCRATCHPAD_FILE" "$NOTE" || exit 0
 fi
 
 exit 0

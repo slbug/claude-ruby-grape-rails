@@ -31,6 +31,7 @@ skills:
 - `ruby-runtime-advisor` for performance, memory, or hot path changes
 - `data-integrity-reviewer` for models, constraints, or transaction changes
 - `migration-safety-reviewer` for migrations adding columns or modifying tables
+- `output-verifier` when the final review makes external or version-specific claims that are not proven by the diff alone
 
 ## Review Rules
 
@@ -54,3 +55,5 @@ skills:
 - Reviewers MUST write an artifact even when the result is clean.
 - Do not allow reviewers to write artifacts under `.claude/plans/...`.
 - Synthesize the final consolidated review to `.claude/reviews/{review-slug}.md`.
+- When `output-verifier` is used, write its result as
+  `.claude/reviews/{review-slug}.provenance.md`.

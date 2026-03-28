@@ -2,7 +2,7 @@
 
 **Claude Code is great. But it doesn't know that `default_scope` will bite you later, that `t.float` will corrupt your money fields, or that your Sidekiq job isn't idempotent.**
 
-This plugin does. It coordinates **22 specialist agents** and **50 skills** that plan, implement,
+This plugin does. It coordinates **23 specialist agents** and **50 skills** that plan, implement,
 review, and verify your Ruby/Rails/Grape code in parallel -- each with domain
 expertise, fresh context, and enforced [Iron Laws](#iron-laws-non-negotiable-rules)
 that catch the bugs your tests won't. It is now stack-aware enough to handle
@@ -36,7 +36,7 @@ that prevent the mistakes Ruby developers actually make in production.
 │  💎 Ruby/Rails/Grape Plugin for Claude Code                         │
 │                                                                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
-│  │    22    │    50    │   100+   │    21    │    21    │           │
+│  │    23    │    50    │   100+   │    21    │    21    │           │
 │  │  Agents  │  Skills  │   Refs   │  Hooks   │Iron Laws │           │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘           │
 │                                                                     │
@@ -226,7 +226,7 @@ Every plan gets its own directory with its implementation-state artifacts:
 │   ├── research/          # Research agent output
 │   ├── summaries/         # Compressed multi-agent output
 │   ├── progress.md        # Session progress log
-│   └── scratchpad.md      # Auto-written decisions, dead-ends, handoffs
+│   └── scratchpad.md      # Structured dead ends, decisions, hypotheses, handoffs
 ├── research/              # Reusable cross-plan topic research
 ├── reviews/               # Review artifacts (per-agent + consolidated)
 └── solutions/             # Compound knowledge (reusable across plans)
@@ -238,7 +238,7 @@ Implementation state stays under one plan namespace; review artifacts stay consi
 
 ### Agent Hierarchy
 
-The plugin uses 22 agents organized into 3 tiers:
+The plugin uses 23 agents organized into 3 tiers:
 
 ```
                     ┌──────────────────────────────┐
@@ -571,7 +571,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | `/rb:audit`          | Full project health audit with 5 parallel agents  |
 | `/rb:challenge`      | Rigorous review mode ("grill me")                 |
 
-## Agents (22)
+## Agents (23)
 
 | Agent                             | Model  | Memory  | Role                                         |
 | --------------------------------- | ------ | ------- | -------------------------------------------- |
@@ -583,6 +583,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | **security-analyzer**             | opus   | --      | OWASP vulnerability scanning                 |
 | **context-supervisor**            | haiku  | --      | Multi-agent output compression               |
 | **verification-runner**           | haiku  | --      | zeitwerk:check, format, test                 |
+| **output-verifier**               | sonnet | --      | Provenance checks for research/review claims |
 | **iron-law-judge**                | sonnet | --      | Pattern-based Iron Law detection             |
 | **dependency-analyzer**           | sonnet | --      | Module dependency & dead code analysis       |
 | **ruby-gem-researcher**           | sonnet | --      | RubyGems library evaluation                  |
@@ -594,7 +595,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | **sidekiq-specialist**            | sonnet | --      | Job idempotency, error handling              |
 | **ruby-runtime-advisor**          | sonnet | --      | Performance, memory, concurrency             |
 | **deployment-validator**          | sonnet | --      | Docker, Kubernetes, Fly.io config            |
-| **web-researcher**                | sonnet | --      | Ruby Weekly, docs, GitHub research           |
+| **web-researcher**                | haiku  | --      | Tiered-source docs and GitHub research       |
 | **data-integrity-reviewer**       | sonnet | --      | Data consistency and constraint validation   |
 | **migration-safety-reviewer**     | sonnet | --      | Migration safety and rollback review         |
 

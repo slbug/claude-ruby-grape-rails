@@ -132,6 +132,28 @@ Research in this order:
    - Blog posts (check author credibility)
    - Reddit discussions
 
+## Source Quality Rules
+
+Classify sources as part of the final synthesis:
+
+- `T1` authoritative primary sources
+  - official docs, source code, changelogs, release notes
+- `T2` first-party ecosystem sources
+  - maintainer posts, maintainer comments, official conference talks
+- `T3` credible community sources
+  - high-quality blogs, issue threads, talks with working examples
+- `T4` low-confidence sources
+  - SEO listicles, uncited summaries, generic aggregators
+- `T5` rejected sources
+  - dead links, fabricated URLs, inaccessible sources without evidence
+
+Rules:
+
+- every cited source should carry `[T1]`, `[T2]`, etc.
+- recommendations should say what quality mix they rely on
+- conflicts should mention source tier when choosing which claim to trust
+- T4/T5 material should never be the sole basis for a recommendation
+
 ## File-First Output Pattern
 
 Write reusable cross-plan research to `.claude/research/{topic-slug}.md`:
@@ -152,8 +174,8 @@ Last Updated: {YYYY-MM-DD}
 **Question**: [what we researched]
 
 **Sources**:
-- Source 1 - <official-docs-url> - [relevance]
-- Source 2 - <source-code-or-changelog-url> - [relevance]
+- [T1] Source 1 - <official-docs-url> - [relevance]
+- [T1] Source 2 - <source-code-or-changelog-url> - [relevance]
 
 **Key Points**:
 - [Finding 1]
@@ -201,6 +223,8 @@ Last Updated: {YYYY-MM-DD}
 
 **Recommended**: Option B
 
+**Source quality**: Based on {n} T1, {n} T2, and {n} T3 sources.
+
 **Rationale**:
 1. [reason]
 2. [reason]
@@ -221,6 +245,30 @@ Last Updated: {YYYY-MM-DD}
 ## Sources
 - [Full citation list]
 ```
+
+## Provenance Check
+
+For high-impact research, verify the draft before final recommendation.
+
+Use `output-verifier` when the research will drive:
+
+- a gem adoption or rejection decision
+- an upgrade plan
+- a security-sensitive recommendation
+- a version-specific implementation choice
+- a recommendation supported partly by T3 sources
+
+When you use it:
+
+1. Write the draft research artifact first.
+2. Spawn `output-verifier` against that artifact.
+3. Save the verifier result alongside the research as:
+   - `.claude/research/{topic-slug}.provenance.md` for reusable research
+   - `.claude/plans/{slug}/research/{topic-slug}.provenance.md` for plan-local research
+4. Apply the report:
+   - remove unsupported claims
+   - soften weakly sourced claims
+   - call out unresolved conflicts explicitly
 
 ## Reuse Rules
 

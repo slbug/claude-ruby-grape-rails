@@ -143,20 +143,50 @@ canonicalize_existing_path() {
   local dir
   local base
   local resolved_dir
+  local target
+  local depth=0
 
   [[ -n "$path" ]] || return 1
   [[ -e "$path" ]] || return 1
+  command -v readlink >/dev/null 2>&1 || return 1
 
-  dir=$(path_dirname "$path") || return 1
-  base=$(path_basename "$path") || return 1
-  [[ -d "$dir" ]] || return 1
-
-  resolved_dir=$(cd "$dir" >/dev/null 2>&1 && pwd -P) || return 1
-  if [[ "$base" == "/" ]]; then
-    printf '%s\n' "$resolved_dir"
-    return 0
+  if [[ "$path" != /* ]]; then
+    path="${PWD}/${path#./}"
   fi
-  printf '%s/%s\n' "$resolved_dir" "$base"
+
+  while :; do
+    depth=$((depth + 1))
+    [[ "$depth" -le 40 ]] || return 1
+
+    dir=$(path_dirname "$path") || return 1
+    base=$(path_basename "$path") || return 1
+    [[ -d "$dir" ]] || return 1
+
+    resolved_dir=$(cd "$dir" >/dev/null 2>&1 && pwd -P) || return 1
+    if [[ "$base" == "/" ]]; then
+      printf '%s\n' "$resolved_dir"
+      return 0
+    fi
+
+    path="${resolved_dir}/${base}"
+
+    if [[ -L "$path" ]]; then
+      target=$(readlink "$path") || return 1
+      [[ -n "$target" ]] || return 1
+
+      if [[ "$target" == /* ]]; then
+        path="$target"
+      else
+        path="${resolved_dir}/${target#./}"
+      fi
+
+      [[ -e "$path" ]] || return 1
+      continue
+    fi
+
+    printf '%s\n' "$path"
+    return 0
+  done
 }
 
 resolve_workspace_file_path() {
@@ -206,6 +236,50 @@ resolve_workspace_root() {
   fi
 
   resolve_project_root_from_dir "${PWD:-.}"
+}
+
+safe_remove_exact_file() {
+  local path="${1:-}"
+  local expected="${2:-}"
+
+  [[ -n "$path" && -n "$expected" ]] || return 0
+  [[ "$path" == "$expected" ]] || return 1
+  [[ ! -e "$path" ]] && return 0
+  [[ -f "$path" && ! -L "$path" ]] || return 1
+
+  rm -f -- "${path:?}"
+}
+
+safe_remove_temp_file() {
+  local path="${1:-}"
+  local pattern="${2:-}"
+
+  [[ -n "$path" && -n "$pattern" ]] || return 0
+  # shellcheck disable=SC2254 # intentional glob match against validated temp-file prefix
+  case "$path" in
+    $pattern) ;;
+    *) return 1 ;;
+  esac
+  [[ ! -e "$path" ]] && return 0
+  [[ -f "$path" && ! -L "$path" ]] || return 1
+
+  rm -f -- "${path:?}"
+}
+
+safe_remove_temp_dir() {
+  local path="${1:-}"
+  local pattern="${2:-}"
+
+  [[ -n "$path" && -n "$pattern" ]] || return 0
+  # shellcheck disable=SC2254 # intentional glob match against validated temp-dir prefix
+  case "$path" in
+    $pattern) ;;
+    *) return 1 ;;
+  esac
+  [[ ! -e "$path" ]] && return 0
+  [[ -d "$path" && ! -L "$path" ]] || return 1
+
+  rm -rf -- "${path:?}"
 }
 
 normalize_hook_mode() {

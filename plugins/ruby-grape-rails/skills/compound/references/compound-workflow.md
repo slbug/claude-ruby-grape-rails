@@ -27,10 +27,15 @@ Extract: module=UserListController, symptom=N+1, root_cause=missing includes
 
 Check these sources in order:
 
-1. **Scratchpad DEAD-END and DECISION entries**:
+1. **Scratchpad `Dead Ends` and `Decisions` sections**:
 
    ```bash
-   grep -A 5 "DEAD-END\|DECISION" .claude/plans/*/scratchpad.md 2>/dev/null | tail -20
+   awk '
+     /^## Dead Ends$/ { section = "dead_ends"; print "---- " FILENAME " (Dead Ends) ----"; next }
+     /^## Decisions$/ { section = "decisions"; print "---- " FILENAME " (Decisions) ----"; next }
+     /^## / { section = ""; next }
+     section == "dead_ends" || section == "decisions" { print }
+   ' .claude/plans/*/scratchpad.md 2>/dev/null | tail -40
    ```
 
 2. **Recent git changes**:
