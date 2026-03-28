@@ -45,9 +45,18 @@ def read_only_tools_coherent(content: str, **_: Any) -> tuple[bool, str]:
         tools = [tools]
     if isinstance(disallowed, str):
         disallowed = [disallowed]
-    if "Read" in tools and ("Write" in disallowed or "Edit" in disallowed or "NotebookEdit" in disallowed):
+    write_like_tools = {"Write", "Edit", "NotebookEdit"}
+
+    if "Read" not in tools:
+        return True, "no read tool; read-only coherence not applicable"
+
+    if "Write" in tools:
+        return True, "agent has explicit write access; not treated as read-only"
+
+    if write_like_tools.intersection(disallowed):
         return True, "read-oriented restrictions present"
-    return True, "no read-only inconsistency detected"
+
+    return False, "Read tool present without disallowing write-capable tools"
 
 
 MATCHERS = {

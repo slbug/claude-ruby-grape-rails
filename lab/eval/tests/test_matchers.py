@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from lab.eval import agent_matchers
 from lab.eval import matchers
 
 
@@ -37,6 +38,40 @@ class MatcherTests(unittest.TestCase):
     def test_description_structure(self) -> None:
         passed, _ = matchers.description_structure(SAMPLE)
         self.assertTrue(passed)
+
+    def test_no_dangerous_patterns_catches_rm_rf_root(self) -> None:
+        passed, evidence = matchers.no_dangerous_patterns("rm -rf /")
+        self.assertFalse(passed)
+        self.assertIn("rm", evidence)
+
+    def test_read_only_tools_coherent_requires_write_blocks_for_read_only_agents(self) -> None:
+        content = """---
+name: sample-agent
+description: Review Ruby code carefully with read-only restrictions.
+tools:
+  - Read
+  - Grep
+disallowedTools:
+  - Write
+  - Edit
+  - NotebookEdit
+---
+"""
+        passed, _ = agent_matchers.read_only_tools_coherent(content)
+        self.assertTrue(passed)
+
+    def test_read_only_tools_coherent_fails_when_read_only_agent_lacks_disallowed_write_tools(self) -> None:
+        content = """---
+name: sample-agent
+description: Review Ruby code carefully with read-only restrictions.
+tools:
+  - Read
+  - Grep
+---
+"""
+        passed, evidence = agent_matchers.read_only_tools_coherent(content)
+        self.assertFalse(passed)
+        self.assertIn("Read tool present", evidence)
 
 
 if __name__ == "__main__":

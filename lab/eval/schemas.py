@@ -16,10 +16,10 @@ class EvalCheck:
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> "EvalCheck":
-      data = dict(raw)
-      check_type = data.pop("type", data.pop("check_type", ""))
-      description = data.pop("desc", data.pop("description", ""))
-      return cls(check_type=check_type, description=description, params=data)
+        data = dict(raw)
+        check_type = data.pop("type", data.pop("check_type", ""))
+        description = data.pop("desc", data.pop("description", ""))
+        return cls(check_type=check_type, description=description, params=data)
 
 
 @dataclass

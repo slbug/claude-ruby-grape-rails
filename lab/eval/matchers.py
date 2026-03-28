@@ -256,7 +256,13 @@ def valid_file_refs(content: str, skill_path: str = "", **_: Any) -> tuple[bool,
 
 
 def no_dangerous_patterns(content: str, **_: Any) -> tuple[bool, str]:
-    patterns = [r"rm -rf /\b", r"git reset --hard", r"curl\s+[^|]+\|\s*sh", r"sudo\s+rm"]
+    patterns = [
+        r"rm\s+-rf\s+/",
+        r"rm\s+-fr\s+/",
+        r"git reset --hard",
+        r"curl\s+[^|]+\|\s*sh",
+        r"sudo\s+rm",
+    ]
     hits = [pattern for pattern in patterns if re.search(pattern, content)]
     return not hits, "no catastrophic patterns" if not hits else f"dangerous patterns: {hits}"
 

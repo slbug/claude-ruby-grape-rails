@@ -5,19 +5,16 @@
 
 set -euo pipefail
 
-SCAN_TARGETS="plugins .claude README.md CLAUDE.md"
+SCAN_TARGETS=(plugins .claude README.md CLAUDE.md)
 # shellcheck disable=SC2016
-PATTERN='(^|[[:space:]\-:>])!\`[^`]+\`'
+PATTERN='(^|[^[:alnum:]_`])!`[^`]+`'
 FOUND=0
 
-for target in $SCAN_TARGETS; do
-  if [[ ! -e "$target" ]]; then
-    continue
-  fi
+scan_file() {
+  local file="$1"
+  local matches
 
-  matches=$(
-    grep -ERn --include='*.md' --include='*.json' "$PATTERN" "$target" 2>/dev/null || true
-  )
+  matches=$(grep -En -- "$PATTERN" "$file" 2>/dev/null || true)
 
   if [[ -n "$matches" ]]; then
     echo "BLOCKED: Dynamic context injection found:"
@@ -25,7 +22,29 @@ for target in $SCAN_TARGETS; do
     echo
     FOUND=1
   fi
-done
+}
+
+if git rev-parse --git-dir >/dev/null 2>&1; then
+  while IFS= read -r -d '' file; do
+    case "$file" in
+      *.md|*.json) ;;
+      *) continue ;;
+    esac
+    [[ -f "$file" ]] || continue
+    scan_file "$file"
+  done < <(git ls-files -z -- "${SCAN_TARGETS[@]}")
+else
+  for target in "${SCAN_TARGETS[@]}"; do
+    if [[ ! -e "$target" ]]; then
+      continue
+    fi
+
+    while IFS= read -r file; do
+      [[ -n "$file" && -f "$file" ]] || continue
+      scan_file "$file"
+    done < <(find "$target" -type f \( -name '*.md' -o -name '*.json' \) 2>/dev/null || true)
+  done
+fi
 
 if [[ "$FOUND" -eq 1 ]]; then
   echo "========================================="

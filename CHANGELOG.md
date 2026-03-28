@@ -59,6 +59,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Tutorial section anchors are now renderer-stable** — the `/rb:intro`
   tutorial content now uses `and`-based headings and matching links instead of
   `&`-dependent anchor slugs.
+- **Eval safety checks now catch more real issues** — the eval harness now
+  detects `rm -rf /`-style patterns correctly, the dynamic-injection guard
+  flags `!\`command\`` inside tracked JSON as well as Markdown, and agent
+  tool-coherence scoring can now fail for read-oriented agents that forgot to
+  block write-capable tools.
+- **Contributor scripts are now harder to misuse** — the Iron Laws content
+  generator now uses `YAML.safe_load` with explicit top-level shape checks, the
+  secret-scan hook no longer calls helper logic before it is defined, and the
+  eval-test wrapper is directly executable as well as callable via `bash`.
 
 ## [1.5.0] - 2026-03-28
 
