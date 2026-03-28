@@ -1,0 +1,16 @@
+{
+  "skill": "skill-name",
+  "skill_path": "plugins/ruby-grape-rails/skills/skill-name/SKILL.md",
+  "dimensions": {
+    "completeness": {
+      "weight": 0.2,
+      "checks": [
+        {
+          "type": "frontmatter_field",
+          "field": "name",
+          "desc": "Has command name"
+        }
+      ]
+    }
+  }
+}

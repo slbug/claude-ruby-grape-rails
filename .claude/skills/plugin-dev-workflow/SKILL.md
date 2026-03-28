@@ -43,9 +43,23 @@ Run the checks that match the files you touched:
   - `ruby -c <file>`
 - Shipped plugin shape:
   - `claude plugin validate plugins/ruby-grape-rails`
+- Contributor eval tooling:
+  - `make eval`
+  - `make eval-all`
+  - `make eval-ci`
+  - `make security-injection`
+  - `make eval-tests`
+  - `make eval-overlap`
+  - `make eval-hard-corpus`
 
 If multiple shipped surfaces changed, run the plugin validator plus the
 file-type-specific checks.
+
+When `lab/eval/` changes, also run:
+
+- `python3 -m compileall lab/eval`
+- `bash scripts/run-eval-tests.sh`
+- `python3 -m pytest lab/eval/tests -v` when `pytest` is installed
 
 ## Release Discipline
 

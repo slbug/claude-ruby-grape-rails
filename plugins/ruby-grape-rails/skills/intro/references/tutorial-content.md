@@ -8,10 +8,10 @@ IMPORTANT: Present ALL content in each section — every paragraph, table, and c
 
 - [Section 1: Welcome](#section-1-welcome)
 - [Section 2: Core Workflow Commands](#section-2-core-workflow-commands)
-- [Section 3: Knowledge & Safety Net](#section-3-knowledge--safety-net)
-- [Section 4: Hooks & Behavioral Rules](#section-4-hooks--behavioral-rules)
-- [Section 5: Init, Review & Gaps](#section-5-init-review--gaps)
-- [Section 6: Cheat Sheet & Next Steps](#section-6-cheat-sheet--next-steps)
+- [Section 3: Knowledge and Safety Net](#section-3-knowledge-and-safety-net)
+- [Section 4: Hooks and Behavioral Rules](#section-4-hooks-and-behavioral-rules)
+- [Section 5: Init, Review and Gaps](#section-5-init-review-and-gaps)
+- [Section 6: Cheat Sheet and Next Steps](#section-6-cheat-sheet-and-next-steps)
 
 ---
 
@@ -104,7 +104,7 @@ This spawns specialist agents to analyze your existing plan and enhance it with 
 
 ---
 
-## Section 3: Knowledge & Safety Net
+## Section 3: Knowledge and Safety Net
 
 ### Context-Aware Knowledge
 
@@ -177,7 +177,7 @@ The plugin automatically prefers runtime tooling tools over alternatives when av
 
 ---
 
-## Section 4: Hooks & Behavioral Rules
+## Section 4: Hooks and Behavioral Rules
 
 The plugin uses **layered enforcement** — some things run automatically, some depend on Claude following instructions, some are on-demand. Here's what actually happens:
 
@@ -235,7 +235,7 @@ Running `/rb:init` significantly improves this.
 
 ---
 
-## Section 5: Init, Review & Gaps
+## Section 5: Init, Review and Gaps
 
 ### Layer 4: `/rb:init` (Strengthens Everything)
 
@@ -301,7 +301,7 @@ The plugin works best when all layers are active: `/rb:init` for persistent rule
 
 ---
 
-## Section 6: Cheat Sheet & Next Steps
+## Section 6: Cheat Sheet and Next Steps
 
 ### Command Reference
 

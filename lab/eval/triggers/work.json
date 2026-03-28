@@ -1,0 +1,23 @@
+{
+  "skill": "work",
+  "should_trigger": [
+    { "prompt": "Implement the unchecked tasks in this plan and stop at blockers" },
+    { "prompt": "Continue the active Ruby plan and make the code changes" },
+    { "prompt": "Work through this refactor plan task by task" },
+    { "prompt": "Resume execution from the current plan checklist" }
+  ],
+  "should_not_trigger": [
+    { "prompt": "Write a multi-file plan before we touch code" },
+    { "prompt": "Review the branch and list findings first" },
+    { "prompt": "Run the verification stack and tell me what fails" },
+    { "prompt": "Research whether this gem is still the best option" }
+  ],
+  "hard_should_trigger": [
+    { "prompt": "The plan exists already; start implementing it and keep verification scoped", "axis": "confusable" },
+    { "prompt": "Pick up from the current scratchpad and continue the changes", "axis": "context_dependent" }
+  ],
+  "hard_should_not_trigger": [
+    { "prompt": "I only need the implementation plan tightened up before any edits", "axis": "confusable" },
+    { "prompt": "I think the code is done; just do the final review and verification pass", "axis": "multi_step" }
+  ]
+}

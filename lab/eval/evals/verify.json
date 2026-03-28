@@ -1,0 +1,53 @@
+{
+  "skill": "verify",
+  "skill_path": "plugins/ruby-grape-rails/skills/verify/SKILL.md",
+  "dimensions": {
+    "completeness": {
+      "weight": 0.22,
+      "checks": [
+        { "type": "frontmatter_field", "field": "name", "expected": "rb:verify", "desc": "Has rb:verify name" },
+        { "type": "section_exists", "section": "Iron Laws", "desc": "Has Iron Laws" },
+        { "type": "section_exists", "section": "Tool Selection Policy", "desc": "Has tool policy" },
+        { "type": "content_present", "pattern": "Verification Stack", "desc": "Has verification stack" }
+      ]
+    },
+    "accuracy": {
+      "weight": 0.19,
+      "checks": [
+        { "type": "valid_skill_refs", "desc": "Valid skill refs" },
+        { "type": "valid_agent_refs", "desc": "Valid agent refs" },
+        { "type": "content_present", "pattern": "VERIFY_COMPOSITE_AVAILABLE|LEFTHOOK_|PRONTO_AVAILABLE", "desc": "Reflects runtime state" }
+      ]
+    },
+    "conciseness": {
+      "weight": 0.13,
+      "checks": [
+        { "type": "line_count", "target": 220, "tolerance": 260, "desc": "Reasonable length" },
+        { "type": "max_section_lines", "max": 85, "desc": "Section size controlled" }
+      ]
+    },
+    "triggering": {
+      "weight": 0.14,
+      "checks": [
+        { "type": "description_length", "min": 90, "max": 320, "desc": "Description length" },
+        { "type": "description_keywords", "min": 5, "desc": "Verify keywords" }
+      ]
+    },
+    "safety": {
+      "weight": 0.14,
+      "checks": [
+        { "type": "has_iron_laws", "min_count": 4, "desc": "Iron laws" },
+        { "type": "content_present", "pattern": "Never skip security scans|Never ignore Zeitwerk", "desc": "Has explicit prohibitions" },
+        { "type": "no_dangerous_patterns", "desc": "No catastrophic patterns" }
+      ]
+    },
+    "clarity": {
+      "weight": 0.18,
+      "checks": [
+        { "type": "action_density", "min_ratio": 0.14, "desc": "Action density" },
+        { "type": "specificity_ratio", "min_ratio": 0.14, "desc": "Concrete guidance" },
+        { "type": "workflow_step_coverage", "min_sections": 5, "desc": "Workflow structure" }
+      ]
+    }
+  }
+}

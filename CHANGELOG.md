@@ -7,6 +7,59 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-03-28
+
+### Added
+
+- **Deterministic contributor eval foundation (`lab/eval/`)** — added a
+  stdlib-only Python scoring framework for contributor use, including skill
+  scoring, agent scoring, trigger corpus validation, baselines, comparison,
+  confusable-pair analysis, hard-corpus generation, and deterministic stress
+  checks.
+- **Core skill eval definitions** — shipped dedicated eval JSON files for the
+  highest-leverage skills: `plan`, `work`, `review`, `verify`, `permissions`,
+  and `research`.
+- **Trigger corpora for core workflows** — added deterministic trigger sets for
+  the same six skills, plus tooling to validate them and surface confusable
+  pairs.
+- **Contributor entrypoints** — added `Makefile` targets and matching
+  `package.json` scripts for eval, baseline creation, comparison, overlap
+  analysis, hard-corpus generation, stress checks, and eval tests.
+- **Dynamic context injection guard** — added
+  `scripts/check-dynamic-injection.sh` plus contributor entrypoints to block
+  tracked plugin files from using `!\`command\`` context injection syntax.
+
+### Changed
+
+- **Contributor docs now describe the eval workflow explicitly** — README,
+  CLAUDE, and `plugin-dev-workflow` now point contributors to the `lab/eval`
+  commands and clarify that this is contributor-only infrastructure, not a new
+  shipped runtime feature.
+- **Core skill routing surfaces were tightened from eval findings** —
+  `plan`, `work`, `review`, `verify`, `permissions`, and `research` now have
+  stronger trigger descriptions, corrected references, explicit Iron Laws where
+  expected, and leaner main skill bodies. Large verification/checklist examples
+  moved into references so the primary routing surface stays focused.
+- **Eval runner ergonomics now match the contributor workflow better** —
+  `npm run eval` / `make eval` now lint tracked Markdown, run the injection
+  guard, and score changed surfaces by default, while `eval-all`, `eval-ci`,
+  `eval-skills`, `eval-agents`, and `eval-triggers` expose clearer targeted
+  modes.
+- **Contributor eval tests now support pytest cleanly** — the repo now ships
+  `pytest.ini`, explicit `pytest` test commands, and a default eval-test
+  wrapper that prefers `pytest` when installed while keeping the existing
+  `unittest` path working.
+- **`/rb:state-audit` examples now prefer `rg` over brittle `grep -r`
+  patterns** — state-audit guidance now avoids shell-globstar-dependent
+  examples and uses faster ripgrep commands instead.
+- **Secret scan missing-tool behavior now surfaces real gaps more clearly** —
+  secret scanning still soft-fails when Betterleaks is absent, but strict mode
+  or secret-looking edits now emit an explicit warning instead of skipping
+  silently.
+- **Tutorial section anchors are now renderer-stable** — the `/rb:intro`
+  tutorial content now uses `and`-based headings and matching links instead of
+  `&`-dependent anchor slugs.
+
 ## [1.5.0] - 2026-03-28
 
 ### Added

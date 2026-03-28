@@ -1,6 +1,6 @@
 ---
 name: rb:plan
-description: Use for any multi-file feature, new boundary, risky refactor, background job workflow, API change, or database change that benefits from upfront design. Also accepts review files and existing plans.
+description: Use for Ruby/Rails/Grape multi-file features, sidekiq workflows, API changes, database changes, or risky refactors that need upfront design before work, review, and verification. Also accepts review files and existing plans.
 argument-hint: <feature description OR path to review/plan file>
 disable-model-invocation: true
 effort: high

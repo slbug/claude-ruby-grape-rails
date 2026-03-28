@@ -1,0 +1,5 @@
+baselines/
+results/
+triggers/_confusable_pairs.json
+triggers/_hard_corpus.json
+triggers/_latest_summary.json

@@ -36,8 +36,19 @@ if [[ -z "$BETTERLEAKS_PATH" ]] && command -v betterleaks >/dev/null 2>&1; then
   BETTERLEAKS_PATH=$(command -v betterleaks)
 fi
 
+emit_missing_betterleaks_warning() {
+  local target="$1"
+
+  echo "⚠️  Betterleaks not available; secret scan skipped for ${target}" >&2
+  echo "Install betterleaks or set BETTERLEAKS_PATH to restore secret scanning." >&2
+}
+
 if [[ -z "$BETTERLEAKS_PATH" || ! -x "$BETTERLEAKS_PATH" ]]; then
-  # Betterleaks not available, skip silently
+  if [[ "$HOOK_MODE" == "strict" ]] || input_has_secret_indicators; then
+    emit_missing_betterleaks_warning "${FILE_PATH:-this change}"
+    exit 2
+  fi
+
   exit 0
 fi
 
