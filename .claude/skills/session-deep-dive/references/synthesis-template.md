@@ -1,74 +1,74 @@
 # Cross-Session Synthesis Template
 
-Synthesize findings from multiple session analysis reports into a
-trend-aware summary that compares against known patterns.
+Synthesize multiple session-analysis reports into a cautious, evidence-backed
+summary.
 
 ## Inputs
 
-1. **Per-session reports** (from analysis-template-v2)
-2. **Previous synthesis report** (for trend comparison)
-3. **MEMORY.md** (for known findings baseline)
+Use only real inputs that exist:
 
-## Synthesis Sections
+1. per-session analysis reports
+2. previous synthesis reports, if present
+3. contributor-supplied notes via `--compare`, if present
+4. recent deterministic signals such as `lab/eval`, when relevant
 
-### 1. Confirmed Patterns
+Do not depend on `MEMORY.md` or old local report artifacts that are not tracked.
 
-Patterns seen in previous reports/MEMORY.md that are still present.
+## Sections
 
-| Pattern | Previous Count | New Count | Total | Trend |
-|---------|---------------|-----------|-------|-------|
-| Zero skill auto-loading | 137 | +5 | 142 | Stable |
-| PR review workflow demand | 9 | +2 | 11 | Growing |
+### 1. Repeated Patterns
 
-Only include patterns with STRONG or MODERATE evidence in new sessions.
-
-### 2. New Patterns
-
-Patterns not found in previous reports or MEMORY.md.
+Patterns that appear again in the new set.
 
 | Pattern | Sessions | Evidence | Strength |
 |---------|----------|----------|----------|
-| {new finding} | 3 | {citations} | STRONG |
+| stale docs-check guidance | 3 | report citations | STRONG |
 
-Require at least 2 sessions OR 1 session with STRONG evidence.
+### 2. New Patterns
 
-### 3. Resolved Patterns
+Patterns not seen in earlier synthesis notes or not previously tracked.
 
-Previously noted patterns with no new occurrences.
+| Pattern | Sessions | Evidence | Strength |
+|---------|----------|----------|----------|
 
-| Pattern | Last Seen | Sessions Since | Status |
-|---------|-----------|----------------|--------|
-| {old issue} | 2026-01-15 | 12 | Likely resolved |
+Require either:
 
-### 4. Actionable Recommendations
+- at least 2 sessions, or
+- 1 session with unusually strong direct evidence
 
-Max 5 recommendations, ordered by evidence strength × impact.
+### 3. Resolved or Weakened Patterns
 
-| # | Recommendation | Evidence | Impact | Effort |
-|---|----------------|----------|--------|--------|
-| 1 | {what to do} | {N sessions, strength} | High | Low |
+Patterns previously reported that no longer appear or appear much less often.
 
-Each recommendation must cite specific sessions and evidence.
+| Pattern | Previous Evidence | Current Evidence | Interpretation |
+|---------|-------------------|------------------|----------------|
 
-### 5. Updated Statistics
+### 4. Corroboration
 
-| Metric | Previous | Current | Delta |
-|--------|----------|---------|-------|
-| Total sessions analyzed | 160 | 165 | +5 |
-| Avg friction score | 0.22 | 0.24 | +0.02 |
-| Plugin adoption rate | 8% | 10% | +2% |
-| Tier 2 eligible rate | 30% | 28% | -2% |
-| Most common fingerprint | bug-fix | bug-fix | — |
+For each important cross-session claim, state whether it is corroborated by:
 
-### 6. MEMORY.md Update Suggestions
+- `lab/eval`
+- docs-check findings
+- deterministic plugin validation
+- transcript evidence only
 
-List specific edits to MEMORY.md based on findings:
+Use this section to prevent observational claims from sounding stronger than
+they are.
 
-- **Add**: {new confirmed pattern to add}
-- **Update**: {existing entry with new data}
-- **Remove**: {pattern that appears resolved}
+### 5. Recommendations
 
-## Output Format
+Maximum 5 recommendations, ordered by evidence strength and likely impact.
 
-Write as structured markdown. Every claim must cite sessions.
-Keep under 150 lines. Focus on actionable, evidence-backed findings.
+| # | Recommendation | Evidence | Confidence | Effort |
+|---|----------------|----------|------------|--------|
+
+### 6. Follow-Up Notes
+
+If the contributor should update a tracked note, say which one. If no tracked
+note is appropriate, say so explicitly instead of inventing a memory file.
+
+## Output Rules
+
+1. Every material claim must cite specific session reports.
+2. Mark purely observational claims as such.
+3. Keep the report concise and action-oriented.

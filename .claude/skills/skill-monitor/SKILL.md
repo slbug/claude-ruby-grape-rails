@@ -1,176 +1,109 @@
 ---
 name: skill-monitor
-description: Analyze skill effectiveness across sessions. Computes per-skill metrics (action rate, friction, outcomes), identifies degrading skills, and generates improvement recommendations. Requires session-scan data in metrics.jsonl.
-argument-hint: "[--skill NAME] [--improve] [--window 7d|30d|all]"
+description: Analyze observational skill-effectiveness signals across scanned sessions. Use for exploratory monitoring and recommendation triage, not as a release gate.
+argument-hint: "[--skill NAME] [--improve] [--window 7d|30d|all] [--provider NAME]"
 disable-model-invocation: true
 ---
 
 # Skill Monitor
 
-Closed-loop skill effectiveness monitoring. Reads session metrics,
-computes per-skill signals, identifies what's working and what needs
-improvement.
+Summarize transcript-derived skill-use signals from `.claude/session-metrics/`.
 
-Inspired by the deploy-monitor-evaluate-improve feedback loop:
-skills get better over time instead of staying static.
+This workflow is exploratory. It helps contributors decide where to inspect
+transcripts or prompts next. It does not prove a skill is good or bad on its
+own.
 
 ## Requirements
 
 Requires `.claude/session-metrics/metrics.jsonl` from `/session-scan`.
-If no data: suggest running `/session-scan` first.
+
+## Before You Trust the Dashboard
+
+Prefer this order:
+
+1. `claude plugin validate plugins/ruby-grape-rails`
+2. `make eval` or `make eval-all`
+3. `/docs-check` if Claude docs drift is suspected
+4. `/skill-monitor` as corroborating observational input
 
 ## Usage
 
-```
-/skill-monitor                     # Dashboard: all skills
-/skill-monitor --skill review      # Deep-dive on one skill
-/skill-monitor --improve           # Generate improvement recommendations
-/skill-monitor --window 30d        # Change comparison window (default: 7d)
-```
-
-## What Main Context Does
-
-### Step 1: Parse Arguments
-
-Extract from `$ARGUMENTS`:
-
-- **`--skill NAME`**: Focus on one skill (e.g., `review`, `plan`, `investigate`)
-- **`--improve`**: Spawn analysis agent for improvement recommendations
-- **`--window PERIOD`**: Comparison window (`7d`, `30d`, `all`; default: `7d`)
-
-### Step 2: Load Metrics
-
-Read `.claude/session-metrics/metrics.jsonl`. For each entry, extract
-the `skill_effectiveness` field (added by compute-metrics.py v2).
-
-Filter by window period. Count sessions with and without skill usage.
-
-If no `skill_effectiveness` data exists in metrics: "Metrics were
-computed before skill tracking was added. Run `/session-scan --rescan`
-to recompute."
-
-### Step 3: Compute Per-Skill Aggregates
-
-For each skill found across all sessions, aggregate:
-
-```
-| Metric              | Computation                                    |
-|---------------------|------------------------------------------------|
-| Total invocations   | Sum of invocation_count across sessions        |
-| Sessions used in    | Count of sessions containing this skill        |
-| Action rate         | Weighted avg of per-session action_rate         |
-| Avg post-errors     | Weighted avg of avg_post_errors                |
-| Avg post-corrections| Weighted avg of avg_post_corrections           |
-| Outcome distribution| Count of effective/friction/no_action/mixed    |
-| Effectiveness score | action_rate - (0.3 * avg_post_corrections)     |
-| Adjusted score      | For analysis/check skills, use lower thresholds |
+```text
+/skill-monitor
+/skill-monitor --skill review
+/skill-monitor --improve
+/skill-monitor --window 30d
+/skill-monitor --provider claude-code
 ```
 
-**Skill type weighting**: Analysis and check skills (verify, triage,
-perf, boundaries, pr-review, audit) have low action rates BY DESIGN —
-their success is "found issues" or "confirmed things pass". Apply
-adjusted thresholds:
+## Workflow
 
-| Skill Type | Flag Threshold | Expected Action Rate |
-|------------|---------------|---------------------|
-| Execution (work, quick, full) | < 0.5 | > 0.7 |
-| Analysis (perf, boundaries, audit, pr-review) | < 0.3 | 0.3-0.5 |
-| Check (verify, triage) | < 0.1 | 0.0-0.3 |
-| Knowledge (compound, learn, brief) | < 0.5 | > 0.5 |
+### 1. Parse Arguments
 
-Also compute **baseline friction** (avg friction of sessions WITHOUT
-any skill usage) vs **skill friction** (avg friction of sessions
-WITH skill usage). Delta = skill_friction - baseline_friction.
-Negative delta = skills reduce friction (good).
+Supported flags:
 
-### Step 4: Display Dashboard
+- `--skill NAME`
+- `--improve`
+- `--window 7d|30d|all`
+- `--provider NAME`
 
-**Dashboard mode** (no `--skill`):
+### 2. Load Metrics
 
-```
-## Skill Effectiveness Dashboard (last {window})
+Read `.claude/session-metrics/metrics.jsonl` and extract
+`skill_effectiveness`.
 
-Baseline friction (no skills): 0.32 | With skills: 0.18 | Delta: -0.14
+If the ledger has no `skill_effectiveness` data, tell the contributor to rescan
+with the current scorer.
 
-| Skill           | Uses | Sessions | Action% | Errors | Corrections | Outcome    | Score |
-|-----------------|------|----------|---------|--------|-------------|------------|-------|
-| /rb:review     | 12   | 8        | 92%     | 0.5    | 0.1         | effective  | 0.89  |
-| /rb:plan       | 9    | 7        | 100%    | 0.2    | 0.0         | effective  | 1.00  |
-| /rb:investigate| 5    | 5        | 80%     | 1.2    | 0.4         | mixed      | 0.68  |
+If `--provider` is present, restrict the dashboard to that provider.
 
-Skills needing attention: /rb:investigate (high post-errors)
-```
+### 3. Compute Observational Aggregates
 
-Flag skills using type-adjusted thresholds (see weighting table above).
-Also flag if avg_post_corrections > 1 or outcome is predominantly "friction".
-When displaying flagged skills, note if the flag is "expected" for the
-skill type (e.g., verify at 0.24 is normal for a check skill).
+Useful aggregates include:
 
-**Skill deep-dive** (`--skill NAME`):
+- total invocations
+- sessions used in
+- weighted action rate
+- weighted average post-errors
+- weighted average post-corrections
+- dominant outcomes
 
-Show per-session breakdown for that skill, including session IDs,
-dates, and individual outcome signals. If session reports exist in
-`.claude/session-analysis/`, reference them.
+If you compute a baseline comparison, present it as heuristic context, not as a
+causal effect estimate.
 
-### Step 5: Improvement Mode (--improve)
+### 4. Display the Dashboard
 
-Spawn `skill-effectiveness-analyzer` agent:
+The dashboard should show:
 
-```
-Agent(subagent_type="skill-effectiveness-analyzer", model="sonnet", prompt="""
-Analyze skill effectiveness data and recommend improvements.
+- window and provider scope
+- sample sizes
+- per-skill aggregates
+- low-confidence warnings for thin samples
 
-Metrics data: {aggregated_metrics_json}
+Flagged skills are review candidates, not proven regressions.
 
-Sessions with friction outcomes: {session_ids}
+### 5. Improvement Mode
 
-For each underperforming skill:
-1. Identify failure patterns from outcome signals
-2. Propose specific skill/agent changes
-3. Suggest new Iron Laws if patterns are systematic
+If `--improve` is requested, delegate to `skill-effectiveness-analyzer`.
 
-Write recommendations to: .claude/skill-metrics/recommendations-{date}.md
-""")
-```
+The analyzer must:
 
-### Step 6: Write Output
+- use the improvement template
+- cite session evidence
+- list confounders
+- look for corroboration in:
+  - `lab/eval`
+  - docs-check
+  - previous session-analysis reports
 
-Write aggregated metrics to `.claude/skill-metrics/dashboard-{date}.json`:
+### 6. Write Output
 
-```json
-{
-  "computed_at": "2026-03-03T14:00:00Z",
-  "window": "7d",
-  "baseline_friction": 0.32,
-  "skill_friction": 0.18,
-  "friction_delta": -0.14,
-  "skills": { ... },
-  "flagged_skills": ["investigate"]
-}
-```
-
-Append-only: never modify previous dashboard files.
+Write dashboard snapshots under `.claude/skill-metrics/` without modifying
+historical snapshots.
 
 ## Iron Laws
 
-1. **NEVER modify metrics.jsonl** — read-only from this skill
-2. **Baseline comparison is mandatory** — raw numbers without baseline are meaningless
-3. **Flag, don't judge** — surface data, let the human decide what to fix
-4. **Evidence tags on recommendations** — every suggestion needs session citations
-
-## Integration
-
-```
-/session-scan → metrics.jsonl (with skill_effectiveness)
-       ↓
-/skill-monitor → dashboard + flagged skills
-       ↓
-/skill-monitor --improve → recommendations
-       ↓
-Developer updates skills/agents → deploy → repeat
-```
-
-## References
-
-- `references/effectiveness-metrics.md` — Full metrics schema and evaluation criteria
-- `references/improvement-template.md` — Template for improvement recommendations
+1. Treat all dashboard conclusions as observational.
+2. Low-sample and mixed-provider results must be labeled clearly.
+3. Corroborate strong claims with deterministic or manual evidence.
+4. Never modify `metrics.jsonl` from this skill.

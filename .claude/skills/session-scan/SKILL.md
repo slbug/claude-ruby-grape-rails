@@ -1,152 +1,159 @@
 ---
 name: session-scan
-description: Compute metrics for Claude Code sessions. Discovers via ccrider, filters trivial, computes friction/opportunity/fingerprint scores. Use for broad session triage.
-argument-hint: "[--since DATE] [--project NAME] [--limit N] [--list] [--rescan]"
+description: Compute exploratory metrics for recent Claude sessions. Use for broad session triage, provider-scoped scans, and identifying transcripts worth deeper review.
+argument-hint: "[--since DATE] [--project NAME] [--provider NAME] [--limit N] [--list] [--rescan]"
 disable-model-invocation: true
 ---
 
 # Session Scan (Tier 1)
 
-Compute deterministic metrics for sessions discovered via ccrider MCP.
-
-## STOP — Read Before Executing
-
-**NEVER call `mcp__ccrider__get_session_messages` in main context.**
-Each response is 5-50KB of JSON. Fetching N sessions directly = context crash.
-
-**You MUST delegate all scoring to subagents.** The main context only does:
-discovery, deduplication, subagent spawning, and result collection.
+Compute deterministic-but-heuristic session metrics from ccrider-discovered
+sessions. This is contributor analytics, not release gating.
 
 ## Requirements
 
-Requires **ccrider MCP**. If not available:
+Requires `ccrider` MCP. If not available:
 
 > ccrider MCP is required. See: <https://github.com/neilberkman/ccrider>
 
+## Important Caveat
+
+Session-scan results are exploratory. Use them to decide what to inspect next,
+not as proof that a plugin change helped or hurt.
+
+Prefer a single provider when analyzing trends. Mixed Claude Code and Codex
+sessions can produce misleading comparisons.
+
 ## Usage
 
-```
-/session-scan                         # Last 7 days, up to 50 sessions
-/session-scan --since 2026-02-01      # Since specific date
-/session-scan --project enaia         # Filter by project name
-/session-scan --limit 20              # Cap session count
-/session-scan --list                  # Discovery only, no scoring
-/session-scan --rescan                # Recompute already-scanned sessions
+```text
+/session-scan
+/session-scan --since 2026-02-01
+/session-scan --project myapp
+/session-scan --provider claude-code
+/session-scan --limit 20
+/session-scan --list
+/session-scan --rescan
 ```
 
-## What Main Context Does
+If your installed `ccrider` uses a different provider label, pass that exact
+label to `--provider`.
+
+## Main-Context Workflow
 
 ### 1. Parse Arguments
 
-Extract from `$ARGUMENTS`:
+Supported flags:
 
-- **`--since DATE`**: ISO date filter (default: 7 days ago)
-- **`--project NAME`**: Filter by project path substring
-- **`--limit N`**: Max sessions to process (default: 50)
-- **`--list`**: Discovery only — show table, skip scoring
-- **`--rescan`**: Recompute metrics for already-scanned sessions
+- `--since DATE`
+- `--project NAME`
+- `--provider NAME`
+- `--limit N`
+- `--list`
+- `--rescan`
 
-### 2. Discover Sessions (safe — response is ~1KB)
+Defaults:
 
-```
-mcp__ccrider__list_recent_sessions(limit: N, project: PROJECT, after_date: SINCE)
-```
+- `--since`: 7 days ago
+- `--limit`: 50
+- `--provider`: unset unless the contributor asks for it
 
-Filter out sessions with < 10 messages. If `--list`: show table and stop.
+### 2. Discover Candidate Sessions
 
-### 3. Deduplicate
+Use the lightweight ccrider listing call first.
 
-Read `.claude/session-metrics/metrics.jsonl` (if exists).
-Skip sessions already scanned unless `--rescan` flag is set.
-Report: "N new sessions to scan (M already in ledger)"
+If your ccrider MCP exposes provider filtering, pass the contributor's
+`--provider` through to discovery. Otherwise:
 
-### 4. Resolve Scorer Path
+1. list recent sessions normally
+2. inspect provider metadata in the returned session summaries
+3. keep only the requested provider before scoring
 
-```
-Glob: **/session-scan/references/compute-metrics.py
-```
+If `--list` is present, stop after showing the filtered candidate table.
 
-Store as `SCORER_PATH` (absolute). `PROJECT_ROOT` = current working directory.
+### 3. Deduplicate Against the Ledger
 
-### 5. Spawn ONE Subagent Per Session
+Read `.claude/session-metrics/metrics.jsonl` if present.
 
-**DO NOT fetch messages yourself. DO NOT run Python yourself.**
-**You MUST use the Task tool to spawn subagents.**
+- skip sessions already scanned unless `--rescan` is set
+- preserve append-only history
+- report how many sessions were new vs already present
 
-For EACH unscanned session, spawn a haiku subagent using this template:
+### 4. Resolve the Canonical Scorer
 
-```
-Task(subagent_type="general-purpose", model="haiku", prompt="""
-Score one Claude Code session. Steps:
+Locate:
 
-1. Fetch messages:
-   mcp__ccrider__get_session_messages(session_id: "{SESSION_ID}", last_n: 200)
-
-2. Write the full tool result (messages JSON) to:
-   {PROJECT_ROOT}/.claude/session-metrics/_tmp_{SHORT_ID}.json
-
-3. Run scorer and capture result in ONE Bash command:
-   python3 {SCORER_PATH} {PROJECT_ROOT}/.claude/session-metrics/_tmp_{SHORT_ID}.json --session-id {SESSION_ID} --project {PROJECT_NAME} > {PROJECT_ROOT}/.claude/session-metrics/_result_{SHORT_ID}.json && rm {PROJECT_ROOT}/.claude/session-metrics/_tmp_{SHORT_ID}.json
-
-4. Report back: "Scored {SHORT_ID}: friction=X.XX fingerprint=Y"
-
-If ccrider fails, report the error and exit.
-""")
+```text
+${CLAUDE_SKILL_DIR}/references/compute-metrics.py
 ```
 
-**Spawn ALL subagents in parallel.** Wait for all to complete.
+This script is the canonical scorer for contributor analytics. Do not
+re-implement the metric formulas inline in the prompt.
+
+### 5. Spawn One Subagent Per Session
+
+Use one lightweight subagent per session. Main context must not fetch large
+session transcripts directly.
+
+Use `Agent(...)`, not legacy `Task(...)`, in contributor guidance.
+
+Each scoring subagent should:
+
+1. fetch one session transcript from ccrider
+2. write the transcript JSON to a temp file under `.claude/session-metrics/`
+3. run `compute-metrics.py` once for that session
+4. include `--provider NAME` when the provider is known
+5. write the score to a temp result file
+6. delete its temp transcript file
 
 ### 6. Collect Results
 
-```bash
-for f in .claude/session-metrics/_result_*.json; do
-  cat "$f" >> .claude/session-metrics/metrics.jsonl
-  rm "$f"
-done
+Append each `_result_*.json` entry into
+`.claude/session-metrics/metrics.jsonl`, then remove the temp result files.
+
+### 7. Display a Triage Table
+
+Show a concise table sorted by friction descending, for example:
+
+```text
+| ID       | Provider    | Project | Date       | Fingerprint | Friction | Opportunity | Tier2? |
+|----------|-------------|---------|------------|-------------|----------|-------------|--------|
+| ffa155ee | claude-code | myapp   | 2026-02-18 | bug-fix     | 0.42     | 0.65        | Yes    |
+| 90a74843 | claude-code | myapp   | 2026-02-17 | feature     | 0.15     | 0.20        | No     |
 ```
 
-### 7. Display Results
+If high-signal sessions exist, suggest `/session-deep-dive`.
 
-Show summary table sorted by friction (descending):
+### 8. Write Scan Metadata
 
-```
-| ID       | Project | Date       | Type        | Friction | Opportunity | Tier2? |
-|----------|---------|------------|-------------|----------|-------------|--------|
-| ffa155ee | enaia   | 2026-02-18 | bug-fix     | 0.42     | 0.65        | Yes    |
-| 90a74843 | wedding | 2026-02-17 | feature     | 0.15     | 0.20        | No     |
-```
+Update `.claude/session-metrics/latest-scan.json` with:
 
-If Tier 2 eligible: suggest `/session-deep-dive --from-scan`.
-
-### 8. Update Scan Metadata
-
-Write `.claude/session-metrics/latest-scan.json`:
-
-```json
-{
-  "scanned_at": "2026-02-20T14:30:00Z",
-  "sessions_discovered": 25,
-  "sessions_scanned": 18,
-  "sessions_skipped": 7,
-  "tier2_eligible": 5
-}
-```
+- scan time
+- provider filter used
+- sessions discovered
+- sessions scanned
+- sessions skipped
+- Tier 2 eligible count
 
 ## Scoring Reference
 
-See `references/scoring-guide.md` for full algorithm documentation.
+See `references/scoring-guide.md`.
 
-- **Friction Score** (0-1): Weighted signals, sigmoid-normalized
-- **Fingerprint**: Rule-based classifier (6 types)
-- **Plugin Opportunity** (0-1): Missed `/rb:` commands
-- **Tier 2 Eligible**: friction > 0.35 OR opportunity > 0.5 OR plugin used OR msgs > 50
+Core outputs:
+
+- friction score
+- fingerprint
+- plugin opportunity score
+- tool profile
+- skill-effectiveness hints
+
+These metrics are intentionally directional, not decision-grade.
 
 ## Iron Laws
 
-1. **NEVER call `get_session_messages` in main context** — WILL crash context
-2. **ONE subagent per session** — each fetches exactly ONE session
-3. **Use subagents with proper tool permissions** — subagents need Write+Bash access
-4. **Absolute paths in subagent prompts** — subagents don't inherit context
-5. **Result files, not direct append** — avoid jsonl race conditions
-6. **NEVER modify existing metrics.jsonl entries** — append-only ledger
-7. **ALWAYS delete temp and result files** after processing
+1. Do not fetch large transcripts in main context.
+2. Use one subagent per scored session.
+3. Keep provider scope explicit when the contributor cares about trends.
+4. Use the canonical scorer script instead of hand-recomputing formulas.
+5. Keep the metrics ledger append-only.
+6. Treat scan output as triage input, not release proof.

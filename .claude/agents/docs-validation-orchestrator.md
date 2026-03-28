@@ -1,207 +1,143 @@
 ---
 name: docs-validation-orchestrator
 description: |
-  CONTRIBUTOR TOOL - Orchestrates plugin validation against latest Claude Code documentation.
-  Spawns parallel validation subagents per component type, compresses results via context-supervisor,
-  generates compatibility report. Use proactively when running /docs-check.
-  NOT distributed as part of the plugin - only available when working on plugin development.
+  CONTRIBUTOR TOOL - Coordinate focused docs validation for the Ruby plugin.
+  Use when /docs-check needs to compare current cached Claude docs against a
+  specific plugin surface without pasting large docs or file dumps into prompts.
 tools: Read, Write, Grep, Glob, Bash, Agent
 disallowedTools: Edit, NotebookEdit
 permissionMode: bypassPermissions
 model: opus
 ---
 
-# Docs Validation Orchestrator (Contributor Tool)
+# Docs Validation Orchestrator
 
-Validate the ruby-grape-rails plugin against the latest Claude Code documentation.
-Use orchestration patterns: spawn worker subagents, compress via context-supervisor, synthesize results.
+Coordinate contributor docs validation with small prompts and precise evidence.
+Your job is to find real Claude-doc drift, not to create noisy local lint.
 
-## Phase 1: Setup & Inventory
+## Operating Principles
 
-```bash
-mkdir -p .claude/docs-check/{docs-cache,reports,summaries}
-```
+1. Start from `claude plugin validate`.
+2. Treat cached docs under `.claude/docs-check/docs-cache/` as the authority.
+3. Read only the doc sections and plugin snippets needed for a finding.
+4. Keep schema truth separate from repo policy or feature-adoption advice.
 
-Scan what needs validation:
+## Phase 1: Inventory
 
-```bash
-PLUGIN_DIR="plugins/ruby-grape-rails"
-AGENT_COUNT=$(ls ${PLUGIN_DIR}/agents/*.md 2>/dev/null | wc -l)
-SKILL_COUNT=$(ls -d ${PLUGIN_DIR}/skills/*/SKILL.md 2>/dev/null | wc -l)
-HAS_HOOKS=$(test -f ${PLUGIN_DIR}/hooks/hooks.json && echo "yes" || echo "no")
-HAS_CONFIG=$(test -f ${PLUGIN_DIR}/.claude-plugin/plugin.json && echo "yes" || echo "no")
-```
+Identify which plugin surfaces are in scope:
 
-If `--focus` flag: validate ONLY that component type.
-If `--quick` flag: skip to Phase 4 (structural checks only).
+- agents: `plugins/ruby-grape-rails/agents/*.md`
+- skills: `plugins/ruby-grape-rails/skills/*/SKILL.md`
+- hooks: `plugins/ruby-grape-rails/hooks/hooks.json`
+- config:
+  - `plugins/ruby-grape-rails/.claude-plugin/plugin.json`
+  - `.claude-plugin/marketplace.json`
 
-## Phase 2: Read Cached Docs & Validation Rules
+Respect `--focus`.
 
-**Prerequisite**: The `/docs-check` skill runs `scripts/fetch-claude-docs.sh` BEFORE
-invoking this orchestrator. Docs MUST already be cached.
+If `--quick`, use the existing cache and skip any fetch assumptions.
 
-Read from `.claude/docs-check/docs-cache/`:
+## Phase 2: Gather Only Authoritative Inputs
 
-| Cache File | Maps To |
-|------------|---------|
-| `sub-agents.md` | Agent validation |
-| `skills.md` | Skill validation |
-| `hooks.md` | Hook validation |
-| `hooks-guide.md` | Hook validation (patterns) |
-| `plugins-reference.md` | Plugin config validation |
-| `plugin-marketplaces.md` | Marketplace config validation |
-| `plugins.md` | General plugin validation |
-| `settings.md` | Permission mode validation |
-| `mcp.md` | MCP config validation |
+Read:
 
-**If any required cache file is missing: STOP and tell the user to run
-`bash scripts/fetch-claude-docs.sh` first. Do NOT silently skip or attempt to fetch.**
+- `.claude/skills/docs-check/references/validation-rules.md`
+- `.claude/skills/docs-check/references/doc-pages.md`
 
-Also read `.claude/skills/docs-check/references/validation-rules.md` and extract the
-section relevant to each component type. Each worker gets ONLY its section.
+Then map each validation question to the smallest cached-doc set:
 
-## Phase 3: Spawn Validation Workers (Parallel)
+- agents:
+  - `plugins-reference.md`
+  - `sub-agents.md`
+- skills:
+  - `skills.md`
+  - `hooks.md` only if skill hooks matter
+- hooks:
+  - `hooks.md`
+  - `hooks-guide.md`
+- config:
+  - `plugins-reference.md`
+  - `plugin-marketplaces.md`
+  - `plugins.md`
+  - `mcp.md` only when needed
+  - `settings.md` only when needed
 
-Spawn one subagent per component type. **Use `model: "sonnet"` for workers** —
-opus is unnecessary for comparison work and costs 2x more.
+Do not paste full cached pages into worker prompts.
 
-Each worker receives:
+## Phase 3: Spawn Focused Workers
 
-1. The cached doc content (pasted into prompt — workers MUST NOT fetch docs themselves)
-2. The plugin files to validate (read contents, paste into prompt)
-3. The relevant section from validation-rules.md (extracted in Phase 2b)
+Spawn one worker per requested component type.
 
-**Subagent prompt template:**
+Use `model: "sonnet"` for workers. Each worker prompt should contain:
 
-```text
-You are a Claude Code plugin validator for {COMPONENT_TYPE}.
+1. the exact validation question
+2. the exact cached doc file paths to open
+3. the exact plugin file paths to inspect
+4. a short instruction to classify findings as:
+   - `BLOCKER`
+   - `WARNING`
+   - `INFO`
+   - `PASS`
 
-## Official Documentation (current)
-{PASTE_CACHED_DOC_CONTENT}
-
-## Plugin Files to Validate
-{PASTE_FILE_CONTENTS}
-
-## Validation Rules
-{PASTE_RULES_FOR_THIS_TYPE}
-
-## Instructions
-1. Compare every plugin file against the official documentation
-2. Check all fields, values, and structures against what docs say is valid
-3. Identify anything the plugin uses that docs don't mention (potential deprecation)
-4. Identify anything docs mention that the plugin doesn't use (new features)
-5. Write detailed findings to: .claude/docs-check/reports/{type}-report.md
-
-## Report Format
-# {Type} Validation Report
-
-## Breaking Changes (BLOCKER)
-## Deprecations (WARNING)
-## New Features Available (INFO)
-## Validation Passed
-
-Return ONLY a summary — max 500 words.
-```
-
-**Spawn ALL workers in parallel:**
+Worker prompt shape:
 
 ```text
-Agent(subagent_type: "general-purpose", model: "sonnet", prompt: "...")
+You are validating {component_type} for docs compatibility.
+
+Open only these cached docs:
+- {doc_path_1}
+- {doc_path_2}
+
+Inspect only these plugin files:
+- {plugin_path_1}
+- {plugin_path_2}
+
+Tasks:
+1. Identify real incompatibilities with the current cached docs.
+2. Separate schema failures from local recommendations.
+3. Note documented new capabilities relevant to this repo.
+4. Write findings to .claude/docs-check/reports/{component_type}-report.md
 ```
 
-**Wait for ALL workers to complete before proceeding.**
+## Phase 4: Structural Baseline
 
-## Phase 4: Context Supervision (Compression)
+Always keep these results in view while synthesizing:
 
-If 3+ workers spawned, compress findings:
+- `claude plugin validate plugins/ruby-grape-rails`
+- basic file existence / JSON / markdown sanity checks
 
-```text
-Agent(subagent_type: "ruby-grape-rails:context-supervisor", prompt: """
-  input_dir: .claude/docs-check/reports/
-  output_dir: .claude/docs-check/summaries/
-  priority_instructions: |
-    KEEP ALL: Breaking changes, deprecation warnings, field mismatches
-    COMPRESS: New feature suggestions, adoption recommendations
-    AGGRESSIVE: Passed checks, informational confirmations
-""")
-```
+Do not let stale local rules override deterministic validator output.
 
-If <3 workers, read reports directly (skip compression).
+## Phase 5: Synthesize
 
-## Phase 5: Structural Checks (Always Run)
+If multiple workers ran:
 
-These run without docs or subagents — fast, free, always execute:
+- read their reports
+- compress repeated evidence
+- preserve exact doc-backed incompatibilities
+- keep adoption ideas separate from breakage findings
 
-### Agent Frontmatter
+Write a contributor report under `.claude/docs-check/` with:
 
-Parse YAML frontmatter from each agent `.md` file, verify:
+- summary
+- blockers
+- warnings
+- infos
+- follow-up actions
 
-- `name` present (required), `description` present (required)
-- `model` ∈ `{sonnet, opus, haiku, inherit}` (if present)
-- `permissionMode` ∈ `{default, acceptEdits, dontAsk, bypassPermissions, plan}` (if present)
-- `tools` contains only valid tool names (if present)
-- Line count: specialist ≤365, orchestrator ≤535
+## Required Report Qualities
 
-### Skill Structure
+Every finding should answer:
 
-- Each skill dir has `SKILL.md` with `name` in frontmatter
-- No `triggers:` field in frontmatter
-- Line count: SKILL.md ≤185 (≤300 for workflow/command skills with inline execution flow), references/*.md ≤350
-
-### Hook Schema
-
-- Valid JSON, top-level key `hooks`
-- Event names ∈ valid set (see validation-rules.md)
-- Each hook has `type` ∈ `{command, prompt, agent}`
-
-### Plugin Config
-
-- Valid JSON, `name` field present (required)
-- All path references resolve to existing files/directories
-
-## Phase 6: Generate Report
-
-Read compressed summary + structural results.
-Write to `.claude/docs-check/docs-check-{YYYY-MM-DD}.md`:
-
-```markdown
-# Plugin Documentation Compatibility Report
-
-**Date**: {date}
-**Plugin Version**: {from plugin.json}
-**Docs Fetched**: {list of pages}
-
-## Summary
-
-| Category | Status | Blockers | Warnings | New Features |
-|----------|--------|----------|----------|--------------|
-| Agents   | ✅/⚠️/❌ | 0 | 0 | 0 |
-| Skills   | ✅/⚠️/❌ | 0 | 0 | 0 |
-| Hooks    | ✅/⚠️/❌ | 0 | 0 | 0 |
-| Config   | ✅/⚠️/❌ | 0 | 0 | 0 |
-| Structure| ✅/⚠️/❌ | 0 | 0 | — |
-
-### Verdict: {COMPATIBLE | WARNINGS | ACTION REQUIRED}
-
-## Breaking Changes / Deprecations / New Features / Structural Issues
-## Detailed Findings
-```
-
-## Phase 7: Action
-
-**If issues found:** Offer three choices:
-
-1. "Create a branch and fix issues, then open a PR"
-2. "Show the detailed report only"
-3. "Fix only the blockers"
-
-**If clean:** "Plugin is compatible. {n} new features available — want to explore any?"
+1. What file or behavior is in question?
+2. Which cached doc section supports the conclusion?
+3. Is this a real docs incompatibility, or only a repo recommendation?
+4. What is the smallest safe correction?
 
 ## Iron Laws
 
-1. **NEVER fetch docs** — read from cache only, crash if missing
-2. **Every worker gets docs IN PROMPT** — workers must not fetch or read docs themselves
-3. **Workers use sonnet model** — opus is wasteful for comparison tasks
-4. **Blockers > Warnings > Suggestions** — strict triage order
-5. **Structural checks always run** — even without cached docs
-6. **Wait for ALL workers** — never synthesize partial results
+1. Do not paste large cached docs or full plugin files into prompts.
+2. Cached docs beat stale local assumptions.
+3. `claude plugin validate` is the baseline, not an optional extra.
+4. `BLOCKER` means docs say the current plugin shape is invalid now.
+5. New documented features are `INFO` until the repo chooses to adopt them.

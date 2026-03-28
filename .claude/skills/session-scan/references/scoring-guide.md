@@ -1,160 +1,148 @@
 # Scoring Guide
 
-Reference documentation for all session metrics algorithms, weights,
-thresholds, and fingerprint rules used by `compute-metrics.py`.
+Reference for the exploratory metrics produced by
+`references/compute-metrics.py`.
+
+## Read This First
+
+These scores are useful for triage, not for proving causality.
+
+Good uses:
+
+- ranking sessions for deeper review
+- spotting repeated friction patterns
+- finding likely missed plugin-command opportunities
+
+Bad uses:
+
+- claiming a plugin change definitely improved outcomes
+- comparing mixed-provider datasets without segmentation
+- treating one metric as a release gate
 
 ## Friction Score (0.0 - 1.0)
 
-Measures how much resistance/struggle occurred in a session.
+Measures how much visible resistance occurred in a session.
 
 ### Formula
 
+```text
+raw = sum(signal_value * weight)
+score = sigmoid(raw)
 ```
-raw = Σ (signal_value × weight)
-score = sigmoid(raw) = 1 / (1 + e^(-k × (raw - midpoint)))
-```
 
-Parameters: `k = 3.0`, `midpoint = 1.5`
+Parameters:
 
-### Signal Weights
+- `k = 3.0`
+- `midpoint = 1.5`
 
-| Signal | Weight | Detection Method |
-|--------|--------|------------------|
+### Signals
+
+| Signal | Weight | Detection |
+|--------|--------|-----------|
 | `error_tool_ratio` | 2.0 | `error_count / tool_count` |
-| `retry_loops` | 3.0 | Same Bash command prefix 3+ consecutive times |
-| `user_corrections` | 2.5 | Messages matching correction patterns |
-| `approach_changes` | 2.0 | Dominant tool shifts between session quarters |
-| `context_compactions` | 1.5 | System messages about context compaction |
-| `interrupted_requests` | 1.0 | `[Request interrupted by user]` occurrences |
-
-### Correction Patterns
-
-Regex for detecting user corrections:
-
-```
-\b(no[,.]?\s|wrong|instead|actually|that's not|not what I|
-I meant|I said|please don't|stop|undo|revert)\b
-```
-
-Applied to first 500 chars of each user message.
-
-### Approach Change Detection
-
-1. Split tool call sequence into 4 equal chunks
-2. Find dominant tool in each chunk
-3. Count transitions between different dominant tools
+| `retry_loops` | 3.0 | repeated Bash command prefixes |
+| `user_corrections` | 2.5 | user redirection language |
+| `approach_changes` | 2.0 | dominant tool shifts across the session |
+| `context_compactions` | 1.5 | compaction mentions |
+| `interrupted_requests` | 1.0 | explicit interrupted-request markers |
 
 ### Interpretation
 
-| Score Range | Meaning |
-|-------------|---------|
-| 0.00 - 0.15 | Smooth session, minimal friction |
-| 0.15 - 0.35 | Some friction, 1-2 stuck points |
-| 0.35 - 0.60 | High friction, multiple issues |
-| 0.60 - 1.00 | Severe friction, likely abandoned approaches |
+| Range | Meaning |
+|-------|---------|
+| `0.00-0.15` | smooth |
+| `0.15-0.35` | some friction |
+| `0.35-0.60` | high friction |
+| `0.60-1.00` | severe friction |
+
+Treat these as triage buckets, not calibrated truth.
 
 ## Session Fingerprint
 
-Rule-based classifier that identifies session type.
+Rule-based session classification.
 
-### Keyword Scores (applied to first 10 user messages)
+Current classes:
 
-| Type | Keywords (×2.0 each) |
-|------|---------------------|
-| `bug-fix` | fix, bug, broken, error, issue, crash, fail, debug, wrong |
-| `feature` | add, implement, build, create, new feature, scaffold |
-| `exploration` | explore, understand, how does, what is, explain, look at |
-| `maintenance` | deps, update, upgrade, bump, version, migrate |
-| `review` | review, PR, pull request, code review, feedback |
-| `refactoring` | refactor, extract, rename, move, reorganize, clean up |
+- `bug-fix`
+- `feature`
+- `exploration`
+- `maintenance`
+- `review`
+- `refactoring`
 
-### Tool Profile Bonuses
+Signals combine:
 
-| Condition | Type | Bonus |
-|-----------|------|-------|
-| Read+Grep > 50% AND Edit < 10% | `exploration` | +3.0 |
-| Edit > 30% | `feature` | +2.0 |
-| Bash > 30% | `bug-fix` | +2.0 |
-| Files edited > 10 | `refactoring` | +2.0 |
-| Files edited > 5 | `feature` | +1.0 |
-| runtime tooling calls > 0 | `bug-fix` | +1.5 |
-| `bundle install/update` commands | `maintenance` | +3.0 |
-| `gh pr` commands | `review` | +3.0 |
+- intent keywords from early user messages
+- tool mix
+- edit volume
+- dependency-management commands
+- review tooling commands
 
-### Confidence
-
-```
-confidence = best_type_score / total_all_scores
-```
-
-Range: 0.0 - 1.0. Higher = more certain classification.
+Confidence is only relative to the other fingerprint scores in that same
+session.
 
 ## Plugin Opportunity Score (0.0 - 1.0)
 
-Detects missed plugin command opportunities.
+A rough signal for likely missed `/rb:` command use.
 
-### Signal Detection
+Current opportunity heuristics include:
 
-| Signal | Missed Command | Condition |
-|--------|---------------|-----------|
-| Retry loops (3+ same cmd) | `/rb:investigate` | Consecutive similar Bash commands |
-| 50+ tools, no plan | `/rb:plan` | High tool count without planning |
-| 3+ test/zeitwerk runs | `/rb:verify` | Repeated manual verification |
-| 2+ `gh pr` commands | `/rb:pr-review` | Manual PR workflow |
-| 10+ edits, no review | `/rb:review` | Many changes without quality check |
+- repeated command retries
+- many tools with no planning
+- repeated manual verification
+- repeated GitHub PR commands
+- many edits without a review pass
 
-### Formula
+This score tells you where to inspect transcripts, not which feature to build
+next without corroboration.
 
-```
-score = min(missed_opportunities × 0.2, 1.0)
-```
+## Skill-Effectiveness Hints
 
-Commands already used in the session are excluded from missed opportunities.
+The scorer emits per-skill signals such as:
 
-## Tier 2 Eligibility
+- invocation count
+- post-skill edits
+- post-skill reads
+- post-skill test runs
+- post-skill errors
+- post-skill corrections
+- dominant outcome
 
-A session is eligible for deep qualitative analysis if ANY of:
+Use these as observational hints. Always corroborate with:
 
-| Condition | Rationale |
-|-----------|-----------|
-| `friction_score > 0.35` | High friction worth investigating |
-| `plugin_opportunity_score > 0.5` | Multiple missed opportunities |
-| Plugin commands used | Learn from actual plugin usage |
-| `message_count > 50` | Long sessions often have patterns |
+- `lab/eval`
+- manual transcript review
+- docs-check / plugin validation if the claim implies a product defect
 
 ## Tool Profile
 
-Percentage breakdown of tool usage:
+The current profile buckets are:
 
-- `read_pct`: Read + Glob
-- `edit_pct`: Edit + Write
-- `bash_pct`: Bash
-- `grep_pct`: Grep
-- `tidewave_pct`: All `mcp__tidewave*` tools
-- `other_pct`: Everything else (Task, Skill, other MCP)
+- `read_pct`: `Read` + `Glob`
+- `edit_pct`: `Edit` + `Write` + `MultiEdit` + `NotebookEdit`
+- `bash_pct`: `Bash`
+- `grep_pct`: `Grep`
+- `tidewave_pct`: MCP calls whose tool name starts with `mcp__tidewave`
+- `other_pct`: everything else, including:
+  - `Agent`
+  - `Task` legacy alias
+  - `Skill`
+  - `AskUserQuestion`
+  - `ExitPlanMode`
+  - `KillShell`
+  - `MCPSearch`
+  - other MCP tools
 
-## Tuning Guide
+## Provider Scope
 
-### Adjusting Friction Sensitivity
+When comparing scans or trends:
 
-To make friction scores **more sensitive** (flag more sessions):
+1. prefer a single provider at a time
+2. record the provider filter used
+3. do not compare mixed-provider windows as if they were homogeneous
 
-- Decrease `FRICTION_SIGMOID_MIDPOINT` (e.g., 1.0 instead of 1.5)
-- Increase individual signal weights
+## What This Guide Deliberately Avoids
 
-To make friction scores **less sensitive** (fewer false positives):
-
-- Increase `FRICTION_SIGMOID_MIDPOINT` (e.g., 2.0)
-- Decrease weights on noisy signals (e.g., `user_corrections`)
-
-### Adjusting Tier 2 Thresholds
-
-- Lower `friction > 0.35` to catch more sessions
-- Lower `opportunity > 0.5` to flag sessions with fewer missed commands
-- Remove `message_count > 50` if long sessions aren't interesting
-
-### Adding New Fingerprint Types
-
-1. Add keyword regex to `FINGERPRINT_KEYWORDS`
-2. Add tool profile bonuses in `compute_fingerprint()`
-3. Update this guide
+- fixed "healthy" adoption percentages
+- strong causal claims from transcript-derived behavior
+- unsupported chain-analysis claims

@@ -1,14 +1,16 @@
 ---
 name: session-trends
-description: Analyze trends across session metrics. Computes windowed aggregates, deltas, and compares against MEMORY.md findings. Use periodically for progress tracking.
-argument-hint: "[--window 7d|30d|all] [--project NAME] [--compare MEMORY.md]"
+description: Analyze exploratory trends across the session metrics ledger. Use for provider-scoped comparisons and broad monitoring, not for release-grade conclusions.
+argument-hint: "[--window 7d|30d|all] [--project NAME] [--provider NAME] [--compare PATH]"
 disable-model-invocation: true
 ---
 
 # Session Trends
 
-Analyze trends from the metrics ledger. Computes windowed aggregates,
-fingerprint distributions, and compares against MEMORY.md baselines.
+Summarize `metrics.jsonl` over time windows.
+
+This skill is for monitoring and prioritization. It should not be treated as
+causal proof that a plugin change helped or hurt.
 
 ## Requirements
 
@@ -16,116 +18,78 @@ Requires `.claude/session-metrics/metrics.jsonl` from `/session-scan`.
 
 ## Usage
 
+```text
+/session-trends
+/session-trends --window 30d
+/session-trends --project myapp
+/session-trends --provider claude-code
+/session-trends --compare .claude/session-analysis/insights-2026-03-20.md
 ```
-/session-trends                          # All windows (7d, 30d, all)
-/session-trends --window 30d             # Specific window only
-/session-trends --project enaia          # Filter by project
-/session-trends --compare MEMORY.md      # Compare against memory baseline
-```
 
-## Pipeline
+## Workflow
 
-### Step 1: Parse Arguments
+### 1. Parse Arguments
 
-Extract from `$ARGUMENTS`:
+Supported flags:
 
-- **`--window WINDOW`**: Time window — `7d`, `30d`, or `all` (default: show all three)
-- **`--project NAME`**: Filter metrics by project name
-- **`--compare PATH`**: Path to MEMORY.md for baseline comparison
-  (default: auto-detect from `.claude/` project memory)
+- `--window 7d|30d|all`
+- `--project NAME`
+- `--provider NAME`
+- `--compare PATH`
 
-### Step 2: Read Metrics Ledger
+### 2. Read the Metrics Ledger
 
 Read `.claude/session-metrics/metrics.jsonl`.
 
-If empty or missing:
+If it is missing or empty, stop and tell the contributor to run
+`/session-scan` first.
 
-> No metrics found. Run `/session-scan` first.
+### 3. Compute Windowed Aggregates with the Canonical Script
 
-If `--project` specified, filter entries by project field.
-
-### Step 3: Compute Trends via Python
+Use:
 
 ```bash
-python3 .claude/skills/session-scan/references/compute-metrics.py \
+python3 ${CLAUDE_SKILL_DIR}/../session-scan/references/compute-metrics.py \
   --trends .claude/session-metrics/metrics.jsonl \
-  --memory {MEMORY_PATH}
+  --project "$PROJECT_FILTER" \
+  --provider "$PROVIDER_FILTER"
 ```
 
-Capture the JSON output.
+Only pass `--project` or `--provider` when the contributor requested them.
 
-### Step 4: Display Trend Report
+### 4. Read Comparison Notes Separately
 
-Format the JSON output as a readable report:
+If `--compare PATH` is provided, read that file separately and compare it
+cautiously against the computed aggregates.
 
-#### Overview
+Do not rely on `MEMORY.md` as a required baseline.
 
-```
-Total sessions: {N} ({backfilled} backfilled from v1)
-Date range: {earliest} to {latest}
-```
+### 5. Present a Readable Report
 
-#### Window Comparison
+Show:
 
-```
-| Metric                  | 7 days | 30 days | All time |
-|-------------------------|--------|---------|----------|
-| Sessions                | 12     | 45      | 165      |
-| Avg friction            | 0.28   | 0.24    | 0.22     |
-| Max friction            | 0.72   | 0.72    | 0.89     |
-| Avg opportunity         | 0.35   | 0.30    | 0.28     |
-| Tier 2 eligible         | 40%    | 33%     | 30%      |
-| Plugin adoption         | 12%    | 10%     | 8%       |
-```
+- total sessions in each window
+- average friction
+- average opportunity
+- fingerprint distribution
+- Tier 2 eligible percentage
+- plugin adoption rate
+- provider distribution
 
-#### Fingerprint Distribution
+If a provider filter was not used and the ledger mixes providers, say so
+explicitly before interpreting the trends.
 
-```
-| Type          | 7d  | 30d | All  |
-|---------------|-----|-----|------|
-| bug-fix       | 4   | 15  | 52   |
-| feature       | 3   | 12  | 48   |
-| exploration   | 2   | 8   | 30   |
-| maintenance   | 1   | 5   | 18   |
-| review        | 1   | 3   | 10   |
-| refactoring   | 1   | 2   | 7    |
-```
+### 6. Suggest Next Actions Carefully
 
-#### MEMORY.md Comparison (if --compare)
+Examples:
 
-Compare measured values against MEMORY.md claims:
-
-```
-| MEMORY.md Claim              | Measured    | Match? |
-|------------------------------|-------------|--------|
-| Plugin adoption: 8-12%       | 10.2%       | Yes    |
-| Minimal friction in 40+ of 74| 68% smooth  | Yes    |
-```
-
-### Step 5: Write trends.json
-
-Write computed trends to `.claude/session-metrics/trends.json`.
-
-### Step 6: Suggest Actions
-
-Based on trends:
-
-- If friction is **increasing**: "Friction trending up — run `/session-deep-dive --from-scan` to investigate"
-- If plugin adoption is **growing**: "Plugin adoption growing — check which commands drive value"
-- If many Tier 2 eligible: "{N} sessions need deep analysis"
-
-## Output Files
-
-| File | Purpose |
-|------|---------|
-| `.claude/session-metrics/trends.json` | Computed trend data |
-
-## Common Queries
-
-See `references/trend-queries.md` for interpreting specific trend patterns.
+- rising friction -> run `/session-deep-dive` on recent high-friction sessions
+- growing missed opportunities -> inspect whether docs or workflow guidance is stale
+- mixed-provider ledger -> re-run with `--provider`
 
 ## Iron Laws
 
-1. **ALWAYS use Python for computation** — no manual aggregation
-2. **NEVER modify metrics.jsonl** — read-only for trends
-3. **ALWAYS show window comparison** — single numbers lack context
+1. Treat trend output as observational.
+2. Prefer provider-scoped comparisons over mixed-provider windows.
+3. Do not depend on missing local artifacts.
+4. Keep the raw ledger read-only.

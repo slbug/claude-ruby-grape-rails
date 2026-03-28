@@ -1,195 +1,207 @@
 # Validation Rules
 
-Per-component checklists for validation workers.
-Each section is passed ONLY to the subagent responsible for that component type.
+Use this file as a contributor checklist, not as a frozen schema snapshot.
+When it conflicts with the cached docs in `.claude/docs-check/docs-cache/`, the
+cached docs win.
 
-## Agent Validation Rules
+## First Principles
 
-### Frontmatter Fields
+1. Run `claude plugin validate plugins/ruby-grape-rails` first.
+2. Treat the cached docs as the authority for current Claude Code behavior.
+3. Separate schema truth from repo policy:
+   - schema truth: whether Claude Code documents a field, event, or hook type
+   - repo policy: whether this repo should adopt that capability
+4. Do not file findings about naming style, line counts, or other local taste as
+   docs-compatibility issues.
 
-Check each agent `.md` YAML frontmatter against `sub-agents.md` docs.
+## Docs-Check Output Levels
 
-**Required fields:**
+| Level | Use for |
+|-------|---------|
+| `BLOCKER` | The plugin uses something current docs reject or no longer support |
+| `WARNING` | Docs still allow it, but the pattern is deprecated, version-gated, or misleading |
+| `INFO` | Docs now support something the repo may want to adopt |
+| `PASS` | Current repo behavior matches current docs |
 
-- `name` — lowercase, hyphens only, no spaces
-- `description` — must include when to use/delegate guidance
+## Agent Validation
 
-**Optional fields (check valid values if present):**
+Authoritative cached docs:
 
-| Field | Valid Values | Notes |
-|-------|-------------|-------|
-| `model` | `sonnet`, `opus`, `haiku`, `inherit` | Default: inherit |
-| `permissionMode` | `default`, `acceptEdits`, `dontAsk`, `bypassPermissions`, `plan` | Honored for local dev (`--plugin-dir`), **ignored for marketplace installs** per docs |
-| `tools` | `Read`, `Write`, `Edit`, `Bash`, `Grep`, `Glob`, `Agent`, `WebFetch`, `WebSearch`, `NotebookEdit`, `Skill`, `AskUserQuestion`, `TaskCreate`, `TaskUpdate`, `TaskOutput`, `KillShell`, `MCPSearch`, `ExitPlanMode` | Check docs for new tools |
-| `disallowedTools` | Same tool names as `tools` | |
-| `maxTurns` | Positive integer | |
-| `skills` | List of skill names | Verify referenced skills exist |
-| `mcpServers` | Object or list | |
-| `hooks` | Object | Per-agent lifecycle hooks |
-| `memory` | `user`, `project`, `local` | Auto-enables Read/Write/Edit |
-| `background` | `true`, `false` | Always run as background task |
-| `isolation` | `worktree` | Run in temporary git worktree |
+- `plugins-reference.md` for plugin-shipped agent support
+- `sub-agents.md` for tool syntax and agent behavior details
 
-**Cross-checks:**
+Current plugin-agent frontmatter supported by docs:
 
-- If `memory` set, agent should have Write access (auto-enabled by memory)
-- Review-only agents: `disallowedTools: Write, Edit, NotebookEdit`
-- `tools` and `disallowedTools` must not overlap
-- Skills in `skills:` must exist in `plugins/ruby-grape-rails/skills/`
+- `name`
+- `description`
+- `model`
+- `effort`
+- `maxTurns`
+- `tools`
+- `disallowedTools`
+- `skills`
+- `memory`
+- `background`
+- `isolation`
 
-**Detect changes:**
+Important current constraints:
 
-- Compare field list in docs against fields above
-- Flag new fields the plugin doesn't use yet
-- Flag fields the plugin uses that docs don't document (potential removal)
+- `isolation` only documents `worktree`
+- plugin-shipped agents do not support:
+  - `hooks`
+  - `mcpServers`
+  - `permissionMode`
+- `Agent(...)` is the current syntax for restricting spawned subagents
+  - `Task(...)` may still appear as historical alias in docs, but contributor
+    guidance should prefer `Agent(...)`
 
-### Structural
+Checks:
 
-- Valid markdown with YAML frontmatter (between `---` delimiters)
-- Specialist agents: ≤365 lines (soft limit), target ~300 lines
-- Orchestrator agents (has subagent prompts inline): ≤535 lines (justified by embedded prompts)
-- **EXCEPTION**: Command skills may exceed 185 lines when execution flow must be inline
-- **EXCEPTION**: Pattern skills may exceed 100 lines when they include comprehensive Iron Laws
+1. Confirm plugin agents only use fields currently documented for plugin agents.
+2. Confirm `tools` / `disallowedTools` use currently documented tool names.
+3. Confirm any `skills:` references point to real shipped skills.
+4. Treat new documented fields as `INFO`, not as automatic repo defects.
 
-## Skill Validation Rules
+## Skill Validation
 
-### Structure
+Authoritative cached docs:
 
-Check each `skills/*/` directory against `skills.md` docs.
+- `skills.md`
+- `hooks.md` and `hooks-guide.md` for skill-scoped hooks
 
-**Required:**
+Current skill frontmatter supported by docs:
 
-- `SKILL.md` exists with `name` in frontmatter
+- `name`
+- `description`
+- `argument-hint`
+- `disable-model-invocation`
+- `user-invocable`
+- `allowed-tools`
+- `model`
+- `effort`
+- `context`
+- `agent`
+- `hooks`
+- `paths`
+- `shell`
 
-**Frontmatter fields:**
+Checks:
 
-| Field | Required | Notes |
-|-------|----------|-------|
-| `name` | Yes | Convention: `rb:{name}` for commands, `{domain}:{name}` for domain-specific, or plain `{name}` for pattern skills |
-| `description` | No | Used for auto-loading |
-| `argument-hint` | No | Shown in command help |
-| `disable-model-invocation` | No | Boolean, default false |
-| `user-invocable` | No | Boolean, default true. Set false to hide from `/` menu |
-| `allowed-tools` | No | Restrict tools when skill is active |
-| `model` | No | Model to use when skill is active |
-| `context` | No | Set to `fork` to run in forked subagent |
-| `agent` | No | Subagent type when `context: fork` is set |
-| `hooks` | No | Lifecycle hooks scoped to this skill |
+1. Flag undocumented skill frontmatter as a docs issue.
+2. Do not flag documented fields such as `effort`, `paths`, or `shell`.
+3. Continue treating `triggers:` as invalid because skills docs do not support
+   it.
+4. When `paths:` is present, confirm the glob patterns are repo-relevant rather
+   than treating the field itself as suspicious.
 
-**Forbidden:** `triggers:` — MUST NOT be present.
+## Hook Validation
 
-**Detect changes:** New frontmatter fields, changed structure conventions.
+Authoritative cached docs:
 
-### Structural
+- `hooks.md`
+- `hooks-guide.md`
 
-- SKILL.md: ≤185 lines for simple skills, ≤300 lines for workflow/command skills
-- references/*.md: ≤350 lines each (soft limit for detailed reference content)
+Current documented hook events include:
 
-## Hook Validation Rules
+- `SessionStart`
+- `SessionEnd`
+- `UserPromptSubmit`
+- `PreToolUse`
+- `PermissionRequest`
+- `PostToolUse`
+- `PostToolUseFailure`
+- `Notification`
+- `SubagentStart`
+- `SubagentStop`
+- `TaskCreated`
+- `TaskCompleted`
+- `Stop`
+- `StopFailure`
+- `TeammateIdle`
+- `InstructionsLoaded`
+- `ConfigChange`
+- `CwdChanged`
+- `FileChanged`
+- `WorktreeCreate`
+- `WorktreeRemove`
+- `PreCompact`
+- `PostCompact`
+- `Elicitation`
+- `ElicitationResult`
 
-### Schema
+Current documented hook types:
 
-Check `hooks/hooks.json` against `hooks.md` docs.
+- `command`
+- `http`
+- `prompt`
+- `agent`
 
-**Structure:**
+Important current constraints:
 
-```json
-{ "hooks": { "EventName": [{ "matcher": "", "hooks": [{ "type": "command", "command": "..." }] }] } }
-```
+- handler-level `if` filters are documented and useful
+- `if` is version-gated:
+  - requires Claude Code `v2.1.85+`
+  - only works on tool events:
+    - `PreToolUse`
+    - `PostToolUse`
+    - `PostToolUseFailure`
+    - `PermissionRequest`
+- `FileChanged` uses `matcher` for watched filenames, so do not lint it as a
+  normal tool matcher only
 
-**Valid event names:**
+Checks:
 
-`PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`,
-`UserPromptSubmit`, `Notification`, `Stop`, `StopFailure`, `SubagentStart`, `SubagentStop`,
-`SessionStart`, `SessionEnd`, `TeammateIdle`, `TaskCompleted`, `PreCompact`, `PostCompact`,
-`InstructionsLoaded`, `ConfigChange`, `WorktreeCreate`, `WorktreeRemove`,
-`Elicitation`, `ElicitationResult`
+1. Confirm `hooks/hooks.json` only uses documented events and hook types.
+2. Flag undocumented events and hook types as `BLOCKER`.
+3. Treat `if` usage outside tool events as `WARNING` or `BLOCKER` depending on
+   whether it disables the handler.
+4. Validate `${CLAUDE_PLUGIN_ROOT}` references against real repo paths.
 
-**Valid hook types:**
+## Plugin Config Validation
 
-| Type | Required Fields | Optional Fields |
-|------|----------------|-----------------|
-| `command` | `command` | `timeout`, `environment` |
-| `prompt` | `prompt` | `model`, `tools` |
-| `agent` | `prompt` | `model`, `tools`, `maxTurns` |
+Authoritative cached docs:
 
-**Cross-checks:**
+- `plugins-reference.md`
+- `plugin-marketplaces.md`
+- `plugins.md`
+- `mcp.md`
+- `settings.md` only when a finding depends on settings semantics
 
-- Event names not in valid set = **BLOCKER** (silently ignored by Claude Code)
-- `command` paths with `${CLAUDE_PLUGIN_ROOT}` should resolve to existing scripts
-- Check docs for new event names, hook types, or fields
+Checks for `.claude-plugin/plugin.json`:
 
-## Plugin Config Validation Rules
+1. Confirm required manifest structure still matches current docs.
+2. Treat these as currently documented plugin capabilities when present:
+   - `hooks`
+   - `mcpServers`
+   - `outputStyles`
+   - `lspServers`
+   - `userConfig`
+   - `channels`
+3. When validating path behavior, remember:
+   - custom `commands`, `agents`, `skills`, and `outputStyles` replace defaults
+   - arrays can keep the default path and add extras
+4. When validating environment-variable guidance, distinguish:
+   - `${CLAUDE_PLUGIN_ROOT}` for bundled files
+   - `${CLAUDE_PLUGIN_DATA}` for persistent state that survives plugin updates
 
-### plugin.json
+Checks for `.claude-plugin/marketplace.json`:
 
-**Required:** `name` (kebab-case, no spaces)
+1. Confirm plugin entries still use documented source shapes.
+2. Flag broken relative paths or malformed source objects.
+3. Treat marketplace metadata gaps as repo policy issues unless current docs
+   make them invalid.
 
-**Valid optional fields:**
+## Recommended Validation Flow
 
-`version`, `description`, `author` (`{name, email?, url?}`), `homepage`,
-`repository`, `license`, `keywords`, `commands`, `agents`, `skills`,
-`hooks`, `mcpServers`, `outputStyles`, `lspServers`
-
-**Cross-checks:** All path fields resolve to existing files/directories.
-
-### marketplace.json
-
-**Required:** `name`, `owner` (object with `name`), `plugins` (array)
-
-**Each plugin entry:** `name` (required), `source` (required), with optional `description`, `version`, `author`, `category`, `tags`.
-
-**Valid `source` forms:**
-
-- Relative path string to a plugin dir inside the marketplace repo
-- Source object, including at least:
-  - `git-subdir`
-  - `github`
-  - `url`
-  - `npm`
-
-**Cross-checks:**
-
-- Relative-path `source` values exist and each has `.claude-plugin/plugin.json`
-- `git-subdir` sources include `url` and `path`
-- `github` sources include `repo`
-- `url` sources include `url`
-- `npm` sources include `package`
-- Names are unique
-- Relative paths must stay within the marketplace root and must not contain `..`
-
-## Priority Classification
-
-Workers MUST classify every finding:
-
-| Level | Meaning | Example |
-|-------|---------|---------|
-| **BLOCKER** | Breaks with current Claude Code | Invalid event name, removed field |
-| **WARNING** | Deprecated/discouraged | Old field name, deprecated pattern |
-| **INFO** | New capability available | New hook event, new frontmatter field |
-| **PASS** | Validates correctly | Field values match docs |
-
-## Output Template
-
-```markdown
-# {Type} Validation Report
-
-**Files checked**: {count}
-**Documentation version**: {date fetched}
-
-## Breaking Changes (BLOCKER)
-- **{file}:{line}** — {description}
-  - Current: `{what plugin has}`
-  - Expected: `{what docs say}`
-
-## Deprecations (WARNING)
-- **{file}** — {description}
-  - Replacement: `{recommended alternative}`
-
-## New Features Available (INFO)
-- **{feature}** — {description}
-  - Docs reference: {section}
-
-## Validation Passed
-- {count} files checked, {count} fields validated
-```
+1. Run deterministic plugin validation.
+2. Identify the exact docs question:
+   - agent schema
+   - skill frontmatter
+   - hooks
+   - manifest / marketplace
+3. Read only the cached doc sections that answer that question.
+4. Compare only the relevant plugin file snippets.
+5. Classify each finding as:
+   - docs incompatibility
+   - repo recommendation
+   - false alarm caused by stale local guidance

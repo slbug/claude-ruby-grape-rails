@@ -1,198 +1,136 @@
 ---
 name: session-deep-dive
-description: Deep qualitative analysis of high-signal sessions. Spawns subagents with v2 template, synthesizes patterns, compares against known findings. Use after /session-scan.
-argument-hint: "<session-id> | --last | --from-scan [--compare REPORT.md]"
+description: Deep qualitative review of high-signal sessions. Use after /session-scan to inspect transcripts, validate heuristic metrics, and synthesize contributor-facing findings.
+argument-hint: "<session-id> | --last | --from-scan [--provider NAME] [--compare PATH]"
 disable-model-invocation: true
 ---
 
 # Session Deep Dive (Tier 2)
 
-Qualitative analysis of high-signal sessions identified by `/session-scan`.
-Spawns subagents with pre-computed metrics context for focused analysis.
+Qualitative analysis for sessions identified by `/session-scan`.
+
+This workflow exists to validate or falsify scan heuristics with actual
+transcript evidence. It is not a replacement for deterministic evals.
 
 ## Requirements
 
-Requires **ccrider MCP**. If not available:
+Requires `ccrider` MCP and a populated `.claude/session-metrics/metrics.jsonl`.
 
-> ccrider MCP is required. See: <https://github.com/neilberkman/ccrider>
+If the ledger does not exist, tell the contributor to run `/session-scan`
+first.
 
 ## Usage
 
-```
-/session-deep-dive ffa155ee-ed8a-492c-8797-878fcbec4d9e
-/session-deep-dive --last                    # Most recent Tier 2 eligible
-/session-deep-dive --from-scan               # All Tier 2 eligible from last scan
-/session-deep-dive --from-scan --compare .claude/UPDATED_PLUGIN_REPORT_160_SESSIONS.md
-```
-
-## Pipeline
-
-### Step 1: Resolve Target Sessions
-
-From `$ARGUMENTS`:
-
-- **Session ID**: Single session to analyze
-- **`--last`**: Most recent Tier 2 eligible session from metrics.jsonl
-- **`--from-scan`**: All sessions where `tier2_eligible: true` AND
-  `tier2_completed: false` in `.claude/session-metrics/metrics.jsonl`
-- **`--compare REPORT.md`**: Previous report to compare against
-  (default: most recent `.claude/session-analysis/insights-*.md`)
-
-If no metrics.jsonl exists, tell the user:
-
-> No metrics found. Run `/session-scan` first to discover and score sessions.
-
-### Step 2: Load Pre-computed Metrics
-
-For each target session, read its entry from `metrics.jsonl`.
-Format the metrics as a context block for subagent prompts:
-
-```
-## Pre-computed Metrics (from /session-scan)
-
-- Friction: 0.42 (retry_loops: 1, user_corrections: 3, approach_changes: 2)
-- Fingerprint: bug-fix (confidence: 0.85)
-- Plugin opportunity: 0.65 (could use: investigate, quick)
-- Tool profile: Read 28.7%, Edit 15.2%, Bash 19.3%, runtime tooling 22.8%
-- Duration: 78 minutes, 19 user messages, 171 tool calls
+```text
+/session-deep-dive SESSION_ID
+/session-deep-dive --last
+/session-deep-dive --from-scan
+/session-deep-dive --from-scan --provider claude-code
+/session-deep-dive --compare .claude/session-analysis/insights-2026-03-20.md
 ```
 
-Determine `PROJECT_ROOT` from current working directory.
+## Workflow
 
-### Step 3: Fetch Transcripts — One Subagent Per Session
+### 1. Resolve Target Sessions
 
-**CRITICAL: One ccrider call = one subagent.** Full transcripts are
-5-30KB each. Even 3 per worker floods the worker's context.
+Supported selectors:
 
-For EACH session, spawn a **haiku** subagent:
+- explicit session ID
+- `--last`
+- `--from-scan`
+- optional `--provider NAME`
+- optional `--compare PATH`
 
-```
-Task(subagent_type="general-purpose", model="haiku", prompt="""
-Fetch one session transcript and save it.
+If `--provider` is present, only analyze ledger entries whose `provider` field
+matches that value.
 
-1. mcp__ccrider__get_session_messages(session_id: "{SESSION_ID}")
-   If > 200 messages: use last_n: 200
+### 2. Load Existing Metrics as Hints
 
-2. Write transcript to {PROJECT_ROOT}/.claude/session-analysis/{SHORT_ID}-transcript.md
-   Format:
-   # Session: {SHORT_ID}
-   Project: {PROJECT}
-   Date: {DATE}
-   Messages: {COUNT}
+For each target session, load its ledger entry and treat these values as
+starting hypotheses:
 
-   ## Messages
-   ### User (seq N)
-   {content}
-   ### Assistant (seq N)
-   {content}
+- friction score
+- fingerprint
+- plugin opportunity score
+- tool profile
+- skill-effectiveness hints
 
-3. Report: "Wrote {SHORT_ID}-transcript.md ({N} messages)"
-""")
-```
+Do not assume they are correct until transcript evidence supports them.
 
-**Spawn ALL fetch subagents in parallel.** Wait for all to complete.
+### 3. Fetch One Transcript Per Subagent
 
-### Step 4: Analyze Sessions
+Use one subagent per session. Main context should not pull multiple full
+transcripts directly.
 
-Read the analysis template — inline it into subagent prompts:
+Use `Agent(...)`, not historical `Task(...)`, in contributor prompts.
 
-```
-Glob: **/session-deep-dive/references/analysis-template-v2.md
-```
+Each fetch subagent should:
 
-**ALWAYS use subagents** — never analyze in main context.
+1. call ccrider for one session
+2. write the transcript to `.claude/session-analysis/{short_id}-transcript.md`
+3. report the transcript path and message count
 
-- **1-6 sessions**: Spawn **sonnet** subagents (one per session)
-- **7+ sessions**: Spawn **haiku** subagents for speed
+### 4. Analyze Each Session with the Shared Template
 
-Each analysis subagent prompt:
+Read:
 
-> Read the session transcript at {transcript_path}.
-> Apply the analysis template below to analyze this session.
-> The pre-computed metrics below give you quantitative context —
-> validate them and add qualitative depth.
->
-> {metrics_context_block}
->
-> {analysis_template_content}
->
-> Write your report (under 200 lines) to {report_path}.
+- `${CLAUDE_SKILL_DIR}/references/analysis-template-v2.md`
 
-Reports go to `.claude/session-analysis/{short_id}-report.md`.
+Then spawn one analysis subagent per transcript. Include:
 
-### Step 5: Compress (if 3+ sessions)
+- transcript path
+- the pre-computed metrics block
+- explicit instruction to mark evidence strength
+- reminder that the metrics are heuristic
 
-If 3+ sessions analyzed, spawn context-supervisor (haiku) to compress:
+Write each report to:
 
-> Read all report files in `.claude/session-analysis/*-report.md`.
-> Write a consolidated summary to `.claude/session-analysis/summaries/consolidated.md`.
-> Preserve: friction patterns, plugin opportunities, evidence strength tags.
-> Remove: per-file details, generic observations, repeated context.
+- `.claude/session-analysis/{short_id}-report.md`
 
-### Step 6: Synthesize
+### 5. Compress When Needed
 
-Read the synthesis template:
+If you have 3 or more per-session reports, compress them before synthesis.
 
-```
-Glob: **/session-deep-dive/references/synthesis-template.md
-```
+Keep:
 
-Read the `--compare` report (or latest insights file).
-Read `MEMORY.md` for known findings.
+- repeatable friction patterns
+- repeated plugin-opportunity signals
+- evidence-strength notes
+- contradictions between metrics and transcript reality
 
-If 3+ sessions: read `summaries/consolidated.md` (NOT individual reports).
-If 1-2 sessions: read individual reports directly.
+### 6. Synthesize Carefully
 
-Produce synthesis comparing:
+Read:
 
-- New findings vs known patterns from MEMORY.md
-- Confirmed patterns (seen before, still present)
-- New patterns (not in previous reports)
-- Resolved patterns (previously noted, no new occurrences)
+- `${CLAUDE_SKILL_DIR}/references/synthesis-template.md`
 
-### Step 7: Update Ledger
+Compare the current session reports against:
 
-Use Python to safely update `metrics.jsonl` — never manually
-read/modify/rewrite in the LLM context:
+- previous synthesis reports, if present
+- the contributor-provided `--compare` file, if present
+- recent deterministic signals such as `lab/eval`, if they are relevant
 
-```bash
-python3 -c "
-import json
-ids = {SESSION_IDS_SET}  # e.g., {'ffa155ee-...', '90a74843-...'}
-lines = open('{PROJECT_ROOT}/.claude/session-metrics/metrics.jsonl').readlines()
-with open('{PROJECT_ROOT}/.claude/session-metrics/metrics.jsonl', 'w') as f:
-    for line in lines:
-        entry = json.loads(line)
-        if entry.get('session_id') in ids:
-            entry['tier2_completed'] = True
-        f.write(json.dumps(entry) + '\n')
-"
-```
+Do not depend on missing local artifacts like `MEMORY.md` or old report files.
 
-### Step 8: Write Output
+### 7. Mark Deep-Dive Completion
 
-Write synthesis to `.claude/session-analysis/insights-{date}.md`
+When updating `metrics.jsonl`, use a scripted update path. Do not hand-edit
+JSONL in the prompt.
 
-Present key findings directly in conversation. Tell user:
+### 8. Write Output
 
-> Full report: `.claude/session-analysis/insights-{date}.md`
-> Per-session reports: `.claude/session-analysis/{id}-report.md`
+Write:
 
-## Output Files
-
-| File | Purpose |
-|------|---------|
-| `.claude/session-analysis/{id}-transcript.md` | Raw transcript |
-| `.claude/session-analysis/{id}-report.md` | Per-session analysis |
-| `.claude/session-analysis/summaries/consolidated.md` | Compressed reports |
-| `.claude/session-analysis/insights-{date}.md` | Cross-session synthesis |
+- per-session reports
+- optional consolidated summary
+- final synthesis:
+  - `.claude/session-analysis/insights-{date}.md`
 
 ## Iron Laws
 
-1. **ONE ccrider call = ONE subagent** — never batch multiple fetches
-2. **NEVER fetch or analyze in main context** — always subagents
-3. **Absolute paths in subagent prompts** — subagents don't inherit skill context
-4. **Python for jsonl updates** — never manually rewrite in LLM context
-5. **ALWAYS pass pre-computed metrics to analysis subagents** — don't re-derive
-6. **NEVER skip synthesis** — cross-session patterns are the real value
-7. **TAG evidence strength** — every finding must be STRONG/MODERATE/WEAK
+1. Transcript-derived metrics are hints, not proof.
+2. Use one transcript-fetch subagent per session.
+3. Validate scan heuristics against actual transcript evidence.
+4. Avoid missing local dependencies such as `MEMORY.md`.
+5. Keep synthesis grounded in tracked files and explicit contributor notes.
+6. Cite evidence strength for every meaningful finding.

@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Session Analytics v2 — Compute deterministic metrics from Claude Code sessions.
+Session Analytics v2 — Compute exploratory metrics from Claude Code sessions.
 
 Reads ccrider message JSON and computes friction scores, fingerprints, plugin
-opportunity scores, tool bigrams, file hotspots, and session chaining.
+opportunity scores, tool bigrams, and file hotspots.
 
 Usage:
     # Single session (outputs JSON to stdout)
-    python3 compute-metrics.py <messages.json> --session-id ID --project NAME
+    python3 compute-metrics.py <messages.json> --session-id ID --project NAME [--provider NAME]
 
     # Batch mode (appends to metrics.jsonl)
     python3 compute-metrics.py --batch <manifest.json>
 
     # Trends mode (computes windowed aggregates)
-    python3 compute-metrics.py --trends <metrics.jsonl> [--memory MEMORY.md]
+    python3 compute-metrics.py --trends <metrics.jsonl> [--project NAME] [--provider NAME] [--notes PATH]
 
     # Backfill from v1 extracts
     python3 compute-metrics.py --backfill <extracts-dir/>
@@ -104,6 +104,33 @@ def parse_messages(data):
     return messages
 
 
+def extract_provider(data, fallback=None):
+    """Extract provider label from transcript payload when available."""
+    candidates = []
+    if isinstance(data, dict):
+        candidates.append(data.get("provider"))
+
+        metadata = data.get("metadata")
+        if isinstance(metadata, dict):
+            candidates.append(metadata.get("provider"))
+
+        session = data.get("session")
+        if isinstance(session, dict):
+            candidates.append(session.get("provider"))
+
+        source = data.get("source")
+        if isinstance(source, dict):
+            candidates.append(source.get("provider"))
+
+    for value in candidates:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    if isinstance(fallback, str) and fallback.strip():
+        return fallback.strip()
+    return "unknown"
+
+
 def _get_role(msg):
     """Get message role, supporting both API format (role) and ccrider format (type)."""
     return msg.get("role", msg.get("type", msg.get("message", {}).get("role", "")))
@@ -114,10 +141,30 @@ def _get_content(msg):
     return msg.get("content", msg.get("message", {}).get("content", ""))
 
 
-# Tool name detection from assistant text (ccrider doesn't preserve tool_use blocks)
+def extract_file_paths(tool_input):
+    """Extract one or more file paths from a tool input payload."""
+    if not isinstance(tool_input, dict):
+        return []
+
+    paths = []
+    for key in ("file_path", "path"):
+        value = tool_input.get(key)
+        if isinstance(value, str) and value:
+            paths.append(value)
+
+    for key in ("file_paths", "paths"):
+        value = tool_input.get(key)
+        if isinstance(value, list):
+            paths.extend(p for p in value if isinstance(p, str) and p)
+
+    return paths
+
+
+# Tool name detection from assistant text (ccrider may not preserve tool_use blocks)
 TOOL_MENTION_RE = re.compile(
-    r"\b(Read|Edit|Write|Bash|Grep|Glob|Task|NotebookEdit|WebFetch|WebSearch"
-    r"|mcp__tidewave\w*)\b"
+    r"\b(Read|Edit|MultiEdit|Write|Bash|Grep|Glob|Task|Agent|NotebookEdit"
+    r"|WebFetch|WebSearch|Skill|AskUserQuestion|ExitPlanMode|KillShell"
+    r"|MCPSearch|mcp__[A-Za-z0-9_]+)\b"
 )
 BASH_CMD_RE = re.compile(
     r"(?:^|\n)\s*(?:\$|>)\s*(bundle\s|rails\s|rake\s|git\s|npm\s|python3?\s|cd\s|rm\s)"
@@ -342,7 +389,12 @@ def compute_fingerprint(user_msgs, tool_calls, files_edited):
         + tool_counts.get("Grep", 0)
         + tool_counts.get("Glob", 0)
     ) / total
-    edit_pct = (tool_counts.get("Edit", 0) + tool_counts.get("Write", 0)) / total
+    edit_pct = (
+        tool_counts.get("Edit", 0)
+        + tool_counts.get("Write", 0)
+        + tool_counts.get("MultiEdit", 0)
+        + tool_counts.get("NotebookEdit", 0)
+    ) / total
     bash_pct = tool_counts.get("Bash", 0) / total
 
     if read_pct > 0.5 and edit_pct < 0.1:
@@ -439,7 +491,9 @@ def compute_plugin_opportunity(user_msgs, tool_calls, rb_commands):
         could_use.append("pr-review")
 
     # Many edits without review suggest /rb:review
-    edit_count = sum(1 for n in tool_names if n in ("Edit", "Write"))
+    edit_count = sum(
+        1 for n in tool_names if n in ("Edit", "Write", "MultiEdit", "NotebookEdit")
+    )
     if edit_count > 10 and "review" not in rb_commands:
         could_use.append("review")
 
@@ -454,7 +508,12 @@ def compute_tool_profile(tool_calls):
     counts = Counter(names)
 
     read_count = counts.get("Read", 0) + counts.get("Glob", 0)
-    edit_count = counts.get("Edit", 0) + counts.get("Write", 0)
+    edit_count = (
+        counts.get("Edit", 0)
+        + counts.get("Write", 0)
+        + counts.get("MultiEdit", 0)
+        + counts.get("NotebookEdit", 0)
+    )
     bash_count = counts.get("Bash", 0)
     grep_count = counts.get("Grep", 0)
     tidewave_count = sum(v for k, v in counts.items() if k.startswith("mcp__tidewave"))
@@ -488,13 +547,14 @@ def compute_file_hotspots(tool_calls, top_n=10):
     for tc in tool_calls:
         name = tc.get("name", "")
         inp = tc.get("input", {})
-        fp = inp.get("file_path", "")
-        if not fp:
+        file_paths = extract_file_paths(inp)
+        if not file_paths:
             continue
-        if name in ("Read", "Glob"):
-            hotspots[fp]["reads"] += 1
-        elif name in ("Edit", "Write"):
-            hotspots[fp]["edits"] += 1
+        for fp in file_paths:
+            if name in ("Read", "Glob"):
+                hotspots[fp]["reads"] += 1
+            elif name in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
+                hotspots[fp]["edits"] += 1
 
     ranked = sorted(
         hotspots.items(),
@@ -659,7 +719,9 @@ def compute_skill_effectiveness(user_msgs, tool_calls, errors, messages):
 
         # Count post-skill signals
         post_edits = sum(
-            1 for tp in window_tools if tp["tc"].get("name") in ("Edit", "Write")
+            1
+            for tp in window_tools
+            if tp["tc"].get("name") in ("Edit", "Write", "MultiEdit", "NotebookEdit")
         )
         post_reads = sum(
             1 for tp in window_tools if tp["tc"].get("name") in ("Read", "Grep", "Glob")
@@ -760,7 +822,7 @@ def compute_skill_effectiveness(user_msgs, tool_calls, errors, messages):
 # ─── Main Metric Pipeline ────────────────────────────────────────────────────
 
 
-def compute_session_metrics(data, session_id, project, date=None):
+def compute_session_metrics(data, session_id, project, date=None, provider=None):
     """Compute all metrics for a single session."""
     messages = parse_messages(data)
     tool_calls = extract_tool_calls(messages)
@@ -773,13 +835,13 @@ def compute_session_metrics(data, session_id, project, date=None):
     files_read = set()
     for tc in tool_calls:
         name = tc.get("name", "")
-        fp = tc.get("input", {}).get("file_path", "")
-        if not fp:
+        file_paths = extract_file_paths(tc.get("input", {}))
+        if not file_paths:
             continue
-        if name in ("Edit", "Write"):
-            files_edited.add(fp)
+        if name in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
+            files_edited.update(file_paths)
         elif name == "Read":
-            files_read.add(fp)
+            files_read.update(file_paths)
 
     # Extract rb commands from user messages
     rb_commands = []
@@ -788,6 +850,8 @@ def compute_session_metrics(data, session_id, project, date=None):
             cmds = RB_COMMAND_RE.findall(text)
             cmds = [c for c in cmds if "{" not in c and "<" not in c]
             rb_commands.extend(cmds)
+
+    provider_name = extract_provider(data, provider)
 
     # runtime tooling detection
     tool_names = [tc.get("name", "") for tc in tool_calls]
@@ -827,6 +891,7 @@ def compute_session_metrics(data, session_id, project, date=None):
         "session_id": session_id,
         "scanned_at": datetime.now(timezone.utc).isoformat(),
         "project": project,
+        "provider": provider_name,
         "date": date
         or (
             timestamps[0][:10]
@@ -852,7 +917,7 @@ def compute_session_metrics(data, session_id, project, date=None):
         "file_hotspots": hotspots,
         "file_categories": categorize_files(list(files_edited)),
         "skill_effectiveness": skill_effectiveness,
-        "session_chain": {"previous_session_id": None, "chain_length": 1},
+        "session_chain": {"implemented": False},
         "tier2_eligible": tier2_eligible,
         "tier2_reason": " AND ".join(tier2_reasons) if tier2_reasons else None,
         "tier2_completed": False,
@@ -964,6 +1029,7 @@ def backfill_from_v1(extract_path):
         "scanned_at": datetime.now(timezone.utc).isoformat(),
         "backfilled": True,
         "project": project,
+        "provider": v1.get("provider", "unknown"),
         "date": None,
         "duration_minutes": v1.get("duration_minutes"),
         "message_count": v1.get("user_message_count", len(user_msgs)),
@@ -991,7 +1057,7 @@ def backfill_from_v1(extract_path):
         "file_hotspots": [],
         "file_categories": v1.get("file_categories", {}),
         "skill_effectiveness": {},
-        "session_chain": {"previous_session_id": None, "chain_length": 1},
+        "session_chain": {"implemented": False},
         "tier2_eligible": friction_score > 0.35 or opportunity_score > 0.5,
         "tier2_reason": None,
         "tier2_completed": False,
@@ -1001,7 +1067,9 @@ def backfill_from_v1(extract_path):
 # ─── Trends Computation ──────────────────────────────────────────────────────
 
 
-def compute_trends(metrics_path, memory_path=None, project_filter=None):
+def compute_trends(
+    metrics_path, notes_path=None, project_filter=None, provider_filter=None
+):
     """Compute windowed aggregates from metrics.jsonl."""
     entries = []
     with open(metrics_path) as f:
@@ -1013,6 +1081,10 @@ def compute_trends(metrics_path, memory_path=None, project_filter=None):
                     if project_filter:
                         proj = entry.get("project", "")
                         if project_filter.lower() not in proj.lower():
+                            continue
+                    if provider_filter and provider_filter.lower() != "all":
+                        provider_name = str(entry.get("provider", "unknown"))
+                        if provider_name.lower() != provider_filter.lower():
                             continue
                     entries.append(entry)
                 except json.JSONDecodeError:
@@ -1066,6 +1138,7 @@ def compute_trends(metrics_path, memory_path=None, project_filter=None):
             if e.get("plugin_signals", {}).get("rb_commands_used")
         )
         backfilled = sum(1 for e in window_entries if e.get("backfilled"))
+        providers = Counter(e.get("provider", "unknown") for e in window_entries)
 
         trends[window_name] = {
             "count": len(window_entries),
@@ -1077,23 +1150,22 @@ def compute_trends(metrics_path, memory_path=None, project_filter=None):
             "tier2_eligible_count": tier2_count,
             "tier2_eligible_pct": round(tier2_count / len(window_entries) * 100, 1),
             "plugin_adoption_rate": round(rb_users / len(window_entries) * 100, 1),
+            "provider_distribution": dict(providers.most_common()),
         }
 
-    # Memory comparison (if provided)
-    memory_comparison = None
-    if memory_path and os.path.exists(memory_path):
-        with open(memory_path) as f:
-            memory_text = f.read()
-        memory_comparison = {
-            "plugin_adoption_memory": "8-12%" if "8-12%" in memory_text else "unknown",
-            "plugin_adoption_measured": f"{trends.get('all', {}).get('plugin_adoption_rate', 0)}%",
+    notes_reference = None
+    if notes_path:
+        notes_reference = {
+            "path": notes_path,
+            "exists": os.path.exists(notes_path),
         }
 
     return {
         "computed_at": now.isoformat(),
         "total_sessions": len(entries),
+        "provider_filter": provider_filter or "all",
         "windows": trends,
-        "memory_comparison": memory_comparison,
+        "notes_reference": notes_reference,
     }
 
 
@@ -1123,7 +1195,9 @@ def run_batch(manifest_path):
         try:
             with open(msg_path) as f:
                 data = json.load(f)
-            metrics = compute_session_metrics(data, sid, project)
+            metrics = compute_session_metrics(
+                data, sid, project, provider=entry.get("provider")
+            )
             results.append(metrics)
 
             with open(metrics_path, "a") as f:
@@ -1144,10 +1218,12 @@ def run_batch(manifest_path):
 
 def print_usage():
     print("Usage:")
-    print("  python3 compute-metrics.py <messages.json> --session-id ID --project NAME")
+    print(
+        "  python3 compute-metrics.py <messages.json> --session-id ID --project NAME [--provider NAME]"
+    )
     print("  python3 compute-metrics.py --batch <manifest.json>")
     print(
-        "  python3 compute-metrics.py --trends <metrics.jsonl> [--memory MEMORY.md] [--project NAME]"
+        "  python3 compute-metrics.py --trends <metrics.jsonl> [--project NAME] [--provider NAME] [--notes PATH]"
     )
     print("  python3 compute-metrics.py --backfill <extracts-dir/>")
     print("  python3 compute-metrics.py --help")
@@ -1170,17 +1246,31 @@ if __name__ == "__main__":
         if len(sys.argv) < 3:
             print("Error: --trends requires metrics.jsonl path")
             sys.exit(1)
-        memory_path = None
-        if "--memory" in sys.argv:
+        notes_path = None
+        if "--notes" in sys.argv:
+            idx = sys.argv.index("--notes")
+            if idx + 1 < len(sys.argv):
+                notes_path = sys.argv[idx + 1]
+        elif "--memory" in sys.argv:
             idx = sys.argv.index("--memory")
             if idx + 1 < len(sys.argv):
-                memory_path = sys.argv[idx + 1]
+                notes_path = sys.argv[idx + 1]
         project_filter = None
         if "--project" in sys.argv:
             idx = sys.argv.index("--project")
             if idx + 1 < len(sys.argv):
                 project_filter = sys.argv[idx + 1]
-        result = compute_trends(sys.argv[2], memory_path, project_filter)
+        provider_filter = None
+        if "--provider" in sys.argv:
+            idx = sys.argv.index("--provider")
+            if idx + 1 < len(sys.argv):
+                provider_filter = sys.argv[idx + 1]
+        result = compute_trends(
+            sys.argv[2],
+            notes_path=notes_path,
+            project_filter=project_filter,
+            provider_filter=provider_filter,
+        )
         print(json.dumps(result, indent=2))
 
     elif mode == "--backfill":
@@ -1244,6 +1334,7 @@ if __name__ == "__main__":
         messages_path = mode
         session_id = None
         project = "unknown"
+        provider = None
 
         if "--session-id" in sys.argv:
             idx = sys.argv.index("--session-id")
@@ -1254,6 +1345,10 @@ if __name__ == "__main__":
             idx = sys.argv.index("--project")
             if idx + 1 < len(sys.argv):
                 project = sys.argv[idx + 1]
+        if "--provider" in sys.argv:
+            idx = sys.argv.index("--provider")
+            if idx + 1 < len(sys.argv):
+                provider = sys.argv[idx + 1]
 
         if not session_id:
             session_id = os.path.basename(messages_path).replace(".json", "")
@@ -1261,5 +1356,5 @@ if __name__ == "__main__":
         with open(messages_path) as f:
             data = json.load(f)
 
-        metrics = compute_session_metrics(data, session_id, project)
+        metrics = compute_session_metrics(data, session_id, project, provider=provider)
         print(json.dumps(metrics))
