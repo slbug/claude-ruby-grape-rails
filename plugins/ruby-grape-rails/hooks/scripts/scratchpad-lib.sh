@@ -142,6 +142,7 @@ ensure_scratchpad_file() {
 
   scratchpad_file="${plan_dir}/scratchpad.md"
   [[ ! -L "$scratchpad_file" ]] || return 1
+  [[ ! -e "$scratchpad_file" || -f "$scratchpad_file" ]] || return 1
 
   if [[ -f "$scratchpad_file" && -s "$scratchpad_file" ]]; then
     return 0

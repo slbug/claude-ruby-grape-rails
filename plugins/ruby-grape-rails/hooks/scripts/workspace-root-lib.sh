@@ -143,20 +143,50 @@ canonicalize_existing_path() {
   local dir
   local base
   local resolved_dir
+  local target
+  local depth=0
 
   [[ -n "$path" ]] || return 1
   [[ -e "$path" ]] || return 1
+  command -v readlink >/dev/null 2>&1 || return 1
 
-  dir=$(path_dirname "$path") || return 1
-  base=$(path_basename "$path") || return 1
-  [[ -d "$dir" ]] || return 1
-
-  resolved_dir=$(cd "$dir" >/dev/null 2>&1 && pwd -P) || return 1
-  if [[ "$base" == "/" ]]; then
-    printf '%s\n' "$resolved_dir"
-    return 0
+  if [[ "$path" != /* ]]; then
+    path="${PWD}/${path#./}"
   fi
-  printf '%s/%s\n' "$resolved_dir" "$base"
+
+  while :; do
+    depth=$((depth + 1))
+    [[ "$depth" -le 40 ]] || return 1
+
+    dir=$(path_dirname "$path") || return 1
+    base=$(path_basename "$path") || return 1
+    [[ -d "$dir" ]] || return 1
+
+    resolved_dir=$(cd "$dir" >/dev/null 2>&1 && pwd -P) || return 1
+    if [[ "$base" == "/" ]]; then
+      printf '%s\n' "$resolved_dir"
+      return 0
+    fi
+
+    path="${resolved_dir}/${base}"
+
+    if [[ -L "$path" ]]; then
+      target=$(readlink "$path") || return 1
+      [[ -n "$target" ]] || return 1
+
+      if [[ "$target" == /* ]]; then
+        path="$target"
+      else
+        path="${resolved_dir}/${target#./}"
+      fi
+
+      [[ -e "$path" ]] || return 1
+      continue
+    fi
+
+    printf '%s\n' "$path"
+    return 0
+  done
 }
 
 resolve_workspace_file_path() {

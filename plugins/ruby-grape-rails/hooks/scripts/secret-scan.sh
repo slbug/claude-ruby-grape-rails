@@ -113,7 +113,7 @@ if [[ -z "$FILE_PATH" ]]; then
         local_resolved=$(resolve_workspace_file_path "$REPO_ROOT" "$file") || continue
         is_path_within_root "$REPO_ROOT" "$local_resolved" || continue
         copy_into_tmpdir "$local_resolved" "$TMP_DIR" 2>/dev/null || true
-      done < <(cd "$REPO_ROOT" && git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null | head -20)
+      done < <(cd "$REPO_ROOT" && git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null)
     else
       while IFS= read -r file; do
         local_resolved=""
@@ -121,7 +121,7 @@ if [[ -z "$FILE_PATH" ]]; then
         local_resolved=$(resolve_workspace_file_path "$REPO_ROOT" "$file") || continue
         is_path_within_root "$REPO_ROOT" "$local_resolved" || continue
         copy_into_tmpdir "$local_resolved" "$TMP_DIR" 2>/dev/null || true
-      done < <(cd "$REPO_ROOT" && git ls-files 2>/dev/null | head -20)
+      done < <(cd "$REPO_ROOT" && git ls-files 2>/dev/null)
     fi
 
     if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then

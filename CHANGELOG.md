@@ -46,6 +46,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Scratchpad handoff insertion now preserves literal note content** —
   hook-written handoff notes no longer route arbitrary text through `awk -v`,
   avoiding backslash escape corruption in persisted scratchpad context.
+- **Scratchpad creation now refuses non-regular existing targets** —
+  `ensure_scratchpad_file()` now bails if `scratchpad.md` already exists as a
+  directory, FIFO, or other non-file path instead of letting `mv -f` behave
+  unexpectedly.
+- **`ACTIVE_PLAN` marker writes now apply the same non-regular-path guard** —
+  the active-plan marker now refuses existing directory/FIFO-style targets
+  before replacing the marker file.
 - **Shell cleanup paths are now more defensive** — shipped hook scripts now
   validate temp-file/temp-dir prefixes before deleting, prefer exact-path
   cleanup for plugin-owned markers, and the verification examples now show the
@@ -54,6 +61,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   now use local cleanup functions instead of embedded quoted path patterns, and
   symlinked `ACTIVE_PLAN` markers are surfaced as manual-cleanup warnings
   rather than silently mishandled.
+- **Strict secret scans no longer truncate after 20 files** — the no-file-path
+  strict-mode secret scan now checks the full changed/tracked file set instead
+  of silently capping coverage.
+- **Workspace path canonicalization now follows symlink targets fully** —
+  helper path checks now resolve the actual target path instead of only
+  normalizing the parent directory.
+- **SessionStart scratchpad checks are now read-only** — startup/resume no
+  longer auto-creates missing `scratchpad.md` files just to report plan state.
+- **PreCompact no longer injects raw scratchpad dead-end text into system context** —
+  compaction hints now reference dead-end counts and the scratchpad path while
+  explicitly treating scratchpad content as untrusted repo notes.
 - **Debug references no longer default to nuclear rebuilds** — investigate
   quick-command docs now prefer staged cache-clear / install / precompile
   steps instead of recommending broad `rm -rf` cleanup by default.

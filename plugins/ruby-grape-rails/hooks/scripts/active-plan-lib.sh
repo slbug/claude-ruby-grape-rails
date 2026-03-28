@@ -235,6 +235,7 @@ set_active_plan() {
   [[ ! -L "$CLAUDE_DIR" ]] || return 1
   mkdir -p -- "$CLAUDE_DIR" || return 1
   [[ ! -L "$ACTIVE_PLAN_MARKER" ]] || return 1
+  [[ ! -e "$ACTIVE_PLAN_MARKER" || -f "$ACTIVE_PLAN_MARKER" ]] || return 1
 
   tmp_marker=$(mktemp "${CLAUDE_DIR}/ACTIVE_PLAN.XXXXXX") || return 1
   [[ -n "$tmp_marker" ]] || return 1

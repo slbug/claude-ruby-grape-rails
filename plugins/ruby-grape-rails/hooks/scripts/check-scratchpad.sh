@@ -2,8 +2,8 @@
 set -o nounset
 set -o pipefail
 
-# SessionStart hook: Initialize structured scratchpads and surface
-# dead-end-heavy plans before the user resumes work.
+# SessionStart hook: Surface existing scratchpads and dead-end-heavy
+# plans before the user resumes work.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
@@ -37,7 +37,6 @@ for plan_dir in "${PLANS_DIR}"/*; do
   [[ -d "${plan_dir}/research" && ! -L "${plan_dir}/research" ]] && needs_scratchpad=true
   [[ "$needs_scratchpad" == "true" ]] || continue
 
-  ensure_scratchpad_file "$plan_dir" "$(get_plan_intent "$plan_dir" 2>/dev/null || true)" || true
   if [[ -f "${plan_dir}/scratchpad.md" && ! -L "${plan_dir}/scratchpad.md" ]]; then
     scratchpads+=("${plan_dir}/scratchpad.md")
   fi
@@ -47,7 +46,7 @@ shopt -u nullglob
 COUNT=${#scratchpads[@]}
 
 if [[ "$COUNT" -gt 0 ]]; then
-  echo "Scratchpad notes found in $COUNT plan(s):"
+  echo "Existing scratchpad notes found in $COUNT plan(s):"
   for file in "${scratchpads[@]}"; do
     [[ -f "$file" ]] || continue
     plan_dir=$(path_dirname "$file")
