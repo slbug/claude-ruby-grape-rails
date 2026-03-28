@@ -208,6 +208,50 @@ resolve_workspace_root() {
   resolve_project_root_from_dir "${PWD:-.}"
 }
 
+safe_remove_exact_file() {
+  local path="${1:-}"
+  local expected="${2:-}"
+
+  [[ -n "$path" && -n "$expected" ]] || return 0
+  [[ "$path" == "$expected" ]] || return 1
+  [[ ! -e "$path" ]] && return 0
+  [[ ! -L "$path" ]] || return 1
+
+  rm -f -- "${path:?}"
+}
+
+safe_remove_temp_file() {
+  local path="${1:-}"
+  local pattern="${2:-}"
+
+  [[ -n "$path" && -n "$pattern" ]] || return 0
+  # shellcheck disable=SC2254 # intentional glob match against validated temp-file prefix
+  case "$path" in
+    $pattern) ;;
+    *) return 1 ;;
+  esac
+  [[ ! -e "$path" ]] && return 0
+  [[ ! -L "$path" ]] || return 1
+
+  rm -f -- "${path:?}"
+}
+
+safe_remove_temp_dir() {
+  local path="${1:-}"
+  local pattern="${2:-}"
+
+  [[ -n "$path" && -n "$pattern" ]] || return 0
+  # shellcheck disable=SC2254 # intentional glob match against validated temp-dir prefix
+  case "$path" in
+    $pattern) ;;
+    *) return 1 ;;
+  esac
+  [[ ! -e "$path" ]] && return 0
+  [[ -d "$path" && ! -L "$path" ]] || return 1
+
+  rm -rf -- "${path:?}"
+}
+
 normalize_hook_mode() {
   case "${1:-}" in
     strict|STRICT|Strict) printf '%s\n' "strict" ;;

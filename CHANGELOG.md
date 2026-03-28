@@ -43,6 +43,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   extraction examples label which file a block came from, and dead-end
   examples now show only the entry body to reinforce appending under the
   existing `## Dead Ends` section.
+- **Scratchpad handoff insertion now preserves literal note content** —
+  hook-written handoff notes no longer route arbitrary text through `awk -v`,
+  avoiding backslash escape corruption in persisted scratchpad context.
+- **Shell cleanup paths are now more defensive** — shipped hook scripts now
+  validate temp-file/temp-dir prefixes before deleting, prefer exact-path
+  cleanup for plugin-owned markers, and the verification examples now show the
+  same safer cleanup style.
+- **Debug references no longer default to nuclear rebuilds** — investigate
+  quick-command docs now prefer staged cache-clear / install / precompile
+  steps instead of recommending broad `rm -rf` cleanup by default.
 - **Release/docs metadata now reflects the expanded shipped surface** — the
   plugin now ships `23` agents, `50` skills, `152` skill references, and `25`
   hook scripts, and README / CLAUDE / intro content were updated to match.

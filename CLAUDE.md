@@ -249,6 +249,14 @@ Defined in `hooks/hooks.json`:
 - `Stop`: Warn if plans have unchecked tasks
 - `StopFailure`: Append normalized API-failure context to the active plan scratchpad for better resume continuity
 
+**Deletion safety rule:**
+
+- use `rm -f` only for `mktemp` outputs or exact fixed plugin-owned paths
+- use `rm -rf` only for validated `mktemp -d` outputs
+- prefer `rmdir` for expected-empty lock directories
+- for variable-based cleanup, validate the path/prefix first and use
+  `${var:?}` in the final delete
+
 **Hook modes:**
 
 - `default` (implicit): keep startup quieter, scan normal written text/source/config files, skip obvious binary/media files, and avoid recent-change fallback scans

@@ -148,13 +148,14 @@ ensure_scratchpad_file() {
   fi
 
   tmp_file=$(mktemp "${plan_dir}/scratchpad.XXXXXX") || return 1
+  [[ -n "$tmp_file" && "$tmp_file" == "${plan_dir}/scratchpad."* ]] || return 1
   if ! emit_scratchpad_template "$plan_dir" "$requested_summary" > "$tmp_file"; then
-    rm -f -- "$tmp_file"
+    safe_remove_temp_file "$tmp_file" "${plan_dir}/scratchpad.*" || true
     return 1
   fi
 
   if ! mv -f -- "$tmp_file" "$scratchpad_file"; then
-    rm -f -- "$tmp_file"
+    safe_remove_temp_file "$tmp_file" "${plan_dir}/scratchpad.*" || true
     return 1
   fi
 }
@@ -198,12 +199,38 @@ append_handoff_note() {
   local file="$1"
   local note="$2"
   local tmp_file
+  local note_file
+  local file_dir
 
   [[ -f "$file" && ! -L "$file" ]] || return 1
   [[ -n "$note" ]] || return 1
 
-  tmp_file=$(mktemp "$(dirname "$file")/scratchpad-handoff.XXXXXX") || return 1
-  if ! awk -v note="$note" '
+  file_dir=$(dirname "$file")
+  tmp_file=$(mktemp "${file_dir}/scratchpad-handoff.XXXXXX") || return 1
+  [[ -n "$tmp_file" && "$tmp_file" == "${file_dir}/scratchpad-handoff."* ]] || return 1
+  note_file=$(mktemp "${file_dir}/scratchpad-note.XXXXXX") || {
+    safe_remove_temp_file "$tmp_file" "${file_dir}/scratchpad-handoff.*" || true
+    return 1
+  }
+  [[ -n "$note_file" && "$note_file" == "${file_dir}/scratchpad-note."* ]] || {
+    safe_remove_temp_file "$tmp_file" "${file_dir}/scratchpad-handoff.*" || true
+    safe_remove_temp_file "$note_file" "${file_dir}/scratchpad-note.*" || true
+    return 1
+  }
+
+  if ! printf '%s\n' "$note" > "$note_file"; then
+    safe_remove_temp_file "$tmp_file" "${file_dir}/scratchpad-handoff.*" || true
+    safe_remove_temp_file "$note_file" "${file_dir}/scratchpad-note.*" || true
+    return 1
+  fi
+
+  if ! awk -v note_file="$note_file" '
+    function print_note_file(path,    line) {
+      while ((getline line < path) > 0) {
+        print line
+      }
+      close(path)
+    }
     BEGIN { saw_handoff = 0; inserted = 0; in_handoff = 0 }
     $0 == "## Handoff" {
       saw_handoff = 1
@@ -214,7 +241,7 @@ append_handoff_note() {
     /^## / && in_handoff {
       if (!inserted) {
         print ""
-        print note
+        print_note_file(note_file)
         inserted = 1
       }
       in_handoff = 0
@@ -222,7 +249,7 @@ append_handoff_note() {
       next
     }
     in_handoff && !inserted && /^\(none yet\)[[:space:]]*$/ {
-      print note
+      print_note_file(note_file)
       inserted = 1
       next
     }
@@ -232,19 +259,23 @@ append_handoff_note() {
         print ""
         print "## Handoff"
         print ""
-        print note
+        print_note_file(note_file)
       } else if (!inserted) {
         print ""
-        print note
+        print_note_file(note_file)
       }
     }
   ' "$file" > "$tmp_file"; then
-    rm -f -- "$tmp_file"
+    safe_remove_temp_file "$tmp_file" "${file_dir}/scratchpad-handoff.*" || true
+    safe_remove_temp_file "$note_file" "${file_dir}/scratchpad-note.*" || true
     return 1
   fi
 
   if ! mv -f -- "$tmp_file" "$file"; then
-    rm -f -- "$tmp_file"
+    safe_remove_temp_file "$tmp_file" "${file_dir}/scratchpad-handoff.*" || true
+    safe_remove_temp_file "$note_file" "${file_dir}/scratchpad-note.*" || true
     return 1
   fi
+
+  safe_remove_temp_file "$note_file" "${file_dir}/scratchpad-note.*" || true
 }

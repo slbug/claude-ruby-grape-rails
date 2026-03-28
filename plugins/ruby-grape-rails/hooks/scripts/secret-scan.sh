@@ -98,8 +98,13 @@ if [[ -z "$FILE_PATH" ]]; then
   if (cd "$REPO_ROOT" && git rev-parse --git-dir >/dev/null 2>&1); then
     TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/rb-secret-scan.XXXXXX") || exit 0
     [[ -n "$TMP_DIR" ]] || exit 0
+    [[ "$TMP_DIR" == "${TMPDIR:-/tmp}/rb-secret-scan."* ]] || exit 0
 
-    trap 'rm -rf -- "$TMP_DIR"' EXIT HUP INT TERM
+    # shellcheck disable=SC2329 # invoked via trap
+    cleanup_secret_scan_tmpdir() {
+      safe_remove_temp_dir "${TMP_DIR:-}" "${TMPDIR:-/tmp}/rb-secret-scan.*" || true
+    }
+    trap cleanup_secret_scan_tmpdir EXIT HUP INT TERM
 
     if (cd "$REPO_ROOT" && git rev-parse --verify HEAD >/dev/null 2>&1); then
       while IFS= read -r file; do

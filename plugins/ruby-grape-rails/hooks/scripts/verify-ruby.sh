@@ -26,9 +26,10 @@ case "$BASE_NAME" in
   *.rb|*.rake|Gemfile|Rakefile|config.ru)
     TMP_OUTPUT=$(mktemp "${TMPDIR:-/tmp}/rb-verify.XXXXXX") || exit 0
     [[ -n "$TMP_OUTPUT" ]] || exit 0
+    [[ "$TMP_OUTPUT" == "${TMPDIR:-/tmp}/rb-verify."* ]] || exit 0
 
     cleanup() {
-      rm -f -- "$TMP_OUTPUT"
+      safe_remove_temp_file "${TMP_OUTPUT:-}" "${TMPDIR:-/tmp}/rb-verify.*" || true
     }
     trap cleanup EXIT HUP INT TERM
 

@@ -76,6 +76,10 @@ When contributor workflow direction or local planning/audit notes change:
 
 - prefer small, verifiable patches over broad churn
 - prefer CLI tools first, then Ruby, then ad-hoc Python only as a last resort
+- use `rm -f` only for `mktemp` outputs or exact fixed plugin-owned paths
+- use `rm -rf` only for validated `mktemp -d` outputs; prefer `rmdir` for
+  expected-empty lock dirs
+- for variable-based cleanup, require both path validation and `${var:?}`
 - keep shipped docs aligned with real implementation
 - do not promote ignored local artifacts into tracked files unless they are
   genuinely reusable

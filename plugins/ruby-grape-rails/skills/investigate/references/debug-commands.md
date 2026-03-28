@@ -3,8 +3,10 @@
 ## Quick Debug Commands
 
 ```bash
-# Nuclear option - clean rebuild
-rm -rf tmp/cache vendor/bundle && bundle install && bundle exec rake assets:precompile
+# Safer rebuild sequence when cache corruption is suspected
+bundle exec rails tmp:cache:clear
+bundle install
+bundle exec rake assets:precompile
 
 # Check what methods a class/module has
 bundle exec rails runner "puts User.methods.grep(/find/).inspect"

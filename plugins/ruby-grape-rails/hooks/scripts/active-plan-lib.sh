@@ -118,13 +118,13 @@ get_active_plan() {
   # Primary: Check explicit marker file
   if [[ -f "$ACTIVE_PLAN_MARKER" ]]; then
     if [[ -L "$ACTIVE_PLAN_MARKER" ]]; then
-      rm -f -- "$ACTIVE_PLAN_MARKER"
+      safe_remove_exact_file "$ACTIVE_PLAN_MARKER" "${CLAUDE_DIR}/ACTIVE_PLAN" || true
       return 1
     fi
 
     local marked_plan
     if ! IFS= read -r marked_plan < "$ACTIVE_PLAN_MARKER"; then
-      rm -f -- "$ACTIVE_PLAN_MARKER"
+      safe_remove_exact_file "$ACTIVE_PLAN_MARKER" "${CLAUDE_DIR}/ACTIVE_PLAN" || true
       return 1
     fi
     marked_plan=$(resolve_plan_dir "$marked_plan") || marked_plan=""
@@ -145,7 +145,7 @@ get_active_plan() {
     fi
 
     # Marker is stale (plan completed or invalid), remove it
-    rm -f -- "$ACTIVE_PLAN_MARKER"
+    safe_remove_exact_file "$ACTIVE_PLAN_MARKER" "${CLAUDE_DIR}/ACTIVE_PLAN" || true
   fi
   
   # Fallback 1: Find most recent plan with unchecked tasks
@@ -237,13 +237,14 @@ set_active_plan() {
 
   tmp_marker=$(mktemp "${CLAUDE_DIR}/ACTIVE_PLAN.XXXXXX") || return 1
   [[ -n "$tmp_marker" ]] || return 1
+  [[ "$tmp_marker" == "${CLAUDE_DIR}/ACTIVE_PLAN."* ]] || return 1
 
   if ! (
-    trap 'rm -f -- "$tmp_marker"' EXIT HUP INT TERM
+    trap 'safe_remove_temp_file "${tmp_marker:-}" "'"${CLAUDE_DIR}"'/ACTIVE_PLAN.*" || true' EXIT HUP INT TERM
     printf '%s\n' "$plan_dir" > "$tmp_marker" &&
       mv -f -- "$tmp_marker" "$ACTIVE_PLAN_MARKER"
   ); then
-    rm -f -- "$tmp_marker"
+    safe_remove_temp_file "$tmp_marker" "${CLAUDE_DIR}/ACTIVE_PLAN.*" || true
     return 1
   fi
 }
@@ -251,7 +252,7 @@ set_active_plan() {
 # Clear the active plan marker (called on plan completion)
 clear_active_plan() {
   [[ ! -L "$CLAUDE_DIR" ]] || return 1
-  rm -f -- "$ACTIVE_PLAN_MARKER"
+  safe_remove_exact_file "$ACTIVE_PLAN_MARKER" "${CLAUDE_DIR}/ACTIVE_PLAN" || true
 }
 
 # Check if a plan is in full mode (autonomous cycle)

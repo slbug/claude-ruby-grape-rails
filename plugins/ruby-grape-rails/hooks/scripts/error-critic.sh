@@ -52,8 +52,8 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   exit 0
 fi
 cleanup_error_critic() {
-  [[ -n "$TRIMMED_LOG" ]] && rm -f -- "$TRIMMED_LOG" 2>/dev/null || true
-  [[ -n "$TMP_COUNT" ]] && rm -f -- "$TMP_COUNT" 2>/dev/null || true
+  [[ -n "$TRIMMED_LOG" ]] && safe_remove_temp_file "$TRIMMED_LOG" "${FAILURE_DIR}/trimmed.*" 2>/dev/null || true
+  [[ -n "$TMP_COUNT" ]] && safe_remove_temp_file "$TMP_COUNT" "${FAILURE_DIR}/count.*" 2>/dev/null || true
   rmdir -- "$LOCK_DIR" 2>/dev/null || true
 }
 trap cleanup_error_critic EXIT HUP INT TERM
@@ -67,6 +67,7 @@ else
 fi
 TMP_COUNT=$(mktemp "${FAILURE_DIR}/count.XXXXXX") || exit 0
 [[ -n "$TMP_COUNT" ]] || exit 0
+[[ "$TMP_COUNT" == "${FAILURE_DIR}/count."* ]] || exit 0
 printf '%s\n' "$COUNT" > "$TMP_COUNT" || exit 0
 mv -f -- "$TMP_COUNT" "$COUNT_FILE" || exit 0
 TMP_COUNT=""
@@ -80,6 +81,7 @@ TMP_COUNT=""
 
 TRIMMED_LOG=$(mktemp "${FAILURE_DIR}/trimmed.XXXXXX") || exit 0
 [[ -n "$TRIMMED_LOG" ]] || exit 0
+[[ "$TRIMMED_LOG" == "${FAILURE_DIR}/trimmed."* ]] || exit 0
 tail -100 "$FAILURE_LOG" > "$TRIMMED_LOG" || exit 0
 mv -f -- "$TRIMMED_LOG" "$FAILURE_LOG" || exit 0
 TRIMMED_LOG=""
