@@ -23,15 +23,15 @@ Preferred paths:
 ## Claim Log
 
 1. [VERIFIED] "{claim}"
-   - Evidence: {file:line or URL} [T1]
-   - Notes: {why the evidence supports the claim}
+   - Evidence: {path/to/file.rb:line}
+   - Notes: {why the local code proves the claim}
 
 2. [UNSUPPORTED] "{claim}"
    - Evidence: {paths or URLs checked}
    - Notes: {why it should be removed or softened}
 
 3. [CONFLICT] "{claim}"
-   - Evidence: {file:line or URL} [T1]
+   - Evidence: <https://example.com/source> [T1]
    - Notes: {what disagrees and which source is stronger}
 
 ## Required Fixes
