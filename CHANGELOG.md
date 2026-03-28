@@ -72,6 +72,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Active-plan marker read failures now fall back correctly** — transient
   `.claude/ACTIVE_PLAN` read issues no longer suppress the normal plan-state
   fallback heuristics.
+- **Symlinked `ACTIVE_PLAN` markers no longer disable plan auto-detection** —
+  the hook layer still warns about manual cleanup, but now continues into the
+  normal fallback heuristics instead of short-circuiting active-plan lookup.
 - **Resume progress summaries now count both `- [x]` and `- [X]`** —
   checked-task reporting no longer undercounts uppercase Markdown checkboxes.
 - **SessionStart scratchpad checks are now read-only** — startup/resume no

@@ -118,10 +118,7 @@ get_active_plan() {
   # Primary: Check explicit marker file
   if [[ -L "$ACTIVE_PLAN_MARKER" ]]; then
     printf '%s\n' "Warning: ${ACTIVE_PLAN_MARKER} is a symlink. Clean up yourself." >&2
-    return 1
-  fi
-
-  if [[ -f "$ACTIVE_PLAN_MARKER" ]]; then
+  elif [[ -f "$ACTIVE_PLAN_MARKER" ]]; then
 
     local marked_plan
     if ! IFS= read -r marked_plan < "$ACTIVE_PLAN_MARKER"; then
