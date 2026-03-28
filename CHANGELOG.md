@@ -39,6 +39,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   counts now track top-level entries instead of nested detail bullets, and the
   compound/planning docs now point to the correct scratchpad template and a
   working section-extraction example.
+- **Scratchpad examples are now less ambiguous** — multi-plan scratchpad
+  extraction examples label which file a block came from, and dead-end
+  examples now show only the entry body to reinforce appending under the
+  existing `## Dead Ends` section.
 - **Release/docs metadata now reflects the expanded shipped surface** — the
   plugin now ships `23` agents, `50` skills, `152` skill references, and `25`
   hook scripts, and README / CLAUDE / intro content were updated to match.

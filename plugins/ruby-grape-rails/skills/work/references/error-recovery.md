@@ -47,8 +47,6 @@ Verification is tiered to balance speed and safety:
 sessions don't re-try the same failed approach:
 
 ```markdown
-## Dead Ends
-
 - [HH:MM] {task description}
   - Tried: {approach attempted}
   - Failed because: {root cause}

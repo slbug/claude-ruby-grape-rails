@@ -31,8 +31,8 @@ Check these sources in order:
 
    ```bash
    awk '
-     /^## Dead Ends$/ { section = "dead_ends"; next }
-     /^## Decisions$/ { section = "decisions"; next }
+     /^## Dead Ends$/ { section = "dead_ends"; print "---- " FILENAME " (Dead Ends) ----"; next }
+     /^## Decisions$/ { section = "decisions"; print "---- " FILENAME " (Decisions) ----"; next }
      /^## / { section = ""; next }
      section == "dead_ends" || section == "decisions" { print }
    ' .claude/plans/*/scratchpad.md 2>/dev/null | tail -40
