@@ -1,199 +1,112 @@
 # Skill Effectiveness Metrics
 
-Defines the measurement framework for evaluating plugin skill
-effectiveness across sessions.
+Reference for the observational skill-use signals currently emitted by
+`compute-metrics.py`.
 
 ## Core Principle
 
-The OpenHands feedback loop: **deploy - monitor - evaluate - improve**.
+These metrics are behavioral proxies, not correctness proofs.
 
-The "correctness" signal comes from user behavior — not explicit
-ratings. When a skill produces useful output, the developer acts
-on it (edits files, runs tests). When it doesn't help, the
-developer corrects, ignores, or abandons the approach.
+They can help answer:
 
-## Per-Session Skill Signals
+- which skills appear to lead to follow-up action?
+- which skills often precede corrections or confusion?
+- which skills deserve transcript review?
 
-Extracted by `compute-metrics.py` in the `skill_effectiveness` field:
+They cannot, on their own, prove that a prompt or agent change improved the
+plugin.
 
-### Raw Signals
+## What the Ledger Actually Contains
 
-| Signal | Source | Meaning |
-|--------|--------|---------|
-| `invocation_count` | User messages | How many times skill was invoked |
-| `total_post_edits` | Tool calls after invocation | Edits made following skill |
-| `total_post_reads` | Tool calls after invocation | Research following skill |
-| `total_post_test_runs` | Bash calls with `rspec`/`minitest` | Verification after skill |
-| `total_post_errors` | Error patterns in messages | Failures after skill |
-| `total_post_corrections` | Correction patterns in user messages | User redirections |
-| `led_to_action_count` | post_edits > 0 or post_test_runs > 0 | Skill produced action |
+Per skill, the current scorer records:
 
-### Computed Signals
+- `invocation_count`
+- `total_post_edits`
+- `total_post_reads`
+- `total_post_test_runs`
+- `total_post_errors`
+- `total_post_corrections`
+- `led_to_action_count`
+- `outcomes`
+- `action_rate`
+- `avg_post_errors`
+- `avg_post_corrections`
+- `dominant_outcome`
 
-| Signal | Formula | Range | Good |
-|--------|---------|-------|------|
-| `action_rate` | led_to_action_count / invocation_count | 0-1 | > 0.7 |
-| `avg_post_errors` | total_post_errors / invocation_count | 0+ | < 1.0 |
-| `avg_post_corrections` | total_post_corrections / invocation_count | 0+ | < 0.5 |
-| `dominant_outcome` | Most common outcome classification | enum | "effective" |
+Do not claim support for measurements the ledger does not compute.
 
-### Outcome Classification
+## Outcome Labels
 
-Each invocation is classified into one of:
+Current outcome labels are simple heuristics:
 
-| Outcome | Criteria | Interpretation |
-|---------|----------|----------------|
-| `effective` | No errors, no corrections, led to action | Skill worked well |
-| `friction` | Corrections > 0 or errors > 3 | Skill caused problems |
-| `no_action` | No edits, no test runs | Skill output was ignored |
-| `mixed` | Some errors but also action | Partial success |
+| Outcome | Meaning |
+|---------|---------|
+| `effective` | low visible friction and some follow-up action |
+| `friction` | strong visible corrections or many errors |
+| `no_action` | little visible follow-up after invocation |
+| `mixed` | some action and some friction |
 
 ## Cross-Session Aggregates
 
-The `/skill-monitor` command computes these from metrics.jsonl:
+Reasonable dashboard aggregates:
 
-### Per-Skill Metrics
+| Aggregate | Meaning |
+|-----------|---------|
+| total invocations | how often the skill was called |
+| sessions used in | how broad the sample is |
+| weighted action rate | how often the skill appears to trigger follow-up action |
+| weighted avg post-errors | visible failures after the skill |
+| weighted avg post-corrections | visible user redirections after the skill |
+| outcome distribution | rough shape of the observed outcomes |
 
-| Aggregate | Computation | Threshold |
-|-----------|-------------|-----------|
-| Total invocations | Sum across sessions | Informational |
-| Session count | Distinct sessions | Informational |
-| Weighted action rate | Σ(action_rate × n) / Σ(n) | Flag if < 0.5 |
-| Weighted avg errors | Σ(avg_errors × n) / Σ(n) | Flag if > 2.0 |
-| Weighted avg corrections | Σ(avg_corr × n) / Σ(n) | Flag if > 1.0 |
-| Outcome distribution | Counts of each outcome type | Flag if friction > 30% |
-| Effectiveness score | action_rate - (0.3 × corrections) | Flag if < 0.5 |
+## Interpreting the Numbers Safely
 
-### Baseline Comparison
+### Action rate
 
-Critical for meaningful interpretation. Without baseline, raw
-numbers are uninterpretable.
+Useful for:
 
-**Baseline group**: Sessions with zero skill invocations.
-**Skill group**: Sessions with at least one skill invocation.
+- finding ignored or low-follow-through skills
 
-| Comparison | Good Signal | Bad Signal |
-|------------|-------------|------------|
-| Friction delta (skill - baseline) | Negative (skills reduce friction) | Positive (skills add friction) |
-| Error rate delta | Negative | Positive |
-| Duration delta | Negative (faster) | Positive (slower) |
+Not enough for:
 
-### Trend Detection
+- claiming a skill is correct or helpful by itself
 
-Compare across time windows to detect degradation:
+### Post-errors and post-corrections
 
-```
-7d_effectiveness vs 30d_effectiveness → trend direction
-```
+Useful for:
 
-| Trend | Interpretation | Action |
-|-------|----------------|--------|
-| Rising effectiveness | Skill improvements working | Continue monitoring |
-| Stable | No change | Check if already good enough |
-| Declining | Skill degrading | Investigate: model changes? code changes? |
-| Insufficient data | < 3 invocations in window | Extend window or wait |
+- finding sessions worth transcript review
+- spotting misleading or incomplete skill behavior
 
-## Per-Skill Evaluation Criteria
+Not enough for:
 
-Different skills have different "correctness" proxies:
+- proving the skill caused the errors
 
-### `/rb:review`
+### Baseline comparison
 
-| Proxy | Signal | How to measure |
-|-------|--------|----------------|
-| Suggestion acceptance | Edits to files flagged in review | post_edits to review-mentioned files |
-| False positive rate | Corrections after review | post_corrections |
-| Completeness | No new issues found later | absence of subsequent /rb:review |
+Sessions with and without skills can be compared, but the result is still
+heavily confounded by task type, contributor choice, and session difficulty.
 
-### `/rb:plan`
+If you show baseline deltas, label them as heuristic context.
 
-| Proxy | Signal | How to measure |
-|-------|--------|----------------|
-| Task completion | Checkboxes completed | Requires plan.md parsing |
-| Scope accuracy | No corrections during /rb:work | post_corrections in work sessions |
-| Rework rate | Plan re-done via --existing | Subsequent /rb:plan --existing |
+## Confidence Rules
 
-### `/rb:investigate`
+Use explicit confidence notes:
 
-| Proxy | Signal | How to measure |
-|-------|--------|----------------|
-| Root cause found | Edits follow investigation | post_edits > 0 |
-| Fix success | Tests pass after fix | post_test_runs with no post_errors |
-| Debugging loop break | No retry loops after | absence of retry_loop friction signal |
+| Situation | Guidance |
+|-----------|----------|
+| fewer than 3 invocations | very low confidence |
+| mixed providers | low confidence until segmented |
+| no corroborating transcript review | low-to-medium confidence |
+| corroborated by `lab/eval` or docs-check | stronger recommendation basis |
 
-### `/rb:compound`
+## Corroboration Checklist
 
-| Proxy | Signal | How to measure |
-|-------|--------|----------------|
-| Solution created | File written to .claude/solutions/ | post_edits to solutions dir |
-| Reuse | Solution referenced in future sessions | Cross-session grep (deep-dive only) |
-| Quality | No corrections during creation | post_corrections == 0 |
+Before turning dashboard output into a recommendation, check at least one of:
 
-### `/rb:verify`
+- manual transcript review
+- `lab/eval`
+- docs-check
+- deterministic plugin validation
 
-| Proxy | Signal | How to measure |
-|-------|--------|----------------|
-| Pass rate | Tests/zeitwerk/format pass | post_errors == 0 |
-| Issues found | Led to fixes | post_edits > 0 after errors found |
-| False alarms | Corrections about irrelevant failures | post_corrections |
-
-### `/rb:quick`
-
-| Proxy | Signal | How to measure |
-|-------|--------|----------------|
-| One-shot success | Task done without follow-up | no subsequent corrections |
-| Scope containment | Small change count | post_edits < 5 |
-| Speed | Low tool count after invocation | total window tools < 20 |
-
-## Dashboard JSON Schema
-
-Output format for `.claude/skill-metrics/dashboard-{date}.json`:
-
-```json
-{
-  "computed_at": "ISO8601",
-  "window": "7d|30d|all",
-  "session_count": 50,
-  "sessions_with_skills": 18,
-  "sessions_without_skills": 32,
-  "baseline_friction": 0.32,
-  "skill_friction": 0.18,
-  "friction_delta": -0.14,
-  "skills": {
-    "/rb:review": {
-      "invocations": 12,
-      "sessions": 8,
-      "action_rate": 0.92,
-      "avg_post_errors": 0.5,
-      "avg_post_corrections": 0.1,
-      "effectiveness_score": 0.89,
-      "outcome_distribution": {
-        "effective": 9,
-        "mixed": 2,
-        "friction": 1,
-        "no_action": 0
-      },
-      "trend": "stable"
-    }
-  },
-  "flagged_skills": [
-    {
-      "skill": "/rb:investigate",
-      "reason": "effectiveness_score < 0.5",
-      "score": 0.42,
-      "recommendation": "Review error handling patterns"
-    }
-  ]
-}
-```
-
-## Minimum Data Requirements
-
-| Analysis Level | Minimum Sessions | Minimum Invocations |
-|----------------|-----------------|---------------------|
-| Dashboard | 5 | 3 per skill |
-| Trend comparison | 10 (across both windows) | 5 per skill |
-| Improvement recs | 10 | 5 per flagged skill |
-| Statistical confidence | 30 | 15 per skill |
-
-Below minimums: show data with "LOW CONFIDENCE" warning.
+Without corroboration, keep the output framed as an investigation lead.

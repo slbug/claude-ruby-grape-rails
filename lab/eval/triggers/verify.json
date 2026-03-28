@@ -3,7 +3,7 @@
   "should_trigger": [
     { "prompt": "Run the Ruby verification stack and stop at the first failure" },
     { "prompt": "Verify this repo with the strongest available checks" },
-    { "prompt": "Check Zeitwerk, lint, tests, and Brakeman for these changes" },
+    { "prompt": "Check Zeitwerk, lint, tests, and Brakeman for this patch" },
     { "prompt": "Run the project-native verify wrapper if it exists, otherwise fall back cleanly" }
   ],
   "should_not_trigger": [
@@ -13,7 +13,7 @@
     { "prompt": "Research whether this gem is still maintained" }
   ],
   "hard_should_trigger": [
-    { "prompt": "The code is done; do the final project checks before review", "axis": "confusable" },
+    { "prompt": "The patch is complete; do the final project checks before merge", "axis": "confusable" },
     { "prompt": "Use the repo's normal CI entrypoint if there is one, then fall back", "axis": "context_dependent" }
   ],
   "hard_should_not_trigger": [

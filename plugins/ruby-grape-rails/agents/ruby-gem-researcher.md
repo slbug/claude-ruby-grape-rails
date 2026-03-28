@@ -1,6 +1,6 @@
 ---
 name: ruby-gem-researcher
-description: Researches Ruby gems and library choices using primary sources. Use only when a new dependency or a meaningful library swap is actually under consideration.
+description: Researches Ruby gems and library swaps using primary sources, version support, migration risk, and Rails/Grape integration fit.
 tools: Read, Grep, Glob, WebSearch
 disallowedTools: Write, Edit, NotebookEdit
 permissionMode: bypassPermissions

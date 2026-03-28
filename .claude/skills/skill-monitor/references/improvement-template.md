@@ -1,136 +1,101 @@
 # Skill Improvement Analysis Template
 
-Template for the skill-effectiveness-analyzer agent. Produces
-actionable recommendations for improving underperforming skills.
+Use this template for observational recommendations only.
 
 ## Inputs
 
-1. **Aggregated metrics** — per-skill dashboard data
-2. **Flagged skills** — skills below effectiveness thresholds
-3. **Session IDs** — sessions where skills had friction outcomes
-4. **Session reports** (if available) — qualitative analysis from deep-dive
+1. aggregated dashboard metrics
+2. flagged skills
+3. session IDs
+4. any matching session-analysis reports
+5. corroborating deterministic signals, if available
 
-## Analysis Sections
+## Sections
 
 ### 1. Executive Summary
 
-One paragraph: how many skills analyzed, how many flagged, overall
-plugin health trend.
+State:
+
+- how many skills were reviewed
+- how many were flagged
+- overall confidence level
+- whether the conclusions are transcript-only or corroborated
 
 ### 2. Per-Skill Analysis
 
 For each flagged skill:
 
 ```markdown
-## /rb:{skill} — Effectiveness: {score}
+## /rb:{skill}
 
-**Status**: {Needs improvement | Critical | Watch}
-**Evidence strength**: {STRONG | MODERATE | WEAK}
+**Status**: {Watch | Needs improvement | High priority}
+**Confidence**: {High | Medium | Low}
 
-### Failure Pattern
+### What the dashboard shows
 
-Describe the dominant failure mode:
-- What goes wrong when this skill underperforms?
-- At what stage does friction occur?
-- Is it a skill design issue, agent behavior issue, or user expectation mismatch?
+| Metric | Value | Notes |
+|--------|-------|-------|
+| Action rate | 0.45 | low follow-through |
+| Avg post-errors | 2.3 | visible friction after use |
+| Avg post-corrections | 1.1 | contributor redirects often |
+| Dominant outcome | friction | heuristic only |
 
-### Supporting Data
+### Confounders
 
-| Metric | Value | Threshold | Status |
-|--------|-------|-----------|--------|
-| Action rate | 0.45 | > 0.7 | BELOW |
-| Avg post-errors | 2.3 | < 1.0 | ABOVE |
-| Avg post-corrections | 1.1 | < 0.5 | ABOVE |
-| Friction outcome % | 40% | < 30% | ABOVE |
+- small sample?
+- mixed providers?
+- unusually hard sessions?
+- stale docs or schema drift rather than skill quality?
 
 ### Session Evidence
 
-| Session | Date | Project | Outcome | Key Signal |
-|---------|------|---------|---------|------------|
-| abc123 | 2026-02-28 | myapp | friction | 4 corrections after review |
-| def456 | 2026-03-01 | myapp | no_action | Review output ignored |
+| Session | Date | Outcome | Key evidence |
+|---------|------|---------|--------------|
 
-### Root Cause Hypothesis
+### Corroboration
 
-{Specific hypothesis about WHY the skill underperforms}
+- `lab/eval`: {supports / does not support / not checked}
+- docs-check: {supports / does not support / not checked}
+- manual transcript review: {supports / does not support / not checked}
 
-Examples:
-- "Review agent flags too many low-severity issues, causing fatigue"
-- "Investigation skill doesn't check compound solutions first"
-- "Plan tasks are too granular for simple features"
-- "Skill prompt doesn't handle edge case X"
+### Recommended Change
 
-### Recommended Changes
-
-1. **{Change type}**: {Description}
-   - File: `{path to skill or agent file}`
-   - What: {specific change}
-   - Expected impact: {how this improves effectiveness}
-   - Evidence: {session IDs supporting this}
-
-Change types:
-- SKILL_PROMPT — Modify skill SKILL.md instructions
-- AGENT_PROMPT — Modify agent system prompt
-- IRON_LAW — Add new Iron Law to prevent pattern
-- REFERENCE — Update or add reference documentation
-- HOOK — Add/modify hook behavior
-- WORKFLOW — Change skill interaction/ordering
+1. **Type**: {SKILL_PROMPT | AGENT_PROMPT | IRON_LAW | REFERENCE | WORKFLOW}
+   - File: `{path}`
+   - Change: {specific change}
+   - Why: {link to evidence}
+   - Expected outcome: {what should improve}
 ```
 
 ### 3. Cross-Skill Patterns
 
-Patterns that affect multiple skills:
+If multiple skills show the same issue, capture that once:
 
-| Pattern | Affected Skills | Impact | Fix |
-|---------|----------------|--------|-----|
-| Over-verbose output | review, plan | Information fatigue | Add output length limits |
-| Missing context handoff | plan → work | Rework on transition | Add scratchpad passing |
+| Pattern | Skills | Evidence | Confidence | Fix direction |
+|---------|--------|----------|------------|---------------|
 
 ### 4. Positive Patterns
 
-What's working well — don't break these:
-
-| Skill | Strength | Why It Works |
-|-------|----------|--------------|
-| /rb:compound | High action rate | Clear schema, minimal friction |
-| /rb:plan | Good completion | Checkbox format enables tracking |
+List what appears to work so contributors do not regress it accidentally.
 
 ### 5. Priority Ranking
 
-Ordered by: evidence_strength × impact × ease_of_fix
+Order recommendations by:
 
-| # | Skill | Change | Evidence | Impact | Effort | Priority |
-|---|-------|--------|----------|--------|--------|----------|
-| 1 | /rb:review | Reduce false positives | STRONG (5 sessions) | High | Low | P0 |
-| 2 | /rb:investigate | Add solution search | MODERATE (3 sessions) | High | Medium | P1 |
+- evidence quality
+- likely impact
+- ease of verification
 
 ### 6. Tracking Plan
 
-How to verify improvements after changes:
+The follow-up plan should prefer:
 
-```
-1. Apply recommended changes
-2. Run /session-scan --rescan after 5+ sessions
-3. Run /skill-monitor --window 7d
-4. Compare effectiveness scores to this report's baseline
-5. If improved: continue monitoring
-   If not: run /skill-monitor --improve for new analysis
-```
-
-## Output Format
-
-Write as structured markdown to:
-`.claude/skill-metrics/recommendations-{date}.md`
-
-Keep under 200 lines. Every recommendation must cite specific
-sessions and metrics. Include tracking plan so improvements
-can be verified.
+1. deterministic validation (`lab/eval`, docs-check, plugin validate)
+2. targeted transcript review
+3. only then a rescan to see whether observational signals moved
 
 ## Anti-Patterns
 
-- **Don't recommend adding complexity** to fix simplicity issues
-- **Don't suggest new skills** when existing ones need fixing
-- **Don't blame the user** — if corrections are high, the skill
-  is misleading, not the user
-- **Don't recommend changes without evidence** — every change
-  needs session citations
+- do not recommend changes from one weak session alone
+- do not present observational data as causal proof
+- do not suggest new skills when the likely issue is stale guidance or bad routing

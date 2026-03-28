@@ -1,47 +1,95 @@
 # Documentation Pages
 
-Maps plugin component types to Claude Code doc pages used for validation.
+Contributor mapping for `.claude/docs-check/`.
 
-## Source
+Use this file to decide which cached Claude docs are authoritative for a given
+validation question. Do not load every cached page unless the problem actually
+crosses those boundaries.
 
-All docs available at `https://code.claude.com/docs/en/{page}.md`
-Index at `https://code.claude.com/docs/llms.txt`.
+## Cached Inputs
 
-## Pages Fetched (All, Always)
+The fetch script maintains:
 
-| Page | Component | Why |
-|------|-----------|-----|
-| `sub-agents.md` | Agents | Frontmatter schema, tool names, model/permission values |
-| `skills.md` | Skills | SKILL.md format, frontmatter fields, directory structure |
-| `hooks.md` | Hooks | Event names, hook types, schema, matcher syntax |
-| `hooks-guide.md` | Hooks | Hook patterns, examples, best practices |
-| `plugins-reference.md` | Plugin config | plugin.json schema, field inventory |
-| `plugin-marketplaces.md` | Marketplace | marketplace.json schema, plugin entries |
-| `plugins.md` | General | Plugin creation guidance, directory conventions |
-| `settings.md` | Config | Permission mode semantics, global settings |
-| `mcp.md` | MCP | MCP server configuration in plugins |
+- `llms.txt` as the discovery index
+- 9 detailed cached pages under `.claude/docs-check/docs-cache/`
 
-Total: 9 pages, ~420KB. All fetched on every run. Cached for 24h.
+Primary cached pages:
 
-## Fetch Strategy
+| Page | Primary use |
+|------|-------------|
+| `sub-agents.md` | Agent tool syntax, `Agent(...)` restrictions, general subagent behavior |
+| `skills.md` | Skill frontmatter, `paths`, `shell`, supporting-file conventions |
+| `hooks.md` | Hook events, hook types, handler schema, `if` examples |
+| `hooks-guide.md` | Hook best practices, version-gated `if` behavior, design guidance |
+| `plugins-reference.md` | Plugin manifest, plugin-shipped agent support, `userConfig`, `channels`, `${CLAUDE_PLUGIN_DATA}` |
+| `plugin-marketplaces.md` | Marketplace manifest structure and source forms |
+| `plugins.md` | Plugin structure, plugin creation guidance, high-level conventions |
+| `settings.md` | Settings semantics when a finding depends on permission or config behavior |
+| `mcp.md` | MCP config semantics when plugin findings touch bundled MCP servers |
 
-The `scripts/fetch-claude-docs.sh` script handles everything:
+## Which Pages To Read
 
-- **Default**: Fetch all 9 pages, skip if cached within 24h
-- **`--force`**: Re-download regardless of cache age
-- **`--quick` mode**: Skill skips fetching entirely (structural checks only)
+### Agents
 
-No conditional fetching. No partial downloads. Always all pages.
+Use:
 
-## Cache Location
+- `plugins-reference.md`
+- `sub-agents.md`
 
-`.claude/docs-check/docs-cache/` (gitignored). The orchestrator reads
-from cache and crashes if files are missing.
+Questions this answers:
 
-## Size
+- Which frontmatter fields are supported for plugin-shipped agents?
+- Is a given tool name or `Agent(...)` restriction documented?
+- Is a reported agent-field issue real or just stale local guidance?
 
-Individual pages: 5-80KB each. Total: ~420KB.
-Each validation worker gets 1-2 pages (~8-20K tokens) — well within
-the 200K context limit. No indexing or compression needed for docs.
+### Skills
 
-**NEVER fetch `llms-full.txt`** (~500KB+ single file with all 57+ pages).
+Use:
+
+- `skills.md`
+- `hooks.md` if the skill uses skill-scoped hooks
+
+Questions this answers:
+
+- Is a skill frontmatter field documented?
+- Are `paths` / `shell` / `effort` valid?
+- Is a structure complaint actually a docs issue?
+
+### Hooks
+
+Use:
+
+- `hooks.md`
+- `hooks-guide.md`
+
+Questions this answers:
+
+- Is this hook event or hook type documented?
+- Is handler-level `if` valid here?
+- Is this a schema break, version gate, or only a local recommendation?
+
+### Plugin Config
+
+Use:
+
+- `plugins-reference.md`
+- `plugin-marketplaces.md`
+- `plugins.md`
+- `mcp.md` when MCP config is involved
+- `settings.md` only when a conclusion depends on settings behavior
+
+Questions this answers:
+
+- Does `plugin.json` support this field?
+- Are `userConfig` or `channels` documented?
+- Should a recommendation use `${CLAUDE_PLUGIN_ROOT}` or
+  `${CLAUDE_PLUGIN_DATA}`?
+
+## Practical Loading Rules
+
+1. Start with the smallest page set that answers the question.
+2. Use `llms.txt` only as the cached index, not as the detailed authority.
+3. Prefer targeted snippets over pasting full cached pages into subagent
+   prompts.
+4. If a finding depends on version-gated behavior, include the exact cached doc
+   snippet that states the gate.

@@ -18,6 +18,10 @@ Contributor tooling in this repo assumes a Unix-like environment:
 - supported: macOS, Linux, WSL
 - not currently supported: native Windows
 
+Session-derived analytics under `.claude/skills/session-*` and
+`.claude/skills/skill-monitor/` are heuristic. Treat them as exploratory input,
+not as release-grade proof.
+
 ## Scope Check
 
 Before editing, decide which surface you are changing:
@@ -59,6 +63,13 @@ Run the checks that match the files you touched:
 
 If multiple shipped surfaces changed, run the plugin validator plus the
 file-type-specific checks.
+
+Before trusting contributor analytics conclusions, prefer this order:
+
+1. `claude plugin validate plugins/ruby-grape-rails`
+2. `make eval` or `make eval-all`
+3. `/docs-check` when Claude docs or plugin schema assumptions may have changed
+4. session-derived analytics only as corroborating evidence
 
 When `lab/eval/` changes, also run:
 

@@ -7,6 +7,106 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-03-28
+
+### Added
+
+- **Agent playbooks for leaner orchestration docs** — moved long-form
+  dependency-analysis, planning, and workflow examples into
+  `plugins/ruby-grape-rails/references/agent-playbooks/` so the main agent
+  routing surfaces stay concise without losing the detailed contributor
+  guidance.
+
+### Changed
+
+- **`dependency-analyzer` is now a focused routing surface instead of a giant
+  example dump** — the agent description is more discriminative, the main file
+  is much shorter, and the detailed command/report examples now live in a
+  dedicated playbook.
+- **Core workflow descriptions were tightened to reduce trigger overlap** —
+  `plan`, `work`, `review`, and `verify` now use more boundary-specific
+  descriptions and less repetitive stack-keyword padding.
+- **Trigger corpora were sharpened without adding answer leakage** — the
+  `plan`, `work`, and `verify` trigger sets now separate design, execution, and
+  final-check intent more clearly while preserving human-realistic prompts.
+- **Secondary agent descriptions are now more discriminative** —
+  `context-supervisor`, `data-integrity-reviewer`, `migration-safety-reviewer`,
+  and `ruby-gem-researcher` now state their boundaries more concretely instead
+  of relying on generic repo-wide keywords.
+- **Oversized orchestrators were slimmed down materially** —
+  `planning-orchestrator` and `workflow-orchestrator` now keep the state
+  machine and hard rules in the agent file while delegating bulky templates and
+  examples to playbooks.
+- **Deterministic eval results improved across the board** — all 23 shipped
+  agents now score `1.0`, and the hottest overlap pairs dropped materially:
+  `plan` vs `work` (`0.1739 -> 0.1209`), `review` vs `verify`
+  (`0.1717 -> 0.1319`), and `verify` vs `work` (`0.1648 -> 0.1059`).
+- **Contributor docs-check now tracks the real cached Claude feature surface
+  more closely** — local docs-check guidance now uses `claude plugin validate`
+  as the baseline, prefers targeted cached-doc snippets over pasted megacontext,
+  prefers `Agent(...)` terminology, and recognizes current fields/events such
+  as skill `paths` / `shell`, hook `FileChanged`, and plugin `userConfig` /
+  `channels`.
+- **Contributor session analytics are now framed more honestly and scoped more
+  cleanly** — session-scan, deep-dive, trends, and skill-monitor now treat
+  transcript-derived metrics as exploratory, remove stale `MEMORY.md` /
+  historical-report dependencies, support provider-scoped analysis guidance,
+  and stop implying session chaining or fixed adoption baselines that the
+  current tooling does not actually implement.
+- **Session trend scoring is less noisy and more explicit about tiny ledgers**
+  — shipped command detection now normalizes both `/rb:*` and
+  `/ruby-grape-rails:*`, contributor analyzer commands are excluded from
+  adoption metrics, retry-loop friction now requires nearby failure evidence,
+  and trend output now exposes `immature_ledger`, `distinct_dates`, and
+  `time_series_signal` so early snapshots are not misread as meaningful
+  time-series trends.
+- **Contributor session-scan metrics now handle more real transcript shapes**
+  — plugin opportunity checks now tolerate both bare and prefixed command
+  forms, nested `edits` payloads contribute to edited-file metrics, and
+  same-message Bash `tool_result` failures are recognized when scoring retry
+  loops.
+- **Broad raw `rm` examples were reduced further** — the docs-cache fetcher now
+  validates cache-file cleanup before deleting failed downloads, and the deploy
+  docs now prefer `apt-get clean`, `bundle clean --force`, and Rails cleanup
+  tasks over broad recursive `rm -rf` examples.
+- **Session-scan now sees Bash activity in ccrider-style text transcripts**
+  — text-mode shell commands are now inferred into real Bash command entries,
+  which lets plugin-opportunity heuristics and retry-loop friction scoring work
+  even when transcripts do not preserve structured `tool_use` blocks.
+- **Docs fetch cleanup is now best-effort and assistant failure detection is
+  less trigger-happy** — refused cache-file cleanup no longer aborts the docs
+  fetch flow under `set -e`, and session-scan now avoids counting generic
+  assistant prose like “if you see an error” as real failure evidence while
+  still catching stronger signals such as exit codes and explicit error lines.
+- **User-side failure detection is narrower, and docs-check wording is more
+  explicit about ignored agent fields** — session-scan no longer treats generic
+  user phrases like “without error” as real failure evidence, and docs-check
+  now states that `hooks`, `mcpServers`, and `permissionMode` are unsupported
+  and ignored for plugin-shipped agents.
+- **Command-alias analytics are now consistent and covered by tests** —
+  session-scan normalizes `/ruby-grape-rails:*` to `/rb:*` in skill
+  effectiveness as well as adoption metrics, trend date parsing now avoids
+  duplicate work, and new Python tests cover command extraction, placeholder
+  filtering, and alias normalization.
+- **Per-skill analytics now reuse the same text-mode tool inference path** —
+  ccrider-style Bash commands in assistant text now contribute consistently to
+  skill-effectiveness windows, and the focused session-scan test module now
+  fails with an explicit import error instead of relying on a bare `assert`.
+- **`/rb:investigate` opportunity suggestions now use the same retry-loop logic
+  as friction scoring** — plugin-opportunity scoring no longer relies on a
+  coarser adjacent-command heuristic, and it now suppresses `investigate`
+  suggestions when that command was already used.
+- **Contributor command snippets are more copy-safe again** — the session
+  trends `rg` example no longer over-escapes JSON brackets, and the Docker
+  cleanup example now runs `rails tmp:clear` under `RAILS_ENV=production` with
+  a dummy secret key so it still boots correctly in deployment-mode bundles.
+- **Session-scan tool inference is stricter and less prose-sensitive** —
+  ccrider-style text transcripts now infer tools only from tool-like forms such
+  as backticked names, `tool:Name`, or `Name(...)`, so ordinary English uses of
+  words like `Agent` and `Task` no longer inflate tool counts, while the
+  focused session-scan tests now fail earlier with a clearer import error if the
+  metrics module is missing.
+
 ## [1.6.0] - 2026-03-28
 
 ### Added

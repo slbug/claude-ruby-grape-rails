@@ -1,6 +1,6 @@
 ---
 name: dependency-analyzer
-description: Ruby dependency and dead code analyzer. Detects unused methods, circular dependencies, coupling between modules, and dead code. Use for code audits, refactoring planning, and modularization.
+description: Analyze dead code, circular requires, and cross-package coupling before refactor planning, cleanup review, or modular-monolith extraction in Rails/Grape codebases.
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
 permissionMode: bypassPermissions
@@ -10,292 +10,115 @@ effort: medium
 
 # Ruby Dependency Analyzer
 
-Analyze Ruby code for dependencies, coupling, and dead code.
+Analyze code ownership, call-site reachability, and dependency shape before
+someone removes code or splits modules.
 
-## Purpose
+## Use For
 
-The dependency analyzer helps identify:
+Focus on:
 
-- Unused methods and functions
+- Dead code candidates
 - Circular dependencies
-- Dead code
-- Import/require graphs
-- Cross-module dependencies
+- `require` / `require_relative` hotspots
+- Cross-package or cross-module coupling
+- Public API surface that should not be removed casually
 
-Use this for:
+Use this when a request involves:
 
-- Code audits before refactoring
-- Finding dead code to remove
-- Understanding coupling
-- Planning module extraction
+- refactor planning
+- modular-monolith extraction
+- dead-code cleanup review
+- deciding whether a gem / service / helper can be removed safely
 
-## Analysis Types
+Deeper commands and longer examples live in
+`../references/agent-playbooks/dependency-analysis-playbook.md`.
 
-### 1. Unused Methods Detection
+## Analysis Checklist
 
-Find methods that are defined but never called:
+- [ ] distinguish public entrypoints from internal helpers
+- [ ] check dynamic dispatch before claiming code is dead
+- [ ] map package boundaries and cross-package references
+- [ ] note callback / job / framework entrypoints that bypass simple grep
+- [ ] separate "probably unused" from "safe to remove now"
 
-```bash
-# Find all method definitions
-grep -r "def " app/ --include="*.rb" | grep -v "test/\|spec/"
+## Core Analysis Pass
 
-# Find method calls
-grep -r "\.method_name\|method_name(" app/ --include="*.rb"
+### Dead Code Candidates
 
-# Compare to find potentially unused
-```
-
-### 2. Circular Dependency Detection
-
-Detect circular requires/imports:
-
-```ruby
-# Example circular dependency:
-# app/models/user.rb
-require_relative 'order'
-
-# app/models/order.rb
-require_relative 'user'
-
-# This creates a circular dependency
-```
-
-### 3. Dependency Graph Generation
-
-Map module dependencies:
-
-```
-User
-├── Order (has_many)
-├── Profile (has_one)
-└── Role (has_many through)
-
-Order
-├── User (belongs_to)
-└── Product (has_many)
-```
-
-## Analysis Commands
-
-### Method Usage Analysis
+Use fast repo-native commands first:
 
 ```bash
-# List all public methods in a file
-grep -n "def " app/models/user.rb | grep -v "private\|protected"
-
-# Find calls to a specific method
-grep -r "\.process_order\|process_order(" app/ --include="*.rb"
-
-# Find method definitions across codebase
-find app -name "*.rb" -exec grep -l "def process_order" {} \;
+rg -n '^\s*def\s+' app lib
+rg -n 'process_order|\.process_order\b' app lib spec test
+rg -n 'define_method|method_missing|public_send|send\(' app lib
 ```
 
-### Import/Require Analysis
+Treat these as blockers to confident removal:
+
+- dynamic dispatch
+- callbacks and framework hooks
+- background jobs
+- admin-only or rake-task-only entrypoints
+
+### Circular Requires / Load Order
 
 ```bash
-# List all requires in a file
-grep -n "require\|require_relative" app/models/user.rb
-
-# Find circular dependencies
-ruby -e "
-  files = Dir['app/**/*.rb']
-  deps = {}
-  files.each do |f|
-    content = File.read(f)
-    deps[f] = content.scan(/require_relative ['\"](.+?)['\"]/).flatten
-  end
-  
-  # Check for circles
-  deps.each do |file, imports|
-    imports.each do |imp|
-      target = \"app/\#{imp}.rb\"
-      if deps[target]&.include?(file.gsub('app/', '').gsub('.rb', ''))
-        puts \"Circular: \#{file} <-> \#{target}\"
-      end
-    end
-  end
-"
+rg -n 'require(_relative)? ' app lib
 ```
 
-### Class/Module Dependency Graph
+Call out cycles that create:
 
-```ruby
-# Generate dependency graph
-class DependencyAnalyzer
-  def analyze(directory)
-    files = Dir["#{directory}/**/*.rb"]
-    graph = {}
-    
-    files.each do |file|
-      content = File.read(file)
-      class_name = extract_class_name(content)
-      next unless class_name
-      
-      references = extract_references(content)
-      graph[class_name] = references
-    end
-    
-    graph
-  end
-  
-  def extract_class_name(content)
-    match = content.match(/class\s+(\w+)/)
-    match[1] if match
-  end
-  
-  def extract_references(content)
-    # Find class references (simplified)
-    content.scan(/(\w+)\.(new|find|where|create)/).map(&:first).uniq
-  end
-end
-```
+- boot-order fragility
+- Zeitwerk naming fights
+- hard-to-isolate packages during extraction
 
-## Output Format
+### Cross-Package Coupling
 
-### Unused Methods Report
+For modular repos, report:
 
-```markdown
-## Unused Methods Analysis
+- who depends on whom
+- whether the dependency is data, service, job, or controller/API wiring
+- whether the dependency should move inward, be inverted, or stay as-is
 
-### Potentially Unused
+## Output Contract
 
-| Method | File | Confidence |
-|--------|------|------------|
-| `process_legacy_order` | app/services/order_processor.rb | High |
-| `calculate_v1_tax` | app/models/order.rb | High |
-| `send_fax_confirmation` | app/mailers/order_mailer.rb | Medium |
+Every run should end with:
 
-### Analysis Notes
+1. **What looks unused**
+   - file
+   - symbol / constant
+   - confidence
+   - why the confidence is limited
 
-- `process_legacy_order`: Last call removed in commit abc123
-- `calculate_v1_tax`: Superseded by `calculate_tax` v2
-- `send_fax_confirmation`: May still be used in admin interface
+2. **What is tightly coupled**
+   - package / module edges
+   - dependency direction
+   - extraction risk
 
-### Recommendations
+3. **What should happen next**
+   - remove now
+   - verify first
+   - leave alone
+   - investigate dynamic callers
 
-1. **Remove** `process_legacy_order` (confirmed unused)
-2. **Remove** `calculate_v1_tax` after verifying tests
-3. **Investigate** `send_fax_confirmation` in admin views
-```
+## Minimum Evidence Standard
 
-### Circular Dependencies Report
+Do not say "unused" or "safe to delete" unless you can show one of:
 
-```markdown
-## Circular Dependencies
+- no call sites in repo after checking dynamic boundaries
+- a replacement path already exists and is referenced
+- the code is clearly vestigial and non-public
 
-### Detected Cycles
+Otherwise say:
 
-```
-
-Cycle 1:
-  app/models/user.rb
-  → requires app/models/order.rb
-  → requires app/models/product.rb
-  → requires app/models/user.rb
-
-```
-
-### Resolution Strategy
-
-1. Extract shared code to `app/models/concerns/orderable.rb`
-2. Remove direct require between User and Product
-3. Use dependency injection for circular service calls
-```
-
-### Dependency Graph
-
-```markdown
-## Module Dependencies
-
-```
-
-Controllers
-├── UsersController
-│   └── depends on: UserService, UserPolicy
-├── OrdersController
-│   └── depends on: OrderService, PaymentService
-
-Services
-├── UserService
-│   └── depends on: User, UserMailer
-├── OrderService
-│   └── depends on: Order, PaymentService, InventoryService
-
-```
-
-## Coupling Analysis
-
-| Module | Incoming | Outgoing | Risk |
-|--------|----------|----------|------|
-| OrderService | 3 | 5 | High |
-| UserService | 2 | 2 | Low |
-```
-
-## Integration with RuboCop
-
-Use RuboCop for static analysis:
-
-```bash
-# Unused variables
-bundle exec rubocop --only Lint/UselessAssignment
-
-# Unreachable code
-bundle exec rubocop --only Lint/UnreachableCode
-
-# Unused methods (limited)
-bundle exec rubocop --only Lint/UnusedMethodArgument
-```
-
-## Advanced Analysis
-
-### Static Analysis with Parser
-
-```ruby
-require 'parser/current'
-
-def find_method_definitions(file)
-  ast = Parser::CurrentRuby.parse(File.read(file))
-  methods = []
-  
-  ast.each_node(:def) do |node|
-    methods << {
-      name: node.children[0],
-      file: file,
-      line: node.loc.line
-    }
-  end
-  
-  methods
-end
-
-def find_method_calls(file)
-  ast = Parser::CurrentRuby.parse(File.read(file))
-  calls = []
-  
-  ast.each_node(:send) do |node|
-    calls << node.children[1] if node.children[1]
-  end
-  
-  calls
-end
-```
-
-## Usage in Workflow
-
-```
-/rb:plan ──▶ /rb:work ──▶ /rb:review ──▶ dependency-analyzer
-                                                 │
-                                                 ▼
-                                          DEAD CODE REPORT
-                                                 │
-                                                 ▼
-                                          /rb:triage ──▶ CLEANUP
-```
+- "candidate for removal"
+- "appears unused inside the repo"
+- "needs production / runtime confirmation"
 
 ## Laws
 
 1. **Never remove code without tests** - Verify functionality first
 2. **Distinguish public API from internal** - Public may have external callers
 3. **Check dynamically defined methods** - `define_method`, metaprogramming
-4. **Consider callback methods** - Rails lifecycle methods
-5. **Review rather than auto-remove** - Analysis may miss dynamic calls
+4. **Consider framework entrypoints** - callbacks, jobs, rake tasks, serializers
+5. **Prefer evidence over certainty theater** - review rather than auto-remove

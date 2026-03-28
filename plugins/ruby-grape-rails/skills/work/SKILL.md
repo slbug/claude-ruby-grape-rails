@@ -1,6 +1,6 @@
 ---
 name: rb:work
-description: Use after /rb:plan to implement Ruby/Rails/Grape/Sidekiq work with verification checkpoints, scratchpad context, and review-ready progress tracking. Can resume the newest active plan automatically.
+description: Use after /rb:plan to implement an existing checklist, resume active code changes, and verify each step in Active Record or Sequel work. Can resume the newest active plan automatically.
 argument-hint: <path to plan file>
 disable-model-invocation: true
 effort: high

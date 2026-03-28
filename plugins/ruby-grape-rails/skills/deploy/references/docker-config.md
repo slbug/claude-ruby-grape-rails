@@ -28,8 +28,9 @@ COPY . .
 # Precompile assets
 RUN SECRET_KEY_BASE=dummy RAILS_ENV=production bundle exec rails assets:precompile
 
-# Cleanup
-RUN rm -rf node_modules tmp/cache vendor/bundle/ruby/*/cache
+# Prefer targeted cleanup to broad recursive deletion
+RUN bundle clean --force && \
+    SECRET_KEY_BASE=dummy RAILS_ENV=production bundle exec rails tmp:clear
 
 # Runner stage
 FROM ruby:3.3-slim-bookworm AS runner

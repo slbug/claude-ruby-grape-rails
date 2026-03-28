@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Session Analytics v2 — Compute deterministic metrics from Claude Code sessions.
+Session Analytics v2 — Compute exploratory metrics from Claude Code sessions.
 
 Reads ccrider message JSON and computes friction scores, fingerprints, plugin
-opportunity scores, tool bigrams, file hotspots, and session chaining.
+opportunity scores, tool bigrams, and file hotspots.
 
 Usage:
     # Single session (outputs JSON to stdout)
-    python3 compute-metrics.py <messages.json> --session-id ID --project NAME
+    python3 compute-metrics.py <messages.json> --session-id ID --project NAME [--provider NAME]
 
     # Batch mode (appends to metrics.jsonl)
     python3 compute-metrics.py --batch <manifest.json>
 
     # Trends mode (computes windowed aggregates)
-    python3 compute-metrics.py --trends <metrics.jsonl> [--memory MEMORY.md]
+    python3 compute-metrics.py --trends <metrics.jsonl> [--project NAME] [--provider NAME] [--notes PATH]
 
     # Backfill from v1 extracts
     python3 compute-metrics.py --backfill <extracts-dir/>
@@ -23,6 +23,7 @@ import json
 import math
 import os
 import re
+import shlex
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
@@ -74,8 +75,10 @@ FINGERPRINT_KEYWORDS = {
 
 # ─── Plugin Opportunity Signals ───────────────────────────────────────────────
 
-RB_COMMAND_RE = re.compile(r"/rb:\w+")
-SKILL_COMMAND_RE = re.compile(r"/(?:rb|hotwire):[a-z][a-z0-9_-]*")
+PLUGIN_COMMAND_RE = re.compile(r"/(?:(?:rb)|(?:ruby-grape-rails)):[a-z][a-z0-9_-]*")
+SKILL_COMMAND_RE = re.compile(
+    r"/(?:(?:rb)|(?:ruby-grape-rails)|(?:hotwire)):[a-z][a-z0-9_-]*"
+)
 
 
 def sigmoid(raw):
@@ -83,6 +86,45 @@ def sigmoid(raw):
     return 1.0 / (
         1.0 + math.exp(-FRICTION_SIGMOID_K * (raw - FRICTION_SIGMOID_MIDPOINT))
     )
+
+
+def normalize_plugin_command(command):
+    """Normalize plugin command aliases to canonical short names."""
+    if not isinstance(command, str):
+        return None
+    if command.startswith("/ruby-grape-rails:"):
+        return "/rb:" + command.split(":", 1)[1]
+    return command
+
+
+def normalize_plugin_command_name(command):
+    """Normalize a plugin command to its bare command name."""
+    if not isinstance(command, str):
+        return None
+    normalized = normalize_plugin_command(command)
+    if not normalized:
+        return None
+    if normalized.startswith("/rb:"):
+        return normalized.split(":", 1)[1]
+    if normalized.startswith("/"):
+        return normalized[1:]
+    return normalized
+
+
+def extract_plugin_commands(user_msgs):
+    """Extract shipped plugin commands while ignoring contributor analyzers."""
+    commands = []
+    for text in user_msgs:
+        if text.startswith("Base directory for this skill:"):
+            continue
+        found = PLUGIN_COMMAND_RE.findall(text)
+        for command in found:
+            if "{" in command or "<" in command:
+                continue
+            normalized = normalize_plugin_command(command)
+            if normalized:
+                commands.append(normalized)
+    return commands
 
 
 # ─── Message Parsing ─────────────────────────────────────────────────────────
@@ -104,6 +146,33 @@ def parse_messages(data):
     return messages
 
 
+def extract_provider(data, fallback=None):
+    """Extract provider label from transcript payload when available."""
+    candidates = []
+    if isinstance(data, dict):
+        candidates.append(data.get("provider"))
+
+        metadata = data.get("metadata")
+        if isinstance(metadata, dict):
+            candidates.append(metadata.get("provider"))
+
+        session = data.get("session")
+        if isinstance(session, dict):
+            candidates.append(session.get("provider"))
+
+        source = data.get("source")
+        if isinstance(source, dict):
+            candidates.append(source.get("provider"))
+
+    for value in candidates:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    if isinstance(fallback, str) and fallback.strip():
+        return fallback.strip()
+    return "unknown"
+
+
 def _get_role(msg):
     """Get message role, supporting both API format (role) and ccrider format (type)."""
     return msg.get("role", msg.get("type", msg.get("message", {}).get("role", "")))
@@ -114,13 +183,64 @@ def _get_content(msg):
     return msg.get("content", msg.get("message", {}).get("content", ""))
 
 
-# Tool name detection from assistant text (ccrider doesn't preserve tool_use blocks)
-TOOL_MENTION_RE = re.compile(
-    r"\b(Read|Edit|Write|Bash|Grep|Glob|Task|NotebookEdit|WebFetch|WebSearch"
-    r"|mcp__tidewave\w*)\b"
+def extract_file_paths(tool_input):
+    """Extract one or more file paths from a tool input payload."""
+    if not isinstance(tool_input, dict):
+        return []
+
+    paths = []
+    for key in ("file_path", "path"):
+        value = tool_input.get(key)
+        if isinstance(value, str) and value:
+            paths.append(value)
+
+    for key in ("file_paths", "paths"):
+        value = tool_input.get(key)
+        if isinstance(value, list):
+            paths.extend(p for p in value if isinstance(p, str) and p)
+
+    edits = tool_input.get("edits")
+    if isinstance(edits, list):
+        for edit in edits:
+            if isinstance(edit, dict):
+                paths.extend(extract_file_paths(edit))
+
+    return paths
+
+
+# Tool name detection from assistant text (ccrider may not preserve tool_use blocks).
+# Restrict this to tool-like syntax so ordinary prose like "ask the Agent" does not
+# inflate tool counts.
+TOOL_NAME_PATTERN = (
+    r"Read|Edit|MultiEdit|Write|Bash|Grep|Glob|Task|Agent|NotebookEdit|"
+    r"WebFetch|WebSearch|Skill|AskUserQuestion|ExitPlanMode|KillShell|"
+    r"MCPSearch|mcp__[A-Za-z0-9_]+"
 )
-BASH_CMD_RE = re.compile(
-    r"(?:^|\n)\s*(?:\$|>)\s*(bundle\s|rails\s|rake\s|git\s|npm\s|python3?\s|cd\s|rm\s)"
+TOOL_MENTION_RE = re.compile(
+    rf"(?:`(?P<backtick>{TOOL_NAME_PATTERN})`|"
+    rf"\btool:(?P<prefixed>{TOOL_NAME_PATTERN})\b|"
+    rf"\b(?P<call>{TOOL_NAME_PATTERN})\s*\()"
+)
+SHELL_FENCE_RE = re.compile(r"```(?:bash|sh|zsh|shell)\s*\n(.*?)```", re.DOTALL | re.I)
+PROMPT_COMMAND_RE = re.compile(r"^\s*(?:\$|>)\s+(.+?)\s*$")
+KNOWN_BASH_PREFIX_RE = re.compile(
+    r"^(bundle\s|rails\s|rake\s|git\s|npm\s|python3?\s|cd\s|rm\s)"
+)
+FAILURE_SIGNAL_RE = re.compile(
+    r"\b(error|failed|failure|exception|traceback|command not found|"
+    r"permission denied|no such file|syntaxerror|exit code)\b",
+    re.IGNORECASE,
+)
+USER_FAILURE_SIGNAL_RE = re.compile(
+    r"(?im)(?:\btraceback\b|\bcommand not found\b|\bpermission denied\b|"
+    r"\bno such file(?: or directory)?\b|\bsyntaxerror\b|\bexit code\s+\d+\b|"
+    r"^\s*(?:error|failed|failure|exception):|\bi got an error\b|"
+    r"\bit failed\b|\bit errored\b)"
+)
+ASSISTANT_FAILURE_SIGNAL_RE = re.compile(
+    r"(?im)(?:\btraceback\b|\bcommand not found\b|\bpermission denied\b|"
+    r"\bno such file(?: or directory)?\b|\bsyntaxerror\b|\bexit code\s+\d+\b|"
+    r"^\s*(?:error|failed|exception):)"
 )
 
 
@@ -130,8 +250,13 @@ def extract_tool_calls(messages):
     For API format: extracts structured tool_use blocks.
     For ccrider format: infers tool names from assistant message text patterns.
     """
+    return [item["tc"] for item in extract_tool_positions(messages)]
+
+
+def extract_tool_positions(messages):
+    """Extract tool calls with message positions across transcript formats."""
     tools = []
-    for msg in messages:
+    for i, msg in enumerate(messages):
         if not isinstance(msg, dict):
             continue
         content = _get_content(msg)
@@ -141,16 +266,29 @@ def extract_tool_calls(messages):
         if isinstance(content, list):
             for block in content:
                 if isinstance(block, dict) and block.get("type") == "tool_use":
-                    tools.append(block)
+                    tools.append({"msg_index": i, "tc": block})
 
         # ccrider format: infer tools from assistant text
         elif isinstance(content, str) and role == "assistant":
-            mentioned = TOOL_MENTION_RE.findall(content)
+            inferred_bash_commands = _infer_bash_commands_from_text(content)
+            mentioned = []
+            for match in TOOL_MENTION_RE.finditer(content):
+                name = match.group("backtick") or match.group("prefixed") or match.group(
+                    "call"
+                )
+                if name:
+                    mentioned.append(name)
             for name in mentioned:
-                tools.append({"name": name, "input": {}})
-            # Detect bash commands in text
-            if BASH_CMD_RE.search(content):
-                tools.append({"name": "Bash", "input": {}})
+                if name == "Bash" and inferred_bash_commands:
+                    continue
+                tools.append({"msg_index": i, "tc": {"name": name, "input": {}}})
+            for command in inferred_bash_commands:
+                tools.append(
+                    {
+                        "msg_index": i,
+                        "tc": {"name": "Bash", "input": {"command": command}},
+                    }
+                )
 
     return tools
 
@@ -227,6 +365,188 @@ def extract_timestamps(messages):
     return timestamps
 
 
+def _text_blocks(content):
+    """Yield text fragments from either string or block content."""
+    if isinstance(content, str):
+        yield content
+    elif isinstance(content, list):
+        for block in content:
+            if isinstance(block, dict):
+                if block.get("type") == "text":
+                    text = block.get("text", "")
+                    if isinstance(text, str):
+                        yield text
+                elif block.get("type") == "tool_result":
+                    text = block.get("content", "")
+                    if isinstance(text, str):
+                        yield text
+
+
+def _normalize_inferred_bash_line(line, allow_bare=False):
+    """Normalize a shell-like line extracted from transcript text."""
+    if not isinstance(line, str):
+        return ""
+
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return ""
+
+    prompt_match = PROMPT_COMMAND_RE.match(stripped)
+    if prompt_match:
+        return prompt_match.group(1).strip()
+
+    if allow_bare and KNOWN_BASH_PREFIX_RE.match(stripped):
+        return stripped
+
+    return ""
+
+
+def _infer_bash_commands_from_text(content):
+    """Best-effort extraction of Bash commands from text-only assistant output."""
+    commands = []
+    seen = set()
+
+    for text in _text_blocks(content):
+        if not isinstance(text, str):
+            continue
+
+        for match in SHELL_FENCE_RE.finditer(text):
+            block = match.group(1)
+            for line in block.splitlines():
+                command = _normalize_inferred_bash_line(line, allow_bare=True)
+                if command and command not in seen:
+                    seen.add(command)
+                    commands.append(command)
+
+        text_without_fences = SHELL_FENCE_RE.sub("", text)
+        for line in text_without_fences.splitlines():
+            command = _normalize_inferred_bash_line(line, allow_bare=False)
+            if command and command not in seen:
+                seen.add(command)
+                commands.append(command)
+
+    return commands
+
+
+def message_has_failure_signal(msg):
+    """Detect whether a message contains explicit failure evidence."""
+    if not isinstance(msg, dict):
+        return False
+
+    role = _get_role(msg)
+    content = _get_content(msg)
+    tool_result_texts = []
+
+    if isinstance(content, list):
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "tool_result":
+                if block.get("is_error"):
+                    return True
+                block_content = block.get("content", "")
+                if isinstance(block_content, str):
+                    tool_result_texts.append(block_content)
+
+    if role == "assistant":
+        for text in tool_result_texts:
+            if FAILURE_SIGNAL_RE.search(text):
+                return True
+        for text in _text_blocks(content):
+            if ASSISTANT_FAILURE_SIGNAL_RE.search(text):
+                return True
+    else:
+        for text in _text_blocks(content):
+            if USER_FAILURE_SIGNAL_RE.search(text):
+                return True
+    return False
+
+
+def normalize_bash_signature(command):
+    """Normalize Bash commands for retry-loop detection."""
+    if not isinstance(command, str) or not command.strip():
+        return ""
+
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        tokens = command.strip().split()
+
+    while tokens and re.match(r"[A-Za-z_][A-Za-z0-9_]*=.*", tokens[0]):
+        tokens = tokens[1:]
+
+    if len(tokens) >= 2 and tokens[0] in ("bash", "zsh", "sh") and tokens[1] in (
+        "-lc",
+        "-c",
+    ):
+        tokens = tokens[2:]
+        while tokens and re.match(r"[A-Za-z_][A-Za-z0-9_]*=.*", tokens[0]):
+            tokens = tokens[1:]
+
+    if len(tokens) >= 2 and tokens[0] == "bundle" and tokens[1] == "exec":
+        tokens = tokens[2:]
+
+    if not tokens:
+        return ""
+
+    return " ".join(tokens[:3])
+
+
+def extract_bash_runs(messages):
+    """Extract Bash commands with nearby failure evidence."""
+    runs = []
+    for index, msg in enumerate(messages):
+        if not isinstance(msg, dict):
+            continue
+
+        content = _get_content(msg)
+        role = _get_role(msg)
+        signatures = []
+
+        if isinstance(content, list):
+            for block in content:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") != "tool_use" or block.get("name") != "Bash":
+                    continue
+
+                command = block.get("input", {}).get("command", "")
+                signature = normalize_bash_signature(command)
+                if signature:
+                    signatures.append(signature)
+
+        if not signatures and role == "assistant":
+            for command in _infer_bash_commands_from_text(content):
+                signature = normalize_bash_signature(command)
+                if signature:
+                    signatures.append(signature)
+
+        if not signatures:
+            continue
+
+        lookahead = messages[index : index + 4]
+        failed = any(message_has_failure_signal(candidate) for candidate in lookahead)
+        for signature in signatures:
+            runs.append({"signature": signature, "failed": failed})
+
+    return runs
+
+
+def count_retry_loops(bash_runs):
+    """Count repeated failing Bash command loops from normalized run data."""
+    retry_loops = 0
+    window = []
+    for run in bash_runs:
+        signature = run["signature"]
+        if window and window[-1]["signature"] == signature:
+            window.append(run)
+        else:
+            if len(window) >= 3 and sum(1 for item in window if item["failed"]) >= 2:
+                retry_loops += 1
+            window = [run]
+    if len(window) >= 3 and sum(1 for item in window if item["failed"]) >= 2:
+        retry_loops += 1
+    return retry_loops
+
+
 # ─── Metric Computation ──────────────────────────────────────────────────────
 
 
@@ -238,26 +558,10 @@ def compute_friction(tool_calls, user_msgs, errors, messages):
     error_count = len(errors)
     error_tool_ratio = error_count / max(tool_count, 1)
 
-    # Retry loops: same command 3+ times with failures between
-    retry_loops = 0
-    bash_cmds = []
-    for tc in tool_calls:
-        name = tc.get("name", "")
-        inp = tc.get("input", {})
-        if name == "Bash":
-            bash_cmds.append(inp.get("command", ""))
-    # Detect consecutive similar commands
-    window = []
-    for cmd in bash_cmds:
-        normalized = cmd.strip().split()[0] if cmd.strip() else ""
-        if window and window[-1] == normalized:
-            window.append(normalized)
-        else:
-            if len(window) >= 3:
-                retry_loops += 1
-            window = [normalized]
-    if len(window) >= 3:
-        retry_loops += 1
+    # Retry loops: same normalized Bash command 3+ times with repeated failure
+    # evidence nearby. This deliberately ignores successful scripted repetition.
+    bash_runs = extract_bash_runs(messages)
+    retry_loops = count_retry_loops(bash_runs)
 
     # User corrections
     user_corrections = 0
@@ -342,7 +646,12 @@ def compute_fingerprint(user_msgs, tool_calls, files_edited):
         + tool_counts.get("Grep", 0)
         + tool_counts.get("Glob", 0)
     ) / total
-    edit_pct = (tool_counts.get("Edit", 0) + tool_counts.get("Write", 0)) / total
+    edit_pct = (
+        tool_counts.get("Edit", 0)
+        + tool_counts.get("Write", 0)
+        + tool_counts.get("MultiEdit", 0)
+        + tool_counts.get("NotebookEdit", 0)
+    ) / total
     bash_pct = tool_counts.get("Bash", 0) / total
 
     if read_pct > 0.5 and edit_pct < 0.1:
@@ -390,9 +699,14 @@ def compute_fingerprint(user_msgs, tool_calls, files_edited):
     return best, confidence
 
 
-def compute_plugin_opportunity(user_msgs, tool_calls, rb_commands):
+def compute_plugin_opportunity(user_msgs, tool_calls, rb_commands, messages=None):
     """Compute plugin opportunity score (0.0-1.0)."""
     could_use = []
+    used_commands = {
+        name
+        for name in (normalize_plugin_command_name(command) for command in rb_commands)
+        if name
+    }
 
     tool_names = [tc.get("name", "") for tc in tool_calls]
     tool_count = len(tool_names)
@@ -402,23 +716,14 @@ def compute_plugin_opportunity(user_msgs, tool_calls, rb_commands):
         if tc.get("name") == "Bash"
     ]
 
-    # Retry loops suggest /rb:investigate
-    consecutive = 0
-    for i in range(1, len(bash_cmds)):
-        if (
-            bash_cmds[i].split()[0:2] == bash_cmds[i - 1].split()[0:2]
-            if bash_cmds[i].strip()
-            else False
-        ):
-            consecutive += 1
-            if consecutive >= 2:
-                could_use.append("investigate")
-                break
-        else:
-            consecutive = 0
+    # Repeated failing Bash runs suggest /rb:investigate.
+    retry_loops = count_retry_loops(extract_bash_runs(messages or []))
+
+    if retry_loops > 0 and "investigate" not in used_commands:
+        could_use.append("investigate")
 
     # Many tools without plan suggest /rb:plan
-    if tool_count > 50 and "plan" not in rb_commands:
+    if tool_count > 50 and "plan" not in used_commands:
         could_use.append("plan")
 
     # Multiple test runs suggest /rb:verify
@@ -430,17 +735,19 @@ def compute_plugin_opportunity(user_msgs, tool_calls, rb_commands):
         or "bundle exec rails test" in c
         or "rails zeitwerk:check" in c
     )
-    if test_runs >= 3 and "verify" not in rb_commands:
+    if test_runs >= 3 and "verify" not in used_commands:
         could_use.append("verify")
 
     # PR commands suggest /rb:pr-review
     pr_cmds = sum(1 for c in bash_cmds if "gh pr" in c)
-    if pr_cmds >= 2 and "pr-review" not in rb_commands:
+    if pr_cmds >= 2 and "pr-review" not in used_commands:
         could_use.append("pr-review")
 
     # Many edits without review suggest /rb:review
-    edit_count = sum(1 for n in tool_names if n in ("Edit", "Write"))
-    if edit_count > 10 and "review" not in rb_commands:
+    edit_count = sum(
+        1 for n in tool_names if n in ("Edit", "Write", "MultiEdit", "NotebookEdit")
+    )
+    if edit_count > 10 and "review" not in used_commands:
         could_use.append("review")
 
     score = min(len(could_use) * 0.2, 1.0)
@@ -454,7 +761,12 @@ def compute_tool_profile(tool_calls):
     counts = Counter(names)
 
     read_count = counts.get("Read", 0) + counts.get("Glob", 0)
-    edit_count = counts.get("Edit", 0) + counts.get("Write", 0)
+    edit_count = (
+        counts.get("Edit", 0)
+        + counts.get("Write", 0)
+        + counts.get("MultiEdit", 0)
+        + counts.get("NotebookEdit", 0)
+    )
     bash_count = counts.get("Bash", 0)
     grep_count = counts.get("Grep", 0)
     tidewave_count = sum(v for k, v in counts.items() if k.startswith("mcp__tidewave"))
@@ -488,13 +800,14 @@ def compute_file_hotspots(tool_calls, top_n=10):
     for tc in tool_calls:
         name = tc.get("name", "")
         inp = tc.get("input", {})
-        fp = inp.get("file_path", "")
-        if not fp:
+        file_paths = extract_file_paths(inp)
+        if not file_paths:
             continue
-        if name in ("Read", "Glob"):
-            hotspots[fp]["reads"] += 1
-        elif name in ("Edit", "Write"):
-            hotspots[fp]["edits"] += 1
+        for fp in file_paths:
+            if name in ("Read", "Glob"):
+                hotspots[fp]["reads"] += 1
+            elif name in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
+                hotspots[fp]["edits"] += 1
 
     ranked = sorted(
         hotspots.items(),
@@ -588,9 +901,10 @@ def _locate_skill_invocations(user_msgs, all_messages):
         for cmd in cmds:
             if "{" in cmd or "<" in cmd:
                 continue
+            normalized = normalize_plugin_command(cmd)
             invocations.append(
                 {
-                    "skill": cmd,
+                    "skill": normalized or cmd,
                     "msg_index": i,
                     "user_msg_index": user_idx,
                 }
@@ -615,29 +929,8 @@ def compute_skill_effectiveness(user_msgs, tool_calls, errors, messages):
     if not invocations:
         return {}
 
-    # Build tool call index: map message index -> tool calls in that range
     total_msgs = len(messages)
-
-    # Extract tool_calls with message positions
-    tool_positions = []
-    for i, msg in enumerate(messages):
-        if not isinstance(msg, dict):
-            continue
-        content = _get_content(msg)
-        role = _get_role(msg)
-        if isinstance(content, list):
-            for block in content:
-                if isinstance(block, dict) and block.get("type") == "tool_use":
-                    tool_positions.append({"msg_index": i, "tc": block})
-        elif isinstance(content, str) and role == "assistant":
-            mentioned = TOOL_MENTION_RE.findall(content)
-            for name in mentioned:
-                tool_positions.append(
-                    {
-                        "msg_index": i,
-                        "tc": {"name": name, "input": {}},
-                    }
-                )
+    tool_positions = extract_tool_positions(messages)
 
     results = {}
     for inv in invocations:
@@ -659,7 +952,9 @@ def compute_skill_effectiveness(user_msgs, tool_calls, errors, messages):
 
         # Count post-skill signals
         post_edits = sum(
-            1 for tp in window_tools if tp["tc"].get("name") in ("Edit", "Write")
+            1
+            for tp in window_tools
+            if tp["tc"].get("name") in ("Edit", "Write", "MultiEdit", "NotebookEdit")
         )
         post_reads = sum(
             1 for tp in window_tools if tp["tc"].get("name") in ("Read", "Grep", "Glob")
@@ -760,7 +1055,7 @@ def compute_skill_effectiveness(user_msgs, tool_calls, errors, messages):
 # ─── Main Metric Pipeline ────────────────────────────────────────────────────
 
 
-def compute_session_metrics(data, session_id, project, date=None):
+def compute_session_metrics(data, session_id, project, date=None, provider=None):
     """Compute all metrics for a single session."""
     messages = parse_messages(data)
     tool_calls = extract_tool_calls(messages)
@@ -773,21 +1068,20 @@ def compute_session_metrics(data, session_id, project, date=None):
     files_read = set()
     for tc in tool_calls:
         name = tc.get("name", "")
-        fp = tc.get("input", {}).get("file_path", "")
-        if not fp:
+        file_paths = extract_file_paths(tc.get("input", {}))
+        if not file_paths:
             continue
-        if name in ("Edit", "Write"):
-            files_edited.add(fp)
+        if name in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
+            files_edited.update(file_paths)
         elif name == "Read":
-            files_read.add(fp)
+            files_read.update(file_paths)
 
-    # Extract rb commands from user messages
-    rb_commands = []
-    for text in user_msgs:
-        if not text.startswith("Base directory for this skill:"):
-            cmds = RB_COMMAND_RE.findall(text)
-            cmds = [c for c in cmds if "{" not in c and "<" not in c]
-            rb_commands.extend(cmds)
+    # Extract shipped plugin commands from user messages.
+    # Explicitly ignore contributor-only analyzer commands such as /docs-check
+    # or /session-scan by only recognizing shipped plugin prefixes.
+    rb_commands = extract_plugin_commands(user_msgs)
+
+    provider_name = extract_provider(data, provider)
 
     # runtime tooling detection
     tool_names = [tc.get("name", "") for tc in tool_calls]
@@ -801,7 +1095,7 @@ def compute_session_metrics(data, session_id, project, date=None):
         user_msgs, tool_calls, list(files_edited)
     )
     opportunity_score, could_use = compute_plugin_opportunity(
-        user_msgs, tool_calls, [c.replace("/rb:", "") for c in rb_commands]
+        user_msgs, tool_calls, [c.replace("/rb:", "") for c in rb_commands], messages
     )
     tool_profile = compute_tool_profile(tool_calls)
     bigrams = compute_tool_bigrams(tool_calls)
@@ -827,6 +1121,7 @@ def compute_session_metrics(data, session_id, project, date=None):
         "session_id": session_id,
         "scanned_at": datetime.now(timezone.utc).isoformat(),
         "project": project,
+        "provider": provider_name,
         "date": date
         or (
             timestamps[0][:10]
@@ -842,7 +1137,7 @@ def compute_session_metrics(data, session_id, project, date=None):
         "friction_signals": friction_signals,
         "plugin_opportunity_score": opportunity_score,
         "plugin_signals": {
-            "rb_commands_used": list(set(rb_commands)),
+            "rb_commands_used": sorted(set(rb_commands)),
             "could_use": could_use,
             "tidewave_available": tidewave_available,
             "tidewave_used": tidewave_used,
@@ -852,7 +1147,7 @@ def compute_session_metrics(data, session_id, project, date=None):
         "file_hotspots": hotspots,
         "file_categories": categorize_files(list(files_edited)),
         "skill_effectiveness": skill_effectiveness,
-        "session_chain": {"previous_session_id": None, "chain_length": 1},
+        "session_chain": {"implemented": False},
         "tier2_eligible": tier2_eligible,
         "tier2_reason": " AND ".join(tier2_reasons) if tier2_reasons else None,
         "tier2_completed": False,
@@ -964,6 +1259,7 @@ def backfill_from_v1(extract_path):
         "scanned_at": datetime.now(timezone.utc).isoformat(),
         "backfilled": True,
         "project": project,
+        "provider": v1.get("provider", "unknown"),
         "date": None,
         "duration_minutes": v1.get("duration_minutes"),
         "message_count": v1.get("user_message_count", len(user_msgs)),
@@ -991,7 +1287,7 @@ def backfill_from_v1(extract_path):
         "file_hotspots": [],
         "file_categories": v1.get("file_categories", {}),
         "skill_effectiveness": {},
-        "session_chain": {"previous_session_id": None, "chain_length": 1},
+        "session_chain": {"implemented": False},
         "tier2_eligible": friction_score > 0.35 or opportunity_score > 0.5,
         "tier2_reason": None,
         "tier2_completed": False,
@@ -1001,7 +1297,9 @@ def backfill_from_v1(extract_path):
 # ─── Trends Computation ──────────────────────────────────────────────────────
 
 
-def compute_trends(metrics_path, memory_path=None, project_filter=None):
+def compute_trends(
+    metrics_path, notes_path=None, project_filter=None, provider_filter=None
+):
     """Compute windowed aggregates from metrics.jsonl."""
     entries = []
     with open(metrics_path) as f:
@@ -1013,6 +1311,10 @@ def compute_trends(metrics_path, memory_path=None, project_filter=None):
                     if project_filter:
                         proj = entry.get("project", "")
                         if project_filter.lower() not in proj.lower():
+                            continue
+                    if provider_filter and provider_filter.lower() != "all":
+                        provider_name = str(entry.get("provider", "unknown"))
+                        if provider_name.lower() != provider_filter.lower():
                             continue
                     entries.append(entry)
                 except json.JSONDecodeError:
@@ -1045,6 +1347,18 @@ def compute_trends(metrics_path, memory_path=None, project_filter=None):
             except (ValueError, TypeError):
                 return None
 
+    parsed_dates = []
+    for entry in entries:
+        parsed = parse_date(entry)
+        if parsed is not None:
+            parsed_dates.append(parsed)
+    distinct_dates = len({dt.date().isoformat() for dt in parsed_dates})
+    time_series_signal = "usable"
+    if len(entries) < 10 or distinct_dates < 2:
+        time_series_signal = "none"
+    elif len(entries) < 20 or distinct_dates < 7:
+        time_series_signal = "weak"
+
     trends = {}
     for window_name, cutoff in windows.items():
         window_entries = [
@@ -1066,6 +1380,7 @@ def compute_trends(metrics_path, memory_path=None, project_filter=None):
             if e.get("plugin_signals", {}).get("rb_commands_used")
         )
         backfilled = sum(1 for e in window_entries if e.get("backfilled"))
+        providers = Counter(e.get("provider", "unknown") for e in window_entries)
 
         trends[window_name] = {
             "count": len(window_entries),
@@ -1077,23 +1392,25 @@ def compute_trends(metrics_path, memory_path=None, project_filter=None):
             "tier2_eligible_count": tier2_count,
             "tier2_eligible_pct": round(tier2_count / len(window_entries) * 100, 1),
             "plugin_adoption_rate": round(rb_users / len(window_entries) * 100, 1),
+            "provider_distribution": dict(providers.most_common()),
         }
 
-    # Memory comparison (if provided)
-    memory_comparison = None
-    if memory_path and os.path.exists(memory_path):
-        with open(memory_path) as f:
-            memory_text = f.read()
-        memory_comparison = {
-            "plugin_adoption_memory": "8-12%" if "8-12%" in memory_text else "unknown",
-            "plugin_adoption_measured": f"{trends.get('all', {}).get('plugin_adoption_rate', 0)}%",
+    notes_reference = None
+    if notes_path:
+        notes_reference = {
+            "path": notes_path,
+            "exists": os.path.exists(notes_path),
         }
 
     return {
         "computed_at": now.isoformat(),
         "total_sessions": len(entries),
+        "provider_filter": provider_filter or "all",
+        "immature_ledger": len(entries) < 10,
+        "distinct_dates": distinct_dates,
+        "time_series_signal": time_series_signal,
         "windows": trends,
-        "memory_comparison": memory_comparison,
+        "notes_reference": notes_reference,
     }
 
 
@@ -1123,7 +1440,9 @@ def run_batch(manifest_path):
         try:
             with open(msg_path) as f:
                 data = json.load(f)
-            metrics = compute_session_metrics(data, sid, project)
+            metrics = compute_session_metrics(
+                data, sid, project, provider=entry.get("provider")
+            )
             results.append(metrics)
 
             with open(metrics_path, "a") as f:
@@ -1144,10 +1463,12 @@ def run_batch(manifest_path):
 
 def print_usage():
     print("Usage:")
-    print("  python3 compute-metrics.py <messages.json> --session-id ID --project NAME")
+    print(
+        "  python3 compute-metrics.py <messages.json> --session-id ID --project NAME [--provider NAME]"
+    )
     print("  python3 compute-metrics.py --batch <manifest.json>")
     print(
-        "  python3 compute-metrics.py --trends <metrics.jsonl> [--memory MEMORY.md] [--project NAME]"
+        "  python3 compute-metrics.py --trends <metrics.jsonl> [--project NAME] [--provider NAME] [--notes PATH]"
     )
     print("  python3 compute-metrics.py --backfill <extracts-dir/>")
     print("  python3 compute-metrics.py --help")
@@ -1170,17 +1491,31 @@ if __name__ == "__main__":
         if len(sys.argv) < 3:
             print("Error: --trends requires metrics.jsonl path")
             sys.exit(1)
-        memory_path = None
-        if "--memory" in sys.argv:
+        notes_path = None
+        if "--notes" in sys.argv:
+            idx = sys.argv.index("--notes")
+            if idx + 1 < len(sys.argv):
+                notes_path = sys.argv[idx + 1]
+        elif "--memory" in sys.argv:
             idx = sys.argv.index("--memory")
             if idx + 1 < len(sys.argv):
-                memory_path = sys.argv[idx + 1]
+                notes_path = sys.argv[idx + 1]
         project_filter = None
         if "--project" in sys.argv:
             idx = sys.argv.index("--project")
             if idx + 1 < len(sys.argv):
                 project_filter = sys.argv[idx + 1]
-        result = compute_trends(sys.argv[2], memory_path, project_filter)
+        provider_filter = None
+        if "--provider" in sys.argv:
+            idx = sys.argv.index("--provider")
+            if idx + 1 < len(sys.argv):
+                provider_filter = sys.argv[idx + 1]
+        result = compute_trends(
+            sys.argv[2],
+            notes_path=notes_path,
+            project_filter=project_filter,
+            provider_filter=provider_filter,
+        )
         print(json.dumps(result, indent=2))
 
     elif mode == "--backfill":
@@ -1244,6 +1579,7 @@ if __name__ == "__main__":
         messages_path = mode
         session_id = None
         project = "unknown"
+        provider = None
 
         if "--session-id" in sys.argv:
             idx = sys.argv.index("--session-id")
@@ -1254,6 +1590,10 @@ if __name__ == "__main__":
             idx = sys.argv.index("--project")
             if idx + 1 < len(sys.argv):
                 project = sys.argv[idx + 1]
+        if "--provider" in sys.argv:
+            idx = sys.argv.index("--provider")
+            if idx + 1 < len(sys.argv):
+                provider = sys.argv[idx + 1]
 
         if not session_id:
             session_id = os.path.basename(messages_path).replace(".json", "")
@@ -1261,5 +1601,5 @@ if __name__ == "__main__":
         with open(messages_path) as f:
             data = json.load(f)
 
-        metrics = compute_session_metrics(data, session_id, project)
+        metrics = compute_session_metrics(data, session_id, project, provider=provider)
         print(json.dumps(metrics))

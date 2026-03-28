@@ -1,0 +1,238 @@
+from __future__ import annotations
+
+import importlib.util
+from pathlib import Path
+import unittest
+
+
+MODULE_PATH = (
+    Path(__file__).resolve().parents[3]
+    / ".claude"
+    / "skills"
+    / "session-scan"
+    / "references"
+    / "compute-metrics.py"
+)
+
+if not MODULE_PATH.exists():
+    raise ImportError(f"Cannot find 'session_scan_metrics' at {MODULE_PATH}")
+
+SPEC = importlib.util.spec_from_file_location("session_scan_metrics", MODULE_PATH)
+if SPEC is None or SPEC.loader is None:
+    raise ImportError(f"Cannot load 'session_scan_metrics' from {MODULE_PATH}")
+session_scan_metrics = importlib.util.module_from_spec(SPEC)
+try:
+    SPEC.loader.exec_module(session_scan_metrics)
+except OSError as exc:
+    raise ImportError(f"Cannot execute 'session_scan_metrics' from {MODULE_PATH}") from exc
+
+
+class SessionScanMetricTests(unittest.TestCase):
+    def test_extract_plugin_commands_normalizes_aliases(self) -> None:
+        user_msgs = [
+            "Use /rb:verify next",
+            "Then try /ruby-grape-rails:permissions",
+        ]
+
+        commands = session_scan_metrics.extract_plugin_commands(user_msgs)
+
+        self.assertEqual(commands, ["/rb:verify", "/rb:permissions"])
+
+    def test_extract_plugin_commands_ignores_placeholders(self) -> None:
+        user_msgs = [
+            "Template: /rb:{command}",
+            "Placeholder: /ruby-grape-rails:<skill>",
+            "Real: /rb:plan",
+        ]
+
+        commands = session_scan_metrics.extract_plugin_commands(user_msgs)
+
+        self.assertEqual(commands, ["/rb:plan"])
+
+    def test_locate_skill_invocations_normalizes_aliases(self) -> None:
+        messages = [
+            {
+                "role": "user",
+                "content": (
+                    "<command-message>ruby-grape-rails:permissions</command-message>\n"
+                    "<command-name>/ruby-grape-rails:permissions</command-name>"
+                ),
+            }
+        ]
+
+        invocations = session_scan_metrics._locate_skill_invocations([], messages)
+
+        self.assertEqual(len(invocations), 1)
+        self.assertEqual(invocations[0]["skill"], "/rb:permissions")
+
+    def test_compute_plugin_opportunity_accepts_prefixed_commands(self) -> None:
+        messages = [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Bash",
+                        "input": {"command": "bundle exec rspec spec/models/user_spec.rb"},
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_result", "is_error": True, "content": "failed with exit code 1"}],
+            },
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Bash",
+                        "input": {"command": "bundle exec rspec spec/models/user_spec.rb"},
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_result", "is_error": True, "content": "failed with exit code 1"}],
+            },
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Bash",
+                        "input": {"command": "bundle exec rspec spec/models/user_spec.rb"},
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_result", "is_error": True, "content": "failed with exit code 1"}],
+            },
+        ]
+        tool_calls = [
+            {"name": "Bash", "input": {"command": "bundle exec rspec spec/models/user_spec.rb"}},
+            {"name": "Bash", "input": {"command": "bundle exec rspec spec/models/user_spec.rb"}},
+            {"name": "Bash", "input": {"command": "bundle exec rspec spec/models/user_spec.rb"}},
+        ]
+
+        score, could_use = session_scan_metrics.compute_plugin_opportunity(
+            [],
+            tool_calls,
+            ["/ruby-grape-rails:verify", "/rb:plan"],
+            messages,
+        )
+
+        self.assertEqual(score, 0.2)
+        self.assertEqual(could_use, ["investigate"])
+
+    def test_compute_plugin_opportunity_skips_investigate_when_already_used(self) -> None:
+        messages = [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Bash",
+                        "input": {"command": "bundle exec rspec spec/models/user_spec.rb"},
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_result", "is_error": True, "content": "failed with exit code 1"}],
+            },
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Bash",
+                        "input": {"command": "bundle exec rspec spec/models/user_spec.rb"},
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_result", "is_error": True, "content": "failed with exit code 1"}],
+            },
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Bash",
+                        "input": {"command": "bundle exec rspec spec/models/user_spec.rb"},
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_result", "is_error": True, "content": "failed with exit code 1"}],
+            },
+        ]
+        tool_calls = [
+            {"name": "Bash", "input": {"command": "bundle exec rspec spec/models/user_spec.rb"}},
+            {"name": "Bash", "input": {"command": "bundle exec rspec spec/models/user_spec.rb"}},
+            {"name": "Bash", "input": {"command": "bundle exec rspec spec/models/user_spec.rb"}},
+        ]
+
+        score, could_use = session_scan_metrics.compute_plugin_opportunity(
+            [],
+            tool_calls,
+            ["/rb:verify", "/rb:investigate"],
+            messages,
+        )
+
+        self.assertEqual(score, 0.0)
+        self.assertEqual(could_use, [])
+
+    def test_skill_effectiveness_counts_text_mode_bash_runs(self) -> None:
+        messages = [
+            {
+                "role": "user",
+                "content": (
+                    "<command-message>ruby-grape-rails:verify</command-message>\n"
+                    "<command-name>/ruby-grape-rails:verify</command-name>"
+                ),
+            },
+            {
+                "role": "assistant",
+                "content": (
+                    "```bash\n"
+                    "$ bundle exec rspec spec/models/user_spec.rb\n"
+                    "```"
+                ),
+            },
+        ]
+
+        results = session_scan_metrics.compute_skill_effectiveness([], [], [], messages)
+
+        self.assertIn("/rb:verify", results)
+        self.assertEqual(results["/rb:verify"]["total_post_test_runs"], 1)
+
+    def test_extract_tool_positions_ignores_plain_agent_prose(self) -> None:
+        messages = [{"role": "assistant", "content": "We should ask the Agent to summarize this."}]
+
+        tool_positions = session_scan_metrics.extract_tool_positions(messages)
+
+        self.assertEqual(tool_positions, [])
+
+    def test_extract_tool_positions_matches_tool_like_text_forms(self) -> None:
+        messages = [
+            {
+                "role": "assistant",
+                "content": "Use `Task` for discovery, then Agent(task=\"scan\") and tool:Bash if needed.",
+            }
+        ]
+
+        tool_positions = session_scan_metrics.extract_tool_positions(messages)
+
+        self.assertEqual(
+            [item["tc"]["name"] for item in tool_positions],
+            ["Task", "Agent", "Bash"],
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

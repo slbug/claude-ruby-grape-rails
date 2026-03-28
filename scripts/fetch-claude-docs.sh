@@ -71,6 +71,15 @@ is_fresh() {
   [ "$file_age" -lt $(( MAX_AGE_HOURS * 3600 )) ]
 }
 
+safe_remove_cache_file() {
+  local path="${1:-}"
+  [[ -n "$path" ]] || return 0
+  [[ "$path" == "${CACHE_DIR}/"* ]] || return 1
+  [[ ! -e "$path" ]] && return 0
+  [[ -f "$path" && ! -L "$path" ]] || return 1
+  rm -f -- "${path:?}"
+}
+
 # Download a single page with retry
 fetch_page() {
   local page="$1"
@@ -93,7 +102,7 @@ fetch_page() {
   done
 
   echo "  [FAILED] $page — could not download after 3 attempts"
-  rm -f "$dest"
+  safe_remove_cache_file "$dest" || true
   return 1
 }
 

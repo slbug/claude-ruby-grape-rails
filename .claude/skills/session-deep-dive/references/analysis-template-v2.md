@@ -1,130 +1,146 @@
 # Session Analysis Template v2
 
-Analyze this Claude Code session transcript and produce a structured report.
-You have both pre-computed quantitative metrics AND the full transcript.
+Analyze one contributor session transcript and produce a structured report.
 
-## Goals
+You have:
 
-1. **Validate metrics** — do the pre-computed scores match the qualitative reality?
-2. **Add depth** — identify specific friction moments, user preferences, workflow patterns
-3. **Assess plugin fit** — which commands/skills would help, which wouldn't?
-4. **Tag evidence** — every finding must have a strength tag
+- the full transcript
+- pre-computed heuristic metrics from `/session-scan`
+
+Your job is to validate, refine, or contradict those heuristics with transcript
+evidence.
+
+## Ground Rules
+
+1. Do not overclaim from one session.
+2. Every finding must carry an evidence-strength tag.
+3. If a metric looks wrong, say so explicitly.
 
 ## Evidence Strength Tags
 
-Tag every finding with one of:
+- `STRONG`: direct evidence or repeated pattern
+- `MODERATE`: plausible pattern with limited evidence
+- `WEAK`: inference only
 
-- **STRONG**: Direct evidence (user complained, explicit error, 3+ occurrences)
-- **MODERATE**: Indirect evidence (pattern suggests friction, 1-2 occurrences)
-- **WEAK**: Inference only (could be interpreted differently)
-
-## Analysis Sections
+## Sections
 
 ### 1. Session Summary
 
-- What was the developer trying to accomplish?
-- Single task or multiple tasks?
-- Success level: fully, partially, not at all?
-- Ruby/Rails/Grape domains touched (Hotwire/Turbo, Active Record, Sidekiq, etc.)?
-- Does the fingerprint from metrics match your assessment?
+- What was the contributor trying to do?
+- Single task or multi-task?
+- Outcome:
+  - fully successful
+  - partially successful
+  - unresolved
+- Which Ruby-plugin surfaces were involved:
+  - skills
+  - agents
+  - hooks
+  - docs / release metadata
+- Does the reported fingerprint fit the session?
 
-### 2. User Correction Tracking
+### 2. Correction Tracking
 
-Enumerate every user correction or redirection:
+Enumerate explicit user corrections or redirections.
 
 | # | User Said | What Went Wrong | Impact |
 |---|-----------|-----------------|--------|
-| 1 | "no, I meant..." | Claude misunderstood scope | Wasted 5 tool calls |
+| 1 | "No, use the shipped hook file" | Scope drift into contributor-only code | 3 wasted tool calls |
 
-This directly validates the `user_corrections` friction signal.
+### 3. Workflow Preferences
 
-### 3. Decision Preferences
+Identify contributor preferences visible in the session:
 
-Identify code style and workflow preferences:
+- plan-first vs direct implementation
+- small patches vs broad rewrites
+- test/validation-first vs patch-first
+- terse vs detailed close-out
+- evidence-heavy review vs quick approval
+- prefers `rg` / `jq` / shell vs ad-hoc scripting
 
-- Pattern matching vs if/else/cond?
-- `with` chains vs nested `case`?
-- Test-first vs implementation-first?
-- Inline vs extracted functions?
-- Prefers detailed explanations or terse responses?
-- How they handle review findings (fix all vs selective)?
+Only record preferences with actual transcript support.
 
-### 4. How They Worked
+### 4. How the Work Happened
 
-- Planned before coding or dove straight in?
-- Iterative cycle pattern (edit → test → fix → test)?
-- Used subagents or worked solo?
-- Debugging approach (read-first vs trial-and-error)?
-- Used runtime tooling? (project_eval, browser_eval, execute_sql_query)
-- Tool mix interpretation (Read-heavy = exploration, Edit-heavy = implementation)
+- did the contributor stay on one problem or bounce between tasks?
+- was the workflow read-first, patch-first, or tool-first?
+- were subagents used effectively?
+- did runtime tooling appear?
+  - Tidewave
+  - browser or HTTP helpers
+  - DB query helpers
+- what does the tool mix imply?
 
 ### 5. Friction Points
 
-For each friction point found:
+For each meaningful friction point:
 
 | # | Type | Description | Evidence | Strength |
 |---|------|-------------|----------|----------|
-| 1 | Error loop | rails zeitwerk:check failed 4× | Bash calls 23-27 | STRONG |
-| 2 | Approach change | Switched from inline job to Sidekiq | Edits 15-20 | MODERATE |
+| 1 | error_loop | repeated hook-schema fix attempts | shell output + edits | STRONG |
 
-Types: error_loop, approach_change, manual_repetition, long_debugging,
-scope_creep, missing_context, tool_confusion
+Suggested types:
 
-### 6. Plugin Skills Assessment
+- `error_loop`
+- `approach_change`
+- `manual_repetition`
+- `scope_creep`
+- `missing_context`
+- `tool_confusion`
+- `manual_verification`
+
+### 6. Plugin Skill Assessment
 
 #### Used Commands
 
-If any `/rb:*` commands were used:
+If `/rb:*` commands were used:
 
-| Command | Worked Well? | Issues? |
-|---------|-------------|---------|
-| `/rb:plan` | Yes — kept scope focused | Plan was too detailed for small task |
+| Command | Helped? | Issues? |
+|---------|---------|---------|
+| `/rb:plan` | yes | over-detailed for a tiny task |
 
 #### Suggested Commands
 
-For each friction point, suggest a specific plugin command:
+Only suggest a command if the transcript evidence is clear.
 
-| Friction Point | Suggested Command | Why It Helps | Strength |
-|----------------|-------------------|-------------|----------|
-| Error loop (#1) | `/rb:investigate` | Structured 4-track analysis | STRONG |
+| Friction Point | Suggested Command | Why | Strength |
+|----------------|-------------------|-----|----------|
+| repeated manual verification | `/rb:verify` | structured verification pass | STRONG |
 
-Only suggest commands that genuinely match. Don't force-fit.
+#### Hook and Workflow Assessment
 
-#### Hook Effectiveness
+- did hook output help or create noise?
+- were checks ignored for a good reason or because they were weak?
+- did the workflow rely on stale contributor assumptions?
 
-- Did PostToolUse verification fire? (rails zeitwerk:check + rubocop after edits)
-- Was the security Iron Laws reminder shown for auth files?
-- Did the developer heed or ignore hook output?
+### 7. Improvement Opportunities
 
-### 7. Plugin Improvement Opportunities
+For each real opportunity:
 
-Most important section. For each opportunity:
-
-```
-**[STRONG/MODERATE/WEAK] {Category}: {Description}**
-
-Evidence: {specific messages, commands, patterns from transcript}
-Session count estimate: {how many other sessions likely have this}
-Suggested implementation: {concrete suggestion}
+```text
+[STRENGTH] Category: description
+Evidence: concrete transcript evidence
+Confidence: high / medium / low
+Suggested change: specific file or workflow change
+Corroboration needed: what should be checked next
 ```
 
-Categories:
+Good categories:
 
-- Missing automation
-- Missing Iron Law
-- Missing skill/agent
-- Auto-loading gap
-- Workflow friction WITH plugin
-- Tool integration gap
+- missing automation
+- stale contributor guidance
+- docs-check false positive
+- workflow friction
+- evaluation blind spot
+- tool taxonomy drift
 
-### 8. Efficiency Assessment
+### 8. Overall Assessment
 
-Rate: **Smooth** / **Some friction** / **High friction** / **Abandoned**
+Rate the session:
 
-Estimate effort savings with right plugin skills: {X}%
+- smooth
+- some friction
+- high friction
+- misleading signals
 
-## Output Format
-
-Write structured markdown with all sections above.
-Keep under 200 lines. Be concrete — cite actual messages, commands, patterns.
-Every finding must have an evidence strength tag.
+Then estimate whether the current plugin helped, hurt, or was mostly irrelevant.

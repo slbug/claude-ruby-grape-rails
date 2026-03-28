@@ -1,6 +1,6 @@
 ---
 name: rb:review
-description: Review code with parallel specialist agents covering Ruby correctness, security, testing, Active Record, Rails/Grape boundaries, and Sidekiq behavior. Use after implementation before commit or PR.
+description: Review changed code with parallel specialist agents for correctness, security, testing, Active Record, Grape, and Sidekiq boundaries. Use after implementation before commit or PR.
 argument-hint: "[test|security|sidekiq|deploy|iron-laws|all]"
 disable-model-invocation: true
 effort: high
