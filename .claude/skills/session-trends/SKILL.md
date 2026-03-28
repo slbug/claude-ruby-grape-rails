@@ -68,6 +68,8 @@ Do not rely on `MEMORY.md` as a required baseline.
 
 Show:
 
+- top-level `time_series_signal`
+- distinct dates represented in the ledger
 - total sessions in each window
 - average friction
 - average opportunity
@@ -78,6 +80,12 @@ Show:
 
 If a provider filter was not used and the ledger mixes providers, say so
 explicitly before interpreting the trends.
+
+If the ledger is brand new or has fewer than 10 sessions:
+
+- say explicitly that there is little or no time-series signal yet
+- note when `7d`, `30d`, and `all` are effectively the same dataset
+- treat the output as an early snapshot, not a trend
 
 ### 6. Suggest Next Actions Carefully
 

@@ -23,6 +23,7 @@ import json
 import math
 import os
 import re
+import shlex
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
@@ -74,8 +75,10 @@ FINGERPRINT_KEYWORDS = {
 
 # ─── Plugin Opportunity Signals ───────────────────────────────────────────────
 
-RB_COMMAND_RE = re.compile(r"/rb:\w+")
-SKILL_COMMAND_RE = re.compile(r"/(?:rb|hotwire):[a-z][a-z0-9_-]*")
+PLUGIN_COMMAND_RE = re.compile(r"/(?:(?:rb)|(?:ruby-grape-rails)):[a-z][a-z0-9_-]*")
+SKILL_COMMAND_RE = re.compile(
+    r"/(?:(?:rb)|(?:ruby-grape-rails)|(?:hotwire)):[a-z][a-z0-9_-]*"
+)
 
 
 def sigmoid(raw):
@@ -83,6 +86,31 @@ def sigmoid(raw):
     return 1.0 / (
         1.0 + math.exp(-FRICTION_SIGMOID_K * (raw - FRICTION_SIGMOID_MIDPOINT))
     )
+
+
+def normalize_plugin_command(command):
+    """Normalize plugin command aliases to canonical short names."""
+    if not isinstance(command, str):
+        return None
+    if command.startswith("/ruby-grape-rails:"):
+        return "/rb:" + command.split(":", 1)[1]
+    return command
+
+
+def extract_plugin_commands(user_msgs):
+    """Extract shipped plugin commands while ignoring contributor analyzers."""
+    commands = []
+    for text in user_msgs:
+        if text.startswith("Base directory for this skill:"):
+            continue
+        found = PLUGIN_COMMAND_RE.findall(text)
+        for command in found:
+            if "{" in command or "<" in command:
+                continue
+            normalized = normalize_plugin_command(command)
+            if normalized:
+                commands.append(normalized)
+    return commands
 
 
 # ─── Message Parsing ─────────────────────────────────────────────────────────
@@ -168,6 +196,11 @@ TOOL_MENTION_RE = re.compile(
 )
 BASH_CMD_RE = re.compile(
     r"(?:^|\n)\s*(?:\$|>)\s*(bundle\s|rails\s|rake\s|git\s|npm\s|python3?\s|cd\s|rm\s)"
+)
+FAILURE_SIGNAL_RE = re.compile(
+    r"\b(error|failed|failure|exception|traceback|command not found|"
+    r"permission denied|no such file|syntaxerror|exit code)\b",
+    re.IGNORECASE,
 )
 
 
@@ -274,6 +307,101 @@ def extract_timestamps(messages):
     return timestamps
 
 
+def _text_blocks(content):
+    """Yield text fragments from either string or block content."""
+    if isinstance(content, str):
+        yield content
+    elif isinstance(content, list):
+        for block in content:
+            if isinstance(block, dict):
+                if block.get("type") == "text":
+                    text = block.get("text", "")
+                    if isinstance(text, str):
+                        yield text
+                elif block.get("type") == "tool_result":
+                    text = block.get("content", "")
+                    if isinstance(text, str):
+                        yield text
+
+
+def message_has_failure_signal(msg):
+    """Detect whether a message contains explicit failure evidence."""
+    if not isinstance(msg, dict):
+        return False
+
+    content = _get_content(msg)
+
+    if isinstance(content, list):
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "tool_result":
+                if block.get("is_error"):
+                    return True
+
+    for text in _text_blocks(content):
+        if FAILURE_SIGNAL_RE.search(text):
+            return True
+    return False
+
+
+def normalize_bash_signature(command):
+    """Normalize Bash commands for retry-loop detection."""
+    if not isinstance(command, str) or not command.strip():
+        return ""
+
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        tokens = command.strip().split()
+
+    while tokens and re.match(r"[A-Za-z_][A-Za-z0-9_]*=.*", tokens[0]):
+        tokens = tokens[1:]
+
+    if len(tokens) >= 2 and tokens[0] in ("bash", "zsh", "sh") and tokens[1] in (
+        "-lc",
+        "-c",
+    ):
+        tokens = tokens[2:]
+        while tokens and re.match(r"[A-Za-z_][A-Za-z0-9_]*=.*", tokens[0]):
+            tokens = tokens[1:]
+
+    if len(tokens) >= 2 and tokens[0] == "bundle" and tokens[1] == "exec":
+        tokens = tokens[2:]
+
+    if not tokens:
+        return ""
+
+    return " ".join(tokens[:3])
+
+
+def extract_bash_runs(messages):
+    """Extract Bash commands with nearby failure evidence."""
+    runs = []
+    for index, msg in enumerate(messages):
+        if not isinstance(msg, dict):
+            continue
+
+        content = _get_content(msg)
+        if not isinstance(content, list):
+            continue
+
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") != "tool_use" or block.get("name") != "Bash":
+                continue
+
+            command = block.get("input", {}).get("command", "")
+            signature = normalize_bash_signature(command)
+            if not signature:
+                continue
+
+            lookahead = messages[index + 1 : index + 4]
+            failed = any(message_has_failure_signal(candidate) for candidate in lookahead)
+            runs.append({"signature": signature, "failed": failed})
+
+    return runs
+
+
 # ─── Metric Computation ──────────────────────────────────────────────────────
 
 
@@ -285,25 +413,20 @@ def compute_friction(tool_calls, user_msgs, errors, messages):
     error_count = len(errors)
     error_tool_ratio = error_count / max(tool_count, 1)
 
-    # Retry loops: same command 3+ times with failures between
+    # Retry loops: same normalized Bash command 3+ times with repeated failure
+    # evidence nearby. This deliberately ignores successful scripted repetition.
     retry_loops = 0
-    bash_cmds = []
-    for tc in tool_calls:
-        name = tc.get("name", "")
-        inp = tc.get("input", {})
-        if name == "Bash":
-            bash_cmds.append(inp.get("command", ""))
-    # Detect consecutive similar commands
+    bash_runs = extract_bash_runs(messages)
     window = []
-    for cmd in bash_cmds:
-        normalized = cmd.strip().split()[0] if cmd.strip() else ""
-        if window and window[-1] == normalized:
-            window.append(normalized)
+    for run in bash_runs:
+        signature = run["signature"]
+        if window and window[-1]["signature"] == signature:
+            window.append(run)
         else:
-            if len(window) >= 3:
+            if len(window) >= 3 and sum(1 for item in window if item["failed"]) >= 2:
                 retry_loops += 1
-            window = [normalized]
-    if len(window) >= 3:
+            window = [run]
+    if len(window) >= 3 and sum(1 for item in window if item["failed"]) >= 2:
         retry_loops += 1
 
     # User corrections
@@ -843,13 +966,10 @@ def compute_session_metrics(data, session_id, project, date=None, provider=None)
         elif name == "Read":
             files_read.update(file_paths)
 
-    # Extract rb commands from user messages
-    rb_commands = []
-    for text in user_msgs:
-        if not text.startswith("Base directory for this skill:"):
-            cmds = RB_COMMAND_RE.findall(text)
-            cmds = [c for c in cmds if "{" not in c and "<" not in c]
-            rb_commands.extend(cmds)
+    # Extract shipped plugin commands from user messages.
+    # Explicitly ignore contributor-only analyzer commands such as /docs-check
+    # or /session-scan by only recognizing shipped plugin prefixes.
+    rb_commands = extract_plugin_commands(user_msgs)
 
     provider_name = extract_provider(data, provider)
 
@@ -907,7 +1027,7 @@ def compute_session_metrics(data, session_id, project, date=None, provider=None)
         "friction_signals": friction_signals,
         "plugin_opportunity_score": opportunity_score,
         "plugin_signals": {
-            "rb_commands_used": list(set(rb_commands)),
+            "rb_commands_used": sorted(set(rb_commands)),
             "could_use": could_use,
             "tidewave_available": tidewave_available,
             "tidewave_used": tidewave_used,
@@ -1117,6 +1237,16 @@ def compute_trends(
             except (ValueError, TypeError):
                 return None
 
+    parsed_dates = [
+        parse_date(entry) for entry in entries if parse_date(entry) is not None
+    ]
+    distinct_dates = len({dt.date().isoformat() for dt in parsed_dates})
+    time_series_signal = "usable"
+    if len(entries) < 10 or distinct_dates < 2:
+        time_series_signal = "none"
+    elif len(entries) < 20 or distinct_dates < 7:
+        time_series_signal = "weak"
+
     trends = {}
     for window_name, cutoff in windows.items():
         window_entries = [
@@ -1164,6 +1294,9 @@ def compute_trends(
         "computed_at": now.isoformat(),
         "total_sessions": len(entries),
         "provider_filter": provider_filter or "all",
+        "immature_ledger": len(entries) < 10,
+        "distinct_dates": distinct_dates,
+        "time_series_signal": time_series_signal,
         "windows": trends,
         "notes_reference": notes_reference,
     }

@@ -53,6 +53,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   historical-report dependencies, support provider-scoped analysis guidance,
   and stop implying session chaining or fixed adoption baselines that the
   current tooling does not actually implement.
+- **Session trend scoring is less noisy and more explicit about tiny ledgers**
+  — shipped command detection now normalizes both `/rb:*` and
+  `/ruby-grape-rails:*`, contributor analyzer commands are excluded from
+  adoption metrics, retry-loop friction now requires nearby failure evidence,
+  and trend output now exposes `immature_ledger`, `distinct_dates`, and
+  `time_series_signal` so early snapshots are not misread as meaningful
+  time-series trends.
 
 ## [1.6.0] - 2026-03-28
 

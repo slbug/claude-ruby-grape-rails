@@ -11,12 +11,31 @@ Before interpreting a trend, ask:
 2. is the sample size large enough?
 3. is this transcript-derived metric being treated too strongly?
 
+If the ledger has fewer than 10 sessions, treat the report as an early snapshot
+instead of a genuine time-series trend.
+
+Also check:
+
+- `time_series_signal`
+- `distinct_dates`
+
+If `time_series_signal` is `none`, do not narrate `7d` vs `30d` vs `all` as if
+they show a meaningful trend.
+
 ## Adoption and Usage
 
 ### "Is plugin adoption increasing?"
 
 Look at `plugin_adoption_rate` across windows, preferably with a provider
 filter.
+
+This rate now reflects only shipped plugin commands:
+
+- `/rb:*`
+- `/ruby-grape-rails:*`
+
+Contributor-only analyzer commands like `/docs-check` and `/session-scan` are
+intentionally ignored.
 
 Interpretation:
 
