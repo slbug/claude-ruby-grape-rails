@@ -79,6 +79,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Internal skill layout is now more consistent for `/rb:learn`** — the
   shipped skill directory was renamed from `learn-from-fix` to `learn` while
   keeping the user-facing command as `/rb:learn`.
+- **Eval frontmatter parsing and Python prerequisites are now clearer** — the
+  eval parser now understands inline comma-separated list fields used in agent
+  frontmatter, coverage includes that form explicitly, and both eval entrypoint
+  scripts now fail fast with a clear Python 3.10+ requirement message.
 
 ## [1.5.0] - 2026-03-28
 

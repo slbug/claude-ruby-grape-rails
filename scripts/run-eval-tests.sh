@@ -3,6 +3,12 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
+  echo "ERROR: lab/eval tests require python3 3.10+." >&2
+  echo "Current python3: $(python3 --version 2>/dev/null || echo unavailable)" >&2
+  exit 1
+fi
+
 if python3 -m pytest --version >/dev/null 2>&1; then
   exec python3 -m pytest lab/eval/tests -v
 fi

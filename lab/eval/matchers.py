@@ -10,6 +10,7 @@ from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PLUGIN_ROOT = PROJECT_ROOT / "plugins" / "ruby-grape-rails"
+LIST_LIKE_FRONTMATTER_KEYS = {"tools", "disallowedTools", "skills"}
 
 
 def _coerce_scalar(value: str) -> Any:
@@ -22,6 +23,12 @@ def _coerce_scalar(value: str) -> Any:
     if re.fullmatch(r"-?\d+", raw):
         return int(raw)
     return raw
+
+
+def _coerce_frontmatter_value(key: str, value: str) -> Any:
+    if key in LIST_LIKE_FRONTMATTER_KEYS and "," in value:
+        return [_coerce_scalar(part) for part in value.split(",") if part.strip()]
+    return _coerce_scalar(value)
 
 
 def parse_frontmatter(content: str) -> dict[str, Any]:
@@ -52,7 +59,7 @@ def parse_frontmatter(content: str) -> dict[str, Any]:
         key = match.group(1)
         value = (match.group(2) or "").rstrip()
         if value:
-            data[key] = _coerce_scalar(value)
+            data[key] = _coerce_frontmatter_value(key, value)
             i += 1
             continue
 

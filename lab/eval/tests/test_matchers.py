@@ -31,6 +31,20 @@ class MatcherTests(unittest.TestCase):
         self.assertEqual(data["name"], "rb:sample")
         self.assertEqual(data["tools"], ["Read"])
 
+    def test_parse_frontmatter_inline_comma_lists(self) -> None:
+        content = """---
+name: sample-agent
+description: Review Ruby code carefully with read-only restrictions.
+tools: Read, Grep, Glob, Bash
+disallowedTools: Write, Edit, NotebookEdit
+skills: testing, review
+---
+"""
+        data = matchers.parse_frontmatter(content)
+        self.assertEqual(data["tools"], ["Read", "Grep", "Glob", "Bash"])
+        self.assertEqual(data["disallowedTools"], ["Write", "Edit", "NotebookEdit"])
+        self.assertEqual(data["skills"], ["testing", "review"])
+
     def test_has_iron_laws(self) -> None:
         passed, _ = matchers.has_iron_laws(SAMPLE, min_count=1)
         self.assertTrue(passed)
@@ -72,6 +86,17 @@ tools:
         passed, evidence = agent_matchers.read_only_tools_coherent(content)
         self.assertFalse(passed)
         self.assertIn("Read tool present", evidence)
+
+    def test_read_only_tools_coherent_supports_inline_comma_lists(self) -> None:
+        content = """---
+name: sample-agent
+description: Review Ruby code carefully with read-only restrictions.
+tools: Read, Grep, Glob, Bash
+disallowedTools: Write, Edit, NotebookEdit
+---
+"""
+        passed, _ = agent_matchers.read_only_tools_coherent(content)
+        self.assertTrue(passed)
 
 
 if __name__ == "__main__":
