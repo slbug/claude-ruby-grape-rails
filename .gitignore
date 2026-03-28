@@ -31,3 +31,5 @@ __pycache__/
 scratchpad/
 
 .opencode/
+
+/lab/eval/.last-eval-commit

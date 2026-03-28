@@ -66,7 +66,7 @@ Based on what changed, spawn appropriate reviewers:
 - `data-integrity-reviewer` - When models, constraints, or transactions changed
 - `migration-safety-reviewer` - When migrations add columns or modify tables
 
-## Review Laws
+## Iron Laws
 
 1. **Never fix code inside `/rb:review`** - findings only, fixes later
 2. **Focus on changed lines first** - label unchanged issues as pre-existing
@@ -80,8 +80,8 @@ Based on what changed, spawn appropriate reviewers:
 ## Provenance Guard
 
 Most review findings are code-local and can be justified directly from the diff.
-Use `output-verifier` only when the review depends on external or versioned
-claims, for example:
+Use `output-verifier` only when the review depends on external evidence,
+versioned sources, or claims that need explicit verification, for example:
 
 - "Rails 8.1 behavior changed here"
 - "Sidekiq best practices require this pattern"
@@ -94,166 +94,9 @@ When used:
 3. save the result to `.claude/reviews/{review-slug}.provenance.md`
 4. remove or soften unsupported external claims before presenting the final review
 
-## Agent Descriptions
-
-### ruby-reviewer
-
-Focus: Ruby correctness, idioms, readability
-
-- Uses `it` keyword where appropriate (Ruby 3.4+)
-- Pattern matching opportunities
-- Method extraction candidates
-- Variable naming
-- Control flow clarity
-
-### security-analyzer
-
-Focus: Security vulnerabilities
-
-- SQL injection vectors
-- XSS in views/serializers
-- Mass assignment risks
-- Authentication bypasses
-- Authorization holes
-- Secrets exposure
-
-### testing-reviewer
-
-Focus: Test quality and coverage
-
-- Missing test cases
-- Fragile tests
-- Test readability
-- Coverage gaps
-- Mock/stub misuse
-
-### iron-law-judge
-
-Focus: Iron Law violations
-
-- Transaction safety
-- Commit-safe enqueue discipline for the active ORM
-- N+1 query prevention
-- Decimal for money
-- Safe HTML rendering
-- JSON-safe Sidekiq args
-
-### sidekiq-specialist
-
-Focus: Background job correctness
-
-- Idempotency
-- Retry safety
-- Argument serialization
-- Commit-safe enqueueing for the active ORM
-- Error handling
-- Queue configuration
-
-### rails-architect
-
-Focus: Service layer and API design
-
-- Context boundaries
-- Grape API patterns
-- Service object design
-- Cross-context coupling
-- Architectural consistency
-
-### ruby-runtime-advisor
-
-Focus: Performance and runtime issues
-
-- N+1 queries
-- Missing indexes
-- Memory bloat
-- Algorithmic complexity
-- Caching opportunities
-
-### data-integrity-reviewer
-
-Focus: Data consistency and constraint enforcement
-
-- Missing foreign key constraints
-- Missing uniqueness constraints
-- Transaction boundaries
-- Validation gaps (model validates but DB doesn't enforce)
-- Rollback safety
-
-### migration-safety-reviewer
-
-Focus: Migration safety and schema changes
-
-- Adding columns with defaults on large tables
-- Missing NOT NULL constraints
-- Missing indexes on foreign keys
-- Irreversible migrations
-- Data migration in schema migrations
-
-## Review Checklist by File Type
-
-### Ruby Files (.rb)
-
-- [ ] Syntax valid (`ruby -c`)
-- [ ] Formatter clean (`standardrb`/`rubocop`)
-- [ ] No bare `rescue` clauses
-- [ ] Method length reasonable (< 20 lines preferred)
-- [ ] Clear variable names
-- [ ] No code duplication
-
-### Rails Controllers
-
-- [ ] Strong parameters defined
-- [ ] Authentication checked
-- [ ] Authorization enforced
-- [ ] Service objects for complex logic
-- [ ] Transaction boundaries
-- [ ] Proper redirects/renders
-
-### Models (Active Record / Sequel)
-
-- [ ] Validations present and tested
-- [ ] Associations have correct dependent options
-- [ ] Scopes are chainable
-- [ ] Callbacks are necessary and safe
-- [ ] No business logic in callbacks
-- [ ] ORM-specific patterns match the owning package
-- [ ] Index hints for queries
-
-### Sidekiq Jobs
-
-- [ ] Includes `Sidekiq::Job`
-- [ ] Arguments are JSON-safe
-- [ ] Idempotent implementation
-- [ ] After_commit hook usage
-- [ ] Retry strategy configured
-- [ ] Dead letter queue considered
-
-### Grape APIs
-
-- [ ] Params declared with types
-- [ ] Error handling present
-- [ ] Authentication middleware
-- [ ] Content type correct
-- [ ] Response serialization
-- [ ] Documentation current
-
-### Tests
-
-- [ ] Tests the behavior, not implementation
-- [ ] Setup is clear and minimal
-- [ ] Assertions are specific
-- [ ] Edge cases covered
-- [ ] Test names describe behavior
-- [ ] No test code duplication
-
-### Migrations
-
-- [ ] Migration framework identified first (Active Record vs Sequel)
-- [ ] Reversible (up/down or change)
-- [ ] Indexes added for foreign keys
-- [ ] Null constraints appropriate
-- [ ] No data loss in changes
-- [ ] Production-safe (no locking tables long)
+Detailed reviewer focus areas, file-type checklists, and common Ruby
+anti-patterns live in
+`${CLAUDE_SKILL_DIR}/references/review-playbook.md`.
 
 ## Review Artifact Contract
 
@@ -399,18 +242,6 @@ Based on findings severity:
 4. **Suggest, don't dictate** - Offer options when appropriate
 5. **Acknowledge trade-offs** - Some issues have valid reasons
 6. **Celebrate good code** - Positive feedback matters too
-
-## Common Ruby Anti-patterns to Catch
-
-| Anti-pattern | Issue | Better Approach |
-|--------------|-------|-----------------|
-| `rescue => e` | Catches all exceptions | `rescue StandardError => e` |
-| `!user.nil?` | Double negative | `user.present?` |
-| `if condition; return x; end` | Unnecessary control flow | `return x if condition` |
-| `ary.map { |x| x.name }` | Redundant block param | `ary.map(&:name)` or `ary.map { it.name }` (Ruby 3.4) |
-| `ary.each do ... end` | Side effects | `ary.each { ... }` for single line |
-| `user && user.name` | Safe navigation | `user&.name` |
-| `DateTime.now` | Wrong class | `Time.current` (Rails) or `Time.now` |
 
 ## Integration with Workflow
 

@@ -11,7 +11,25 @@ unless File.exist?(YAML_SOURCE)
   exit 1
 end
 
-yaml = YAML.load_file(YAML_SOURCE)
+yaml_raw = File.read(YAML_SOURCE)
+yaml = YAML.safe_load(
+  yaml_raw,
+  permitted_classes: [],
+  permitted_symbols: [],
+  aliases: false
+)
+
+required_keys = %w[version last_updated total_laws categories laws]
+missing_keys = required_keys.reject { |key| yaml.is_a?(Hash) && yaml.key?(key) }
+unless missing_keys.empty?
+  warn "Error: YAML source missing required keys: #{missing_keys.join(', ')}"
+  exit 1
+end
+
+unless yaml['categories'].is_a?(Array) && yaml['laws'].is_a?(Array)
+  warn "Error: Invalid Iron Laws YAML structure in #{YAML_SOURCE}"
+  exit 1
+end
 
 def law_count_label(count)
   "#{count} #{count == 1 ? 'law' : 'laws'}"

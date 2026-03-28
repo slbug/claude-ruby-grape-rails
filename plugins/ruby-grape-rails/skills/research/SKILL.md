@@ -1,6 +1,6 @@
 ---
 name: rb:research
-description: Research Ruby gems, Rails/Grape patterns, upgrade paths, or architectural choices. Use when the team needs evidence before adding a gem or adopting a pattern.
+description: Research Ruby/Rails/Grape/Sidekiq gems, upgrade paths, security-sensitive choices, or architectural trade-offs. Use when the team needs evidence before implementation, verification, or adopting a pattern.
 argument-hint: <topic>
 disable-model-invocation: true
 effort: high
@@ -8,6 +8,14 @@ effort: high
 # Research Ruby Approaches
 
 Research with primary sources first, synthesize findings, and provide actionable recommendations.
+
+## Iron Laws
+
+1. Start with T1 primary sources before using community commentary.
+2. Mark source tiers explicitly in every research artifact.
+3. Do not make version-specific claims without a cited source.
+4. Separate reusable cross-plan research from plan-local repo findings.
+5. Use `output-verifier` before high-impact recommendations that depend on external evidence.
 
 ## Research Process
 

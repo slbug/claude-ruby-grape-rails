@@ -1,6 +1,6 @@
 ---
 name: rb:permissions
-description: Analyze recent Claude Code sessions and recommend safe Bash permission entries for Ruby/Rails/Grape workflows in settings.json. Use when permission prompts slow work, after repeated Bash approvals, or when the user says "fix permissions", "reduce prompts", "allow commands", "permission fatigue", "bash permission denied", "settings.json", or "stop asking me".
+description: Analyze recent Claude Code sessions and recommend safe Bash permission entries for Ruby/Rails/Grape workflows in settings.json. Use when repeated approval prompts slow work or the user asks to reduce prompts, allow commands, or fix permissions.
 argument-hint: "[--days=14] [--dry-run]"
 effort: low
 ---

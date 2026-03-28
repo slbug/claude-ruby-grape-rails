@@ -1,0 +1,15 @@
+{
+  "skill": "skill-name",
+  "should_trigger": [
+    { "prompt": "real user request that should route here" }
+  ],
+  "should_not_trigger": [
+    { "prompt": "real user request that should route elsewhere" }
+  ],
+  "hard_should_trigger": [
+    { "prompt": "ambiguous but still belongs here", "axis": "confusable" }
+  ],
+  "hard_should_not_trigger": [
+    { "prompt": "ambiguous but belongs elsewhere", "axis": "confusable" }
+  ]
+}

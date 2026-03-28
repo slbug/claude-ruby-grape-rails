@@ -36,8 +36,29 @@ if [[ -z "$BETTERLEAKS_PATH" ]] && command -v betterleaks >/dev/null 2>&1; then
   BETTERLEAKS_PATH=$(command -v betterleaks)
 fi
 
+emit_missing_betterleaks_warning() {
+  local target="$1"
+
+  echo "⚠️  Betterleaks not available; secret scan skipped for ${target}" >&2
+  echo "Install betterleaks or set BETTERLEAKS_PATH to restore secret scanning." >&2
+}
+
+input_has_secret_indicators() {
+  local snippet
+
+  snippet=$(printf '%s' "$INPUT" | jq -r '(.tool_input.content // .tool_input.new_string // empty)' 2>/dev/null) || snippet=""
+  [[ -n "$snippet" ]] || return 1
+
+  printf '%s' "$snippet" | grep -Eqi \
+    '(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|api[_-]?key|secret|token|client_secret|aws_secret_access_key|xox[baprs]-|ghp_[A-Za-z0-9]{20,})'
+}
+
 if [[ -z "$BETTERLEAKS_PATH" || ! -x "$BETTERLEAKS_PATH" ]]; then
-  # Betterleaks not available, skip silently
+  if [[ "$HOOK_MODE" == "strict" ]] || input_has_secret_indicators; then
+    emit_missing_betterleaks_warning "${FILE_PATH:-this change}"
+    exit 2
+  fi
+
   exit 0
 fi
 
@@ -51,16 +72,6 @@ is_binaryish_path() {
       return 1
       ;;
   esac
-}
-
-input_has_secret_indicators() {
-  local snippet
-
-  snippet=$(printf '%s' "$INPUT" | jq -r '(.tool_input.content // .tool_input.new_string // empty)' 2>/dev/null) || snippet=""
-  [[ -n "$snippet" ]] || return 1
-
-  printf '%s' "$snippet" | grep -Eqi \
-    '(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|api[_-]?key|secret|token|client_secret|aws_secret_access_key|xox[baprs]-|ghp_[A-Za-z0-9]{20,})'
 }
 
 emit_secret_warning() {

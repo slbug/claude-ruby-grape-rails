@@ -38,10 +38,10 @@ Search for patterns:
 
 ```bash
 # Find Current assignments in jobs and async code
-grep -r "Current\." app/jobs/ app/workers/ --include="*.rb"
+rg -n --glob '*.rb' 'Current\.' app/jobs app/workers
 
 # Check for custom thread/fiber usage with Current
-grep -r "Thread.new\|Concurrent\|Async" app/ --include="*.rb" -A 5 | grep -i current
+rg -n -C 5 --glob '*.rb' 'Thread\.new|Concurrent|Async|Fiber\.schedule' app | rg -i 'current'
 ```
 
 **Verify:**
@@ -59,7 +59,7 @@ Detect session store type first:
 
 ```bash
 # Check configured session store
-grep -r "config.session_store" config/initializers/ config/application.rb
+rg -n 'config\.session_store' config/initializers config/application.rb
 ```
 
 **For ActiveRecord session store:**
@@ -74,7 +74,7 @@ ActiveRecord::SessionStore::Session.pluck(:data).map { |d| d.to_s.bytesize }.max
 ```bash
 # Check cookie size in browser dev tools or logs
 # Look for CookieOverflow errors in logs
-grep "CookieOverflow" log/production.log
+rg -n 'CookieOverflow' log/production.log
 ```
 
 **For Cache/Redis-backed sessions:**
@@ -103,7 +103,7 @@ Check your application's actual Redis namespace configuration:
 
 ```bash
 # Find Redis namespace in config
-grep -r "redis\|Redis" config/initializers/ config/application.rb | grep -i namespace
+rg -n -i 'redis.*namespace|namespace.*redis' config/initializers config/application.rb
 ```
 
 ```bash
@@ -134,10 +134,10 @@ See: [references/audit-procedures.md#redis-key-namespace--ttl](references/audit-
 
 ```bash
 # Find broadcast calls
-grep -r "broadcast_" app/models/ --include="*.rb"
+rg -n --glob '*.rb' 'broadcast_' app/models
 
 # Check for DB queries in turbo stream templates
-grep -r "<%.*\.each\|<%.*\.where\|<%.*\.find" app/views/**/*.turbo_stream.*
+rg -n --glob '*.turbo_stream.*' '<%.*\.(each|where|find)' app/views
 ```
 
 **Verify:**
@@ -156,10 +156,10 @@ Search for denormalization patterns:
 
 ```bash
 # Find counter updates
-grep -r "update.*count\|update.*total" app/models/ --include="*.rb"
+rg -n --glob '*.rb' 'update.*(count|total)' app/models
 
 # Find manual cache invalidation
-grep -r "Rails.cache.delete\|expire_fragment" app/ --include="*.rb"
+rg -n --glob '*.rb' 'Rails\.cache\.delete|expire_fragment' app
 ```
 
 **Verify:**

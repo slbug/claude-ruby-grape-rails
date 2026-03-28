@@ -12,6 +12,11 @@ Optional machine-readable output:
 ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 14 --json
 ```
 
+Validation rules:
+
+- `--days` must be `0` or greater.
+- `--limit` must be greater than `0`.
+
 ## What It Scans
 
 - Claude session JSONL files for the current repo only:

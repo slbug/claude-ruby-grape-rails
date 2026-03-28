@@ -1,0 +1,23 @@
+{
+  "skill": "permissions",
+  "should_trigger": [
+    { "prompt": "Permission prompts are noisy; analyze my recent sessions and suggest settings.json rules" },
+    { "prompt": "Figure out which Bash commands are safe to always allow in this Ruby repo" },
+    { "prompt": "Scan my Claude session history and classify command risk" },
+    { "prompt": "Recommend safer permission entries based on the commands I keep approving" }
+  ],
+  "should_not_trigger": [
+    { "prompt": "Run the verification suite for this branch" },
+    { "prompt": "Plan a new background job flow before we edit anything" },
+    { "prompt": "Review this patch for correctness problems" },
+    { "prompt": "Research the best gem for feature flags in Rails" }
+  ],
+  "hard_should_trigger": [
+    { "prompt": "Claude keeps asking about bundle exec and git commands; tune the approval rules", "axis": "confusable" },
+    { "prompt": "Use recent transcript evidence, not guesswork, to recommend safe Bash allowlists", "axis": "context_dependent" }
+  ],
+  "hard_should_not_trigger": [
+    { "prompt": "The repo has a verify wrapper; run it and tell me what fails", "axis": "confusable" },
+    { "prompt": "I need a security review of the command changes in this PR", "axis": "boundary" }
+  ]
+}

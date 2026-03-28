@@ -1,0 +1,23 @@
+{
+  "skill": "verify",
+  "should_trigger": [
+    { "prompt": "Run the Ruby verification stack and stop at the first failure" },
+    { "prompt": "Verify this repo with the strongest available checks" },
+    { "prompt": "Check Zeitwerk, lint, tests, and Brakeman for these changes" },
+    { "prompt": "Run the project-native verify wrapper if it exists, otherwise fall back cleanly" }
+  ],
+  "should_not_trigger": [
+    { "prompt": "Review the patch for correctness and missing tests" },
+    { "prompt": "Plan the database and API work before we code" },
+    { "prompt": "Analyze my permission prompts and suggest allow rules" },
+    { "prompt": "Research whether this gem is still maintained" }
+  ],
+  "hard_should_trigger": [
+    { "prompt": "The code is done; do the final project checks before review", "axis": "confusable" },
+    { "prompt": "Use the repo's normal CI entrypoint if there is one, then fall back", "axis": "context_dependent" }
+  ],
+  "hard_should_not_trigger": [
+    { "prompt": "The code is done; now inspect the diff for real findings", "axis": "confusable" },
+    { "prompt": "The checks failed twice; investigate the root cause instead of rerunning blindly", "axis": "boundary" }
+  ]
+}

@@ -1,6 +1,6 @@
 ---
 name: rb:work
-description: Use after /rb:plan to implement tasks systematically with verification checkpoints and progress tracking. Can resume the newest active plan automatically.
+description: Use after /rb:plan to implement Ruby/Rails/Grape/Sidekiq work with verification checkpoints, scratchpad context, and review-ready progress tracking. Can resume the newest active plan automatically.
 argument-hint: <path to plan file>
 disable-model-invocation: true
 effort: high
@@ -17,7 +17,7 @@ Execute the unchecked tasks from a plan file.
 /rb:work
 ```
 
-## Work Laws
+## Iron Laws
 
 1. Never auto-start `/rb:review`.
 2. Plan checkboxes are the state - check them off as you complete.
@@ -140,53 +140,8 @@ Task hints indicate which domain expertise to apply:
    - Fix errors immediately
    - Don't let errors accumulate
 
-### Common Patterns by Domain
-
-#### Rails Controller Tasks
-
-```ruby
-# Checklist:
-# - Strong parameters defined
-# - Authentication/authorization checked
-# - Service object for complex logic
-# - Transaction boundaries
-# - Redirect or render explicit
-# - Flash messages for user feedback
-```
-
-#### Active Record Tasks
-
-```ruby
-# Checklist:
-# - Migration is reversible
-# - Index added for foreign keys
-# - Null constraints where appropriate
-# - Default values considered
-# - Transaction wrapping multi-step changes
-```
-
-#### Sidekiq Job Tasks
-
-```ruby
-# Checklist:
-# - Includes Sidekiq::Job
-# - JSON-safe arguments only
-# - Idempotent implementation
-# - Commit-safe enqueueing for the active ORM
-# - Retry strategy configured
-# - Dead letter queue considered
-```
-
-#### Grape API Tasks
-
-```ruby
-# Checklist:
-# - Params declared with types
-# - Error handling for each endpoint
-# - Authentication middleware applied
-# - Content negotiation correct
-# - Documentation updated
-```
+For domain-specific implementation patterns and deeper checklists, see
+`${CLAUDE_SKILL_DIR}/references/execution-guide.md`.
 
 ## Verification Tiers
 

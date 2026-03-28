@@ -2,6 +2,9 @@
 
 Development documentation for the Ruby/Rails/Grape Claude Code plugin.
 
+Contributor tooling and shipped hook workflows are validated on macOS, Linux,
+and WSL. Native Windows is not currently supported.
+
 ## Overview
 
 This plugin provides **agentic workflow orchestration** with specialist agents and reference skills for Ruby/Rails/Grape development.
@@ -115,6 +118,8 @@ claude-ruby-grape-rails/
 │           ├── compound-docs/       # Solution documentation system
 │           ├── investigate/
 │           └── ...
+├── lab/
+│   └── eval/                        # Contributor-only deterministic eval tooling
 ├── CLAUDE.md
 └── README.md
 ```
@@ -750,6 +755,34 @@ When adding, removing, or renaming commands/skills/agents, check if
 `plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md` needs updating.
 The tutorial is new users' first impression — stale command references erode trust.
 Quick check: does the cheat sheet in Section 4 still match reality?
+
+### Contributor Eval Workflow
+
+For contributor-facing plugin quality work, prefer the deterministic eval
+entrypoints before broader experimentation:
+
+Minimum runtime: `python3` 3.10+ for `lab/eval/`.
+
+- `make eval` / `npm run eval` for lint + injection check + changed surfaces
+- `make eval-all` / `npm run eval:all` for the full `1.6.0` eval snapshot
+- `make eval-ci` / `npm run eval:ci` for the contributor CI gate
+- `make security-injection` / `npm run security:injection`
+- `make eval-tests` / `npm run eval:test` for the default contributor test
+  path (prefers `pytest` when installed, otherwise falls back to `unittest`)
+- `make eval-tests-pytest` / `npm run eval:test:pytest` for explicit `pytest`
+  runs
+- `make eval-baseline`
+- `make eval-compare`
+- `make eval-overlap`
+- `make eval-hard-corpus`
+
+Current `lab/eval/` scope:
+
+- core skill evals for `plan`, `work`, `review`, `verify`, `permissions`, and
+  `research`
+- structural scoring for all shipped agents
+- deterministic trigger corpora and confusable-pair analysis
+- no model-judged behavioral routing yet
 
 ---
 

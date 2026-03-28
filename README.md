@@ -108,6 +108,9 @@ claude --plugin-dir ./claude-ruby-grape-rails/plugins/ruby-grape-rails
 
 ### Known Limitations
 
+**Supported Environments**: This plugin is validated on macOS, Linux, and WSL.
+Native Windows is not currently supported.
+
 **Marketplace Install & Agent Permissions**: This plugin's specialist agents require
 `permissionMode: bypassPermissions` to run Bash commands in the background. When installed
 via marketplace, Claude Code strips this field, which may cause "permission check failed" errors.
@@ -670,6 +673,34 @@ PRs welcome! See [CLAUDE.md](CLAUDE.md) for development conventions.
 - Skills: ~100 lines SKILL.md + `references/` for details
 - Agents: under 300 lines, `disallowedTools` for reviewers
 - All markdown passes `npm run lint`
+
+### Eval workflow
+
+`1.6.0` adds a deterministic contributor eval foundation under `lab/eval/`.
+It requires `python3` 3.10+ for the stdlib typing syntax used by the eval
+tooling.
+
+Primary entrypoints:
+
+- `make eval` or `npm run eval` for lint + injection check + changed surfaces
+- `make eval-all` or `npm run eval:all` for the full `1.6.0` snapshot
+- `make eval-ci` or `npm run eval:ci` for the contributor CI gate
+- `make security-injection` or `npm run security:injection`
+- `make eval-tests` or `npm run eval:test` for the default contributor test
+  path (prefers `pytest` when installed, otherwise falls back to `unittest`)
+- `make eval-tests-pytest` or `npm run eval:test:pytest` for explicit `pytest`
+  runs
+- `make eval-baseline`
+- `make eval-compare`
+- `make eval-overlap`
+- `make eval-hard-corpus`
+
+Current scope:
+
+- six high-leverage skill evals: `plan`, `work`, `review`, `verify`,
+  `permissions`, `research`
+- structural scoring for all shipped agents
+- deterministic trigger corpora plus confusable-pair / hard-corpus generation
 
 ## License
 

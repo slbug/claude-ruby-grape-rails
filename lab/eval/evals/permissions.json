@@ -1,0 +1,53 @@
+{
+  "skill": "permissions",
+  "skill_path": "plugins/ruby-grape-rails/skills/permissions/SKILL.md",
+  "dimensions": {
+    "completeness": {
+      "weight": 0.2,
+      "checks": [
+        { "type": "frontmatter_field", "field": "name", "expected": "rb:permissions", "desc": "Has rb:permissions name" },
+        { "type": "section_exists", "section": "Iron Laws", "desc": "Has Iron Laws" },
+        { "type": "has_iron_laws", "min_count": 3, "desc": "At least three Iron Laws" },
+        { "type": "valid_file_refs", "desc": "Valid file refs" }
+      ]
+    },
+    "accuracy": {
+      "weight": 0.2,
+      "checks": [
+        { "type": "valid_skill_refs", "desc": "Valid skill refs" },
+        { "type": "valid_agent_refs", "desc": "Valid agent refs" },
+        { "type": "content_present", "pattern": "settings\\.json|~/.claude/projects", "desc": "Mentions correct data sources" }
+      ]
+    },
+    "conciseness": {
+      "weight": 0.14,
+      "checks": [
+        { "type": "line_count", "target": 140, "tolerance": 180, "desc": "Reasonable length" },
+        { "type": "max_section_lines", "max": 65, "desc": "Section size controlled" }
+      ]
+    },
+    "triggering": {
+      "weight": 0.14,
+      "checks": [
+        { "type": "description_length", "min": 80, "max": 320, "desc": "Description length" },
+        { "type": "description_keywords", "min": 4, "desc": "Permissions keywords" }
+      ]
+    },
+    "safety": {
+      "weight": 0.14,
+      "checks": [
+        { "type": "has_iron_laws", "min_count": 3, "desc": "Iron laws" },
+        { "type": "content_present", "pattern": "GREEN|YELLOW|RED|never auto-allow", "desc": "Risk classification" },
+        { "type": "no_dangerous_patterns", "desc": "No catastrophic patterns" }
+      ]
+    },
+    "clarity": {
+      "weight": 0.18,
+      "checks": [
+        { "type": "action_density", "min_ratio": 0.15, "desc": "Action density" },
+        { "type": "specificity_ratio", "min_ratio": 0.12, "desc": "Concrete guidance" },
+        { "type": "workflow_step_coverage", "min_sections": 4, "desc": "Workflow structure" }
+      ]
+    }
+  }
+}
