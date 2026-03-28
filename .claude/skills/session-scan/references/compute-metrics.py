@@ -243,8 +243,13 @@ def extract_tool_calls(messages):
     For API format: extracts structured tool_use blocks.
     For ccrider format: infers tool names from assistant message text patterns.
     """
+    return [item["tc"] for item in extract_tool_positions(messages)]
+
+
+def extract_tool_positions(messages):
+    """Extract tool calls with message positions across transcript formats."""
     tools = []
-    for msg in messages:
+    for i, msg in enumerate(messages):
         if not isinstance(msg, dict):
             continue
         content = _get_content(msg)
@@ -254,7 +259,7 @@ def extract_tool_calls(messages):
         if isinstance(content, list):
             for block in content:
                 if isinstance(block, dict) and block.get("type") == "tool_use":
-                    tools.append(block)
+                    tools.append({"msg_index": i, "tc": block})
 
         # ccrider format: infer tools from assistant text
         elif isinstance(content, str) and role == "assistant":
@@ -263,9 +268,14 @@ def extract_tool_calls(messages):
             for name in mentioned:
                 if name == "Bash" and inferred_bash_commands:
                     continue
-                tools.append({"name": name, "input": {}})
+                tools.append({"msg_index": i, "tc": {"name": name, "input": {}}})
             for command in inferred_bash_commands:
-                tools.append({"name": "Bash", "input": {"command": command}})
+                tools.append(
+                    {
+                        "msg_index": i,
+                        "tc": {"name": "Bash", "input": {"command": command}},
+                    }
+                )
 
     return tools
 
@@ -909,29 +919,8 @@ def compute_skill_effectiveness(user_msgs, tool_calls, errors, messages):
     if not invocations:
         return {}
 
-    # Build tool call index: map message index -> tool calls in that range
     total_msgs = len(messages)
-
-    # Extract tool_calls with message positions
-    tool_positions = []
-    for i, msg in enumerate(messages):
-        if not isinstance(msg, dict):
-            continue
-        content = _get_content(msg)
-        role = _get_role(msg)
-        if isinstance(content, list):
-            for block in content:
-                if isinstance(block, dict) and block.get("type") == "tool_use":
-                    tool_positions.append({"msg_index": i, "tc": block})
-        elif isinstance(content, str) and role == "assistant":
-            mentioned = TOOL_MENTION_RE.findall(content)
-            for name in mentioned:
-                tool_positions.append(
-                    {
-                        "msg_index": i,
-                        "tc": {"name": name, "input": {}},
-                    }
-                )
+    tool_positions = extract_tool_positions(messages)
 
     results = {}
     for inv in invocations:

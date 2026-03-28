@@ -15,8 +15,9 @@ MODULE_PATH = (
 )
 
 SPEC = importlib.util.spec_from_file_location("session_scan_metrics", MODULE_PATH)
+if SPEC is None or SPEC.loader is None:
+    raise ImportError(f"Cannot load 'session_scan_metrics' from {MODULE_PATH}")
 session_scan_metrics = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
 SPEC.loader.exec_module(session_scan_metrics)
 
 
@@ -73,6 +74,30 @@ class SessionScanMetricTests(unittest.TestCase):
 
         self.assertEqual(score, 0.2)
         self.assertEqual(could_use, ["investigate"])
+
+    def test_skill_effectiveness_counts_text_mode_bash_runs(self) -> None:
+        messages = [
+            {
+                "role": "user",
+                "content": (
+                    "<command-message>ruby-grape-rails:verify</command-message>\n"
+                    "<command-name>/ruby-grape-rails:verify</command-name>"
+                ),
+            },
+            {
+                "role": "assistant",
+                "content": (
+                    "```bash\n"
+                    "$ bundle exec rspec spec/models/user_spec.rb\n"
+                    "```"
+                ),
+            },
+        ]
+
+        results = session_scan_metrics.compute_skill_effectiveness([], [], [], messages)
+
+        self.assertIn("/rb:verify", results)
+        self.assertEqual(results["/rb:verify"]["total_post_test_runs"], 1)
 
 
 if __name__ == "__main__":

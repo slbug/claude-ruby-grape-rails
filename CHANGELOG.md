@@ -88,6 +88,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   effectiveness as well as adoption metrics, trend date parsing now avoids
   duplicate work, and new Python tests cover command extraction, placeholder
   filtering, and alias normalization.
+- **Per-skill analytics now reuse the same text-mode tool inference path** —
+  ccrider-style Bash commands in assistant text now contribute consistently to
+  skill-effectiveness windows, and the focused session-scan test module now
+  fails with an explicit import error instead of relying on a bare `assert`.
 
 ## [1.6.0] - 2026-03-28
 
