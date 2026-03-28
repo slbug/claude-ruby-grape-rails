@@ -134,7 +134,6 @@ name: my-agent
 description: Description with "Use proactively when..." guidance
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
-permissionMode: bypassPermissions
 model: sonnet
 memory: project
 skills:
@@ -149,10 +148,10 @@ skills:
 - Use `sonnet` for secondary orchestrators (investigation, tracing) and judgment-heavy tasks
 - Use `haiku` for mechanical tasks: compression, verification, dependency analysis
 - Review agents are **read-only** (`disallowedTools: Write, Edit, NotebookEdit`)
-- Use `permissionMode: bypassPermissions` for all agents — **required for local development with `--plugin-dir`**
-  - **Local dev (`--plugin-dir`)**: Field is honored, prevents "Bash command permission check failed" errors
-  - **Marketplace install**: Claude Code **ignores** `permissionMode` on plugin agents — agents fall back to session default permissions
-    - **Workaround**: Copy agents to `~/.claude/agents/` or add `permissions.allow` rules to `settings.json`
+- Do **not** rely on `permissionMode` in shipped plugin agents
+  - **Marketplace install**: Claude Code ignores `permissionMode` on plugin agents
+  - **Workaround**: document `permissions.allow` rules in `.claude/settings.json` for required tools such as `Bash(bundle *)`, `Bash(rails *)`, `Bash(rake *)`, `Read(*)`, `Grep(*)`, and `Glob(*)`
+  - **Local dev (`--plugin-dir`)**: you may still experiment with `permissionMode` while iterating locally, but do not ship it in plugin agent frontmatter
 - Use `memory: project` for agents that benefit from cross-session learning (orchestrators, pattern analysts).
   Note: `memory` auto-enables Read, Write, Edit — only add to agents that already have Write access
 - Preload relevant skills via `skills:` field
@@ -217,6 +216,8 @@ Defined in `hooks/hooks.json`:
     "PostToolUseFailure": [...],   // Ruby failure hints + error critic for bundle commands
     "SubagentStart": [...],        // Iron Laws injection into all subagents
     "SessionStart": [...],         // Setup dirs + runtime tool detection + resume detection
+    "FileChanged": [...],          // Runtime refresh when Gemfile/Rakefile/gemspec/lefthook files change
+    "CwdChanged": [...],           // Runtime refresh when working directory changes
     "PreCompact": [...],           // Re-inject workflow rules before compaction
     "PostCompact": [...],          // Advise re-reading active plan artifacts after compaction
     "Stop": [...],                 // Warn if uncompleted tasks
@@ -228,15 +229,15 @@ Defined in `hooks/hooks.json`:
 **Current hooks:**
 
 - `PreToolUse` (Bash): Block destructive operations (`rails db:drop`, `git push --force`, `RAILS_ENV=production`) before execution
-- `PostToolUse` (Edit|MultiEdit|Write): Multiple scripts run in sequence:
-  - `format-ruby.sh`: Auto `bundle exec standardrb` or `bundle exec rubocop -a`
-  - `verify-ruby.sh`: Syntax check via `ruby -c <file>` (catches broken Ruby before formatting)
-  - `iron-law-verifier.sh`: **Programmatic Iron Law verification** (scans code for violations)
-  - `security-reminder.sh`: Security Iron Laws for auth files
-  - `log-progress.sh`: Async progress logging
-  - `plan-stop-reminder.sh`: Plan STOP reminder on plan.md write
-  - `debug-statement-warning.sh`: Detect debug statements (`puts`, `binding.pry`, etc.) in production .rb files
-  - `secret-scan.sh`: Secret scanning with hook-mode gating
+- `PostToolUse` (Edit|Write): Multiple scripts run in sequence:
+  - `iron-law-verifier.sh`: **Programmatic Iron Law verification** (scans code for violations) — all Edit|Write
+  - `security-reminder.sh`: Security Iron Laws for auth files — all Edit|Write
+  - `log-progress.sh`: Async progress logging — all Edit|Write
+  - `plan-stop-reminder.sh`: Plan STOP reminder on plan.md write — all Edit|Write
+  - `secret-scan.sh`: Secret scanning with hook-mode gating — all Edit|Write
+  - `format-ruby.sh`: Auto `bundle exec standardrb` or `bundle exec rubocop -a` — Ruby-ish files only (`*.rb`, `*.rake`, `*Gemfile`, `*Rakefile`, `*config.ru`) via `if` filter
+  - `verify-ruby.sh`: Syntax check via `ruby -c <file>` — Ruby-ish files only via `if` filter
+  - `debug-statement-warning.sh`: Detect debug statements (`puts`, `binding.pry`, etc.) — Ruby-ish files only via `if` filter
 - `PostToolUseFailure` (Bash): Ruby-specific debugging hints when bundle exec fails,
   **error critic** that detects repeated failures and escalates to structured analysis (both via `additionalContext`)
 - `SubagentStart`: Inject all Iron Laws into every spawned subagent via `additionalContext` (addresses zero skill auto-loading gap)
@@ -247,6 +248,8 @@ Defined in `hooks/hooks.json`:
 - `SessionStart` (all): Setup `.claude/` directories + consolidated runtime detection
   - `detect-runtime.sh`: Detect Ruby/Rails version, stack gems, verification tools, local helper tools, Lefthook coverage, and active hook mode
 - `SessionStart` (startup|resume only): Scratchpad check + resume workflow detection + workflow hints
+- `FileChanged` (Gemfile|Gemfile.lock|Rakefile|lefthook|justfile|*.gemspec): Re-runs `detect-runtime-file-changed.sh` to refresh `.claude/.runtime_env` when core project files change mid-session
+- `CwdChanged`: Re-runs `detect-runtime-file-changed.sh` to keep runtime detection aligned when the session moves between repos or package roots
 - `Stop`: Warn if plans have unchecked tasks
 - `StopFailure`: Append normalized API-failure context to the active plan scratchpad for better resume continuity
 
@@ -368,8 +371,9 @@ claude plugin validate plugins/ruby-grape-rails
 
 ### Why orchestrators and command skills exceed targets
 
-Even with `permissionMode: bypassPermissions`, plugin files live in `~/.claude/plugins/cache/` — outside the project.
-This means agents **cannot reliably read** skill `references/*.md` at runtime.
+Marketplace-installed plugin files live in `~/.claude/plugins/cache/` and agent
+tool access still follows the session permission policy. This means agents
+**cannot reliably read** skill `references/*.md` at runtime.
 
 Content must be inline (in agent prompt or preloaded SKILL.md) to be available:
 
@@ -390,7 +394,6 @@ Only trim when content is purely informational and not execution-critical.
 - [ ] Frontmatter complete
 - [ ] `disallowedTools: Write, Edit, NotebookEdit` for review agents
 - [ ] `Write` allowed for agents that output reports (e.g., research agents, context-supervisor)
-- [ ] `permissionMode: bypassPermissions`
 - [ ] Skills preloaded
 - [ ] Under target (300 lines), hard limit only if justified by inline subagent prompts
 

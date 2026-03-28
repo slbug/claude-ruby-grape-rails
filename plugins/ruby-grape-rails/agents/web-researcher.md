@@ -3,7 +3,6 @@ name: web-researcher
 description: Fetches and extracts information from focused web sources efficiently. Optimized for official Ruby, Rails, Grape, Sidekiq, and gem documentation.
 tools: WebSearch, WebFetch
 disallowedTools: Write, Edit, NotebookEdit, Bash
-permissionMode: bypassPermissions
 model: haiku
 effort: low
 background: true

@@ -2,7 +2,7 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|MultiEdit|Write",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
@@ -220,101 +220,6 @@
             "timeout": 15
           }
         ]
-      },
-      {
-        "matcher": "MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "if": "MultiEdit(*.rb)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*.rake)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*Gemfile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*Rakefile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*config.ru)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*.rb)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*.rake)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*Gemfile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*Rakefile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*config.ru)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*.rb)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*.rake)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*Gemfile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*Rakefile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "if": "MultiEdit(*config.ru)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          }
-        ]
       }
     ],
     "PreToolUse": [
@@ -396,6 +301,17 @@
     "FileChanged": [
       {
         "matcher": "Gemfile|Gemfile\\.lock|Rakefile|lefthook\\.ya?ml|\\.lefthook\\.ya?ml|lefthook-local\\.ya?ml|\\.lefthook-local\\.ya?ml|justfile|\\.justfile|Justfile|.*\\.gemspec",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-file-changed.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "CwdChanged": [
+      {
         "hooks": [
           {
             "type": "command",

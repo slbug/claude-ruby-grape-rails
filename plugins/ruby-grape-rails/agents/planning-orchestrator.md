@@ -3,7 +3,6 @@ name: planning-orchestrator
 description: Orchestrates Ruby/Rails/Grape feature planning by coordinating specialist agents and synthesizing a plan compatible with /rb:work.
 tools: Read, Write, Grep, Glob, Agent
 disallowedTools: Edit, NotebookEdit
-permissionMode: bypassPermissions
 model: opus
 maxTurns: 40
 memory: project
@@ -96,6 +95,18 @@ Before any agent work starts:
 4. Record the feature summary and plan path at the top of the file.
 
 ### Phase 1: Research Cache Reuse
+
+Before spawning topic research agents, consult the compound knowledge base for
+similar solved problems:
+
+1. Search `.claude/solutions/` by symptom keywords, subsystem names, and likely
+   component tags
+2. Pull matching solution docs into the synthesis context only when they are
+   clearly relevant to the feature or review findings
+3. Log reused solution-doc context under `## Decisions` → `### Research Cache Reuse`
+   in `.claude/plans/{slug}/scratchpad.md`
+4. Do not treat prior solution docs as a reason to skip current-code discovery
+   agents or fresh verification planning
 
 Before spawning topic research agents, check for fresh prior
 research that can narrow or replace repeated gem/tool/community

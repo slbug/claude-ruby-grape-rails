@@ -3,7 +3,6 @@ name: call-tracer
 description: Traces Rails, Grape, service, model, and Sidekiq call chains from an entry point to downstream effects.
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
-permissionMode: bypassPermissions
 model: sonnet
 effort: medium
 ---

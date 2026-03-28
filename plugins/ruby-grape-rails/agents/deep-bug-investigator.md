@@ -3,7 +3,6 @@ name: deep-bug-investigator
 description: Investigates tricky Ruby/Rails/Grape bugs, race conditions, stale cache problems, and Sidekiq failures using structured evidence gathering.
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
-permissionMode: bypassPermissions
 model: sonnet
 effort: medium
 maxTurns: 30

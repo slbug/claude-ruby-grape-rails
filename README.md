@@ -111,35 +111,34 @@ claude --plugin-dir ./claude-ruby-grape-rails/plugins/ruby-grape-rails
 **Supported Environments**: This plugin is validated on macOS, Linux, and WSL.
 Native Windows is not currently supported.
 
-**Marketplace Install & Agent Permissions**: This plugin's specialist agents require
-`permissionMode: bypassPermissions` to run Bash commands in the background. When installed
-via marketplace, Claude Code strips this field, which may cause "permission check failed" errors.
+**Marketplace Install & Agent Permissions**: Marketplace-installed plugin agents
+follow your session permission policy. If you want specialist agents to run Ruby
+verification commands without repeated prompts, add explicit `permissions.allow`
+rules for the tools they need.
 
 **Workarounds:**
 
-1. Copy agents to your local `~/.claude/agents/` directory (they'll retain permissions)
-2. Add permissive rules to your project's `.claude/settings.json`:
+1. Add explicit rules to your project's `.claude/settings.json`:
 
    ```json
    {
      "permissions": {
        "defaultMode": "acceptEdits",
        "allow": [
-         "Bash(bundle *)",
-         "Bash(rails *)",
-         "Bash(rake *)",
-         "Read(*)",
-         "Glob(*)"
+          "Bash(bundle *)",
+          "Bash(rails *)",
+          "Bash(rake *)",
+          "Grep(*)",
+          "Read(*)",
+          "Glob(*)"
        ]
      }
    }
    ```
 
-3. Use `--plugin-dir` for local development (development mode honors `permissionMode`)
-4. Run `/rb:permissions` to scan recent prompts and propose safer
+2. Run `/rb:permissions` to scan recent prompts and propose safer
    `settings.json` allowlists instead of growing them blindly
-
-We are working on a marketplace-compatible redesign (Phase 3B in plan).
+3. Use `--plugin-dir` for local development while iterating on the plugin itself
 
 ## Getting Started
 

@@ -188,16 +188,24 @@ Before finalizing the plan, verify:
 
 ## Compound Documentation Lookup
 
-When planning, check these references for patterns:
+Before deeper topic research, check the compound knowledge base for similar
+solved problems, known risks, and prevention ideas:
 
-1. `ruby-idioms` - Ruby 3.4+ features, `it` keyword, pattern matching
-2. `rails-idioms` - Rails 8 patterns, Solid Queue, Thruster
-3. `active-record-patterns` - Transactions, N+1 prevention, enums
-4. `sidekiq` - Job design, retries, enqueue-after-commit
-5. `security` - Brakeman, SQL injection, XSS prevention
-6. `testing` - RSpec/Minitest patterns, factories, VCR
+1. Search `.claude/solutions/` for relevant symptoms, components, and tags
+2. Reuse only concrete prior fixes or prevention guidance that clearly match
+3. Treat solution docs as evidence to surface, not as a reason to skip current
+   codebase discovery
 
-Spawn `compound-docs` agent if you need synthesis across multiple domains.
+When you need pattern reminders while reading those solutions, check these
+references:
+
+1. `compound-docs` - KB conventions, schema, and search expectations
+2. `ruby-idioms` - Ruby 3.4+ features, `it` keyword, pattern matching
+3. `rails-idioms` - Rails 8 patterns, Solid Queue, Thruster
+4. `active-record-patterns` - Transactions, N+1 prevention, enums
+5. `sidekiq` - Job design, retries, enqueue-after-commit
+6. `security` - Brakeman, SQL injection, XSS prevention
+7. `testing` - RSpec/Minitest patterns, factories, VCR
 
 ## Agent Spawning with Progress Tracking
 

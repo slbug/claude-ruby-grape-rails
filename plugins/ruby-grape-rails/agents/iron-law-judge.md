@@ -3,7 +3,6 @@ name: iron-law-judge
 description: Checks Ruby/Rails/Grape code for project Iron Law violations using pattern analysis. Use proactively after code changes or during review.
 tools: Read, Grep, Glob
 disallowedTools: Write, Edit, NotebookEdit
-permissionMode: bypassPermissions
 model: sonnet
 effort: medium
 skills:

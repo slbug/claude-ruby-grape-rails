@@ -119,7 +119,9 @@ Use these as observational hints. Always corroborate with:
 The current profile buckets are:
 
 - `read_pct`: `Read` + `Glob`
-- `edit_pct`: `Edit` + `Write` + `MultiEdit` + `NotebookEdit`
+- `edit_pct`: `Edit` + `Write` + `NotebookEdit`
+  - legacy note: older transcripts may still surface `MultiEdit`; treat it as an
+    edit-family alias when analyzing historical data
 - `bash_pct`: `Bash`
 - `grep_pct`: `Grep`
 - `tidewave_pct`: MCP calls whose tool name starts with `mcp__tidewave`

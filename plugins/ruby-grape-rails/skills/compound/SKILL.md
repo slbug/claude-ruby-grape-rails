@@ -2,8 +2,6 @@
 name: rb:compound
 description: Capture a solved Ruby/Rails/Grape problem as reusable knowledge for future sessions.
 argument-hint: "[path to fix|review|plan]"
-skills:
-  - compound-docs
 effort: low
 ---
 # Compound Knowledge
@@ -206,6 +204,13 @@ Or compound during `/rb:learn` when extracting patterns.
 - **Learn**: Extract general patterns and update skills
 
 Use both: Compound first for the instance, Learn to generalize.
+
+## References
+
+- `${CLAUDE_SKILL_DIR}/references/compound-workflow.md` — Detailed capture workflow
+- `../compound-docs/SKILL.md` — Knowledge-base conventions and search expectations
+- `../compound-docs/references/schema.md` — Solution frontmatter schema
+- `../compound-docs/references/resolution-template.md` — Canonical solution template
 
 ## Decision Menu
 

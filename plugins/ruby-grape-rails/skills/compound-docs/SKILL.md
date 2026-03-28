@@ -1,6 +1,6 @@
 ---
 name: compound-docs
-description: Schema for documenting solved Ruby/Rails/Grape problems as reusable solution notes.
+description: Background reference for Ruby/Rails/Grape solution notes. Use when searching past fixes, validating solution-doc structure, or consulting the compound knowledge base during planning and investigation.
 user-invocable: false
 effort: low
 ---
@@ -72,6 +72,7 @@ Compound documents are consumed by:
 - `/rb:plan` - Reference existing solutions during planning
 - `/rb:work` - Apply proven patterns from solutions
 - `/rb:review` - Verify fixes against documented solutions
+- `/rb:investigate` - Search for similar solved problems before debugging deeply
 - `/rb:learn` - Extract patterns to update skills and Iron Laws
 
 ## Maintenance

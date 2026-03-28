@@ -3,7 +3,6 @@ name: ruby-runtime-advisor
 description: Advises on Ruby runtime, threading, connection-pool, and background execution tradeoffs for Rails/Grape systems.
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
-permissionMode: bypassPermissions
 model: sonnet
 effort: medium
 skills:

@@ -3,7 +3,6 @@ name: context-supervisor
 description: Compresses research, plan, review, and work artifacts into a concise summary for the parent orchestrator while preserving blockers, decisions, and disagreements.
 tools: Read, Write, Grep, Glob
 disallowedTools: Edit, NotebookEdit, Bash
-permissionMode: bypassPermissions
 model: haiku
 effort: low
 ---
