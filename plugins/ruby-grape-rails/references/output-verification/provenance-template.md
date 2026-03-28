@@ -34,6 +34,10 @@ Preferred paths:
    - Evidence: <https://example.com/source> [T1]
    - Notes: {what disagrees and which source is stronger}
 
+4. [WEAK] "{claim}"
+   - Evidence: <https://example.com/background> [T2]
+   - Notes: {why this stays tentative and should not drive a decisive recommendation alone}
+
 ## Required Fixes
 
 - {claim to remove, soften, or re-cite}
@@ -41,7 +45,10 @@ Preferred paths:
 
 ## Notes
 
+- Allowed claim statuses: `VERIFIED`, `UNSUPPORTED`, `CONFLICT`, `WEAK`.
 - Use `file:line` evidence for review findings proven directly by local code.
+- Extensionless local files such as `Gemfile:12`, `Rakefile:3`, and
+  `Dockerfile:10` are valid `file:line` evidence too.
 - Use URL + source tier for external research claims.
 - Keep `Required Fixes` even when the answer is "None." The section should
   always exist.

@@ -55,6 +55,18 @@ No actual entries here.
         passed, _ = output_checks.has_provenance_claim_entries(content)
         self.assertTrue(passed)
 
+    def test_has_provenance_claim_entries_rejects_undocumented_statuses(self) -> None:
+        content = """# Provenance: sample
+
+## Claim Log
+
+1. [OPINION] "not part of the shared contract"
+   - Evidence: app/models/user.rb:14
+   - Notes: This should not count.
+"""
+        passed, _ = output_checks.has_provenance_claim_entries(content)
+        self.assertFalse(passed)
+
     def test_has_provenance_local_evidence_scopes_to_claim_log_and_requires_file_ref(self) -> None:
         content = """# Provenance: sample
 
@@ -69,6 +81,18 @@ No actual entries here.
 """
         passed, _ = output_checks.has_provenance_local_evidence(content)
         self.assertFalse(passed)
+
+    def test_has_provenance_local_evidence_allows_extensionless_root_files(self) -> None:
+        content = """# Provenance: sample
+
+## Claim Log
+
+1. [VERIFIED] "Gemfile proves the dependency change"
+   - Evidence: Gemfile:12
+   - Notes: Proven by local code.
+"""
+        passed, _ = output_checks.has_provenance_local_evidence(content)
+        self.assertTrue(passed)
 
     def test_has_provenance_external_evidence_scopes_to_claim_log(self) -> None:
         content = """# Provenance: sample
