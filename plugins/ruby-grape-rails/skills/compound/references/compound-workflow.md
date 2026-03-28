@@ -30,7 +30,12 @@ Check these sources in order:
 1. **Scratchpad `Dead Ends` and `Decisions` sections**:
 
    ```bash
-   sed -n '/^## Dead Ends/,/^## /p; /^## Decisions/,/^## /p' .claude/plans/*/scratchpad.md 2>/dev/null | tail -40
+   awk '
+     /^## Dead Ends$/ { section = "dead_ends"; next }
+     /^## Decisions$/ { section = "decisions"; next }
+     /^## / { section = ""; next }
+     section == "dead_ends" || section == "decisions" { print }
+   ' .claude/plans/*/scratchpad.md 2>/dev/null | tail -40
    ```
 
 2. **Recent git changes**:

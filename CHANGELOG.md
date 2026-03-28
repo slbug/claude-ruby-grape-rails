@@ -35,6 +35,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Scratchpad guidance is now canonical across planning/workflow docs** —
   planning, work, brief, and compound guidance now use the same section model
   instead of mixed ad-hoc `DEAD-END` / `DECISION` entry styles.
+- **Scratchpad dead-end handling is now more precise** — hook-level dead-end
+  counts now track top-level entries instead of nested detail bullets, and the
+  compound/planning docs now point to the correct scratchpad template and a
+  working section-extraction example.
 - **Release/docs metadata now reflects the expanded shipped surface** — the
   plugin now ships `23` agents, `50` skills, `152` skill references, and `25`
   hook scripts, and README / CLAUDE / intro content were updated to match.

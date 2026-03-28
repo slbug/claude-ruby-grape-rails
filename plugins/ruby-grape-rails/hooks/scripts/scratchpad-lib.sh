@@ -179,7 +179,7 @@ count_markdown_bullets_in_section() {
   local section="$2"
 
   extract_markdown_section "$file" "$section" 2>/dev/null |
-    grep -Ec '^[[:space:]]*[-*] ' 2>/dev/null || true
+    grep -Ec '^[-*] ' 2>/dev/null || true
 }
 
 extract_dead_end_section() {

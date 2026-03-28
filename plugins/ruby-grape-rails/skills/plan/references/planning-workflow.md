@@ -266,7 +266,7 @@ specifying the method signature — this causes issues.
 **Scratchpad**: Create `.claude/plans/{slug}/scratchpad.md`
 at the start of planning with initial context (feature name, brief
 description, plan file path). Use the canonical structure from
-`${CLAUDE_SKILL_DIR}/scratchpad-template.md` for:
+`${CLAUDE_SKILL_DIR}/references/scratchpad-template.md` for:
 
 - `## Decisions` → `### Clarifications`
 - `## Decisions` → `### Research Cache Reuse`
