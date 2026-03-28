@@ -92,6 +92,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   ccrider-style Bash commands in assistant text now contribute consistently to
   skill-effectiveness windows, and the focused session-scan test module now
   fails with an explicit import error instead of relying on a bare `assert`.
+- **`/rb:investigate` opportunity suggestions now use the same retry-loop logic
+  as friction scoring** — plugin-opportunity scoring no longer relies on a
+  coarser adjacent-command heuristic, and it now suppresses `investigate`
+  suggestions when that command was already used.
 
 ## [1.6.0] - 2026-03-28
 

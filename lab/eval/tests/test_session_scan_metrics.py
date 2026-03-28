@@ -60,20 +60,126 @@ class SessionScanMetricTests(unittest.TestCase):
         self.assertEqual(invocations[0]["skill"], "/rb:permissions")
 
     def test_compute_plugin_opportunity_accepts_prefixed_commands(self) -> None:
+        messages = [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Bash",
+                        "input": {"command": "bundle exec rspec spec/models/user_spec.rb"},
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_result", "is_error": True, "content": "failed with exit code 1"}],
+            },
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Bash",
+                        "input": {"command": "bundle exec rspec spec/models/user_spec.rb"},
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_result", "is_error": True, "content": "failed with exit code 1"}],
+            },
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Bash",
+                        "input": {"command": "bundle exec rspec spec/models/user_spec.rb"},
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_result", "is_error": True, "content": "failed with exit code 1"}],
+            },
+        ]
         tool_calls = [
-            {"name": "Bash", "input": {"command": "bundle exec rspec spec/a.rb"}},
-            {"name": "Bash", "input": {"command": "bundle exec rspec spec/b.rb"}},
-            {"name": "Bash", "input": {"command": "bundle exec rspec spec/c.rb"}},
+            {"name": "Bash", "input": {"command": "bundle exec rspec spec/models/user_spec.rb"}},
+            {"name": "Bash", "input": {"command": "bundle exec rspec spec/models/user_spec.rb"}},
+            {"name": "Bash", "input": {"command": "bundle exec rspec spec/models/user_spec.rb"}},
         ]
 
         score, could_use = session_scan_metrics.compute_plugin_opportunity(
             [],
             tool_calls,
             ["/ruby-grape-rails:verify", "/rb:plan"],
+            messages,
         )
 
         self.assertEqual(score, 0.2)
         self.assertEqual(could_use, ["investigate"])
+
+    def test_compute_plugin_opportunity_skips_investigate_when_already_used(self) -> None:
+        messages = [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Bash",
+                        "input": {"command": "bundle exec rspec spec/models/user_spec.rb"},
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_result", "is_error": True, "content": "failed with exit code 1"}],
+            },
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Bash",
+                        "input": {"command": "bundle exec rspec spec/models/user_spec.rb"},
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_result", "is_error": True, "content": "failed with exit code 1"}],
+            },
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "Bash",
+                        "input": {"command": "bundle exec rspec spec/models/user_spec.rb"},
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_result", "is_error": True, "content": "failed with exit code 1"}],
+            },
+        ]
+        tool_calls = [
+            {"name": "Bash", "input": {"command": "bundle exec rspec spec/models/user_spec.rb"}},
+            {"name": "Bash", "input": {"command": "bundle exec rspec spec/models/user_spec.rb"}},
+            {"name": "Bash", "input": {"command": "bundle exec rspec spec/models/user_spec.rb"}},
+        ]
+
+        score, could_use = session_scan_metrics.compute_plugin_opportunity(
+            [],
+            tool_calls,
+            ["/rb:verify", "/rb:investigate"],
+            messages,
+        )
+
+        self.assertEqual(score, 0.0)
+        self.assertEqual(could_use, [])
 
     def test_skill_effectiveness_counts_text_mode_bash_runs(self) -> None:
         messages = [

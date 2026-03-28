@@ -517,6 +517,23 @@ def extract_bash_runs(messages):
     return runs
 
 
+def count_retry_loops(bash_runs):
+    """Count repeated failing Bash command loops from normalized run data."""
+    retry_loops = 0
+    window = []
+    for run in bash_runs:
+        signature = run["signature"]
+        if window and window[-1]["signature"] == signature:
+            window.append(run)
+        else:
+            if len(window) >= 3 and sum(1 for item in window if item["failed"]) >= 2:
+                retry_loops += 1
+            window = [run]
+    if len(window) >= 3 and sum(1 for item in window if item["failed"]) >= 2:
+        retry_loops += 1
+    return retry_loops
+
+
 # ─── Metric Computation ──────────────────────────────────────────────────────
 
 
@@ -530,19 +547,8 @@ def compute_friction(tool_calls, user_msgs, errors, messages):
 
     # Retry loops: same normalized Bash command 3+ times with repeated failure
     # evidence nearby. This deliberately ignores successful scripted repetition.
-    retry_loops = 0
     bash_runs = extract_bash_runs(messages)
-    window = []
-    for run in bash_runs:
-        signature = run["signature"]
-        if window and window[-1]["signature"] == signature:
-            window.append(run)
-        else:
-            if len(window) >= 3 and sum(1 for item in window if item["failed"]) >= 2:
-                retry_loops += 1
-            window = [run]
-    if len(window) >= 3 and sum(1 for item in window if item["failed"]) >= 2:
-        retry_loops += 1
+    retry_loops = count_retry_loops(bash_runs)
 
     # User corrections
     user_corrections = 0
@@ -680,7 +686,7 @@ def compute_fingerprint(user_msgs, tool_calls, files_edited):
     return best, confidence
 
 
-def compute_plugin_opportunity(user_msgs, tool_calls, rb_commands):
+def compute_plugin_opportunity(user_msgs, tool_calls, rb_commands, messages=None):
     """Compute plugin opportunity score (0.0-1.0)."""
     could_use = []
     used_commands = {
@@ -697,20 +703,11 @@ def compute_plugin_opportunity(user_msgs, tool_calls, rb_commands):
         if tc.get("name") == "Bash"
     ]
 
-    # Retry loops suggest /rb:investigate
-    consecutive = 0
-    for i in range(1, len(bash_cmds)):
-        if (
-            bash_cmds[i].split()[0:2] == bash_cmds[i - 1].split()[0:2]
-            if bash_cmds[i].strip()
-            else False
-        ):
-            consecutive += 1
-            if consecutive >= 2:
-                could_use.append("investigate")
-                break
-        else:
-            consecutive = 0
+    # Repeated failing Bash runs suggest /rb:investigate.
+    retry_loops = count_retry_loops(extract_bash_runs(messages or []))
+
+    if retry_loops > 0 and "investigate" not in used_commands:
+        could_use.append("investigate")
 
     # Many tools without plan suggest /rb:plan
     if tool_count > 50 and "plan" not in used_commands:
@@ -1085,7 +1082,7 @@ def compute_session_metrics(data, session_id, project, date=None, provider=None)
         user_msgs, tool_calls, list(files_edited)
     )
     opportunity_score, could_use = compute_plugin_opportunity(
-        user_msgs, tool_calls, [c.replace("/rb:", "") for c in rb_commands]
+        user_msgs, tool_calls, [c.replace("/rb:", "") for c in rb_commands], messages
     )
     tool_profile = compute_tool_profile(tool_calls)
     bigrams = compute_tool_bigrams(tool_calls)
