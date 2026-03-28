@@ -87,6 +87,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   resolves the repo root before running and uses an explicit unittest top-level
   path, so the non-pytest fallback works more reliably outside the repository
   root.
+- **Permissions extraction now rejects invalid scan windows and limits** — the
+  canonical `/rb:permissions` extractor now fails fast when `--days` is
+  negative or `--limit` is zero/non-positive, and the reference doc now
+  documents those constraints explicitly.
 
 ## [1.5.0] - 2026-03-28
 

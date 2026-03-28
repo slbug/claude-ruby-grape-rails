@@ -29,6 +29,16 @@ OptionParser.new do |parser|
   end
 end.parse!
 
+if options[:days].negative?
+  warn '--days must be zero or greater'
+  exit 1
+end
+
+if options[:limit] <= 0
+  warn '--limit must be greater than zero'
+  exit 1
+end
+
 def find_repo_root(start_dir)
   path = Pathname.new(start_dir).expand_path
 
