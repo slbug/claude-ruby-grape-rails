@@ -5,6 +5,8 @@ user-invocable: false
 paths:
   - spec/**
   - test/**
+  - "**/spec/**"
+  - "**/test/**"
 effort: medium
 ---
 # Testing

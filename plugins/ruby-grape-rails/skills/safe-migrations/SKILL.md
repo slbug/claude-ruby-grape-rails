@@ -6,6 +6,9 @@ paths:
   - db/migrate/**
   - db/schema.rb
   - db/structure.sql
+  - "**/db/migrate/**"
+  - "**/db/schema.rb"
+  - "**/db/structure.sql"
 effort: medium
 ---
 # Safe Migrations

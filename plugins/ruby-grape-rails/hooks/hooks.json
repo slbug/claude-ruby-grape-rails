@@ -26,11 +26,6 @@
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/secret-scan.sh",
             "timeout": 30
           }
@@ -122,6 +117,12 @@
             "if": "Edit(*Rakefile)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Edit(*config.ru)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
           }
         ]
       },
@@ -209,6 +210,12 @@
           {
             "type": "command",
             "if": "Write(*Rakefile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Write(*config.ru)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
             "timeout": 15
           }
@@ -300,6 +307,12 @@
             "if": "MultiEdit(*Rakefile)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*config.ru)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
           }
         ]
       }
@@ -382,7 +395,7 @@
     ],
     "FileChanged": [
       {
-        "matcher": "Gemfile|Gemfile\\.lock|Rakefile|lefthook\\.yml|justfile|\\.justfile|Justfile|.*\\.gemspec",
+        "matcher": "Gemfile|Gemfile\\.lock|Rakefile|lefthook\\.ya?ml|\\.lefthook\\.ya?ml|lefthook-local\\.ya?ml|\\.lefthook-local\\.ya?ml|justfile|\\.justfile|Justfile|.*\\.gemspec",
         "hooks": [
           {
             "type": "command",

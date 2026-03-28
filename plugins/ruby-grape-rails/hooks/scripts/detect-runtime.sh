@@ -554,12 +554,11 @@ if [[ -n "$RTK_PATH" ]]; then
   fi
 fi
 
-# Report runtime info
-if [[ ${#RUNTIME_INFO[@]} -gt 0 ]]; then
-  echo "✓ Runtime: ${RUNTIME_INFO[*]}"
-fi
-
 if [[ "${RUBY_PLUGIN_DETECT_RUNTIME_QUIET:-0}" != "1" ]]; then
+  if [[ ${#RUNTIME_INFO[@]} -gt 0 ]]; then
+    echo "✓ Runtime: ${RUNTIME_INFO[*]}"
+  fi
+
   echo "✓ Hook mode: $HOOK_MODE"
 
   if [[ ${#STACK[@]} -gt 0 ]]; then

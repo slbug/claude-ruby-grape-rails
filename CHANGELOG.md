@@ -24,6 +24,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Gemfile.lock`, `Rakefile`, `lefthook.yml`, `justfile`, and `*.gemspec`,
   while using a dedicated quiet wrapper for refreshes instead of branching on
   untrusted hook input.
+- **Hook narrowing now applies consistently across Ruby-ish file edits** —
+  quiet runtime refreshes no longer leak status output, `debug-statement-warning`
+  no longer runs twice from both broad and filtered hook groups, `config.ru`
+  now gets the same debug-statement coverage as the other Ruby-ish targets, and
+  the `FileChanged` lefthook matcher now covers the same config variants that
+  runtime detection already recognizes.
 - **Selective skill `paths:` adoption started conservatively** —
   `safe-migrations` now narrows to migration/schema files and `testing` narrows
   to `spec/**` and `test/**`, while broader auto-loading constraints remain
