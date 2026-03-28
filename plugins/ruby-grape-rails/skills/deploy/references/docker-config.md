@@ -30,7 +30,7 @@ RUN SECRET_KEY_BASE=dummy RAILS_ENV=production bundle exec rails assets:precompi
 
 # Prefer targeted cleanup to broad recursive deletion
 RUN bundle clean --force && \
-    bundle exec rails tmp:clear
+    SECRET_KEY_BASE=dummy RAILS_ENV=production bundle exec rails tmp:clear
 
 # Runner stage
 FROM ruby:3.3-slim-bookworm AS runner

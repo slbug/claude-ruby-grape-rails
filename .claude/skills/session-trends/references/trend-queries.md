@@ -52,7 +52,7 @@ Action:
 Use a quick extraction from the ledger:
 
 ```bash
-rg -o '"rb_commands_used":\\[[^]]*\\]' .claude/session-metrics/metrics.jsonl | sort | uniq -c | sort -rn
+rg -o '"rb_commands_used":\[[^]]*\]' .claude/session-metrics/metrics.jsonl | sort | uniq -c | sort -rn
 ```
 
 ## Friction

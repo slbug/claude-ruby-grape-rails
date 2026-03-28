@@ -96,6 +96,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   as friction scoring** — plugin-opportunity scoring no longer relies on a
   coarser adjacent-command heuristic, and it now suppresses `investigate`
   suggestions when that command was already used.
+- **Contributor command snippets are more copy-safe again** — the session
+  trends `rg` example no longer over-escapes JSON brackets, and the Docker
+  cleanup example now runs `rails tmp:clear` under `RAILS_ENV=production` with
+  a dummy secret key so it still boots correctly in deployment-mode bundles.
 
 ## [1.6.0] - 2026-03-28
 
