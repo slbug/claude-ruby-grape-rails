@@ -1,4 +1,4 @@
-.PHONY: lint security-injection eval eval-all eval-ci eval-skills eval-agents eval-triggers eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-stress eval-tests eval-tests-pytest eval-tests-unittest ci
+.PHONY: lint security-injection eval eval-all eval-ci eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-stress eval-tests eval-tests-pytest eval-tests-unittest ci
 
 lint:
 	npm run lint
@@ -23,6 +23,9 @@ eval-agents:
 
 eval-triggers:
 	bash lab/eval/run_eval.sh --triggers
+
+eval-output:
+	python3 -m lab.eval.artifact_scorer --all
 
 eval-baseline:
 	python3 -m lab.eval.baseline

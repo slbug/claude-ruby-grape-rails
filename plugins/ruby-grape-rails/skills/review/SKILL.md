@@ -87,12 +87,19 @@ versioned sources, or claims that need explicit verification, for example:
 - "Sidekiq best practices require this pattern"
 - "This gem feature is unsupported in the current version"
 
+If the finding is already proven directly by changed code, line references in the
+review itself are enough and no provenance sidecar is needed.
+
 When used:
 
 1. write the draft consolidated review
 2. run `output-verifier` against the draft
 3. save the result to `.claude/reviews/{review-slug}.provenance.md`
 4. remove or soften unsupported external claims before presenting the final review
+
+Use the shared provenance contract:
+
+- `../../references/output-verification/provenance-template.md`
 
 Detailed reviewer focus areas, file-type checklists, and common Ruby
 anti-patterns live in

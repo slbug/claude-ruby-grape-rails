@@ -675,15 +675,18 @@ PRs welcome! See [CLAUDE.md](CLAUDE.md) for development conventions.
 
 ### Eval workflow
 
-`1.6.0` adds a deterministic contributor eval foundation under `lab/eval/`.
-It requires `python3` 3.10+ for the stdlib typing syntax used by the eval
-tooling.
+The repo includes a deterministic contributor eval foundation under
+`lab/eval/`. `1.7.0` adds separate artifact-quality checks for research/review
+outputs. It requires `python3` 3.10+ for the stdlib typing syntax used by the
+eval tooling.
 
 Primary entrypoints:
 
 - `make eval` or `npm run eval` for lint + injection check + changed surfaces
-- `make eval-all` or `npm run eval:all` for the full `1.6.0` snapshot
+- `make eval-all` or `npm run eval:all` for the full structural snapshot
 - `make eval-ci` or `npm run eval:ci` for the contributor CI gate
+- `make eval-output` or `npm run eval:output` for deterministic research/review
+  artifact fixtures
 - `make security-injection` or `npm run security:injection`
 - `make eval-tests` or `npm run eval:test` for the default contributor test
   path (prefers `pytest` when installed, otherwise falls back to `unittest`)
@@ -698,8 +701,15 @@ Current scope:
 
 - six high-leverage skill evals: `plan`, `work`, `review`, `verify`,
   `permissions`, `research`
+- deterministic research/review output fixtures under `lab/eval/fixtures/output/`
+- shipped provenance template under
+  `plugins/ruby-grape-rails/references/output-verification/`
 - structural scoring for all shipped agents
 - deterministic trigger corpora plus confusable-pair / hard-corpus generation
+
+Note: `eval-output` is separate from `eval-all` / `eval-ci` for now.
+The contributor-only output-verification checklist lives under
+`.claude/skills/plugin-dev-workflow/references/`.
 
 ### Docs-check and session analytics
 

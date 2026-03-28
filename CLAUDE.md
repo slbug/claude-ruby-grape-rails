@@ -359,6 +359,19 @@ claude plugin validate plugins/ruby-grape-rails
 # Should pass without errors before committing changes
 ```
 
+### Output Artifact Eval
+
+`1.7.0` adds deterministic contributor checks for research/review outputs:
+
+```bash
+make eval-output
+# or
+npm run eval:output
+```
+
+This scores tracked fixture artifacts under `lab/eval/fixtures/output/` and is
+the canonical contributor check for provenance/report contract changes.
+
 ## Size Guidelines
 
 | Component | Target | Hard Limit | Notes |

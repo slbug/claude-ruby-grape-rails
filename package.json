@@ -1,6 +1,6 @@
 {
   "name": "ruby-grape-rails-plugin",
-  "version": "1.6.3",
+  "version": "1.7.0",
   "private": true,
   "description": "Claude Code plugin for Ruby, Rails, Grape, PostgreSQL, Redis, and Sidekiq development",
   "scripts": {
@@ -12,6 +12,7 @@
     "eval:skills": "bash lab/eval/run_eval.sh --skills",
     "eval:agents": "bash lab/eval/run_eval.sh --agents",
     "eval:triggers": "bash lab/eval/run_eval.sh --triggers",
+    "eval:output": "python3 -m lab.eval.artifact_scorer --all",
     "eval:baseline": "python3 -m lab.eval.baseline",
     "eval:compare": "python3 -m lab.eval.compare --pretty",
     "eval:overlap": "python3 -m lab.eval.trigger_scorer --overlap --pretty",

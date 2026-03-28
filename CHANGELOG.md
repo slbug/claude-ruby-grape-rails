@@ -7,6 +7,30 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-03-28
+
+### Added
+
+- **Deterministic research/review output eval** — `lab/eval/artifact_scorer.py`
+  now scores tracked research/review fixture artifacts, and contributors can run
+  it directly via `make eval-output` / `npm run eval:output`.
+- **Shared provenance contract references** — added
+  `plugins/ruby-grape-rails/references/output-verification/provenance-template.md`
+  so research/review provenance sidecars have a canonical documented structure
+  instead of only path conventions.
+
+### Changed
+
+- **Research/review provenance guidance is now explicit and aligned** —
+  `output-verifier`, `research`, `review`, and `parallel-reviewer` now all
+  point to the same shared provenance contract, distinguish when provenance is
+  required vs optional, and describe how verified findings should be applied
+  back to the final artifact.
+- **Contributor-only output-verification guidance now lives under `.claude/`**
+  — the shipped plugin keeps the provenance template, while the contributor
+  checklist moved to
+  `.claude/skills/plugin-dev-workflow/references/output-verification-checklist.md`.
+
 ## [1.6.3] - 2026-03-28
 
 ### Changed
