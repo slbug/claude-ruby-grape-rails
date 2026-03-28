@@ -9,7 +9,7 @@ FROM ruby:3.3-slim-bookworm AS builder
 # Install build dependencies
 RUN apt-get update -qq && \
     apt-get install -y build-essential libpq-dev libvips git && \
-    apt-get clean
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /rails
 
@@ -38,7 +38,7 @@ FROM ruby:3.3-slim-bookworm AS runner
 # Install runtime dependencies
 RUN apt-get update -qq && \
     apt-get install -y libpq-dev libvips curl && \
-    apt-get clean
+    rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN groupadd -r rails && useradd -r -g rails rails

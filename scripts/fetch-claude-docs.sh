@@ -102,7 +102,7 @@ fetch_page() {
   done
 
   echo "  [FAILED] $page — could not download after 3 attempts"
-  safe_remove_cache_file "$dest"
+  safe_remove_cache_file "$dest" || true
   return 1
 }
 

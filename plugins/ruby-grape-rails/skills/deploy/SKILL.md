@@ -252,7 +252,7 @@ FROM ruby:3.4-slim
 # Install runtime deps
 RUN apt-get update -qq && \
     apt-get install -y libpq-dev && \
-    apt-get clean
+    rm -rf /var/lib/apt/lists/*
 
 # Install Thruster
 COPY --from=ghcr.io/basecamp/thruster:latest /usr/local/bin/thrust /usr/local/bin/thrust

@@ -73,6 +73,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   — text-mode shell commands are now inferred into real Bash command entries,
   which lets plugin-opportunity heuristics and retry-loop friction scoring work
   even when transcripts do not preserve structured `tool_use` blocks.
+- **Docs fetch cleanup is now best-effort and assistant failure detection is
+  less trigger-happy** — refused cache-file cleanup no longer aborts the docs
+  fetch flow under `set -e`, and session-scan now avoids counting generic
+  assistant prose like “if you see an error” as real failure evidence while
+  still catching stronger signals such as exit codes and explicit error lines.
 
 ## [1.6.0] - 2026-03-28
 

@@ -224,6 +224,11 @@ FAILURE_SIGNAL_RE = re.compile(
     r"permission denied|no such file|syntaxerror|exit code)\b",
     re.IGNORECASE,
 )
+ASSISTANT_FAILURE_SIGNAL_RE = re.compile(
+    r"(?im)(?:\btraceback\b|\bcommand not found\b|\bpermission denied\b|"
+    r"\bno such file(?: or directory)?\b|\bsyntaxerror\b|\bexit code\s+\d+\b|"
+    r"^\s*(?:error|failed|exception):)"
+)
 
 
 def extract_tool_calls(messages):
@@ -399,17 +404,30 @@ def message_has_failure_signal(msg):
     if not isinstance(msg, dict):
         return False
 
+    role = _get_role(msg)
     content = _get_content(msg)
+    tool_result_texts = []
 
     if isinstance(content, list):
         for block in content:
             if isinstance(block, dict) and block.get("type") == "tool_result":
                 if block.get("is_error"):
                     return True
+                block_content = block.get("content", "")
+                if isinstance(block_content, str):
+                    tool_result_texts.append(block_content)
 
-    for text in _text_blocks(content):
-        if FAILURE_SIGNAL_RE.search(text):
-            return True
+    if role == "assistant":
+        for text in tool_result_texts:
+            if FAILURE_SIGNAL_RE.search(text):
+                return True
+        for text in _text_blocks(content):
+            if ASSISTANT_FAILURE_SIGNAL_RE.search(text):
+                return True
+    else:
+        for text in _text_blocks(content):
+            if FAILURE_SIGNAL_RE.search(text):
+                return True
     return False
 
 
