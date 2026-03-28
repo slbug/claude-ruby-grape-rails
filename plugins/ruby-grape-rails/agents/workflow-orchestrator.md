@@ -110,8 +110,9 @@ INITIALIZING ──▶ DISCOVERING ──▶ PLANNING ──▶ WORKING ──�
 3. **Drive task execution** - through the plan file state in WORKING phase
 4. **Run full verification** - before review phase
 5. **Delegate review** - to `parallel-reviewer`
-6. **Capture learnings** - with `/rb:compound` when cycle succeeds
-7. **Maintain state** - in `progress.md` for resumption
+6. **Run provenance checks when needed** - use `output-verifier` for research/review claims that depend on external or version-specific evidence
+7. **Capture learnings** - with `/rb:compound` when cycle succeeds
+8. **Maintain state** - in `progress.md` for resumption
 
 ## Tooling Recommendations
 

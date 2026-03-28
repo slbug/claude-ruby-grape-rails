@@ -79,13 +79,13 @@ DO for users? Not what files we'll touch.}
 - Rewrite the Summary for a developer who hasn't seen the ticket
 - "In scope" items should answer "what will users see/do?"
 - "Out of scope" should explain WHY items were excluded, not just
-  list them — pull from scratchpad DECISION entries if available
+  list them — pull from the scratchpad `## Decisions` section if available
 - Include task/phase count so developers gauge effort
 
 ### Section 2: Key Decisions
 
 **Source**: plan.md `## Technical Decisions` table +
-`.claude/plans/{slug}/scratchpad.md` DECISION entries
+`.claude/plans/{slug}/scratchpad.md` `## Decisions` section
 
 **Template:**
 
@@ -96,10 +96,10 @@ DO for users? Not what files we'll touch.}
 
 **{Decision}**: We chose **{Choice}**.
 - Why: {Rationale from table}
-- Alternative rejected: {From scratchpad DECISION entry, if exists}
+- Alternative rejected: {From scratchpad Decisions section, if exists}
 - Trade-off: {What we give up with this choice}
 
-{If scratchpad has DECISION entries not in the table, include those too.}
+{If scratchpad has decision notes not in the table, include those too.}
 ```
 
 **Rules:**
@@ -207,8 +207,8 @@ locations}
 
 ### Section 2: Key Decisions & Why
 
-**Source**: Same as pre-work Section 2, plus scratchpad entries
-written DURING work (DEAD-END, HANDOFF entries)
+**Source**: Same as pre-work Section 2, plus scratchpad sections
+written DURING work (`## Dead Ends`, `## Handoff`)
 
 **Template:**
 
@@ -217,7 +217,7 @@ written DURING work (DEAD-END, HANDOFF entries)
 
 {Same format as pre-work Section 2, but also include:}
 
-{If scratchpad has DEAD-END entries:}
+{If scratchpad has entries under `## Dead Ends`:}
 **Approaches that didn't work:**
 - {Dead-end description}: {Why it failed, what we did instead}
 ```

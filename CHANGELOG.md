@@ -7,6 +7,38 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-03-28
+
+### Added
+
+- **Structured scratchpad template + hook support** — active plans now use a
+  canonical scratchpad structure with `Dead Ends`, `Decisions`,
+  `Hypotheses`, `Open Questions`, and `Handoff`, and the hook layer now
+  initializes missing scratchpads, highlights dead ends on resume, and
+  preserves dead-end context across compaction.
+- **T1-T5 source-quality tiers for web research** — `web-researcher` and
+  `/rb:research` now classify sources from authoritative (`T1`) through
+  rejected (`T5`), require visible tier tags in research output, and call out
+  source-quality mix in synthesis.
+- **`output-verifier` agent** — new internal verifier agent for
+  provenance-checking research briefs and review findings when they rely on
+  external or version-specific claims.
+- **Contributor `plugin-dev-workflow` skill** — new local `.claude` skill
+  documenting how to validate shipped plugin changes, keep release metadata
+  aligned, and maintain audit/roadmap files in this repo.
+
+### Changed
+
+- **Research and review workflows now support provenance sidecars** —
+  high-impact research and externally sourced review claims can now be checked
+  with `output-verifier` and saved as adjacent `.provenance.md` reports.
+- **Scratchpad guidance is now canonical across planning/workflow docs** —
+  planning, work, brief, and compound guidance now use the same section model
+  instead of mixed ad-hoc `DEAD-END` / `DECISION` entry styles.
+- **Release/docs metadata now reflects the expanded shipped surface** — the
+  plugin now ships `23` agents, `50` skills, `152` skill references, and `25`
+  hook scripts, and README / CLAUDE / intro content were updated to match.
+
 ## [1.4.0] - 2026-03-27
 
 ### Added

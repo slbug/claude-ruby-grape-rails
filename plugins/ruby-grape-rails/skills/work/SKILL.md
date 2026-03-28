@@ -279,28 +279,20 @@ When resuming work:
 
 Update `scratchpad.md` with:
 
-- Decisions made during implementation
-- Patterns discovered
-- Technical debt notes
-- Refactoring opportunities
+- `## Dead Ends`
+  - failed approaches and why they failed
+- `## Decisions`
+  - implementation choices, trade-offs, and discovered infrastructure
+- `## Hypotheses`
+  - ideas worth testing later
+- `## Open Questions`
+  - unresolved concerns to revisit
+- `## Handoff`
+  - branch state, API failures, or next-step notes
 
-Format:
-
-```markdown
-## Session: {timestamp}
-
-### Decisions
-- {what was decided}
-
-### Discoveries
-- {what was learned}
-
-### Technical Debt
-- {what to revisit}
-
-### Next Session Notes
-- {where to resume}
-```
+Follow the canonical structure in
+`${CLAUDE_SKILL_DIR}/../plan/references/scratchpad-template.md`. Prefer appending to the
+existing sections rather than inventing new top-level headings.
 
 ## Completion Protocol
 

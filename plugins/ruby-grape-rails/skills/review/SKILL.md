@@ -77,6 +77,23 @@ Based on what changed, spawn appropriate reviewers:
 7. **Contextualize** - explain why it matters, not just what's wrong
 8. **Identify package + ORM first** - do not apply flat Rails / Active Record advice to Sequel or modular packages
 
+## Provenance Guard
+
+Most review findings are code-local and can be justified directly from the diff.
+Use `output-verifier` only when the review depends on external or versioned
+claims, for example:
+
+- "Rails 8.1 behavior changed here"
+- "Sidekiq best practices require this pattern"
+- "This gem feature is unsupported in the current version"
+
+When used:
+
+1. write the draft consolidated review
+2. run `output-verifier` against the draft
+3. save the result to `.claude/reviews/{review-slug}.provenance.md`
+4. remove or soften unsupported external claims before presenting the final review
+
 ## Agent Descriptions
 
 ### ruby-reviewer
@@ -244,6 +261,8 @@ Every `/rb:review` run produces two artifact layers:
 
 - Per-reviewer artifacts: `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
 - Consolidated review: `.claude/reviews/{review-slug}.md`
+- Optional provenance sidecar when `output-verifier` is used:
+  `.claude/reviews/{review-slug}.provenance.md`
 
 Rules:
 

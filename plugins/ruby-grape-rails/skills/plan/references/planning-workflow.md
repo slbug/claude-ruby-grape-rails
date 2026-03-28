@@ -31,8 +31,8 @@ interrogate — if the user gives a detailed answer, extract
 what you need and move on.
 
 **Capture decisions**: Save all clarification answers to
-`.claude/plans/{slug}/scratchpad.md` as DECISION entries for future
-reference.
+`.claude/plans/{slug}/scratchpad.md` under
+`## Decisions` → `### Clarifications` for future reference.
 
 ## Depth Detection
 
@@ -130,10 +130,13 @@ whether fresh research already exists:
    - `.claude/research/{topic-slug}.md` or `research-*.md` →
      skip `web-researcher` for that topic
 6. Record every reuse in
-   `.claude/plans/{slug}/scratchpad.md`:
+   `.claude/plans/{slug}/scratchpad.md` under
+   `## Decisions` → `### Research Cache Reuse`:
 
    ```markdown
-   ## Research Cache Reuse
+   ## Decisions
+
+   ### Research Cache Reuse
    - REUSED: .claude/research/sidekiq-vs-solid-queue.md -> skipped web-researcher
    ```
 
@@ -173,9 +176,10 @@ instead of re-spawning.
 
 When Explore agents discover **project infrastructure** (not
 feature-specific code) — e.g., test helpers, factory patterns,
-API endpoint maps — write a compact summary
-to `.claude/plans/{slug}/scratchpad.md` under a `## Infrastructure`
-heading. This prevents re-exploration in follow-up sessions.
+API endpoint maps — write a compact summary to
+`.claude/plans/{slug}/scratchpad.md` under
+`## Decisions` → `### Infrastructure`. This prevents re-exploration
+in follow-up sessions.
 
 Signals that knowledge is infrastructure (not feature-specific):
 
@@ -261,8 +265,14 @@ specifying the method signature — this causes issues.
 
 **Scratchpad**: Create `.claude/plans/{slug}/scratchpad.md`
 at the start of planning with initial context (feature name, brief
-description, plan file path). Use it throughout planning for
-clarifications, infrastructure notes, and `REUSED:` cache entries.
+description, plan file path). Use the canonical structure from
+`${CLAUDE_SKILL_DIR}/scratchpad-template.md` for:
+
+- `## Decisions` → `### Clarifications`
+- `## Decisions` → `### Research Cache Reuse`
+- `## Decisions` → `### Infrastructure`
+- `## Hypotheses`
+- `## Open Questions`
 
 **Do NOT read any reference files.** The plan template is inlined
 in the planning-orchestrator agent.

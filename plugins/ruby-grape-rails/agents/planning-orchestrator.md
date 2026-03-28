@@ -99,10 +99,16 @@ Before any agent work starts:
    - `.claude/plans/{slug}/research/`
    - `.claude/plans/{slug}/summaries/`
    - `.claude/plans/{slug}/scratchpad.md`
-3. Seed `scratchpad.md` with:
-   - feature name / request summary
-   - plan path
-   - a `## Research Cache Reuse` heading
+3. Ensure `scratchpad.md` uses the canonical structure:
+   - `## Dead Ends`
+   - `## Decisions`
+     - `### Clarifications`
+     - `### Research Cache Reuse`
+     - `### Infrastructure`
+   - `## Hypotheses`
+   - `## Open Questions`
+   - `## Handoff`
+4. Record the feature summary and plan path at the top of the file.
 
 ### Phase 1: Research Cache Reuse
 
@@ -132,7 +138,8 @@ research:
      - `*-evaluation.md` → skip `ruby-gem-researcher` for that topic
      - `research-*.md` or clearly topical global research → skip
        `web-researcher` for that topic
-   - Append `REUSED: {filename} -> skipped {agent}` to
+   - Append `REUSED: {filename} -> skipped {agent}` under
+     `## Decisions` → `### Research Cache Reuse` in
      `.claude/plans/{slug}/scratchpad.md`
 5. **Do not over-reuse**
    - Never skip current-code agents such as `rails-patterns-analyst`,
