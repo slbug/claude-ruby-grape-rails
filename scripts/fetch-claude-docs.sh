@@ -72,7 +72,7 @@ is_fresh() {
 }
 
 safe_remove_cache_file() {
-  local path="$1"
+  local path="${1:-}"
   [[ -n "$path" ]] || return 0
   [[ "$path" == "${CACHE_DIR}/"* ]] || return 1
   [[ ! -e "$path" ]] && return 0
