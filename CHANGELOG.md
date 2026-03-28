@@ -83,6 +83,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   user phrases like “without error” as real failure evidence, and docs-check
   now states that `hooks`, `mcpServers`, and `permissionMode` are unsupported
   and ignored for plugin-shipped agents.
+- **Command-alias analytics are now consistent and covered by tests** —
+  session-scan normalizes `/ruby-grape-rails:*` to `/rb:*` in skill
+  effectiveness as well as adoption metrics, trend date parsing now avoids
+  duplicate work, and new Python tests cover command extraction, placeholder
+  filtering, and alias normalization.
 
 ## [1.6.0] - 2026-03-28
 

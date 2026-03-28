@@ -881,9 +881,10 @@ def _locate_skill_invocations(user_msgs, all_messages):
         for cmd in cmds:
             if "{" in cmd or "<" in cmd:
                 continue
+            normalized = normalize_plugin_command(cmd)
             invocations.append(
                 {
-                    "skill": cmd,
+                    "skill": normalized or cmd,
                     "msg_index": i,
                     "user_msg_index": user_idx,
                 }
@@ -1347,9 +1348,11 @@ def compute_trends(
             except (ValueError, TypeError):
                 return None
 
-    parsed_dates = [
-        parse_date(entry) for entry in entries if parse_date(entry) is not None
-    ]
+    parsed_dates = []
+    for entry in entries:
+        parsed = parse_date(entry)
+        if parsed is not None:
+            parsed_dates.append(parsed)
     distinct_dates = len({dt.date().isoformat() for dt in parsed_dates})
     time_series_signal = "usable"
     if len(entries) < 10 or distinct_dates < 2:
