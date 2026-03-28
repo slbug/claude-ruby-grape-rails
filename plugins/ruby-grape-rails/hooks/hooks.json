@@ -6,16 +6,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/iron-law-verifier.sh",
             "timeout": 15
           },
@@ -43,6 +33,273 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/secret-scan.sh",
             "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Edit(*.rb)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Edit(*.rake)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Edit(*Gemfile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Edit(*Rakefile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Edit(*config.ru)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Edit(*.rb)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Edit(*.rake)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Edit(*Gemfile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Edit(*Rakefile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Edit(*config.ru)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Edit(*.rb)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Edit(*.rake)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Edit(*Gemfile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Edit(*Rakefile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Write(*.rb)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Write(*.rake)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Write(*Gemfile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Write(*Rakefile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Write(*config.ru)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Write(*.rb)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Write(*.rake)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Write(*Gemfile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Write(*Rakefile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Write(*config.ru)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "Write(*.rb)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Write(*.rake)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Write(*Gemfile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Write(*Rakefile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "MultiEdit(*.rb)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*.rake)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*Gemfile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*Rakefile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*config.ru)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*.rb)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*.rake)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*Gemfile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*Rakefile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*config.ru)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*.rb)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*.rake)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*Gemfile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(*Rakefile)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
+            "timeout": 15
           }
         ]
       }
@@ -119,6 +376,18 @@
           {
             "type": "command",
             "command": "echo 'Ruby/Rails/Grape plugin loaded — describe the task and I will route the right workflow'"
+          }
+        ]
+      }
+    ],
+    "FileChanged": [
+      {
+        "matcher": "Gemfile|Gemfile\\.lock|Rakefile|lefthook\\.yml|justfile|\\.justfile|Justfile|.*\\.gemspec",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-file-changed.sh",
+            "timeout": 15
           }
         ]
       }

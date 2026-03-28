@@ -125,6 +125,10 @@ Write a contributor report under `.claude/docs-check/` with:
 - infos
 - follow-up actions
 
+If a dated existing report disagrees with the current cached docs or current
+`claude plugin validate` output, mark the older report as stale instead of
+copying its warning forward.
+
 ## Required Report Qualities
 
 Every finding should answer:

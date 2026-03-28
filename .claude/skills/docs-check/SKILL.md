@@ -79,6 +79,9 @@ Pass through the user flags. The orchestrator should:
 3. Prefer targeted cached-doc snippets over pasting full pages into prompts.
 4. Prefer `Agent(...)` terminology over historical `Task(...)` wording.
 5. Distinguish docs incompatibility from local repo recommendations.
+6. Treat dated reports under `.claude/docs-check/` as historical snapshots; a
+   stale warning in an old report is not current guidance if the cached docs
+   and current validator disagree.
 
 ## Outputs
 

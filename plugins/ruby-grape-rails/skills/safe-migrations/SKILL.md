@@ -2,6 +2,10 @@
 name: safe-migrations
 description: Safe database migration patterns for Rails. Covers zero-downtime deployments, locking concerns, and backfilling strategies. Use strong_migrations gem or follow manual patterns.
 user-invocable: false
+paths:
+  - db/migrate/**
+  - db/schema.rb
+  - db/structure.sql
 effort: medium
 ---
 # Safe Migrations
