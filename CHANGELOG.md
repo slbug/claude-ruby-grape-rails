@@ -7,6 +7,41 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-03-28
+
+### Added
+
+- **Agent playbooks for leaner orchestration docs** — moved long-form
+  dependency-analysis, planning, and workflow examples into
+  `plugins/ruby-grape-rails/references/agent-playbooks/` so the main agent
+  routing surfaces stay concise without losing the detailed contributor
+  guidance.
+
+### Changed
+
+- **`dependency-analyzer` is now a focused routing surface instead of a giant
+  example dump** — the agent description is more discriminative, the main file
+  is much shorter, and the detailed command/report examples now live in a
+  dedicated playbook.
+- **Core workflow descriptions were tightened to reduce trigger overlap** —
+  `plan`, `work`, `review`, and `verify` now use more boundary-specific
+  descriptions and less repetitive stack-keyword padding.
+- **Trigger corpora were sharpened without adding answer leakage** — the
+  `plan`, `work`, and `verify` trigger sets now separate design, execution, and
+  final-check intent more clearly while preserving human-realistic prompts.
+- **Secondary agent descriptions are now more discriminative** —
+  `context-supervisor`, `data-integrity-reviewer`, `migration-safety-reviewer`,
+  and `ruby-gem-researcher` now state their boundaries more concretely instead
+  of relying on generic repo-wide keywords.
+- **Oversized orchestrators were slimmed down materially** —
+  `planning-orchestrator` and `workflow-orchestrator` now keep the state
+  machine and hard rules in the agent file while delegating bulky templates and
+  examples to playbooks.
+- **Deterministic eval results improved across the board** — all 23 shipped
+  agents now score `1.0`, and the hottest overlap pairs dropped materially:
+  `plan` vs `work` (`0.1739 -> 0.1209`), `review` vs `verify`
+  (`0.1717 -> 0.1319`), and `verify` vs `work` (`0.1648 -> 0.1059`).
+
 ## [1.6.0] - 2026-03-28
 
 ### Added

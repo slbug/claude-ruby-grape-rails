@@ -1,6 +1,6 @@
 ---
 name: migration-safety-reviewer
-description: Reviews database migrations for safety risks, missing constraints, and rollback safety. Use when migrations modify existing tables or add columns with defaults.
+description: Reviews Active Record or Sequel migrations for locking risk, rollback safety, indexes, and constraint gaps before deployment review.
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
 permissionMode: bypassPermissions

@@ -1,6 +1,6 @@
 ---
 name: data-integrity-reviewer
-description: Reviews migrations, models, and transactions for data integrity risks, constraint enforcement, rollback safety, and transaction boundaries. Use when data consistency is critical.
+description: Reviews Active Record or Sequel models, migrations, and transactions for data integrity risks, rollback safety, and constraint gaps during review.
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
 permissionMode: bypassPermissions

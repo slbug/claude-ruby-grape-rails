@@ -1,6 +1,6 @@
 ---
 name: rb:verify
-description: Run the project verification stack for Ruby/Rails/Grape work. Detects the project toolchain, prefers a repo-native composite verify wrapper when one exists, and otherwise uses the strongest available direct checks. Validates autoloading, linting, tests, security, and migrations.
+description: Use to verify completed code with the project's strongest check stack. Prefer a repo-native CI wrapper when present, otherwise run Zeitwerk, lint, tests, Brakeman, security, and migration checks.
 argument-hint: "[--quick|--full]"
 effort: low
 ---
