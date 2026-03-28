@@ -97,7 +97,7 @@ def _run_check(content: str, check: EvalCheck, skill_path: str) -> AssertionResu
 
 def score_skill(skill_path: str, eval_def: EvalDefinition | None = None) -> SubjectScore:
     path = Path(skill_path).resolve()
-    content = path.read_text()
+    content = path.read_text(encoding="utf-8")
     definition = eval_def or default_eval(str(path))
     dimensions: dict[str, DimensionResult] = {}
     total_weight = 0.0

@@ -19,7 +19,7 @@ def load_latest_baseline() -> dict:
     latest = BASELINES_DIR / "latest.json"
     if not latest.is_file():
         raise SystemExit("No baseline found. Run python3 -m lab.eval.baseline first.")
-    return json.loads(latest.read_text())
+    return json.loads(latest.read_text(encoding="utf-8"))
 
 
 def current_snapshot() -> dict:

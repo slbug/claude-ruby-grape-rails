@@ -39,7 +39,7 @@ def load_all_descriptions() -> dict[str, str]:
         skill_file = skill_dir / "SKILL.md"
         if not skill_file.is_file():
             continue
-        fm = parse_frontmatter(skill_file.read_text())
+        fm = parse_frontmatter(skill_file.read_text(encoding="utf-8"))
         descriptions[skill_dir.name] = str(fm.get("description", ""))
     return descriptions
 
@@ -48,7 +48,7 @@ def load_trigger_file(skill_name: str) -> dict[str, Any] | None:
     path = TRIGGERS_DIR / f"{skill_name}.json"
     if not path.is_file():
         return None
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def score_trigger_file(skill_name: str, data: dict[str, Any]) -> dict[str, Any]:
@@ -127,7 +127,7 @@ def score_all() -> dict[str, Any]:
     for path in sorted(TRIGGERS_DIR.glob("*.json")):
         if path.name.startswith("_"):
             continue
-        scores[path.stem] = score_trigger_file(path.stem, json.loads(path.read_text()))
+        scores[path.stem] = score_trigger_file(path.stem, json.loads(path.read_text(encoding="utf-8")))
     return {
         "skills": scores,
         "confusable_pairs": build_confusable_pairs(descriptions),

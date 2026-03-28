@@ -80,7 +80,7 @@ def _run_check(content: str, check_type: str, description: str, agent_path: str,
 
 def score_agent(agent_path: str, eval_def: EvalDefinition | None = None) -> SubjectScore:
     path = Path(agent_path).resolve()
-    content = path.read_text()
+    content = path.read_text(encoding="utf-8")
     definition = eval_def or default_eval(str(path))
     dimensions: dict[str, DimensionResult] = {}
     total_weight = 0.0

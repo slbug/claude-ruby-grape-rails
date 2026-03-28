@@ -117,7 +117,7 @@ import sys
 
 label = sys.argv[1]
 threshold = float(sys.argv[2])
-data = json.loads(Path(sys.argv[3]).read_text())
+data = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
 
 if not data:
     print(f"  No {label} scored.")
@@ -150,7 +150,7 @@ from pathlib import Path
 import sys
 
 threshold = float(sys.argv[1])
-payload = json.loads(Path(sys.argv[2]).read_text())
+payload = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 skills = payload.get("skills", {})
 pairs = payload.get("confusable_pairs", [])
 

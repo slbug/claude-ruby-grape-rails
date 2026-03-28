@@ -212,8 +212,8 @@ def _suite_checks(suite: str) -> tuple[CheckSpec, ...]:
 
 
 def score_fixture(spec: FixtureSpec) -> dict:
-    artifact = spec.artifact_path.read_text()
-    provenance = spec.provenance_path.read_text()
+    artifact = spec.artifact_path.read_text(encoding="utf-8")
+    provenance = spec.provenance_path.read_text(encoding="utf-8")
     checks = _suite_checks(spec.suite)
 
     assertions = []
