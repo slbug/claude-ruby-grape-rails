@@ -146,7 +146,12 @@ update_file() {
 
   # Generate content using Ruby
   local new_content
-  new_content=$(ruby "$RUBY_SCRIPT" "$content_type")
+  local ruby_exit=0
+  new_content=$(ruby "$RUBY_SCRIPT" "$content_type") || ruby_exit=$?
+  if [[ $ruby_exit -ne 0 ]]; then
+    log_error "Failed to generate content for type: $content_type (exit $ruby_exit)"
+    return 1
+  fi
   tmp_file=$(new_output_temp_file "$file") || return 1
 
   # Update file using Ruby, then move into place atomically.
@@ -213,7 +218,12 @@ update_judge_file() {
     return 1
   fi
 
-  judge_content=$(ruby "$RUBY_SCRIPT" judge)
+  local ruby_exit=0
+  judge_content=$(ruby "$RUBY_SCRIPT" judge) || ruby_exit=$?
+  if [[ $ruby_exit -ne 0 ]]; then
+    log_error "Failed to generate judge content (exit $ruby_exit)"
+    return 1
+  fi
   tmp_file=$(new_output_temp_file "$judge_file") || return 1
 
   if ! ruby -e '

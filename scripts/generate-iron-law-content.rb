@@ -38,6 +38,11 @@ def validate_entries!(yaml)
   errors = []
 
   yaml['categories'].each_with_index do |category, index|
+    unless category.is_a?(Hash)
+      errors << "category[#{index}] must be a mapping, got #{category.class}"
+      next
+    end
+
     missing = category_required.reject { |key| category[key] }
     next if missing.empty?
 
@@ -45,6 +50,11 @@ def validate_entries!(yaml)
   end
 
   yaml['laws'].each_with_index do |law, index|
+    unless law.is_a?(Hash)
+      errors << "law[#{index}] must be a mapping, got #{law.class}"
+      next
+    end
+
     missing = law_required.reject { |key| law[key] }
     errors << "law[#{index}] missing: #{missing.join(', ')}" unless missing.empty?
     next unless law.key?('category') && law['category']
