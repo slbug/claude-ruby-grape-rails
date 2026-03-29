@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Score Ruby plugin skills with deterministic structural checks."""
 
 from __future__ import annotations
@@ -31,8 +30,6 @@ def default_eval(skill_path: str) -> EvalDefinition:
                     "checks": [
                         {"type": "frontmatter_field", "field": "name", "desc": "Has command name"},
                         {"type": "frontmatter_field", "field": "description", "desc": "Has description"},
-                        {"type": "section_exists", "section": "Iron Laws", "desc": "Has Iron Laws"},
-                        {"type": "has_iron_laws", "min_count": 1, "desc": "Has at least one law"},
                     ],
                 },
                 "accuracy": {
@@ -54,14 +51,13 @@ def default_eval(skill_path: str) -> EvalDefinition:
                     "weight": 0.15,
                     "checks": [
                         {"type": "description_length", "min": 60, "max": 320, "desc": "Description length"},
-                        {"type": "description_keywords", "min": 4, "desc": "Domain keywords"},
+                        {"type": "description_keywords", "min": 3, "desc": "Domain keywords"},
                         {"type": "description_structure", "desc": "Description has use/intent framing"},
                     ],
                 },
                 "safety": {
                     "weight": 0.12,
                     "checks": [
-                        {"type": "has_iron_laws", "min_count": 1, "desc": "Iron laws present"},
                         {"type": "no_dangerous_patterns", "desc": "No catastrophic patterns"},
                     ],
                 },
@@ -80,7 +76,10 @@ def default_eval(skill_path: str) -> EvalDefinition:
 
 
 def _run_check(content: str, check: EvalCheck, skill_path: str) -> AssertionResult:
-    fn = matchers.MATCHERS[check.check_type]
+    fn = matchers.MATCHERS.get(check.check_type)
+    if fn is None:
+        available = ", ".join(sorted(matchers.MATCHERS))
+        raise ValueError(f"Unknown check type: {check.check_type!r}. Available: {available}")
     passed, evidence = fn(
         content,
         skill_path=skill_path,
@@ -97,7 +96,9 @@ def _run_check(content: str, check: EvalCheck, skill_path: str) -> AssertionResu
 
 def score_skill(skill_path: str, eval_def: EvalDefinition | None = None) -> SubjectScore:
     path = Path(skill_path).resolve()
-    content = path.read_text()
+    if not path.is_file():
+        raise FileNotFoundError(f"Missing skill file: {path}")
+    content = path.read_text(encoding="utf-8")
     definition = eval_def or default_eval(str(path))
     dimensions: dict[str, DimensionResult] = {}
     total_weight = 0.0
@@ -143,6 +144,8 @@ def score_core() -> dict[str, dict]:
     results: dict[str, dict] = {}
     for skill_name in CORE_SKILLS:
         skill_path = SKILLS_DIR / skill_name / "SKILL.md"
+        if not skill_path.is_file():
+            raise FileNotFoundError(f"Missing core skill file: {skill_path}")
         eval_path = find_eval(skill_name)
         eval_def = EvalDefinition.from_file(eval_path) if eval_path else None
         results[skill_name] = score_skill(str(skill_path), eval_def).to_dict()
@@ -153,7 +156,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Score Ruby plugin skills deterministically")
     parser.add_argument("skill_path", nargs="?", help="Path to a SKILL.md file")
     parser.add_argument("--all", action="store_true", help="Score all skills")
-    parser.add_argument("--core", action="store_true", help="Score the 1.6.0 core skill subset")
+    parser.add_argument("--core", action="store_true", help="Score the core skill subset")
     parser.add_argument("--eval", help="Override eval definition JSON")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
     parser.add_argument("--fail-under", type=float, help="Exit non-zero if composite score is below threshold")

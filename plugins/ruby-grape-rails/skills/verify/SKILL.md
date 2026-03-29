@@ -93,7 +93,9 @@ bundle exec rails zeitwerk:check
 ```
 
 Run this only when cached runtime state shows `FULL_RAILS_APP=true` or the repo
-clearly has `bin/rails`.
+clearly has a real Rails entrypoint (`bin/rails` or `script/rails`) or the
+standard runnable app layout (`config/application.rb`, `config/environment.rb`,
+`config/boot.rb`, `app/`, and `config/environments/`).
 
 **Purpose**: Verify all files can be autoloaded correctly.
 

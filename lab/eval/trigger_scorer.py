@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Validate and analyze deterministic trigger corpora."""
 
 from __future__ import annotations
@@ -39,7 +38,7 @@ def load_all_descriptions() -> dict[str, str]:
         skill_file = skill_dir / "SKILL.md"
         if not skill_file.is_file():
             continue
-        fm = parse_frontmatter(skill_file.read_text())
+        fm = parse_frontmatter(skill_file.read_text(encoding="utf-8"))
         descriptions[skill_dir.name] = str(fm.get("description", ""))
     return descriptions
 
@@ -48,7 +47,7 @@ def load_trigger_file(skill_name: str) -> dict[str, Any] | None:
     path = TRIGGERS_DIR / f"{skill_name}.json"
     if not path.is_file():
         return None
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def score_trigger_file(skill_name: str, data: dict[str, Any]) -> dict[str, Any]:
@@ -91,10 +90,10 @@ def score_trigger_file(skill_name: str, data: dict[str, Any]) -> dict[str, Any]:
 def build_confusable_pairs(descriptions: dict[str, str], limit: int = 10) -> list[dict[str, Any]]:
     bundle: dict[str, set[str]] = {}
     for skill, desc in descriptions.items():
-        if load_trigger_file(skill) is None:
+        data = load_trigger_file(skill)
+        if data is None:
             continue
         tokens = set(tokenize(desc))
-        data = load_trigger_file(skill) or {}
         for bucket in ("should_trigger", "hard_should_trigger"):
             for item in data.get(bucket, []):
                 tokens.update(tokenize(_extract_prompt(item)))
@@ -127,7 +126,7 @@ def score_all() -> dict[str, Any]:
     for path in sorted(TRIGGERS_DIR.glob("*.json")):
         if path.name.startswith("_"):
             continue
-        scores[path.stem] = score_trigger_file(path.stem, json.loads(path.read_text()))
+        scores[path.stem] = score_trigger_file(path.stem, json.loads(path.read_text(encoding="utf-8")))
     return {
         "skills": scores,
         "confusable_pairs": build_confusable_pairs(descriptions),

@@ -258,13 +258,16 @@ Last Updated: {YYYY-MM-DD}
 
 For high-impact research, verify the draft before final recommendation.
 
-Use `output-verifier` when the research will drive:
+Provenance is required when the research will drive:
 
 - a gem adoption or rejection decision
 - an upgrade plan
 - a security-sensitive recommendation
 - a version-specific implementation choice
 - a recommendation supported partly by T3 sources
+
+For informal "how do I do X?" research that does not drive a durable decision,
+provenance is optional.
 
 When you use it:
 
@@ -277,6 +280,10 @@ When you use it:
    - remove unsupported claims
    - soften weakly sourced claims
    - call out unresolved conflicts explicitly
+
+Use the shared provenance contract:
+
+- `../../references/output-verification/provenance-template.md`
 
 ## Reuse Rules
 

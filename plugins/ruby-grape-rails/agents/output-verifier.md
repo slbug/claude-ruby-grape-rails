@@ -64,35 +64,22 @@ For each important claim, identify:
 
 ### 4. Return a Verification Report
 
-Use this structure:
+Write the sidecar using the shared provenance contract in:
 
-```markdown
-## Verification Summary
+- `../references/output-verification/provenance-template.md`
 
-- Verified: {n}
-- Unsupported: {n}
-- Conflicts: {n}
-- Weakly sourced: {n}
+That means the sidecar should always include:
 
-## Claim Log
+- the verified artifact path
+- summary counts for verified / unsupported / conflicts / weak sourcing
+- a `Source Tiers` summary
+- a claim log with evidence lines
+- a `Required Fixes` section
 
-1. [VERIFIED] {claim}
-   - Evidence: {file path or URL} [T1]
-   - Notes: {why it holds}
+Prefer:
 
-2. [UNSUPPORTED] {claim}
-   - Evidence checked: {paths or URLs}
-   - Notes: {why it should be removed or softened}
-
-3. [CONFLICT] {claim}
-   - Source A: {URL/path} [T1]
-   - Source B: {URL/path} [T3]
-   - Notes: {what disagrees and which source is stronger}
-
-## Required Fixes
-
-- {claim to remove, soften, or re-cite}
-```
+- `file:line` evidence for review findings proven directly by local code
+- URL + source tier evidence for research claims
 
 ## Rules
 

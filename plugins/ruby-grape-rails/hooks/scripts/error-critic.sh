@@ -2,13 +2,24 @@
 set -o nounset
 set -o pipefail
 
-command -v jq >/dev/null 2>&1 || exit 0
+HOOK_NAME="${BASH_SOURCE[0]##*/}"
+
+emit_missing_dependency_block() {
+  local dependency="$1"
+
+  echo "BLOCKED: ${HOOK_NAME} cannot inspect the hook payload because ${dependency} is unavailable." >&2
+  echo "Install the missing dependency or disable the hook explicitly before continuing." >&2
+  exit 2
+}
+
+command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
-[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
-INPUT=$(read_hook_input)
+read_hook_input
+INPUT="$HOOK_INPUT_VALUE"
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 CLAUDE_DIR="${REPO_ROOT}/.claude"
@@ -23,6 +34,11 @@ case "$COMMAND" in
   *"bundle exec rspec"*|*"rails test"*|*"zeitwerk:check"*|*"rubocop"*|*"standardrb"*|*"brakeman"*|*"db:migrate"*) ;;
   *) exit 0 ;;
 esac
+
+emit_error_critic_temp_warning() {
+  echo "WARNING: ${HOOK_NAME} skipped failure-loop analysis because a temporary file could not be created." >&2
+  exit 0
+}
 
 SESSION_KEY=$(printf '%s' "$SESSION_ID" | tr -c '[:alnum:]_-' '_')
 CMD_KEY=$(printf '%s' "$COMMAND" | cksum | awk '{print $1}')
@@ -65,9 +81,9 @@ if [[ -f "$COUNT_FILE" ]]; then
 else
   COUNT=1
 fi
-TMP_COUNT=$(mktemp "${FAILURE_DIR}/count.XXXXXX") || exit 0
-[[ -n "$TMP_COUNT" ]] || exit 0
-[[ "$TMP_COUNT" == "${FAILURE_DIR}/count."* ]] || exit 0
+TMP_COUNT=$(mktemp "${FAILURE_DIR}/count.XXXXXX") || emit_error_critic_temp_warning
+[[ -n "$TMP_COUNT" ]] || emit_error_critic_temp_warning
+[[ "$TMP_COUNT" == "${FAILURE_DIR}/count."* ]] || emit_error_critic_temp_warning
 printf '%s\n' "$COUNT" > "$TMP_COUNT" || exit 0
 mv -f -- "$TMP_COUNT" "$COUNT_FILE" || exit 0
 TMP_COUNT=""
@@ -79,9 +95,9 @@ TMP_COUNT=""
   echo
 } >> "$FAILURE_LOG"
 
-TRIMMED_LOG=$(mktemp "${FAILURE_DIR}/trimmed.XXXXXX") || exit 0
-[[ -n "$TRIMMED_LOG" ]] || exit 0
-[[ "$TRIMMED_LOG" == "${FAILURE_DIR}/trimmed."* ]] || exit 0
+TRIMMED_LOG=$(mktemp "${FAILURE_DIR}/trimmed.XXXXXX") || emit_error_critic_temp_warning
+[[ -n "$TRIMMED_LOG" ]] || emit_error_critic_temp_warning
+[[ "$TRIMMED_LOG" == "${FAILURE_DIR}/trimmed."* ]] || emit_error_critic_temp_warning
 tail -100 "$FAILURE_LOG" > "$TRIMMED_LOG" || exit 0
 mv -f -- "$TRIMMED_LOG" "$FAILURE_LOG" || exit 0
 TRIMMED_LOG=""

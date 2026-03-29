@@ -52,7 +52,7 @@ class EvalDefinition:
 
     @classmethod
     def from_file(cls, path: str | Path) -> "EvalDefinition":
-        return cls.from_dict(json.loads(Path(path).read_text()))
+        return cls.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
 
 
 @dataclass

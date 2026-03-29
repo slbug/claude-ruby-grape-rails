@@ -45,6 +45,7 @@ fi
 CLAUDE_DIR="${REPO_ROOT}/.claude"
 PLANS_DIR="${CLAUDE_DIR}/plans"
 ACTIVE_PLAN_MARKER="${CLAUDE_DIR}/ACTIVE_PLAN"
+MARKDOWN_UNCHECKED_TASK_PATTERN='^[[:space:]]*([-*+]|[0-9]+\.)[[:space:]]+\[ \]'
 
 resolve_plan_dir() {
   local plan_dir="$1"
@@ -73,10 +74,10 @@ is_valid_plan_dir() {
 get_file_mtime() {
   local file="$1"
 
-  if stat -f '%m' "$file" >/dev/null 2>&1; then
-    stat -f '%m' "$file"
-  else
+  if stat -c '%Y' "$file" >/dev/null 2>&1; then
     stat -c '%Y' "$file"
+  else
+    stat -f '%m' "$file"
   fi
 }
 
@@ -110,6 +111,13 @@ get_planning_activity_mtime() {
   printf '%s\n' "$newest_mtime"
 }
 
+plan_has_unchecked_tasks() {
+  local plan_file="$1"
+
+  [[ -f "$plan_file" && ! -L "$plan_file" ]] || return 1
+  grep -qE -- "$MARKDOWN_UNCHECKED_TASK_PATTERN" "$plan_file" 2>/dev/null
+}
+
 # Get the active plan directory
 # Returns: path to active plan directory, or empty if none
 get_active_plan() {
@@ -136,7 +144,7 @@ get_active_plan() {
         fi
 
         # Check if plan.md exists with unchecked tasks (work phase)
-        if [[ -f "$marked_plan/plan.md" ]] && grep -q '^\- \[ \]' "$marked_plan/plan.md" 2>/dev/null; then
+        if plan_has_unchecked_tasks "$marked_plan/plan.md"; then
           echo "$marked_plan"
           return 0
         fi
@@ -162,7 +170,7 @@ get_active_plan() {
   for plan_file in "${PLANS_DIR}"/*/plan.md; do
     [[ -f "$plan_file" ]] || continue
     [[ ! -L "$plan_file" ]] || continue
-    grep -q -- '^\- \[ \]' "$plan_file" 2>/dev/null || continue
+    plan_has_unchecked_tasks "$plan_file" || continue
 
     plan_mtime=$(get_file_mtime "$plan_file" 2>/dev/null || echo 0)
     if [[ "$plan_mtime" -gt "$newest_mtime" ]]; then

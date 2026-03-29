@@ -60,28 +60,36 @@ verify:
 
 ```bash
 #!/bin/bash
-# .git/hooks/pre-commit
+# .husky/pre-commit.bash
 
 echo "Running pre-commit verification..."
 
-# Stash unstaged changes
-git stash -q --keep-index
+created_stash=false
+if ! git diff --quiet -- .; then
+  git stash push -q --keep-index -m pre-commit-verify
+  created_stash=true
+fi
+
+restore_stash() {
+  if [ "$created_stash" = true ]; then
+    git stash pop -q
+  fi
+}
+trap restore_stash EXIT
 
 # Run checks
 if ! bundle exec standardrb --format quiet; then
   echo "❌ Linting failed. Run: bundle exec standardrb --fix"
-  git stash pop -q
   exit 1
 fi
 
 if ! bundle exec rails zeitwerk:check > /dev/null 2>&1; then
   echo "❌ Zeitwerk check failed"
-  git stash pop -q
   exit 1
 fi
 
-# Restore stashed changes
-git stash pop -q
+trap - EXIT
+restore_stash
 
 echo "✅ Pre-commit checks passed"
 exit 0

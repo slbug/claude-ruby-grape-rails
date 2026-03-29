@@ -181,27 +181,28 @@ The plugin automatically prefers runtime tooling tools over alternatives when av
 
 The plugin uses **layered enforcement** — some things run automatically, some depend on Claude following instructions, some are on-demand. Here's what actually happens:
 
-### Layer 1: Hooks (Automatic, Every Edit)
+### Layer 1: Hooks (Automatic and Hook-Driven)
 
 [Claude Code hooks](https://docs.anthropic.com/en/docs/claude-code/hooks) run shell scripts automatically after tool use. These are real automation — no instructions needed:
 
 | Hook | Trigger | What It Does |
 |------|---------|-------------|
-| Dangerous ops block | Before Bash command | Blocks `bin/rails db:reset/drop`, `git push --force`, `RAILS_ENV=prod` |
+| Dangerous ops block | Before Bash command | Blocks destructive DB commands like `rails db:drop`, `bin/rails db:reset`, `bundle exec rails db:purge`, `rake db:drop`, `bin/rake db:reset`, and `bundle exec rake db:purge`, plus equivalent `bundle exec bin/...` and env-prefixed forms; also blocks `git push --force` and `RAILS_ENV=prod` |
 | Format check | Every `.rb` edit | Auto-fixes with StandardRB (if configured) or RuboCop |
 | Iron Law verifier | Every `.rb` edit | Scans code content for Iron Law violations with line numbers |
-| Debug stmt warning | Every `.rb` edit | Warns about `puts`/`debugger`/`p` in production code |
+| Debug stmt warning | Ruby-ish app file edits | Warns about `puts`/`debugger`/`p` in production code, excluding `spec/`, `test/`, and repo script directories |
 | Security reminder | Editing auth/session/password files | Outputs relevant Iron Laws via stderr + exit 2 |
 | Progress logging | Every file edit | Appends to `.claude/plans/{slug}/progress.md` (async) |
 | Failure hints | Bash command fails | Injects debugging hints via `additionalContext` |
 | Error critic | Repeated test failures | Escalates to structured critic analysis after 3+ failures |
 | Iron Laws injection | Any subagent spawns | Injects all 21 Iron Laws into subagents via `additionalContext` |
-| PreCompact rules | Before context compaction | Re-injects workflow rules via JSON `systemMessage` |
+| PreCompact rules | Before context compaction | Warns about the active workflow phase and what to re-read after compaction |
 
 Format check **auto-fixes** — runs `standardrb --fix` when StandardRB is configured, otherwise `rubocop -a`.
 
-The PreCompact hook detects active workflow phases (`/rb:plan`, `/rb:work`, `/rb:full`) and re-injects their critical rules
-before context compaction. This prevents "rule amnesia" where Claude loses behavioral constraints after context is compressed.
+The PreCompact hook detects active workflow phases (`/rb:plan`, `/rb:work`, `/rb:full`) and emits a user-facing reminder
+before compaction so the next turn re-reads the right plan artifacts. PostCompact then reinforces those re-read steps after
+context is compressed.
 
 Note: `verify-ruby.sh` runs `ruby -c` syntax checks on Ruby files. Verification commands
 (`/rb:verify`, `/rb:full`) run full checks including format, tests, and Rails-specific validations
@@ -280,8 +281,8 @@ Being honest about the gaps:
 
 | Check | Status | Why |
 |-------|--------|-----|
-| Ruby syntax check | PostToolUse hook on Edit/Write | `verify-ruby.sh` runs `ruby -c` on Ruby files |
-| Format check (StandardRB/RuboCop) | PostToolUse hook on Edit/Write | Auto-fixes with StandardRB when configured, else RuboCop |
+| Ruby syntax check | PostToolUse Edit/Write via `rubyish-post-edit.sh` | `verify-ruby.sh` runs `ruby -c` on Ruby files |
+| Format check (StandardRB/RuboCop) | PostToolUse Edit/Write via `rubyish-post-edit.sh` | Auto-fixes with StandardRB when configured, else RuboCop |
 | Full verification | `/rb:verify`, `/rb:full` VERIFYING phase | Includes format, tests, and Rails-specific checks (zeitwerk:check for Rails) |
 | `bundle exec rspec` | `/rb:full` VERIFYING phase + on-demand (`/rb:verify`) | Not run per-task, only between phases |
 | Type checking (Steep/Sorbet) | On-demand (`/rb:verify`) | Takes minutes, not seconds |

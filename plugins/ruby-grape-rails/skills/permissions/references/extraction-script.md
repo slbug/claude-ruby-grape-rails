@@ -12,19 +12,34 @@ Optional machine-readable output:
 ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 14 --json
 ```
 
+Other useful flags:
+
+```bash
+ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 30 --limit 50 --repo-only
+```
+
 Validation rules:
 
 - `--days` must be `0` or greater.
 - `--limit` must be greater than `0`.
+- `--repo-only` ignores `~/.claude/settings.json`.
+- `--dry-run` is accepted for skill parity; the extractor is read-only either
+  way.
 
 ## What It Scans
 
 - Claude session JSONL files for the current repo only:
   `~/.claude/projects/{project-slug}/*.jsonl`
+- Repo scope resolved from the current git root when available, otherwise from
+  repo-local markers such as:
+  - `.claude/settings.json`
+  - `.claude/settings.local.json`
+  - `Gemfile`
 - Current permissions from:
   - `~/.claude/settings.json`
   - `.claude/settings.json`
   - `.claude/settings.local.json`
+  - or only repo-local settings when `--repo-only` is set
 
 ## What It Reports
 
@@ -35,6 +50,7 @@ Validation rules:
 - deprecated `Bash(name:*)` patterns that should be rewritten
 - obvious garbage permission entries
 - duplicate permission entries
+- scan truncation metadata when large session windows are capped
 
 ## Output Notes
 
@@ -43,6 +59,10 @@ Validation rules:
   candidates; they should stay manually approved or denied.
 - Grouping is heuristic and aimed at useful permission patterns, not exact
   command reconstruction.
+- Large session windows are capped by default to the newest `200` session files
+  and `10000` lines per file. Override with:
+  - `RUBY_PLUGIN_PERMISSIONS_MAX_SESSION_FILES`
+  - `RUBY_PLUGIN_PERMISSIONS_MAX_LINES_PER_FILE`
 
 Use the extractor output as evidence, then classify the groups with
 `risk-classification.md` before proposing settings changes.

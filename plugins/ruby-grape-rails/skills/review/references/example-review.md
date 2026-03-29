@@ -68,12 +68,4 @@ end
 | 2 | Missing rate limiting | WARNING | security-analyzer | magic_links_controller.rb | Yes |
 | 3 | No expired token test | WARNING | testing-reviewer | magic_token_spec.rb | Yes |
 
-## Next Steps
-
-How would you like to proceed?
-
-- `/rb:triage .claude/reviews/{review-slug}.md` — Select findings and create a fix plan
-- `/rb:work .claude/plans/magic-link-auth/plan.md` — Fix directly
-- I'll handle it myself
-
 ```

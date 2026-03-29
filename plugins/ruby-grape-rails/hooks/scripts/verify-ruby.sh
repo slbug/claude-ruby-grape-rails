@@ -2,14 +2,33 @@
 set -o nounset
 set -o pipefail
 
-command -v jq >/dev/null 2>&1 || exit 0
-command -v ruby >/dev/null 2>&1 || exit 0
+HOOK_NAME="${BASH_SOURCE[0]##*/}"
+
+emit_missing_dependency_block() {
+  local dependency="$1"
+
+  echo "BLOCKED: ${HOOK_NAME} cannot inspect the hook payload because ${dependency} is unavailable." >&2
+  echo "Install the missing dependency or disable the hook explicitly before continuing." >&2
+  exit 2
+}
+
+command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
-[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
-INPUT=$(read_hook_input)
+read_hook_input
+INPUT="$HOOK_INPUT_VALUE"
+if [[ -z "$INPUT" ]]; then
+  case "${HOOK_INPUT_STATUS:-empty}" in
+    truncated|invalid)
+      echo "BLOCKED: ${HOOK_NAME} could not safely inspect a ${HOOK_INPUT_STATUS} hook payload." >&2
+      echo "Fix the hook input before retrying automatic Ruby verification." >&2
+      exit 2
+      ;;
+  esac
+fi
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 
@@ -22,11 +41,30 @@ is_path_within_root "$REPO_ROOT" "$FILE_PATH" || exit 0
 
 BASE_NAME=$(path_basename "$FILE_PATH")
 
+emit_tempfile_failure_warning() {
+  echo "⚠️  Ruby syntax verification skipped for ${FILE_PATH} because a temporary file could not be created." >&2
+  echo "Fix TMPDIR permissions or disk space to restore automatic Ruby verification." >&2
+}
+
 case "$BASE_NAME" in
   *.rb|*.rake|Gemfile|Rakefile|config.ru)
-    TMP_OUTPUT=$(mktemp "${TMPDIR:-/tmp}/rb-verify.XXXXXX") || exit 0
-    [[ -n "$TMP_OUTPUT" ]] || exit 0
-    [[ "$TMP_OUTPUT" == "${TMPDIR:-/tmp}/rb-verify."* ]] || exit 0
+    if ! command -v ruby >/dev/null 2>&1; then
+      echo "⚠️  Ruby syntax check skipped for ${FILE_PATH} because ruby is not available." >&2
+      echo "Install Ruby to restore automatic syntax verification." >&2
+      exit 2
+    fi
+    TMP_OUTPUT=$(mktemp "${TMPDIR:-/tmp}/rb-verify.XXXXXX") || {
+      emit_tempfile_failure_warning
+      exit 2
+    }
+    [[ -n "$TMP_OUTPUT" ]] || {
+      emit_tempfile_failure_warning
+      exit 2
+    }
+    [[ "$TMP_OUTPUT" == "${TMPDIR:-/tmp}/rb-verify."* ]] || {
+      emit_tempfile_failure_warning
+      exit 2
+    }
 
     cleanup() {
       safe_remove_temp_file "${TMP_OUTPUT:-}" "${TMPDIR:-/tmp}/rb-verify.*" || true

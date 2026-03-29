@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Score Ruby plugin agents with deterministic structural checks."""
 
 from __future__ import annotations
@@ -73,14 +72,21 @@ def _run_check(content: str, check_type: str, description: str, agent_path: str,
     if check_type in agent_matchers.MATCHERS:
         fn = agent_matchers.MATCHERS[check_type]
     else:
-        fn = matchers.MATCHERS[check_type]
+        fn = matchers.MATCHERS.get(check_type)
+        if fn is None:
+            available = ", ".join(sorted(set(agent_matchers.MATCHERS) | set(matchers.MATCHERS)))
+            raise ValueError(f"Unknown check type: {check_type!r}. Available: {available}")
     passed, evidence = fn(content, skill_path=agent_path, plugin_root=str(PLUGIN_ROOT), **params)
     return AssertionResult(check_type=check_type, description=description, passed=bool(passed), evidence=evidence)
 
 
 def score_agent(agent_path: str, eval_def: EvalDefinition | None = None) -> SubjectScore:
     path = Path(agent_path).resolve()
-    content = path.read_text()
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"Agent file not found: {path}. This file may have been moved or deleted."
+        )
+    content = path.read_text(encoding="utf-8")
     definition = eval_def or default_eval(str(path))
     dimensions: dict[str, DimensionResult] = {}
     total_weight = 0.0

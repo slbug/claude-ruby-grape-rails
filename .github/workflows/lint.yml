@@ -1,4 +1,4 @@
-name: Lint
+name: Lint and Eval
 
 on:
   push:
@@ -51,7 +51,55 @@ jobs:
 
       - name: Validate JSON files
         run: |
-          for file in $(find . -name "*.json" -not -path "./node_modules/*"); do
+          git ls-files -z '*.json' | while IFS= read -r -d '' file; do
             echo "Validating $file"
             python3 -m json.tool "$file" > /dev/null
           done
+
+  eval-tests:
+    name: Eval Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run eval tests
+        run: npm run eval:test
+
+  eval-ci:
+    name: Eval CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run eval CI gate
+        run: npm run eval:ci

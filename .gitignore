@@ -26,10 +26,8 @@ __pycache__/
 !.claude/agents/
 !.claude/commands/
 !.claude/skills/
-.claude/skills/analyze-sessions/references/session-index.json
+!.claude/conventions.md
 .claude/docs-check/  # Runtime artifacts (docs-cache, reports, summaries)
 scratchpad/
 
 .opencode/
-
-/lab/eval/.last-eval-commit

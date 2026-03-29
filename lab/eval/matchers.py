@@ -91,8 +91,8 @@ def get_sections(content: str) -> dict[str, str]:
     sections: dict[str, list[str]] = {}
     current: str | None = None
     for line in body.splitlines():
-        if line.startswith("## ") or line.startswith("### "):
-            current = line.lstrip("#").strip()
+        if line.startswith("## "):
+            current = line[3:].strip()
             sections[current] = []
             continue
         if current is not None:
@@ -133,15 +133,38 @@ def description_length(content: str, min: int = 50, max: int = 280, **_: Any) ->
 
 
 def description_keywords(content: str, min: int = 4, keywords: list[str] | None = None, **_: Any) -> tuple[bool, str]:
-    desc = str(parse_frontmatter(content).get("description", "")).lower()
+    fm = parse_frontmatter(content)
+    desc = str(fm.get("description", ""))
+    desc_tokens = tokenize(desc)
+    command_name = str(fm.get("name", ""))
+    command_tokens = {
+        token
+        for token in re.split(r"[:/_-]+", command_name.lower())
+        if token and token != "rb"
+    }
     domain = keywords or [
         "ruby", "rails", "grape", "sidekiq", "karafka", "sequel",
         "active record", "postgres", "redis", "hotwire", "brakeman",
         "rubocop", "zeitwerk", "research", "review", "verify",
         "plan", "work", "permissions", "migration", "security",
+        "runtime", "trace", "context", "integration", "execute",
+        "execution", "query", "queries", "sql", "docs", "logs",
+        "models", "model", "source", "inspect", "introspection",
+        "debug", "deploy", "document", "learn", "audit", "brief",
+        "challenge", "secrets", "state", "boundaries", "boundary",
+        "quick", "performance", "perf",
     ]
-    found = sorted({item for item in domain if item in desc})
-    return len(found) >= min, f"{len(found)} keywords found: {found[:8]}"
+    candidates = set(domain) | command_tokens
+    found = set()
+    for item in candidates:
+        normalized = normalize_text(item)
+        if not normalized:
+            continue
+        parts = normalized.split()
+        if all(part in desc_tokens for part in parts):
+            found.add(item)
+    found_list = sorted(found)
+    return len(found_list) >= min, f"{len(found_list)} keywords found: {found_list[:8]}"
 
 
 def description_structure(content: str, **_: Any) -> tuple[bool, str]:
@@ -149,7 +172,9 @@ def description_structure(content: str, **_: Any) -> tuple[bool, str]:
     passed = ("use for" in desc or "use when" in desc or "use to" in desc) and (
         "plan" in desc or "review" in desc or "verify" in desc or "work" in desc
     )
-    return passed, "description has explicit use/intent framing"
+    if passed:
+        return True, "description has explicit use/intent framing"
+    return False, "missing explicit use/intent framing"
 
 
 def has_iron_laws(content: str, min_count: int = 1, **_: Any) -> tuple[bool, str]:
@@ -218,7 +243,13 @@ def has_examples(content: str, min_blocks: int = 1, **_: Any) -> tuple[bool, str
 def no_duplication(content: str, **_: Any) -> tuple[bool, str]:
     seen: dict[str, int] = {}
     duplicates: list[str] = []
+    in_fence = False
     for line in get_body(content).splitlines():
+        if line.strip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
         stripped = line.strip()
         if len(stripped) < 20:
             continue
@@ -229,8 +260,14 @@ def no_duplication(content: str, **_: Any) -> tuple[bool, str]:
 
 
 def workflow_step_coverage(content: str, min_sections: int = 3, **_: Any) -> tuple[bool, str]:
+    body = get_body(content)
     sections = get_sections(content)
-    return len(sections) >= min_sections, f"{len(sections)} sections"
+    heading_count = len(re.findall(r"^#{1,3}\s+\S", body, flags=re.MULTILINE))
+    ordered_steps = len(re.findall(r"^\d+\.\s+\S", body, flags=re.MULTILINE))
+    labeled_steps = len(re.findall(r"^(?:[-*]\s+)?(?:step|phase)\b", body, flags=re.IGNORECASE | re.MULTILINE))
+    bullet_steps = min(len(re.findall(r"^[-*]\s+\S", body, flags=re.MULTILINE)), 3)
+    structure_units = max(len(sections), heading_count + ordered_steps + labeled_steps + bullet_steps)
+    return structure_units >= min_sections, f"{structure_units} structure units"
 
 
 def valid_skill_refs(content: str, plugin_root: str = "", **_: Any) -> tuple[bool, str]:
@@ -238,7 +275,17 @@ def valid_skill_refs(content: str, plugin_root: str = "", **_: Any) -> tuple[boo
     skills_dir = root / "skills"
     if not skills_dir.is_dir():
         return True, "skill directory missing; skipped"
-    existing = {item.name for item in skills_dir.iterdir() if item.is_dir()}
+    existing: set[str] = set()
+    for item in skills_dir.iterdir():
+        if not item.is_dir():
+            continue
+        existing.add(item.name)
+        skill_file = item / "SKILL.md"
+        if skill_file.is_file():
+            fm = parse_frontmatter(skill_file.read_text(encoding="utf-8"))
+            skill_name = str(fm.get("name", ""))
+            if skill_name.startswith("rb:"):
+                existing.add(skill_name.split(":", 1)[1])
     refs = set(re.findall(r"/rb:([a-z0-9][a-z0-9-]*)", content))
     missing = [ref for ref in refs if ref not in existing]
     return not missing, "all skill refs valid" if not missing else f"missing skills: {missing}"

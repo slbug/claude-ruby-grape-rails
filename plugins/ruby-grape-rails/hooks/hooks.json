@@ -37,92 +37,32 @@
           {
             "type": "command",
             "if": "Edit(*.rb)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "timeout": 45
           },
           {
             "type": "command",
             "if": "Edit(*.rake)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "timeout": 45
           },
           {
             "type": "command",
             "if": "Edit(*Gemfile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "timeout": 45
           },
           {
             "type": "command",
             "if": "Edit(*Rakefile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "timeout": 45
           },
           {
             "type": "command",
             "if": "Edit(*config.ru)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "Edit(*.rb)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "Edit(*.rake)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "Edit(*Gemfile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "Edit(*Rakefile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "Edit(*config.ru)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "Edit(*.rb)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "if": "Edit(*.rake)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "if": "Edit(*Gemfile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "if": "Edit(*Rakefile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "if": "Edit(*config.ru)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "timeout": 45
           }
         ]
       },
@@ -132,92 +72,32 @@
           {
             "type": "command",
             "if": "Write(*.rb)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "timeout": 45
           },
           {
             "type": "command",
             "if": "Write(*.rake)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "timeout": 45
           },
           {
             "type": "command",
             "if": "Write(*Gemfile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "timeout": 45
           },
           {
             "type": "command",
             "if": "Write(*Rakefile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "timeout": 45
           },
           {
             "type": "command",
             "if": "Write(*config.ru)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/format-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "Write(*.rb)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "Write(*.rake)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "Write(*Gemfile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "Write(*Rakefile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "Write(*config.ru)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/verify-ruby.sh",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "if": "Write(*.rb)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "if": "Write(*.rake)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "if": "Write(*Gemfile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "if": "Write(*Rakefile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "if": "Write(*config.ru)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/debug-statement-warning.sh",
-            "timeout": 15
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "timeout": 45
           }
         ]
       }

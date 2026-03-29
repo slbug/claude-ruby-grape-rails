@@ -84,7 +84,7 @@ Tasks annotated `[direct]` are simple and don't need a specialist:
 - **Simple wiring**: Adding routes, requires, includes
 - **File operations**: Moving, renaming, or deleting files
 
-Implement these directly without spawning a Task agent. Run
+Implement these directly without spawning a specialist via `Agent(...)`. Run
 verification (syntax check + format) after each one.
 
 ## Parallel Task Execution
@@ -113,21 +113,21 @@ Tasks are parallelizable if they:
 
 ### Spawning Pattern
 
-Spawn ALL parallel tasks in ONE message using the Task tool:
+Spawn ALL parallel tasks in ONE message using `Agent(...)`:
 
 ```
-Task({
+Agent(
+  subagent_type: "general-purpose",
   description: "Implement P2-T1",
   prompt: "Implement P2-T1: Add currency/area unit selectors to
     occupier deal form at app/.../occupier_deal/.../details_form.rb.
-    [full task context here]",
-  subagent_type: "general-purpose"
-})
-Task({
+    [full task context here]"
+)
+Agent(
+  subagent_type: "general-purpose",
   description: "Implement P2-T2",
-  prompt: "Implement P2-T2: Add selectors to landlord deal form...",
-  subagent_type: "general-purpose"
-})
+  prompt: "Implement P2-T2: Add selectors to landlord deal form..."
+)
 // ... one per parallel task
 ```
 

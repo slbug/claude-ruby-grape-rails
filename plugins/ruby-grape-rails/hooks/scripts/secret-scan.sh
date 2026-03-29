@@ -8,13 +8,24 @@ set -o pipefail
 # Hook input: JSON via stdin with .tool_input.file_path
 # Exit 2 with stderr message to surface warning to Claude
 
-command -v jq >/dev/null 2>&1 || exit 0
+HOOK_NAME="${BASH_SOURCE[0]##*/}"
+
+emit_missing_dependency_block() {
+  local dependency="$1"
+
+  echo "BLOCKED: ${HOOK_NAME} cannot inspect the hook payload because ${dependency} is unavailable." >&2
+  echo "Install the missing dependency or disable the hook explicitly before continuing." >&2
+  exit 2
+}
+
+command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
-[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
-INPUT=$(read_hook_input)
+read_hook_input
+INPUT="$HOOK_INPUT_VALUE"
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 HOOK_MODE=$(resolve_hook_mode "$REPO_ROOT")
@@ -35,6 +46,8 @@ BETTERLEAKS_PATH="${BETTERLEAKS_PATH:-}"
 if [[ -z "$BETTERLEAKS_PATH" ]] && command -v betterleaks >/dev/null 2>&1; then
   BETTERLEAKS_PATH=$(command -v betterleaks)
 fi
+BETTERLEAKS_RESULT=""
+BETTERLEAKS_ERROR=""
 
 emit_missing_betterleaks_warning() {
   local target="$1"
@@ -84,12 +97,69 @@ emit_secret_warning() {
   echo "To ignore: add '#betterleaks:allow' comment to the line" >&2
 }
 
+emit_scanner_failure_warning() {
+  local target="$1"
+  local status="$2"
+  local err_preview="$3"
+
+  echo "⚠️  Betterleaks failed while scanning ${target} (exit ${status})." >&2
+  if [[ -n "$err_preview" ]]; then
+    printf 'Scanner output:\n%s\n' "$err_preview" >&2
+  fi
+}
+
 emit_truncation_warning() {
   local source_label="$1"
   local limit="$2"
 
   echo "⚠️  Strict secret scan truncated after ${limit} files from ${source_label}" >&2
   echo "Run betterleaks manually for full coverage if needed." >&2
+}
+
+emit_scan_setup_failure_warning() {
+  local target="$1"
+
+  echo "⚠️  Betterleaks setup failed for ${target}; secret scan could not create a temporary workspace." >&2
+  echo "Fix TMPDIR permissions or disk space to restore secret scanning." >&2
+}
+
+new_secret_scan_tmpdir() {
+  local tmp_dir
+
+  tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/rb-secret-scan.XXXXXX") || return 1
+  [[ -n "$tmp_dir" ]] || return 1
+  [[ "$tmp_dir" == "${TMPDIR:-/tmp}/rb-secret-scan."* ]] || return 1
+
+  printf '%s\n' "$tmp_dir"
+}
+
+run_betterleaks_dir() {
+  local target_dir="$1"
+  local result_file
+  local err_file
+  local status
+
+  result_file=$(mktemp "${TMPDIR:-/tmp}/rb-secret-scan.result.XXXXXX") || return 1
+  err_file=$(mktemp "${TMPDIR:-/tmp}/rb-secret-scan.err.XXXXXX") || {
+    rm -f -- "$result_file"
+    return 1
+  }
+
+  BETTERLEAKS_RESULT=""
+  BETTERLEAKS_ERROR=""
+
+  "$BETTERLEAKS_PATH" dir "$target_dir" --no-banner --redact=100 >"$result_file" 2>"$err_file"
+  status=$?
+  BETTERLEAKS_RESULT=$(cat "$result_file" 2>/dev/null || true)
+  BETTERLEAKS_ERROR=$(sed -n '1,5p' "$err_file" 2>/dev/null || true)
+
+  if [[ -n "$BETTERLEAKS_RESULT" || "$status" -eq 0 ]]; then
+    rm -f -- "$result_file" "$err_file"
+    return 0
+  fi
+
+  rm -f -- "$result_file" "$err_file"
+  return "$status"
 }
 
 copy_into_tmpdir() {
@@ -146,9 +216,10 @@ if [[ -z "$FILE_PATH" ]]; then
   [[ "$HOOK_MODE" == "strict" ]] || exit 0
 
   if (cd "$REPO_ROOT" && git rev-parse --git-dir >/dev/null 2>&1); then
-    TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/rb-secret-scan.XXXXXX") || exit 0
-    [[ -n "$TMP_DIR" ]] || exit 0
-    [[ "$TMP_DIR" == "${TMPDIR:-/tmp}/rb-secret-scan."* ]] || exit 0
+    TMP_DIR=$(new_secret_scan_tmpdir) || {
+      emit_scan_setup_failure_warning "recent changes"
+      exit 2
+    }
 
     # shellcheck disable=SC2329 # invoked via trap
     cleanup_secret_scan_tmpdir() {
@@ -157,15 +228,26 @@ if [[ -z "$FILE_PATH" ]]; then
     trap cleanup_secret_scan_tmpdir EXIT HUP INT TERM
 
     if (cd "$REPO_ROOT" && git rev-parse --verify HEAD >/dev/null 2>&1); then
-      copy_strict_scan_input "$TMP_DIR" "changed files" < <(cd "$REPO_ROOT" && git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null)
+      copy_strict_scan_input "$TMP_DIR" "changed and untracked files" < <(
+        cd "$REPO_ROOT" && {
+          git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null
+          git ls-files --others --exclude-standard 2>/dev/null
+        } | awk 'NF && !seen[$0]++'
+      )
     else
-      copy_strict_scan_input "$TMP_DIR" "tracked files" < <(cd "$REPO_ROOT" && git ls-files 2>/dev/null)
+      copy_strict_scan_input "$TMP_DIR" "tracked and untracked files" < <(
+        cd "$REPO_ROOT" && git ls-files --cached --others --exclude-standard 2>/dev/null | awk 'NF && !seen[$0]++'
+      )
     fi
 
     if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
-      RESULT=$("$BETTERLEAKS_PATH" dir "$TMP_DIR" --no-banner --redact=100 2>/dev/null || true)
-      if [[ -n "$RESULT" ]]; then
-        emit_secret_warning "recent changes" "$RESULT"
+      if run_betterleaks_dir "$TMP_DIR"; then
+        if [[ -n "$BETTERLEAKS_RESULT" ]]; then
+          emit_secret_warning "recent changes" "$BETTERLEAKS_RESULT"
+          exit 2
+        fi
+      else
+        emit_scanner_failure_warning "recent changes" "$?" "$BETTERLEAKS_ERROR"
         exit 2
       fi
     fi
@@ -176,10 +258,33 @@ else
   fi
 
   if [[ -f "$FILE_PATH" && ! -L "$FILE_PATH" ]] && is_path_within_root "$REPO_ROOT" "$FILE_PATH"; then
-    RESULT=$("$BETTERLEAKS_PATH" dir "$FILE_PATH" --no-banner --redact=100 2>/dev/null || true)
-    if [[ -n "$RESULT" ]]; then
-      emit_secret_warning "$FILE_PATH" "$RESULT"
+    TMP_DIR=$(new_secret_scan_tmpdir) || {
+      emit_scan_setup_failure_warning "$FILE_PATH"
       exit 2
+    }
+
+    # shellcheck disable=SC2329 # invoked via trap
+    cleanup_single_secret_scan_tmpdir() {
+      safe_remove_temp_dir "${TMP_DIR:-}" "${TMPDIR:-/tmp}/rb-secret-scan.*" || true
+    }
+    trap cleanup_single_secret_scan_tmpdir EXIT HUP INT TERM
+
+    copy_into_tmpdir "$FILE_PATH" "$TMP_DIR" 2>/dev/null || {
+      emit_scan_setup_failure_warning "$FILE_PATH"
+      exit 2
+    }
+
+    if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
+      if run_betterleaks_dir "$TMP_DIR"; then
+        if [[ -n "$BETTERLEAKS_RESULT" ]]; then
+          emit_secret_warning "$FILE_PATH" "$BETTERLEAKS_RESULT"
+          exit 2
+        fi
+      else
+        status=$?
+        emit_scanner_failure_warning "$FILE_PATH" "$status" "$BETTERLEAKS_ERROR"
+        exit 2
+      fi
     fi
   fi
 fi
