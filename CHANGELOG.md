@@ -26,10 +26,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   point to the same shared provenance contract, distinguish when provenance is
   required vs optional, and describe how verified findings should be applied
   back to the final artifact.
+- **Output-verification evals are stricter and more deterministic** — the
+  research/review artifact checks now enforce the shared provenance contract
+  more precisely, handle CRLF and UTF-8 input consistently, and cover the
+  contract with dedicated regression tests instead of relying on looser
+  fixture-only validation.
 - **Contributor-only output-verification guidance now lives under `.claude/`**
   — the shipped plugin keeps the provenance template, while the contributor
   checklist moved to
   `.claude/skills/plugin-dev-workflow/references/output-verification-checklist.md`.
+- **Contributor eval and docs-cache tooling now fail more predictably** —
+  `run_eval.sh --changed` is tracked-only by default, reports deleted changed
+  skills/agents explicitly, and adds `--include-untracked` for opt-in local
+  work, while `fetch-claude-docs.sh` now fails incomplete refreshes by default
+  and reserves `--allow-partial` for best-effort refreshes.
+- **Destructive-operation and contributor entrypoint hardening continued** —
+  the dangerous-ops hook now blocks plain `rails` and `rake` destructive DB
+  commands too, and the contributor pre-commit / lint entrypoints were updated
+  to use path-safe file handling instead of brittle whitespace-splitting loops.
 
 ## [1.6.3] - 2026-03-28
 
