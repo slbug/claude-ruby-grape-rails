@@ -66,11 +66,10 @@ def find_repo_root(start_dir)
                       (candidate + '.claude/settings.local.json').file?
     next if candidate.to_s == home_dir && claude_settings
 
-    if git_root && candidate.to_s != git_root && !candidate.to_s.start_with?("#{git_root}/")
-      next
-    end
+    next if git_root && candidate.to_s != git_root && !candidate.to_s.start_with?("#{git_root}/")
 
     return candidate.to_s if (candidate + '.git').exist?
+
     settings_candidate ||= candidate.to_s if claude_settings
     gemfile_candidate ||= candidate.to_s if (candidate + 'Gemfile').file?
 
@@ -192,8 +191,11 @@ def extract_bash_commands(entry)
     command = block.dig('input', 'command').to_s.strip
     next [] if command.empty?
 
-    command.each_line.filter_map do |line|
-      stripped = line.strip
+    # Handle line continuations (\ at end of line) before splitting
+    normalized = command.gsub(/\\\n/, ' ')
+    # Split on newlines and semicolons to get individual command segments
+    normalized.split(/[;\n]/).filter_map do |segment|
+      stripped = segment.strip
       next if stripped.empty?
 
       stripped
@@ -324,7 +326,9 @@ puts 'Dry-run: extractor is read-only; no settings changes were written.' if opt
 puts "Sessions scanned: #{recent_files.length} (last #{options[:days]} days)"
 puts "Additional recent sessions skipped by cap: #{truncated_session_files}" if truncated_session_files.positive?
 puts "Files capped at #{max_lines_per_file} lines: #{line_capped_files}" if line_capped_files.positive?
-puts 'WARNING: transcript scan was truncated by caps; recommendations are partial.' if truncated_session_files.positive? || line_capped_files.positive?
+if truncated_session_files.positive? || line_capped_files.positive?
+  puts 'WARNING: transcript scan was truncated by caps; recommendations are partial.'
+end
 puts "Total Bash tool calls seen: #{total_bash_commands}"
 puts "Uncovered command groups: #{group_counts.length}"
 puts "Total avoidable prompts: #{group_counts.values.sum}"
