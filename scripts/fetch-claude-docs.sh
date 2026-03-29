@@ -156,9 +156,10 @@ for page in "${PAGES[@]}"; do
     required_present=$(( required_present + 1 ))
   fi
 done
+extra_cached=$(( total_files - required_present ))
 echo "  Cache: $CACHE_DIR"
-echo "  Files: $total_files doc pages"
 echo "  Required pages present: ${required_present}/${#PAGES[@]}"
+echo "  Cached markdown pages: $total_files total (${extra_cached} extra cached pages)"
 echo "  Size:  $total_size"
 if [ "$index_failed" -gt 0 ]; then
   echo "  Index: failed"

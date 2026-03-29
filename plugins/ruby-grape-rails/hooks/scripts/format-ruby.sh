@@ -11,9 +11,13 @@ set -o pipefail
 command -v jq >/dev/null 2>&1 || exit 0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+DEP_LIB="${SCRIPT_DIR}/ruby-dependency-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+[[ -r "$DEP_LIB" && ! -L "$DEP_LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
+# shellcheck disable=SC1090,SC1091
+source "$DEP_LIB"
 INPUT=$(read_hook_input)
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
@@ -35,13 +39,8 @@ esac
 
 has_gem() {
   local gem_name="$1"
-  if [[ -f "$PROJECT_LOCKFILE" ]] && grep -Fq "    ${gem_name} " "$PROJECT_LOCKFILE"; then
-    return 0
-  fi
-  [[ -f "$PROJECT_GEMFILE" ]] && (
-    grep -Fq "gem \"${gem_name}\"" "$PROJECT_GEMFILE" ||
-      grep -Fq "gem '${gem_name}'" "$PROJECT_GEMFILE"
-  )
+  ruby_plugin_repo_declares_gem "$REPO_ROOT" "$PROJECT_GEMFILE" "$gem_name" ||
+    ruby_plugin_lock_has_gem "$PROJECT_LOCKFILE" "$gem_name"
 }
 
 command -v bundle >/dev/null 2>&1 || exit 0

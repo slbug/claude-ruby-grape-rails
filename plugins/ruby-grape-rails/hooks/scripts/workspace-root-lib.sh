@@ -12,10 +12,26 @@
 # - otherwise the canonicalized candidate directory itself
 
 read_hook_input() {
+  local max_bytes="${RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES:-262144}"
+  local input=""
+
   if [[ -t 0 ]]; then
     printf '%s' ""
   else
-    cat
+    input=$(dd bs="$max_bytes" count=1 2>/dev/null || true)
+    [[ -n "$input" ]] || {
+      printf '%s' ""
+      return 0
+    }
+
+    if command -v jq >/dev/null 2>&1; then
+      if ! printf '%s' "$input" | jq -e . >/dev/null 2>&1; then
+        printf '%s' ""
+        return 0
+      fi
+    fi
+
+    printf '%s' "$input"
   fi
 }
 

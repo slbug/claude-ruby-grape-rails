@@ -8,9 +8,13 @@ set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+DEP_LIB="${SCRIPT_DIR}/ruby-dependency-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+[[ -r "$DEP_LIB" && ! -L "$DEP_LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
+# shellcheck disable=SC1090,SC1091
+source "$DEP_LIB"
 INPUT=$(read_hook_input)
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
@@ -71,42 +75,20 @@ emit_shell_assignment() {
   printf '%q\n' "$value"
 }
 
-escape_ere() {
-  printf '%s' "$1" | sed 's/[][(){}.^$?+*|\\/]/\\&/g'
-}
-
 gem_declared() {
-  local gem_name="$1"
-  local escaped_name
-
-  [[ -f "$PROJECT_GEMFILE" ]] || return 1
-  escaped_name=$(escape_ere "$gem_name")
-  grep -Eq "^[[:space:]]*gem[[:space:]]+['\"]${escaped_name}['\"]([[:space:]]*(,|#|$))" "$PROJECT_GEMFILE"
+  ruby_plugin_repo_declares_gem "$REPO_ROOT" "$PROJECT_GEMFILE" "$1"
 }
 
-gemfile_declares_pattern() {
-  local pattern="$1"
-
-  [[ -f "$PROJECT_GEMFILE" ]] || return 1
-  grep -Eq "$pattern" "$PROJECT_GEMFILE"
+gem_prefix_declared() {
+  ruby_plugin_repo_declares_gem_prefix "$REPO_ROOT" "$PROJECT_GEMFILE" "$1"
 }
 
 lock_version() {
-  local gem_name="$1"
-  local escaped_name
-
-  [[ -f "$PROJECT_LOCKFILE" ]] || return 1
-  escaped_name=$(escape_ere "$gem_name")
-  grep -m 1 -E "^[[:space:]]{4}${escaped_name} \([^)]+\)$" "$PROJECT_LOCKFILE" |
-    sed -E 's/.*\(([^)]+)\).*/\1/'
+  ruby_plugin_lock_version "$PROJECT_LOCKFILE" "$1"
 }
 
 lock_has_gem() {
-  local gem_name="$1"
-  local version
-
-  version=$(lock_version "$gem_name" || true)
-  [[ -n "$version" ]]
+  ruby_plugin_lock_has_gem "$PROJECT_LOCKFILE" "$1"
 }
 
 add_tool() {
@@ -135,7 +117,7 @@ makefile_has_target() {
   makefile_path=$(find_first_repo_file GNUmakefile Makefile makefile || true)
   [[ -n "$makefile_path" ]] || return 1
 
-  escaped_target=$(escape_ere "$target_name")
+  escaped_target=$(ruby_plugin_escape_ere "$target_name")
   grep -Eq "^[[:space:]]*${escaped_target}[[:space:]]*:" "$makefile_path"
 }
 
@@ -146,7 +128,7 @@ rake_task_declared_in_file() {
 
   [[ -f "$target_file" && ! -L "$target_file" ]] || return 1
 
-  escaped_task=$(escape_ere "$task_name")
+  escaped_task=$(ruby_plugin_escape_ere "$task_name")
   grep -Eq "task[[:space:]]*(\\(|:|['\"])${escaped_task}([[:space:][:punct:]]|$)|${escaped_task}:[[:space:]]" "$target_file"
 }
 
@@ -177,7 +159,7 @@ justfile_has_recipe() {
   justfile_path=$(find_first_repo_file justfile .justfile Justfile || true)
   [[ -n "$justfile_path" ]] || return 1
 
-  escaped_recipe=$(escape_ere "$recipe_name")
+  escaped_recipe=$(ruby_plugin_escape_ere "$recipe_name")
   grep -Eq "^[[:space:]]*${escaped_recipe}[[:space:]]*:" "$justfile_path"
 }
 
@@ -442,7 +424,7 @@ fi
 
 # Detect Tidewave Rails gem (MCP-based runtime integration)
 TIDEWAVE_GEM_PRESENT=false
-if [[ -f "$PROJECT_GEMFILE" ]] && grep -Eq "gem ['\"]tidewave['\"]" "$PROJECT_GEMFILE"; then
+if gem_declared 'tidewave'; then
   TIDEWAVE_GEM_PRESENT=true
   STACK+=("Tidewave")
 fi
@@ -454,7 +436,7 @@ if gem_declared 'standard' || lock_has_gem 'standard'; then
   add_tool "standardrb"
 fi
 
-if gem_declared 'rubocop' || lock_has_gem 'rubocop' || gemfile_declares_pattern "^[[:space:]]*gem[[:space:]]+['\"]rubocop-" ; then
+if gem_declared 'rubocop' || lock_has_gem 'rubocop' || gem_prefix_declared 'rubocop-' ; then
   RUBOCOP_AVAILABLE=true
   RUBOCOP_VERSION=$(lock_version 'rubocop' || true)
   add_tool "rubocop"
@@ -466,7 +448,7 @@ if gem_declared 'brakeman' || lock_has_gem 'brakeman'; then
   add_tool "brakeman"
 fi
 
-if gem_declared 'pronto' || lock_has_gem 'pronto' || gemfile_declares_pattern "^[[:space:]]*gem[[:space:]]+['\"]pronto-" ; then
+if gem_declared 'pronto' || lock_has_gem 'pronto' || gem_prefix_declared 'pronto-' ; then
   PRONTO_AVAILABLE=true
   PRONTO_VERSION=$(lock_version 'pronto' || true)
   add_tool "pronto"
@@ -510,7 +492,7 @@ if [[ -n "$LEFTHOOK_CONFIG_PATH" ]]; then
     LEFTHOOK_LINT_COVERED=true
   fi
 
-  if grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH" && { lock_has_gem 'pronto-rubocop' || gemfile_declares_pattern "^[[:space:]]*gem[[:space:]]+['\"]pronto-rubocop['\"]"; }; then
+  if grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH" && { lock_has_gem 'pronto-rubocop' || gem_declared 'pronto-rubocop'; }; then
     LEFTHOOK_DIFF_LINT_COVERED=true
   fi
 

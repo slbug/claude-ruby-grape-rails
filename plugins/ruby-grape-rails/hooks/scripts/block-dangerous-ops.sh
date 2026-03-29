@@ -31,28 +31,53 @@ normalize_command_segments() {
   printf '%s\n' "$command_text" | tr ';' '\n'
 }
 
-strip_leading_env_prefixes() {
+trim_leading_whitespace() {
   local segment="$1"
 
   segment="${segment#"${segment%%[![:space:]]*}"}"
+  printf '%s\n' "$segment"
+}
+
+to_ascii_lower() {
+  printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+LEADING_ENV_PREFIXES_RESULT=""
+STRIPPED_COMMAND_RESULT=""
+
+split_leading_env_prefixes() {
+  local segment
+  local prefix=""
+  local assignment=""
+
+  segment=$(trim_leading_whitespace "$1")
 
   while :; do
     if [[ "$segment" =~ ^env[[:space:]]+ ]]; then
+      prefix+="env "
       segment="${segment#env}"
-      segment="${segment#"${segment%%[![:space:]]*}"}"
+      segment=$(trim_leading_whitespace "$segment")
       continue
     fi
 
-    if [[ "$segment" =~ ^[A-Za-z_][A-Za-z0-9_]*=([^[:space:]]+|\"[^\"]*\"|\'[^\']*\')[[:space:]]+ ]]; then
+    if [[ "$segment" =~ ^([A-Za-z_][A-Za-z0-9_]*=([^[:space:]]+|\"[^\"]*\"|\'[^\']*\'))([[:space:]]+|$) ]]; then
+      assignment="${BASH_REMATCH[1]}"
+      prefix+="${assignment} "
       segment="${segment#"${BASH_REMATCH[0]}"}"
-      segment="${segment#"${segment%%[![:space:]]*}"}"
+      segment=$(trim_leading_whitespace "$segment")
       continue
     fi
 
     break
   done
 
-  printf '%s\n' "$segment"
+  LEADING_ENV_PREFIXES_RESULT="$prefix"
+  STRIPPED_COMMAND_RESULT="$segment"
+}
+
+strip_leading_env_prefixes() {
+  split_leading_env_prefixes "$1"
+  printf '%s\n' "$STRIPPED_COMMAND_RESULT"
 }
 
 is_destructive_db_command() {
@@ -63,7 +88,8 @@ is_destructive_db_command() {
     segment=$(strip_leading_env_prefixes "$segment")
     [[ -n "$segment" ]] || continue
 
-    if [[ "$segment" =~ ^((bundle[[:space:]]+exec[[:space:]]+)?((\./)?bin/)?(rails|rake))[[:space:]]+db:(drop|reset|purge)([[:space:]]|$) ]]; then
+    if [[ "$segment" =~ ^((bundle[[:space:]]+exec[[:space:]]+)?((\./)?bin/)?(rails|rake))([[:space:]]|$) ]] &&
+      printf '%s' "$segment" | grep -qE "(^|[[:space:]])['\"]?db:(drop|reset|purge)(:[[:alnum:]_:-]+)?['\"]?([[:space:]]|$)"; then
       return 0
     fi
   done < <(normalize_command_segments "$command_text")
@@ -80,10 +106,54 @@ is_destructive_redis_command() {
     segment=$(strip_leading_env_prefixes "$segment")
     [[ -n "$segment" ]] || continue
 
-    lowered=${segment,,}
+    lowered=$(to_ascii_lower "$segment")
     if [[ "$lowered" =~ ^redis-cli([[:space:]]+[^[:space:]]+)*[[:space:]]+flush(all|db)([[:space:]]|$) ]]; then
       return 0
     fi
+  done < <(normalize_command_segments "$command_text")
+
+  return 1
+}
+
+is_force_push_command() {
+  local command_text="$1"
+  local segment
+
+  while IFS= read -r segment; do
+    segment=$(strip_leading_env_prefixes "$segment")
+    [[ -n "$segment" ]] || continue
+
+    if [[ "$segment" =~ ^git([[:space:]]+-c[[:space:]]+[^[:space:]]+)*[[:space:]]+push([[:space:]]|$) ]] &&
+      printf '%s' "$segment" | grep -qE '(^|[[:space:]])(--force|-f)([[:space:]]|$)'; then
+      return 0
+    fi
+  done < <(normalize_command_segments "$command_text")
+
+  return 1
+}
+
+is_harmless_env_probe() {
+  printf '%s' "$1" | grep -qE '^(echo|printf|cat|env|export|declare|typeset|readonly|unset|true|false)([[:space:]]|$)'
+}
+
+is_production_env_command() {
+  local command_text="$1"
+  local segment
+
+  while IFS= read -r segment; do
+    split_leading_env_prefixes "$segment"
+    [[ -n "$LEADING_ENV_PREFIXES_RESULT" ]] || continue
+    [[ -n "$STRIPPED_COMMAND_RESULT" ]] || continue
+
+    if ! printf '%s' "$LEADING_ENV_PREFIXES_RESULT" | grep -qiE '(^|[[:space:]])(RAILS_ENV|RACK_ENV)=["'\'']?(prod|production)["'\'']?([[:space:]]|$)'; then
+      continue
+    fi
+
+    if is_harmless_env_probe "$STRIPPED_COMMAND_RESULT"; then
+      continue
+    fi
+
+    return 0
   done < <(normalize_command_segments "$command_text")
 
   return 1
@@ -106,14 +176,14 @@ MSG
   exit 2
 fi
 
-if printf '%s' "$COMMAND" | grep -qE 'git push.*(--force|-f)([[:space:]]|$)'; then
+if is_force_push_command "$COMMAND"; then
   cat >&2 <<'MSG'
 BLOCKED: force push detected. Prefer git push --force-with-lease.
 MSG
   exit 2
 fi
 
-if printf '%s' "$COMMAND" | grep -qiE '(RAILS_ENV|RACK_ENV)=["'\'']?(prod|production)["'\'']?'; then
+if is_production_env_command "$COMMAND"; then
   cat >&2 <<'MSG'
 BLOCKED: production environment detected. Re-check that this command belongs in Claude Code.
 MSG

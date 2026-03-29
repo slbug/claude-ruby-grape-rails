@@ -12,18 +12,35 @@ end
 
 gemfile = File.read('Gemfile')
 lockfile = File.exist?('Gemfile.lock') ? File.read('Gemfile.lock') : ''
+gemspec_contents = Dir.glob('*.gemspec').sort.filter_map do |path|
+  next unless File.file?(path) && !File.symlink?(path)
+
+  File.read(path)
+end
+gemfile_uses_gemspec = gemfile.match?(/^\s*gemspec(?:\s*(?:\(|#|$)|$)/)
 
 # Detection helpers
-def gem_present?(content, name)
-  # Match exact Gemfile entries like:
-  # gem "pg"
-  # gem 'pg', '~> 1.5'
-  # gem 'pg' # needed for postgres
-  content.match?(/^\s*gem\s+['"]#{Regexp.escape(name)}['"](?=\s*(?:,|#|$))/)
+def gem_declared_in_manifest?(content, name)
+  content.match?(/^\s*gem\s*(?:\(|\s)\s*['"]#{Regexp.escape(name)}['"](?=\s*(?:,|\)|#|$))/)
+end
+
+def gemspec_declares_dependency?(content, name)
+  content.match?(
+    /^\s*(?:spec|s)?\.?add(?:_runtime|_development)?_dependency\s*(?:\(|\s)\s*['"]#{Regexp.escape(name)}['"](?=\s*(?:,|\)|#|$))/
+  )
 end
 
 def lock_version(content, name)
   content[/^\s{4}#{Regexp.escape(name)} \(([^)]+)\)$/, 1]
+end
+
+def repo_gem_present?(gemfile_content, lockfile_content, gemspecs, gemfile_uses_gemspec, name)
+  return true if gem_declared_in_manifest?(gemfile_content, name)
+
+  return false unless gemfile_uses_gemspec
+  return true if gemspecs.any? { |content| gemspec_declares_dependency?(content, name) }
+
+  !lock_version(lockfile_content, name).to_s.empty?
 end
 
 def directory_glob(*patterns)
@@ -171,22 +188,25 @@ orms = []
   'mysql' => 'mysql2',
   'postgres' => 'pg'
 }.each do |component, gem_name|
-  next unless gem_present?(gemfile, gem_name)
+  next unless repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, gem_name)
 
   detected << component
   version = lock_version(lockfile, gem_name)
   versions[component] = version if version
 end
 
-if gem_present?(gemfile, 'redis') || gem_present?(gemfile, 'redis-client')
+if repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, 'redis') ||
+   repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, 'redis-client')
   detected << 'redis'
   versions['redis'] = lock_version(lockfile, 'redis') || lock_version(lockfile, 'redis-client')
 end
 
-orms << 'active_record' if gem_present?(gemfile, 'rails') || gem_present?(gemfile, 'activerecord')
-orms << 'sequel' if gem_present?(gemfile, 'sequel') || gem_present?(gemfile, 'sequel-rails')
+orms << 'active_record' if repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, 'rails') ||
+                           repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, 'activerecord')
+orms << 'sequel' if repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, 'sequel') ||
+                    repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, 'sequel-rails')
 orms.uniq!
-versions['activerecord'] = lock_version(lockfile, 'activerecord') if gem_present?(gemfile, 'activerecord')
+versions['activerecord'] = lock_version(lockfile, 'activerecord') if repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, 'activerecord')
 versions['sequel'] = lock_version(lockfile, 'sequel') if orms.include?('sequel')
 
 rails_component_gems = %w[
@@ -201,7 +221,9 @@ rails_component_gems = %w[
   railties
 ]
 
-detected_rails_components = rails_component_gems.select { |gem_name| gem_present?(gemfile, gem_name) }
+detected_rails_components = rails_component_gems.select do |gem_name|
+  repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, gem_name)
+end
 rails_components = detected_rails_components.any?
 full_rails_app =
   (File.file?('bin/rails') && !File.symlink?('bin/rails')) ||

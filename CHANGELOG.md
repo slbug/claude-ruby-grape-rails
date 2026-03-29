@@ -49,6 +49,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the dangerous-ops hook now blocks plain `rails` and `rake` destructive DB
   commands too, and the contributor pre-commit / lint entrypoints were updated
   to use path-safe file handling instead of brittle whitespace-splitting loops.
+- **Dangerous-op blocking and Ruby hook detection are now more consistent** —
+  the destructive-op hook now covers quoted and namespaced DB tasks,
+  `git -c ... push --force`, and Redis flushes under stock macOS Bash, while
+  Ruby gem detection now understands `gem(...)` and gemspec-driven repos across
+  the runtime detector, stack detector, and formatter. The Ruby-ish post-edit
+  hook surface was also collapsed behind a shared wrapper to reduce repeated
+  wiring drift.
 - **Secret scanning, runtime detection, and permission extraction are more
   consistent under degraded conditions** — Betterleaks runtime failures are now
   surfaced instead of silently passing, runtime detection no longer needs the

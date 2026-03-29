@@ -36,8 +36,8 @@ that prevent the mistakes Ruby developers actually make in production.
 │  💎 Ruby/Rails/Grape Plugin for Claude Code                         │
 │                                                                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
-│  │    23    │    50    │   100+   │    21    │    21    │           │
-│  │  Agents  │  Skills  │   Refs   │  Hooks   │Iron Laws │           │
+│  │    23    │    50    │   100+   │    11    │    21    │           │
+│  │  Agents  │  Skills  │   Refs   │  Events  │Iron Laws │           │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘           │
 │                                                                     │
 │  AGENTS                          COMMANDS                           │
@@ -518,7 +518,7 @@ The plugin enforces **21 Iron Laws** that prevent common, costly mistakes:
 
 ### Enforcement
 
-- **Programmatic**: 7 laws checked automatically on every file edit
+- **Programmatic**: 6 laws checked automatically on every file edit
 - **Behavioral**: All 21 laws injected into subagent context
 - **Review-time**: Full audit during `/rb:review`
 
