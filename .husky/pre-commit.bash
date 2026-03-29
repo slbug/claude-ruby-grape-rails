@@ -19,7 +19,9 @@ if [[ ${#STAGED_MD_FILES[@]} -gt 0 ]]; then
       exit 1
     fi
   else
-    echo "Warning: npx not found, skipping markdown lint"
+    echo "ERROR: npx not found, cannot lint staged Markdown files." >&2
+    echo "Install Node.js dependencies with 'npm ci' before committing Markdown changes." >&2
+    exit 1
   fi
 fi
 

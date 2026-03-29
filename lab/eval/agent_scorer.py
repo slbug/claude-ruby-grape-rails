@@ -82,6 +82,10 @@ def _run_check(content: str, check_type: str, description: str, agent_path: str,
 
 def score_agent(agent_path: str, eval_def: EvalDefinition | None = None) -> SubjectScore:
     path = Path(agent_path).resolve()
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"Agent file not found: {path}. This file may have been moved or deleted."
+        )
     content = path.read_text(encoding="utf-8")
     definition = eval_def or default_eval(str(path))
     dimensions: dict[str, DimensionResult] = {}

@@ -40,10 +40,27 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   skills/agents explicitly, and adds `--include-untracked` for opt-in local
   work, while `fetch-claude-docs.sh` now fails incomplete refreshes by default
   and reserves `--allow-partial` for best-effort refreshes.
+- **Hosted and local contributor gates now use the same stricter eval surface** —
+  the GitHub Actions workflow now runs the eval CI gate, JSON validation uses
+  tracked file manifests, `check-dynamic-injection.sh` covers `.claude-plugin`
+  too, and agent evals fail with explicit missing-file errors instead of bare
+  tracebacks.
 - **Destructive-operation and contributor entrypoint hardening continued** —
   the dangerous-ops hook now blocks plain `rails` and `rake` destructive DB
   commands too, and the contributor pre-commit / lint entrypoints were updated
   to use path-safe file handling instead of brittle whitespace-splitting loops.
+- **Secret scanning, runtime detection, and permission extraction are more
+  consistent under degraded conditions** — Betterleaks runtime failures are now
+  surfaced instead of silently passing, runtime detection no longer needs the
+  `just` binary just to parse a justfile and uses consistent full-Rails
+  fallbacks, the permissions extractor uses safer repo-root heuristics plus
+  explicit transcript caps, and the Iron Law output generator no longer depends
+  on the Ruby helper having an executable bit.
+- **Full Rails app detection is more conservative without depending only on
+  `bin/rails`** — runtime fallback and verifier guidance now treat a repo as a
+  runnable full Rails app only when it has a real Rails entrypoint or the
+  standard runnable app layout, instead of assuming stray config files alone are
+  enough.
 
 ## [1.6.3] - 2026-03-28
 

@@ -707,9 +707,13 @@ Current scope:
 - structural scoring for all shipped agents
 - deterministic trigger corpora plus confusable-pair / hard-corpus generation
 
-Note: `eval-output` is separate from `eval-all` / `eval-ci` for now.
-The contributor-only output-verification checklist lives under
-`.claude/skills/plugin-dev-workflow/references/`.
+Notes:
+
+- `eval-output` is separate from `eval-all` / `eval-ci` for now.
+- `--include-untracked` is available for local changed-mode exploration, but it
+  intentionally makes results non-comparable and is not part of `eval-ci`.
+- The contributor-only output-verification checklist lives under
+  `.claude/skills/plugin-dev-workflow/references/`.
 
 ### Docs-check and session analytics
 

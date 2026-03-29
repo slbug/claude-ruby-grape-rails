@@ -190,7 +190,7 @@ The plugin uses **layered enforcement** — some things run automatically, some 
 | Dangerous ops block | Before Bash command | Blocks destructive DB commands like `rails db:drop`, `bin/rails db:reset`, `bundle exec rails db:purge`, `rake db:drop`, `bin/rake db:reset`, and `bundle exec rake db:purge`, plus equivalent `bundle exec bin/...` and env-prefixed forms; also blocks `git push --force` and `RAILS_ENV=prod` |
 | Format check | Every `.rb` edit | Auto-fixes with StandardRB (if configured) or RuboCop |
 | Iron Law verifier | Every `.rb` edit | Scans code content for Iron Law violations with line numbers |
-| Debug stmt warning | Every `.rb` edit | Warns about `puts`/`debugger`/`p` in production code |
+| Debug stmt warning | Ruby-ish app file edits | Warns about `puts`/`debugger`/`p` in production code, excluding `spec/`, `test/`, and repo script directories |
 | Security reminder | Editing auth/session/password files | Outputs relevant Iron Laws via stderr + exit 2 |
 | Progress logging | Every file edit | Appends to `.claude/plans/{slug}/progress.md` (async) |
 | Failure hints | Bash command fails | Injects debugging hints via `additionalContext` |

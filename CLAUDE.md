@@ -94,7 +94,7 @@ claude-ruby-grape-rails/
 │       └── skill-monitor/           # /skill-monitor — observational dashboards
 ├── scripts/
 │   ├── fetch-claude-docs.sh         # Download Claude Code docs for validation
-│   ├── check-dynamic-injection.sh   # Block tracked docs/config from !`command`
+│   ├── check-dynamic-injection.sh   # Block tracked docs/config from inline shell injection placeholders
 │   ├── run-eval-tests.sh            # Contributor eval test entrypoint
 │   ├── generate-iron-law-content.rb
 │   ├── generate-iron-law-outputs.sh
@@ -248,7 +248,7 @@ Defined in `hooks/hooks.json`:
   - `secret-scan.sh`: Secret scanning with hook-mode gating — all Edit|Write
   - `format-ruby.sh`: Auto `bundle exec standardrb` or `bundle exec rubocop -a` — Ruby-ish files only (`*.rb`, `*.rake`, `*Gemfile`, `*Rakefile`, `*config.ru`) via `if` filter
   - `verify-ruby.sh`: Syntax check via `ruby -c <file>` — Ruby-ish files only via `if` filter
-  - `debug-statement-warning.sh`: Detect debug statements (`puts`, `binding.pry`, etc.) — Ruby-ish files only via `if` filter
+  - `debug-statement-warning.sh`: Detect debug statements (`puts`, `binding.pry`, etc.) — Ruby-ish app files via `if` filter, excluding `spec/`, `test/`, and repo script directories
 - `PostToolUseFailure` (Bash): Ruby-specific debugging hints when bundle exec fails,
   **error critic** that detects repeated failures and escalates to structured analysis (both via `additionalContext`)
 - `SubagentStart`: Inject all Iron Laws into every spawned subagent via `additionalContext` (addresses zero skill auto-loading gap)
@@ -799,7 +799,7 @@ entrypoints before broader experimentation:
 
 Minimum runtime: `python3` 3.10+ for `lab/eval/`.
 
-- `make eval` / `npm run eval` for lint + injection check + changed surfaces
+- `make eval` / `npm run eval` for lint + injection check + tracked changed surfaces
 - `make eval-all` / `npm run eval:all` for the full eval snapshot
 - `make eval-ci` / `npm run eval:ci` for the contributor CI gate
 - `make eval-output` / `npm run eval:output` for deterministic research/review
@@ -813,6 +813,12 @@ Minimum runtime: `python3` 3.10+ for `lab/eval/`.
 - `make eval-compare`
 - `make eval-overlap`
 - `make eval-hard-corpus`
+
+Notes:
+
+- `eval-output` is separate from `eval-all` / `eval-ci` for now.
+- `--include-untracked` is available for local changed-mode exploration, but it
+  intentionally makes results non-comparable and is not part of `eval-ci`.
 
 Current `lab/eval/` scope:
 

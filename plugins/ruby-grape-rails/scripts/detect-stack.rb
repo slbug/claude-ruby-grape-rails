@@ -203,8 +203,16 @@ rails_component_gems = %w[
 
 detected_rails_components = rails_component_gems.select { |gem_name| gem_present?(gemfile, gem_name) }
 rails_components = detected_rails_components.any?
-full_rails_markers = %w[config/application.rb config/environment.rb bin/rails]
-full_rails_app = gem_present?(gemfile, 'rails') || full_rails_markers.any? { |path| File.exist?(path) }
+full_rails_app =
+  (File.file?('bin/rails') && !File.symlink?('bin/rails')) ||
+  (File.file?('script/rails') && !File.symlink?('script/rails')) ||
+  (
+    %w[config/application.rb config/environment.rb config/boot.rb].all? do |path|
+      File.file?(path) && !File.symlink?(path)
+    end &&
+      Dir.exist?('app') && !File.symlink?('app') &&
+      Dir.exist?('config/environments') && !File.symlink?('config/environments')
+  )
 detected.uniq!
 
 rails_version = versions['rails']

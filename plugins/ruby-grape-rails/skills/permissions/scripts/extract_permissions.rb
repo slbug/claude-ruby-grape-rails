@@ -41,13 +41,41 @@ end
 
 def find_repo_root(start_dir)
   path = Pathname.new(start_dir).expand_path
+  git_root = begin
+    root = `git -C #{Shellwords.escape(path.to_s)} rev-parse --show-toplevel 2>/dev/null`.strip
+    root unless root.empty?
+  rescue StandardError
+    nil
+  end
+  home_dir = Dir.home
 
   path.ascend do |candidate|
+    claude_settings = (candidate + '.claude/settings.json').file? ||
+                      (candidate + '.claude/settings.local.json').file?
+    next if candidate.to_s == home_dir && claude_settings
+
+    next if git_root && candidate.to_s != git_root && !candidate.to_s.start_with?("#{git_root}/")
+
     return candidate.to_s if (candidate + '.git').exist? ||
+                             claude_settings ||
                              (candidate + 'Gemfile').file?
+
+    break if git_root && candidate.to_s == git_root
   end
 
+  return git_root if git_root
+
   start_dir
+end
+
+def positive_env_int(name, default)
+  raw = ENV[name]
+  return default if raw.nil? || raw.empty?
+
+  value = Integer(raw, exception: false)
+  return default unless value && value.positive?
+
+  value
 end
 
 def claude_project_slug(repo_root)
@@ -148,15 +176,27 @@ deny_globs = all_deny.filter_map { |permission| permission_to_glob(permission) }
 
 cutoff = Time.now - (options[:days] * 86_400)
 session_files = Dir.glob(project_transcript_glob)
-recent_files = session_files.select { |path| File.file?(path) && File.mtime(path) > cutoff }
+max_session_files = positive_env_int('RUBY_PLUGIN_PERMISSIONS_MAX_SESSION_FILES', 200)
+max_lines_per_file = positive_env_int('RUBY_PLUGIN_PERMISSIONS_MAX_LINES_PER_FILE', 10_000)
+recent_candidates = session_files.select { |path| File.file?(path) && File.mtime(path) > cutoff }
+recent_files = recent_candidates.sort_by { |path| File.mtime(path) }.reverse.first(max_session_files)
+truncated_session_files = [recent_candidates.length - recent_files.length, 0].max
 
 group_counts = Hash.new(0)
 examples = {}
 total_bash_commands = 0
 ignored_denied = 0
+line_capped_files = 0
 
 recent_files.each do |session_file|
-  File.foreach(session_file) do |line|
+  file_truncated = false
+
+  File.foreach(session_file).with_index do |line, index|
+    if index >= max_lines_per_file
+      file_truncated = true
+      break
+    end
+
     begin
       entry = JSON.parse(line)
     rescue JSON::ParserError
@@ -178,6 +218,7 @@ recent_files.each do |session_file|
       examples[group] ||= command
     end
   end
+  line_capped_files += 1 if file_truncated
 rescue Errno::ENOENT
   next
 end
@@ -201,6 +242,10 @@ report = {
   project_slug: project_slug,
   days: options[:days],
   scanned_sessions: recent_files.length,
+  available_sessions_in_window: recent_candidates.length,
+  truncated_session_files: truncated_session_files,
+  line_capped_files: line_capped_files,
+  max_lines_per_file: max_lines_per_file,
   scanned_files: recent_files,
   total_bash_commands: total_bash_commands,
   ignored_denied_commands: ignored_denied,
@@ -226,6 +271,8 @@ end
 puts "Repo root: #{repo_root}"
 puts "Project transcript scope: #{project_slug}"
 puts "Sessions scanned: #{recent_files.length} (last #{options[:days]} days)"
+puts "Additional recent sessions skipped by cap: #{truncated_session_files}" if truncated_session_files.positive?
+puts "Files capped at #{max_lines_per_file} lines: #{line_capped_files}" if line_capped_files.positive?
 puts "Total Bash tool calls seen: #{total_bash_commands}"
 puts "Uncovered command groups: #{group_counts.length}"
 puts "Total avoidable prompts: #{group_counts.values.sum}"

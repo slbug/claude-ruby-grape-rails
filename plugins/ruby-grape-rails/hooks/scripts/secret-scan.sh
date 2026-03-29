@@ -35,6 +35,8 @@ BETTERLEAKS_PATH="${BETTERLEAKS_PATH:-}"
 if [[ -z "$BETTERLEAKS_PATH" ]] && command -v betterleaks >/dev/null 2>&1; then
   BETTERLEAKS_PATH=$(command -v betterleaks)
 fi
+BETTERLEAKS_RESULT=""
+BETTERLEAKS_ERROR=""
 
 emit_missing_betterleaks_warning() {
   local target="$1"
@@ -84,6 +86,17 @@ emit_secret_warning() {
   echo "To ignore: add '#betterleaks:allow' comment to the line" >&2
 }
 
+emit_scanner_failure_warning() {
+  local target="$1"
+  local status="$2"
+  local err_preview="$3"
+
+  echo "⚠️  Betterleaks failed while scanning ${target} (exit ${status})." >&2
+  if [[ -n "$err_preview" ]]; then
+    printf 'Scanner output:\n%s\n' "$err_preview" >&2
+  fi
+}
+
 emit_truncation_warning() {
   local source_label="$1"
   local limit="$2"
@@ -100,6 +113,35 @@ new_secret_scan_tmpdir() {
   [[ "$tmp_dir" == "${TMPDIR:-/tmp}/rb-secret-scan."* ]] || return 1
 
   printf '%s\n' "$tmp_dir"
+}
+
+run_betterleaks_dir() {
+  local target_dir="$1"
+  local result_file
+  local err_file
+  local status
+
+  result_file=$(mktemp "${TMPDIR:-/tmp}/rb-secret-scan.result.XXXXXX") || return 1
+  err_file=$(mktemp "${TMPDIR:-/tmp}/rb-secret-scan.err.XXXXXX") || {
+    rm -f -- "$result_file"
+    return 1
+  }
+
+  BETTERLEAKS_RESULT=""
+  BETTERLEAKS_ERROR=""
+
+  "$BETTERLEAKS_PATH" dir "$target_dir" --no-banner --redact=100 >"$result_file" 2>"$err_file"
+  status=$?
+
+  if [[ "$status" -eq 0 ]]; then
+    BETTERLEAKS_RESULT=$(cat "$result_file")
+    rm -f -- "$result_file" "$err_file"
+    return 0
+  fi
+
+  BETTERLEAKS_ERROR=$(sed -n '1,5p' "$err_file" 2>/dev/null || true)
+  rm -f -- "$result_file" "$err_file"
+  return "$status"
 }
 
 copy_into_tmpdir() {
@@ -171,9 +213,13 @@ if [[ -z "$FILE_PATH" ]]; then
     fi
 
     if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
-      RESULT=$("$BETTERLEAKS_PATH" dir "$TMP_DIR" --no-banner --redact=100 2>/dev/null || true)
-      if [[ -n "$RESULT" ]]; then
-        emit_secret_warning "recent changes" "$RESULT"
+      if run_betterleaks_dir "$TMP_DIR"; then
+        if [[ -n "$BETTERLEAKS_RESULT" ]]; then
+          emit_secret_warning "recent changes" "$BETTERLEAKS_RESULT"
+          exit 2
+        fi
+      else
+        emit_scanner_failure_warning "recent changes" "$?" "$BETTERLEAKS_ERROR"
         exit 2
       fi
     fi
@@ -195,9 +241,14 @@ else
     copy_into_tmpdir "$FILE_PATH" "$TMP_DIR" 2>/dev/null || exit 0
 
     if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
-      RESULT=$("$BETTERLEAKS_PATH" dir "$TMP_DIR" --no-banner --redact=100 2>/dev/null || true)
-      if [[ -n "$RESULT" ]]; then
-        emit_secret_warning "$FILE_PATH" "$RESULT"
+      if run_betterleaks_dir "$TMP_DIR"; then
+        if [[ -n "$BETTERLEAKS_RESULT" ]]; then
+          emit_secret_warning "$FILE_PATH" "$BETTERLEAKS_RESULT"
+          exit 2
+        fi
+      else
+        status=$?
+        emit_scanner_failure_warning "$FILE_PATH" "$status" "$BETTERLEAKS_ERROR"
         exit 2
       fi
     fi

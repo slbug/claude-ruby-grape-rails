@@ -80,7 +80,7 @@ update_file() {
 
   # Generate content using Ruby
   local new_content
-  new_content=$("$RUBY_SCRIPT" "$content_type")
+  new_content=$(ruby "$RUBY_SCRIPT" "$content_type")
 
   # Update file using Ruby
   ruby -e '
@@ -113,7 +113,7 @@ generate_whole_file() {
   local output_file="$1"
   local content_type="$2"
 
-  "$RUBY_SCRIPT" "$content_type" > "$output_file"
+  ruby "$RUBY_SCRIPT" "$content_type" > "$output_file"
   log_info "Generated $output_file"
 }
 
@@ -181,7 +181,7 @@ generate_all() {
       else
         # Generate content using Ruby
         local judge_content
-        judge_content=$("$RUBY_SCRIPT" judge)
+        judge_content=$(ruby "$RUBY_SCRIPT" judge)
 
         # Update file using Ruby
         ruby -e '
@@ -220,8 +220,8 @@ if [[ ! -f "$YAML_SOURCE" ]]; then
   exit 1
 fi
 
-if [[ ! -x "$RUBY_SCRIPT" ]]; then
-  log_error "Ruby script not found or not executable: $RUBY_SCRIPT"
+if [[ ! -f "$RUBY_SCRIPT" || -L "$RUBY_SCRIPT" ]]; then
+  log_error "Ruby script not found: $RUBY_SCRIPT"
   exit 1
 fi
 

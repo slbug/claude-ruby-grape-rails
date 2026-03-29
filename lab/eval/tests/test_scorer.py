@@ -116,6 +116,14 @@ class ScorerTests(unittest.TestCase):
         self.assertIn("Unknown check type", str(ctx.exception))
         self.assertIn("not_a_real_check", str(ctx.exception))
 
+    def test_score_agent_reports_missing_file_clearly(self) -> None:
+        missing_agent = Path("/tmp/definitely-missing-agent.md")
+
+        with self.assertRaises(FileNotFoundError) as ctx:
+            score_agent(str(missing_agent))
+
+        self.assertIn("Agent file not found", str(ctx.exception))
+
     def test_compare_snapshots_includes_removed_items(self) -> None:
         baseline = {
             "skills": {"plan": {"composite": 1.0}, "verify": {"composite": 0.9}},

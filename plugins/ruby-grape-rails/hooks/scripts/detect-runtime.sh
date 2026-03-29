@@ -176,7 +176,6 @@ justfile_has_recipe() {
 
   justfile_path=$(find_first_repo_file justfile .justfile Justfile || true)
   [[ -n "$justfile_path" ]] || return 1
-  command -v just >/dev/null 2>&1 || return 1
 
   escaped_recipe=$(escape_ere "$recipe_name")
   grep -Eq "^[[:space:]]*${escaped_recipe}[[:space:]]*:" "$justfile_path"
@@ -268,7 +267,7 @@ fi
 
 # Detect Rails version from Gemfile.lock as a fallback only.
 if [[ -f "$PROJECT_LOCKFILE" ]]; then
-  FALLBACK_RAILS_VERSION=$(grep -m 1 -E "^    rails " "$PROJECT_LOCKFILE" | sed 's/.*(\(.*\)).*/\1/')
+  FALLBACK_RAILS_VERSION=$(grep -m 1 -E "^    rails " "$PROJECT_LOCKFILE" | sed -E 's/.*\(([^)]+)\).*/\1/')
 fi
 
 # Detect richer stack/package signals via the shared init detector.
@@ -306,8 +305,6 @@ if [[ "$STACK_DETECTOR_OK" == "true" ]]; then
 else
   fallback_stack=()
   fallback_orms=()
-  full_rails_markers=(config/application.rb config/environment.rb bin/rails)
-
   if gem_declared 'rails'; then
     fallback_stack+=("rails")
   fi
@@ -360,12 +357,15 @@ else
     fi
   done
 
-  for marker in "${full_rails_markers[@]}"; do
-    if [[ -e "${REPO_ROOT}/${marker}" ]]; then
-      FULL_RAILS_APP="true"
-      break
-    fi
-  done
+  if [[ -f "${REPO_ROOT}/bin/rails" && ! -L "${REPO_ROOT}/bin/rails" ]] || \
+     [[ -f "${REPO_ROOT}/script/rails" && ! -L "${REPO_ROOT}/script/rails" ]] || \
+     { [[ -f "${REPO_ROOT}/config/application.rb" && ! -L "${REPO_ROOT}/config/application.rb" ]] && \
+       [[ -f "${REPO_ROOT}/config/environment.rb" && ! -L "${REPO_ROOT}/config/environment.rb" ]] && \
+       [[ -f "${REPO_ROOT}/config/boot.rb" && ! -L "${REPO_ROOT}/config/boot.rb" ]] && \
+       [[ -d "${REPO_ROOT}/app" && ! -L "${REPO_ROOT}/app" ]] && \
+       [[ -d "${REPO_ROOT}/config/environments" && ! -L "${REPO_ROOT}/config/environments" ]]; }; then
+    FULL_RAILS_APP="true"
+  fi
 
   if gem_declared 'rails'; then
     RAILS_COMPONENTS="true"

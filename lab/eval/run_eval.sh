@@ -2,9 +2,9 @@
 # Run deterministic contributor evals for the Ruby plugin.
 #
 # Usage:
-#   ./lab/eval/run_eval.sh              # Lint + injection check + changed surfaces
+#   ./lab/eval/run_eval.sh              # Lint + injection check + tracked changed surfaces
 #   ./lab/eval/run_eval.sh --changed    # Same as default
-#   ./lab/eval/run_eval.sh --changed --include-untracked
+#   ./lab/eval/run_eval.sh --changed --include-untracked  # local-only expansion
 #   ./lab/eval/run_eval.sh --all        # Lint + injection check + core skills + all agents + triggers
 #   ./lab/eval/run_eval.sh --skills     # Core skills only
 #   ./lab/eval/run_eval.sh --agents     # All agents only
@@ -16,7 +16,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PLUGIN_ROOT="plugins/ruby-grape-rails"
-LAST_EVAL_FILE="${SCRIPT_DIR}/.last-eval-commit"
 MODE="--changed"
 INCLUDE_UNTRACKED=false
 for arg in "$@"; do
@@ -67,18 +66,6 @@ collect_changed_paths() {
     if [[ -n "$staged" ]]; then
       lines=$(printf '%s\n%s\n' "$lines" "$staged")
     fi
-
-    if [[ -f "$LAST_EVAL_FILE" ]]; then
-      local last_commit=""
-      last_commit="$(cat "$LAST_EVAL_FILE")"
-      if git rev-parse --verify "$last_commit" >/dev/null 2>&1; then
-        local since_last=""
-        since_last=$(git diff --name-only "$last_commit" HEAD -- "$prefix" 2>/dev/null || true)
-        if [[ -n "$since_last" ]]; then
-          lines=$(printf '%s\n%s\n' "$lines" "$since_last")
-        fi
-      fi
-    fi
   else
     lines=$(git ls-files -- "$prefix" 2>/dev/null || true)
   fi
@@ -103,7 +90,7 @@ collect_changed_skill_names() {
 
 collect_changed_agent_paths() {
   collect_changed_paths "${PLUGIN_ROOT}/agents/" \
-    | grep -E '^plugins/ruby-grape-rails/agents/.+\.md$' \
+    | grep -E "^${PLUGIN_ROOT}/agents/.+\.md$" \
     | sort -u || true
 }
 
@@ -115,7 +102,7 @@ should_run_changed_triggers() {
   local core_changed=""
   core_changed=$(
     collect_changed_paths "${PLUGIN_ROOT}/skills/" \
-      | sed -n "s|^${PLUGIN_ROOT}/skills/\\([^/]*\\)/SKILL\\.md$|\\1|p" \
+      | sed -n "s|^${PLUGIN_ROOT}/skills/\\([^/]*\\)/.*|\\1|p" \
       | grep -E "$CORE_SKILLS_REGEX" || true
   )
   [[ -n "$core_changed" ]]
@@ -304,14 +291,13 @@ run_all_triggers() {
   python3 -m lab.eval.trigger_scorer --all | summarize_triggers "$TRIGGER_FAIL_UNDER"
 }
 
-persist_last_eval_marker() {
-  if have_head; then
-    git rev-parse HEAD > "$LAST_EVAL_FILE"
-  fi
-}
-
 echo "=== Ruby Plugin Eval ==="
 echo
+
+if [[ "$MODE" == "--changed" && "$INCLUDE_UNTRACKED" == "true" ]]; then
+  echo "NOTE: --include-untracked makes changed-mode results local-only and non-comparable."
+  echo
+fi
 
 case "$MODE" in
   --changed)
@@ -389,8 +375,6 @@ if [[ $FAILURES -gt 0 ]]; then
   echo "Eval finished with ${FAILURES} failing section(s)."
   exit 1
 fi
-
-persist_last_eval_marker
 
 echo
 echo "Eval passed."

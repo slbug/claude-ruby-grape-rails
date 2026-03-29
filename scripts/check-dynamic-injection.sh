@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-SCAN_TARGETS=(plugins .claude README.md CLAUDE.md)
+SCAN_TARGETS=(plugins .claude .claude-plugin README.md CLAUDE.md)
 # shellcheck disable=SC2016
 PATTERN='(^|[^[:alnum:]_`])!`[^`]+`'
 FOUND=0
@@ -41,10 +41,10 @@ else
       continue
     fi
 
-    while IFS= read -r file; do
+    while IFS= read -r -d '' file; do
       [[ -n "$file" && -f "$file" ]] || continue
       scan_file "$file"
-    done < <(find "$target" -type f \( -name '*.md' -o -name '*.json' \) 2>/dev/null || true)
+    done < <(find "$target" -type f \( -name '*.md' -o -name '*.json' \) -print0 2>/dev/null || true)
   done
 fi
 

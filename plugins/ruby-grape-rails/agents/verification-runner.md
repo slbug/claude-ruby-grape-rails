@@ -49,7 +49,9 @@ When parsing JSON, YAML, text, or command output during verification:
    - if it fails because the wrapper itself is unavailable locally (`command not found`, permission denied, missing task, missing dependency), log the fallback and continue with the direct sequence below
    - if it surfaces real lint/test/security failures, stop there and report the failure instead of hiding it behind fallback
 2. `bundle exec rails zeitwerk:check` if `FULL_RAILS_APP=true`; if the cache is absent, fall back to repo detection consistent with `/rb:verify`:
-   `bin/rails` exists, or `rails` is configured and both `config/application.rb` and `config/environment.rb` exist
+   a real Rails entrypoint exists (`bin/rails` or `script/rails`), or the repo
+   has the standard runnable app layout (`config/application.rb`,
+   `config/environment.rb`, `config/boot.rb`, `app/`, and `config/environments/`)
 3. Prefer direct linting: `bundle exec standardrb` if configured, else `bundle exec rubocop` if configured
 4. Prefer direct security scanning: `bundle exec brakeman` if configured
 5. `bundle exec rspec` if `spec/` exists, else `bin/rails test`
