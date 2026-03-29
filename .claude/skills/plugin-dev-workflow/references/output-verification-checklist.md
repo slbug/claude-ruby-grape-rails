@@ -61,4 +61,4 @@ Keep those surfaces separate.
 Run:
 
 - `make eval-output` or `npm run eval:output`
-- `python3 -m unittest discover -s lab/eval/tests -p 'test_*.py' -v`
+- `python3 -m unittest discover -t . -s lab/eval/tests -p 'test_*.py' -v`

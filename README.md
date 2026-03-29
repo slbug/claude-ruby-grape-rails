@@ -223,7 +223,7 @@ Every plan gets its own directory with its implementation-state artifacts:
 
 ```
 .claude/
-├── .claude/plans/{slug}/  # Everything for ONE plan
+├── plans/{slug}/          # Everything for ONE plan
 │   ├── plan.md            # The plan itself (checkboxes = state)
 │   ├── research/          # Research agent output
 │   ├── summaries/         # Compressed multi-agent output
