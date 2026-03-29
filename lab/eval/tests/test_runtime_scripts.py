@@ -695,9 +695,15 @@ class RuntimeScriptTests(unittest.TestCase):
             (tmp / "Gemfile").write_text('source "https://rubygems.org"\ngem "standard"\n', encoding="utf-8")
             target = tmp / "demo.rb"
             target.write_text("puts :ok\n", encoding="utf-8")
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            fake_bundle = fake_bin / "bundle"
+            fake_bundle.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            fake_bundle.chmod(0o755)
             env = dict(os.environ)
             env["CLAUDE_PROJECT_DIR"] = tmpdir
             env["TMPDIR"] = str(tmp / "missing-tmpdir")
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
 
             result = subprocess.run(
                 ["bash", str(FORMAT_RUBY)],
