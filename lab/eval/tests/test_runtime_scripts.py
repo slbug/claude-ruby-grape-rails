@@ -25,6 +25,7 @@ CHECK_PENDING_PLANS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-
 CHECK_RESUME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-resume.sh"
 SETUP_DIRS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/setup-dirs.sh"
 ACTIVE_PLAN_LIB = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/active-plan-lib.sh"
+WORKSPACE_ROOT_LIB = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/workspace-root-lib.sh"
 FORMAT_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/format-ruby.sh"
 VERIFY_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/verify-ruby.sh"
 
@@ -247,6 +248,26 @@ class RuntimeScriptTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2, command)
             self.assertIn("destructive Rails database command", result.stderr)
 
+    def test_block_dangerous_ops_blocks_common_python_wrapper_forms(self) -> None:
+        for command, expected in (
+            ('python3 -c "import os; os.system(\'rails db:drop\')"', "destructive Rails database command"),
+            ('python3 -c "import os; os.system(\'redis-cli flushall\')"', "destructive Redis flush detected"),
+            ('python3 -c "import os; os.system(\'RAILS_ENV=production rails db:migrate\')"', "production environment detected"),
+        ):
+            result = run_block_hook(command)
+            self.assertEqual(result.returncode, 2, command)
+            self.assertIn(expected, result.stderr)
+
+    def test_block_dangerous_ops_blocks_absolute_path_binaries(self) -> None:
+        for command, expected in (
+            ("/usr/bin/git push --force origin main", "force push detected"),
+            ("/usr/bin/redis-cli flushall", "destructive Redis flush detected"),
+            ("/usr/bin/rails db:drop", "destructive Rails database command"),
+        ):
+            result = run_block_hook(command)
+            self.assertEqual(result.returncode, 2, command)
+            self.assertIn(expected, result.stderr)
+
     def test_block_dangerous_ops_blocks_production_env_assignments_beyond_prefixes(self) -> None:
         for command in (
             "rails db:migrate RAILS_ENV=production",
@@ -276,6 +297,29 @@ class RuntimeScriptTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 2)
         self.assertIn("destructive Rails database command", result.stderr)
+
+    def test_workspace_root_lib_debug_warning_is_bash_3_2_safe(self) -> None:
+        result = subprocess.run(
+            [
+                "/bin/bash",
+                "-c",
+                f"source {shlex.quote(str(WORKSPACE_ROOT_LIB))}; read_hook_input",
+            ],
+            input="",
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+            env={
+                **os.environ,
+                "RUBY_PLUGIN_DEBUG_HOOKS": "1",
+                "RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES": "abc",
+            },
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("bad substitution", result.stderr)
+        self.assertIn("invalid RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES=", result.stderr)
 
     def test_block_dangerous_ops_is_bash_3_2_safe_for_redis_flush(self) -> None:
         result = run_block_hook("redis-cli FLUSHALL", shell="/bin/bash")

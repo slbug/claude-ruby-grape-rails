@@ -185,14 +185,19 @@ end
 def extract_bash_commands(entry)
   return [] unless entry['type'] == 'assistant'
 
-  Array(entry.dig('message', 'content')).filter_map do |block|
-    next unless block.is_a?(Hash)
-    next unless block['type'] == 'tool_use' && block['name'] == 'Bash'
+  Array(entry.dig('message', 'content')).flat_map do |block|
+    next [] unless block.is_a?(Hash)
+    next [] unless block['type'] == 'tool_use' && block['name'] == 'Bash'
 
     command = block.dig('input', 'command').to_s.strip
-    next if command.empty?
+    next [] if command.empty?
 
-    command.lines.first.to_s.strip
+    command.each_line.filter_map do |line|
+      stripped = line.strip
+      next if stripped.empty?
+
+      stripped
+    end
   end
 end
 

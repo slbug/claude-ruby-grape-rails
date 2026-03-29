@@ -8,18 +8,37 @@ set -o pipefail
 # Hook input: JSON via stdin with .tool_input.file_path
 # Auto-fixes formatting issues when possible
 
-command -v jq >/dev/null 2>&1 || exit 0
+HOOK_NAME="${BASH_SOURCE[0]##*/}"
+
+emit_missing_dependency_block() {
+  local dependency="$1"
+
+  echo "BLOCKED: ${HOOK_NAME} cannot inspect the hook payload because ${dependency} is unavailable." >&2
+  echo "Install the missing dependency or disable the hook explicitly before continuing." >&2
+  exit 2
+}
+
+command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 DEP_LIB="${SCRIPT_DIR}/ruby-dependency-lib.sh"
-[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
-[[ -r "$DEP_LIB" && ! -L "$DEP_LIB" ]] || exit 0
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
+[[ -r "$DEP_LIB" && ! -L "$DEP_LIB" ]] || emit_missing_dependency_block "ruby-dependency-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
 # shellcheck disable=SC1090,SC1091
 source "$DEP_LIB"
 read_hook_input
 INPUT="$HOOK_INPUT_VALUE"
+if [[ -z "$INPUT" ]]; then
+  case "${HOOK_INPUT_STATUS:-empty}" in
+    truncated|invalid)
+      echo "BLOCKED: ${HOOK_NAME} could not safely inspect a ${HOOK_INPUT_STATUS} hook payload." >&2
+      echo "Fix the hook input before retrying automatic Ruby formatting." >&2
+      exit 2
+      ;;
+  esac
+fi
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 PROJECT_GEMFILE="${REPO_ROOT}/Gemfile"

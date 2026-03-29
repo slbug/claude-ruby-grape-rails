@@ -223,7 +223,7 @@ Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
     "SessionStart": [...],         // Setup dirs + runtime tool detection + resume detection
     "FileChanged": [...],          // Runtime refresh when Gemfile/Rakefile/gemspec/lefthook files change
     "CwdChanged": [...],           // Runtime refresh when working directory changes
-    "PreCompact": [...],           // Re-inject workflow rules before compaction
+    "PreCompact": [...],           // Warn before compaction about active workflow state
     "PostCompact": [...],          // Advise re-reading active plan artifacts after compaction
     "Stop": [...],                 // Warn if uncompleted tasks
     "StopFailure": [...]           // Persist API failure context for resume flows
@@ -250,8 +250,8 @@ Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
 - `PostToolUseFailure` (Bash): Ruby-specific debugging hints when bundle exec fails,
   **error critic** that detects repeated failures and escalates to structured analysis (both via `additionalContext`)
 - `SubagentStart`: Inject all Iron Laws into every spawned subagent via `additionalContext` (addresses zero skill auto-loading gap)
-- `PreCompact`: Re-inject workflow rules (plan/work/full) before compaction via JSON `systemMessage`,
-  including `.claude/ACTIVE_PLAN` resolution for context-aware compaction
+- `PreCompact`: Warn before compaction about the active plan/work/full state so
+  the next turn re-reads the right artifacts after compaction
 - `PostCompact`: Advise Claude which active plan artifacts to re-read after
   compaction when unchecked tasks still exist
 - `SessionStart` (all): Setup `.claude/` directories + consolidated runtime detection
@@ -291,7 +291,8 @@ Workflow convention with hook-level detection support:
 **Hook output patterns (important for contributors):**
 
 - `PostToolUse` stdout is **verbose-mode only** — use `exit 2` + stderr to feed messages to Claude
-- `PreCompact` has **no stdout context injection** — use JSON `systemMessage`
+- `PreCompact` has **no context injection path** — use a user-facing stderr
+  reminder only and rely on `PostCompact` to re-read active plan artifacts
 - `SessionStart` stdout IS added to Claude's context (one of two exceptions along with `UserPromptSubmit`)
 - `SubagentStart` uses `hookSpecificOutput.additionalContext` to inject context into subagents
 - `PostToolUseFailure` uses `hookSpecificOutput.additionalContext` for debugging hints
@@ -504,9 +505,8 @@ When working on Ruby/Rails/Grape code, ALWAYS load relevant skills based on file
 | `*.rb` | `ruby-idioms` | Always check Iron Laws |
 
 **Hook prerequisites:** core hook automation expects `bash`, `jq`, and `grep`
-to be available. When those dependencies are missing, enforcement hooks now
-surface an explicit dependency failure instead of silently disabling
-guardrails.
+to be available. When those dependencies are missing, hooks now surface an
+explicit error or warning instead of silently disabling guardrails.
 
 **Note on job files**: Load `rails-idioms` instead of `sidekiq` when `config/environments/production.rb` contains `solid_queue` (Rails 8+ default).
 

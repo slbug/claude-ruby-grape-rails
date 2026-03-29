@@ -18,6 +18,7 @@ read_hook_input() {
   local debug_hooks="${RUBY_PLUGIN_DEBUG_HOOKS:-}"
   local read_limit=0
   local input=""
+  local quoted_raw_max_bytes=""
 
   HOOK_INPUT_STATUS="empty"
   HOOK_INPUT_VALUE=""
@@ -25,7 +26,8 @@ read_hook_input() {
   if [[ "$raw_max_bytes" =~ ^[1-9][0-9]*$ ]]; then
     max_bytes="$raw_max_bytes"
   elif [[ -n "$debug_hooks" ]]; then
-    echo "Warning: invalid RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES=${raw_max_bytes@Q}; using ${default_max_bytes}" >&2
+    printf -v quoted_raw_max_bytes '%q' "$raw_max_bytes"
+    echo "Warning: invalid RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES=${quoted_raw_max_bytes}; using ${default_max_bytes}" >&2
   fi
 
   if [[ -t 0 ]]; then

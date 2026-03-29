@@ -106,6 +106,21 @@ class PermissionsExtractorTests(unittest.TestCase):
         self.assertIn("ruby script/b.rb", groups)
         self.assertEqual(len(groups), 2)
 
+    def test_multiline_bash_payload_records_each_command_line(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            write_transcript(repo, tmp, "bundle exec rubocop\nbundle exec brakeman\n")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        groups = {entry["group"] for entry in report["uncovered_groups"]}
+        self.assertIn("bundle exec rubocop", groups)
+        self.assertIn("bundle exec brakeman", groups)
+
 
 if __name__ == "__main__":
     unittest.main()

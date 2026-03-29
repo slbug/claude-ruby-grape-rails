@@ -6,17 +6,34 @@ set -o pipefail
 # This hook populates context at SessionStart and refreshes .runtime_env when
 # watched files change.
 
+HOOK_NAME="${BASH_SOURCE[0]##*/}"
+
+emit_runtime_dependency_warning() {
+  local dependency="$1"
+
+  echo "WARNING: ${HOOK_NAME} cannot refresh Ruby runtime context because ${dependency} is unavailable." >&2
+  exit 0
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 DEP_LIB="${SCRIPT_DIR}/ruby-dependency-lib.sh"
-[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
-[[ -r "$DEP_LIB" && ! -L "$DEP_LIB" ]] || exit 0
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_runtime_dependency_warning "workspace-root-lib.sh"
+[[ -r "$DEP_LIB" && ! -L "$DEP_LIB" ]] || emit_runtime_dependency_warning "ruby-dependency-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
 # shellcheck disable=SC1090,SC1091
 source "$DEP_LIB"
 read_hook_input
 INPUT="$HOOK_INPUT_VALUE"
+if [[ -z "$INPUT" ]]; then
+  case "${HOOK_INPUT_STATUS:-empty}" in
+    truncated|invalid)
+      echo "WARNING: ${HOOK_NAME} could not safely inspect a ${HOOK_INPUT_STATUS} hook payload." >&2
+      exit 0
+      ;;
+  esac
+fi
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 PROJECT_GEMFILE="${REPO_ROOT}/Gemfile"

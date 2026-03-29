@@ -32,8 +32,8 @@ the right domain knowledge based on what files you're editing and enforces rules
 that prevent the mistakes Ruby developers actually make in production.
 
 Hook prerequisites: core hook guardrails expect `bash`, `jq`, and `grep`. If a
-required dependency is missing, the plugin now surfaces an explicit dependency
-failure instead of silently disabling those checks.
+required dependency is missing, the plugin now surfaces an explicit hook error
+or warning instead of silently disabling those checks.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -223,9 +223,9 @@ The plugin implements a **Plan, Work, Verify, Review, Compound** lifecycle. Each
   `.claude/research/` and prior plan research before respawning
   duplicate topic-research agents.
 - **Workflow continuity is hook-backed.** `PreCompact`, `PostCompact`, and
-  `StopFailure` preserve rules, log failure context, and surface re-read
-  reminders after compaction or failed stops instead of relying only on chat
-  memory.
+  `StopFailure` warn before compaction, log failure context, and surface
+  re-read reminders after compaction or failed stops instead of relying only on
+  chat memory.
 
 ### Plan Namespaces
 

@@ -196,12 +196,13 @@ The plugin uses **layered enforcement** — some things run automatically, some 
 | Failure hints | Bash command fails | Injects debugging hints via `additionalContext` |
 | Error critic | Repeated test failures | Escalates to structured critic analysis after 3+ failures |
 | Iron Laws injection | Any subagent spawns | Injects all 21 Iron Laws into subagents via `additionalContext` |
-| PreCompact rules | Before context compaction | Re-injects workflow rules via JSON `systemMessage` |
+| PreCompact rules | Before context compaction | Warns about the active workflow phase and what to re-read after compaction |
 
 Format check **auto-fixes** — runs `standardrb --fix` when StandardRB is configured, otherwise `rubocop -a`.
 
-The PreCompact hook detects active workflow phases (`/rb:plan`, `/rb:work`, `/rb:full`) and re-injects their critical rules
-before context compaction. This prevents "rule amnesia" where Claude loses behavioral constraints after context is compressed.
+The PreCompact hook detects active workflow phases (`/rb:plan`, `/rb:work`, `/rb:full`) and emits a user-facing reminder
+before compaction so the next turn re-reads the right plan artifacts. PostCompact then reinforces those re-read steps after
+context is compressed.
 
 Note: `verify-ruby.sh` runs `ruby -c` syntax checks on Ruby files. Verification commands
 (`/rb:verify`, `/rb:full`) run full checks including format, tests, and Rails-specific validations

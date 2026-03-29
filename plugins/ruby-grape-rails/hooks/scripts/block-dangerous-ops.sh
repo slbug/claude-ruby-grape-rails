@@ -97,6 +97,29 @@ trim_enclosing_grouping() {
   printf '%s\n' "$segment"
 }
 
+normalize_command_executable() {
+  local segment
+  local first=""
+  local rest=""
+
+  segment=$(trim_leading_whitespace "$1")
+  [[ -n "$segment" ]] || {
+    printf '\n'
+    return 0
+  }
+
+  first="${segment%%[[:space:]]*}"
+  if [[ "$first" != "$segment" ]]; then
+    rest="${segment#"$first"}"
+  fi
+
+  if [[ "$first" == */* ]]; then
+    first="${first##*/}"
+  fi
+
+  printf '%s%s\n' "$first" "$rest"
+}
+
 to_ascii_lower() {
   printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
 }
@@ -219,6 +242,64 @@ extract_ruby_wrapper_payload() {
   return 1
 }
 
+extract_python_wrapper_payload() {
+  local segment
+  local rest
+  local token
+  local python_code
+  local nested_command
+
+  segment=$(trim_enclosing_grouping "$1")
+  [[ "$segment" =~ ^python([0-9]+(\.[0-9]+)?)?([[:space:]]|$) ]] || return 1
+
+  rest="${segment#"${BASH_REMATCH[0]}"}"
+  while :; do
+    rest=$(trim_leading_whitespace "$rest")
+    [[ -n "$rest" ]] || return 1
+
+    token="${rest%%[[:space:]]*}"
+    if [[ "$token" == "$rest" ]]; then
+      return 1
+    fi
+
+    if [[ "$token" == "-c" ]]; then
+      rest="${rest#"$token"}"
+      python_code=$(trim_matching_outer_quotes "$rest")
+      nested_command=$(printf '%s' "$python_code" | sed -nE "s/.*os\\.system\\([[:space:]]*'([^']*)'([[:space:]]*)\\).*/\\1/p")
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$python_code" | sed -nE 's/.*os\.system\([[:space:]]*"([^"]*)"([[:space:]]*)\).*/\1/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$python_code" | sed -nE "s/.*subprocess\\.(run|call|Popen)\\([[:space:]]*'([^']*)'([[:space:]]*,[^)]*shell[[:space:]]*=[[:space:]]*True[^)]*)?\\).*/\\2/p")
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$python_code" | sed -nE 's/.*subprocess\.(run|call|Popen)\([[:space:]]*"([^"]*)"([[:space:]]*,[^)]*shell[[:space:]]*=[[:space:]]*True[^)]*)?\).*/\2/p')
+      fi
+      [[ -n "$nested_command" ]] || return 1
+      printf '%s\n' "$nested_command"
+      return 0
+    fi
+
+    [[ "$token" == -* ]] || return 1
+    rest="${rest#"$token"}"
+  done
+
+  return 1
+}
+
+emit_command_variants_for_stream() {
+  local command_text="$1"
+  local segment=""
+
+  emit_command_variants "$command_text"
+
+  while IFS= read -r segment; do
+    segment=$(strip_leading_env_prefixes "$segment")
+    [[ -n "$segment" ]] || continue
+    emit_command_variants "$segment"
+  done < <(normalize_command_segments "$command_text")
+}
+
 emit_command_variants() {
   local command_text="$1"
   local depth="${2:-2}"
@@ -226,6 +307,7 @@ emit_command_variants() {
   local normalized=""
 
   normalized=$(trim_enclosing_grouping "$command_text")
+  normalized=$(normalize_command_executable "$normalized")
   [[ -n "$normalized" ]] || return 0
 
   printf '%s\n' "$normalized"
@@ -239,65 +321,51 @@ emit_command_variants() {
   if nested=$(extract_ruby_wrapper_payload "$normalized"); then
     emit_command_variants "$nested" $(( depth - 1 ))
   fi
+
+  if nested=$(extract_python_wrapper_payload "$normalized"); then
+    emit_command_variants "$nested" $(( depth - 1 ))
+  fi
 }
 
 is_destructive_db_command() {
   local command_text="$1"
-  local segment
   local candidate
 
-  while IFS= read -r segment; do
-    segment=$(strip_leading_env_prefixes "$segment")
-    [[ -n "$segment" ]] || continue
-
-    while IFS= read -r candidate; do
-      if [[ "$candidate" =~ ^((bundle[[:space:]]+exec[[:space:]]+)?((\./)?bin/)?(rails|rake))([[:space:]]|$) ]] &&
-        printf '%s' "$candidate" | grep -qE "(^|[[:space:]])['\"]?db:(drop|reset|purge)(:[[:alnum:]_:-]+)?['\"]?([[:space:]]|$)"; then
-        return 0
-      fi
-    done < <(emit_command_variants "$segment")
-  done < <(normalize_command_segments "$command_text")
+  while IFS= read -r candidate; do
+    if [[ "$candidate" =~ ^((bundle[[:space:]]+exec[[:space:]]+)?((\./)?bin/)?(rails|rake))([[:space:]]|$) ]] &&
+      printf '%s' "$candidate" | grep -qE "(^|[[:space:]])['\"]?db:(drop|reset|purge)(:[[:alnum:]_:-]+)?['\"]?([[:space:]]|$)"; then
+      return 0
+    fi
+  done < <(emit_command_variants_for_stream "$command_text")
 
   return 1
 }
 
 is_destructive_redis_command() {
   local command_text="$1"
-  local segment
   local candidate
   local lowered
 
-  while IFS= read -r segment; do
-    segment=$(strip_leading_env_prefixes "$segment")
-    [[ -n "$segment" ]] || continue
-
-    while IFS= read -r candidate; do
-      lowered=$(to_ascii_lower "$candidate")
-      if [[ "$lowered" =~ ^redis-cli([[:space:]]+[^[:space:]]+)*[[:space:]]+flush(all|db)([[:space:]]|$) ]]; then
-        return 0
-      fi
-    done < <(emit_command_variants "$segment")
-  done < <(normalize_command_segments "$command_text")
+  while IFS= read -r candidate; do
+    lowered=$(to_ascii_lower "$candidate")
+    if [[ "$lowered" =~ ^redis-cli([[:space:]]+[^[:space:]]+)*[[:space:]]+flush(all|db)([[:space:]]|$) ]]; then
+      return 0
+    fi
+  done < <(emit_command_variants_for_stream "$command_text")
 
   return 1
 }
 
 is_force_push_command() {
   local command_text="$1"
-  local segment
   local candidate
 
-  while IFS= read -r segment; do
-    segment=$(strip_leading_env_prefixes "$segment")
-    [[ -n "$segment" ]] || continue
-
-    while IFS= read -r candidate; do
-      if [[ "$candidate" =~ ^git([[:space:]]+-c[[:space:]]+[^[:space:]]+)*[[:space:]]+push([[:space:]]|$) ]] &&
-        printf '%s' "$candidate" | grep -qE '(^|[[:space:]])((--force|-f)([[:space:]]|$)|\+[^[:space:]]+($|[[:space:]])|[^[:space:]]+:\+[^[:space:]]+($|[[:space:]]))'; then
-        return 0
-      fi
-    done < <(emit_command_variants "$segment")
-  done < <(normalize_command_segments "$command_text")
+  while IFS= read -r candidate; do
+    if [[ "$candidate" =~ ^git([[:space:]]+-c[[:space:]]+[^[:space:]]+)*[[:space:]]+push([[:space:]]|$) ]] &&
+      printf '%s' "$candidate" | grep -qE '(^|[[:space:]])((--force|-f)([[:space:]]|$)|\+[^[:space:]]+($|[[:space:]])|[^[:space:]]+:\+[^[:space:]]+($|[[:space:]]))'; then
+      return 0
+    fi
+  done < <(emit_command_variants_for_stream "$command_text")
 
   return 1
 }
@@ -331,32 +399,30 @@ segment_clears_production_env() {
 
 is_production_env_command() {
   local command_text="$1"
-  local segment
   local candidate
   local production_env_active=false
+  local segment
+
+  while IFS= read -r candidate; do
+    split_leading_env_prefixes "$candidate"
+    if [[ -n "$LEADING_ENV_PREFIXES_RESULT" && -n "$STRIPPED_COMMAND_RESULT" ]] &&
+      printf '%s' "$LEADING_ENV_PREFIXES_RESULT" | grep -qiE '(^|[[:space:]])(RAILS_ENV|RACK_ENV)=["'\'']?(prod|production)["'\'']?([[:space:]]|$)' &&
+      ! is_harmless_env_probe "$STRIPPED_COMMAND_RESULT"; then
+      return 0
+    fi
+
+    if candidate_mentions_production_env "$candidate" && ! is_harmless_env_probe "$candidate"; then
+      return 0
+    fi
+  done < <(emit_command_variants_for_stream "$command_text")
 
   while IFS= read -r segment; do
-    while IFS= read -r candidate; do
-      split_leading_env_prefixes "$candidate"
-      if [[ -n "$LEADING_ENV_PREFIXES_RESULT" && -n "$STRIPPED_COMMAND_RESULT" ]] &&
-        printf '%s' "$LEADING_ENV_PREFIXES_RESULT" | grep -qiE '(^|[[:space:]])(RAILS_ENV|RACK_ENV)=["'\'']?(prod|production)["'\'']?([[:space:]]|$)' &&
-        ! is_harmless_env_probe "$STRIPPED_COMMAND_RESULT"; then
-        return 0
-      fi
-
-      if candidate_mentions_production_env "$candidate" && ! is_harmless_env_probe "$candidate"; then
-        return 0
-      fi
-
-      if [[ "$production_env_active" == "true" ]] && ! is_harmless_env_probe "$candidate"; then
-        return 0
-      fi
-    done < <(emit_command_variants "$segment")
-
     if segment_exports_production_env "$segment"; then
       production_env_active=true
     elif segment_clears_production_env "$segment"; then
       production_env_active=false
+    elif [[ "$production_env_active" == "true" ]] && ! is_harmless_env_probe "$segment"; then
+      return 0
     fi
   done < <(normalize_command_segments "$command_text")
 

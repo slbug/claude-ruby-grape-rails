@@ -14,7 +14,7 @@ if [[ ${#STAGED_MD_FILES[@]} -gt 0 ]]; then
   echo "Linting staged Markdown files..."
 
   if command -v npx >/dev/null 2>&1; then
-    if ! printf '%s\0' "${STAGED_MD_FILES[@]}" | xargs -0 npx markdownlint; then
+    if ! printf '%s\0' "${STAGED_MD_FILES[@]}" | xargs -0 npx markdownlint --; then
       echo ""
       echo "Markdown lint errors found. Fix them or run:"
       echo "  npm run lint:fix"
