@@ -51,8 +51,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   to use path-safe file handling instead of brittle whitespace-splitting loops.
 - **Dangerous-op blocking and Ruby hook detection are now more consistent** —
   the destructive-op hook now covers quoted and namespaced DB tasks,
-  `git -c ... push --force`, common `bash -lc` / `sh -lc` / `ruby -e
-  system(...)` wrapper forms, and Redis flushes under stock macOS Bash, while
+  `git -c ... push --force`, common `bash -lc` / `sh -lc` wrappers, several
+  common `ruby -e` inline execution forms (`system(...)`, backticks, `%q/%Q`,
+  `%x{...}`, `exec(...)`), and Redis flushes under stock macOS Bash, while
   Ruby gem detection now understands `gem(...)` and gemspec-driven repos
   across the runtime detector, stack detector, and formatter. The Ruby-ish
   post-edit hook surface was also collapsed behind a shared wrapper to reduce

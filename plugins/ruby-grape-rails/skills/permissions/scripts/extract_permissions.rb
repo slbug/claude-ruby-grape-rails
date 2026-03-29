@@ -143,7 +143,9 @@ def command_group(command)
       first_line.split(/\s+/)
     end
 
-  core_tokens = tokens.drop_while { |token| token.match?(/\A[A-Za-z_][A-Za-z0-9_]*=.*/) }
+  core_tokens = tokens.dup
+  core_tokens.shift while core_tokens.first == 'env'
+  core_tokens = core_tokens.drop_while { |token| token.match?(/\A[A-Za-z_][A-Za-z0-9_]*=.*/) }
   core_tokens = tokens if core_tokens.empty?
   return first_line if core_tokens.empty?
 

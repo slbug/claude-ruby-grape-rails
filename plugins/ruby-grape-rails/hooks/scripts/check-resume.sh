@@ -21,8 +21,8 @@ shopt -s nullglob
 for dir in "${PLANS_DIR}"/*/; do
   [[ -d "$dir" && ! -L "$dir" ]] || continue
   [[ -f "${dir}plan.md" && ! -L "${dir}plan.md" ]] || continue
-  UNCHECKED=$(grep -c -- '^\- \[ \]' "${dir}plan.md" 2>/dev/null || true)
-  CHECKED=$(grep -cE -- '^\- \[[xX]\]' "${dir}plan.md" 2>/dev/null || true)
+  UNCHECKED=$(grep -cE -- '^[[:space:]]*([-*+]|[0-9]+\.)[[:space:]]+\[ \]' "${dir}plan.md" 2>/dev/null || true)
+  CHECKED=$(grep -cE -- '^[[:space:]]*([-*+]|[0-9]+\.)[[:space:]]+\[[xX]\]' "${dir}plan.md" 2>/dev/null || true)
   UNCHECKED=${UNCHECKED:-0}
   CHECKED=${CHECKED:-0}
   if [[ "$UNCHECKED" -gt 0 ]]; then

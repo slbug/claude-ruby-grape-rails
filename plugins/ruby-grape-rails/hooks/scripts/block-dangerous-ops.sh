@@ -165,9 +165,19 @@ extract_ruby_wrapper_payload() {
     if [[ "$token" == "-e" ]]; then
       rest="${rest#"$token"}"
       ruby_code=$(trim_matching_outer_quotes "$rest")
-      nested_command=$(printf '%s' "$ruby_code" | sed -nE "s/.*(system|exec|spawn)\\('([^']*)'\\).*/\\2/p")
+      nested_command=$(printf '%s' "$ruby_code" | sed -nE "s/.*(system|exec|spawn)\\([[:space:]]*'([^']*)'([[:space:]]*,.*)?\\).*/\\2/p")
       if [[ -z "$nested_command" ]]; then
-        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*(system|exec|spawn)\("([^"]*)"\).*/\2/p')
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*(system|exec|spawn)\([[:space:]]*"([^"]*)"([[:space:]]*,.*)?\).*/\2/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*(system|exec|spawn)\([[:space:]]*%[qQ]\{([^}]*)\}([[:space:]]*,.*)?\).*/\2/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        # shellcheck disable=SC2016
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*`([^`]*)`.*/\1/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*%x\{([^}]*)\}.*/\1/p')
       fi
       [[ -n "$nested_command" ]] || return 1
       printf '%s\n' "$nested_command"

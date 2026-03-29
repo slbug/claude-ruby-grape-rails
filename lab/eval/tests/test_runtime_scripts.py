@@ -17,6 +17,8 @@ DETECT_RUNTIME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runt
 DEBUG_STATEMENT_WARNING = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/debug-statement-warning.sh"
 HOOKS_JSON = REPO_ROOT / "plugins/ruby-grape-rails/hooks/hooks.json"
 PRE_COMMIT_HOOK = REPO_ROOT / ".husky/pre-commit.bash"
+CHECK_PENDING_PLANS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-pending-plans.sh"
+CHECK_RESUME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-resume.sh"
 
 
 def run_block_hook(command: str, shell: str = "bash") -> subprocess.CompletedProcess[str]:
@@ -94,6 +96,20 @@ def run_debug_statement_warning(repo_root: str, file_path: str) -> subprocess.Co
     )
 
 
+def run_workspace_hook(script_path: Path, repo_root: str, payload: dict | None = None) -> subprocess.CompletedProcess[str]:
+    env = dict(os.environ)
+    env["CLAUDE_PROJECT_DIR"] = repo_root
+    return subprocess.run(
+        ["bash", str(script_path)],
+        input=json.dumps(payload or {}),
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        check=False,
+        env=env,
+    )
+
+
 def run_secret_scan(
     repo_root: str,
     file_path: str,
@@ -161,9 +177,17 @@ class RuntimeScriptTests(unittest.TestCase):
             self.assertIn(expected, result.stderr)
 
     def test_block_dangerous_ops_blocks_common_ruby_wrapper_forms(self) -> None:
-        result = run_block_hook('ruby -e "system(\'rails db:drop\')"')
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("destructive Rails database command", result.stderr)
+        for command in (
+            'ruby -e "system(\'rails db:drop\')"',
+            "ruby -e 'system(%q{rails db:drop})'",
+            "ruby -e '`rails db:drop`'",
+            'ruby -e \'system("rails db:drop", exception: true)\'',
+            "ruby -e 'exec(%Q{rails db:drop})'",
+            "ruby -e '%x{rails db:drop}'",
+        ):
+            result = run_block_hook(command)
+            self.assertEqual(result.returncode, 2, command)
+            self.assertIn("destructive Rails database command", result.stderr)
 
     def test_block_dangerous_ops_blocks_production_env_assignments_beyond_prefixes(self) -> None:
         for command in (
@@ -428,6 +452,34 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         self.assertNotIn("mapfile", result.stderr)
+
+    def test_plan_hooks_count_common_markdown_checkbox_variants(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plan_dir = tmp / ".claude" / "plans" / "demo"
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "plan.md").write_text(
+                textwrap.dedent(
+                    """
+                    # Demo
+
+                    * [ ] one
+                    1. [ ] two
+                    - [ ] three
+                    + [x] done
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+
+            pending = run_workspace_hook(CHECK_PENDING_PLANS, tmpdir, {"stop_hook_active": False})
+            resume = run_workspace_hook(CHECK_RESUME, tmpdir)
+
+        self.assertEqual(pending.returncode, 0, pending.stderr)
+        self.assertIn("1 plan(s) have uncompleted tasks", pending.stdout)
+        self.assertEqual(resume.returncode, 0, resume.stderr)
+        self.assertIn("has 3 remaining tasks (1 done)", resume.stdout)
 
 
 if __name__ == "__main__":
