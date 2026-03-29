@@ -139,6 +139,16 @@ update_file() {
 
   validate_destination_path "$file" || return 1
 
+  if [[ ! -f "$file" ]]; then
+    log_error "File not found: $file"
+    return 1
+  fi
+
+  if [[ ! -r "$file" ]]; then
+    log_error "File not readable: $file"
+    return 1
+  fi
+
   if ! grep -q "$start_marker" "$file"; then
     log_error "Markers not found in $file"
     return 1

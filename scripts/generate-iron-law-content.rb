@@ -34,7 +34,7 @@ end
 def validate_entries!(yaml)
   category_required = %w[id name law_count]
   law_required = %w[id category title rule summary_text rationale subagent_text]
-  category_ids = yaml['categories'].filter_map { |category| category['id'] }
+  category_ids = yaml['categories'].filter_map { |category| category['id'] if category.is_a?(Hash) }
   errors = []
 
   yaml['categories'].each_with_index do |category, index|
