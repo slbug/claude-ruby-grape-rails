@@ -21,7 +21,7 @@
     "eval:stress": "python3 -m lab.eval.evaluator_stress_test",
     "eval:test": "bash scripts/run-eval-tests.sh",
     "eval:test:pytest": "python3 -m pytest lab/eval/tests -v",
-    "eval:test:unittest": "python3 -m unittest discover -s lab/eval/tests -p 'test_*.py' -v",
+    "eval:test:unittest": "python3 -m unittest discover -s lab/eval/tests -p 'test_*.py' -t . -v",
     "security:injection": "bash scripts/check-dynamic-injection.sh",
     "ci": "npm run eval:test && npm run eval:ci",
     "prepare": "husky || true"

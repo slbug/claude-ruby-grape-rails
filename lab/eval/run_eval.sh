@@ -4,6 +4,7 @@
 # Usage:
 #   ./lab/eval/run_eval.sh              # Lint + injection check + changed surfaces
 #   ./lab/eval/run_eval.sh --changed    # Same as default
+#   ./lab/eval/run_eval.sh --changed --include-untracked
 #   ./lab/eval/run_eval.sh --all        # Lint + injection check + core skills + all agents + triggers
 #   ./lab/eval/run_eval.sh --skills     # Core skills only
 #   ./lab/eval/run_eval.sh --agents     # All agents only
@@ -16,7 +17,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PLUGIN_ROOT="plugins/ruby-grape-rails"
 LAST_EVAL_FILE="${SCRIPT_DIR}/.last-eval-commit"
-MODE="${1:---changed}"
+MODE="--changed"
+INCLUDE_UNTRACKED=false
+for arg in "$@"; do
+  case "$arg" in
+    --changed|--all|--skills|--agents|--triggers|--ci)
+      MODE="$arg"
+      ;;
+    --include-untracked)
+      INCLUDE_UNTRACKED=true
+      ;;
+    *)
+      echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked]" >&2
+      exit 1
+      ;;
+  esac
+done
 FAIL_UNDER="${RUBY_PLUGIN_EVAL_FAIL_UNDER:-0.90}"
 AGENT_FAIL_UNDER="${RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER:-0.85}"
 TRIGGER_FAIL_UNDER="${RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER:-0.90}"
@@ -67,10 +83,12 @@ collect_changed_paths() {
     lines=$(git ls-files -- "$prefix" 2>/dev/null || true)
   fi
 
-  local untracked=""
-  untracked=$(git ls-files --others --exclude-standard -- "$prefix" 2>/dev/null || true)
-  if [[ -n "$untracked" ]]; then
-    lines=$(printf '%s\n%s\n' "$lines" "$untracked")
+  if [[ "$INCLUDE_UNTRACKED" == "true" ]]; then
+    local untracked=""
+    untracked=$(git ls-files --others --exclude-standard -- "$prefix" 2>/dev/null || true)
+    if [[ -n "$untracked" ]]; then
+      lines=$(printf '%s\n%s\n' "$lines" "$untracked")
+    fi
   fi
 
   printf '%s\n' "$lines" | awk 'NF' | sort -u
@@ -200,9 +218,13 @@ run_changed_skills() {
   local result="{"
   local first=true
   local skill=""
+  local missing_skills=()
   for skill in "${skills_to_check[@]}"; do
     local path="${PLUGIN_ROOT}/skills/${skill}/SKILL.md"
-    [[ -f "$path" ]] || continue
+    if [[ ! -f "$path" ]]; then
+      missing_skills+=("$skill")
+      continue
+    fi
 
     local score=""
     score="$(python3 -m lab.eval.scorer "$path")"
@@ -214,6 +236,11 @@ run_changed_skills() {
     result+="\"${skill}\":${score}"
   done
   result+="}"
+
+  if [[ ${#missing_skills[@]} -gt 0 ]]; then
+    echo "  Missing changed skill files (deleted or moved): ${missing_skills[*]}" >&2
+    return 1
+  fi
 
   printf '%s\n' "$result" | summarize_subject_scores "skills" "$FAIL_UNDER"
 }
@@ -240,9 +267,14 @@ run_changed_agents() {
 
   local result="{"
   local first=true
+  local missing_agents=()
   for path in "${agent_paths[@]}"; do
     local agent_name
     agent_name="$(basename "$path" .md)"
+    if [[ ! -f "$path" ]]; then
+      missing_agents+=("$agent_name")
+      continue
+    fi
     local score=""
     score="$(python3 -m lab.eval.agent_scorer "$path")"
     if [[ "$first" == true ]]; then
@@ -253,6 +285,11 @@ run_changed_agents() {
     result+="\"${agent_name}\":${score}"
   done
   result+="}"
+
+  if [[ ${#missing_agents[@]} -gt 0 ]]; then
+    echo "  Missing changed agent files (deleted or moved): ${missing_agents[*]}" >&2
+    return 1
+  fi
 
   printf '%s\n' "$result" | summarize_subject_scores "agents" "$AGENT_FAIL_UNDER"
 }
@@ -342,7 +379,7 @@ case "$MODE" in
     run_all_triggers || FAILURES=$((FAILURES + 1))
     ;;
   *)
-    echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci]"
+    echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked]"
     exit 1
     ;;
 esac

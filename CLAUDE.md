@@ -17,7 +17,7 @@ The plugin implements a **Plan → Work → Verify → Review → Compound** lif
 /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
      │           │            │              │              │
      ↓           ↓            ↓              ↓              ↓
-plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
+.claude/plans/{slug}/  (in namespace) (in namespace) (in namespace) .claude/solutions/
 ```
 
 **Key principle**: Filesystem is the state machine. Each phase reads from previous phase's output. Solutions feed back into future cycles.
@@ -26,13 +26,13 @@ plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
 
 | Command | Phase | Input | Output |
 |---------|-------|-------|--------|
-| `/rb:plan` | Planning | Feature description | `plans/{slug}/plan.md` |
+| `/rb:plan` | Planning | Feature description | `.claude/plans/{slug}/plan.md` |
 | `/rb:plan --existing` | Enhancement | Plan file | Enhanced plan with research |
 | `/rb:brief` | Understanding | Plan file | Interactive walkthrough (ephemeral) |
-| `/rb:work` | Execution | Plan file | Updated checkboxes, `plans/{slug}/progress.md` |
+| `/rb:work` | Execution | Plan file | Updated checkboxes, `.claude/plans/{slug}/progress.md` |
 | `/rb:verify` | Verification | Plan namespace | Verification results |
-| `/rb:review` | Quality | Changed files | `reviews/{review-slug}.md` + `reviews/{agent-slug}/...` |
-| `/rb:compound` | Knowledge | Solved problem | `solutions/{category}/{fix}.md` |
+| `/rb:review` | Quality | Changed files | `.claude/reviews/{review-slug}.md` + `.claude/reviews/{agent-slug}/...` |
+| `/rb:compound` | Knowledge | Solved problem | `.claude/solutions/{category}/{fix}.md` |
 | `/rb:full` | All | Feature description | Complete cycle with compounding |
 
 ### Artifact Directories
@@ -211,7 +211,7 @@ Defined in `hooks/hooks.json`:
 ```json
 {
   "hooks": {
-    "PreToolUse": [...],            // Block dangerous ops (rails db:drop, force push, RAILS_ENV=production)
+    "PreToolUse": [...],            // Block dangerous ops (rails/rake db:drop, force push, RAILS_ENV=production)
     "PostToolUse": [...],          // Format + Iron Law verify + security + progress + plan STOP + debug stmt
     "PostToolUseFailure": [...],   // Ruby failure hints + error critic for bundle commands
     "SubagentStart": [...],        // Iron Laws injection into all subagents
@@ -228,7 +228,7 @@ Defined in `hooks/hooks.json`:
 
 **Current hooks:**
 
-- `PreToolUse` (Bash): Block destructive operations (`rails db:drop`, `git push --force`, `RAILS_ENV=production`) before execution
+- `PreToolUse` (Bash): Block destructive operations (`rails` / `rake` `db:drop/reset/purge`, `git push --force`, `RAILS_ENV=production`) before execution
 - `PostToolUse` (Edit|Write): Multiple scripts run in sequence:
   - `iron-law-verifier.sh`: **Programmatic Iron Law verification** (scans code for violations) — all Edit|Write
   - `security-reminder.sh`: Security Iron Laws for auth files — all Edit|Write
@@ -781,7 +781,7 @@ entrypoints before broader experimentation:
 Minimum runtime: `python3` 3.10+ for `lab/eval/`.
 
 - `make eval` / `npm run eval` for lint + injection check + changed surfaces
-- `make eval-all` / `npm run eval:all` for the full `1.6.0` eval snapshot
+- `make eval-all` / `npm run eval:all` for the full eval snapshot
 - `make eval-ci` / `npm run eval:ci` for the contributor CI gate
 - `make security-injection` / `npm run security:injection`
 - `make eval-tests` / `npm run eval:test` for the default contributor test

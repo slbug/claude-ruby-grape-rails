@@ -75,6 +75,37 @@ class ScorerTests(unittest.TestCase):
         self.assertIn("Unknown check type", str(ctx.exception))
         self.assertIn("not_a_real_check", str(ctx.exception))
 
+    def test_score_agent_reports_unknown_check_types_clearly(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            agent_path = Path(tmpdir) / "sample-agent.md"
+            agent_path.write_text(
+                "---\nname: sample-agent\ndescription: test agent\ntools: Read\neffort: medium\n---\n# Agent\n",
+                encoding="utf-8",
+            )
+            eval_def = EvalDefinition.from_dict(
+                {
+                    "agent": "sample-agent",
+                    "agent_path": str(agent_path),
+                    "dimensions": {
+                        "safety": {
+                            "weight": 1.0,
+                            "checks": [
+                                {
+                                    "type": "not_a_real_check",
+                                    "desc": "invalid check type",
+                                }
+                            ],
+                        }
+                    },
+                }
+            )
+
+            with self.assertRaises(ValueError) as ctx:
+                score_agent(str(agent_path), eval_def)
+
+        self.assertIn("Unknown check type", str(ctx.exception))
+        self.assertIn("not_a_real_check", str(ctx.exception))
+
     def test_compare_snapshots_includes_removed_items(self) -> None:
         baseline = {
             "skills": {"plan": {"composite": 1.0}, "verify": {"composite": 0.9}},

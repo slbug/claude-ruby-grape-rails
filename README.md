@@ -191,7 +191,7 @@ The plugin implements a **Plan, Work, Verify, Review, Compound** lifecycle. Each
 /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
      │           │            │              │              │
      ↓           ↓            ↓              ↓              ↓
-plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
+.claude/plans/{slug}/  (in namespace) (in namespace) (in namespace) .claude/solutions/
 ```
 
 - **Plan** -- Research agents analyze your codebase in parallel, then synthesize a structured implementation plan
@@ -223,7 +223,7 @@ Every plan gets its own directory with its implementation-state artifacts:
 
 ```
 .claude/
-├── plans/{slug}/          # Everything for ONE plan
+├── .claude/plans/{slug}/  # Everything for ONE plan
 │   ├── plan.md            # The plan itself (checkboxes = state)
 │   ├── research/          # Research agent output
 │   ├── summaries/         # Compressed multi-agent output
@@ -333,13 +333,13 @@ When you run `/rb:plan Add real-time notifications`:
    ├── web-researcher            (if unfamiliar technology)
    └── ... up to 8 agents
    │
-3. Each agent writes to plans/{slug}/research/{topic}.md
+3. Each agent writes to `.claude/plans/{slug}/research/{topic}.md`
    │
 4. context-supervisor compresses all research into one summary
    │
 5. Orchestrator reads the summary + synthesizes the plan
    │
-6. Output: plans/{slug}/plan.md with [P1-T1] checkboxes
+6. Output: `.claude/plans/{slug}/plan.md` with [P1-T1] checkboxes
 ```
 
 ### How Review Works

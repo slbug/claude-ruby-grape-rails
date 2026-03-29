@@ -52,6 +52,6 @@ eval-tests-pytest:
 	python3 -m pytest lab/eval/tests -v
 
 eval-tests-unittest:
-	python3 -m unittest discover -s lab/eval/tests -p 'test_*.py' -v
+	python3 -m unittest discover -s lab/eval/tests -p 'test_*.py' -t . -v
 
 ci: eval-tests eval-ci

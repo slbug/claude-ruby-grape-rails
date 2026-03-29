@@ -17,7 +17,7 @@ TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null) || exit 0
 COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
 [[ -n "$COMMAND" ]] || exit 0
 
-if printf '%s' "$COMMAND" | grep -qE '(bin/rails|bundle exec rails) db:(drop|reset|purge)([[:space:]]|$)'; then
+if printf '%s' "$COMMAND" | grep -qE '(^|[[:space:]])(bin/rails|bundle exec rails|rails|rake)[[:space:]]+db:(drop|reset|purge)([[:space:]]|$)'; then
   cat >&2 <<'MSG'
 BLOCKED: destructive Rails database command detected.
 Use a targeted rollback or migration instead. If you truly need a full reset,

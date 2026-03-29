@@ -203,7 +203,8 @@ rails_component_gems = %w[
 
 detected_rails_components = rails_component_gems.select { |gem_name| gem_present?(gemfile, gem_name) }
 rails_components = detected_rails_components.any?
-full_rails_app = gem_present?(gemfile, 'rails')
+full_rails_markers = %w[config/application.rb config/environment.rb bin/rails]
+full_rails_app = gem_present?(gemfile, 'rails') || full_rails_markers.any? { |path| File.exist?(path) }
 detected.uniq!
 
 rails_version = versions['rails']

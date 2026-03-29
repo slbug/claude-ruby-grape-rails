@@ -72,7 +72,10 @@ def _run_check(content: str, check_type: str, description: str, agent_path: str,
     if check_type in agent_matchers.MATCHERS:
         fn = agent_matchers.MATCHERS[check_type]
     else:
-        fn = matchers.MATCHERS[check_type]
+        fn = matchers.MATCHERS.get(check_type)
+        if fn is None:
+            available = ", ".join(sorted(set(agent_matchers.MATCHERS) | set(matchers.MATCHERS)))
+            raise ValueError(f"Unknown check type: {check_type!r}. Available: {available}")
     passed, evidence = fn(content, skill_path=agent_path, plugin_root=str(PLUGIN_ROOT), **params)
     return AssertionResult(check_type=check_type, description=description, passed=bool(passed), evidence=evidence)
 

@@ -181,13 +181,13 @@ The plugin automatically prefers runtime tooling tools over alternatives when av
 
 The plugin uses **layered enforcement** — some things run automatically, some depend on Claude following instructions, some are on-demand. Here's what actually happens:
 
-### Layer 1: Hooks (Automatic, Every Edit)
+### Layer 1: Hooks (Automatic and Hook-Driven)
 
 [Claude Code hooks](https://docs.anthropic.com/en/docs/claude-code/hooks) run shell scripts automatically after tool use. These are real automation — no instructions needed:
 
 | Hook | Trigger | What It Does |
 |------|---------|-------------|
-| Dangerous ops block | Before Bash command | Blocks `bin/rails db:reset/drop`, `git push --force`, `RAILS_ENV=prod` |
+| Dangerous ops block | Before Bash command | Blocks `rails` / `bin/rails` / `bundle exec rails` / `rake` `db:reset/drop/purge`, `git push --force`, `RAILS_ENV=prod` |
 | Format check | Every `.rb` edit | Auto-fixes with StandardRB (if configured) or RuboCop |
 | Iron Law verifier | Every `.rb` edit | Scans code content for Iron Law violations with line numbers |
 | Debug stmt warning | Every `.rb` edit | Warns about `puts`/`debugger`/`p` in production code |

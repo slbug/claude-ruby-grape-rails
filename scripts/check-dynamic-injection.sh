@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Blocks dynamic context injection syntax (!`command`) in plugin/contributor docs.
-# This feature executes shell commands at skill load time. The Ruby plugin does
-# not use it and treats it as unsafe in tracked files.
+# Blocks dynamic context injection syntax (!`command`) in tracked plugin and
+# contributor docs/config surfaces. This feature executes shell commands at
+# skill load time. The Ruby plugin does not use it and treats it as unsafe in
+# these tracked surfaces.
 
 set -euo pipefail
 
@@ -52,7 +53,7 @@ if [[ "$FOUND" -eq 1 ]]; then
   echo "========================================="
   echo
   echo "The !\`command\` syntax executes shell commands and injects stdout into Claude context."
-  echo "Do not use it in plugin files. Use normal tools/agents instead."
+  echo "Do not use it in tracked plugin or contributor docs/config files. Use normal tools/agents instead."
   exit 1
 fi
 

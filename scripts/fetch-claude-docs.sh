@@ -6,6 +6,7 @@
 #   ./scripts/fetch-claude-docs.sh              # Fetch all doc pages
 #   ./scripts/fetch-claude-docs.sh --force      # Re-download even if cached
 #   ./scripts/fetch-claude-docs.sh --index-only # Just fetch llms.txt index
+#   ./scripts/fetch-claude-docs.sh --allow-partial # Best-effort refresh
 #
 # Output: .claude/docs-check/docs-cache/*.md
 # These files are gitignored and used by /docs-check validation.
@@ -18,6 +19,7 @@ CACHE_DIR=".claude/docs-check/docs-cache"
 MAX_AGE_HOURS=24
 FORCE=false
 INDEX_ONLY=false
+ALLOW_PARTIAL=false
 
 # All pages needed for plugin validation (~420KB total)
 PAGES=(
@@ -37,11 +39,13 @@ for arg in "$@"; do
   case "$arg" in
     --force) FORCE=true ;;
     --index-only) INDEX_ONLY=true ;;
+    --allow-partial) ALLOW_PARTIAL=true ;;
     --help|-h)
-      echo "Usage: $0 [--force] [--index-only]"
+      echo "Usage: $0 [--force] [--index-only] [--allow-partial]"
       echo ""
       echo "  --force       Re-download even if cached within ${MAX_AGE_HOURS}h"
       echo "  --index-only  Only fetch the llms.txt index file"
+      echo "  --allow-partial  Keep best-effort behavior on missing docs"
       exit 0
       ;;
     *)
@@ -111,6 +115,7 @@ echo "=== Claude Code Documentation Fetcher ==="
 echo ""
 
 echo "Fetching index..."
+index_failed=0
 if is_fresh "${CACHE_DIR}/llms.txt"; then
   echo "  [cached] llms.txt (< ${MAX_AGE_HOURS}h old)"
 else
@@ -119,12 +124,16 @@ else
     echo "  [fetched] llms.txt (${page_count} pages indexed)"
   else
     echo "  [FAILED] Could not fetch llms.txt"
+    index_failed=1
   fi
 fi
 
 if [ "$INDEX_ONLY" = true ]; then
   echo ""
   echo "Done (index only)."
+  if [ "$ALLOW_PARTIAL" != true ] && [ "$index_failed" -ne 0 ]; then
+    exit 1
+  fi
   exit 0
 fi
 
@@ -141,9 +150,19 @@ echo ""
 echo "=== Summary ==="
 total_files=$(find "$CACHE_DIR" -name "*.md" -not -name "llms.txt" | wc -l)
 total_size=$(du -sh "$CACHE_DIR" 2>/dev/null | cut -f1)
+required_present=0
+for page in "${PAGES[@]}"; do
+  if [ -f "${CACHE_DIR}/${page}" ]; then
+    required_present=$(( required_present + 1 ))
+  fi
+done
 echo "  Cache: $CACHE_DIR"
 echo "  Files: $total_files doc pages"
+echo "  Required pages present: ${required_present}/${#PAGES[@]}"
 echo "  Size:  $total_size"
+if [ "$index_failed" -gt 0 ]; then
+  echo "  Index: failed"
+fi
 if [ "$failed" -gt 0 ]; then
   echo "  Failures: $failed (missing from cache — re-run or use --force)"
 fi
@@ -166,3 +185,10 @@ for page in "${PAGES[@]}"; do
     fi
   fi
 done
+
+if [ "$ALLOW_PARTIAL" != true ] && { [ "$index_failed" -gt 0 ] || [ "$failed" -gt 0 ] || [ "$required_present" -lt "${#PAGES[@]}" ]; }; then
+  echo ""
+  echo "ERROR: Claude docs cache refresh incomplete." >&2
+  echo "Re-run the fetch or use --allow-partial only for best-effort local checks." >&2
+  exit 1
+fi

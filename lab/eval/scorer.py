@@ -159,7 +159,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Score Ruby plugin skills deterministically")
     parser.add_argument("skill_path", nargs="?", help="Path to a SKILL.md file")
     parser.add_argument("--all", action="store_true", help="Score all skills")
-    parser.add_argument("--core", action="store_true", help="Score the 1.6.0 core skill subset")
+    parser.add_argument("--core", action="store_true", help="Score the core skill subset")
     parser.add_argument("--eval", help="Override eval definition JSON")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
     parser.add_argument("--fail-under", type=float, help="Exit non-zero if composite score is below threshold")
