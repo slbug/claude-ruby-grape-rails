@@ -116,6 +116,8 @@ def permission_to_glob(permission)
   return unless permission.start_with?('Bash(') && permission.end_with?(')')
 
   pattern = permission[5...-1]
+  # Normalize the pattern the same way commands are normalized
+  pattern = normalized_command_for_coverage(pattern)
   pattern.sub(/:\*\z/, ' *')
 end
 
