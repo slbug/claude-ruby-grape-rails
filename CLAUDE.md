@@ -207,11 +207,11 @@ The compound system captures solved problems as searchable institutional knowled
 
 - `compound-docs` — Schema and reference for solution documentation
 - `compound` (`/rb:compound`) — Post-fix knowledge capture skill
-Solution docs use YAML frontmatter (see `compound-docs/references/schema.md`).
+Solution docs use YAML frontmatter (see `plugins/ruby-grape-rails/skills/compound-docs/references/schema.md`).
 
 ### Hooks
 
-Defined in `hooks/hooks.json`:
+Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
 
 ```json
 {
@@ -491,17 +491,22 @@ When working on Ruby/Rails/Grape code, ALWAYS load relevant skills based on file
 
 | File Pattern | Auto-Load Skills | Check References |
 |--------------|------------------|------------------|
-| `*_controller.rb`, `*_helper.rb` | `rails-contexts`, `rails-idioms` | `references/routing-patterns.md` |
-| `*job.rb`, `app/jobs/*` | `sidekiq` or `rails-idioms` | `references/job-patterns.md` |
-| `db/migrate/*`, `*_migration.rb`, `*model.rb` | `active-record-patterns`, `safe-migrations` | `references/migrations.md`, `references/queries.md` |
-| `*auth*`, `*session*`, `*password*` | `security` | `references/authentication.md`, `references/authorization.md` |
-| `*_spec.rb`, `*_test.rb`, `*factory*`, `*fixtures*` | `testing` | `references/rspec-patterns.md`, `references/factory-patterns.md` |
-| `config/environments/production.rb`, `Dockerfile`, `fly.toml` | `deploy` | `references/docker-config.md` |
-| `app/services/*`, `app/interactors/*`, `lib/**/*.rb` | `rails-contexts`, `ruby-contexts` | `references/context-patterns.md` |
-| `lib/tasks/*.rake` | `ruby-idioms` | `references/rake-tasks.md` |
-| `*_component.rb`, `app/components/*` | `hotwire-patterns` | `references/components.md` |
-| `app/api/**/*.rb`, `*_api.rb`, `app/apis/**/*.rb` | `grape-idioms` | `references/grape-patterns.md` |
+| `*_controller.rb`, `*_helper.rb` | `rails-contexts`, `rails-idioms` | `plugins/ruby-grape-rails/skills/rails-contexts/references/routing-patterns.md` |
+| `*job.rb`, `app/jobs/*` | `sidekiq` or `rails-idioms` | `plugins/ruby-grape-rails/skills/sidekiq/references/job-patterns.md` |
+| `db/migrate/*`, `*_migration.rb`, `*model.rb` | `active-record-patterns`, `safe-migrations` | `plugins/ruby-grape-rails/skills/active-record-patterns/references/migrations.md`, `plugins/ruby-grape-rails/skills/active-record-patterns/references/queries.md` |
+| `*auth*`, `*session*`, `*password*` | `security` | `plugins/ruby-grape-rails/skills/security/references/authentication.md`, `plugins/ruby-grape-rails/skills/security/references/authorization.md` |
+| `*_spec.rb`, `*_test.rb`, `*factory*`, `*fixtures*` | `testing` | `plugins/ruby-grape-rails/skills/testing/references/rspec-patterns.md`, `plugins/ruby-grape-rails/skills/testing/references/factory-patterns.md` |
+| `config/environments/production.rb`, `Dockerfile`, `fly.toml` | `deploy` | `plugins/ruby-grape-rails/skills/deploy/references/docker-config.md` |
+| `app/services/*`, `app/interactors/*`, `lib/**/*.rb` | `rails-contexts`, `ruby-contexts` | `plugins/ruby-grape-rails/skills/rails-contexts/references/context-patterns.md` |
+| `lib/tasks/*.rake` | `ruby-idioms` | `plugins/ruby-grape-rails/skills/ruby-idioms/references/rake-tasks.md` |
+| `*_component.rb`, `app/components/*` | `hotwire-patterns` | `plugins/ruby-grape-rails/skills/hotwire-patterns/references/components.md` |
+| `app/api/**/*.rb`, `*_api.rb`, `app/apis/**/*.rb` | `grape-idioms` | `plugins/ruby-grape-rails/skills/grape-idioms/references/grape-patterns.md` |
 | `*.rb` | `ruby-idioms` | Always check Iron Laws |
+
+**Hook prerequisites:** core hook automation expects `bash`, `jq`, and `grep`
+to be available. When those dependencies are missing, enforcement hooks now
+surface an explicit dependency failure instead of silently disabling
+guardrails.
 
 **Note on job files**: Load `rails-idioms` instead of `sidekiq` when `config/environments/production.rb` contains `solid_queue` (Rails 8+ default).
 

@@ -6,7 +6,7 @@ This prevents repeat noise and compounds review knowledge.
 
 ## Convention File
 
-Location: `.claude/conventions.md` (project root, checked into git)
+Location: `.claude/conventions.md` (project root, intended to be checked into git)
 
 ### Entry Format
 

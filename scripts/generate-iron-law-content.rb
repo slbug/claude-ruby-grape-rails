@@ -47,6 +47,7 @@ def validate_entries!(yaml)
   yaml['laws'].each_with_index do |law, index|
     missing = law_required.reject { |key| law[key] }
     errors << "law[#{index}] missing: #{missing.join(', ')}" unless missing.empty?
+    next unless law.key?('category') && law['category']
     next if category_ids.include?(law['category'])
 
     errors << "law[#{index}] references unknown category: #{law['category'].inspect}"
@@ -150,6 +151,13 @@ def generate_injector_script(yaml)
     output += "#{law['subagent_text']}\n"
   end
 
+  payload = JSON.generate(
+    'hookSpecificOutput' => {
+      'hookEventName' => 'SubagentStart',
+      'additionalContext' => output
+    }
+  )
+
   puts '#!/usr/bin/env bash'
   puts 'set -o nounset'
   puts 'set -o pipefail'
@@ -157,14 +165,9 @@ def generate_injector_script(yaml)
   puts '# GENERATED FROM iron-laws.yml — DO NOT EDIT'
   puts "# Source version: #{yaml['version']} (updated #{yaml['last_updated']})"
   puts ''
-  puts 'command -v jq >/dev/null 2>&1 || exit 0'
-  puts ''
-  puts "additional_context=$(cat <<'EOF'"
-  puts output
+  puts "cat <<'EOF'"
+  puts payload
   puts 'EOF'
-  puts ')'
-  puts ''
-  puts 'jq -n --arg ctx "$additional_context" \'{"hookSpecificOutput": {"hookEventName": "SubagentStart", "additionalContext": $ctx}}\''
 end
 
 # Generate canonical registry

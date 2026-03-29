@@ -12,6 +12,9 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 BLOCK_DANGEROUS_OPS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/block-dangerous-ops.sh"
+IRON_LAW_VERIFIER = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/iron-law-verifier.sh"
+INJECT_IRON_LAWS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/inject-iron-laws.sh"
+SECURITY_REMINDER = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/security-reminder.sh"
 SECRET_SCAN = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/secret-scan.sh"
 DETECT_STACK = REPO_ROOT / "plugins/ruby-grape-rails/scripts/detect-stack.rb"
 DETECT_RUNTIME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime.sh"
@@ -232,10 +235,13 @@ class RuntimeScriptTests(unittest.TestCase):
         for command in (
             'ruby -e "system(\'rails db:drop\')"',
             "ruby -e 'system(%q{rails db:drop})'",
+            "ruby -e 'system(%q(rails db:drop))'",
             "ruby -e '`rails db:drop`'",
             'ruby -e \'system("rails db:drop", exception: true)\'',
             "ruby -e 'exec(%Q{rails db:drop})'",
+            "ruby -e 'system(%Q(rails db:drop))'",
             "ruby -e '%x{rails db:drop}'",
+            "ruby -e '%x(rails db:drop)'",
         ):
             result = run_block_hook(command)
             self.assertEqual(result.returncode, 2, command)
@@ -439,6 +445,76 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("SHELLFIRM_AVAILABLE=true", runtime_env)
         self.assertIn("DCG_VERSION=0.9.0", runtime_env)
         self.assertIn("SHELLFIRM_VERSION=0.3.9", runtime_env)
+
+    def test_iron_law_verifier_fails_closed_when_jq_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            app_dir = tmp / "app"
+            app_dir.mkdir()
+            (app_dir / "demo.rb").write_text("class Demo; end\n", encoding="utf-8")
+            payload = json.dumps({"tool_input": {"file_path": "app/demo.rb"}})
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["PATH"] = str(tmp / "bin")
+            (tmp / "bin").mkdir()
+
+            result = subprocess.run(
+                ["/bin/bash", str(IRON_LAW_VERIFIER)],
+                input=payload,
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("cannot inspect the hook payload because jq is unavailable", result.stderr)
+
+    def test_security_reminder_fails_closed_when_jq_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            app_dir = tmp / "app" / "controllers"
+            app_dir.mkdir(parents=True)
+            (app_dir / "admin_controller.rb").write_text("class AdminController; end\n", encoding="utf-8")
+            payload = json.dumps({"tool_input": {"file_path": "app/controllers/admin_controller.rb"}})
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["PATH"] = str(tmp / "bin")
+            (tmp / "bin").mkdir()
+
+            result = subprocess.run(
+                ["/bin/bash", str(SECURITY_REMINDER)],
+                input=payload,
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("cannot inspect the hook payload because jq is unavailable", result.stderr)
+
+    def test_inject_iron_laws_no_longer_requires_jq(self) -> None:
+        env = dict(os.environ)
+        env["PATH"] = "/usr/bin:/bin"
+
+        result = subprocess.run(
+            ["bash", str(INJECT_IRON_LAWS)],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+            env=env,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["hookSpecificOutput"]["hookEventName"], "SubagentStart")
+        self.assertIn("Iron Law 1", payload["hookSpecificOutput"]["additionalContext"])
 
     def test_secret_scan_treats_stdout_findings_as_secret_hits_even_on_nonzero_exit(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

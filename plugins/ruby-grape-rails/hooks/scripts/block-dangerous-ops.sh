@@ -183,11 +183,29 @@ extract_ruby_wrapper_payload() {
         nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*(system|exec|spawn)\([[:space:]]*%[qQ]\{([^}]*)\}([[:space:]]*,.*)?\).*/\2/p')
       fi
       if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*(system|exec|spawn)\([[:space:]]*%[qQ]\(([^)]*)\)([[:space:]]*,.*)?\).*/\2/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*(system|exec|spawn)\([[:space:]]*%[qQ]\[([^]]*)\]([[:space:]]*,.*)?\).*/\2/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*(system|exec|spawn)\([[:space:]]*%[qQ]<([^>]*)>([[:space:]]*,.*)?\).*/\2/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
         # shellcheck disable=SC2016
         nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*`([^`]*)`.*/\1/p')
       fi
       if [[ -z "$nested_command" ]]; then
         nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*%x\{([^}]*)\}.*/\1/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*%x\(([^)]*)\).*/\1/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*%x\[([^]]*)\].*/\1/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*%x<([^>]*)>.*/\1/p')
       fi
       [[ -n "$nested_command" ]] || return 1
       printf '%s\n' "$nested_command"

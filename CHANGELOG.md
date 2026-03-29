@@ -414,7 +414,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `settings.json` rules, classifies risk, and recommends safer Ruby-project
   permission entries instead of broad guesswork. The skill now ships with a
   canonical Ruby extractor under
-  `skills/permissions/scripts/extract_permissions.rb`.
+  `plugins/ruby-grape-rails/skills/permissions/scripts/extract_permissions.rb`.
 
 ### Changed
 

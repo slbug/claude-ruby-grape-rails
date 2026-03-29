@@ -74,7 +74,7 @@ collect_changed_paths() {
     if [[ -n "$AGAINST_REF" ]]; then
       merge_base=$(git merge-base HEAD "$AGAINST_REF" 2>/dev/null || true)
       if [[ -n "$merge_base" ]]; then
-        lines=$(git diff --name-only "$merge_base" -- "$prefix" 2>/dev/null || true)
+        lines=$(git diff --name-only "${merge_base}..HEAD" -- "$prefix" 2>/dev/null || true)
       else
         echo "WARN: could not resolve merge-base with ${AGAINST_REF}; falling back to HEAD diff." >&2
         lines=$(git diff --name-only HEAD -- "$prefix" 2>/dev/null || true)
