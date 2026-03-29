@@ -223,6 +223,16 @@ update_judge_file() {
 
   validate_destination_path "$judge_file" || return 1
 
+  if [[ ! -f "$judge_file" ]]; then
+    log_error "File not found: $judge_file"
+    return 1
+  fi
+
+  if [[ ! -r "$judge_file" ]]; then
+    log_error "File not readable: $judge_file"
+    return 1
+  fi
+
   if ! grep -q "$judge_start_marker" "$judge_file"; then
     log_error "Markers not found in $judge_file"
     return 1

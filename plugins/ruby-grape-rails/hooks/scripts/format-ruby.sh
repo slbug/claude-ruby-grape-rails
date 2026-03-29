@@ -100,10 +100,10 @@ if has_gem standard; then
   if ! (cd "$REPO_ROOT" && bundle exec standardrb --fix -- "$FILE_PATH") 2>"$ERR_FILE"; then
     # If auto-fix failed, report for manual fixing
     report_formatter_failure "NEEDS FORMAT" "bundle exec standardrb --fix $QUOTED_PATH" "$ERR_FILE"
-    rm -f -- "$ERR_FILE"
+    safe_remove_temp_file "${ERR_FILE:-}" "${TMPDIR:-/tmp}/ruby-format.*" || true
     exit 2
   fi
-  rm -f -- "$ERR_FILE"
+  safe_remove_temp_file "${ERR_FILE:-}" "${TMPDIR:-/tmp}/ruby-format.*" || true
 elif has_gem rubocop; then
   if ! command -v bundle >/dev/null 2>&1; then
     echo "⚠️  Ruby formatting skipped for ${FILE_PATH} because Bundler is not available." >&2
@@ -118,8 +118,8 @@ elif has_gem rubocop; then
   if ! (cd "$REPO_ROOT" && bundle exec rubocop --force-exclusion -a -- "$FILE_PATH") 2>"$ERR_FILE"; then
     # If auto-fix failed, report for manual fixing
     report_formatter_failure "NEEDS FORMAT OR LINT FIX" "bundle exec rubocop --force-exclusion -a $QUOTED_PATH" "$ERR_FILE"
-    rm -f -- "$ERR_FILE"
+    safe_remove_temp_file "${ERR_FILE:-}" "${TMPDIR:-/tmp}/ruby-format.*" || true
     exit 2
   fi
-  rm -f -- "$ERR_FILE"
+  safe_remove_temp_file "${ERR_FILE:-}" "${TMPDIR:-/tmp}/ruby-format.*" || true
 fi

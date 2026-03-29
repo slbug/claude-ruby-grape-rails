@@ -141,7 +141,7 @@ run_betterleaks_dir() {
 
   result_file=$(mktemp "${TMPDIR:-/tmp}/rb-secret-scan.result.XXXXXX") || return 1
   err_file=$(mktemp "${TMPDIR:-/tmp}/rb-secret-scan.err.XXXXXX") || {
-    rm -f -- "$result_file"
+    safe_remove_temp_file "${result_file:-}" "${TMPDIR:-/tmp}/rb-secret-scan.result.*" || true
     return 1
   }
 
@@ -154,11 +154,13 @@ run_betterleaks_dir() {
   BETTERLEAKS_ERROR=$(sed -n '1,5p' "$err_file" 2>/dev/null || true)
 
   if [[ -n "$BETTERLEAKS_RESULT" || "$status" -eq 0 ]]; then
-    rm -f -- "$result_file" "$err_file"
+    safe_remove_temp_file "${result_file:-}" "${TMPDIR:-/tmp}/rb-secret-scan.result.*" || true
+    safe_remove_temp_file "${err_file:-}" "${TMPDIR:-/tmp}/rb-secret-scan.err.*" || true
     return 0
   fi
 
-  rm -f -- "$result_file" "$err_file"
+  safe_remove_temp_file "${result_file:-}" "${TMPDIR:-/tmp}/rb-secret-scan.result.*" || true
+  safe_remove_temp_file "${err_file:-}" "${TMPDIR:-/tmp}/rb-secret-scan.err.*" || true
   return "$status"
 }
 
