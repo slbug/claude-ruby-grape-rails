@@ -27,6 +27,8 @@ def disallowed_tools_present(content: str, **_: Any) -> tuple[bool, str]:
 def permission_mode_valid(content: str, allowed: list[str] | None = None, **_: Any) -> tuple[bool, str]:
     fm = parse_frontmatter(content)
     mode = fm.get("permissionMode", "")
+    if not mode:
+        return True, "permissionMode absent (acceptable for shipped plugin agents)"
     accepted = allowed or ["bypassPermissions", "default", "acceptEdits", "plan"]
     return mode in accepted, f"permissionMode={mode!r}"
 

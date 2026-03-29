@@ -93,7 +93,12 @@ claude-ruby-grape-rails/
 │       ├── session-trends/          # /session-trends — provider-scoped trend reporting
 │       └── skill-monitor/           # /skill-monitor — observational dashboards
 ├── scripts/
-│   └── fetch-claude-docs.sh         # Download Claude Code docs for validation
+│   ├── fetch-claude-docs.sh         # Download Claude Code docs for validation
+│   ├── check-dynamic-injection.sh   # Block tracked docs/config from !`command`
+│   ├── run-eval-tests.sh            # Contributor eval test entrypoint
+│   ├── generate-iron-law-content.rb
+│   ├── generate-iron-law-outputs.sh
+│   └── ...
 ├── plugins/
 │   └── ruby-grape-rails/
 │       ├── .claude-plugin/
@@ -228,11 +233,13 @@ Defined in `hooks/hooks.json`:
 
 **Current hooks:**
 
-- `PreToolUse` (Bash): Block destructive operations
-  (`rails` / `bin/rails` / `./bin/rails` / `bundle exec rails` / `rake` /
-  `bin/rake` / `./bin/rake` / `bundle exec rake`
-  `db:drop/reset/purge`, `git push --force`, `RAILS_ENV=production`) before
-  execution
+- `PreToolUse` (Bash): Block destructive operations before execution, including
+  `rails db:drop/reset/purge`, `bin/rails db:drop/reset/purge`,
+  `./bin/rails db:drop/reset/purge`, `bundle exec rails db:drop/reset/purge`,
+  `rake db:drop/reset/purge`, `bin/rake db:drop/reset/purge`,
+  `./bin/rake db:drop/reset/purge`, `bundle exec rake db:drop/reset/purge`,
+  equivalent `bundle exec bin/...` and env-prefixed forms, `git push --force`,
+  and `RAILS_ENV=production`
 - `PostToolUse` (Edit|Write): Multiple scripts run in sequence:
   - `iron-law-verifier.sh`: **Programmatic Iron Law verification** (scans code for violations) — all Edit|Write
   - `security-reminder.sh`: Security Iron Laws for auth files — all Edit|Write

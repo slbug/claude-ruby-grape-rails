@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Blocks dynamic context injection syntax (!`command`) in tracked plugin and
-# contributor docs/config surfaces. This feature executes shell commands at
-# skill load time. The Ruby plugin does not use it and treats it as unsafe in
-# these tracked surfaces.
+# contributor docs/config surfaces when git metadata is available. In non-git
+# contexts, it falls back to a best-effort scan of the same target paths.
+# This feature executes shell commands at skill load time. The Ruby plugin does
+# not use it and treats it as unsafe in these surfaces.
 
 set -euo pipefail
 

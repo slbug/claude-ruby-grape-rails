@@ -23,6 +23,16 @@ class ScorerTests(unittest.TestCase):
         result = score_agent(agent_path)
         self.assertGreater(result.composite, 0.5)
 
+    def test_default_agent_eval_accepts_missing_permission_mode_for_shipped_agents(self) -> None:
+        agent_path = next(path for path in find_all_agents() if path.endswith("/verification-runner.md"))
+        result = score_agent(agent_path)
+        permission_assertion = next(
+            assertion
+            for assertion in result.dimensions["accuracy"].assertions
+            if assertion.check_type == "permission_mode_valid"
+        )
+        self.assertTrue(permission_assertion.passed)
+
     def test_trigger_scoring_and_overlap(self) -> None:
         trigger_results = score_all()
         self.assertIn("plan", trigger_results["skills"])

@@ -92,6 +92,16 @@ emit_truncation_warning() {
   echo "Run betterleaks manually for full coverage if needed." >&2
 }
 
+new_secret_scan_tmpdir() {
+  local tmp_dir
+
+  tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/rb-secret-scan.XXXXXX") || return 1
+  [[ -n "$tmp_dir" ]] || return 1
+  [[ "$tmp_dir" == "${TMPDIR:-/tmp}/rb-secret-scan."* ]] || return 1
+
+  printf '%s\n' "$tmp_dir"
+}
+
 copy_into_tmpdir() {
   local source_file="$1"
   local tmp_dir="$2"
@@ -146,9 +156,7 @@ if [[ -z "$FILE_PATH" ]]; then
   [[ "$HOOK_MODE" == "strict" ]] || exit 0
 
   if (cd "$REPO_ROOT" && git rev-parse --git-dir >/dev/null 2>&1); then
-    TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/rb-secret-scan.XXXXXX") || exit 0
-    [[ -n "$TMP_DIR" ]] || exit 0
-    [[ "$TMP_DIR" == "${TMPDIR:-/tmp}/rb-secret-scan."* ]] || exit 0
+    TMP_DIR=$(new_secret_scan_tmpdir) || exit 0
 
     # shellcheck disable=SC2329 # invoked via trap
     cleanup_secret_scan_tmpdir() {
@@ -176,10 +184,22 @@ else
   fi
 
   if [[ -f "$FILE_PATH" && ! -L "$FILE_PATH" ]] && is_path_within_root "$REPO_ROOT" "$FILE_PATH"; then
-    RESULT=$("$BETTERLEAKS_PATH" dir "$FILE_PATH" --no-banner --redact=100 2>/dev/null || true)
-    if [[ -n "$RESULT" ]]; then
-      emit_secret_warning "$FILE_PATH" "$RESULT"
-      exit 2
+    TMP_DIR=$(new_secret_scan_tmpdir) || exit 0
+
+    # shellcheck disable=SC2329 # invoked via trap
+    cleanup_single_secret_scan_tmpdir() {
+      safe_remove_temp_dir "${TMP_DIR:-}" "${TMPDIR:-/tmp}/rb-secret-scan.*" || true
+    }
+    trap cleanup_single_secret_scan_tmpdir EXIT HUP INT TERM
+
+    copy_into_tmpdir "$FILE_PATH" "$TMP_DIR" 2>/dev/null || exit 0
+
+    if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
+      RESULT=$("$BETTERLEAKS_PATH" dir "$TMP_DIR" --no-banner --redact=100 2>/dev/null || true)
+      if [[ -n "$RESULT" ]]; then
+        emit_secret_warning "$FILE_PATH" "$RESULT"
+        exit 2
+      fi
     fi
   fi
 fi

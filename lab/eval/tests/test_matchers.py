@@ -131,6 +131,17 @@ disallowedTools: Write, Edit, NotebookEdit
         passed, _ = agent_matchers.read_only_tools_coherent(content)
         self.assertTrue(passed)
 
+    def test_permission_mode_valid_accepts_absent_field_for_shipped_agents(self) -> None:
+        content = """---
+name: sample-agent
+description: Review Ruby code carefully with read-only restrictions.
+tools: Read, Grep, Glob, Bash
+---
+"""
+        passed, evidence = agent_matchers.permission_mode_valid(content)
+        self.assertTrue(passed)
+        self.assertIn("acceptable", evidence)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -84,7 +84,7 @@ Tasks annotated `[direct]` are simple and don't need a specialist:
 - **Simple wiring**: Adding routes, requires, includes
 - **File operations**: Moving, renaming, or deleting files
 
-Implement these directly without spawning a Task agent. Run
+Implement these directly without spawning a specialist via `Agent(...)`. Run
 verification (syntax check + format) after each one.
 
 ## Parallel Task Execution
@@ -113,7 +113,7 @@ Tasks are parallelizable if they:
 
 ### Spawning Pattern
 
-Spawn ALL parallel tasks in ONE message using the Agent tool:
+Spawn ALL parallel tasks in ONE message using `Agent(...)`:
 
 ```
 Agent(

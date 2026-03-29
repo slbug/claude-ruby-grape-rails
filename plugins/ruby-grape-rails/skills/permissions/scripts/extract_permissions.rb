@@ -44,7 +44,6 @@ def find_repo_root(start_dir)
 
   path.ascend do |candidate|
     return candidate.to_s if (candidate + '.git').exist? ||
-                             (candidate + '.claude').directory? ||
                              (candidate + 'Gemfile').file?
   end
 
