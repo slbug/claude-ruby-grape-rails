@@ -62,9 +62,81 @@ skills:
         passed, _ = matchers.has_iron_laws(SAMPLE, min_count=1)
         self.assertTrue(passed)
 
+    def test_get_sections_ignores_nested_headings_in_parent_sections(self) -> None:
+        content = """---
+name: rb:sample
+description: Sample skill
+---
+# Sample
+
+## Workflow
+Top-level workflow guidance.
+
+### Details
+Nested detail that should stay inside Workflow.
+
+## Notes
+Additional notes.
+"""
+        sections = matchers.get_sections(content)
+        self.assertEqual(set(sections), {"Workflow", "Notes"})
+        self.assertIn("Nested detail", sections["Workflow"])
+
     def test_description_structure(self) -> None:
         passed, _ = matchers.description_structure(SAMPLE)
         self.assertTrue(passed)
+
+    def test_description_structure_returns_failure_specific_evidence(self) -> None:
+        content = """---
+name: rb:sample
+description: Ruby workflow helper for local changes.
+---
+"""
+        passed, evidence = matchers.description_structure(content)
+        self.assertFalse(passed)
+        self.assertIn("missing explicit use/intent framing", evidence)
+
+    def test_valid_skill_refs_accepts_frontmatter_command_aliases(self) -> None:
+        content = "Use /rb:runtime and /rb:trace when runtime debugging needs live inspection."
+        passed, evidence = matchers.valid_skill_refs(content)
+        self.assertTrue(passed)
+        self.assertEqual(evidence, "all skill refs valid")
+
+    def test_workflow_step_coverage_accepts_compact_heading_and_list_structure(self) -> None:
+        content = """---
+name: rb:quick
+description: Use for Ruby quick fixes and review follow-up.
+---
+# Quick Path
+
+Use when the change is small and low risk.
+
+1. inspect the existing code path first
+2. implement directly
+3. verify with the narrowest correct command set
+"""
+        passed, evidence = matchers.workflow_step_coverage(content, min_sections=3)
+        self.assertTrue(passed)
+        self.assertIn("structure units", evidence)
+
+    def test_no_duplication_ignores_repeated_fenced_command_examples(self) -> None:
+        content = """---
+name: rb:sample
+description: Use for Ruby verification and review workflows with Rails context.
+---
+# Sample
+
+```bash
+/rb:runtime logs error
+```
+
+```bash
+/rb:runtime logs error
+```
+"""
+        passed, evidence = matchers.no_duplication(content)
+        self.assertTrue(passed)
+        self.assertEqual(evidence, "no repeated long lines")
 
     def test_no_dangerous_patterns_catches_rm_rf_root(self) -> None:
         passed, evidence = matchers.no_dangerous_patterns("rm -rf /")
@@ -110,6 +182,17 @@ disallowedTools: Write, Edit, NotebookEdit
 """
         passed, _ = agent_matchers.read_only_tools_coherent(content)
         self.assertTrue(passed)
+
+    def test_permission_mode_valid_accepts_absent_field_for_shipped_agents(self) -> None:
+        content = """---
+name: sample-agent
+description: Review Ruby code carefully with read-only restrictions.
+tools: Read, Grep, Glob, Bash
+---
+"""
+        passed, evidence = agent_matchers.permission_mode_valid(content)
+        self.assertTrue(passed)
+        self.assertIn("acceptable", evidence)
 
 
 if __name__ == "__main__":

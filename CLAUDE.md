@@ -17,7 +17,7 @@ The plugin implements a **Plan → Work → Verify → Review → Compound** lif
 /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
      │           │            │              │              │
      ↓           ↓            ↓              ↓              ↓
-plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
+.claude/plans/{slug}/  (in namespace) (in namespace) (in namespace) .claude/solutions/
 ```
 
 **Key principle**: Filesystem is the state machine. Each phase reads from previous phase's output. Solutions feed back into future cycles.
@@ -26,13 +26,13 @@ plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
 
 | Command | Phase | Input | Output |
 |---------|-------|-------|--------|
-| `/rb:plan` | Planning | Feature description | `plans/{slug}/plan.md` |
+| `/rb:plan` | Planning | Feature description | `.claude/plans/{slug}/plan.md` |
 | `/rb:plan --existing` | Enhancement | Plan file | Enhanced plan with research |
 | `/rb:brief` | Understanding | Plan file | Interactive walkthrough (ephemeral) |
-| `/rb:work` | Execution | Plan file | Updated checkboxes, `plans/{slug}/progress.md` |
+| `/rb:work` | Execution | Plan file | Updated checkboxes, `.claude/plans/{slug}/progress.md` |
 | `/rb:verify` | Verification | Plan namespace | Verification results |
-| `/rb:review` | Quality | Changed files | `reviews/{review-slug}.md` + `reviews/{agent-slug}/...` |
-| `/rb:compound` | Knowledge | Solved problem | `solutions/{category}/{fix}.md` |
+| `/rb:review` | Quality | Changed files | `.claude/reviews/{review-slug}.md` + `.claude/reviews/{agent-slug}/...` |
+| `/rb:compound` | Knowledge | Solved problem | `.claude/solutions/{category}/{fix}.md` |
 | `/rb:full` | All | Feature description | Complete cycle with compounding |
 
 ### Artifact Directories
@@ -93,7 +93,12 @@ claude-ruby-grape-rails/
 │       ├── session-trends/          # /session-trends — provider-scoped trend reporting
 │       └── skill-monitor/           # /skill-monitor — observational dashboards
 ├── scripts/
-│   └── fetch-claude-docs.sh         # Download Claude Code docs for validation
+│   ├── fetch-claude-docs.sh         # Download Claude Code docs for validation
+│   ├── check-dynamic-injection.sh   # Block tracked docs/config from inline shell injection placeholders
+│   ├── run-eval-tests.sh            # Contributor eval test entrypoint
+│   ├── generate-iron-law-content.rb
+│   ├── generate-iron-law-outputs.sh
+│   └── ...
 ├── plugins/
 │   └── ruby-grape-rails/
 │       ├── .claude-plugin/
@@ -202,23 +207,23 @@ The compound system captures solved problems as searchable institutional knowled
 
 - `compound-docs` — Schema and reference for solution documentation
 - `compound` (`/rb:compound`) — Post-fix knowledge capture skill
-Solution docs use YAML frontmatter (see `compound-docs/references/schema.md`).
+Solution docs use YAML frontmatter (see `plugins/ruby-grape-rails/skills/compound-docs/references/schema.md`).
 
 ### Hooks
 
-Defined in `hooks/hooks.json`:
+Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
 
 ```json
 {
   "hooks": {
-    "PreToolUse": [...],            // Block dangerous ops (rails db:drop, force push, RAILS_ENV=production)
+    "PreToolUse": [...],            // Block dangerous ops (rails/bin/rails/rake db:drop variants, force push, RAILS_ENV=production)
     "PostToolUse": [...],          // Format + Iron Law verify + security + progress + plan STOP + debug stmt
     "PostToolUseFailure": [...],   // Ruby failure hints + error critic for bundle commands
     "SubagentStart": [...],        // Iron Laws injection into all subagents
     "SessionStart": [...],         // Setup dirs + runtime tool detection + resume detection
     "FileChanged": [...],          // Runtime refresh when Gemfile/Rakefile/gemspec/lefthook files change
     "CwdChanged": [...],           // Runtime refresh when working directory changes
-    "PreCompact": [...],           // Re-inject workflow rules before compaction
+    "PreCompact": [...],           // Warn before compaction about active workflow state
     "PostCompact": [...],          // Advise re-reading active plan artifacts after compaction
     "Stop": [...],                 // Warn if uncompleted tasks
     "StopFailure": [...]           // Persist API failure context for resume flows
@@ -228,21 +233,25 @@ Defined in `hooks/hooks.json`:
 
 **Current hooks:**
 
-- `PreToolUse` (Bash): Block destructive operations (`rails db:drop`, `git push --force`, `RAILS_ENV=production`) before execution
+- `PreToolUse` (Bash): Block destructive operations before execution, including
+  `rails db:drop/reset/purge`, `bin/rails db:drop/reset/purge`,
+  `./bin/rails db:drop/reset/purge`, `bundle exec rails db:drop/reset/purge`,
+  `rake db:drop/reset/purge`, `bin/rake db:drop/reset/purge`,
+  `./bin/rake db:drop/reset/purge`, `bundle exec rake db:drop/reset/purge`,
+  equivalent `bundle exec bin/...` and env-prefixed forms, `git push --force`,
+  and `RAILS_ENV=production`
 - `PostToolUse` (Edit|Write): Multiple scripts run in sequence:
   - `iron-law-verifier.sh`: **Programmatic Iron Law verification** (scans code for violations) — all Edit|Write
   - `security-reminder.sh`: Security Iron Laws for auth files — all Edit|Write
   - `log-progress.sh`: Async progress logging — all Edit|Write
   - `plan-stop-reminder.sh`: Plan STOP reminder on plan.md write — all Edit|Write
   - `secret-scan.sh`: Secret scanning with hook-mode gating — all Edit|Write
-  - `format-ruby.sh`: Auto `bundle exec standardrb` or `bundle exec rubocop -a` — Ruby-ish files only (`*.rb`, `*.rake`, `*Gemfile`, `*Rakefile`, `*config.ru`) via `if` filter
-  - `verify-ruby.sh`: Syntax check via `ruby -c <file>` — Ruby-ish files only via `if` filter
-  - `debug-statement-warning.sh`: Detect debug statements (`puts`, `binding.pry`, etc.) — Ruby-ish files only via `if` filter
+  - `rubyish-post-edit.sh`: Ruby-ish Edit/Write fan-out for `*.rb`, `*.rake`, `*Gemfile`, `*Rakefile`, and `*config.ru`; delegates to `format-ruby.sh`, `verify-ruby.sh`, and `debug-statement-warning.sh`
 - `PostToolUseFailure` (Bash): Ruby-specific debugging hints when bundle exec fails,
   **error critic** that detects repeated failures and escalates to structured analysis (both via `additionalContext`)
 - `SubagentStart`: Inject all Iron Laws into every spawned subagent via `additionalContext` (addresses zero skill auto-loading gap)
-- `PreCompact`: Re-inject workflow rules (plan/work/full) before compaction via JSON `systemMessage`,
-  including `.claude/ACTIVE_PLAN` resolution for context-aware compaction
+- `PreCompact`: Warn before compaction about the active plan/work/full state so
+  the next turn re-reads the right artifacts after compaction
 - `PostCompact`: Advise Claude which active plan artifacts to re-read after
   compaction when unchecked tasks still exist
 - `SessionStart` (all): Setup `.claude/` directories + consolidated runtime detection
@@ -282,7 +291,8 @@ Workflow convention with hook-level detection support:
 **Hook output patterns (important for contributors):**
 
 - `PostToolUse` stdout is **verbose-mode only** — use `exit 2` + stderr to feed messages to Claude
-- `PreCompact` has **no stdout context injection** — use JSON `systemMessage`
+- `PreCompact` has **no context injection path** — use a user-facing stderr
+  reminder only and rely on `PostCompact` to re-read active plan artifacts
 - `SessionStart` stdout IS added to Claude's context (one of two exceptions along with `UserPromptSubmit`)
 - `SubagentStart` uses `hookSpecificOutput.additionalContext` to inject context into subagents
 - `PostToolUseFailure` uses `hookSpecificOutput.additionalContext` for debugging hints
@@ -322,7 +332,7 @@ claude --plugin-dir ./plugins/ruby-grape-rails
 # Check: .claude/plans/ has checkbox plan
 
 /rb:work .claude/plans/test-feature/plan.md
-# Check: Checkboxes update, progress logged in plans/test-feature/progress.md
+# Check: Checkboxes update, progress logged in .claude/plans/test-feature/progress.md
 ```
 
 ### Adding new agent
@@ -358,6 +368,19 @@ claude plugin validate plugins/ruby-grape-rails
 
 # Should pass without errors before committing changes
 ```
+
+### Output Artifact Eval
+
+`1.7.0` adds deterministic contributor checks for research/review outputs:
+
+```bash
+make eval-output
+# or
+npm run eval:output
+```
+
+This scores tracked fixture artifacts under `lab/eval/fixtures/output/` and is
+the canonical contributor check for provenance/report contract changes.
 
 ## Size Guidelines
 
@@ -414,7 +437,10 @@ Only trim when content is purely informational and not execution-critical.
 ### Release
 
 - [ ] All markdown passes linting
-- [ ] Version bumped in `plugins/ruby-grape-rails/.claude-plugin/plugin.json`
+- [ ] Versions aligned in:
+  - `package.json`
+  - `.claude-plugin/marketplace.json`
+  - `plugins/ruby-grape-rails/.claude-plugin/plugin.json`
 - [ ] `CHANGELOG.md` updated with all changes under new version heading
 - [ ] README updated
 - [ ] `/rb:intro` tutorial content still accurate (commands, agents, features)
@@ -427,14 +453,19 @@ The plugin uses [semantic versioning](https://semver.org/):
 - **MINOR**: New features (new hooks, skills, agents, commands)
 - **PATCH**: Bug fixes, doc updates, description improvements
 
-**IMPORTANT**: Users only receive updates when the version in `plugin.json`
-changes. If you push code without bumping the version, existing users won't
-see the changes due to caching.
+**IMPORTANT**: Keep release versions aligned across `package.json`,
+`.claude-plugin/marketplace.json`, and
+`plugins/ruby-grape-rails/.claude-plugin/plugin.json`. Marketplace metadata,
+published package metadata, and the shipped plugin manifest should move
+together when preparing a release.
 
-When making changes, ALWAYS update `CHANGELOG.md` under the current
-`[Unreleased]` section. Use categories: Added, Changed, Fixed, Removed.
-On release, rename `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD` and bump
-`plugin.json`.
+When making changes, keep `CHANGELOG.md` aligned with release state. Use
+categories: Added, Changed, Fixed, Removed.
+
+- if the current version is already treated as released, add new notes under
+  `[Unreleased]`
+- if preparing the next release, move that work into the target version section
+  and bump all three versioned metadata files together
 
 ## Backlog
 
@@ -461,17 +492,21 @@ When working on Ruby/Rails/Grape code, ALWAYS load relevant skills based on file
 
 | File Pattern | Auto-Load Skills | Check References |
 |--------------|------------------|------------------|
-| `*_controller.rb`, `*_helper.rb` | `rails-contexts`, `rails-idioms` | `references/routing-patterns.md` |
-| `*job.rb`, `app/jobs/*` | `sidekiq` or `rails-idioms` | `references/job-patterns.md` |
-| `db/migrate/*`, `*_migration.rb`, `*model.rb` | `active-record-patterns`, `safe-migrations` | `references/migrations.md`, `references/queries.md` |
-| `*auth*`, `*session*`, `*password*` | `security` | `references/authentication.md`, `references/authorization.md` |
-| `*_spec.rb`, `*_test.rb`, `*factory*`, `*fixtures*` | `testing` | `references/rspec-patterns.md`, `references/factory-patterns.md` |
-| `config/environments/production.rb`, `Dockerfile`, `fly.toml` | `deploy` | `references/docker-config.md` |
-| `app/services/*`, `app/interactors/*`, `lib/**/*.rb` | `rails-contexts`, `ruby-contexts` | `references/context-patterns.md` |
-| `lib/tasks/*.rake` | `ruby-idioms` | `references/rake-tasks.md` |
-| `*_component.rb`, `app/components/*` | `hotwire-patterns` | `references/components.md` |
-| `app/api/**/*.rb`, `*_api.rb`, `app/apis/**/*.rb` | `grape-idioms` | `references/grape-patterns.md` |
+| `*_controller.rb`, `*_helper.rb` | `rails-contexts`, `rails-idioms` | `plugins/ruby-grape-rails/skills/rails-contexts/references/routing-patterns.md` |
+| `*job.rb`, `app/jobs/*` | `sidekiq` or `rails-idioms` | `plugins/ruby-grape-rails/skills/sidekiq/references/job-patterns.md` |
+| `db/migrate/*`, `*_migration.rb`, `*model.rb` | `active-record-patterns`, `safe-migrations` | `plugins/ruby-grape-rails/skills/active-record-patterns/references/migrations.md`, `plugins/ruby-grape-rails/skills/active-record-patterns/references/queries.md` |
+| `*auth*`, `*session*`, `*password*` | `security` | `plugins/ruby-grape-rails/skills/security/references/authentication.md`, `plugins/ruby-grape-rails/skills/security/references/authorization.md` |
+| `*_spec.rb`, `*_test.rb`, `*factory*`, `*fixtures*` | `testing` | `plugins/ruby-grape-rails/skills/testing/references/rspec-patterns.md`, `plugins/ruby-grape-rails/skills/testing/references/factory-patterns.md` |
+| `config/environments/production.rb`, `Dockerfile`, `fly.toml` | `deploy` | `plugins/ruby-grape-rails/skills/deploy/references/docker-config.md` |
+| `app/services/*`, `app/interactors/*`, `lib/**/*.rb` | `rails-contexts`, `ruby-contexts` | `plugins/ruby-grape-rails/skills/rails-contexts/references/context-patterns.md` |
+| `lib/tasks/*.rake` | `ruby-idioms` | `plugins/ruby-grape-rails/skills/ruby-idioms/references/rake-tasks.md` |
+| `*_component.rb`, `app/components/*` | `hotwire-patterns` | `plugins/ruby-grape-rails/skills/hotwire-patterns/references/components.md` |
+| `app/api/**/*.rb`, `*_api.rb`, `app/apis/**/*.rb` | `grape-idioms` | `plugins/ruby-grape-rails/skills/grape-idioms/references/grape-patterns.md` |
 | `*.rb` | `ruby-idioms` | Always check Iron Laws |
+
+**Hook prerequisites:** core hook automation expects `bash`, `jq`, and `grep`
+to be available. When those dependencies are missing, hooks now surface an
+explicit error or warning instead of silently disabling guardrails.
 
 **Note on job files**: Load `rails-idioms` instead of `sidekiq` when `config/environments/production.rb` contains `solid_queue` (Rails 8+ default).
 
@@ -664,7 +699,7 @@ When working on code, automatically consult relevant reference documentation bef
 | New to the plugin | `/rb:intro` |
 | Bug fix, debug | `/rb:investigate` |
 | Small UI fix, CSS tweak, config change | `/rb:quick` |
-| Small change (<50 lines) | `/rb:quick` |
+| Small change (<100 lines) | `/rb:quick` |
 | New feature (clear scope) | `/rb:plan` then `/rb:work` |
 | Understand a plan | `/rb:brief` |
 | Enhance existing plan | `/rb:plan --existing` |
@@ -767,9 +802,11 @@ entrypoints before broader experimentation:
 
 Minimum runtime: `python3` 3.10+ for `lab/eval/`.
 
-- `make eval` / `npm run eval` for lint + injection check + changed surfaces
-- `make eval-all` / `npm run eval:all` for the full `1.6.0` eval snapshot
+- `make eval` / `npm run eval` for lint + injection check + tracked changed surfaces
+- `make eval-all` / `npm run eval:all` for the full eval snapshot
 - `make eval-ci` / `npm run eval:ci` for the contributor CI gate
+- `make eval-output` / `npm run eval:output` for deterministic research/review
+  artifact and provenance checks
 - `make security-injection` / `npm run security:injection`
 - `make eval-tests` / `npm run eval:test` for the default contributor test
   path (prefers `pytest` when installed, otherwise falls back to `unittest`)
@@ -780,20 +817,28 @@ Minimum runtime: `python3` 3.10+ for `lab/eval/`.
 - `make eval-overlap`
 - `make eval-hard-corpus`
 
+Notes:
+
+- `eval-output` is separate from `eval-all` / `eval-ci` for now.
+- `--include-untracked` is available for local changed-mode exploration, but it
+  intentionally makes results non-comparable and is not part of `eval-ci`.
+
 Current `lab/eval/` scope:
 
 - core skill evals for `plan`, `work`, `review`, `verify`, `permissions`, and
   `research`
 - structural scoring for all shipped agents
 - deterministic trigger corpora and confusable-pair analysis
+- deterministic research/review artifact and provenance checks
 - no model-judged behavioral routing yet
 
 For contributor workflows under `.claude/`, use this order:
 
 1. `claude plugin validate plugins/ruby-grape-rails`
 2. `make eval` or `make eval-all`
-3. `/docs-check` when Claude docs or local schema assumptions may have drifted
-4. session analytics only as corroborating, provider-scoped evidence
+3. `make eval-output` for deterministic research/review artifact fixtures
+4. `/docs-check` when Claude docs or local schema assumptions may have drifted
+5. session analytics only as corroborating, provider-scoped evidence
 
 ---
 

@@ -7,6 +7,74 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-03-28
+
+### Added
+
+- **Deterministic research/review output eval** — `lab/eval/artifact_scorer.py`
+  now scores tracked research/review fixture artifacts, and contributors can run
+  it directly via `make eval-output` / `npm run eval:output`.
+- **Shared provenance contract references** — added
+  `plugins/ruby-grape-rails/references/output-verification/provenance-template.md`
+  so research/review provenance sidecars have a canonical documented structure
+  instead of only path conventions.
+
+### Changed
+
+- **Research/review provenance guidance is now explicit and aligned** —
+  `output-verifier`, `research`, `review`, and `parallel-reviewer` now all
+  point to the same shared provenance contract, distinguish when provenance is
+  required vs optional, and describe how verified findings should be applied
+  back to the final artifact.
+- **Output-verification evals are stricter and more deterministic** — the
+  research/review artifact checks now enforce the shared provenance contract
+  more precisely, handle CRLF and UTF-8 input consistently, and cover the
+  contract with dedicated regression tests instead of relying on looser
+  fixture-only validation.
+- **Contributor-only output-verification guidance now lives under `.claude/`**
+  — the shipped plugin keeps the provenance template, while the contributor
+  checklist moved to
+  `.claude/skills/plugin-dev-workflow/references/output-verification-checklist.md`.
+- **Contributor eval and docs-cache tooling now fail more predictably** —
+  `run_eval.sh --changed` is tracked-only by default, reports deleted changed
+  skills/agents explicitly, and adds `--include-untracked` for opt-in local
+  work, while `fetch-claude-docs.sh` now fails incomplete refreshes by default
+  and reserves `--allow-partial` for best-effort refreshes.
+- **Hosted and local contributor gates now use the same stricter eval surface** —
+  the GitHub Actions workflow now runs the eval CI gate, JSON validation uses
+  tracked file manifests, `check-dynamic-injection.sh` covers `.claude-plugin`
+  too, and agent evals fail with explicit missing-file errors instead of bare
+  tracebacks.
+- **Destructive-operation and contributor entrypoint hardening continued** —
+  the dangerous-ops hook now blocks plain `rails` and `rake` destructive DB
+  commands too, and the contributor pre-commit / lint entrypoints were updated
+  to use path-safe file handling instead of brittle whitespace-splitting loops.
+- **Dangerous-op blocking and Ruby hook detection are now more consistent** —
+  the destructive-op hook now covers quoted and namespaced DB tasks,
+  `git -c ... push --force`, common `bash -lc` / `sh -lc` wrappers, several
+  common `ruby -e` inline execution forms (`system(...)`, backticks, `%q/%Q`,
+  `%x{...}`, `exec(...)`), and Redis flushes under stock macOS Bash, while
+  Ruby gem detection now understands `gem(...)` and gemspec-driven repos
+  across the runtime detector, stack detector, and formatter. The Ruby-ish
+  post-edit hook surface was also collapsed behind a shared wrapper to reduce
+  repeated wiring drift.
+- **Secret scanning, runtime detection, and permission extraction are more
+  consistent under degraded conditions** — Betterleaks runtime failures are now
+  surfaced instead of silently passing, runtime detection no longer needs the
+  `just` binary just to parse a justfile and uses consistent full-Rails
+  fallbacks, the permissions extractor uses safer repo-root heuristics plus
+  explicit transcript caps, and the Iron Law output generator no longer depends
+  on the Ruby helper having an executable bit.
+- **Iron Law projection updates now fail closed when bounded markers are
+  missing** — `generate-iron-law-outputs.sh` no longer warns-and-skips missing
+  bounded sections for README or judge projections, which reduces silent
+  partial-regeneration risk.
+- **Full Rails app detection is more conservative without depending only on
+  `bin/rails`** — runtime fallback and verifier guidance now treat a repo as a
+  runnable full Rails app only when it has a real Rails entrypoint or the
+  standard runnable app layout, instead of assuming stray config files alone are
+  enough.
+
 ## [1.6.3] - 2026-03-28
 
 ### Changed
@@ -346,7 +414,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `settings.json` rules, classifies risk, and recommends safer Ruby-project
   permission entries instead of broad guesswork. The skill now ships with a
   canonical Ruby extractor under
-  `skills/permissions/scripts/extract_permissions.rb`.
+  `plugins/ruby-grape-rails/skills/permissions/scripts/extract_permissions.rb`.
 
 ### Changed
 

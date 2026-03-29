@@ -1,7 +1,7 @@
 # Scoring Guide
 
 Reference for the exploratory metrics produced by
-`references/compute-metrics.py`.
+`compute-metrics.py`.
 
 ## Read This First
 

@@ -31,13 +31,17 @@ No prompt engineering. No "please check for N+1 queries." The plugin auto-loads
 the right domain knowledge based on what files you're editing and enforces rules
 that prevent the mistakes Ruby developers actually make in production.
 
+Hook prerequisites: core hook guardrails expect `bash`, `jq`, and `grep`. If a
+required dependency is missing, the plugin now surfaces an explicit hook error
+or warning instead of silently disabling those checks.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │  💎 Ruby/Rails/Grape Plugin for Claude Code                         │
 │                                                                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
-│  │    23    │    50    │   100+   │    21    │    21    │           │
-│  │  Agents  │  Skills  │   Refs   │  Hooks   │Iron Laws │           │
+│  │    23    │    50    │   100+   │    11    │    21    │           │
+│  │  Agents  │  Skills  │   Refs   │  Events  │Iron Laws │           │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘           │
 │                                                                     │
 │  AGENTS                          COMMANDS                           │
@@ -78,6 +82,12 @@ that prevent the mistakes Ruby developers actually make in production.
 │  github.com/slbug/claude-ruby-grape-rails                           │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+Ruby Edit/Write automation is delegated through
+[rubyish-post-edit.sh](plugins/ruby-grape-rails/hooks/scripts/rubyish-post-edit.sh),
+which fans out to formatting, syntax, and debug checks.
+[hooks.json](plugins/ruby-grape-rails/hooks/hooks.json)
+is the current wiring source of truth.
 
 ## Installation
 
@@ -191,7 +201,7 @@ The plugin implements a **Plan, Work, Verify, Review, Compound** lifecycle. Each
 /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
      │           │            │              │              │
      ↓           ↓            ↓              ↓              ↓
-plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
+.claude/plans/{slug}/  (in namespace) (in namespace) (in namespace) .claude/solutions/
 ```
 
 - **Plan** -- Research agents analyze your codebase in parallel, then synthesize a structured implementation plan
@@ -213,9 +223,9 @@ plans/{slug}/  (in namespace) (in namespace) (in namespace) solutions/
   `.claude/research/` and prior plan research before respawning
   duplicate topic-research agents.
 - **Workflow continuity is hook-backed.** `PreCompact`, `PostCompact`, and
-  `StopFailure` preserve rules, log failure context, and surface re-read
-  reminders after compaction or failed stops instead of relying only on chat
-  memory.
+  `StopFailure` warn before compaction, log failure context, and surface
+  re-read reminders after compaction or failed stops instead of relying only on
+  chat memory.
 
 ### Plan Namespaces
 
@@ -333,13 +343,13 @@ When you run `/rb:plan Add real-time notifications`:
    ├── web-researcher            (if unfamiliar technology)
    └── ... up to 8 agents
    │
-3. Each agent writes to plans/{slug}/research/{topic}.md
+3. Each agent writes to `.claude/plans/{slug}/research/{topic}.md`
    │
 4. context-supervisor compresses all research into one summary
    │
 5. Orchestrator reads the summary + synthesizes the plan
    │
-6. Output: plans/{slug}/plan.md with [P1-T1] checkboxes
+6. Output: `.claude/plans/{slug}/plan.md` with [P1-T1] checkboxes
 ```
 
 ### How Review Works
@@ -518,7 +528,7 @@ The plugin enforces **21 Iron Laws** that prevent common, costly mistakes:
 
 ### Enforcement
 
-- **Programmatic**: 7 laws checked automatically on every file edit
+- **Programmatic**: 6 programmatic detectors checked automatically on every file edit
 - **Behavioral**: All 21 laws injected into subagent context
 - **Review-time**: Full audit during `/rb:review`
 
@@ -675,15 +685,18 @@ PRs welcome! See [CLAUDE.md](CLAUDE.md) for development conventions.
 
 ### Eval workflow
 
-`1.6.0` adds a deterministic contributor eval foundation under `lab/eval/`.
-It requires `python3` 3.10+ for the stdlib typing syntax used by the eval
-tooling.
+The repo includes a deterministic contributor eval foundation under
+`lab/eval/`. `1.7.0` adds separate artifact-quality checks for research/review
+outputs. It requires `python3` 3.10+ for the stdlib typing syntax used by the
+eval tooling.
 
 Primary entrypoints:
 
 - `make eval` or `npm run eval` for lint + injection check + changed surfaces
-- `make eval-all` or `npm run eval:all` for the full `1.6.0` snapshot
+- `make eval-all` or `npm run eval:all` for the full structural snapshot
 - `make eval-ci` or `npm run eval:ci` for the contributor CI gate
+- `make eval-output` or `npm run eval:output` for deterministic research/review
+  artifact fixtures
 - `make security-injection` or `npm run security:injection`
 - `make eval-tests` or `npm run eval:test` for the default contributor test
   path (prefers `pytest` when installed, otherwise falls back to `unittest`)
@@ -698,8 +711,19 @@ Current scope:
 
 - six high-leverage skill evals: `plan`, `work`, `review`, `verify`,
   `permissions`, `research`
+- deterministic research/review output fixtures under `lab/eval/fixtures/output/`
+- shipped provenance template under
+  `plugins/ruby-grape-rails/references/output-verification/`
 - structural scoring for all shipped agents
 - deterministic trigger corpora plus confusable-pair / hard-corpus generation
+
+Notes:
+
+- `eval-output` is separate from `eval-all` / `eval-ci` for now.
+- `--include-untracked` is available for local changed-mode exploration, but it
+  intentionally makes results non-comparable and is not part of `eval-ci`.
+- The contributor-only output-verification checklist lives under
+  `.claude/skills/plugin-dev-workflow/references/`.
 
 ### Docs-check and session analytics
 

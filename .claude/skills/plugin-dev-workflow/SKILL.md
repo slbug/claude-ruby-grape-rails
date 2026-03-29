@@ -56,6 +56,7 @@ Run the checks that match the files you touched:
   - `make eval`
   - `make eval-all`
   - `make eval-ci`
+  - `make eval-output`
   - `make security-injection`
   - `make eval-tests`
   - `make eval-overlap`
@@ -68,15 +69,21 @@ Before trusting contributor analytics conclusions, prefer this order:
 
 1. `claude plugin validate plugins/ruby-grape-rails`
 2. `make eval` or `make eval-all`
-3. `/docs-check` when Claude docs or plugin schema assumptions may have changed
-4. session-derived analytics only as corroborating evidence
+3. `make eval-output` for deterministic research/review artifact fixtures
+4. `/docs-check` when Claude docs or plugin schema assumptions may have changed
+5. session-derived analytics only as corroborating evidence
 
 When `lab/eval/` changes, also run:
 
 - use `python3` 3.10+ for the eval tooling
 - `python3 -m compileall lab/eval`
 - `bash scripts/run-eval-tests.sh`
+- `python3 -m lab.eval.artifact_scorer --all`
 - `python3 -m pytest lab/eval/tests -v` when `pytest` is installed
+
+For research/review artifact changes, also consult:
+
+- `${CLAUDE_SKILL_DIR}/references/output-verification-checklist.md`
 
 ## Release Discipline
 

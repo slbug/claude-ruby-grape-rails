@@ -10,7 +10,8 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
-INPUT=$(read_hook_input)
+read_hook_input
+INPUT="$HOOK_INPUT_VALUE"
 
 LIB="${SCRIPT_DIR}/active-plan-lib.sh"
 [[ -r "$LIB" && ! -L "$LIB" ]] || exit 0
@@ -70,16 +71,6 @@ normalize_error_type() {
   fi
 
   printf '%s\n' "$value"
-}
-
-get_file_mtime() {
-  local file="$1"
-
-  if stat -f '%m' "$file" >/dev/null 2>&1; then
-    stat -f '%m' "$file"
-  else
-    stat -c '%Y' "$file"
-  fi
 }
 
 clear_stale_lock() {

@@ -6,13 +6,24 @@ set -o pipefail
 # remind Claude to STOP and present the plan to the user.
 # Skips in /rb:full autonomous mode (detected by progress.md with State).
 
-command -v jq >/dev/null 2>&1 || exit 0
+HOOK_NAME="${BASH_SOURCE[0]##*/}"
+
+emit_missing_dependency_block() {
+  local dependency="$1"
+
+  echo "BLOCKED: ${HOOK_NAME} cannot inspect the hook payload because ${dependency} is unavailable." >&2
+  echo "Install the missing dependency or disable the hook explicitly before continuing." >&2
+  exit 2
+}
+
+command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
-[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
-INPUT=$(read_hook_input)
+read_hook_input
+INPUT="$HOOK_INPUT_VALUE"
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 PLANS_DIR="${REPO_ROOT}/.claude/plans"

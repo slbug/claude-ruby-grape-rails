@@ -1,7 +1,7 @@
 ---
 name: rb:permissions
 description: Analyze recent Claude Code sessions and recommend safe Bash permission entries for Ruby/Rails/Grape workflows in settings.json. Use when repeated approval prompts slow work or the user asks to reduce prompts, allow commands, or fix permissions.
-argument-hint: "[--days=14] [--dry-run]"
+argument-hint: "[--days=14] [--limit=30] [--repo-only] [--dry-run]"
 effort: low
 ---
 # Permission Analyzer
@@ -22,12 +22,14 @@ writing.
 
 ## Arguments
 
-`$ARGUMENTS` — `--days=N` (default: 14), `--dry-run` (preview only).
+`$ARGUMENTS` — `--days=N` (default: 14), `--limit=N`, `--repo-only`,
+`--dry-run`.
 
 ## Iron Laws
 
 1. **Never auto-allow RED commands.**
-2. **Evidence-based only** — recommend commands actually approved in sessions.
+2. **Evidence-based only** — recommend commands observed in recent Bash tool-use
+   events for this project.
 3. **Show before writing** — present the diff, get explicit confirmation.
 4. **Preserve existing settings** — merge, never overwrite.
 5. **Prefer the narrowest safe scope** — project settings for Ruby app commands, user settings only for universal tools.
@@ -39,7 +41,7 @@ writing.
 Run the canonical extractor first:
 
 ```bash
-ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days "${DAYS:-14}"
+ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days "${DAYS:-14}" ${REPO_ONLY:+--repo-only} ${LIMIT:+--limit "${LIMIT}"} ${DRY_RUN:+--dry-run}
 ```
 
 See `${CLAUDE_SKILL_DIR}/references/extraction-script.md` for the output format.
@@ -71,7 +73,8 @@ For each uncovered command group:
 
 ### Step 3: Interactive Triage
 
-Unless `--dry-run` was requested, walk the user through the findings.
+Walk the user through the findings. `--dry-run` means preview-only for the
+overall permission workflow; the extractor itself is already read-only.
 
 - Batch GREEN items first:
   - add all

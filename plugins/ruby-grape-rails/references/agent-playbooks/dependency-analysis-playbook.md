@@ -24,8 +24,12 @@ end
 
 deps.each do |file, imports|
   imports.each do |imp|
-    target = "app/#{imp}.rb"
-    if deps[target]&.include?(file.delete_prefix("app/").delete_suffix(".rb"))
+    # Keep everything relative to maintain consistent hash keys
+    target_dir = File.dirname(file)
+    target = File.join(target_dir, "#{imp}.rb")
+    target = Pathname.new(target).cleanpath.to_s
+    reverse_edge = Pathname.new(file).relative_path_from(Pathname.new(File.dirname(target))).to_s.delete_suffix(".rb")
+    if deps[target]&.include?(reverse_edge)
       puts "Circular: #{file} <-> #{target}"
     end
   end

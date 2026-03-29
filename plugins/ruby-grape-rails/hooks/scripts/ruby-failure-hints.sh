@@ -2,7 +2,17 @@
 set -o nounset
 set -o pipefail
 
-command -v jq >/dev/null 2>&1 || exit 0
+HOOK_NAME="${BASH_SOURCE[0]##*/}"
+
+emit_missing_dependency_block() {
+  local dependency="$1"
+
+  echo "BLOCKED: ${HOOK_NAME} cannot inspect the hook payload because ${dependency} is unavailable." >&2
+  echo "Install the missing dependency or disable the hook explicitly before continuing." >&2
+  exit 2
+}
+
+command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 
 COMMAND=$(jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
 [[ -n "$COMMAND" ]] || exit 0

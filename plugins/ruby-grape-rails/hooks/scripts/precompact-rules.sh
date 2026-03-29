@@ -2,25 +2,42 @@
 set -o nounset
 set -o pipefail
 
-# PreCompact hook: Detect active workflow phase and re-inject rules
-# Uses explicit active-plan marker with fallback to heuristic detection
+# PreCompact hook: Detect active workflow phase and warn the user before
+# compaction so the next session re-reads the right plan artifacts.
+
+HOOK_NAME="${BASH_SOURCE[0]##*/}"
+
+emit_missing_dependency_notice() {
+  local dependency="$1"
+
+  echo "WARNING: ${HOOK_NAME} cannot prepare the pre-compaction reminder because ${dependency} is unavailable." >&2
+  exit 2
+}
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
-[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_notice "workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
 # shellcheck disable=SC2034 # consumed by active-plan-lib during sourcing
-INPUT=$(read_hook_input)
+read_hook_input
+INPUT="$HOOK_INPUT_VALUE"
+if [[ -z "$INPUT" ]]; then
+  case "${HOOK_INPUT_STATUS:-empty}" in
+    truncated|invalid)
+      echo "WARNING: ${HOOK_NAME} could not safely inspect a ${HOOK_INPUT_STATUS} hook payload." >&2
+      exit 2
+      ;;
+  esac
+fi
 LIB="${SCRIPT_DIR}/active-plan-lib.sh"
-[[ -r "$LIB" && ! -L "$LIB" ]] || exit 0
+[[ -r "$LIB" && ! -L "$LIB" ]] || emit_missing_dependency_notice "active-plan-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$LIB"
 SCRATCHPAD_LIB="${SCRIPT_DIR}/scratchpad-lib.sh"
-[[ -r "$SCRATCHPAD_LIB" && ! -L "$SCRATCHPAD_LIB" ]] || exit 0
+[[ -r "$SCRATCHPAD_LIB" && ! -L "$SCRATCHPAD_LIB" ]] || emit_missing_dependency_notice "scratchpad-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$SCRATCHPAD_LIB"
-command -v jq >/dev/null 2>&1 || exit 0
 
 # Main detection
 ACTIVE_PLAN_DIR=$(get_active_plan)
@@ -85,5 +102,5 @@ UNTRUSTED SCRATCHPAD NOTES:
 fi
 
 if [[ -n "$CONTEXT" ]]; then
-  printf '%s' "$CONTEXT" | jq -Rs '{systemMessage: .}'
+  printf '%s\n' "$CONTEXT" >&2
 fi

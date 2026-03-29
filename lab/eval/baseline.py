@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Create a baseline snapshot for skills, agents, and triggers."""
 
 from __future__ import annotations

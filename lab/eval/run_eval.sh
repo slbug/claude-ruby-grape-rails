@@ -2,8 +2,10 @@
 # Run deterministic contributor evals for the Ruby plugin.
 #
 # Usage:
-#   ./lab/eval/run_eval.sh              # Lint + injection check + changed surfaces
+#   ./lab/eval/run_eval.sh              # Lint + injection check + tracked changed surfaces
 #   ./lab/eval/run_eval.sh --changed    # Same as default
+#   ./lab/eval/run_eval.sh --changed --against origin/main  # branch-style diff vs merge-base
+#   ./lab/eval/run_eval.sh --changed --include-untracked  # local-only expansion
 #   ./lab/eval/run_eval.sh --all        # Lint + injection check + core skills + all agents + triggers
 #   ./lab/eval/run_eval.sh --skills     # Core skills only
 #   ./lab/eval/run_eval.sh --agents     # All agents only
@@ -15,8 +17,32 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PLUGIN_ROOT="plugins/ruby-grape-rails"
-LAST_EVAL_FILE="${SCRIPT_DIR}/.last-eval-commit"
-MODE="${1:---changed}"
+MODE="--changed"
+INCLUDE_UNTRACKED=false
+AGAINST_REF=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --changed|--all|--skills|--agents|--triggers|--ci)
+      MODE="$1"
+      ;;
+    --include-untracked)
+      INCLUDE_UNTRACKED=true
+      ;;
+    --against)
+      shift
+      if [[ $# -eq 0 ]]; then
+        echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]" >&2
+        exit 1
+      fi
+      AGAINST_REF="$1"
+      ;;
+    *)
+      echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
 FAIL_UNDER="${RUBY_PLUGIN_EVAL_FAIL_UNDER:-0.90}"
 AGENT_FAIL_UNDER="${RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER:-0.85}"
 TRIGGER_FAIL_UNDER="${RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER:-0.90}"
@@ -42,35 +68,36 @@ have_head() {
 collect_changed_paths() {
   local prefix="$1"
   local lines=""
+  local merge_base=""
 
   if have_head; then
-    lines=$(git diff --name-only HEAD -- "$prefix" 2>/dev/null || true)
+    if [[ -n "$AGAINST_REF" ]]; then
+      merge_base=$(git merge-base HEAD "$AGAINST_REF" 2>/dev/null || true)
+      if [[ -n "$merge_base" ]]; then
+        lines=$(git diff --name-only "${merge_base}..HEAD" -- "$prefix" 2>/dev/null || true)
+      else
+        echo "WARN: could not resolve merge-base with ${AGAINST_REF}; falling back to HEAD diff." >&2
+        lines=$(git diff --name-only HEAD -- "$prefix" 2>/dev/null || true)
+      fi
+    else
+      lines=$(git diff --name-only HEAD -- "$prefix" 2>/dev/null || true)
+    fi
 
     local staged=""
     staged=$(git diff --cached --name-only -- "$prefix" 2>/dev/null || true)
     if [[ -n "$staged" ]]; then
       lines=$(printf '%s\n%s\n' "$lines" "$staged")
     fi
-
-    if [[ -f "$LAST_EVAL_FILE" ]]; then
-      local last_commit=""
-      last_commit="$(cat "$LAST_EVAL_FILE")"
-      if git rev-parse --verify "$last_commit" >/dev/null 2>&1; then
-        local since_last=""
-        since_last=$(git diff --name-only "$last_commit" HEAD -- "$prefix" 2>/dev/null || true)
-        if [[ -n "$since_last" ]]; then
-          lines=$(printf '%s\n%s\n' "$lines" "$since_last")
-        fi
-      fi
-    fi
   else
     lines=$(git ls-files -- "$prefix" 2>/dev/null || true)
   fi
 
-  local untracked=""
-  untracked=$(git ls-files --others --exclude-standard -- "$prefix" 2>/dev/null || true)
-  if [[ -n "$untracked" ]]; then
-    lines=$(printf '%s\n%s\n' "$lines" "$untracked")
+  if [[ "$INCLUDE_UNTRACKED" == "true" ]]; then
+    local untracked=""
+    untracked=$(git ls-files --others --exclude-standard -- "$prefix" 2>/dev/null || true)
+    if [[ -n "$untracked" ]]; then
+      lines=$(printf '%s\n%s\n' "$lines" "$untracked")
+    fi
   fi
 
   printf '%s\n' "$lines" | awk 'NF' | sort -u
@@ -85,7 +112,7 @@ collect_changed_skill_names() {
 
 collect_changed_agent_paths() {
   collect_changed_paths "${PLUGIN_ROOT}/agents/" \
-    | grep -E '^plugins/ruby-grape-rails/agents/.+\.md$' \
+    | grep -E "^${PLUGIN_ROOT}/agents/.+\.md$" \
     | sort -u || true
 }
 
@@ -97,7 +124,7 @@ should_run_changed_triggers() {
   local core_changed=""
   core_changed=$(
     collect_changed_paths "${PLUGIN_ROOT}/skills/" \
-      | sed -n "s|^${PLUGIN_ROOT}/skills/\\([^/]*\\)/SKILL\\.md$|\\1|p" \
+      | sed -n "s|^${PLUGIN_ROOT}/skills/\\([^/]*\\)/.*|\\1|p" \
       | grep -E "$CORE_SKILLS_REGEX" || true
   )
   [[ -n "$core_changed" ]]
@@ -117,7 +144,7 @@ import sys
 
 label = sys.argv[1]
 threshold = float(sys.argv[2])
-data = json.loads(Path(sys.argv[3]).read_text())
+data = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
 
 if not data:
     print(f"  No {label} scored.")
@@ -150,7 +177,7 @@ from pathlib import Path
 import sys
 
 threshold = float(sys.argv[1])
-payload = json.loads(Path(sys.argv[2]).read_text())
+payload = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
 skills = payload.get("skills", {})
 pairs = payload.get("confusable_pairs", [])
 
@@ -188,7 +215,13 @@ run_injection_check() {
 }
 
 run_changed_skills() {
-  mapfile -t skills_to_check < <(collect_changed_skill_names)
+  local skills_to_check=()
+  local skill_name=""
+
+  while IFS= read -r skill_name; do
+    [[ -n "$skill_name" ]] || continue
+    skills_to_check+=("$skill_name")
+  done < <(collect_changed_skill_names)
 
   if [[ ${#skills_to_check[@]} -eq 0 ]]; then
     echo "  No skill changes detected."
@@ -200,9 +233,13 @@ run_changed_skills() {
   local result="{"
   local first=true
   local skill=""
+  local missing_skills=()
   for skill in "${skills_to_check[@]}"; do
     local path="${PLUGIN_ROOT}/skills/${skill}/SKILL.md"
-    [[ -f "$path" ]] || continue
+    if [[ ! -f "$path" ]]; then
+      missing_skills+=("$skill")
+      continue
+    fi
 
     local score=""
     score="$(python3 -m lab.eval.scorer "$path")"
@@ -215,6 +252,10 @@ run_changed_skills() {
   done
   result+="}"
 
+  if [[ ${#missing_skills[@]} -gt 0 ]]; then
+    echo "  NOTE: deleted or moved changed skills were skipped: ${missing_skills[*]}" >&2
+  fi
+
   printf '%s\n' "$result" | summarize_subject_scores "skills" "$FAIL_UNDER"
 }
 
@@ -224,7 +265,13 @@ run_all_skills() {
 }
 
 run_changed_agents() {
-  mapfile -t agent_paths < <(collect_changed_agent_paths)
+  local agent_paths=()
+  local agent_path=""
+
+  while IFS= read -r agent_path; do
+    [[ -n "$agent_path" ]] || continue
+    agent_paths+=("$agent_path")
+  done < <(collect_changed_agent_paths)
 
   if [[ ${#agent_paths[@]} -eq 0 ]]; then
     echo "  No agent changes detected."
@@ -240,9 +287,14 @@ run_changed_agents() {
 
   local result="{"
   local first=true
+  local missing_agents=()
   for path in "${agent_paths[@]}"; do
     local agent_name
     agent_name="$(basename "$path" .md)"
+    if [[ ! -f "$path" ]]; then
+      missing_agents+=("$agent_name")
+      continue
+    fi
     local score=""
     score="$(python3 -m lab.eval.agent_scorer "$path")"
     if [[ "$first" == true ]]; then
@@ -253,6 +305,10 @@ run_changed_agents() {
     result+="\"${agent_name}\":${score}"
   done
   result+="}"
+
+  if [[ ${#missing_agents[@]} -gt 0 ]]; then
+    echo "  NOTE: deleted or moved changed agents were skipped: ${missing_agents[*]}" >&2
+  fi
 
   printf '%s\n' "$result" | summarize_subject_scores "agents" "$AGENT_FAIL_UNDER"
 }
@@ -267,14 +323,18 @@ run_all_triggers() {
   python3 -m lab.eval.trigger_scorer --all | summarize_triggers "$TRIGGER_FAIL_UNDER"
 }
 
-persist_last_eval_marker() {
-  if have_head; then
-    git rev-parse HEAD > "$LAST_EVAL_FILE"
-  fi
-}
-
 echo "=== Ruby Plugin Eval ==="
 echo
+
+if [[ "$MODE" == "--changed" && "$INCLUDE_UNTRACKED" == "true" ]]; then
+  echo "NOTE: --include-untracked makes changed-mode results local-only and non-comparable."
+  echo
+fi
+
+if [[ "$MODE" == "--changed" && -n "$AGAINST_REF" ]]; then
+  echo "NOTE: --against ${AGAINST_REF} compares changed surfaces from merge-base to HEAD plus staged changes."
+  echo
+fi
 
 case "$MODE" in
   --changed)
@@ -342,7 +402,7 @@ case "$MODE" in
     run_all_triggers || FAILURES=$((FAILURES + 1))
     ;;
   *)
-    echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci]"
+    echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]"
     exit 1
     ;;
 esac
@@ -352,8 +412,6 @@ if [[ $FAILURES -gt 0 ]]; then
   echo "Eval finished with ${FAILURES} failing section(s)."
   exit 1
 fi
-
-persist_last_eval_marker
 
 echo
 echo "Eval passed."

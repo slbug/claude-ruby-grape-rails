@@ -6,12 +6,39 @@ set -o pipefail
 # This hook populates context at SessionStart and refreshes .runtime_env when
 # watched files change.
 
+HOOK_NAME="${BASH_SOURCE[0]##*/}"
+
+emit_runtime_dependency_warning() {
+  local dependency="$1"
+
+  echo "WARNING: ${HOOK_NAME} cannot refresh Ruby runtime context because ${dependency} is unavailable." >&2
+  exit 0
+}
+
+emit_runtime_temp_warning() {
+  echo "WARNING: ${HOOK_NAME} could not update .runtime_env because a temporary file could not be created." >&2
+  exit 0
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
-[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+DEP_LIB="${SCRIPT_DIR}/ruby-dependency-lib.sh"
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_runtime_dependency_warning "workspace-root-lib.sh"
+[[ -r "$DEP_LIB" && ! -L "$DEP_LIB" ]] || emit_runtime_dependency_warning "ruby-dependency-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
-INPUT=$(read_hook_input)
+# shellcheck disable=SC1090,SC1091
+source "$DEP_LIB"
+read_hook_input
+INPUT="$HOOK_INPUT_VALUE"
+if [[ -z "$INPUT" ]]; then
+  case "${HOOK_INPUT_STATUS:-empty}" in
+    truncated|invalid)
+      echo "WARNING: ${HOOK_NAME} could not safely inspect a ${HOOK_INPUT_STATUS} hook payload." >&2
+      exit 0
+      ;;
+  esac
+fi
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 PROJECT_GEMFILE="${REPO_ROOT}/Gemfile"
@@ -39,6 +66,10 @@ BETTERLEAKS_PATH=""
 RTK_PATH=""
 RTK_VERSION=""
 RTK_GAIN_AVAILABLE=false
+DCG_PATH=""
+DCG_VERSION=""
+SHELLFIRM_PATH=""
+SHELLFIRM_VERSION=""
 PSQL_AVAILABLE=false
 REDIS_CLI_AVAILABLE=false
 BUNDLE_AVAILABLE=false
@@ -71,42 +102,20 @@ emit_shell_assignment() {
   printf '%q\n' "$value"
 }
 
-escape_ere() {
-  printf '%s' "$1" | sed 's/[][(){}.^$?+*|\\/]/\\&/g'
-}
-
 gem_declared() {
-  local gem_name="$1"
-  local escaped_name
-
-  [[ -f "$PROJECT_GEMFILE" ]] || return 1
-  escaped_name=$(escape_ere "$gem_name")
-  grep -Eq "^[[:space:]]*gem[[:space:]]+['\"]${escaped_name}['\"]([[:space:]]*(,|#|$))" "$PROJECT_GEMFILE"
+  ruby_plugin_repo_declares_gem "$REPO_ROOT" "$PROJECT_GEMFILE" "$1"
 }
 
-gemfile_declares_pattern() {
-  local pattern="$1"
-
-  [[ -f "$PROJECT_GEMFILE" ]] || return 1
-  grep -Eq "$pattern" "$PROJECT_GEMFILE"
+gem_prefix_declared() {
+  ruby_plugin_repo_declares_gem_prefix "$REPO_ROOT" "$PROJECT_GEMFILE" "$1"
 }
 
 lock_version() {
-  local gem_name="$1"
-  local escaped_name
-
-  [[ -f "$PROJECT_LOCKFILE" ]] || return 1
-  escaped_name=$(escape_ere "$gem_name")
-  grep -m 1 -E "^[[:space:]]{4}${escaped_name} \([^)]+\)$" "$PROJECT_LOCKFILE" |
-    sed -E 's/.*\(([^)]+)\).*/\1/'
+  ruby_plugin_lock_version "$PROJECT_LOCKFILE" "$1"
 }
 
 lock_has_gem() {
-  local gem_name="$1"
-  local version
-
-  version=$(lock_version "$gem_name" || true)
-  [[ -n "$version" ]]
+  ruby_plugin_lock_has_gem "$PROJECT_LOCKFILE" "$1"
 }
 
 add_tool() {
@@ -135,7 +144,7 @@ makefile_has_target() {
   makefile_path=$(find_first_repo_file GNUmakefile Makefile makefile || true)
   [[ -n "$makefile_path" ]] || return 1
 
-  escaped_target=$(escape_ere "$target_name")
+  escaped_target=$(ruby_plugin_escape_ere "$target_name")
   grep -Eq "^[[:space:]]*${escaped_target}[[:space:]]*:" "$makefile_path"
 }
 
@@ -146,7 +155,7 @@ rake_task_declared_in_file() {
 
   [[ -f "$target_file" && ! -L "$target_file" ]] || return 1
 
-  escaped_task=$(escape_ere "$task_name")
+  escaped_task=$(ruby_plugin_escape_ere "$task_name")
   grep -Eq "task[[:space:]]*(\\(|:|['\"])${escaped_task}([[:space:][:punct:]]|$)|${escaped_task}:[[:space:]]" "$target_file"
 }
 
@@ -176,9 +185,8 @@ justfile_has_recipe() {
 
   justfile_path=$(find_first_repo_file justfile .justfile Justfile || true)
   [[ -n "$justfile_path" ]] || return 1
-  command -v just >/dev/null 2>&1 || return 1
 
-  escaped_recipe=$(escape_ere "$recipe_name")
+  escaped_recipe=$(ruby_plugin_escape_ere "$recipe_name")
   grep -Eq "^[[:space:]]*${escaped_recipe}[[:space:]]*:" "$justfile_path"
 }
 
@@ -268,7 +276,7 @@ fi
 
 # Detect Rails version from Gemfile.lock as a fallback only.
 if [[ -f "$PROJECT_LOCKFILE" ]]; then
-  FALLBACK_RAILS_VERSION=$(grep -m 1 -E "^    rails " "$PROJECT_LOCKFILE" | sed 's/.*(\(.*\)).*/\1/')
+  FALLBACK_RAILS_VERSION=$(grep -m 1 -E "^    rails " "$PROJECT_LOCKFILE" | sed -E 's/.*\(([^)]+)\).*/\1/')
 fi
 
 # Detect richer stack/package signals via the shared init detector.
@@ -306,8 +314,6 @@ if [[ "$STACK_DETECTOR_OK" == "true" ]]; then
 else
   fallback_stack=()
   fallback_orms=()
-  full_rails_markers=(config/application.rb config/environment.rb bin/rails)
-
   if gem_declared 'rails'; then
     fallback_stack+=("rails")
   fi
@@ -360,12 +366,15 @@ else
     fi
   done
 
-  for marker in "${full_rails_markers[@]}"; do
-    if [[ -e "${REPO_ROOT}/${marker}" ]]; then
-      FULL_RAILS_APP="true"
-      break
-    fi
-  done
+  if [[ -f "${REPO_ROOT}/bin/rails" && ! -L "${REPO_ROOT}/bin/rails" ]] || \
+     [[ -f "${REPO_ROOT}/script/rails" && ! -L "${REPO_ROOT}/script/rails" ]] || \
+     { [[ -f "${REPO_ROOT}/config/application.rb" && ! -L "${REPO_ROOT}/config/application.rb" ]] && \
+       [[ -f "${REPO_ROOT}/config/environment.rb" && ! -L "${REPO_ROOT}/config/environment.rb" ]] && \
+       [[ -f "${REPO_ROOT}/config/boot.rb" && ! -L "${REPO_ROOT}/config/boot.rb" ]] && \
+       [[ -d "${REPO_ROOT}/app" && ! -L "${REPO_ROOT}/app" ]] && \
+       [[ -d "${REPO_ROOT}/config/environments" && ! -L "${REPO_ROOT}/config/environments" ]]; }; then
+    FULL_RAILS_APP="true"
+  fi
 
   if gem_declared 'rails'; then
     RAILS_COMPONENTS="true"
@@ -398,19 +407,22 @@ if [[ "$FULL_RAILS_APP" == "true" ]]; then
   STACK+=("Rails")
 fi
 
-for component in ${DETECTED_STACK_RAW//,/ }; do
-  case "$component" in
-    grape) STACK+=("Grape") ;;
-    sidekiq) STACK+=("Sidekiq") ;;
-    redis) STACK+=("Redis") ;;
-    postgres) STACK+=("PostgreSQL") ;;
-    mysql) STACK+=("MySQL") ;;
-    solid_queue) STACK+=("SolidQueue") ;;
-    karafka) STACK+=("Karafka") ;;
-    hotwire) STACK+=("Hotwire") ;;
-    rails) : ;;
-  esac
-done
+if [[ -n "$DETECTED_STACK_RAW" ]]; then
+  IFS=',' read -r -a detected_components <<< "$DETECTED_STACK_RAW"
+  for component in "${detected_components[@]}"; do
+    case "$component" in
+      grape) STACK+=("Grape") ;;
+      sidekiq) STACK+=("Sidekiq") ;;
+      redis) STACK+=("Redis") ;;
+      postgres) STACK+=("PostgreSQL") ;;
+      mysql) STACK+=("MySQL") ;;
+      solid_queue) STACK+=("SolidQueue") ;;
+      karafka) STACK+=("Karafka") ;;
+      hotwire) STACK+=("Hotwire") ;;
+      rails) : ;;
+    esac
+  done
+fi
 
 if [[ -n "$DETECTED_ORMS" ]]; then
   [[ "$DETECTED_ORMS" == *"active_record"* ]] && STACK+=("ActiveRecord")
@@ -439,7 +451,7 @@ fi
 
 # Detect Tidewave Rails gem (MCP-based runtime integration)
 TIDEWAVE_GEM_PRESENT=false
-if [[ -f "$PROJECT_GEMFILE" ]] && grep -Eq "gem ['\"]tidewave['\"]" "$PROJECT_GEMFILE"; then
+if gem_declared 'tidewave'; then
   TIDEWAVE_GEM_PRESENT=true
   STACK+=("Tidewave")
 fi
@@ -451,7 +463,7 @@ if gem_declared 'standard' || lock_has_gem 'standard'; then
   add_tool "standardrb"
 fi
 
-if gem_declared 'rubocop' || lock_has_gem 'rubocop' || gemfile_declares_pattern "^[[:space:]]*gem[[:space:]]+['\"]rubocop-" ; then
+if gem_declared 'rubocop' || lock_has_gem 'rubocop' || gem_prefix_declared 'rubocop-' ; then
   RUBOCOP_AVAILABLE=true
   RUBOCOP_VERSION=$(lock_version 'rubocop' || true)
   add_tool "rubocop"
@@ -463,7 +475,7 @@ if gem_declared 'brakeman' || lock_has_gem 'brakeman'; then
   add_tool "brakeman"
 fi
 
-if gem_declared 'pronto' || lock_has_gem 'pronto' || gemfile_declares_pattern "^[[:space:]]*gem[[:space:]]+['\"]pronto-" ; then
+if gem_declared 'pronto' || lock_has_gem 'pronto' || gem_prefix_declared 'pronto-' ; then
   PRONTO_AVAILABLE=true
   PRONTO_VERSION=$(lock_version 'pronto' || true)
   add_tool "pronto"
@@ -502,20 +514,21 @@ LEFTHOOK_CONFIG_PATH=$(find_first_repo_file \
 
 if [[ -n "$LEFTHOOK_CONFIG_PATH" ]]; then
   LEFTHOOK_CONFIG_PRESENT=true
+  LEFTHOOK_ANALYSIS_TEXT="$(sed -E 's/[[:space:]]+#.*$//; /^[[:space:]]*#/d' "$LEFTHOOK_CONFIG_PATH" 2>/dev/null || cat "$LEFTHOOK_CONFIG_PATH")"
 
-  if grep -Eq '(^|[^[:alnum:]_])(standard|standardrb|rubocop)([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH"; then
+  if printf '%s\n' "$LEFTHOOK_ANALYSIS_TEXT" | grep -Eq '(^|[^[:alnum:]_])(standard|standardrb|rubocop)([^[:alnum:]_]|$)'; then
     LEFTHOOK_LINT_COVERED=true
   fi
 
-  if grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH" && { lock_has_gem 'pronto-rubocop' || gemfile_declares_pattern "^[[:space:]]*gem[[:space:]]+['\"]pronto-rubocop['\"]"; }; then
+  if printf '%s\n' "$LEFTHOOK_ANALYSIS_TEXT" | grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)' && { lock_has_gem 'pronto-rubocop' || gem_declared 'pronto-rubocop'; }; then
     LEFTHOOK_DIFF_LINT_COVERED=true
   fi
 
-  if grep -Eq '(brakeman|betterleaks|bundler[ -]?audit|flog|debride)' "$LEFTHOOK_CONFIG_PATH"; then
+  if printf '%s\n' "$LEFTHOOK_ANALYSIS_TEXT" | grep -Eq '(brakeman|betterleaks|bundler[ -]?audit|flog|debride)'; then
     LEFTHOOK_SECURITY_COVERED=true
   fi
 
-  if grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH"; then
+  if printf '%s\n' "$LEFTHOOK_ANALYSIS_TEXT" | grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)'; then
     LEFTHOOK_PRONTO_COVERED=true
   fi
 fi
@@ -530,6 +543,18 @@ detect_verify_composite || true
 if command -v rtk >/dev/null 2>&1; then
   RTK_PATH=$(command -v rtk)
   add_tool "rtk"
+fi
+
+# Detect DCG (external Claude Code destructive command guard)
+if command -v dcg >/dev/null 2>&1; then
+  DCG_PATH=$(command -v dcg)
+  add_tool "dcg"
+fi
+
+# Detect Shellfirm (external shell/agent safety layer)
+if command -v shellfirm >/dev/null 2>&1; then
+  SHELLFIRM_PATH=$(command -v shellfirm)
+  add_tool "shellfirm"
 fi
 
 # Detect Betterleaks executable
@@ -552,6 +577,14 @@ if [[ -n "$RTK_PATH" ]]; then
   if "$RTK_PATH" gain --help >/dev/null 2>&1; then
     RTK_GAIN_AVAILABLE=true
   fi
+fi
+
+if [[ -n "$DCG_PATH" ]]; then
+  DCG_VERSION=$("$DCG_PATH" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || printf '%s' "unknown")
+fi
+
+if [[ -n "$SHELLFIRM_PATH" ]]; then
+  SHELLFIRM_VERSION=$("$SHELLFIRM_PATH" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || printf '%s' "unknown")
 fi
 
 if [[ "${RUBY_PLUGIN_DETECT_RUNTIME_QUIET:-0}" != "1" ]]; then
@@ -591,9 +624,9 @@ if [[ -e "$RUNTIME_ENV_FILE" && ! -f "$RUNTIME_ENV_FILE" ]]; then
   exit 0
 fi
 
-TMP_RUNTIME_ENV=$(mktemp "${CLAUDE_DIR}/.runtime_env.XXXXXX") || exit 0
-[[ -n "$TMP_RUNTIME_ENV" ]] || exit 0
-[[ "$TMP_RUNTIME_ENV" == "${CLAUDE_DIR}/.runtime_env."* ]] || exit 0
+TMP_RUNTIME_ENV=$(mktemp "${CLAUDE_DIR}/.runtime_env.XXXXXX") || emit_runtime_temp_warning
+[[ -n "$TMP_RUNTIME_ENV" ]] || emit_runtime_temp_warning
+[[ "$TMP_RUNTIME_ENV" == "${CLAUDE_DIR}/.runtime_env."* ]] || emit_runtime_temp_warning
 # shellcheck disable=SC2329 # invoked via trap
 cleanup_runtime_env_tmp() {
   safe_remove_temp_file "${TMP_RUNTIME_ENV:-}" "${CLAUDE_DIR}/.runtime_env.*" || true
@@ -638,6 +671,22 @@ trap cleanup_runtime_env_tmp EXIT HUP INT TERM
     fi
   else
     emit_shell_assignment "RTK_AVAILABLE" "false"
+  fi
+
+  if [[ -n "$DCG_PATH" ]]; then
+    emit_shell_assignment "DCG_AVAILABLE" "true"
+    emit_shell_assignment "DCG_PATH" "$DCG_PATH"
+    [[ -n "$DCG_VERSION" ]] && emit_shell_assignment "DCG_VERSION" "$DCG_VERSION"
+  else
+    emit_shell_assignment "DCG_AVAILABLE" "false"
+  fi
+
+  if [[ -n "$SHELLFIRM_PATH" ]]; then
+    emit_shell_assignment "SHELLFIRM_AVAILABLE" "true"
+    emit_shell_assignment "SHELLFIRM_PATH" "$SHELLFIRM_PATH"
+    [[ -n "$SHELLFIRM_VERSION" ]] && emit_shell_assignment "SHELLFIRM_VERSION" "$SHELLFIRM_VERSION"
+  else
+    emit_shell_assignment "SHELLFIRM_AVAILABLE" "false"
   fi
 
   if [[ -n "$BETTERLEAKS_PATH" ]]; then

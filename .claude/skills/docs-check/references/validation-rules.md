@@ -157,6 +157,9 @@ Checks:
 3. Treat `if` usage outside tool events as `WARNING` or `BLOCKER` depending on
    whether it disables the handler.
 4. Validate `${CLAUDE_PLUGIN_ROOT}` references against real repo paths.
+   - in this repo, those targets live under `plugins/ruby-grape-rails/...`
+   - inside the packaged plugin root, the same files appear as paths like
+     `hooks/hooks.json` or `.claude-plugin/plugin.json`
 
 ## Plugin Config Validation
 

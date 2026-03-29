@@ -225,8 +225,13 @@ if [[ ! -f "$RUNTIME_ENV_FILE" || -L "$RUNTIME_ENV_FILE" ]]; then
 fi
 
 if [[ -z "$FULL_RAILS_APP" ]]; then
-  if [[ -e "$REPO_ROOT/bin/rails" ]] || \
-     { gem_or_lock_has rails && [[ -f "$REPO_ROOT/config/application.rb" && -f "$REPO_ROOT/config/environment.rb" ]]; }; then
+  if [[ -f "$REPO_ROOT/bin/rails" && ! -L "$REPO_ROOT/bin/rails" ]] || \
+     [[ -f "$REPO_ROOT/script/rails" && ! -L "$REPO_ROOT/script/rails" ]] || \
+     { [[ -f "$REPO_ROOT/config/application.rb" && ! -L "$REPO_ROOT/config/application.rb" ]] && \
+       [[ -f "$REPO_ROOT/config/environment.rb" && ! -L "$REPO_ROOT/config/environment.rb" ]] && \
+       [[ -f "$REPO_ROOT/config/boot.rb" && ! -L "$REPO_ROOT/config/boot.rb" ]] && \
+       [[ -d "$REPO_ROOT/app" && ! -L "$REPO_ROOT/app" ]] && \
+       [[ -d "$REPO_ROOT/config/environments" && ! -L "$REPO_ROOT/config/environments" ]]; }; then
     FULL_RAILS_APP=true
   else
     FULL_RAILS_APP=false

@@ -56,3 +56,5 @@ skills:
 - Synthesize the final consolidated review to `.claude/reviews/{review-slug}.md`.
 - When `output-verifier` is used, write its result as
   `.claude/reviews/{review-slug}.provenance.md`.
+- That provenance sidecar should follow:
+  `../references/output-verification/provenance-template.md`

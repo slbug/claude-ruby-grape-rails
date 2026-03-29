@@ -31,6 +31,47 @@ unless yaml['categories'].is_a?(Array) && yaml['laws'].is_a?(Array)
   exit 1
 end
 
+def validate_entries!(yaml)
+  category_required = %w[id name law_count]
+  law_required = %w[id category title rule summary_text rationale subagent_text]
+  category_ids = yaml['categories'].filter_map { |category| category['id'] if category.is_a?(Hash) }
+  errors = []
+
+  yaml['categories'].each_with_index do |category, index|
+    unless category.is_a?(Hash)
+      errors << "category[#{index}] must be a mapping, got #{category.class}"
+      next
+    end
+
+    missing = category_required.reject { |key| category[key] }
+    next if missing.empty?
+
+    errors << "category[#{index}] missing: #{missing.join(', ')}"
+  end
+
+  yaml['laws'].each_with_index do |law, index|
+    unless law.is_a?(Hash)
+      errors << "law[#{index}] must be a mapping, got #{law.class}"
+      next
+    end
+
+    missing = law_required.reject { |key| law[key] }
+    errors << "law[#{index}] missing: #{missing.join(', ')}" unless missing.empty?
+    next unless law.key?('category') && law['category']
+    next if category_ids.include?(law['category'])
+
+    errors << "law[#{index}] references unknown category: #{law['category'].inspect}"
+  end
+
+  return if errors.empty?
+
+  warn "Error: Invalid Iron Laws YAML entries in #{YAML_SOURCE}"
+  errors.each { |error| warn "  - #{error}" }
+  exit 1
+end
+
+validate_entries!(yaml)
+
 def law_count_label(count)
   "#{count} #{count == 1 ? 'law' : 'laws'}"
 end
@@ -120,6 +161,13 @@ def generate_injector_script(yaml)
     output += "#{law['subagent_text']}\n"
   end
 
+  payload = JSON.generate(
+    'hookSpecificOutput' => {
+      'hookEventName' => 'SubagentStart',
+      'additionalContext' => output
+    }
+  )
+
   puts '#!/usr/bin/env bash'
   puts 'set -o nounset'
   puts 'set -o pipefail'
@@ -127,14 +175,9 @@ def generate_injector_script(yaml)
   puts '# GENERATED FROM iron-laws.yml — DO NOT EDIT'
   puts "# Source version: #{yaml['version']} (updated #{yaml['last_updated']})"
   puts ''
-  puts 'command -v jq >/dev/null 2>&1 || exit 0'
-  puts ''
-  puts "additional_context=$(cat <<'EOF'"
-  puts output
+  puts "cat <<'EOF'"
+  puts payload
   puts 'EOF'
-  puts ')'
-  puts ''
-  puts 'jq -n --arg ctx "$additional_context" \'{"hookSpecificOutput": {"hookEventName": "SubagentStart", "additionalContext": $ctx}}\''
 end
 
 # Generate canonical registry
@@ -210,8 +253,8 @@ def generate_readme(yaml)
   puts ''
   puts '### Enforcement'
   puts ''
-  programmatic_count = yaml['laws'].count { |law| law['detector_id'] }
-  puts "- **Programmatic**: #{programmatic_count} laws checked automatically on every file edit"
+  programmatic_count = yaml['laws'].filter_map { |law| law['detector_id'] }.uniq.count
+  puts "- **Programmatic**: #{programmatic_count} programmatic detectors checked automatically on every file edit"
   puts "- **Behavioral**: All #{yaml['total_laws']} laws injected into subagent context"
   puts '- **Review-time**: Full audit during `/rb:review`'
   puts ''
