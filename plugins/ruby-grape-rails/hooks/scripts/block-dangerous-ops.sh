@@ -2,11 +2,19 @@
 set -o nounset
 set -o pipefail
 
-command -v jq >/dev/null 2>&1 || exit 0
-command -v grep >/dev/null 2>&1 || exit 0
+emit_missing_dependency_block() {
+  local dependency="$1"
+
+  echo "BLOCKED: block-dangerous-ops.sh cannot inspect the command because ${dependency} is unavailable." >&2
+  echo "Install the missing dependency or disable the hook explicitly before running destructive commands." >&2
+  exit 2
+}
+
+command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
+command -v grep >/dev/null 2>&1 || emit_missing_dependency_block "grep"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
-[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
 
@@ -260,27 +268,58 @@ is_harmless_env_probe() {
   printf '%s' "$1" | grep -qE '^(echo|printf|cat|env|export|declare|typeset|readonly|unset|true|false)([[:space:]]|$)'
 }
 
+candidate_mentions_production_env() {
+  printf '%s' "$1" | grep -qiE '(^|[[:space:]])(RAILS_ENV|RACK_ENV)=["'\'']?(prod|production)["'\'']?([[:space:]]|$)'
+}
+
+segment_exports_production_env() {
+  printf '%s' "$1" | grep -qiE '^[[:space:]]*export([[:space:]]+[^[:space:]]+)*[[:space:]]+(RAILS_ENV|RACK_ENV)=["'\'']?(prod|production)["'\'']?([[:space:]]|$)'
+}
+
+segment_clears_production_env() {
+  local segment="$1"
+
+  if printf '%s' "$segment" | grep -qiE '^[[:space:]]*unset[[:space:]]+(RAILS_ENV|RACK_ENV)([[:space:]]|$)'; then
+    return 0
+  fi
+
+  if printf '%s' "$segment" | grep -qiE '^[[:space:]]*export([[:space:]]+[^[:space:]]+)*[[:space:]]+(RAILS_ENV|RACK_ENV)=' &&
+    ! segment_exports_production_env "$segment"; then
+    return 0
+  fi
+
+  return 1
+}
+
 is_production_env_command() {
   local command_text="$1"
   local segment
   local candidate
+  local production_env_active=false
 
   while IFS= read -r segment; do
     while IFS= read -r candidate; do
       split_leading_env_prefixes "$candidate"
-      [[ -n "$LEADING_ENV_PREFIXES_RESULT" ]] || continue
-      [[ -n "$STRIPPED_COMMAND_RESULT" ]] || continue
-
-      if ! printf '%s' "$LEADING_ENV_PREFIXES_RESULT" | grep -qiE '(^|[[:space:]])(RAILS_ENV|RACK_ENV)=["'\'']?(prod|production)["'\'']?([[:space:]]|$)'; then
-        continue
+      if [[ -n "$LEADING_ENV_PREFIXES_RESULT" && -n "$STRIPPED_COMMAND_RESULT" ]] &&
+        printf '%s' "$LEADING_ENV_PREFIXES_RESULT" | grep -qiE '(^|[[:space:]])(RAILS_ENV|RACK_ENV)=["'\'']?(prod|production)["'\'']?([[:space:]]|$)' &&
+        ! is_harmless_env_probe "$STRIPPED_COMMAND_RESULT"; then
+        return 0
       fi
 
-      if is_harmless_env_probe "$STRIPPED_COMMAND_RESULT"; then
-        continue
+      if candidate_mentions_production_env "$candidate" && ! is_harmless_env_probe "$candidate"; then
+        return 0
       fi
 
-      return 0
+      if [[ "$production_env_active" == "true" ]] && ! is_harmless_env_probe "$candidate"; then
+        return 0
+      fi
     done < <(emit_command_variants "$segment")
+
+    if segment_exports_production_env "$segment"; then
+      production_env_active=true
+    elif segment_clears_production_env "$segment"; then
+      production_env_active=false
+    fi
   done < <(normalize_command_segments "$command_text")
 
   return 1

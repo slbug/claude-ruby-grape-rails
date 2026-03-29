@@ -207,9 +207,16 @@ if [[ -z "$FILE_PATH" ]]; then
     trap cleanup_secret_scan_tmpdir EXIT HUP INT TERM
 
     if (cd "$REPO_ROOT" && git rev-parse --verify HEAD >/dev/null 2>&1); then
-      copy_strict_scan_input "$TMP_DIR" "changed files" < <(cd "$REPO_ROOT" && git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null)
+      copy_strict_scan_input "$TMP_DIR" "changed and untracked files" < <(
+        cd "$REPO_ROOT" && {
+          git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null
+          git ls-files --others --exclude-standard 2>/dev/null
+        } | awk 'NF && !seen[$0]++'
+      )
     else
-      copy_strict_scan_input "$TMP_DIR" "tracked files" < <(cd "$REPO_ROOT" && git ls-files 2>/dev/null)
+      copy_strict_scan_input "$TMP_DIR" "tracked and untracked files" < <(
+        cd "$REPO_ROOT" && git ls-files --cached --others --exclude-standard 2>/dev/null | awk 'NF && !seen[$0]++'
+      )
     fi
 
     if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then

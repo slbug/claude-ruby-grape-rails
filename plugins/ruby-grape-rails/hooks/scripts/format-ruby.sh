@@ -43,7 +43,6 @@ has_gem() {
     ruby_plugin_lock_has_gem "$PROJECT_LOCKFILE" "$gem_name"
 }
 
-command -v bundle >/dev/null 2>&1 || exit 0
 printf -v QUOTED_PATH '%q' "$FILE_PATH"
 
 report_formatter_failure() {
@@ -63,6 +62,11 @@ report_formatter_failure() {
 }
 
 if has_gem standard; then
+  if ! command -v bundle >/dev/null 2>&1; then
+    echo "⚠️  Ruby formatting skipped for ${FILE_PATH} because Bundler is not available." >&2
+    echo "Install Bundler to restore automatic StandardRB formatting." >&2
+    exit 2
+  fi
   # Auto-fix with StandardRB
   ERR_FILE=$(mktemp "${TMPDIR:-/tmp}/ruby-format.XXXXXX") || exit 0
   if ! (cd "$REPO_ROOT" && bundle exec standardrb --fix -- "$FILE_PATH") 2>"$ERR_FILE"; then
@@ -73,6 +77,11 @@ if has_gem standard; then
   fi
   rm -f -- "$ERR_FILE"
 elif has_gem rubocop; then
+  if ! command -v bundle >/dev/null 2>&1; then
+    echo "⚠️  Ruby formatting skipped for ${FILE_PATH} because Bundler is not available." >&2
+    echo "Install Bundler to restore automatic RuboCop formatting." >&2
+    exit 2
+  fi
   # Auto-fix with RuboCop
   ERR_FILE=$(mktemp "${TMPDIR:-/tmp}/ruby-format.XXXXXX") || exit 0
   if ! (cd "$REPO_ROOT" && bundle exec rubocop --force-exclusion -a -- "$FILE_PATH") 2>"$ERR_FILE"; then

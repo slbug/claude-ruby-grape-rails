@@ -3,7 +3,6 @@ set -o nounset
 set -o pipefail
 
 command -v jq >/dev/null 2>&1 || exit 0
-command -v ruby >/dev/null 2>&1 || exit 0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
@@ -24,6 +23,11 @@ BASE_NAME=$(path_basename "$FILE_PATH")
 
 case "$BASE_NAME" in
   *.rb|*.rake|Gemfile|Rakefile|config.ru)
+    if ! command -v ruby >/dev/null 2>&1; then
+      echo "⚠️  Ruby syntax check skipped for ${FILE_PATH} because ruby is not available." >&2
+      echo "Install Ruby to restore automatic syntax verification." >&2
+      exit 2
+    fi
     TMP_OUTPUT=$(mktemp "${TMPDIR:-/tmp}/rb-verify.XXXXXX") || exit 0
     [[ -n "$TMP_OUTPUT" ]] || exit 0
     [[ "$TMP_OUTPUT" == "${TMPDIR:-/tmp}/rb-verify."* ]] || exit 0

@@ -48,22 +48,28 @@ def find_repo_root(start_dir)
     nil
   end
   home_dir = Dir.home
+  settings_candidate = nil
+  gemfile_candidate = nil
 
   path.ascend do |candidate|
     claude_settings = (candidate + '.claude/settings.json').file? ||
                       (candidate + '.claude/settings.local.json').file?
     next if candidate.to_s == home_dir && claude_settings
 
-    next if git_root && candidate.to_s != git_root && !candidate.to_s.start_with?("#{git_root}/")
+    if git_root && candidate.to_s != git_root && !candidate.to_s.start_with?("#{git_root}/")
+      next
+    end
 
-    return candidate.to_s if (candidate + '.git').exist? ||
-                             claude_settings ||
-                             (candidate + 'Gemfile').file?
+    return candidate.to_s if (candidate + '.git').exist?
+    settings_candidate ||= candidate.to_s if claude_settings
+    gemfile_candidate ||= candidate.to_s if (candidate + 'Gemfile').file?
 
     break if git_root && candidate.to_s == git_root
   end
 
+  return settings_candidate if settings_candidate
   return git_root if git_root
+  return gemfile_candidate if gemfile_candidate
 
   start_dir
 end
@@ -106,6 +112,24 @@ end
 
 def covered_by_patterns?(command, patterns)
   patterns.any? { |pattern| File.fnmatch?(pattern, command) }
+end
+
+def normalized_command_for_coverage(command)
+  first_line = command.lines.first.to_s.strip
+  return first_line if first_line.empty?
+
+  tokens =
+    begin
+      Shellwords.split(first_line)
+    rescue ArgumentError
+      first_line.split(/\s+/)
+    end
+
+  core_tokens = tokens.dup
+  core_tokens.shift while core_tokens.first == 'env'
+  core_tokens = core_tokens.drop_while { |token| token.match?(/\A[A-Za-z_][A-Za-z0-9_]*=.*/) }
+  core_tokens = tokens if core_tokens.empty?
+  core_tokens.join(' ')
 end
 
 def command_group(command)
@@ -205,17 +229,18 @@ recent_files.each do |session_file|
 
     extract_bash_commands(entry).each do |command|
       total_bash_commands += 1
+      normalized_command = normalized_command_for_coverage(command)
 
-      if covered_by_patterns?(command, deny_globs)
+      if covered_by_patterns?(normalized_command, deny_globs)
         ignored_denied += 1
         next
       end
 
-      next if covered_by_patterns?(command, allow_globs)
+      next if covered_by_patterns?(normalized_command, allow_globs)
 
-      group = command_group(command)
+      group = command_group(normalized_command)
       group_counts[group] += 1
-      examples[group] ||= command
+      examples[group] ||= normalized_command
     end
   end
   line_capped_files += 1 if file_truncated

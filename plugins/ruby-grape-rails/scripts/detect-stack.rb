@@ -34,24 +34,40 @@ def lock_version(content, name)
   content[/^\s{4}#{Regexp.escape(name)} \(([^)]+)\)$/, 1]
 end
 
+def lock_dependency_declared?(content, name)
+  in_dependencies = false
+
+  content.each_line do |line|
+    if line == "DEPENDENCIES\n"
+      in_dependencies = true
+      next
+    end
+
+    break if in_dependencies && line.match?(/^\S/)
+
+    next unless in_dependencies
+    return true if line.match?(/^\s{2}#{Regexp.escape(name)}(?:[[:space:]]|!|\(|$)/)
+  end
+
+  false
+end
+
 def repo_gem_present?(gemfile_content, lockfile_content, gemspecs, gemfile_uses_gemspec, name)
   return true if gem_declared_in_manifest?(gemfile_content, name)
 
   return false unless gemfile_uses_gemspec
   return true if gemspecs.any? { |content| gemspec_declares_dependency?(content, name) }
 
-  !lock_version(lockfile_content, name).to_s.empty?
+  lock_dependency_declared?(lockfile_content, name)
 end
 
 def directory_glob(*patterns)
   patterns.flat_map { |pattern| Dir.glob(pattern) }
           .select do |path|
-            begin
-              stat = File.lstat(path)
-              stat.directory? && !stat.symlink?
-            rescue SystemCallError
-              false
-            end
+            stat = File.lstat(path)
+            stat.directory? && !stat.symlink?
+  rescue SystemCallError
+    false
           end
           .uniq
           .sort
@@ -206,7 +222,8 @@ orms << 'active_record' if repo_gem_present?(gemfile, lockfile, gemspec_contents
 orms << 'sequel' if repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, 'sequel') ||
                     repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, 'sequel-rails')
 orms.uniq!
-versions['activerecord'] = lock_version(lockfile, 'activerecord') if repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, 'activerecord')
+versions['activerecord'] = lock_version(lockfile, 'activerecord') if repo_gem_present?(gemfile, lockfile,
+                                                                                       gemspec_contents, gemfile_uses_gemspec, 'activerecord')
 versions['sequel'] = lock_version(lockfile, 'sequel') if orms.include?('sequel')
 
 rails_component_gems = %w[

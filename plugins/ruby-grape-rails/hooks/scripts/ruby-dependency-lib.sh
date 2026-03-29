@@ -16,11 +16,20 @@ ruby_plugin_lock_version() {
     sed -E 's/.*\(([^)]+)\).*/\1/'
 }
 
-ruby_plugin_lock_has_gem() {
-  local version
+ruby_plugin_lock_declares_gem() {
+  local lockfile="$1"
+  local gem_name="$2"
+  local escaped_name
 
-  version=$(ruby_plugin_lock_version "$1" "$2" || true)
-  [[ -n "$version" ]]
+  [[ -f "$lockfile" && ! -L "$lockfile" ]] || return 1
+  escaped_name=$(ruby_plugin_escape_ere "$gem_name")
+
+  sed -n '/^DEPENDENCIES$/,/^[^[:space:]]/p' "$lockfile" |
+    grep -Eq "^[[:space:]]{2}${escaped_name}([[:space:]]|!|\\(|$)"
+}
+
+ruby_plugin_lock_has_gem() {
+  ruby_plugin_lock_declares_gem "$1" "$2"
 }
 
 ruby_plugin_gemfile_uses_gemspec() {

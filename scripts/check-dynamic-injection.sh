@@ -7,6 +7,8 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SCAN_TARGETS=(plugins .claude .claude-plugin README.md CLAUDE.md)
 # shellcheck disable=SC2016
 PATTERN='(^|[^[:alnum:]_`])!`[^`]+`'
@@ -26,25 +28,25 @@ scan_file() {
   fi
 }
 
-if git rev-parse --git-dir >/dev/null 2>&1; then
+if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
   while IFS= read -r -d '' file; do
     case "$file" in
-      *.md|*.json) ;;
+      *.md|*.json|*.yml|*.yaml) ;;
       *) continue ;;
     esac
-    [[ -f "$file" ]] || continue
-    scan_file "$file"
-  done < <(git ls-files -z -- "${SCAN_TARGETS[@]}")
+    [[ -f "${REPO_ROOT}/${file}" ]] || continue
+    scan_file "${REPO_ROOT}/${file}"
+  done < <(git -C "$REPO_ROOT" ls-files -z -- "${SCAN_TARGETS[@]}")
 else
   for target in "${SCAN_TARGETS[@]}"; do
-    if [[ ! -e "$target" ]]; then
+    if [[ ! -e "${REPO_ROOT}/${target}" ]]; then
       continue
     fi
 
     while IFS= read -r -d '' file; do
       [[ -n "$file" && -f "$file" ]] || continue
       scan_file "$file"
-    done < <(find "$target" -type f \( -name '*.md' -o -name '*.json' \) -print0 2>/dev/null || true)
+    done < <(find "${REPO_ROOT}/${target}" -type f \( -name '*.md' -o -name '*.json' -o -name '*.yml' -o -name '*.yaml' \) -print0 2>/dev/null || true)
   done
 fi
 

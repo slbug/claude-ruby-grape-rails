@@ -31,6 +31,36 @@ unless yaml['categories'].is_a?(Array) && yaml['laws'].is_a?(Array)
   exit 1
 end
 
+def validate_entries!(yaml)
+  category_required = %w[id name law_count]
+  law_required = %w[id category title rule summary_text rationale subagent_text]
+  category_ids = yaml['categories'].filter_map { |category| category['id'] }
+  errors = []
+
+  yaml['categories'].each_with_index do |category, index|
+    missing = category_required.reject { |key| category[key] }
+    next if missing.empty?
+
+    errors << "category[#{index}] missing: #{missing.join(', ')}"
+  end
+
+  yaml['laws'].each_with_index do |law, index|
+    missing = law_required.reject { |key| law[key] }
+    errors << "law[#{index}] missing: #{missing.join(', ')}" unless missing.empty?
+    next if category_ids.include?(law['category'])
+
+    errors << "law[#{index}] references unknown category: #{law['category'].inspect}"
+  end
+
+  return if errors.empty?
+
+  warn "Error: Invalid Iron Laws YAML entries in #{YAML_SOURCE}"
+  errors.each { |error| warn "  - #{error}" }
+  exit 1
+end
+
+validate_entries!(yaml)
+
 def law_count_label(count)
   "#{count} #{count == 1 ? 'law' : 'laws'}"
 end

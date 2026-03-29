@@ -234,11 +234,6 @@ if [[ -L "$RUBY_SCRIPT" ]]; then
   exit 1
 fi
 
-if [[ ! -f "$RUBY_SCRIPT" ]]; then
-  log_error "Ruby script not found: $RUBY_SCRIPT"
-  exit 1
-fi
-
 # Main
 TARGET="${1:-all}"
 

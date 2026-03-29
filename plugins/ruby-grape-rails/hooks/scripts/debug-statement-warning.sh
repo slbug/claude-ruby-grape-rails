@@ -34,7 +34,14 @@ esac
 
 FILE_NAME="$BASE_NAME"
 DEBUGS=""
-for pattern in 'binding\.pry' 'binding\.irb' '\<byebug\>' '\<debugger\>' '^[[:space:]]*puts\>' '^[[:space:]]*pp\>'; do
+for pattern in \
+  'binding\.pry' \
+  'binding\.irb' \
+  '(^|[^[:alnum:]_])byebug([^[:alnum:]_]|$)' \
+  '(^|[^[:alnum:]_])debugger([^[:alnum:]_]|$)' \
+  '(^|[^[:alnum:]_])puts([[:space:]]|\(|$)' \
+  '(^|[^[:alnum:]_])pp([[:space:]]|\(|$)' \
+  '(^|[^[:alnum:]_])p([[:space:]]|\(|$)'; do
   MATCH=$(grep -nEm 3 "$pattern" -- "$FILE_PATH" 2>/dev/null)
   [[ -n "$MATCH" ]] && DEBUGS+="
 $MATCH"

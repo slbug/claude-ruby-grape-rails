@@ -13,9 +13,11 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DOCS_BASE_URL="https://code.claude.com/docs/en"
 INDEX_URL="https://code.claude.com/docs/llms.txt"
-CACHE_DIR=".claude/docs-check/docs-cache"
+CACHE_DIR="${REPO_ROOT}/.claude/docs-check/docs-cache"
 MAX_AGE_HOURS=24
 FORCE=false
 INDEX_ONLY=false
@@ -55,6 +57,7 @@ for arg in "$@"; do
   esac
 done
 
+cd "$REPO_ROOT"
 mkdir -p "$CACHE_DIR"
 
 # Get file modification time (portable: Linux + macOS)
@@ -124,6 +127,7 @@ else
     echo "  [fetched] llms.txt (${page_count} pages indexed)"
   else
     echo "  [FAILED] Could not fetch llms.txt"
+    echo "  [WARNING] Required-page coverage cannot be fully verified without the index." >&2
     index_failed=1
   fi
 fi
@@ -148,7 +152,7 @@ done
 # Summary
 echo ""
 echo "=== Summary ==="
-total_files=$(find "$CACHE_DIR" -name "*.md" -not -name "llms.txt" | wc -l)
+total_files=$(find "$CACHE_DIR" -name "*.md" | wc -l)
 total_size=$(du -sh "$CACHE_DIR" 2>/dev/null | cut -f1)
 required_present=0
 for page in "${PAGES[@]}"; do

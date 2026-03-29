@@ -4,6 +4,7 @@
 # Usage:
 #   ./lab/eval/run_eval.sh              # Lint + injection check + tracked changed surfaces
 #   ./lab/eval/run_eval.sh --changed    # Same as default
+#   ./lab/eval/run_eval.sh --changed --against origin/main  # branch-style diff vs merge-base
 #   ./lab/eval/run_eval.sh --changed --include-untracked  # local-only expansion
 #   ./lab/eval/run_eval.sh --all        # Lint + injection check + core skills + all agents + triggers
 #   ./lab/eval/run_eval.sh --skills     # Core skills only
@@ -18,19 +19,29 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PLUGIN_ROOT="plugins/ruby-grape-rails"
 MODE="--changed"
 INCLUDE_UNTRACKED=false
-for arg in "$@"; do
-  case "$arg" in
+AGAINST_REF=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     --changed|--all|--skills|--agents|--triggers|--ci)
-      MODE="$arg"
+      MODE="$1"
       ;;
     --include-untracked)
       INCLUDE_UNTRACKED=true
       ;;
+    --against)
+      shift
+      if [[ $# -eq 0 ]]; then
+        echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]" >&2
+        exit 1
+      fi
+      AGAINST_REF="$1"
+      ;;
     *)
-      echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked]" >&2
+      echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]" >&2
       exit 1
       ;;
   esac
+  shift
 done
 FAIL_UNDER="${RUBY_PLUGIN_EVAL_FAIL_UNDER:-0.90}"
 AGENT_FAIL_UNDER="${RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER:-0.85}"
@@ -57,9 +68,20 @@ have_head() {
 collect_changed_paths() {
   local prefix="$1"
   local lines=""
+  local merge_base=""
 
   if have_head; then
-    lines=$(git diff --name-only HEAD -- "$prefix" 2>/dev/null || true)
+    if [[ -n "$AGAINST_REF" ]]; then
+      merge_base=$(git merge-base HEAD "$AGAINST_REF" 2>/dev/null || true)
+      if [[ -n "$merge_base" ]]; then
+        lines=$(git diff --name-only "$merge_base" -- "$prefix" 2>/dev/null || true)
+      else
+        echo "WARN: could not resolve merge-base with ${AGAINST_REF}; falling back to HEAD diff." >&2
+        lines=$(git diff --name-only HEAD -- "$prefix" 2>/dev/null || true)
+      fi
+    else
+      lines=$(git diff --name-only HEAD -- "$prefix" 2>/dev/null || true)
+    fi
 
     local staged=""
     staged=$(git diff --cached --name-only -- "$prefix" 2>/dev/null || true)
@@ -193,7 +215,13 @@ run_injection_check() {
 }
 
 run_changed_skills() {
-  mapfile -t skills_to_check < <(collect_changed_skill_names)
+  local skills_to_check=()
+  local skill_name=""
+
+  while IFS= read -r skill_name; do
+    [[ -n "$skill_name" ]] || continue
+    skills_to_check+=("$skill_name")
+  done < <(collect_changed_skill_names)
 
   if [[ ${#skills_to_check[@]} -eq 0 ]]; then
     echo "  No skill changes detected."
@@ -225,8 +253,7 @@ run_changed_skills() {
   result+="}"
 
   if [[ ${#missing_skills[@]} -gt 0 ]]; then
-    echo "  Missing changed skill files (deleted or moved): ${missing_skills[*]}" >&2
-    return 1
+    echo "  NOTE: deleted or moved changed skills were skipped: ${missing_skills[*]}" >&2
   fi
 
   printf '%s\n' "$result" | summarize_subject_scores "skills" "$FAIL_UNDER"
@@ -238,7 +265,13 @@ run_all_skills() {
 }
 
 run_changed_agents() {
-  mapfile -t agent_paths < <(collect_changed_agent_paths)
+  local agent_paths=()
+  local agent_path=""
+
+  while IFS= read -r agent_path; do
+    [[ -n "$agent_path" ]] || continue
+    agent_paths+=("$agent_path")
+  done < <(collect_changed_agent_paths)
 
   if [[ ${#agent_paths[@]} -eq 0 ]]; then
     echo "  No agent changes detected."
@@ -274,8 +307,7 @@ run_changed_agents() {
   result+="}"
 
   if [[ ${#missing_agents[@]} -gt 0 ]]; then
-    echo "  Missing changed agent files (deleted or moved): ${missing_agents[*]}" >&2
-    return 1
+    echo "  NOTE: deleted or moved changed agents were skipped: ${missing_agents[*]}" >&2
   fi
 
   printf '%s\n' "$result" | summarize_subject_scores "agents" "$AGENT_FAIL_UNDER"
@@ -296,6 +328,11 @@ echo
 
 if [[ "$MODE" == "--changed" && "$INCLUDE_UNTRACKED" == "true" ]]; then
   echo "NOTE: --include-untracked makes changed-mode results local-only and non-comparable."
+  echo
+fi
+
+if [[ "$MODE" == "--changed" && -n "$AGAINST_REF" ]]; then
+  echo "NOTE: --against ${AGAINST_REF} compares changed surfaces from merge-base to HEAD plus staged changes."
   echo
 fi
 
@@ -365,7 +402,7 @@ case "$MODE" in
     run_all_triggers || FAILURES=$((FAILURES + 1))
     ;;
   *)
-    echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked]"
+    echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]"
     exit 1
     ;;
 esac
