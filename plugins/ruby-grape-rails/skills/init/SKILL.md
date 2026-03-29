@@ -87,12 +87,12 @@ Optional external integration:
 - prefer `DCG_AVAILABLE=true` from a non-symlink `.claude/.runtime_env` when present; otherwise fall back to `command -v dcg`
 - if DCG is available, ask the user whether they want to enable DCG for Claude Code
 - if they say yes, tell them: `For Claude Code destructive-command blocking, run: dcg setup`
-- if they want the manual hook shape, use `${CLAUDE_SKILL_DIR}/references/external-integrations.md`
+- if they want the recommended `dcg` TOML or the manual hook shape, use `${CLAUDE_SKILL_DIR}/references/external-integrations.md`
 - DCG hook installation is external to this plugin; detection alone does not make Claude use DCG
 - prefer `SHELLFIRM_AVAILABLE=true` from a non-symlink `.claude/.runtime_env` when present; otherwise fall back to `command -v shellfirm`
 - if Shellfirm is available, ask the user whether they want to connect Shellfirm to Claude Code
 - if they say yes, tell them: `For Claude Code hook and MCP safety tooling, run: shellfirm connect claude-code`
-- if they want a project-policy starting point, use `${CLAUDE_SKILL_DIR}/references/external-integrations.md` for the recommended scope and boundaries
+- if they want a project-policy starting point, use `${CLAUDE_SKILL_DIR}/references/external-integrations.md` for the recommended scope and boundaries, but do not invent a generic `.shellfirm.yaml`
 - Shellfirm hook and MCP installation are external to this plugin; detection alone does not make Claude use Shellfirm
 - use `${CLAUDE_SKILL_DIR}/references/external-integrations.md` for the exact recommended setup commands
 
