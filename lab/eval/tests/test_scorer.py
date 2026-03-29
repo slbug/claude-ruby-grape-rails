@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from lab.eval.agent_scorer import find_all_agents, score_agent
 from lab.eval.compare import compare_snapshots
-from lab.eval.scorer import find_all_skills, score_skill
+from lab.eval.scorer import default_eval, find_all_skills, score_skill
 from lab.eval.schemas import EvalDefinition
 from lab.eval.trigger_scorer import build_confusable_pairs, load_all_descriptions, score_all
 
@@ -17,6 +17,27 @@ class ScorerTests(unittest.TestCase):
         plan_path = next(path for path in find_all_skills() if path.endswith("/plan/SKILL.md"))
         result = score_skill(plan_path)
         self.assertGreater(result.composite, 0.5)
+
+    def test_default_skill_eval_no_longer_requires_iron_laws_universally(self) -> None:
+        eval_def = default_eval("plugins/ruby-grape-rails/skills/runtime-integration/SKILL.md")
+        check_types = {
+            check.check_type
+            for dimension in eval_def.dimensions.values()
+            for check in dimension.checks
+        }
+        self.assertNotIn("has_iron_laws", check_types)
+        completeness_checks = [check.check_type for check in eval_def.dimensions["completeness"].checks]
+        self.assertNotIn("section_exists", completeness_checks)
+
+    def test_runtime_integration_skill_refs_score_without_alias_false_negatives(self) -> None:
+        runtime_path = next(path for path in find_all_skills() if path.endswith("/runtime-integration/SKILL.md"))
+        result = score_skill(runtime_path)
+        skill_ref_assertion = next(
+            assertion
+            for assertion in result.dimensions["accuracy"].assertions
+            if assertion.check_type == "valid_skill_refs"
+        )
+        self.assertTrue(skill_ref_assertion.passed)
 
     def test_verification_runner_agent_scores(self) -> None:
         agent_path = next(path for path in find_all_agents() if path.endswith("/verification-runner.md"))

@@ -86,6 +86,58 @@ Additional notes.
         passed, _ = matchers.description_structure(SAMPLE)
         self.assertTrue(passed)
 
+    def test_description_structure_returns_failure_specific_evidence(self) -> None:
+        content = """---
+name: rb:sample
+description: Ruby workflow helper for local changes.
+---
+"""
+        passed, evidence = matchers.description_structure(content)
+        self.assertFalse(passed)
+        self.assertIn("missing explicit use/intent framing", evidence)
+
+    def test_valid_skill_refs_accepts_frontmatter_command_aliases(self) -> None:
+        content = "Use /rb:runtime and /rb:trace when runtime debugging needs live inspection."
+        passed, evidence = matchers.valid_skill_refs(content)
+        self.assertTrue(passed)
+        self.assertEqual(evidence, "all skill refs valid")
+
+    def test_workflow_step_coverage_accepts_compact_heading_and_list_structure(self) -> None:
+        content = """---
+name: rb:quick
+description: Use for Ruby quick fixes and review follow-up.
+---
+# Quick Path
+
+Use when the change is small and low risk.
+
+1. inspect the existing code path first
+2. implement directly
+3. verify with the narrowest correct command set
+"""
+        passed, evidence = matchers.workflow_step_coverage(content, min_sections=3)
+        self.assertTrue(passed)
+        self.assertIn("structure units", evidence)
+
+    def test_no_duplication_ignores_repeated_fenced_command_examples(self) -> None:
+        content = """---
+name: rb:sample
+description: Use for Ruby verification and review workflows with Rails context.
+---
+# Sample
+
+```bash
+/rb:runtime logs error
+```
+
+```bash
+/rb:runtime logs error
+```
+"""
+        passed, evidence = matchers.no_duplication(content)
+        self.assertTrue(passed)
+        self.assertEqual(evidence, "no repeated long lines")
+
     def test_no_dangerous_patterns_catches_rm_rf_root(self) -> None:
         passed, evidence = matchers.no_dangerous_patterns("rm -rf /")
         self.assertFalse(passed)

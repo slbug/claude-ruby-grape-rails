@@ -518,7 +518,7 @@ The plugin enforces **21 Iron Laws** that prevent common, costly mistakes:
 
 ### Enforcement
 
-- **Programmatic**: 6 laws checked automatically on every file edit
+- **Programmatic**: 6 programmatic detectors checked automatically on every file edit
 - **Behavioral**: All 21 laws injected into subagent context
 - **Review-time**: Full audit during `/rb:review`
 

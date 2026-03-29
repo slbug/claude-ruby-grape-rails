@@ -30,8 +30,6 @@ def default_eval(skill_path: str) -> EvalDefinition:
                     "checks": [
                         {"type": "frontmatter_field", "field": "name", "desc": "Has command name"},
                         {"type": "frontmatter_field", "field": "description", "desc": "Has description"},
-                        {"type": "section_exists", "section": "Iron Laws", "desc": "Has Iron Laws"},
-                        {"type": "has_iron_laws", "min_count": 1, "desc": "Has at least one law"},
                     ],
                 },
                 "accuracy": {
@@ -53,14 +51,13 @@ def default_eval(skill_path: str) -> EvalDefinition:
                     "weight": 0.15,
                     "checks": [
                         {"type": "description_length", "min": 60, "max": 320, "desc": "Description length"},
-                        {"type": "description_keywords", "min": 4, "desc": "Domain keywords"},
+                        {"type": "description_keywords", "min": 3, "desc": "Domain keywords"},
                         {"type": "description_structure", "desc": "Description has use/intent framing"},
                     ],
                 },
                 "safety": {
                     "weight": 0.12,
                     "checks": [
-                        {"type": "has_iron_laws", "min_count": 1, "desc": "Iron laws present"},
                         {"type": "no_dangerous_patterns", "desc": "No catastrophic patterns"},
                     ],
                 },

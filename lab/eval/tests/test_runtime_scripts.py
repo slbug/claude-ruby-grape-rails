@@ -11,6 +11,7 @@ import unittest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 BLOCK_DANGEROUS_OPS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/block-dangerous-ops.sh"
+SECRET_SCAN = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/secret-scan.sh"
 DETECT_STACK = REPO_ROOT / "plugins/ruby-grape-rails/scripts/detect-stack.rb"
 DETECT_RUNTIME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime.sh"
 
@@ -73,6 +74,28 @@ def run_detect_runtime(tmpdir: str, extra_path: str | None = None) -> str:
         raise AssertionError(result.stderr)
 
     return Path(tmpdir, ".claude", ".runtime_env").read_text(encoding="utf-8")
+
+
+def run_secret_scan(
+    repo_root: str,
+    file_path: str,
+    betterleaks_path: str,
+    hook_mode: str = "strict",
+) -> subprocess.CompletedProcess[str]:
+    payload = json.dumps({"tool_input": {"file_path": file_path}})
+    env = dict(os.environ)
+    env["CLAUDE_PROJECT_DIR"] = repo_root
+    env["BETTERLEAKS_PATH"] = betterleaks_path
+    env["RUBY_PLUGIN_HOOK_MODE"] = hook_mode
+    return subprocess.run(
+        ["bash", str(SECRET_SCAN)],
+        input=payload,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        check=False,
+        env=env,
+    )
 
 
 class RuntimeScriptTests(unittest.TestCase):
@@ -220,6 +243,29 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("SHELLFIRM_AVAILABLE=true", runtime_env)
         self.assertIn("DCG_VERSION=0.9.0", runtime_env)
         self.assertIn("SHELLFIRM_VERSION=0.3.9", runtime_env)
+
+    def test_secret_scan_treats_stdout_findings_as_secret_hits_even_on_nonzero_exit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            fake = tmp / "betterleaks"
+            fake.write_text(
+                "#!/usr/bin/env bash\n"
+                "echo 'FOUND SECRET'\n"
+                "echo 'scanner warning' >&2\n"
+                "exit 3\n",
+                encoding="utf-8",
+            )
+            fake.chmod(0o755)
+            target = tmp / "demo.txt"
+            target.write_text("token=abc\n", encoding="utf-8")
+
+            result = run_secret_scan(tmpdir, str(target), str(fake))
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("Potential secret detected", result.stderr)
+        self.assertIn("FOUND SECRET", result.stderr)
+        self.assertNotIn("Betterleaks failed while scanning", result.stderr)
 
 
 if __name__ == "__main__":

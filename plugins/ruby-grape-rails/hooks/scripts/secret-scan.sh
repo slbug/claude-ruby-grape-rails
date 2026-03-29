@@ -132,14 +132,14 @@ run_betterleaks_dir() {
 
   "$BETTERLEAKS_PATH" dir "$target_dir" --no-banner --redact=100 >"$result_file" 2>"$err_file"
   status=$?
+  BETTERLEAKS_RESULT=$(cat "$result_file" 2>/dev/null || true)
+  BETTERLEAKS_ERROR=$(sed -n '1,5p' "$err_file" 2>/dev/null || true)
 
-  if [[ "$status" -eq 0 ]]; then
-    BETTERLEAKS_RESULT=$(cat "$result_file")
+  if [[ -n "$BETTERLEAKS_RESULT" || "$status" -eq 0 ]]; then
     rm -f -- "$result_file" "$err_file"
     return 0
   fi
 
-  BETTERLEAKS_ERROR=$(sed -n '1,5p' "$err_file" 2>/dev/null || true)
   rm -f -- "$result_file" "$err_file"
   return "$status"
 }

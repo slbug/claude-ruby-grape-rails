@@ -224,7 +224,17 @@ if [[ ! -f "$YAML_SOURCE" ]]; then
   exit 1
 fi
 
-if [[ ! -f "$RUBY_SCRIPT" || -L "$RUBY_SCRIPT" ]]; then
+if [[ ! -e "$RUBY_SCRIPT" ]]; then
+  log_error "Ruby script not found: $RUBY_SCRIPT"
+  exit 1
+fi
+
+if [[ -L "$RUBY_SCRIPT" ]]; then
+  log_error "Ruby script symlinks are not allowed: $RUBY_SCRIPT"
+  exit 1
+fi
+
+if [[ ! -f "$RUBY_SCRIPT" ]]; then
   log_error "Ruby script not found: $RUBY_SCRIPT"
   exit 1
 fi
