@@ -169,7 +169,11 @@ def command_group(command)
   elsif %w[git rails bin/rails rake make just npm yarn pnpm lefthook].include?(core_tokens[0])
     core_tokens[1] ? core_tokens[0, 2].join(' ') : core_tokens[0]
   elsif %w[ruby python python3 node].include?(core_tokens[0])
-    if core_tokens[1] && !core_tokens[1].start_with?('-')
+    if core_tokens[1] == '-m' && core_tokens[2]
+      core_tokens[0, 3].join(' ')
+    elsif core_tokens[1] == '-e'
+      core_tokens[0, 2].join(' ')
+    elsif core_tokens[1] && !core_tokens[1].start_with?('-')
       core_tokens[0, 2].join(' ')
     else
       core_tokens[0]
@@ -179,6 +183,94 @@ def command_group(command)
   else
     core_tokens[0]
   end
+end
+
+def split_shell_commands(command)
+  normalized = command.gsub(/\\\n/, ' ')
+  commands = []
+  current = +''
+  in_single = false
+  in_double = false
+  escaped = false
+  index = 0
+
+  while index < normalized.length
+    char = normalized[index]
+    next_char = normalized[index + 1]
+
+    if escaped
+      current << char
+      escaped = false
+      index += 1
+      next
+    end
+
+    if in_single
+      current << char
+      in_single = false if char == "'"
+      index += 1
+      next
+    end
+
+    if in_double
+      current << char
+      if char == '\\' && next_char
+        current << next_char
+        index += 2
+        next
+      end
+      in_double = false if char == '"'
+      index += 1
+      next
+    end
+
+    case char
+    when '\\'
+      escaped = true
+      current << char
+      index += 1
+    when "'"
+      in_single = true
+      current << char
+      index += 1
+    when '"'
+      in_double = true
+      current << char
+      index += 1
+    when ';', "\n"
+      stripped = current.strip
+      commands << stripped unless stripped.empty?
+      current = +''
+      index += 1
+    when '&'
+      if next_char == '&'
+        stripped = current.strip
+        commands << stripped unless stripped.empty?
+        current = +''
+        index += 2
+      else
+        current << char
+        index += 1
+      end
+    when '|'
+      if next_char == '|'
+        stripped = current.strip
+        commands << stripped unless stripped.empty?
+        current = +''
+        index += 2
+      else
+        current << char
+        index += 1
+      end
+    else
+      current << char
+      index += 1
+    end
+  end
+
+  stripped = current.strip
+  commands << stripped unless stripped.empty?
+  commands
 end
 
 def extract_bash_commands(entry)
@@ -191,15 +283,7 @@ def extract_bash_commands(entry)
     command = block.dig('input', 'command').to_s.strip
     next [] if command.empty?
 
-    # Handle line continuations (\ at end of line) before splitting
-    normalized = command.gsub(/\\\n/, ' ')
-    # Split on newlines and semicolons to get individual command segments
-    normalized.split(/[;\n]/).filter_map do |segment|
-      stripped = segment.strip
-      next if stripped.empty?
-
-      stripped
-    end
+    split_shell_commands(command)
   end
 end
 

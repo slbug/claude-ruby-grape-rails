@@ -116,6 +116,13 @@ emit_truncation_warning() {
   echo "Run betterleaks manually for full coverage if needed." >&2
 }
 
+emit_scan_setup_failure_warning() {
+  local target="$1"
+
+  echo "⚠️  Betterleaks setup failed for ${target}; secret scan could not create a temporary workspace." >&2
+  echo "Fix TMPDIR permissions or disk space to restore secret scanning." >&2
+}
+
 new_secret_scan_tmpdir() {
   local tmp_dir
 
@@ -209,7 +216,10 @@ if [[ -z "$FILE_PATH" ]]; then
   [[ "$HOOK_MODE" == "strict" ]] || exit 0
 
   if (cd "$REPO_ROOT" && git rev-parse --git-dir >/dev/null 2>&1); then
-    TMP_DIR=$(new_secret_scan_tmpdir) || exit 0
+    TMP_DIR=$(new_secret_scan_tmpdir) || {
+      emit_scan_setup_failure_warning "recent changes"
+      exit 2
+    }
 
     # shellcheck disable=SC2329 # invoked via trap
     cleanup_secret_scan_tmpdir() {
@@ -248,7 +258,10 @@ else
   fi
 
   if [[ -f "$FILE_PATH" && ! -L "$FILE_PATH" ]] && is_path_within_root "$REPO_ROOT" "$FILE_PATH"; then
-    TMP_DIR=$(new_secret_scan_tmpdir) || exit 0
+    TMP_DIR=$(new_secret_scan_tmpdir) || {
+      emit_scan_setup_failure_warning "$FILE_PATH"
+      exit 2
+    }
 
     # shellcheck disable=SC2329 # invoked via trap
     cleanup_single_secret_scan_tmpdir() {
@@ -256,7 +269,10 @@ else
     }
     trap cleanup_single_secret_scan_tmpdir EXIT HUP INT TERM
 
-    copy_into_tmpdir "$FILE_PATH" "$TMP_DIR" 2>/dev/null || exit 0
+    copy_into_tmpdir "$FILE_PATH" "$TMP_DIR" 2>/dev/null || {
+      emit_scan_setup_failure_warning "$FILE_PATH"
+      exit 2
+    }
 
     if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
       if run_betterleaks_dir "$TMP_DIR"; then

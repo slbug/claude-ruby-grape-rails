@@ -121,6 +121,52 @@ class PermissionsExtractorTests(unittest.TestCase):
         self.assertIn("bundle exec rubocop", groups)
         self.assertIn("bundle exec brakeman", groups)
 
+    def test_shell_aware_split_preserves_quoted_semicolons(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            write_transcript(repo, tmp, "printf '%s;still-one-command' foo; bundle exec rubocop")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        groups = {entry["group"] for entry in report["uncovered_groups"]}
+        self.assertIn("printf", groups)
+        self.assertIn("bundle exec rubocop", groups)
+        self.assertEqual(len(groups), 2)
+
+    def test_shell_aware_split_separates_and_or_chains(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            write_transcript(repo, tmp, "bundle exec rubocop && bundle exec brakeman || echo fail")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        groups = {entry["group"] for entry in report["uncovered_groups"]}
+        self.assertIn("bundle exec rubocop", groups)
+        self.assertIn("bundle exec brakeman", groups)
+        self.assertIn("echo", groups)
+
+    def test_python_module_commands_keep_module_name_in_group(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            write_transcript(repo, tmp, "python3 -m pytest spec/models")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        groups = {entry["group"] for entry in report["uncovered_groups"]}
+        self.assertIn("python3 -m pytest", groups)
+
 
 if __name__ == "__main__":
     unittest.main()

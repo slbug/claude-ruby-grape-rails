@@ -41,6 +41,11 @@ is_path_within_root "$REPO_ROOT" "$FILE_PATH" || exit 0
 
 BASE_NAME=$(path_basename "$FILE_PATH")
 
+emit_tempfile_failure_warning() {
+  echo "⚠️  Ruby syntax verification skipped for ${FILE_PATH} because a temporary file could not be created." >&2
+  echo "Fix TMPDIR permissions or disk space to restore automatic Ruby verification." >&2
+}
+
 case "$BASE_NAME" in
   *.rb|*.rake|Gemfile|Rakefile|config.ru)
     if ! command -v ruby >/dev/null 2>&1; then
@@ -48,9 +53,18 @@ case "$BASE_NAME" in
       echo "Install Ruby to restore automatic syntax verification." >&2
       exit 2
     fi
-    TMP_OUTPUT=$(mktemp "${TMPDIR:-/tmp}/rb-verify.XXXXXX") || exit 0
-    [[ -n "$TMP_OUTPUT" ]] || exit 0
-    [[ "$TMP_OUTPUT" == "${TMPDIR:-/tmp}/rb-verify."* ]] || exit 0
+    TMP_OUTPUT=$(mktemp "${TMPDIR:-/tmp}/rb-verify.XXXXXX") || {
+      emit_tempfile_failure_warning
+      exit 2
+    }
+    [[ -n "$TMP_OUTPUT" ]] || {
+      emit_tempfile_failure_warning
+      exit 2
+    }
+    [[ "$TMP_OUTPUT" == "${TMPDIR:-/tmp}/rb-verify."* ]] || {
+      emit_tempfile_failure_warning
+      exit 2
+    }
 
     cleanup() {
       safe_remove_temp_file "${TMP_OUTPUT:-}" "${TMPDIR:-/tmp}/rb-verify.*" || true

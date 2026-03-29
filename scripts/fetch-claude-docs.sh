@@ -22,6 +22,8 @@ MAX_AGE_HOURS=24
 FORCE=false
 INDEX_ONLY=false
 ALLOW_PARTIAL=false
+CURL_CONNECT_TIMEOUT=10
+CURL_MAX_TIME=60
 
 # All pages needed for plugin validation (~420KB total)
 PAGES=(
@@ -99,7 +101,7 @@ fetch_page() {
   fi
 
   for attempt in 1 2 3; do
-    if curl -sfL "$url" -o "$dest" 2>/dev/null; then
+    if curl -sfL --connect-timeout "$CURL_CONNECT_TIMEOUT" --max-time "$CURL_MAX_TIME" "$url" -o "$dest" 2>/dev/null; then
       local size
       size=$(wc -c < "$dest")
       echo "  [fetched] $page (${size} bytes)"
@@ -122,7 +124,7 @@ index_failed=0
 if is_fresh "${CACHE_DIR}/llms.txt"; then
   echo "  [cached] llms.txt (< ${MAX_AGE_HOURS}h old)"
 else
-  if curl -sfL "$INDEX_URL" -o "${CACHE_DIR}/llms.txt" 2>/dev/null; then
+  if curl -sfL --connect-timeout "$CURL_CONNECT_TIMEOUT" --max-time "$CURL_MAX_TIME" "$INDEX_URL" -o "${CACHE_DIR}/llms.txt" 2>/dev/null; then
     page_count=$(grep -c '\.md' "${CACHE_DIR}/llms.txt" 2>/dev/null || echo "?")
     echo "  [fetched] llms.txt (${page_count} pages indexed)"
   else

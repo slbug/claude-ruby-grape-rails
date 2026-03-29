@@ -81,6 +81,11 @@ report_formatter_failure() {
   fi
 }
 
+emit_tempfile_failure_warning() {
+  echo "⚠️  Ruby formatting skipped for ${FILE_PATH} because a temporary file could not be created." >&2
+  echo "Fix TMPDIR permissions or disk space to restore automatic Ruby formatting." >&2
+}
+
 if has_gem standard; then
   if ! command -v bundle >/dev/null 2>&1; then
     echo "⚠️  Ruby formatting skipped for ${FILE_PATH} because Bundler is not available." >&2
@@ -88,7 +93,10 @@ if has_gem standard; then
     exit 2
   fi
   # Auto-fix with StandardRB
-  ERR_FILE=$(mktemp "${TMPDIR:-/tmp}/ruby-format.XXXXXX") || exit 0
+  ERR_FILE=$(mktemp "${TMPDIR:-/tmp}/ruby-format.XXXXXX") || {
+    emit_tempfile_failure_warning
+    exit 2
+  }
   if ! (cd "$REPO_ROOT" && bundle exec standardrb --fix -- "$FILE_PATH") 2>"$ERR_FILE"; then
     # If auto-fix failed, report for manual fixing
     report_formatter_failure "NEEDS FORMAT" "bundle exec standardrb --fix $QUOTED_PATH" "$ERR_FILE"
@@ -103,7 +111,10 @@ elif has_gem rubocop; then
     exit 2
   fi
   # Auto-fix with RuboCop
-  ERR_FILE=$(mktemp "${TMPDIR:-/tmp}/ruby-format.XXXXXX") || exit 0
+  ERR_FILE=$(mktemp "${TMPDIR:-/tmp}/ruby-format.XXXXXX") || {
+    emit_tempfile_failure_warning
+    exit 2
+  }
   if ! (cd "$REPO_ROOT" && bundle exec rubocop --force-exclusion -a -- "$FILE_PATH") 2>"$ERR_FILE"; then
     # If auto-fix failed, report for manual fixing
     report_formatter_failure "NEEDS FORMAT OR LINT FIX" "bundle exec rubocop --force-exclusion -a $QUOTED_PATH" "$ERR_FILE"

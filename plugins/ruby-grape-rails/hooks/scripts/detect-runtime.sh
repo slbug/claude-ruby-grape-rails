@@ -15,6 +15,11 @@ emit_runtime_dependency_warning() {
   exit 0
 }
 
+emit_runtime_temp_warning() {
+  echo "WARNING: ${HOOK_NAME} could not update .runtime_env because a temporary file could not be created." >&2
+  exit 0
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 DEP_LIB="${SCRIPT_DIR}/ruby-dependency-lib.sh"
@@ -619,9 +624,9 @@ if [[ -e "$RUNTIME_ENV_FILE" && ! -f "$RUNTIME_ENV_FILE" ]]; then
   exit 0
 fi
 
-TMP_RUNTIME_ENV=$(mktemp "${CLAUDE_DIR}/.runtime_env.XXXXXX") || exit 0
-[[ -n "$TMP_RUNTIME_ENV" ]] || exit 0
-[[ "$TMP_RUNTIME_ENV" == "${CLAUDE_DIR}/.runtime_env."* ]] || exit 0
+TMP_RUNTIME_ENV=$(mktemp "${CLAUDE_DIR}/.runtime_env.XXXXXX") || emit_runtime_temp_warning
+[[ -n "$TMP_RUNTIME_ENV" ]] || emit_runtime_temp_warning
+[[ "$TMP_RUNTIME_ENV" == "${CLAUDE_DIR}/.runtime_env."* ]] || emit_runtime_temp_warning
 # shellcheck disable=SC2329 # invoked via trap
 cleanup_runtime_env_tmp() {
   safe_remove_temp_file "${TMP_RUNTIME_ENV:-}" "${CLAUDE_DIR}/.runtime_env.*" || true

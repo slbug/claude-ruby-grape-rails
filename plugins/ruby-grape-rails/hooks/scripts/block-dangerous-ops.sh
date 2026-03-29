@@ -97,12 +97,44 @@ trim_enclosing_grouping() {
   printf '%s\n' "$segment"
 }
 
-normalize_command_executable() {
+strip_leading_shell_wrappers() {
   local segment
   local first=""
   local rest=""
 
   segment=$(trim_leading_whitespace "$1")
+
+  while [[ -n "$segment" ]]; do
+    first="${segment%%[[:space:]]*}"
+    if [[ "$first" != "$segment" ]]; then
+      rest="${segment#"$first"}"
+    else
+      rest=""
+    fi
+
+    case "$first" in
+      command|builtin|exec)
+        segment=$(trim_leading_whitespace "$rest")
+        if [[ "$segment" == --[[:space:]]* ]]; then
+          segment="${segment#--}"
+          segment=$(trim_leading_whitespace "$segment")
+        fi
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  printf '%s\n' "$segment"
+}
+
+normalize_command_executable() {
+  local segment
+  local first=""
+  local rest=""
+
+  segment=$(strip_leading_shell_wrappers "$1")
   [[ -n "$segment" ]] || {
     printf '\n'
     return 0
@@ -122,6 +154,118 @@ normalize_command_executable() {
 
 to_ascii_lower() {
   printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+extract_percent_literal_token() {
+  local text="$1"
+  local open_delim=""
+  local close_delim=""
+  local body=""
+  local token=""
+  local remainder=""
+
+  case "$text" in
+    %q\(*|%q\{*|%q\[*|%q\<*|%Q\(*|%Q\{*|%Q\[*|%Q\<*|%x\(*|%x\{*|%x\[*|%x\<*)
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+
+  open_delim="${text:2:1}"
+  case "$open_delim" in
+    '(') close_delim=')' ;;
+    '{') close_delim='}' ;;
+    '[') close_delim=']' ;;
+    '<') close_delim='>' ;;
+    *) return 1 ;;
+  esac
+
+  body="${text:3}"
+  [[ "$body" == *"$close_delim"* ]] || return 1
+  token="${body%%"$close_delim"*}"
+  remainder="${body#"$token"}"
+  remainder="${remainder#"$close_delim"}"
+
+  printf '%s\n' "$token"
+  printf '%s\n' "$remainder"
+}
+
+join_literal_arguments_from_text() {
+  local text="$1"
+  local token=""
+  local literals=()
+  local percent_result=""
+  local percent_token=""
+  local percent_remainder=""
+
+  while :; do
+    text=$(trim_leading_whitespace "$text")
+
+    while [[ -n "$text" ]]; do
+      case "$text" in
+        ,*|\[*|\]*|\(*|\)*|\{*|\}*)
+          text="${text#?}"
+          text=$(trim_leading_whitespace "$text")
+          continue
+          ;;
+      esac
+      break
+    done
+
+    [[ -n "$text" ]] || break
+
+    if [[ "$text" =~ ^\'([^\']*)\'(.*)$ ]]; then
+      token="${BASH_REMATCH[1]}"
+      text="${BASH_REMATCH[2]}"
+      literals+=("$token")
+      continue
+    fi
+
+    if [[ "$text" =~ ^\"([^\"]*)\"(.*)$ ]]; then
+      token="${BASH_REMATCH[1]}"
+      text="${BASH_REMATCH[2]}"
+      literals+=("$token")
+      continue
+    fi
+
+    if percent_result=$(extract_percent_literal_token "$text" 2>/dev/null); then
+      percent_token=$(printf '%s\n' "$percent_result" | sed -n '1p')
+      percent_remainder=$(printf '%s\n' "$percent_result" | sed -n '2p')
+      token="$percent_token"
+      text="$percent_remainder"
+      literals+=("$token")
+      continue
+    fi
+
+    break
+  done
+
+  [[ "${#literals[@]}" -gt 0 ]] || return 1
+  printf '%s\n' "${literals[*]}"
+}
+
+collapse_duplicate_leading_token() {
+  local command_text="$1"
+  local first=""
+  local second=""
+  local remainder=""
+
+  [[ "$command_text" == *" "* ]] || {
+    printf '%s\n' "$command_text"
+    return 0
+  }
+
+  first="${command_text%% *}"
+  remainder="${command_text#"$first"}"
+  remainder="${remainder#" "}"
+  second="${remainder%% *}"
+
+  if [[ -n "$first" && -n "$second" && "$first" == "$second" ]]; then
+    printf '%s\n' "$remainder"
+  else
+    printf '%s\n' "$command_text"
+  fi
 }
 
 LEADING_ENV_PREFIXES_RESULT=""
@@ -180,7 +324,8 @@ extract_ruby_wrapper_payload() {
   local rest
   local token
   local ruby_code
-  local nested_command
+  local nested_command=""
+  local call_body
 
   segment=$(trim_enclosing_grouping "$1")
   [[ "$segment" == ruby[[:space:]]* ]] || return 1
@@ -198,7 +343,13 @@ extract_ruby_wrapper_payload() {
     if [[ "$token" == "-e" ]]; then
       rest="${rest#"$token"}"
       ruby_code=$(trim_matching_outer_quotes "$rest")
-      nested_command=$(printf '%s' "$ruby_code" | sed -nE "s/.*(system|exec|spawn)\\([[:space:]]*'([^']*)'([[:space:]]*,.*)?\\).*/\\2/p")
+      call_body=$(printf '%s' "$ruby_code" | sed -nE 's/.*(system|exec|spawn)\((.*)\).*/\2/p')
+      if [[ -n "$call_body" ]]; then
+        nested_command=$(join_literal_arguments_from_text "$call_body" || true)
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE "s/.*(system|exec|spawn)\\([[:space:]]*'([^']*)'([[:space:]]*,.*)?\\).*/\\2/p")
+      fi
       if [[ -z "$nested_command" ]]; then
         nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*(system|exec|spawn)\([[:space:]]*"([^"]*)"([[:space:]]*,.*)?\).*/\2/p')
       fi
@@ -247,7 +398,8 @@ extract_python_wrapper_payload() {
   local rest
   local token
   local python_code
-  local nested_command
+  local nested_command=""
+  local call_body
 
   segment=$(trim_enclosing_grouping "$1")
   [[ "$segment" =~ ^python([0-9]+(\.[0-9]+)?)?([[:space:]]|$) ]] || return 1
@@ -274,6 +426,19 @@ extract_python_wrapper_payload() {
       fi
       if [[ -z "$nested_command" ]]; then
         nested_command=$(printf '%s' "$python_code" | sed -nE 's/.*subprocess\.(run|call|Popen)\([[:space:]]*"([^"]*)"([[:space:]]*,[^)]*shell[[:space:]]*=[[:space:]]*True[^)]*)?\).*/\2/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        call_body=$(printf '%s' "$python_code" | sed -nE 's/.*subprocess\.(run|call|Popen|check_call|check_output)\((.*)\).*/\2/p')
+        if [[ -n "$call_body" ]]; then
+          nested_command=$(join_literal_arguments_from_text "$call_body" || true)
+        fi
+      fi
+      if [[ -z "$nested_command" ]]; then
+        call_body=$(printf '%s' "$python_code" | sed -nE 's/.*os\.execv[p]?\((.*)\).*/\1/p')
+        if [[ -n "$call_body" ]]; then
+          nested_command=$(join_literal_arguments_from_text "$call_body" || true)
+          nested_command=$(collapse_duplicate_leading_token "$nested_command")
+        fi
       fi
       [[ -n "$nested_command" ]] || return 1
       printf '%s\n' "$nested_command"

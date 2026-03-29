@@ -28,6 +28,7 @@ ACTIVE_PLAN_LIB = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/active-pla
 WORKSPACE_ROOT_LIB = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/workspace-root-lib.sh"
 FORMAT_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/format-ruby.sh"
 VERIFY_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/verify-ruby.sh"
+RUBYISH_POST_EDIT = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/rubyish-post-edit.sh"
 
 
 def run_block_hook(
@@ -201,6 +202,26 @@ class RuntimeScriptTests(unittest.TestCase):
             self.assertTrue(path.is_file(), path)
             self.assertTrue(os.access(path, os.X_OK), path)
 
+    def test_rubyish_post_edit_fails_closed_on_invalid_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+
+            result = subprocess.run(
+                ["bash", str(RUBYISH_POST_EDIT)],
+                input="{not-json",
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("could not safely inspect an invalid hook payload", result.stderr)
+
     def test_block_dangerous_ops_blocks_quoted_and_namespaced_db_tasks(self) -> None:
         for command in (
             'bundle exec rails "db:drop"',
@@ -247,6 +268,20 @@ class RuntimeScriptTests(unittest.TestCase):
             result = run_block_hook(command)
             self.assertEqual(result.returncode, 2, command)
             self.assertIn("destructive Rails database command", result.stderr)
+
+    def test_block_dangerous_ops_blocks_array_style_wrapper_forms(self) -> None:
+        for command, expected in (
+            ('ruby -e "system(\'git\',\'push\',\'--force\')"', "force push detected"),
+            ('ruby -e "exec(\'rails\',\'db:drop\')"', "destructive Rails database command"),
+            ('ruby -e "spawn(\'redis-cli\',\'flushall\')"', "destructive Redis flush detected"),
+            ('python3 -c "import subprocess; subprocess.run([\'git\', \'push\', \'--force\'])"', "force push detected"),
+            ('python3 -c "import os; os.execvp(\'git\', [\'git\', \'push\', \'--force\'])"', "force push detected"),
+            ("command git push --force", "force push detected"),
+            ("builtin git push --force", "force push detected"),
+        ):
+            result = run_block_hook(command)
+            self.assertEqual(result.returncode, 2, command)
+            self.assertIn(expected, result.stderr)
 
     def test_block_dangerous_ops_blocks_common_python_wrapper_forms(self) -> None:
         for command, expected in (
@@ -622,6 +657,108 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 2)
         self.assertIn("Potential secret detected", result.stderr)
+
+    def test_secret_scan_reports_tempdir_creation_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            target = tmp / "secret.txt"
+            target.write_text("token=abc\n", encoding="utf-8")
+            fake = tmp / "betterleaks"
+            fake.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            fake.chmod(0o755)
+
+            payload = json.dumps({"tool_input": {"file_path": str(target)}})
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["BETTERLEAKS_PATH"] = str(fake)
+            env["RUBY_PLUGIN_HOOK_MODE"] = "strict"
+            env["TMPDIR"] = str(tmp / "missing-tmpdir")
+
+            result = subprocess.run(
+                ["bash", str(SECRET_SCAN)],
+                input=payload,
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("secret scan could not create a temporary workspace", result.stderr)
+
+    def test_format_ruby_reports_tempfile_creation_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            (tmp / "Gemfile").write_text('source "https://rubygems.org"\ngem "standard"\n', encoding="utf-8")
+            target = tmp / "demo.rb"
+            target.write_text("puts :ok\n", encoding="utf-8")
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["TMPDIR"] = str(tmp / "missing-tmpdir")
+
+            result = subprocess.run(
+                ["bash", str(FORMAT_RUBY)],
+                input=json.dumps({"tool_input": {"file_path": str(target)}}),
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("temporary file could not be created", result.stderr)
+
+    def test_verify_ruby_reports_tempfile_creation_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            target = tmp / "demo.rb"
+            target.write_text("puts :ok\n", encoding="utf-8")
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["TMPDIR"] = str(tmp / "missing-tmpdir")
+
+            result = subprocess.run(
+                ["bash", str(VERIFY_RUBY)],
+                input=json.dumps({"tool_input": {"file_path": str(target)}}),
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("temporary file could not be created", result.stderr)
+
+    def test_detect_runtime_warns_when_runtime_env_tempfile_cannot_be_created(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            claude_dir = tmp / ".claude"
+            claude_dir.mkdir()
+            claude_dir.chmod(0o555)
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["RUBY_PLUGIN_DETECT_RUNTIME_QUIET"] = "1"
+
+            try:
+                result = subprocess.run(
+                    ["bash", str(DETECT_RUNTIME)],
+                    capture_output=True,
+                    text=True,
+                    cwd=REPO_ROOT,
+                    check=False,
+                    env=env,
+                )
+            finally:
+                claude_dir.chmod(0o755)
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("could not update .runtime_env", result.stderr)
 
     def test_debug_statement_warning_detects_standalone_p_and_inline_puts(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
