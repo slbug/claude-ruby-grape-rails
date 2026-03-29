@@ -18,7 +18,17 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
 
-INPUT=$(read_hook_input)
+read_hook_input
+INPUT="$HOOK_INPUT_VALUE"
+if [[ -z "$INPUT" ]]; then
+  case "${HOOK_INPUT_STATUS:-empty}" in
+    truncated|invalid)
+      echo "BLOCKED: block-dangerous-ops.sh could not safely inspect a ${HOOK_INPUT_STATUS} hook payload." >&2
+      echo "Increase RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES or fix the hook input before re-running this command." >&2
+      exit 2
+      ;;
+  esac
+fi
 TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null) || exit 0
 [[ "$TOOL" == "Bash" ]] || exit 0
 

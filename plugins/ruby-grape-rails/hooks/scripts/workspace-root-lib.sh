@@ -12,25 +12,53 @@
 # - otherwise the canonicalized candidate directory itself
 
 read_hook_input() {
-  local max_bytes="${RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES:-262144}"
+  local default_max_bytes=262144
+  local raw_max_bytes="${RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES:-$default_max_bytes}"
+  local max_bytes="$default_max_bytes"
+  local debug_hooks="${RUBY_PLUGIN_DEBUG_HOOKS:-}"
+  local read_limit=0
   local input=""
+
+  HOOK_INPUT_STATUS="empty"
+  HOOK_INPUT_VALUE=""
+
+  if [[ "$raw_max_bytes" =~ ^[1-9][0-9]*$ ]]; then
+    max_bytes="$raw_max_bytes"
+  elif [[ -n "$debug_hooks" ]]; then
+    echo "Warning: invalid RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES=${raw_max_bytes@Q}; using ${default_max_bytes}" >&2
+  fi
 
   if [[ -t 0 ]]; then
     printf '%s' ""
   else
-    input=$(dd bs="$max_bytes" count=1 2>/dev/null || true)
+    read_limit=$(( max_bytes + 1 ))
+    input=$(head -c "$read_limit" 2>/dev/null || true)
     [[ -n "$input" ]] || {
       printf '%s' ""
       return 0
     }
 
+    if [[ ${#input} -gt "$max_bytes" ]]; then
+      HOOK_INPUT_STATUS="truncated"
+      input="${input:0:max_bytes}"
+    fi
+
     if command -v jq >/dev/null 2>&1; then
       if ! printf '%s' "$input" | jq -e . >/dev/null 2>&1; then
+        if [[ "$HOOK_INPUT_STATUS" == "truncated" ]]; then
+          [[ -n "$debug_hooks" ]] && echo "Warning: hook input exceeded ${max_bytes} bytes and was truncated" >&2
+        else
+          HOOK_INPUT_STATUS="invalid"
+          [[ -n "$debug_hooks" ]] && echo "Warning: hook input was not valid JSON" >&2
+        fi
         printf '%s' ""
         return 0
       fi
     fi
 
+    HOOK_INPUT_STATUS="valid"
+    # shellcheck disable=SC2034
+    HOOK_INPUT_VALUE="$input"
     printf '%s' "$input"
   fi
 }

@@ -15,7 +15,8 @@ DEP_LIB="${SCRIPT_DIR}/ruby-dependency-lib.sh"
 source "$ROOT_LIB"
 # shellcheck disable=SC1090,SC1091
 source "$DEP_LIB"
-INPUT=$(read_hook_input)
+read_hook_input
+INPUT="$HOOK_INPUT_VALUE"
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 PROJECT_GEMFILE="${REPO_ROOT}/Gemfile"
@@ -491,20 +492,21 @@ LEFTHOOK_CONFIG_PATH=$(find_first_repo_file \
 
 if [[ -n "$LEFTHOOK_CONFIG_PATH" ]]; then
   LEFTHOOK_CONFIG_PRESENT=true
+  LEFTHOOK_ANALYSIS_TEXT="$(sed -E 's/[[:space:]]+#.*$//; /^[[:space:]]*#/d' "$LEFTHOOK_CONFIG_PATH" 2>/dev/null || cat "$LEFTHOOK_CONFIG_PATH")"
 
-  if grep -Eq '(^|[^[:alnum:]_])(standard|standardrb|rubocop)([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH"; then
+  if printf '%s\n' "$LEFTHOOK_ANALYSIS_TEXT" | grep -Eq '(^|[^[:alnum:]_])(standard|standardrb|rubocop)([^[:alnum:]_]|$)'; then
     LEFTHOOK_LINT_COVERED=true
   fi
 
-  if grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH" && { lock_has_gem 'pronto-rubocop' || gem_declared 'pronto-rubocop'; }; then
+  if printf '%s\n' "$LEFTHOOK_ANALYSIS_TEXT" | grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)' && { lock_has_gem 'pronto-rubocop' || gem_declared 'pronto-rubocop'; }; then
     LEFTHOOK_DIFF_LINT_COVERED=true
   fi
 
-  if grep -Eq '(brakeman|betterleaks|bundler[ -]?audit|flog|debride)' "$LEFTHOOK_CONFIG_PATH"; then
+  if printf '%s\n' "$LEFTHOOK_ANALYSIS_TEXT" | grep -Eq '(brakeman|betterleaks|bundler[ -]?audit|flog|debride)'; then
     LEFTHOOK_SECURITY_COVERED=true
   fi
 
-  if grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)' "$LEFTHOOK_CONFIG_PATH"; then
+  if printf '%s\n' "$LEFTHOOK_ANALYSIS_TEXT" | grep -Eq '(^|[^[:alnum:]_])pronto([^[:alnum:]_]|$)'; then
     LEFTHOOK_PRONTO_COVERED=true
   fi
 fi

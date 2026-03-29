@@ -280,8 +280,8 @@ Being honest about the gaps:
 
 | Check | Status | Why |
 |-------|--------|-----|
-| Ruby syntax check | PostToolUse hook on Edit/Write | `verify-ruby.sh` runs `ruby -c` on Ruby files |
-| Format check (StandardRB/RuboCop) | PostToolUse hook on Edit/Write | Auto-fixes with StandardRB when configured, else RuboCop |
+| Ruby syntax check | PostToolUse Edit/Write via `rubyish-post-edit.sh` | `verify-ruby.sh` runs `ruby -c` on Ruby files |
+| Format check (StandardRB/RuboCop) | PostToolUse Edit/Write via `rubyish-post-edit.sh` | Auto-fixes with StandardRB when configured, else RuboCop |
 | Full verification | `/rb:verify`, `/rb:full` VERIFYING phase | Includes format, tests, and Rails-specific checks (zeitwerk:check for Rails) |
 | `bundle exec rspec` | `/rb:full` VERIFYING phase + on-demand (`/rb:verify`) | Not run per-task, only between phases |
 | Type checking (Steep/Sorbet) | On-demand (`/rb:verify`) | Takes minutes, not seconds |

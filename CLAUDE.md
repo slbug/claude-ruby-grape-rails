@@ -246,9 +246,7 @@ Defined in `hooks/hooks.json`:
   - `log-progress.sh`: Async progress logging — all Edit|Write
   - `plan-stop-reminder.sh`: Plan STOP reminder on plan.md write — all Edit|Write
   - `secret-scan.sh`: Secret scanning with hook-mode gating — all Edit|Write
-  - `format-ruby.sh`: Auto `bundle exec standardrb` or `bundle exec rubocop -a` — Ruby-ish files only (`*.rb`, `*.rake`, `*Gemfile`, `*Rakefile`, `*config.ru`) via `if` filter
-  - `verify-ruby.sh`: Syntax check via `ruby -c <file>` — Ruby-ish files only via `if` filter
-  - `debug-statement-warning.sh`: Detect debug statements (`puts`, `binding.pry`, etc.) — Ruby-ish app files via `if` filter, excluding `spec/`, `test/`, and repo script directories
+  - `rubyish-post-edit.sh`: Ruby-ish Edit/Write fan-out for `*.rb`, `*.rake`, `*Gemfile`, `*Rakefile`, and `*config.ru`; delegates to `format-ruby.sh`, `verify-ruby.sh`, and `debug-statement-warning.sh`
 - `PostToolUseFailure` (Bash): Ruby-specific debugging hints when bundle exec fails,
   **error critic** that detects repeated failures and escalates to structured analysis (both via `additionalContext`)
 - `SubagentStart`: Inject all Iron Laws into every spawned subagent via `additionalContext` (addresses zero skill auto-loading gap)

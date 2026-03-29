@@ -11,7 +11,8 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
 # shellcheck disable=SC2034 # consumed by active-plan-lib during sourcing
-INPUT=$(read_hook_input)
+read_hook_input
+INPUT="$HOOK_INPUT_VALUE"
 LIB="${SCRIPT_DIR}/active-plan-lib.sh"
 [[ -r "$LIB" && ! -L "$LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091

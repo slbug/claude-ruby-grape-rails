@@ -79,6 +79,12 @@ that prevent the mistakes Ruby developers actually make in production.
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+Ruby Edit/Write automation is delegated through
+[rubyish-post-edit.sh](/Users/slbug/work/claude-ruby-grape-rails/plugins/ruby-grape-rails/hooks/scripts/rubyish-post-edit.sh),
+which fans out to formatting, syntax, and debug checks.
+[hooks.json](/Users/slbug/work/claude-ruby-grape-rails/plugins/ruby-grape-rails/hooks/hooks.json)
+is the current wiring source of truth.
+
 ## Installation
 
 ### From GitHub (recommended)

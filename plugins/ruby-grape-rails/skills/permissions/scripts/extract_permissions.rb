@@ -10,11 +10,12 @@ require 'time'
 options = {
   days: 14,
   json: false,
-  limit: 30
+  limit: 30,
+  repo_only: false
 }
 
 OptionParser.new do |parser|
-  parser.banner = 'Usage: extract_permissions.rb [--days N] [--json] [--limit N]'
+  parser.banner = 'Usage: extract_permissions.rb [--days N] [--json] [--limit N] [--repo-only]'
 
   parser.on('--days N', Integer, 'Only scan sessions from the last N days') do |days|
     options[:days] = days
@@ -26,6 +27,10 @@ OptionParser.new do |parser|
 
   parser.on('--limit N', Integer, 'Limit text output to the top N groups (default: 30)') do |limit|
     options[:limit] = limit
+  end
+
+  parser.on('--repo-only', 'Ignore ~/.claude/settings.json and only use repo-local settings') do
+    options[:repo_only] = true
   end
 end.parse!
 
@@ -159,6 +164,12 @@ def command_group(command)
     end
   elsif %w[git rails bin/rails rake make just npm yarn pnpm lefthook].include?(core_tokens[0])
     core_tokens[1] ? core_tokens[0, 2].join(' ') : core_tokens[0]
+  elsif %w[ruby python python3 node].include?(core_tokens[0])
+    if core_tokens[1] && !core_tokens[1].start_with?('-')
+      core_tokens[0, 2].join(' ')
+    else
+      core_tokens[0]
+    end
   elsif core_tokens[0].start_with?('bin/') || core_tokens[0].start_with?('script/')
     core_tokens[1] ? core_tokens[0, 2].join(' ') : core_tokens[0]
   else
@@ -184,10 +195,10 @@ repo_root = find_repo_root(Dir.pwd)
 project_slug = claude_project_slug(repo_root)
 project_transcript_glob = File.expand_path("~/.claude/projects/#{project_slug}/*.jsonl")
 settings_sources = [
-  File.expand_path('~/.claude/settings.json'),
   File.join(repo_root, '.claude/settings.json'),
   File.join(repo_root, '.claude/settings.local.json')
 ]
+settings_sources.unshift(File.expand_path('~/.claude/settings.json')) unless options[:repo_only]
 
 all_allow = []
 all_deny = []
@@ -273,6 +284,7 @@ report = {
   truncated_session_files: truncated_session_files,
   line_capped_files: line_capped_files,
   max_lines_per_file: max_lines_per_file,
+  settings_scope: options[:repo_only] ? 'repo-only' : 'repo+global',
   scanned_files: recent_files,
   total_bash_commands: total_bash_commands,
   ignored_denied_commands: ignored_denied,
@@ -297,9 +309,11 @@ end
 
 puts "Repo root: #{repo_root}"
 puts "Project transcript scope: #{project_slug}"
+puts "Settings scope: #{options[:repo_only] ? 'repo-only' : 'repo + ~/.claude/settings.json'}"
 puts "Sessions scanned: #{recent_files.length} (last #{options[:days]} days)"
 puts "Additional recent sessions skipped by cap: #{truncated_session_files}" if truncated_session_files.positive?
 puts "Files capped at #{max_lines_per_file} lines: #{line_capped_files}" if line_capped_files.positive?
+puts 'WARNING: transcript scan was truncated by caps; recommendations are partial.' if truncated_session_files.positive? || line_capped_files.positive?
 puts "Total Bash tool calls seen: #{total_bash_commands}"
 puts "Uncovered command groups: #{group_counts.length}"
 puts "Total avoidable prompts: #{group_counts.values.sum}"

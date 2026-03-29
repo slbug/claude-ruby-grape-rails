@@ -7,7 +7,8 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
-INPUT=$(read_hook_input)
+read_hook_input
+INPUT="$HOOK_INPUT_VALUE"
 STATUS=0
 
 run_hook() {

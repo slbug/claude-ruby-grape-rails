@@ -10,9 +10,27 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SCAN_TARGETS=(plugins .claude .claude-plugin README.md CLAUDE.md)
+MAX_FALLBACK_FILES="${RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_FILES:-500}"
+MAX_FALLBACK_BYTES="${RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_BYTES:-5242880}"
 # shellcheck disable=SC2016
 PATTERN='(^|[^[:alnum:]_`])!`[^`]+`'
 FOUND=0
+FALLBACK_PARTIAL=0
+FALLBACK_FILES_SCANNED=0
+FALLBACK_BYTES_SCANNED=0
+
+positive_int_or_default() {
+  local raw="$1"
+  local fallback="$2"
+  if [[ "$raw" =~ ^[1-9][0-9]*$ ]]; then
+    printf '%s\n' "$raw"
+  else
+    printf '%s\n' "$fallback"
+  fi
+}
+
+MAX_FALLBACK_FILES="$(positive_int_or_default "$MAX_FALLBACK_FILES" 500)"
+MAX_FALLBACK_BYTES="$(positive_int_or_default "$MAX_FALLBACK_BYTES" 5242880)"
 
 scan_file() {
   local file="$1"
@@ -45,8 +63,18 @@ else
 
     while IFS= read -r -d '' file; do
       [[ -n "$file" && -f "$file" ]] || continue
+      file_size=$(wc -c < "$file" 2>/dev/null || echo 0)
+      if [[ "$FALLBACK_FILES_SCANNED" -ge "$MAX_FALLBACK_FILES" ]] ||
+        [[ $(( FALLBACK_BYTES_SCANNED + file_size )) -gt "$MAX_FALLBACK_BYTES" ]]; then
+        FALLBACK_PARTIAL=1
+        break
+      fi
+      FALLBACK_FILES_SCANNED=$((FALLBACK_FILES_SCANNED + 1))
+      FALLBACK_BYTES_SCANNED=$((FALLBACK_BYTES_SCANNED + file_size))
       scan_file "$file"
     done < <(find "${REPO_ROOT}/${target}" -type f \( -name '*.md' -o -name '*.json' -o -name '*.yml' -o -name '*.yaml' \) -print0 2>/dev/null || true)
+
+    [[ "$FALLBACK_PARTIAL" -eq 1 ]] && break
   done
 fi
 
@@ -58,6 +86,10 @@ if [[ "$FOUND" -eq 1 ]]; then
   echo "The !\`command\` syntax executes shell commands and injects stdout into Claude context."
   echo "Do not use it in tracked plugin or contributor docs/config files. Use normal tools/agents instead."
   exit 1
+fi
+
+if [[ "$FALLBACK_PARTIAL" -eq 1 ]]; then
+  echo "WARNING: fallback dynamic-injection scan hit file/size caps; results are partial." >&2
 fi
 
 echo "No dynamic context injection found."

@@ -218,22 +218,6 @@ generate_all() {
   log_info "Generation complete!"
 }
 
-# Validate
-if [[ ! -f "$YAML_SOURCE" ]]; then
-  log_error "YAML source not found: $YAML_SOURCE"
-  exit 1
-fi
-
-if [[ ! -e "$RUBY_SCRIPT" ]]; then
-  log_error "Ruby script not found: $RUBY_SCRIPT"
-  exit 1
-fi
-
-if [[ -L "$RUBY_SCRIPT" ]]; then
-  log_error "Ruby script symlinks are not allowed: $RUBY_SCRIPT"
-  exit 1
-fi
-
 # Main
 TARGET="${1:-all}"
 
@@ -247,6 +231,31 @@ esac
 if ! valid_target "$TARGET"; then
   log_error "Unknown target: $TARGET"
   show_usage
+  exit 1
+fi
+
+if [[ ! -f "$YAML_SOURCE" ]]; then
+  log_error "YAML source not found: $YAML_SOURCE"
+  exit 1
+fi
+
+if ! command -v ruby >/dev/null 2>&1; then
+  log_error "ruby is required to generate Iron Law outputs"
+  exit 1
+fi
+
+if [[ ! -f "$RUBY_SCRIPT" ]]; then
+  log_error "Ruby script not found or not a regular file: $RUBY_SCRIPT"
+  exit 1
+fi
+
+if [[ -L "$RUBY_SCRIPT" ]]; then
+  log_error "Ruby script symlinks are not allowed: $RUBY_SCRIPT"
+  exit 1
+fi
+
+if [[ ! -r "$RUBY_SCRIPT" ]]; then
+  log_error "Ruby script is not readable: $RUBY_SCRIPT"
   exit 1
 fi
 

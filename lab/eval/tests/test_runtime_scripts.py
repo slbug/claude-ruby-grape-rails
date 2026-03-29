@@ -19,9 +19,16 @@ HOOKS_JSON = REPO_ROOT / "plugins/ruby-grape-rails/hooks/hooks.json"
 PRE_COMMIT_HOOK = REPO_ROOT / ".husky/pre-commit.bash"
 CHECK_PENDING_PLANS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-pending-plans.sh"
 CHECK_RESUME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-resume.sh"
+FORMAT_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/format-ruby.sh"
+VERIFY_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/verify-ruby.sh"
 
 
-def run_block_hook(command: str, shell: str = "bash") -> subprocess.CompletedProcess[str]:
+def run_block_hook(
+    command: str,
+    shell: str = "bash",
+    extra_env: dict[str, str] | None = None,
+    payload_override: str | None = None,
+) -> subprocess.CompletedProcess[str]:
     payload = json.dumps(
         {
             "tool_name": "Bash",
@@ -29,7 +36,10 @@ def run_block_hook(command: str, shell: str = "bash") -> subprocess.CompletedPro
                 "command": command,
             },
         }
-    )
+    ) if payload_override is None else payload_override
+    env = dict(os.environ)
+    if extra_env:
+        env.update(extra_env)
     return subprocess.run(
         [shell, str(BLOCK_DANGEROUS_OPS)],
         input=payload,
@@ -37,6 +47,7 @@ def run_block_hook(command: str, shell: str = "bash") -> subprocess.CompletedPro
         text=True,
         cwd=REPO_ROOT,
         check=False,
+        env=env,
     )
 
 
@@ -150,6 +161,11 @@ class RuntimeScriptTests(unittest.TestCase):
             self.assertTrue(path.is_file(), path)
             self.assertTrue(os.access(path, os.X_OK), path)
 
+    def test_rubyish_post_edit_delegates_are_executable(self) -> None:
+        for path in (FORMAT_RUBY, VERIFY_RUBY, DEBUG_STATEMENT_WARNING):
+            self.assertTrue(path.is_file(), path)
+            self.assertTrue(os.access(path, os.X_OK), path)
+
     def test_block_dangerous_ops_blocks_quoted_and_namespaced_db_tasks(self) -> None:
         for command in (
             'bundle exec rails "db:drop"',
@@ -201,6 +217,22 @@ class RuntimeScriptTests(unittest.TestCase):
     def test_block_dangerous_ops_does_not_treat_echo_as_production_command(self) -> None:
         result = run_block_hook('echo "RAILS_ENV=production"')
         self.assertEqual(result.returncode, 0)
+
+    def test_block_dangerous_ops_fails_closed_on_truncated_hook_payload(self) -> None:
+        result = run_block_hook(
+            "rails db:drop",
+            extra_env={"RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES": "10"},
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("could not safely inspect a truncated hook payload", result.stderr)
+
+    def test_block_dangerous_ops_uses_default_limit_when_hook_byte_env_is_invalid(self) -> None:
+        result = run_block_hook(
+            "rails db:drop",
+            extra_env={"RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES": "abc"},
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("destructive Rails database command", result.stderr)
 
     def test_block_dangerous_ops_is_bash_3_2_safe_for_redis_flush(self) -> None:
         result = run_block_hook("redis-cli FLUSHALL", shell="/bin/bash")
@@ -452,6 +484,20 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         self.assertNotIn("mapfile", result.stderr)
+
+    def test_detect_runtime_ignores_lefthook_comment_mentions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            (tmp / "lefthook.yml").write_text(
+                "# rubocop only in comment\npre-commit:\n  commands:\n    noop:\n      run: echo hi\n",
+                encoding="utf-8",
+            )
+
+            runtime_env = run_detect_runtime(tmpdir)
+
+        self.assertIn("LEFTHOOK_CONFIG_PRESENT=true", runtime_env)
+        self.assertIn("LEFTHOOK_LINT_COVERED=false", runtime_env)
 
     def test_plan_hooks_count_common_markdown_checkbox_variants(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -14,7 +14,8 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
-INPUT=$(read_hook_input)
+read_hook_input
+INPUT="$HOOK_INPUT_VALUE"
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 HOOK_MODE=$(resolve_hook_mode "$REPO_ROOT")

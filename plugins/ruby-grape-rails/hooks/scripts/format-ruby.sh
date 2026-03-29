@@ -18,7 +18,8 @@ DEP_LIB="${SCRIPT_DIR}/ruby-dependency-lib.sh"
 source "$ROOT_LIB"
 # shellcheck disable=SC1090,SC1091
 source "$DEP_LIB"
-INPUT=$(read_hook_input)
+read_hook_input
+INPUT="$HOOK_INPUT_VALUE"
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 PROJECT_GEMFILE="${REPO_ROOT}/Gemfile"
