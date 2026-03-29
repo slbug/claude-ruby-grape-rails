@@ -275,7 +275,7 @@ is_force_push_command() {
 
     while IFS= read -r candidate; do
       if [[ "$candidate" =~ ^git([[:space:]]+-c[[:space:]]+[^[:space:]]+)*[[:space:]]+push([[:space:]]|$) ]] &&
-        printf '%s' "$candidate" | grep -qE '(^|[[:space:]])(--force|-f)([[:space:]]|$)'; then
+        printf '%s' "$candidate" | grep -qE '(^|[[:space:]])((--force|-f)([[:space:]]|$)|\+[^[:space:]]+($|[[:space:]])|[^[:space:]]+:\+[^[:space:]]+($|[[:space:]]))'; then
         return 0
       fi
     done < <(emit_command_variants "$segment")

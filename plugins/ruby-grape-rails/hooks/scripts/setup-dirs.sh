@@ -9,6 +9,12 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 source "$ROOT_LIB"
 read_hook_input
 INPUT="$HOOK_INPUT_VALUE"
+case "${HOOK_INPUT_STATUS:-empty}" in
+  truncated|invalid)
+    echo "Warning: skipping setup-dirs.sh because hook input was ${HOOK_INPUT_STATUS}" >&2
+    exit 0
+    ;;
+esac
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 CLAUDE_DIR="${REPO_ROOT}/.claude"

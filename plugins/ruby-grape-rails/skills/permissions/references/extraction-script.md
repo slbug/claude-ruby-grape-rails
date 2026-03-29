@@ -12,10 +12,19 @@ Optional machine-readable output:
 ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 14 --json
 ```
 
+Other useful flags:
+
+```bash
+ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 30 --limit 50 --repo-only
+```
+
 Validation rules:
 
 - `--days` must be `0` or greater.
 - `--limit` must be greater than `0`.
+- `--repo-only` ignores `~/.claude/settings.json`.
+- `--dry-run` is accepted for skill parity; the extractor is read-only either
+  way.
 
 ## What It Scans
 
@@ -30,6 +39,7 @@ Validation rules:
   - `~/.claude/settings.json`
   - `.claude/settings.json`
   - `.claude/settings.local.json`
+  - or only repo-local settings when `--repo-only` is set
 
 ## What It Reports
 

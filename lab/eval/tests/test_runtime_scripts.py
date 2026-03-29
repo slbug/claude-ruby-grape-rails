@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import shlex
 import subprocess
 import tempfile
 import textwrap
@@ -19,6 +20,8 @@ HOOKS_JSON = REPO_ROOT / "plugins/ruby-grape-rails/hooks/hooks.json"
 PRE_COMMIT_HOOK = REPO_ROOT / ".husky/pre-commit.bash"
 CHECK_PENDING_PLANS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-pending-plans.sh"
 CHECK_RESUME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-resume.sh"
+SETUP_DIRS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/setup-dirs.sh"
+ACTIVE_PLAN_LIB = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/active-plan-lib.sh"
 FORMAT_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/format-ruby.sh"
 VERIFY_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/verify-ruby.sh"
 
@@ -121,6 +124,34 @@ def run_workspace_hook(script_path: Path, repo_root: str, payload: dict | None =
     )
 
 
+def run_workspace_hook_raw(script_path: Path, repo_root: str, payload: str) -> subprocess.CompletedProcess[str]:
+    env = dict(os.environ)
+    env["CLAUDE_PROJECT_DIR"] = repo_root
+    return subprocess.run(
+        ["bash", str(script_path)],
+        input=payload,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        check=False,
+        env=env,
+    )
+
+
+def run_active_plan_query(repo_root: str) -> subprocess.CompletedProcess[str]:
+    env = dict(os.environ)
+    env["CLAUDE_PROJECT_DIR"] = repo_root
+    command = f"source {shlex.quote(str(ACTIVE_PLAN_LIB))}; get_active_plan"
+    return subprocess.run(
+        ["bash", "-c", command],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        check=False,
+        env=env,
+    )
+
+
 def run_secret_scan(
     repo_root: str,
     file_path: str,
@@ -181,6 +212,11 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("force push detected", result.stderr)
 
+    def test_block_dangerous_ops_blocks_force_push_by_refspec(self) -> None:
+        result = run_block_hook("git push origin +main")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("force push detected", result.stderr)
+
     def test_block_dangerous_ops_blocks_common_wrapper_shell_forms(self) -> None:
         for command, expected in (
             ('bash -lc "rails db:drop"', "destructive Rails database command"),
@@ -217,6 +253,7 @@ class RuntimeScriptTests(unittest.TestCase):
     def test_block_dangerous_ops_does_not_treat_echo_as_production_command(self) -> None:
         result = run_block_hook('echo "RAILS_ENV=production"')
         self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
 
     def test_block_dangerous_ops_fails_closed_on_truncated_hook_payload(self) -> None:
         result = run_block_hook(
@@ -356,6 +393,21 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(values.get("DETECTED_STACK", ""), "")
         self.assertNotIn("RAILS_VERSION", values)
+
+    def test_detect_stack_finds_nested_package_manifests(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / "Gemfile").write_text('source "https://rubygems.org"\n', encoding="utf-8")
+            (tmp / "packs" / "billing" / "invoices").mkdir(parents=True)
+            (tmp / "packs" / "billing" / "invoices" / "package.yml").write_text(
+                "enforce_dependencies: true\n",
+                encoding="utf-8",
+            )
+
+            values = run_detect_stack(tmpdir)
+
+        self.assertEqual(values["PACKAGE_LAYOUT"], "modular_monolith")
+        self.assertIn("packs/billing/invoices", values["PACKAGE_LOCATIONS"])
 
     def test_detect_runtime_exports_dcg_and_shellfirm_when_installed(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -498,6 +550,55 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertIn("LEFTHOOK_CONFIG_PRESENT=true", runtime_env)
         self.assertIn("LEFTHOOK_LINT_COVERED=false", runtime_env)
+
+    def test_setup_dirs_skips_mutation_on_invalid_hook_input(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            result = run_workspace_hook_raw(SETUP_DIRS, tmpdir, "{not-json")
+
+            claude_dir = tmp / ".claude"
+            created_dirs = [
+                claude_dir / "plans",
+                claude_dir / "research",
+                claude_dir / "reviews",
+                claude_dir / "solutions",
+                claude_dir / "audit",
+                claude_dir / "skill-metrics",
+            ]
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("skipping setup-dirs.sh because hook input was invalid", result.stderr)
+        self.assertFalse(claude_dir.exists())
+        for path in created_dirs:
+            self.assertFalse(path.exists(), path)
+
+    def test_active_plan_marker_respects_numbered_unchecked_tasks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plan_dir = tmp / ".claude" / "plans" / "demo"
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "plan.md").write_text("# Demo\n\n1. [ ] first task\n", encoding="utf-8")
+            active_marker = tmp / ".claude" / "ACTIVE_PLAN"
+            active_marker.write_text(str(plan_dir.resolve()) + "\n", encoding="utf-8")
+
+            result = run_active_plan_query(tmpdir)
+            marker_exists = active_marker.exists()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(Path(result.stdout.strip()).resolve(), plan_dir.resolve())
+        self.assertTrue(marker_exists)
+
+    def test_active_plan_fallback_respects_bullet_unchecked_tasks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plan_dir = tmp / ".claude" / "plans" / "demo"
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "plan.md").write_text("# Demo\n\n* [ ] first task\n", encoding="utf-8")
+
+            result = run_active_plan_query(tmpdir)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(Path(result.stdout.strip()).resolve(), plan_dir.resolve())
 
     def test_plan_hooks_count_common_markdown_checkbox_variants(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

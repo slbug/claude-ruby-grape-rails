@@ -142,7 +142,7 @@ def soft_package_content_markers
 end
 
 def package_manifests
-  package_root_patterns.flat_map { |root| Dir.glob("#{root}/*/package.yml") }
+  package_root_patterns.flat_map { |root| Dir.glob("#{root}/**/package.yml") }
                        .select do |path|
                          regular_file?(path) && safe_directory?(File.dirname(path))
                        end

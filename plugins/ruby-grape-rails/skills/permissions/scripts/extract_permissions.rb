@@ -11,11 +11,12 @@ options = {
   days: 14,
   json: false,
   limit: 30,
-  repo_only: false
+  repo_only: false,
+  dry_run: false
 }
 
 OptionParser.new do |parser|
-  parser.banner = 'Usage: extract_permissions.rb [--days N] [--json] [--limit N] [--repo-only]'
+  parser.banner = 'Usage: extract_permissions.rb [--days N] [--json] [--limit N] [--repo-only] [--dry-run]'
 
   parser.on('--days N', Integer, 'Only scan sessions from the last N days') do |days|
     options[:days] = days
@@ -31,6 +32,10 @@ OptionParser.new do |parser|
 
   parser.on('--repo-only', 'Ignore ~/.claude/settings.json and only use repo-local settings') do
     options[:repo_only] = true
+  end
+
+  parser.on('--dry-run', 'Accepted for skill parity; extractor output is already read-only') do
+    options[:dry_run] = true
   end
 end.parse!
 
@@ -310,6 +315,7 @@ end
 puts "Repo root: #{repo_root}"
 puts "Project transcript scope: #{project_slug}"
 puts "Settings scope: #{options[:repo_only] ? 'repo-only' : 'repo + ~/.claude/settings.json'}"
+puts 'Dry-run: extractor is read-only; no settings changes were written.' if options[:dry_run]
 puts "Sessions scanned: #{recent_files.length} (last #{options[:days]} days)"
 puts "Additional recent sessions skipped by cap: #{truncated_session_files}" if truncated_session_files.positive?
 puts "Files capped at #{max_lines_per_file} lines: #{line_capped_files}" if line_capped_files.positive?

@@ -29,12 +29,11 @@ read_hook_input() {
   fi
 
   if [[ -t 0 ]]; then
-    printf '%s' ""
+    return 0
   else
     read_limit=$(( max_bytes + 1 ))
     input=$(head -c "$read_limit" 2>/dev/null || true)
     [[ -n "$input" ]] || {
-      printf '%s' ""
       return 0
     }
 
@@ -51,7 +50,6 @@ read_hook_input() {
           HOOK_INPUT_STATUS="invalid"
           [[ -n "$debug_hooks" ]] && echo "Warning: hook input was not valid JSON" >&2
         fi
-        printf '%s' ""
         return 0
       fi
     fi
@@ -59,7 +57,6 @@ read_hook_input() {
     HOOK_INPUT_STATUS="valid"
     # shellcheck disable=SC2034
     HOOK_INPUT_VALUE="$input"
-    printf '%s' "$input"
   fi
 }
 

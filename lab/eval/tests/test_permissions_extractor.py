@@ -53,6 +53,20 @@ def write_transcript(repo_root: Path, home_dir: Path, command: str, name: str = 
 
 
 class PermissionsExtractorTests(unittest.TestCase):
+    def test_dry_run_flag_is_accepted_for_skill_parity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            write_transcript(repo, tmp, "bundle exec rails db:migrate")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only", "--dry-run")
+
+        self.assertEqual(report["settings_scope"], "repo-only")
+        self.assertEqual(report["uncovered_groups"][0]["group"], "bundle exec rails db:migrate")
+
     def test_repo_only_ignores_global_allowlist(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
