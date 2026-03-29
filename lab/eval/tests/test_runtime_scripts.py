@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -11,6 +12,7 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[3]
 BLOCK_DANGEROUS_OPS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/block-dangerous-ops.sh"
 DETECT_STACK = REPO_ROOT / "plugins/ruby-grape-rails/scripts/detect-stack.rb"
+DETECT_RUNTIME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime.sh"
 
 
 def run_block_hook(command: str, shell: str = "bash") -> subprocess.CompletedProcess[str]:
@@ -52,6 +54,27 @@ def run_detect_stack(tmpdir: str) -> dict[str, str]:
     return values
 
 
+def run_detect_runtime(tmpdir: str, extra_path: str | None = None) -> str:
+    env = dict(os.environ)
+    env["CLAUDE_PROJECT_DIR"] = tmpdir
+    env["RUBY_PLUGIN_DETECT_RUNTIME_QUIET"] = "1"
+    if extra_path:
+        env["PATH"] = f"{extra_path}{os.pathsep}{env.get('PATH', '')}"
+
+    result = subprocess.run(
+        ["bash", str(DETECT_RUNTIME)],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+    if result.returncode != 0:
+        raise AssertionError(result.stderr)
+
+    return Path(tmpdir, ".claude", ".runtime_env").read_text(encoding="utf-8")
+
+
 class RuntimeScriptTests(unittest.TestCase):
     def test_block_dangerous_ops_blocks_quoted_and_namespaced_db_tasks(self) -> None:
         for command in (
@@ -67,6 +90,22 @@ class RuntimeScriptTests(unittest.TestCase):
         result = run_block_hook("git -c push.default=current push --force origin main")
         self.assertEqual(result.returncode, 2)
         self.assertIn("force push detected", result.stderr)
+
+    def test_block_dangerous_ops_blocks_common_wrapper_shell_forms(self) -> None:
+        for command, expected in (
+            ('bash -lc "rails db:drop"', "destructive Rails database command"),
+            ('sh -lc "git push --force"', "force push detected"),
+            ('bash -lc "redis-cli flushall"', "destructive Redis flush detected"),
+            ('bash -lc "RAILS_ENV=production rails runner 1"', "production environment detected"),
+        ):
+            result = run_block_hook(command)
+            self.assertEqual(result.returncode, 2, command)
+            self.assertIn(expected, result.stderr)
+
+    def test_block_dangerous_ops_blocks_common_ruby_wrapper_forms(self) -> None:
+        result = run_block_hook('ruby -e "system(\'rails db:drop\')"')
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("destructive Rails database command", result.stderr)
 
     def test_block_dangerous_ops_does_not_treat_echo_as_production_command(self) -> None:
         result = run_block_hook('echo "RAILS_ENV=production"')
@@ -150,6 +189,37 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(values["RAILS_VERSION"], "8.1.0")
         self.assertIn("rails", values["DETECTED_STACK"])
         self.assertIn("grape", values["DETECTED_STACK"])
+
+    def test_detect_runtime_exports_dcg_and_shellfirm_when_installed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+
+            for name, version in (("dcg", "0.9.0"), ("shellfirm", "0.3.9")):
+                script = fake_bin / name
+                script.write_text(
+                    textwrap.dedent(
+                        f"""\
+                        #!/usr/bin/env bash
+                        if [[ "${{1:-}}" == "--version" ]]; then
+                          echo "{name} {version}"
+                          exit 0
+                        fi
+                        exit 0
+                        """
+                    ),
+                    encoding="utf-8",
+                )
+                script.chmod(0o755)
+
+            runtime_env = run_detect_runtime(tmpdir, extra_path=str(fake_bin))
+
+        self.assertIn("DCG_AVAILABLE=true", runtime_env)
+        self.assertIn("SHELLFIRM_AVAILABLE=true", runtime_env)
+        self.assertIn("DCG_VERSION=0.9.0", runtime_env)
+        self.assertIn("SHELLFIRM_VERSION=0.3.9", runtime_env)
 
 
 if __name__ == "__main__":

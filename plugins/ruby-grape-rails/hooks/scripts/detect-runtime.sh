@@ -43,6 +43,10 @@ BETTERLEAKS_PATH=""
 RTK_PATH=""
 RTK_VERSION=""
 RTK_GAIN_AVAILABLE=false
+DCG_PATH=""
+DCG_VERSION=""
+SHELLFIRM_PATH=""
+SHELLFIRM_VERSION=""
 PSQL_AVAILABLE=false
 REDIS_CLI_AVAILABLE=false
 BUNDLE_AVAILABLE=false
@@ -517,6 +521,18 @@ if command -v rtk >/dev/null 2>&1; then
   add_tool "rtk"
 fi
 
+# Detect DCG (external Claude Code destructive command guard)
+if command -v dcg >/dev/null 2>&1; then
+  DCG_PATH=$(command -v dcg)
+  add_tool "dcg"
+fi
+
+# Detect Shellfirm (external shell/agent safety layer)
+if command -v shellfirm >/dev/null 2>&1; then
+  SHELLFIRM_PATH=$(command -v shellfirm)
+  add_tool "shellfirm"
+fi
+
 # Detect Betterleaks executable
 if command -v betterleaks >/dev/null 2>&1; then
   BETTERLEAKS_PATH=$(command -v betterleaks)
@@ -537,6 +553,14 @@ if [[ -n "$RTK_PATH" ]]; then
   if "$RTK_PATH" gain --help >/dev/null 2>&1; then
     RTK_GAIN_AVAILABLE=true
   fi
+fi
+
+if [[ -n "$DCG_PATH" ]]; then
+  DCG_VERSION=$("$DCG_PATH" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || printf '%s' "unknown")
+fi
+
+if [[ -n "$SHELLFIRM_PATH" ]]; then
+  SHELLFIRM_VERSION=$("$SHELLFIRM_PATH" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || printf '%s' "unknown")
 fi
 
 if [[ "${RUBY_PLUGIN_DETECT_RUNTIME_QUIET:-0}" != "1" ]]; then
@@ -623,6 +647,22 @@ trap cleanup_runtime_env_tmp EXIT HUP INT TERM
     fi
   else
     emit_shell_assignment "RTK_AVAILABLE" "false"
+  fi
+
+  if [[ -n "$DCG_PATH" ]]; then
+    emit_shell_assignment "DCG_AVAILABLE" "true"
+    emit_shell_assignment "DCG_PATH" "$DCG_PATH"
+    [[ -n "$DCG_VERSION" ]] && emit_shell_assignment "DCG_VERSION" "$DCG_VERSION"
+  else
+    emit_shell_assignment "DCG_AVAILABLE" "false"
+  fi
+
+  if [[ -n "$SHELLFIRM_PATH" ]]; then
+    emit_shell_assignment "SHELLFIRM_AVAILABLE" "true"
+    emit_shell_assignment "SHELLFIRM_PATH" "$SHELLFIRM_PATH"
+    [[ -n "$SHELLFIRM_VERSION" ]] && emit_shell_assignment "SHELLFIRM_VERSION" "$SHELLFIRM_VERSION"
+  else
+    emit_shell_assignment "SHELLFIRM_AVAILABLE" "false"
   fi
 
   if [[ -n "$BETTERLEAKS_PATH" ]]; then

@@ -25,8 +25,6 @@ normalize_command_segments() {
   command_text=${command_text//&&/;}
   command_text=${command_text//||/;}
   command_text=${command_text//|/;}
-  command_text=${command_text//(/;}
-  command_text=${command_text//)/;}
 
   printf '%s\n' "$command_text" | tr ';' '\n'
 }
@@ -35,6 +33,49 @@ trim_leading_whitespace() {
   local segment="$1"
 
   segment="${segment#"${segment%%[![:space:]]*}"}"
+  printf '%s\n' "$segment"
+}
+
+trim_trailing_whitespace() {
+  local segment="$1"
+
+  segment="${segment%"${segment##*[![:space:]]}"}"
+  printf '%s\n' "$segment"
+}
+
+trim_matching_outer_quotes() {
+  local segment
+
+  segment=$(trim_leading_whitespace "$1")
+  segment=$(trim_trailing_whitespace "$segment")
+
+  case "$segment" in
+    \"*\")
+      segment="${segment#\"}"
+      segment="${segment%\"}"
+      ;;
+    \'*\')
+      segment="${segment#\'}"
+      segment="${segment%\'}"
+      ;;
+  esac
+
+  printf '%s\n' "$segment"
+}
+
+trim_enclosing_grouping() {
+  local segment
+
+  segment=$(trim_leading_whitespace "$1")
+  segment=$(trim_trailing_whitespace "$segment")
+
+  while [[ "$segment" == \(*\) ]]; do
+    segment="${segment#(}"
+    segment="${segment%)}"
+    segment=$(trim_leading_whitespace "$segment")
+    segment=$(trim_trailing_whitespace "$segment")
+  done
+
   printf '%s\n' "$segment"
 }
 
@@ -80,18 +121,95 @@ strip_leading_env_prefixes() {
   printf '%s\n' "$STRIPPED_COMMAND_RESULT"
 }
 
+extract_shell_wrapper_payload() {
+  local segment
+
+  segment=$(trim_enclosing_grouping "$1")
+
+  if [[ "$segment" =~ ^(bash|sh|zsh)([[:space:]]+[-A-Za-z0-9_:./=]+)*[[:space:]]+-[A-Za-z]*c[A-Za-z]*[[:space:]]+(.+)$ ]]; then
+    trim_matching_outer_quotes "${BASH_REMATCH[3]}"
+    return 0
+  fi
+
+  return 1
+}
+
+extract_ruby_wrapper_payload() {
+  local segment
+  local rest
+  local token
+  local ruby_code
+  local nested_command
+
+  segment=$(trim_enclosing_grouping "$1")
+  [[ "$segment" == ruby[[:space:]]* ]] || return 1
+
+  rest="${segment#ruby}"
+  while :; do
+    rest=$(trim_leading_whitespace "$rest")
+    [[ -n "$rest" ]] || return 1
+
+    token="${rest%%[[:space:]]*}"
+    if [[ "$token" == "$rest" ]]; then
+      return 1
+    fi
+
+    if [[ "$token" == "-e" ]]; then
+      rest="${rest#"$token"}"
+      ruby_code=$(trim_matching_outer_quotes "$rest")
+      nested_command=$(printf '%s' "$ruby_code" | sed -nE "s/.*(system|exec|spawn)\\('([^']*)'\\).*/\\2/p")
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*(system|exec|spawn)\("([^"]*)"\).*/\2/p')
+      fi
+      [[ -n "$nested_command" ]] || return 1
+      printf '%s\n' "$nested_command"
+      return 0
+    fi
+
+    [[ "$token" == -* ]] || return 1
+    rest="${rest#"$token"}"
+  done
+
+  return 1
+}
+
+emit_command_variants() {
+  local command_text="$1"
+  local depth="${2:-2}"
+  local nested=""
+  local normalized=""
+
+  normalized=$(trim_enclosing_grouping "$command_text")
+  [[ -n "$normalized" ]] || return 0
+
+  printf '%s\n' "$normalized"
+
+  [[ "$depth" -gt 0 ]] || return 0
+
+  if nested=$(extract_shell_wrapper_payload "$normalized"); then
+    emit_command_variants "$nested" $(( depth - 1 ))
+  fi
+
+  if nested=$(extract_ruby_wrapper_payload "$normalized"); then
+    emit_command_variants "$nested" $(( depth - 1 ))
+  fi
+}
+
 is_destructive_db_command() {
   local command_text="$1"
   local segment
+  local candidate
 
   while IFS= read -r segment; do
     segment=$(strip_leading_env_prefixes "$segment")
     [[ -n "$segment" ]] || continue
 
-    if [[ "$segment" =~ ^((bundle[[:space:]]+exec[[:space:]]+)?((\./)?bin/)?(rails|rake))([[:space:]]|$) ]] &&
-      printf '%s' "$segment" | grep -qE "(^|[[:space:]])['\"]?db:(drop|reset|purge)(:[[:alnum:]_:-]+)?['\"]?([[:space:]]|$)"; then
-      return 0
-    fi
+    while IFS= read -r candidate; do
+      if [[ "$candidate" =~ ^((bundle[[:space:]]+exec[[:space:]]+)?((\./)?bin/)?(rails|rake))([[:space:]]|$) ]] &&
+        printf '%s' "$candidate" | grep -qE "(^|[[:space:]])['\"]?db:(drop|reset|purge)(:[[:alnum:]_:-]+)?['\"]?([[:space:]]|$)"; then
+        return 0
+      fi
+    done < <(emit_command_variants "$segment")
   done < <(normalize_command_segments "$command_text")
 
   return 1
@@ -100,16 +218,19 @@ is_destructive_db_command() {
 is_destructive_redis_command() {
   local command_text="$1"
   local segment
+  local candidate
   local lowered
 
   while IFS= read -r segment; do
     segment=$(strip_leading_env_prefixes "$segment")
     [[ -n "$segment" ]] || continue
 
-    lowered=$(to_ascii_lower "$segment")
-    if [[ "$lowered" =~ ^redis-cli([[:space:]]+[^[:space:]]+)*[[:space:]]+flush(all|db)([[:space:]]|$) ]]; then
-      return 0
-    fi
+    while IFS= read -r candidate; do
+      lowered=$(to_ascii_lower "$candidate")
+      if [[ "$lowered" =~ ^redis-cli([[:space:]]+[^[:space:]]+)*[[:space:]]+flush(all|db)([[:space:]]|$) ]]; then
+        return 0
+      fi
+    done < <(emit_command_variants "$segment")
   done < <(normalize_command_segments "$command_text")
 
   return 1
@@ -118,15 +239,18 @@ is_destructive_redis_command() {
 is_force_push_command() {
   local command_text="$1"
   local segment
+  local candidate
 
   while IFS= read -r segment; do
     segment=$(strip_leading_env_prefixes "$segment")
     [[ -n "$segment" ]] || continue
 
-    if [[ "$segment" =~ ^git([[:space:]]+-c[[:space:]]+[^[:space:]]+)*[[:space:]]+push([[:space:]]|$) ]] &&
-      printf '%s' "$segment" | grep -qE '(^|[[:space:]])(--force|-f)([[:space:]]|$)'; then
-      return 0
-    fi
+    while IFS= read -r candidate; do
+      if [[ "$candidate" =~ ^git([[:space:]]+-c[[:space:]]+[^[:space:]]+)*[[:space:]]+push([[:space:]]|$) ]] &&
+        printf '%s' "$candidate" | grep -qE '(^|[[:space:]])(--force|-f)([[:space:]]|$)'; then
+        return 0
+      fi
+    done < <(emit_command_variants "$segment")
   done < <(normalize_command_segments "$command_text")
 
   return 1
@@ -139,21 +263,24 @@ is_harmless_env_probe() {
 is_production_env_command() {
   local command_text="$1"
   local segment
+  local candidate
 
   while IFS= read -r segment; do
-    split_leading_env_prefixes "$segment"
-    [[ -n "$LEADING_ENV_PREFIXES_RESULT" ]] || continue
-    [[ -n "$STRIPPED_COMMAND_RESULT" ]] || continue
+    while IFS= read -r candidate; do
+      split_leading_env_prefixes "$candidate"
+      [[ -n "$LEADING_ENV_PREFIXES_RESULT" ]] || continue
+      [[ -n "$STRIPPED_COMMAND_RESULT" ]] || continue
 
-    if ! printf '%s' "$LEADING_ENV_PREFIXES_RESULT" | grep -qiE '(^|[[:space:]])(RAILS_ENV|RACK_ENV)=["'\'']?(prod|production)["'\'']?([[:space:]]|$)'; then
-      continue
-    fi
+      if ! printf '%s' "$LEADING_ENV_PREFIXES_RESULT" | grep -qiE '(^|[[:space:]])(RAILS_ENV|RACK_ENV)=["'\'']?(prod|production)["'\'']?([[:space:]]|$)'; then
+        continue
+      fi
 
-    if is_harmless_env_probe "$STRIPPED_COMMAND_RESULT"; then
-      continue
-    fi
+      if is_harmless_env_probe "$STRIPPED_COMMAND_RESULT"; then
+        continue
+      fi
 
-    return 0
+      return 0
+    done < <(emit_command_variants "$segment")
   done < <(normalize_command_segments "$command_text")
 
   return 1

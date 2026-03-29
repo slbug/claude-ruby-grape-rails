@@ -74,8 +74,8 @@ update_file() {
   fi
 
   if ! grep -q "$start_marker" "$file"; then
-    log_warn "Markers not found in $file — skipping"
-    return 0
+    log_error "Markers not found in $file"
+    return 1
   fi
 
   # Generate content using Ruby
@@ -115,6 +115,48 @@ generate_whole_file() {
 
   ruby "$RUBY_SCRIPT" "$content_type" > "$output_file"
   log_info "Generated $output_file"
+}
+
+update_judge_file() {
+  local judge_file="${REPO_ROOT}/plugins/ruby-grape-rails/agents/iron-law-judge.md"
+  local judge_start_marker="<!-- IRON_LAWS_JUDGE_START -->"
+  local judge_end_marker="<!-- IRON_LAWS_JUDGE_END -->"
+  local judge_content
+
+  if [[ ! -f "$judge_file" ]]; then
+    log_error "File not found: $judge_file"
+    return 1
+  fi
+
+  if ! grep -q "$judge_start_marker" "$judge_file"; then
+    log_error "Markers not found in $judge_file"
+    return 1
+  fi
+
+  judge_content=$(ruby "$RUBY_SCRIPT" judge)
+
+  ruby -e '
+    file = ARGV[0]
+    start_marker = ARGV[1]
+    end_marker = ARGV[2]
+    new_content = STDIN.read
+
+    content = File.read(file)
+
+    pattern = /(#{Regexp.escape(start_marker)}).*?(#{Regexp.escape(end_marker)})/m
+    unless content.match?(pattern)
+      warn "Bounded replacement markers not found or malformed in #{file}"
+      exit 1
+    end
+    replacement = "#{start_marker}\n\n<!-- GENERATED FROM iron-laws.yml — DO NOT EDIT -->\n\n#{new_content}\n#{end_marker}"
+
+    new_file_content = content.sub(pattern, replacement)
+
+    File.write(file, new_file_content)
+    puts "Updated #{file}"
+  ' "$judge_file" "$judge_start_marker" "$judge_end_marker" <<< "$judge_content"
+
+  log_info "Updated $judge_file"
 }
 
 # Main generation
@@ -169,45 +211,7 @@ generate_all() {
   case "$target" in
     judge|all)
       log_info "Generating iron-law-judge.md section..."
-      # Use special markers for judge file (IRON_LAWS_JUDGE_START/END)
-      local judge_file="${REPO_ROOT}/plugins/ruby-grape-rails/agents/iron-law-judge.md"
-      local judge_start_marker="<!-- IRON_LAWS_JUDGE_START -->"
-      local judge_end_marker="<!-- IRON_LAWS_JUDGE_END -->"
-
-      if [[ ! -f "$judge_file" ]]; then
-        log_error "File not found: $judge_file"
-      elif ! grep -q "$judge_start_marker" "$judge_file"; then
-        log_warn "Markers not found in $judge_file — skipping"
-      else
-        # Generate content using Ruby
-        local judge_content
-        judge_content=$(ruby "$RUBY_SCRIPT" judge)
-
-        # Update file using Ruby
-        ruby -e '
-          file = ARGV[0]
-          start_marker = ARGV[1]
-          end_marker = ARGV[2]
-          new_content = STDIN.read
-
-          content = File.read(file)
-
-          # Find and replace bounded section
-          pattern = /(#{Regexp.escape(start_marker)}).*?(#{Regexp.escape(end_marker)})/m
-          unless content.match?(pattern)
-            warn "Bounded replacement markers not found or malformed in #{file}"
-            exit 1
-          end
-          replacement = "#{start_marker}\n\n<!-- GENERATED FROM iron-laws.yml — DO NOT EDIT -->\n\n#{new_content}\n#{end_marker}"
-
-          new_file_content = content.sub(pattern, replacement)
-
-          File.write(file, new_file_content)
-          puts "Updated #{file}"
-        ' "$judge_file" "$judge_start_marker" "$judge_end_marker" <<< "$judge_content"
-
-        log_info "Updated $judge_file"
-      fi
+      update_judge_file
       ;;
   esac
 

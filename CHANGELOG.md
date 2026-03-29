@@ -51,11 +51,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   to use path-safe file handling instead of brittle whitespace-splitting loops.
 - **Dangerous-op blocking and Ruby hook detection are now more consistent** —
   the destructive-op hook now covers quoted and namespaced DB tasks,
-  `git -c ... push --force`, and Redis flushes under stock macOS Bash, while
-  Ruby gem detection now understands `gem(...)` and gemspec-driven repos across
-  the runtime detector, stack detector, and formatter. The Ruby-ish post-edit
-  hook surface was also collapsed behind a shared wrapper to reduce repeated
-  wiring drift.
+  `git -c ... push --force`, common `bash -lc` / `sh -lc` / `ruby -e
+  system(...)` wrapper forms, and Redis flushes under stock macOS Bash, while
+  Ruby gem detection now understands `gem(...)` and gemspec-driven repos
+  across the runtime detector, stack detector, and formatter. The Ruby-ish
+  post-edit hook surface was also collapsed behind a shared wrapper to reduce
+  repeated wiring drift.
 - **Secret scanning, runtime detection, and permission extraction are more
   consistent under degraded conditions** — Betterleaks runtime failures are now
   surfaced instead of silently passing, runtime detection no longer needs the
@@ -63,6 +64,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   fallbacks, the permissions extractor uses safer repo-root heuristics plus
   explicit transcript caps, and the Iron Law output generator no longer depends
   on the Ruby helper having an executable bit.
+- **Iron Law projection updates now fail closed when bounded markers are
+  missing** — `generate-iron-law-outputs.sh` no longer warns-and-skips missing
+  bounded sections for README or judge projections, which reduces silent
+  partial-regeneration risk.
 - **Full Rails app detection is more conservative without depending only on
   `bin/rails`** — runtime fallback and verifier guidance now treat a repo as a
   runnable full Rails app only when it has a real Rails entrypoint or the

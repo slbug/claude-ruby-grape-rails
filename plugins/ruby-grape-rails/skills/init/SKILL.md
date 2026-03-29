@@ -40,14 +40,28 @@ ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
 REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 RUNTIME_ENV_PATH="${REPO_ROOT}/.claude/.runtime_env"
 RTK_AVAILABLE_CACHED=""
+DCG_AVAILABLE_CACHED=""
+SHELLFIRM_AVAILABLE_CACHED=""
 if [[ -f "$RUNTIME_ENV_PATH" && ! -L "$RUNTIME_ENV_PATH" ]]; then
   RTK_AVAILABLE_CACHED=$(grep -E '^RTK_AVAILABLE=' "$RUNTIME_ENV_PATH" | tail -n 1 | cut -d= -f2-)
+  DCG_AVAILABLE_CACHED=$(grep -E '^DCG_AVAILABLE=' "$RUNTIME_ENV_PATH" | tail -n 1 | cut -d= -f2-)
+  SHELLFIRM_AVAILABLE_CACHED=$(grep -E '^SHELLFIRM_AVAILABLE=' "$RUNTIME_ENV_PATH" | tail -n 1 | cut -d= -f2-)
 fi
 command -v betterleaks &> /dev/null && echo "Betterleaks: available"
 if [[ "$RTK_AVAILABLE_CACHED" == "true" ]]; then
   echo "RTK: available (cached)"
 elif command -v rtk &> /dev/null; then
   echo "RTK: available"
+fi
+if [[ "$DCG_AVAILABLE_CACHED" == "true" ]]; then
+  echo "DCG: available (cached)"
+elif command -v dcg &> /dev/null; then
+  echo "DCG: available"
+fi
+if [[ "$SHELLFIRM_AVAILABLE_CACHED" == "true" ]]; then
+  echo "Shellfirm: available (cached)"
+elif command -v shellfirm &> /dev/null; then
+  echo "Shellfirm: available"
 fi
 ```
 
@@ -70,6 +84,17 @@ Optional external integration:
 - if they say yes, tell them: `For automatic Claude command rewriting, run: rtk init -g`
 - do **not** inject long RTK command-preference rules into the project
 - RTK hook installation is external to this plugin; detection alone does not make Claude use RTK
+- prefer `DCG_AVAILABLE=true` from a non-symlink `.claude/.runtime_env` when present; otherwise fall back to `command -v dcg`
+- if DCG is available, ask the user whether they want to enable DCG for Claude Code
+- if they say yes, tell them: `For Claude Code destructive-command blocking, run: dcg setup`
+- if they want the manual hook shape, use `${CLAUDE_SKILL_DIR}/references/external-integrations.md`
+- DCG hook installation is external to this plugin; detection alone does not make Claude use DCG
+- prefer `SHELLFIRM_AVAILABLE=true` from a non-symlink `.claude/.runtime_env` when present; otherwise fall back to `command -v shellfirm`
+- if Shellfirm is available, ask the user whether they want to connect Shellfirm to Claude Code
+- if they say yes, tell them: `For Claude Code hook and MCP safety tooling, run: shellfirm connect claude-code`
+- if they want a project-policy starting point, use `${CLAUDE_SKILL_DIR}/references/external-integrations.md` for the recommended scope and boundaries
+- Shellfirm hook and MCP installation are external to this plugin; detection alone does not make Claude use Shellfirm
+- use `${CLAUDE_SKILL_DIR}/references/external-integrations.md` for the exact recommended setup commands
 
 Verification/tooling policy:
 
