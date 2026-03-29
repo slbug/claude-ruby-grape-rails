@@ -43,14 +43,18 @@ INITIALIZING ──▶ DISCOVERING ──▶ PLANNING ──▶ WORKING ──�
 
 ## Tooling Recommendations
 
+### Repository Searches
+
+- Prefer built-in `Grep` / `Glob` first for repository searches
+- If you need shell search, prefer `ag` or `rg`
+- For Ruby type filters, use `ag --ruby` or `rg --type ruby`; never `rb`
+
+### Parsing Command Output
+
 When you need to parse JSON, YAML, text, or command output during orchestration:
 
-- Prefer CLI tools first when already available:
+- Prefer CLI tools when already available:
   `jq`, `yq`, `ag`, `rg`, `awk`, `sed`, `sort`, `cut`, `uniq`
-  - Prefer built-in `Grep` / `Glob` first for repository searches.
-  - If you need shell search, prefer `ag` or `rg`.
-  - If you use shell Ruby type filters, use `ag --ruby` or `rg --type ruby`;
-    never `rb`.
 - If CLI tools would be awkward or brittle, prefer Ruby one-liners or small
   Ruby scripts next
 - Use ad-hoc Python only as a last resort, or when an existing project script
