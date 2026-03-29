@@ -37,6 +37,7 @@ Keep those surfaces separate.
 - cite findings with `file:line`
 - keep review artifacts findings-only
 - do not add task lists to the review artifact itself
+- do not add `## Next Steps` or other follow-up planning sections to the review artifact itself
 - keep the mandatory at-a-glance finding table
 
 ## Provenance Sidecar Expectations

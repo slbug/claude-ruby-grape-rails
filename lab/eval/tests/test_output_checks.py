@@ -138,6 +138,20 @@ Use the maintained upstream path.
         passed, _ = output_checks.has_inline_tier_markers(content, minimum=2)
         self.assertTrue(passed)
 
+    def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
+        content = """# Review: sample
+
+## Summary
+
+- Clean enough.
+
+## Next Steps
+
+Use /rb:triage next.
+"""
+        passed, _ = output_checks.review_has_no_followup_sections(content)
+        self.assertFalse(passed)
+
 
 if __name__ == "__main__":
     unittest.main()

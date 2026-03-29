@@ -17,7 +17,37 @@ TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null) || exit 0
 COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
 [[ -n "$COMMAND" ]] || exit 0
 
-if printf '%s' "$COMMAND" | grep -qE '(^|[[:space:]])(bin/rails|bundle exec rails|rails|rake)[[:space:]]+db:(drop|reset|purge)([[:space:]]|$)'; then
+is_destructive_db_command() {
+  local command_text="$1"
+  local segments segment
+
+  segments=${command_text//$'\r'/}
+  segments=${segments//$'\n'/;}
+  segments=${segments//&&/;}
+  segments=${segments//||/;}
+  segments=${segments//|/;}
+  segments=${segments//;/;}
+  segments=${segments//(/;}
+  segments=${segments//)/;}
+
+  while IFS= read -r segment; do
+    segment="${segment#"${segment%%[![:space:]]*}"}"
+    [[ -n "$segment" ]] || continue
+
+    while [[ "$segment" =~ ^[A-Za-z_][A-Za-z0-9_]*=([^[:space:]]+|\"[^\"]*\"|\'[^\']*\')[[:space:]]+ ]]; do
+      segment="${segment#"${BASH_REMATCH[0]}"}"
+      segment="${segment#"${segment%%[![:space:]]*}"}"
+    done
+
+    if [[ "$segment" =~ ^((\./)?bin/(rails|rake)|bundle[[:space:]]+exec[[:space:]]+(rails|rake)|rails|rake)[[:space:]]+db:(drop|reset|purge)([[:space:]]|$) ]]; then
+      return 0
+    fi
+  done < <(printf '%s\n' "$segments" | tr ';' '\n')
+
+  return 1
+}
+
+if is_destructive_db_command "$COMMAND"; then
   cat >&2 <<'MSG'
 BLOCKED: destructive Rails database command detected.
 Use a targeted rollback or migration instead. If you truly need a full reset,

@@ -211,7 +211,7 @@ Defined in `hooks/hooks.json`:
 ```json
 {
   "hooks": {
-    "PreToolUse": [...],            // Block dangerous ops (rails/rake db:drop, force push, RAILS_ENV=production)
+    "PreToolUse": [...],            // Block dangerous ops (rails/bin/rails/rake db:drop variants, force push, RAILS_ENV=production)
     "PostToolUse": [...],          // Format + Iron Law verify + security + progress + plan STOP + debug stmt
     "PostToolUseFailure": [...],   // Ruby failure hints + error critic for bundle commands
     "SubagentStart": [...],        // Iron Laws injection into all subagents
@@ -228,7 +228,11 @@ Defined in `hooks/hooks.json`:
 
 **Current hooks:**
 
-- `PreToolUse` (Bash): Block destructive operations (`rails` / `rake` `db:drop/reset/purge`, `git push --force`, `RAILS_ENV=production`) before execution
+- `PreToolUse` (Bash): Block destructive operations
+  (`rails` / `bin/rails` / `./bin/rails` / `bundle exec rails` / `rake` /
+  `bin/rake` / `./bin/rake` / `bundle exec rake`
+  `db:drop/reset/purge`, `git push --force`, `RAILS_ENV=production`) before
+  execution
 - `PostToolUse` (Edit|Write): Multiple scripts run in sequence:
   - `iron-law-verifier.sh`: **Programmatic Iron Law verification** (scans code for violations) — all Edit|Write
   - `security-reminder.sh`: Security Iron Laws for auth files — all Edit|Write
@@ -322,7 +326,7 @@ claude --plugin-dir ./plugins/ruby-grape-rails
 # Check: .claude/plans/ has checkbox plan
 
 /rb:work .claude/plans/test-feature/plan.md
-# Check: Checkboxes update, progress logged in plans/test-feature/progress.md
+# Check: Checkboxes update, progress logged in .claude/plans/test-feature/progress.md
 ```
 
 ### Adding new agent
@@ -427,7 +431,10 @@ Only trim when content is purely informational and not execution-critical.
 ### Release
 
 - [ ] All markdown passes linting
-- [ ] Version bumped in `plugins/ruby-grape-rails/.claude-plugin/plugin.json`
+- [ ] Versions aligned in:
+  - `package.json`
+  - `.claude-plugin/marketplace.json`
+  - `plugins/ruby-grape-rails/.claude-plugin/plugin.json`
 - [ ] `CHANGELOG.md` updated with all changes under new version heading
 - [ ] README updated
 - [ ] `/rb:intro` tutorial content still accurate (commands, agents, features)
@@ -440,14 +447,19 @@ The plugin uses [semantic versioning](https://semver.org/):
 - **MINOR**: New features (new hooks, skills, agents, commands)
 - **PATCH**: Bug fixes, doc updates, description improvements
 
-**IMPORTANT**: Users only receive updates when the version in `plugin.json`
-changes. If you push code without bumping the version, existing users won't
-see the changes due to caching.
+**IMPORTANT**: Keep release versions aligned across `package.json`,
+`.claude-plugin/marketplace.json`, and
+`plugins/ruby-grape-rails/.claude-plugin/plugin.json`. Marketplace metadata,
+published package metadata, and the shipped plugin manifest should move
+together when preparing a release.
 
-When making changes, ALWAYS update `CHANGELOG.md` under the current
-`[Unreleased]` section. Use categories: Added, Changed, Fixed, Removed.
-On release, rename `[Unreleased]` to `[X.Y.Z] - YYYY-MM-DD` and bump
-`plugin.json`.
+When making changes, keep `CHANGELOG.md` aligned with release state. Use
+categories: Added, Changed, Fixed, Removed.
+
+- if the current version is already treated as released, add new notes under
+  `[Unreleased]`
+- if preparing the next release, move that work into the target version section
+  and bump all three versioned metadata files together
 
 ## Backlog
 
@@ -783,6 +795,8 @@ Minimum runtime: `python3` 3.10+ for `lab/eval/`.
 - `make eval` / `npm run eval` for lint + injection check + changed surfaces
 - `make eval-all` / `npm run eval:all` for the full eval snapshot
 - `make eval-ci` / `npm run eval:ci` for the contributor CI gate
+- `make eval-output` / `npm run eval:output` for deterministic research/review
+  artifact and provenance checks
 - `make security-injection` / `npm run security:injection`
 - `make eval-tests` / `npm run eval:test` for the default contributor test
   path (prefers `pytest` when installed, otherwise falls back to `unittest`)
@@ -799,14 +813,16 @@ Current `lab/eval/` scope:
   `research`
 - structural scoring for all shipped agents
 - deterministic trigger corpora and confusable-pair analysis
+- deterministic research/review artifact and provenance checks
 - no model-judged behavioral routing yet
 
 For contributor workflows under `.claude/`, use this order:
 
 1. `claude plugin validate plugins/ruby-grape-rails`
 2. `make eval` or `make eval-all`
-3. `/docs-check` when Claude docs or local schema assumptions may have drifted
-4. session analytics only as corroborating, provider-scoped evidence
+3. `make eval-output` for deterministic research/review artifact fixtures
+4. `/docs-check` when Claude docs or local schema assumptions may have drifted
+5. session analytics only as corroborating, provider-scoped evidence
 
 ---
 

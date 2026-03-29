@@ -144,6 +144,12 @@ REVIEW_CHECKS: tuple[CheckSpec, ...] = (
         output_checks.review_has_no_task_lists,
     ),
     CheckSpec(
+        "review_no_followup_sections",
+        "Review does not embed follow-up planning",
+        "artifact",
+        output_checks.review_has_no_followup_sections,
+    ),
+    CheckSpec(
         "review_provenance_local_evidence",
         "Provenance records local code evidence",
         "provenance",
@@ -193,6 +199,7 @@ FIXTURES: dict[str, tuple[FixtureSpec, ...]] = {
                 "review_file_refs",
                 "review_mandatory_table",
                 "review_no_task_lists",
+                "review_no_followup_sections",
                 "review_provenance_local_evidence",
                 "provenance_claim_entries",
                 "provenance_required_fixes",

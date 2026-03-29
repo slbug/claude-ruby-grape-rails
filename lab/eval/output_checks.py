@@ -117,6 +117,16 @@ def review_has_no_task_lists(content: str) -> tuple[bool, str]:
     return not bool(match), "No task lists present" if not match else "Review should not contain task lists"
 
 
+def review_has_no_followup_sections(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
+    match = re.search(r"(?m)^## (Next Steps|Action Items|Follow-up|Follow Up|Fix Plan)\s*$", content)
+    return (
+        (True, "No follow-up planning section present")
+        if not match
+        else (False, "Review should not contain follow-up planning sections")
+    )
+
+
 def has_provenance_header(content: str) -> tuple[bool, str]:
     content = _normalize_newlines(content)
     match = re.search(r"(?m)^# Provenance: .+", content)

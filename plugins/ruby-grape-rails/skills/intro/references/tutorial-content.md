@@ -187,7 +187,7 @@ The plugin uses **layered enforcement** — some things run automatically, some 
 
 | Hook | Trigger | What It Does |
 |------|---------|-------------|
-| Dangerous ops block | Before Bash command | Blocks `rails` / `bin/rails` / `bundle exec rails` / `rake` `db:reset/drop/purge`, `git push --force`, `RAILS_ENV=prod` |
+| Dangerous ops block | Before Bash command | Blocks `rails` / `bin/rails` / `./bin/rails` / `bundle exec rails` / `rake` / `bin/rake` / `./bin/rake` / `bundle exec rake` `db:reset/drop/purge`, `git push --force`, `RAILS_ENV=prod` |
 | Format check | Every `.rb` edit | Auto-fixes with StandardRB (if configured) or RuboCop |
 | Iron Law verifier | Every `.rb` edit | Scans code content for Iron Law violations with line numbers |
 | Debug stmt warning | Every `.rb` edit | Warns about `puts`/`debugger`/`p` in production code |

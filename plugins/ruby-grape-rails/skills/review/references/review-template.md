@@ -70,16 +70,6 @@ good_code
 **File**: {path}
 **Suggestion**: {improvement idea}
 
----
-
-## Next Steps
-
-How would you like to proceed?
-
-- `/rb:triage .claude/reviews/{review-slug}.md` — Select findings and create a fix plan
-- `/rb:work` — Fix directly (for simple, clear fixes)
-- I'll handle it myself
-
 ```
 
 ## Verdict Decision Rules
@@ -116,3 +106,7 @@ Every review MUST end with this at-a-glance table (even if only 1 finding):
 **IMPORTANT**: The review template does NOT include task lists (`- [ ]`),
 fix phases, or plan modifications. Review is findings-only. Task creation
 belongs in `/rb:triage`.
+
+After presenting the final review, suggest `/rb:triage` in chat if follow-up
+planning is needed. Do not embed follow-up prompts or task-routing sections
+inside the review artifact itself.

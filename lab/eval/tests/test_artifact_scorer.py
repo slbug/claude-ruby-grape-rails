@@ -42,6 +42,7 @@ class ArtifactScorerTests(unittest.TestCase):
                 "review_file_refs",
                 "review_mandatory_table",
                 "review_no_task_lists",
+                "review_no_followup_sections",
                 "review_provenance_local_evidence",
                 "provenance_claim_entries",
                 "provenance_required_fixes",
