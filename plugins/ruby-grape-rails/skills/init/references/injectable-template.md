@@ -22,7 +22,11 @@ These rules govern ALL `/rb:*` command execution. Violations invalidate the sess
 When parsing JSON, YAML, text, or command output during `/rb:*` workflows:
 
 - Prefer CLI tools first when they are already available:
-  `jq`, `yq`, `rg`, `ag`, `awk`, `sed`, `sort`, `cut`, `uniq`
+  `jq`, `yq`, `ag`, `rg`, `awk`, `sed`, `sort`, `cut`, `uniq`
+  - Prefer built-in `Grep` / `Glob` first for repository searches.
+  - If you need shell search, prefer `ag` or `rg`.
+  - If you use shell Ruby type filters, use `ag --ruby` or `rg --type ruby`;
+    never `rb`.
 - If CLI tools would be brittle or insufficient, prefer Ruby one-liners or
   small Ruby scripts next
 - Use ad-hoc Python only as a last resort, or when an existing project/plugin

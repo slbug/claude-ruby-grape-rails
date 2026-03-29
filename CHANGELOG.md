@@ -7,6 +7,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-03-29
+
+### Changed
+
+- **Search-tool guidance now prefers built-in repository tools first** —
+  orchestrator and init prompts now recommend `Grep` / `Glob` before shell
+  search, prefer `ag` or `rg` when shell search is needed, and explicitly say
+  Ruby type filters should use `ag --ruby` or `rg --type ruby`, never `rb`.
+
 ## [1.7.0] - 2026-03-28
 
 ### Added
