@@ -32,10 +32,18 @@ Before choosing commands:
    Re-detect the wrapper from the working tree before running it.
 4. If the cache is absent, fall back to reading the repo directly.
 
+### Repository Searches
+
+- Prefer built-in `Grep` / `Glob` first for repository searches
+- If you need shell search, prefer `ag` or `rg`
+- For Ruby type filters, use `ag --ruby` or `rg --type ruby`; never `rb`
+
+### Parsing Command Output
+
 When parsing JSON, YAML, text, or command output during verification:
 
-- Prefer CLI tools first when already available:
-  `jq`, `yq`, `rg`, `ag`, `awk`, `sed`, `sort`, `cut`, `uniq`
+- Prefer CLI tools when already available:
+  `jq`, `yq`, `ag`, `rg`, `awk`, `sed`, `sort`, `cut`, `uniq`
 - If CLI tools would be awkward or brittle, prefer Ruby one-liners or small
   Ruby scripts next
 - Use ad-hoc Python only as a last resort, or when an existing project script

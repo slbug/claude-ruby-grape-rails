@@ -56,7 +56,7 @@ Identify contributor preferences visible in the session:
 - test/validation-first vs patch-first
 - terse vs detailed close-out
 - evidence-heavy review vs quick approval
-- prefers `rg` / `jq` / shell vs ad-hoc scripting
+- prefers `Grep` / `Glob`, `ag` / `rg`, `jq`, and shell vs ad-hoc scripting
 
 Only record preferences with actual transcript support.
 
