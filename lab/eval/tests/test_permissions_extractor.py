@@ -205,6 +205,81 @@ class PermissionsExtractorTests(unittest.TestCase):
         self.assertIn("bundle", groups)
         self.assertIn("rake db:migrate", groups)
 
+    def test_shell_aware_split_does_not_break_redirection_ampersands(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            write_transcript(repo, tmp, "bundle exec rspec spec/models/user_spec.rb 2>&1")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        groups = [entry["group"] for entry in report["uncovered_groups"]]
+        self.assertEqual(groups, ["bundle exec rspec"])
+
+    def test_shell_aware_split_treats_heredoc_body_as_single_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            write_transcript(
+                repo,
+                tmp,
+                "cat <<'EOF'\nfoo;bar\nEOF\n",
+            )
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        groups = [entry["group"] for entry in report["uncovered_groups"]]
+        self.assertEqual(groups, ["cat"])
+
+    def test_shell_aware_split_ignores_comment_suffixes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            write_transcript(repo, tmp, "echo ok # this ; is comment")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        groups = [entry["group"] for entry in report["uncovered_groups"]]
+        self.assertEqual(groups, ["echo"])
+
+    def test_shell_aware_split_separates_single_pipelines(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            write_transcript(repo, tmp, "ps aux | grep sidekiq")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        groups = {entry["group"] for entry in report["uncovered_groups"]}
+        self.assertIn("ps", groups)
+        self.assertIn("grep", groups)
+
+    def test_git_grouping_skips_leading_git_options(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            write_transcript(repo, tmp, "git -C services/payments status")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        groups = [entry["group"] for entry in report["uncovered_groups"]]
+        self.assertEqual(groups, ["git status"])
+
     def test_dot_slash_binstub_commands_normalize_for_grouping_and_coverage(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -270,6 +345,23 @@ class PermissionsExtractorTests(unittest.TestCase):
             [(repo / ".claude" / "settings.json").resolve()],
         )
         self.assertEqual(report["uncovered_groups"][0]["group"], "bundle exec rubocop")
+
+    def test_deny_patterns_participate_in_deprecated_pattern_reporting(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            (repo / ".claude" / "settings.json").write_text(
+                json.dumps({"permissions": {"deny": ["Bash(git:*)"]}}),
+                encoding="utf-8",
+            )
+            write_transcript(repo, tmp, "bundle exec rubocop")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        self.assertIn("Bash(git:*)", report["deprecated_patterns"])
 
 
 if __name__ == "__main__":

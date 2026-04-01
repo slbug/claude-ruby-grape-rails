@@ -14,8 +14,21 @@ emit_missing_dependency_block() {
 
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 command -v grep >/dev/null 2>&1 || emit_missing_dependency_block "grep"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
+# shellcheck disable=SC1090,SC1091
+source "$ROOT_LIB"
+read_hook_input
+case "${HOOK_INPUT_STATUS:-ok}" in
+  invalid|truncated)
+    echo "BLOCKED: ${HOOK_NAME} could not safely inspect an invalid hook payload." >&2
+    exit 2
+    ;;
+esac
+INPUT="$HOOK_INPUT_VALUE"
 
-COMMAND=$(jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
+COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
 [[ -n "$COMMAND" ]] || exit 0
 
 HINTS=""

@@ -16,7 +16,12 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+case "$SCRIPT_PATH" in
+  */*) SCRIPT_BASE_DIR="${SCRIPT_PATH%/*}" ;;
+  *) SCRIPT_BASE_DIR="." ;;
+esac
+SCRIPT_DIR="$(cd "${SCRIPT_BASE_DIR}" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PLUGIN_ROOT="plugins/ruby-grape-rails"
 MODE="--changed"
@@ -64,6 +69,16 @@ require_python_310() {
 
 require_python_310
 
+require_command() {
+  local command_name="$1"
+  local reason="$2"
+
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "ERROR: ${command_name} is required for ${reason}." >&2
+    exit 1
+  fi
+}
+
 validate_threshold() {
   local env_name="$1"
   local value="$2"
@@ -77,10 +92,10 @@ try:
 except ValueError:
     raise SystemExit(1)
 
-raise SystemExit(0 if math.isfinite(value) else 1)
+raise SystemExit(0 if math.isfinite(value) and 0.0 <= value <= 1.0 else 1)
 PY
   then
-    echo "ERROR: ${env_name} must be a finite numeric threshold, got: ${value}" >&2
+    echo "ERROR: ${env_name} must be a finite numeric threshold between 0 and 1, got: ${value}" >&2
     exit 1
   fi
 }
@@ -248,6 +263,7 @@ PY
 }
 
 run_lint() {
+  require_command npm "linting in ${MODE} mode"
   npm run lint --silent
 }
 

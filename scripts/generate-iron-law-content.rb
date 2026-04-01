@@ -243,7 +243,7 @@ def generate_readme(yaml)
   puts '### Enforcement'
   puts ''
   programmatic_count = yaml['laws'].filter_map { |law| law['detector_id'] }.uniq.count
-  puts "- **Programmatic**: #{programmatic_count} programmatic detectors checked automatically on every file edit"
+  puts "- **Programmatic**: #{programmatic_count} programmatic detectors checked automatically on targeted Ruby-ish edits"
   puts "- **Behavioral**: All #{yaml['total_laws']} laws injected into subagent context"
   puts '- **Review-time**: Full audit during `/rb:review`'
   puts ''

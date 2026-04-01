@@ -45,7 +45,7 @@ fi
 CLAUDE_DIR="${REPO_ROOT}/.claude"
 PLANS_DIR="${CLAUDE_DIR}/plans"
 ACTIVE_PLAN_MARKER="${CLAUDE_DIR}/ACTIVE_PLAN"
-MARKDOWN_UNCHECKED_TASK_PATTERN='^[[:space:]]*([-*+]|[0-9]+\.)[[:space:]]+\[ \]'
+MARKDOWN_UNCHECKED_TASK_PATTERN='^[[:space:]]*(([-*+]|[0-9]+\.)[[:space:]]+)?\[ \]'
 
 resolve_plan_dir() {
   local plan_dir="$1"

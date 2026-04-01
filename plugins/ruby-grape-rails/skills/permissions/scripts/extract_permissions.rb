@@ -183,6 +183,35 @@ def command_group(command)
   return first_line if core_tokens.empty?
   core_tokens[0] = core_tokens[0].sub(%r{\A\./(?=(bin|script)/)}, '')
 
+  if core_tokens[0] == 'git'
+    option_takes_value = lambda do |token|
+      %w[
+        -C
+        -c
+        --git-dir
+        --work-tree
+        --namespace
+        --super-prefix
+        --config-env
+        --exec-path
+      ].include?(token)
+    end
+
+    index = 1
+    while index < core_tokens.length
+      token = core_tokens[index]
+      break unless token.start_with?('-')
+
+      if option_takes_value.call(token)
+        index += 2
+      else
+        index += 1
+      end
+    end
+
+    return core_tokens[index] ? "git #{core_tokens[index]}" : 'git'
+  end
+
   if core_tokens[0] == 'bundle' && core_tokens[1] == 'exec'
     if core_tokens[2] == 'rails' && core_tokens[3]
       core_tokens[0, 4].join(' ')
@@ -212,6 +241,7 @@ end
 
 def split_shell_commands(command)
   normalized = command.gsub(/\\\n/, ' ')
+  return [normalized.strip] if normalized.match?(/(^|[[:space:];(|&])<<-?\s*['"]?[A-Za-z_][A-Za-z0-9_]*['"]?/)
   commands = []
   current = +''
   in_single = false
@@ -254,6 +284,14 @@ def split_shell_commands(command)
       escaped = true
       current << char
       index += 1
+    when '#'
+      if current.empty? || current[-1].match?(/[[:space:];|&()]/)
+        index += 1
+        index += 1 while index < normalized.length && normalized[index] != "\n"
+      else
+        current << char
+        index += 1
+      end
     when "'"
       in_single = true
       current << char
@@ -268,10 +306,21 @@ def split_shell_commands(command)
       current = +''
       index += 1
     when '&'
-      stripped = current.strip
-      commands << stripped unless stripped.empty?
-      current = +''
-      index += (next_char == '&' ? 2 : 1)
+      prev_char = index.positive? ? normalized[index - 1] : nil
+      if next_char == '&'
+        stripped = current.strip
+        commands << stripped unless stripped.empty?
+        current = +''
+        index += 2
+      elsif prev_char == '>' || prev_char == '<' || next_char == '>'
+        current << char
+        index += 1
+      else
+        stripped = current.strip
+        commands << stripped unless stripped.empty?
+        current = +''
+        index += 1
+      end
     when '|'
       if next_char == '|'
         stripped = current.strip
@@ -279,8 +328,10 @@ def split_shell_commands(command)
         current = +''
         index += 2
       else
-        current << char
-        index += 1
+        stripped = current.strip
+        commands << stripped unless stripped.empty?
+        current = +''
+        index += (next_char == '&' ? 2 : 1)
       end
     else
       current << char
@@ -394,15 +445,17 @@ rescue Errno::ENOENT
   next
 end
 
-deprecated_patterns = all_allow.select do |permission|
+all_patterns = all_allow + all_deny
+
+deprecated_patterns = all_patterns.select do |permission|
   permission.start_with?('Bash(') && permission.include?(':*)')
 end.uniq.sort
-garbage_patterns = all_allow.select do |permission|
+garbage_patterns = all_patterns.select do |permission|
   permission.match?(/\ABash\((done|fi|then|do|EOF|EOT|RUBY|BASH)\)\z/) ||
     permission.include?('__NEW_LINE_')
 end.uniq.sort
 
-duplicate_patterns = all_allow
+duplicate_patterns = all_patterns
                      .group_by { |permission| permission }
                      .select { |_permission, entries| entries.length > 1 }
                      .keys

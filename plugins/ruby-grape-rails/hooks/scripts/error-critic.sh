@@ -14,6 +14,8 @@ emit_missing_dependency_block() {
 
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 command -v grep >/dev/null 2>&1 || emit_missing_dependency_block "grep"
+command -v cksum >/dev/null 2>&1 || emit_missing_dependency_block "cksum"
+command -v awk >/dev/null 2>&1 || emit_missing_dependency_block "awk"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
@@ -53,6 +55,7 @@ emit_error_critic_write_warning() {
 
 SESSION_KEY=$(printf '%s' "$SESSION_ID" | tr -c '[:alnum:]_-' '_')
 CMD_KEY=$(printf '%s' "$COMMAND" | cksum | awk '{print $1}')
+[[ -n "$CMD_KEY" ]] || emit_error_critic_state_warning
 [[ ! -L "$CLAUDE_DIR" ]] || exit 0
 mkdir -p -- "$CLAUDE_DIR" || emit_error_critic_state_warning
 [[ -d "$CLAUDE_DIR" ]] || emit_error_critic_state_warning

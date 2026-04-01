@@ -35,10 +35,12 @@ VERIFY_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/verify-ruby.sh
 RUBYISH_POST_EDIT = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/rubyish-post-edit.sh"
 STOP_FAILURE_LOG = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/stop-failure-log.sh"
 ERROR_CRITIC = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/error-critic.sh"
+RUBY_FAILURE_HINTS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/ruby-failure-hints.sh"
 RUBY_POST_TOOL_USE_FAILURE = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/ruby-post-tool-use-failure.sh"
 PRECOMPACT_RULES = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/precompact-rules.sh"
 POSTCOMPACT_VERIFY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/postcompact-verify.sh"
 CHECK_DYNAMIC_INJECTION = REPO_ROOT / "scripts/check-dynamic-injection.sh"
+FETCH_CLAUDE_DOCS = REPO_ROOT / "scripts/fetch-claude-docs.sh"
 RUN_EVAL = REPO_ROOT / "lab/eval/run_eval.sh"
 GENERATE_IRON_LAW_CONTENT = REPO_ROOT / "scripts/generate-iron-law-content.rb"
 GENERATE_IRON_LAW_OUTPUTS = REPO_ROOT / "scripts/generate-iron-law-outputs.sh"
@@ -72,10 +74,10 @@ def run_block_hook(
     )
 
 
-def run_detect_stack(tmpdir: str) -> dict[str, str]:
+def run_detect_stack(tmpdir: str, cwd: str | None = None) -> dict[str, str]:
     result = subprocess.run(
         ["ruby", str(DETECT_STACK)],
-        cwd=tmpdir,
+        cwd=cwd or tmpdir,
         capture_output=True,
         text=True,
         check=False,
@@ -704,6 +706,32 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("rails", values["DETECTED_STACK"])
         self.assertIn("sidekiq", values["DETECTED_STACK"])
 
+    def test_detect_stack_finds_repo_root_from_nested_cwd(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / "Gemfile").write_text(
+                'source "https://rubygems.org"\n\ngem "rails"\n',
+                encoding="utf-8",
+            )
+            (tmp / "Gemfile.lock").write_text(
+                textwrap.dedent(
+                    """
+                    GEM
+                      specs:
+                        rails (8.1.0)
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            nested = tmp / "app" / "models"
+            nested.mkdir(parents=True)
+
+            values = run_detect_stack(tmpdir, cwd=str(nested))
+
+        self.assertEqual(values["RAILS_VERSION"], "8.1.0")
+        self.assertIn("rails", values["DETECTED_STACK"])
+
     def test_detect_stack_supports_gemspec_driven_repos(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -743,6 +771,39 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(values["RAILS_VERSION"], "8.1.0")
         self.assertIn("rails", values["DETECTED_STACK"])
         self.assertIn("grape", values["DETECTED_STACK"])
+
+    def test_detect_stack_supports_gemspec_only_repos(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / "demo.gemspec").write_text(
+                textwrap.dedent(
+                    """
+                    Gem::Specification.new do |spec|
+                      spec.name = "demo"
+                      spec.version = "0.1.0"
+                      spec.add_dependency "rails", "~> 8.1"
+                    end
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            (tmp / "Gemfile.lock").write_text(
+                textwrap.dedent(
+                    """
+                    GEM
+                      specs:
+                        rails (8.1.0)
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+
+            values = run_detect_stack(tmpdir)
+
+        self.assertEqual(values["RAILS_VERSION"], "8.1.0")
+        self.assertIn("rails", values["DETECTED_STACK"])
 
     def test_detect_stack_ignores_transitive_lockfile_specs_for_gemspec_repo(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -787,6 +848,20 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(values.get("DETECTED_STACK", ""), "")
         self.assertNotIn("RAILS_VERSION", values)
+
+    def test_detect_stack_ignores_symlinked_manifests(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as extdir:
+            tmp = Path(tmpdir)
+            external = Path(extdir) / "Gemfile"
+            external.write_text(
+                'source "https://rubygems.org"\n\ngem "grape"\n',
+                encoding="utf-8",
+            )
+            os.symlink(external, tmp / "Gemfile")
+
+            values = run_detect_stack(tmpdir)
+
+        self.assertEqual(values, {})
 
     def test_detect_stack_finds_nested_package_manifests(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1397,6 +1472,18 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(Path(result.stdout.strip()).resolve(), plan_dir.resolve())
 
+    def test_active_plan_fallback_respects_bare_markdown_checkboxes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plan_dir = tmp / ".claude" / "plans" / "demo"
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "plan.md").write_text("# Demo\n\n[ ] first task\n", encoding="utf-8")
+
+            result = run_active_plan_query(tmpdir)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(Path(result.stdout.strip()).resolve(), plan_dir.resolve())
+
     def test_plan_hooks_count_common_markdown_checkbox_variants(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -1527,7 +1614,7 @@ class RuntimeScriptTests(unittest.TestCase):
             env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
 
             result = subprocess.run(
-                ["bash", str(ERROR_CRITIC)],
+                ["/bin/bash", str(ERROR_CRITIC)],
                 input=json.dumps(payload),
                 capture_output=True,
                 text=True,
@@ -1538,6 +1625,54 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         self.assertIn("hook-state could not be updated", result.stderr)
+
+    def test_error_critic_blocks_when_cksum_or_awk_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            for name in ("jq", "grep", "dirname", "mkdir", "mktemp", "mv", "rmdir", "tail", "head", "tr", "date"):
+                source = shutil.which(name)
+                self.assertIsNotNone(source, name)
+                os.symlink(source, fake_bin / name)
+            payload = {
+                "tool_input": {"command": "bundle exec rspec spec/models"},
+                "error": "expected: 1\ngot: 0",
+                "session_id": "abc123",
+            }
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["PATH"] = str(fake_bin)
+
+            result = subprocess.run(
+                ["/bin/bash", str(ERROR_CRITIC)],
+                input=json.dumps(payload),
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("cksum", result.stderr)
+
+    def test_ruby_failure_hints_blocks_on_invalid_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            result = subprocess.run(
+                ["bash", str(RUBY_FAILURE_HINTS)],
+                input="{bad-json",
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("could not safely inspect an invalid hook payload", result.stderr)
 
     def test_precompact_rules_surfaces_active_plan_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1593,6 +1728,7 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("results are partial", result.stderr)
         self.assertIn("cannot be trusted", result.stderr)
+        self.assertIn("RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_FILES", result.stderr)
 
     def test_run_eval_marks_include_untracked_as_local_only(self) -> None:
         env = dict(os.environ)
@@ -1663,7 +1799,23 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
             self.assertEqual(result.returncode, 1, env_name)
-            self.assertIn(f"{env_name} must be a finite numeric threshold", result.stderr)
+            self.assertIn(f"{env_name} must be a finite numeric threshold between 0 and 1", result.stderr)
+
+    def test_run_eval_rejects_out_of_range_threshold_envs(self) -> None:
+        for threshold in ("-1", "2"):
+            env = dict(os.environ)
+            env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = threshold
+            result = subprocess.run(
+                ["bash", str(RUN_EVAL), "--skills"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+            self.assertEqual(result.returncode, 1, threshold)
+            self.assertIn("must be a finite numeric threshold between 0 and 1", result.stderr)
 
     def test_run_eval_reports_tempfile_creation_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1687,6 +1839,72 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1)
         self.assertIn("could not create a temporary score payload file", result.stderr)
+
+    def test_run_eval_reports_missing_npm_for_linting_modes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            python3_path = shutil.which("python3")
+            dirname_path = shutil.which("dirname")
+            self.assertIsNotNone(python3_path)
+            self.assertIsNotNone(dirname_path)
+            os.symlink(python3_path, fake_bin / "python3")
+            os.symlink(dirname_path, fake_bin / "dirname")
+            env = dict(os.environ)
+            env["PATH"] = str(fake_bin)
+            env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = "0"
+            env["RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER"] = "0"
+            env["RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER"] = "0"
+
+            result = subprocess.run(
+                ["/bin/bash", str(RUN_EVAL), "--ci"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("npm is required for linting in --ci mode", result.stderr)
+
+    def test_fetch_claude_docs_unknown_argument_uses_stderr(self) -> None:
+        result = subprocess.run(
+            ["bash", str(FETCH_CLAUDE_DOCS), "--bogus"],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("Unknown argument: --bogus", result.stderr)
+
+    def test_fetch_claude_docs_preflights_required_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            for name in ("curl", "date", "dirname", "mkdir", "mktemp", "mv", "rm", "sed", "stat", "wc"):
+                source = shutil.which(name)
+                self.assertIsNotNone(source, name)
+                os.symlink(source, fake_bin / name)
+            env = dict(os.environ)
+            env["PATH"] = str(fake_bin)
+
+            result = subprocess.run(
+                ["/bin/bash", str(FETCH_CLAUDE_DOCS), "--index-only"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("required command not found: grep", result.stderr)
 
     def test_generate_iron_law_content_rejects_mismatched_counts(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

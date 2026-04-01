@@ -91,6 +91,7 @@ fi
 if [[ "$FALLBACK_PARTIAL" -eq 1 ]]; then
   echo "ERROR: fallback dynamic-injection scan hit file/size caps; results are partial." >&2
   echo "ERROR: a clean result cannot be trusted because only the scanned subset was checked." >&2
+  echo "ERROR: raise RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_FILES and/or RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_BYTES to scan a larger fallback set." >&2
   exit 1
 fi
 

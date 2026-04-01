@@ -13,7 +13,12 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+case "$SCRIPT_PATH" in
+  */*) SCRIPT_BASE_DIR="${SCRIPT_PATH%/*}" ;;
+  *) SCRIPT_BASE_DIR="." ;;
+esac
+SCRIPT_DIR="$(cd "${SCRIPT_BASE_DIR}" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DOCS_BASE_URL="https://code.claude.com/docs/en"
 INDEX_URL="https://code.claude.com/docs/llms.txt"
@@ -70,13 +75,22 @@ for arg in "$@"; do
       exit 0
       ;;
     *)
-      echo "Unknown argument: $arg"
+      echo "Unknown argument: $arg" >&2
       exit 1
       ;;
   esac
 done
 
 require_command curl
+require_command date
+require_command grep
+require_command mkdir
+require_command mktemp
+require_command mv
+require_command rm
+require_command sed
+require_command stat
+require_command wc
 
 cd "$REPO_ROOT"
 mkdir -p "$CACHE_DIR"

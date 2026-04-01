@@ -1,23 +1,48 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require 'pathname'
+
 # Detect stack dependencies and repository layout for /rb:init.
 # Outputs simple "key=value" pairs for consumption by init skill.
 
-# Only run if Gemfile exists
-unless File.exist?('Gemfile')
-  puts '# No Gemfile found'
+def safe_manifest_file?(path)
+  File.file?(path) && !File.symlink?(path)
+rescue SystemCallError
+  false
+end
+
+def manifest_root(start_dir)
+  Pathname.new(start_dir).expand_path.ascend do |candidate|
+    gemfile = candidate.join('Gemfile')
+    gemspecs = Dir.glob(candidate.join('*.gemspec').to_s)
+
+    return candidate.to_s if safe_manifest_file?(gemfile.to_s) ||
+                             gemspecs.any? { |path| safe_manifest_file?(path) }
+  end
+
+  nil
+end
+
+repo_root = manifest_root(Dir.pwd)
+unless repo_root
+  puts '# No Gemfile or gemspec found'
   exit 0
 end
 
-gemfile = File.read('Gemfile')
-lockfile = File.exist?('Gemfile.lock') ? File.read('Gemfile.lock') : ''
+Dir.chdir(repo_root) do
+gemfile = safe_manifest_file?('Gemfile') ? File.read('Gemfile') : ''
+lockfile = safe_manifest_file?('Gemfile.lock') ? File.read('Gemfile.lock') : ''
 gemspec_contents = Dir.glob('*.gemspec').sort.filter_map do |path|
   next unless File.file?(path) && !File.symlink?(path)
 
   File.read(path)
 end
-gemfile_uses_gemspec = gemfile.match?(/^\s*gemspec(?:\s*(?:\(|#|$)|$)/)
+gemfile_uses_gemspec = if gemfile.empty?
+                         gemspec_contents.any?
+                       else
+                         gemfile.match?(/^\s*gemspec(?:\s*(?:\(|#|$)|$)/)
+                       end
 
 # Detection helpers
 def gem_declared_in_manifest?(content, name)
@@ -311,6 +336,8 @@ end
 
 orms.each do |orm|
   puts "HAS_#{orm.upcase}=true"
+end
+
 end
 
 exit 0
