@@ -985,27 +985,47 @@ class RuntimeScriptTests(unittest.TestCase):
     def test_detect_runtime_warns_when_runtime_env_tempfile_cannot_be_created(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            claude_dir = tmp / ".claude"
-            claude_dir.mkdir()
-            claude_dir.chmod(0o555)
+            (tmp / ".claude").mkdir()
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            (fake_bin / "mktemp").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+            os.chmod(fake_bin / "mktemp", 0o755)
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["RUBY_PLUGIN_DETECT_RUNTIME_QUIET"] = "1"
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+
+            result = subprocess.run(
+                ["bash", str(DETECT_RUNTIME)],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("could not update .runtime_env", result.stderr)
+
+    def test_detect_runtime_warns_when_runtime_state_dir_cannot_be_prepared(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").write_text("not-a-directory\n", encoding="utf-8")
             env = dict(os.environ)
             env["CLAUDE_PROJECT_DIR"] = tmpdir
             env["RUBY_PLUGIN_DETECT_RUNTIME_QUIET"] = "1"
 
-            try:
-                result = subprocess.run(
-                    ["bash", str(DETECT_RUNTIME)],
-                    capture_output=True,
-                    text=True,
-                    cwd=REPO_ROOT,
-                    check=False,
-                    env=env,
-                )
-            finally:
-                claude_dir.chmod(0o755)
+            result = subprocess.run(
+                ["bash", str(DETECT_RUNTIME)],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
 
         self.assertEqual(result.returncode, 0)
-        self.assertIn("could not update .runtime_env", result.stderr)
+        self.assertIn("runtime state directory could not be prepared", result.stderr)
 
     def test_detect_runtime_warns_when_runtime_env_final_move_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1282,6 +1302,50 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(second.returncode, 0)
         self.assertIn("REPEATED FAILURE", second.stdout)
 
+    def test_error_critic_warns_when_hook_state_storage_cannot_be_prepared(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").write_text("not-a-directory\n", encoding="utf-8")
+            payload = {
+                "tool_input": {"command": "bundle exec rspec spec/models"},
+                "error": "expected: 1\ngot: 0",
+                "session_id": "abc123",
+            }
+            result = run_workspace_hook(ERROR_CRITIC, tmpdir, payload)
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("hook-state storage could not be prepared", result.stderr)
+
+    def test_error_critic_warns_when_hook_state_update_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            (fake_bin / "mv").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+            os.chmod(fake_bin / "mv", 0o755)
+            payload = {
+                "tool_input": {"command": "bundle exec rspec spec/models"},
+                "error": "expected: 1\ngot: 0",
+                "session_id": "abc123",
+            }
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+
+            result = subprocess.run(
+                ["bash", str(ERROR_CRITIC)],
+                input=json.dumps(payload),
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("hook-state could not be updated", result.stderr)
+
     def test_precompact_rules_surfaces_active_plan_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -1333,9 +1397,9 @@ class RuntimeScriptTests(unittest.TestCase):
                 env=env,
             )
 
-        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 1)
         self.assertIn("results are partial", result.stderr)
-        self.assertIn("scanned subset", result.stderr)
+        self.assertIn("cannot be trusted", result.stderr)
 
     def test_run_eval_marks_include_untracked_as_local_only(self) -> None:
         env = dict(os.environ)
@@ -1353,6 +1417,29 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         self.assertIn("local-only and non-comparable", result.stdout)
+
+    def test_run_eval_reports_tempfile_creation_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            (fake_bin / "mktemp").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+            os.chmod(fake_bin / "mktemp", 0o755)
+            env = dict(os.environ)
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+            env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = "0"
+
+            result = subprocess.run(
+                ["bash", str(RUN_EVAL), "--skills"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("could not create a temporary score payload file", result.stderr)
 
     def test_generate_iron_law_content_rejects_mismatched_counts(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

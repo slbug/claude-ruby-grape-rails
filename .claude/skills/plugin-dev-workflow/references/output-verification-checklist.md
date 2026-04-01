@@ -11,8 +11,11 @@ checks.
 - contributor-only validation:
   - `make eval-output`
   - `npm run eval:output`
-  - tracked fixtures under
-    [`lab/eval/fixtures/output/`](../../../../lab/eval/fixtures/output/)
+  - tracked fixtures such as:
+    - [`lab/eval/fixtures/output/research-good.md`](../../../../lab/eval/fixtures/output/research-good.md)
+    - [`lab/eval/fixtures/output/research-bad.md`](../../../../lab/eval/fixtures/output/research-bad.md)
+    - [`lab/eval/fixtures/output/review-good.md`](../../../../lab/eval/fixtures/output/review-good.md)
+    - [`lab/eval/fixtures/output/review-bad.md`](../../../../lab/eval/fixtures/output/review-bad.md)
 
 Keep those surfaces separate.
 

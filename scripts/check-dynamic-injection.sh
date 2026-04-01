@@ -89,8 +89,9 @@ if [[ "$FOUND" -eq 1 ]]; then
 fi
 
 if [[ "$FALLBACK_PARTIAL" -eq 1 ]]; then
-  echo "WARNING: fallback dynamic-injection scan hit file/size caps; results are partial." >&2
-  echo "WARNING: a clean result only covers the scanned subset, not the full fallback surface." >&2
+  echo "ERROR: fallback dynamic-injection scan hit file/size caps; results are partial." >&2
+  echo "ERROR: a clean result cannot be trusted because only the scanned subset was checked." >&2
+  exit 1
 fi
 
 echo "No dynamic context injection found."

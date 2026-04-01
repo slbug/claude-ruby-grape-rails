@@ -12,7 +12,7 @@
 #   ./lab/eval/run_eval.sh --skills     # Core skills only
 #   ./lab/eval/run_eval.sh --agents     # All agents only
 #   ./lab/eval/run_eval.sh --triggers   # Trigger corpora only
-#   ./lab/eval/run_eval.sh --ci         # CI gate for all tracked eval surfaces
+#   ./lab/eval/run_eval.sh --ci         # tracked scoring gate (runtime tests run separately)
 
 set -euo pipefail
 
@@ -136,7 +136,10 @@ summarize_subject_scores() {
   local label="$1"
   local threshold="$2"
   local payload_file
-  payload_file="$(mktemp "${TMPDIR:-/tmp}/rb-eval-scores.XXXXXX")"
+  payload_file="$(mktemp "${TMPDIR:-/tmp}/rb-eval-scores.XXXXXX")" || {
+    echo "ERROR: could not create a temporary score payload file." >&2
+    return 1
+  }
   cat > "$payload_file"
   local status=0
   python3 - "$label" "$threshold" "$payload_file" <<'PY' || status=$?
@@ -170,7 +173,10 @@ PY
 summarize_triggers() {
   local threshold="$1"
   local payload_file
-  payload_file="$(mktemp "${TMPDIR:-/tmp}/rb-eval-triggers.XXXXXX")"
+  payload_file="$(mktemp "${TMPDIR:-/tmp}/rb-eval-triggers.XXXXXX")" || {
+    echo "ERROR: could not create a temporary trigger payload file." >&2
+    return 1
+  }
   cat > "$payload_file"
   local status=0
   python3 - "$threshold" "$payload_file" <<'PY' || status=$?
@@ -255,7 +261,8 @@ run_changed_skills() {
   result+="}"
 
   if [[ ${#missing_skills[@]} -gt 0 ]]; then
-    echo "  NOTE: deleted or moved changed skills were skipped: ${missing_skills[*]}" >&2
+    echo "  ERROR: deleted or moved changed skills cannot be scored: ${missing_skills[*]}" >&2
+    return 1
   fi
 
   printf '%s\n' "$result" | summarize_subject_scores "skills" "$FAIL_UNDER"
@@ -309,7 +316,8 @@ run_changed_agents() {
   result+="}"
 
   if [[ ${#missing_agents[@]} -gt 0 ]]; then
-    echo "  NOTE: deleted or moved changed agents were skipped: ${missing_agents[*]}" >&2
+    echo "  ERROR: deleted or moved changed agents cannot be scored: ${missing_agents[*]}" >&2
+    return 1
   fi
 
   printf '%s\n' "$result" | summarize_subject_scores "agents" "$AGENT_FAIL_UNDER"
@@ -386,7 +394,8 @@ case "$MODE" in
     run_all_triggers || FAILURES=$((FAILURES + 1))
     ;;
   --ci)
-    echo "--- CI Gate: lint + injection check + core skills + all agents + triggers ---"
+    echo "--- CI Scoring Gate: lint + injection check + core skills + all agents + triggers ---"
+    echo "NOTE: runtime tests run separately via npm run eval:test or npm run ci."
     echo
     echo "--- Lint ---"
     run_lint || FAILURES=$((FAILURES + 1))

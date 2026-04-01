@@ -97,6 +97,19 @@ def claude_project_slug(repo_root)
   repo_root.tr('/:\\', '-')
 end
 
+def project_transcript_files(project_slug)
+  project_dir = File.expand_path("~/.claude/projects/#{project_slug}")
+  return [] unless File.directory?(project_dir)
+
+  Dir.children(project_dir)
+     .grep(/\.jsonl\z/)
+     .map { |entry| File.join(project_dir, entry) }
+     .select { |path| File.file?(path) }
+     .sort
+rescue Errno::ENOENT
+  []
+end
+
 def load_permissions(settings_path)
   return { allow: [], deny: [] } unless File.file?(settings_path)
 
@@ -294,7 +307,6 @@ end
 
 repo_root = find_repo_root(Dir.pwd)
 project_slug = claude_project_slug(repo_root)
-project_transcript_glob = File.expand_path("~/.claude/projects/#{project_slug}/*.jsonl")
 settings_sources = [
   File.join(repo_root, '.claude/settings.json'),
   File.join(repo_root, '.claude/settings.local.json')
@@ -313,7 +325,7 @@ allow_globs = all_allow.filter_map { |permission| permission_to_glob(permission)
 deny_globs = all_deny.filter_map { |permission| permission_to_glob(permission) }
 
 cutoff = Time.now - (options[:days] * 86_400)
-session_files = Dir.glob(project_transcript_glob)
+session_files = project_transcript_files(project_slug)
 max_session_files = positive_env_int('RUBY_PLUGIN_PERMISSIONS_MAX_SESSION_FILES', 200)
 max_lines_per_file = positive_env_int('RUBY_PLUGIN_PERMISSIONS_MAX_LINES_PER_FILE', 10_000)
 recent_candidates = session_files.select { |path| File.file?(path) && File.mtime(path) > cutoff }
@@ -325,6 +337,7 @@ examples = {}
 total_bash_commands = 0
 ignored_denied = 0
 line_capped_files = 0
+malformed_lines = 0
 
 recent_files.each do |session_file|
   file_truncated = false
@@ -338,6 +351,7 @@ recent_files.each do |session_file|
     begin
       entry = JSON.parse(line)
     rescue JSON::ParserError
+      malformed_lines += 1
       next
     end
 
@@ -385,6 +399,7 @@ report = {
   truncated_session_files: truncated_session_files,
   line_capped_files: line_capped_files,
   max_lines_per_file: max_lines_per_file,
+  malformed_lines: malformed_lines,
   settings_scope: options[:repo_only] ? 'repo-only' : 'repo+global',
   scanned_files: recent_files,
   total_bash_commands: total_bash_commands,
@@ -415,9 +430,11 @@ puts 'Dry-run: extractor is read-only; no settings changes were written.' if opt
 puts "Sessions scanned: #{recent_files.length} (last #{options[:days]} days)"
 puts "Additional recent sessions skipped by cap: #{truncated_session_files}" if truncated_session_files.positive?
 puts "Files capped at #{max_lines_per_file} lines: #{line_capped_files}" if line_capped_files.positive?
+puts "Malformed transcript lines skipped: #{malformed_lines}" if malformed_lines.positive?
 if truncated_session_files.positive? || line_capped_files.positive?
   puts 'WARNING: transcript scan was truncated by caps; recommendations are partial.'
 end
+puts 'WARNING: malformed transcript lines were skipped; recommendations may be incomplete.' if malformed_lines.positive?
 puts "Total Bash tool calls seen: #{total_bash_commands}"
 puts "Uncovered command groups: #{group_counts.length}"
 puts "Total avoidable prompts: #{group_counts.values.sum}"

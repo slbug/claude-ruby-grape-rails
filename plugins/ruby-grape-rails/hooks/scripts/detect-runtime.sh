@@ -25,6 +25,11 @@ emit_runtime_move_warning() {
   exit 0
 }
 
+emit_runtime_setup_warning() {
+  echo "WARNING: ${HOOK_NAME} could not update .runtime_env because the runtime state directory could not be prepared." >&2
+  exit 0
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 DEP_LIB="${SCRIPT_DIR}/ruby-dependency-lib.sh"
@@ -621,7 +626,8 @@ fi
 # Export runtime environment to file for other scripts
 RUNTIME_ENV_FILE="${CLAUDE_DIR}/.runtime_env"
 [[ ! -L "$CLAUDE_DIR" ]] || exit 0
-mkdir -p -- "$CLAUDE_DIR" || exit 0
+mkdir -p -- "$CLAUDE_DIR" || emit_runtime_setup_warning
+[[ -d "$CLAUDE_DIR" ]] || emit_runtime_setup_warning
 
 if [[ -L "$RUNTIME_ENV_FILE" ]]; then
   exit 0

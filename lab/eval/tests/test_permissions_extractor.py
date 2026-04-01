@@ -52,6 +52,10 @@ def write_transcript(repo_root: Path, home_dir: Path, command: str, name: str = 
     (transcript_dir / name).write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
 
+def transcript_dir_for(repo_root: Path, home_dir: Path) -> Path:
+    return home_dir / ".claude" / "projects" / claude_project_slug(repo_root)
+
+
 class PermissionsExtractorTests(unittest.TestCase):
     def test_dry_run_flag_is_accepted_for_skill_parity(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -183,6 +187,37 @@ class PermissionsExtractorTests(unittest.TestCase):
 
         groups = {entry["group"] for entry in report["uncovered_groups"]}
         self.assertIn("python3 -m pytest", groups)
+
+    def test_project_slug_with_glob_metacharacters_still_discovers_transcripts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo[abc]"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            write_transcript(repo, tmp, "bundle exec rubocop")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        self.assertEqual(report["scanned_sessions"], 1)
+        self.assertEqual(report["uncovered_groups"][0]["group"], "bundle exec rubocop")
+
+    def test_malformed_transcript_lines_are_counted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            write_transcript(repo, tmp, "bundle exec rubocop", "good.jsonl")
+            transcript_dir = transcript_dir_for(repo, tmp)
+            (transcript_dir / "bad.jsonl").write_text("{not-json}\n", encoding="utf-8")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        self.assertEqual(report["malformed_lines"], 1)
+        groups = {entry["group"] for entry in report["uncovered_groups"]}
+        self.assertIn("bundle exec rubocop", groups)
 
 
 if __name__ == "__main__":

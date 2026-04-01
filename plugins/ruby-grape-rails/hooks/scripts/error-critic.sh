@@ -41,21 +41,31 @@ emit_error_critic_temp_warning() {
   exit 0
 }
 
+emit_error_critic_state_warning() {
+  echo "WARNING: ${HOOK_NAME} skipped failure-loop analysis because hook-state storage could not be prepared." >&2
+  exit 0
+}
+
+emit_error_critic_write_warning() {
+  echo "WARNING: ${HOOK_NAME} skipped failure-loop analysis because hook-state could not be updated." >&2
+  exit 0
+}
+
 SESSION_KEY=$(printf '%s' "$SESSION_ID" | tr -c '[:alnum:]_-' '_')
 CMD_KEY=$(printf '%s' "$COMMAND" | cksum | awk '{print $1}')
 [[ ! -L "$CLAUDE_DIR" ]] || exit 0
-mkdir -p -- "$CLAUDE_DIR" || exit 0
-[[ -d "$CLAUDE_DIR" ]] || exit 0
+mkdir -p -- "$CLAUDE_DIR" || emit_error_critic_state_warning
+[[ -d "$CLAUDE_DIR" ]] || emit_error_critic_state_warning
 [[ ! -L "$HOOK_STATE_DIR" ]] || exit 0
-mkdir -p -- "$HOOK_STATE_DIR" || exit 0
-[[ -d "$HOOK_STATE_DIR" ]] || exit 0
+mkdir -p -- "$HOOK_STATE_DIR" || emit_error_critic_state_warning
+[[ -d "$HOOK_STATE_DIR" ]] || emit_error_critic_state_warning
 [[ ! -L "$FAILURES_ROOT" ]] || exit 0
-mkdir -p -- "$FAILURES_ROOT" || exit 0
-[[ -d "$FAILURES_ROOT" ]] || exit 0
+mkdir -p -- "$FAILURES_ROOT" || emit_error_critic_state_warning
+[[ -d "$FAILURES_ROOT" ]] || emit_error_critic_state_warning
 FAILURE_DIR="${FAILURES_ROOT}/${SESSION_KEY}"
 [[ ! -L "$FAILURE_DIR" ]] || exit 0
-mkdir -p -- "$FAILURE_DIR" || exit 0
-[[ -d "$FAILURE_DIR" && ! -L "$FAILURE_DIR" ]] || exit 0
+mkdir -p -- "$FAILURE_DIR" || emit_error_critic_state_warning
+[[ -d "$FAILURE_DIR" && ! -L "$FAILURE_DIR" ]] || emit_error_critic_state_warning
 FAILURE_LOG="$FAILURE_DIR/${CMD_KEY}.log"
 COUNT_FILE="$FAILURE_DIR/${CMD_KEY}.count"
 LOCK_DIR="$FAILURE_DIR/${CMD_KEY}.lock"
@@ -85,8 +95,8 @@ fi
 TMP_COUNT=$(mktemp "${FAILURE_DIR}/count.XXXXXX") || emit_error_critic_temp_warning
 [[ -n "$TMP_COUNT" ]] || emit_error_critic_temp_warning
 [[ "$TMP_COUNT" == "${FAILURE_DIR}/count."* ]] || emit_error_critic_temp_warning
-printf '%s\n' "$COUNT" > "$TMP_COUNT" || exit 0
-mv -f -- "$TMP_COUNT" "$COUNT_FILE" || exit 0
+printf '%s\n' "$COUNT" > "$TMP_COUNT" || emit_error_critic_write_warning
+mv -f -- "$TMP_COUNT" "$COUNT_FILE" || emit_error_critic_write_warning
 TMP_COUNT=""
 
 {
@@ -99,8 +109,8 @@ TMP_COUNT=""
 TRIMMED_LOG=$(mktemp "${FAILURE_DIR}/trimmed.XXXXXX") || emit_error_critic_temp_warning
 [[ -n "$TRIMMED_LOG" ]] || emit_error_critic_temp_warning
 [[ "$TRIMMED_LOG" == "${FAILURE_DIR}/trimmed."* ]] || emit_error_critic_temp_warning
-tail -100 "$FAILURE_LOG" > "$TRIMMED_LOG" || exit 0
-mv -f -- "$TRIMMED_LOG" "$FAILURE_LOG" || exit 0
+tail -100 "$FAILURE_LOG" > "$TRIMMED_LOG" || emit_error_critic_write_warning
+mv -f -- "$TRIMMED_LOG" "$FAILURE_LOG" || emit_error_critic_write_warning
 TRIMMED_LOG=""
 
 if [[ "$COUNT" -lt 2 ]]; then
