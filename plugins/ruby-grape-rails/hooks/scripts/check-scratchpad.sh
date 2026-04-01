@@ -36,17 +36,23 @@ scratchpads=()
 shopt -s nullglob
 for plan_dir in "${PLANS_DIR}"/*; do
   [[ -d "$plan_dir" && ! -L "$plan_dir" ]] || continue
+  scratchpad_file="${plan_dir}/scratchpad.md"
 
   needs_scratchpad=false
-  [[ "$plan_dir" == "$ACTIVE_PLAN" ]] && needs_scratchpad=true
-  [[ -f "${plan_dir}/plan.md" && ! -L "${plan_dir}/plan.md" ]] && needs_scratchpad=true
-  [[ -f "${plan_dir}/progress.md" && ! -L "${plan_dir}/progress.md" ]] && needs_scratchpad=true
-  [[ -d "${plan_dir}/research" && ! -L "${plan_dir}/research" ]] && needs_scratchpad=true
-  [[ "$needs_scratchpad" == "true" ]] || continue
+  if [[ "$plan_dir" == "$ACTIVE_PLAN" ]]; then
+    needs_scratchpad=true
+  elif plan_has_unchecked_tasks "${plan_dir}/plan.md"; then
+    needs_scratchpad=true
+  elif [[ -d "${plan_dir}/research" && ! -L "${plan_dir}/research" && ! -f "${plan_dir}/plan.md" ]]; then
+    needs_scratchpad=true
+  fi
 
-  ensure_scratchpad_file "$plan_dir" "$(get_plan_intent "$plan_dir" 2>/dev/null || true)" || true
-  if [[ -f "${plan_dir}/scratchpad.md" && ! -L "${plan_dir}/scratchpad.md" ]]; then
-    scratchpads+=("${plan_dir}/scratchpad.md")
+  if [[ "$needs_scratchpad" == "true" ]]; then
+    ensure_scratchpad_file "$plan_dir" "$(get_plan_intent "$plan_dir" 2>/dev/null || true)" || true
+  fi
+
+  if [[ -f "$scratchpad_file" && ! -L "$scratchpad_file" ]]; then
+    scratchpads+=("$scratchpad_file")
   fi
 done
 shopt -u nullglob

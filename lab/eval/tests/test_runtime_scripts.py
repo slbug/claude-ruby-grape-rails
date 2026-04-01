@@ -1050,6 +1050,40 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("## Handoff", content)
         self.assertIn("Scratchpad notes ready in 1 plan(s):", result.stdout)
 
+    def test_check_scratchpad_does_not_backfill_completed_historical_plans(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plans_dir = tmp / ".claude" / "plans"
+
+            active_dir = plans_dir / "active"
+            active_dir.mkdir(parents=True)
+            (active_dir / "plan.md").write_text("# Active\n\n- [ ] first task\n", encoding="utf-8")
+
+            complete_dir = plans_dir / "complete"
+            complete_dir.mkdir(parents=True)
+            (complete_dir / "plan.md").write_text("# Complete\n\n- [x] done\n", encoding="utf-8")
+            (complete_dir / "progress.md").write_text("done\n", encoding="utf-8")
+
+            noted_dir = plans_dir / "noted"
+            noted_dir.mkdir(parents=True)
+            (noted_dir / "plan.md").write_text("# Noted\n\n- [x] done\n", encoding="utf-8")
+            (noted_dir / "scratchpad.md").write_text("# Scratchpad: noted\n", encoding="utf-8")
+
+            (tmp / ".claude" / "ACTIVE_PLAN").write_text(str(active_dir.resolve()) + "\n", encoding="utf-8")
+
+            result = run_workspace_hook(CHECK_SCRATCHPAD, tmpdir)
+            active_exists = (active_dir / "scratchpad.md").is_file()
+            complete_exists = (complete_dir / "scratchpad.md").exists()
+            noted_exists = (noted_dir / "scratchpad.md").is_file()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(active_exists)
+        self.assertFalse(complete_exists)
+        self.assertTrue(noted_exists)
+        self.assertIn("Scratchpad notes ready in 2 plan(s):", result.stdout)
+        self.assertIn("active (ACTIVE)", result.stdout)
+        self.assertIn("noted", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
