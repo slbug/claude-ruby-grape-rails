@@ -52,7 +52,7 @@ def read_only_tools_coherent(content: str, **_: Any) -> tuple[bool, str]:
     if "Read" not in tools:
         return True, "no read tool; read-only coherence not applicable"
 
-    if "Write" in tools:
+    if write_like_tools.intersection(tools):
         return True, "agent has explicit write access; not treated as read-only"
 
     if write_like_tools.intersection(disallowed):
@@ -65,8 +65,9 @@ def omit_claudemd_coherent(content: str, **_: Any) -> tuple[bool, str]:
     fm = parse_frontmatter(content)
     tools = _coerce_tool_list(fm.get("tools", []))
     omit_claudemd = fm.get("omitClaudeMd")
+    write_like_tools = {"Write", "Edit", "NotebookEdit"}
 
-    if "Write" in tools:
+    if write_like_tools.intersection(tools):
         if omit_claudemd is True:
             return False, "write-capable agent should not set omitClaudeMd"
         return True, "write-capable agent keeps CLAUDE.md context"

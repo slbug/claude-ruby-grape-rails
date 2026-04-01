@@ -183,6 +183,17 @@ disallowedTools: Write, Edit, NotebookEdit
         passed, _ = agent_matchers.read_only_tools_coherent(content)
         self.assertTrue(passed)
 
+    def test_read_only_tools_coherent_treats_edit_tool_as_write_capable(self) -> None:
+        content = """---
+name: sample-agent
+description: Make direct code edits when needed.
+tools: Read, Edit, Grep, Glob
+---
+"""
+        passed, evidence = agent_matchers.read_only_tools_coherent(content)
+        self.assertTrue(passed)
+        self.assertIn("write access", evidence)
+
     def test_permission_mode_valid_accepts_absent_field_for_shipped_agents(self) -> None:
         content = """---
 name: sample-agent
@@ -224,6 +235,18 @@ omitClaudeMd: true
 name: sample-agent
 description: Coordinate the workflow and write output files.
 tools: Read, Write, Grep, Glob
+omitClaudeMd: true
+---
+"""
+        passed, evidence = agent_matchers.omit_claudemd_coherent(content)
+        self.assertFalse(passed)
+        self.assertIn("should not set omitClaudeMd", evidence)
+
+    def test_omit_claudemd_coherent_rejects_true_for_edit_capable_agents(self) -> None:
+        content = """---
+name: sample-agent
+description: Make direct code edits when needed.
+tools: Read, Edit, Grep, Glob
 omitClaudeMd: true
 ---
 """
