@@ -325,18 +325,6 @@ Workflow convention with hook-level detection support:
 - `SubagentStart` uses `hookSpecificOutput.additionalContext` to inject context into subagents
 - `PostToolUseFailure` uses `hookSpecificOutput.additionalContext` for debugging hints
 
-### Runtime Tooling Integration
-
-The plugin integrates with Tidewave Rails for runtime operations:
-
-- `/rb:runtime execute` - Ruby code execution via `mcp__tidewave__project_eval`
-- `/rb:runtime query` - SQL execution via `mcp__tidewave__execute_sql_query`
-- `/rb:runtime docs` - Documentation via `mcp__tidewave__get_docs`
-- `/rb:runtime logs` - Log reading via `mcp__tidewave__get_logs`
-- Tidewave gem detection via `Gemfile` parsing
-
-**Note:** Runtime features require Tidewave Rails gem (`bundle add tidewave --group development`) and Tidewave MCP tool access.
-
 ## Development
 
 ### Testing locally
@@ -498,21 +486,6 @@ categories: Added, Changed, Fixed, Removed.
 - if preparing the next release, move that work into the target version section
   and bump all three versioned metadata files together
 
-## Backlog
-
-### Potential New Agents
-
-1. **Ruby concurrency advisor** — Thread-safety and concurrency specialist
-   - **Scope**: Concurrent Ruby, Thread safety, Ractor usage, Sidekiq concurrency patterns
-   - **Status**: Consider for v2.0
-
-2. **Hotwire architect** — Complex Hotwire/Turbo architecture specialist
-   - **Scope**: Nested frames, Stimulus controller architecture, cable connections
-   - **Current coverage**: `rails-architect` agent covers general Rails patterns
-   - **Status**: Consider if `rails-architect` proves too general for complex Hotwire apps
-
----
-
 # Claude Code Behavioral Instructions
 
 **CRITICAL**: These instructions OVERRIDE default behavior for Ruby/Rails/Grape projects in this codebase.
@@ -599,70 +572,17 @@ When fixing a bug in a file that has named variants (e.g., `seller_account/form.
 `buyer_account/form.rb`, `occupier_account/form.rb`), proactively grep for all sibling files and
 check if the same bug exists in each variant. Do this BEFORE implementing the fix, not after.
 
-<!-- IRON_LAWS_START -->
+Iron Laws are maintained in `iron-laws.yml` and projected into shipped plugin
+artifacts.
 
-<!-- GENERATED FROM iron-laws.yml — DO NOT EDIT -->
+When `iron-laws.yml` changes, rerun:
 
-## Iron Laws Enforcement (NON-NEGOTIABLE)
-
-These rules are NEVER violated. If code would violate them, **STOP and explain** before proceeding:
-
-### Active Record Iron Laws
-
-1. **Decimal for Money** — NEVER use float for money — use decimal or integer (cents)
-2. **Parameterized Queries** — ALWAYS use parameterized queries — never interpolate user input into SQL strings
-3. **Eager Loading** — USE includes/preload for associations — avoids N+1 queries
-4. **Commit-Safe Enqueueing in Active Record** — IN Active Record code, use after_commit not after_save when enqueueing jobs that depend on committed data
-5. **Transaction Boundaries** — WRAP multi-step operations in transactions — use ActiveRecord::Base.transaction
-6. **No Validation Bypass** — NO update_columns, update_column, or save(validate: false) in normal flows
-7. **No default_scope** — NO default_scope — use explicit named scopes only
-
-### Sidekiq Iron Laws
-
-8. **Idempotent Jobs** — Jobs MUST be idempotent — safe to retry
-9. **JSON-Safe Arguments** — Args use JSON-safe types only — no symbols, no Ruby objects, no procs
-10. **No ORM Objects in Args** — NEVER store ORM objects in args — store IDs, not records
-11. **Commit-Safe Enqueueing** — ALWAYS enqueue jobs after commit using the active ORM or transaction hook — not after_save or inline before commit
-
-### Security Iron Laws
-
-12. **No Eval** — NO eval with user input — code injection vulnerability
-13. **Explicit Authorization** — AUTHORIZE in EVERY controller action — do not trust before_action alone
-14. **No Unsafe HTML** — NEVER use html_safe or raw with untrusted content — XSS vulnerability
-15. **No SQL Concatenation** — NO SQL string concatenation — always use parameterized queries
-
-### Ruby Iron Laws
-
-16. **method_missing Requires respond_to_missing?** — NO method_missing without respond_to_missing? — breaks introspection
-17. **Supervise Background Processes** — SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers in production
-18. **Rescue StandardError** — DON'T RESCUE Exception — only rescue StandardError or specific classes
-
-### Hotwire/Turbo Iron Laws
-
-19. **No DB Queries in Turbo Streams** — NEVER query DB in Turbo Stream responses — pre-compute everything before broadcast
-20. **Use turbo_frame_tag** — ALWAYS use turbo_frame_tag for partial updates — prevents full page reloads
-
-### Verification Iron Laws
-
-21. **Verify Before Claiming Done** — VERIFY BEFORE CLAIMING DONE — never say 'should work' or 'this fixes it.' Run bundle exec rspec or bin/rails test and show the result
-
-### Violation Response
-
-When detecting a potential Iron Law violation:
-
-```
-STOP: This code would violate Iron Law [number]: [description]
-
-What you wrote:
-[problematic code]
-
-Correct pattern:
-[fixed code]
-
-Should I apply this fix?
+```bash
+bash scripts/generate-iron-law-outputs.sh
 ```
 
-<!-- IRON_LAWS_END -->
+This refreshes the generated hook/runtime projections, including the shipped
+injector/verifier surfaces.
 
 ## Framework Detection
 
@@ -888,7 +808,6 @@ these are the main still-unadopted features worth tracking:
 - `http` hook type for external telemetry/logging
 - `SubagentStop` for specialist completion metrics
 - `SessionEnd` for cleanup of temporary artifacts
-- hook `environment` field if it materially simplifies script wiring
 
 ### Skills
 

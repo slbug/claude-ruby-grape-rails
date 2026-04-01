@@ -25,6 +25,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   formatting, syntax checks, and debug-statement warnings, progress logging is
   async, the plan STOP reminder runs only for `Write(*plan.md)`, and
   `PostToolUseFailure` stays narrowed to Ruby-relevant Bash command families.
+- **Runtime and contributor failure paths are clearer under degraded conditions** —
+  `detect-runtime.sh` now warns when runtime state directories cannot be
+  prepared, `error-critic.sh` warns when hook-state storage or updates fail,
+  `run_eval.sh` now distinguishes the scoring gate from runtime tests and emits
+  explicit temporary-file errors, and changed-mode eval no longer treats
+  deleted or moved changed skills/agents as note-only skips.
+- **Contributor integrity checks are stricter and less lossy** —
+  fallback dynamic-injection scans now fail when coverage is partial, the
+  permissions extractor no longer relies on glob-interpolated transcript paths
+  and now reports malformed JSONL lines, and contributor verification docs now
+  point at concrete output fixtures instead of only the parent directory.
 
 ## [1.7.1] - 2026-03-29
 

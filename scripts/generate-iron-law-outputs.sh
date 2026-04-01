@@ -3,7 +3,7 @@
 # Generate Iron Law outputs from canonical YAML source
 # Usage: ./scripts/generate-iron-law-outputs.sh [target]
 #   target: optional specific target to regenerate
-#           (readme|claude|canonical|init|tutorial|injector|judge|all)
+#           (readme|canonical|init|tutorial|injector|judge|all)
 #
 # This script delegates to generate-iron-law-content.rb for actual content generation
 #
@@ -42,7 +42,6 @@ Regenerate Iron Law projections from plugins/ruby-grape-rails/references/iron-la
 
 Targets:
   readme     Update bounded Iron Laws section in README.md
-  claude     Update bounded Iron Laws section in CLAUDE.md
   canonical  Regenerate canonical-registry.md
   init       Update bounded Iron Laws section in init injectable template
   tutorial   Update bounded Iron Laws section in intro tutorial content
@@ -57,7 +56,7 @@ EOF
 
 valid_target() {
   case "$1" in
-    readme|claude|canonical|init|tutorial|injector|judge|all) return 0 ;;
+    readme|canonical|init|tutorial|injector|judge|all) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -285,13 +284,6 @@ generate_all() {
     readme|all)
       log_info "Generating README.md section..."
       update_file "${REPO_ROOT}/README.md" "readme"
-      ;;
-  esac
-
-  case "$target" in
-    claude|all)
-      log_info "Generating CLAUDE.md section..."
-      update_file "${REPO_ROOT}/CLAUDE.md" "claude"
       ;;
   esac
 

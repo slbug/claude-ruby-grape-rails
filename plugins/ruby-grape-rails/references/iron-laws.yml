@@ -353,10 +353,6 @@ generation_targets:
     section: "Iron Laws summary"
     marker: "<!-- IRON_LAWS_START -->"
 
-  - file: "CLAUDE.md"
-    section: "Iron Laws enforcement rules"
-    marker: "<!-- IRON_LAWS_START -->"
-
   - file: "CHANGELOG.md"
     section: "Initial release laws"
     marker: "<!-- IRON_LAWS_START -->"

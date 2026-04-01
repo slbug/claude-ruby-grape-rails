@@ -98,39 +98,6 @@ def law_count_label(count)
   "#{count} #{count == 1 ? 'law' : 'laws'}"
 end
 
-# Generate CLAUDE.md section
-def generate_claude_section(yaml)
-  puts '## Iron Laws Enforcement (NON-NEGOTIABLE)'
-  puts ''
-  puts 'These rules are NEVER violated. If code would violate them, **STOP and explain** before proceeding:'
-  puts ''
-
-  yaml['categories'].each do |cat|
-    puts "### #{cat['name']} Iron Laws"
-    puts ''
-    yaml['laws'].select { |l| l['category'] == cat['id'] }.each do |law|
-      puts "#{law['id']}. **#{law['title']}** — #{law['rule']}"
-    end
-    puts ''
-  end
-
-  puts '### Violation Response'
-  puts ''
-  puts 'When detecting a potential Iron Law violation:'
-  puts ''
-  puts '```'
-  puts 'STOP: This code would violate Iron Law [number]: [description]'
-  puts ''
-  puts 'What you wrote:'
-  puts '[problematic code]'
-  puts ''
-  puts 'Correct pattern:'
-  puts '[fixed code]'
-  puts ''
-  puts 'Should I apply this fix?'
-  puts '```'
-end
-
 # Generate injectable template section
 def generate_injectable_section(yaml)
   puts '## IRON LAWS — STOP if violated'
@@ -300,8 +267,6 @@ end
 
 # Main
 case ARGV[0]
-when 'claude'
-  generate_claude_section(yaml)
 when 'injectable'
   generate_injectable_section(yaml)
 when 'tutorial'
@@ -315,6 +280,6 @@ when 'readme'
 when 'judge'
   generate_judge_section(yaml)
 else
-  puts "Usage: #{$PROGRAM_NAME} [claude|injectable|tutorial|injector|canonical|readme|judge]"
+  puts "Usage: #{$PROGRAM_NAME} [injectable|tutorial|injector|canonical|readme|judge]"
   exit 1
 end

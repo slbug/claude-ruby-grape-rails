@@ -35,6 +35,7 @@ VERIFY_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/verify-ruby.sh
 RUBYISH_POST_EDIT = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/rubyish-post-edit.sh"
 STOP_FAILURE_LOG = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/stop-failure-log.sh"
 ERROR_CRITIC = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/error-critic.sh"
+RUBY_POST_TOOL_USE_FAILURE = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/ruby-post-tool-use-failure.sh"
 PRECOMPACT_RULES = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/precompact-rules.sh"
 POSTCOMPACT_VERIFY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/postcompact-verify.sh"
 CHECK_DYNAMIC_INJECTION = REPO_ROOT / "scripts/check-dynamic-injection.sh"
@@ -311,6 +312,87 @@ class RuntimeScriptTests(unittest.TestCase):
         seen_filters = {hook.get("if") for hook in hook_entries}
         self.assertEqual(seen_filters, expected_filters)
         self.assertTrue(all(hook.get("if") for hook in hook_entries))
+        self.assertEqual(len(hook_entries), len(expected_filters))
+        self.assertEqual(
+            {hook.get("command") for hook in hook_entries},
+            {"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"},
+        )
+
+    def test_ruby_post_tool_use_failure_prefers_error_critic_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            wrapper = tmp / "ruby-post-tool-use-failure.sh"
+            wrapper.write_text(RUBY_POST_TOOL_USE_FAILURE.read_text(encoding="utf-8"), encoding="utf-8")
+            wrapper.chmod(0o755)
+
+            (tmp / "ruby-failure-hints.sh").write_text(
+                "#!/usr/bin/env bash\n"
+                "printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUseFailure\",\"additionalContext\":\"hint\"}}'\n",
+                encoding="utf-8",
+            )
+            (tmp / "ruby-failure-hints.sh").chmod(0o755)
+
+            (tmp / "error-critic.sh").write_text(
+                "#!/usr/bin/env bash\n"
+                "printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUseFailure\",\"additionalContext\":\"critic\"}}'\n",
+                encoding="utf-8",
+            )
+            (tmp / "error-critic.sh").chmod(0o755)
+
+            result = subprocess.run(
+                ["bash", str(wrapper)],
+                input=json.dumps({"tool_input": {"command": "bundle exec rspec"}}),
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=dict(os.environ),
+            )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(
+            result.stdout,
+            '{"hookSpecificOutput":{"hookEventName":"PostToolUseFailure","additionalContext":"critic"}}',
+        )
+
+    def test_ruby_post_tool_use_failure_stops_after_first_failed_delegate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            wrapper = tmp / "ruby-post-tool-use-failure.sh"
+            wrapper.write_text(RUBY_POST_TOOL_USE_FAILURE.read_text(encoding="utf-8"), encoding="utf-8")
+            wrapper.chmod(0o755)
+
+            (tmp / "ruby-failure-hints.sh").write_text(
+                "#!/usr/bin/env bash\n"
+                "echo ran > \"$(dirname \"$0\")/hints-ran\"\n"
+                "exit 2\n",
+                encoding="utf-8",
+            )
+            (tmp / "ruby-failure-hints.sh").chmod(0o755)
+
+            (tmp / "error-critic.sh").write_text(
+                "#!/usr/bin/env bash\n"
+                "echo ran > \"$(dirname \"$0\")/critic-ran\"\n",
+                encoding="utf-8",
+            )
+            (tmp / "error-critic.sh").chmod(0o755)
+
+            result = subprocess.run(
+                ["bash", str(wrapper)],
+                input=json.dumps({"tool_input": {"command": "bundle exec rspec"}}),
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=dict(os.environ),
+            )
+
+            hints_ran = (tmp / "hints-ran").is_file()
+            critic_ran = (tmp / "critic-ran").exists()
+
+        self.assertEqual(result.returncode, 2)
+        self.assertTrue(hints_ran)
+        self.assertFalse(critic_ran)
 
     def test_session_start_runtime_detection_uses_fast_sync_and_async_refresh_hooks(self) -> None:
         hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]["SessionStart"]
@@ -1493,6 +1575,7 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         self.assertIn("Regenerate Iron Law projections", result.stdout)
+        self.assertNotIn("claude", result.stdout)
 
 
 if __name__ == "__main__":
