@@ -122,7 +122,10 @@ def permission_to_glob(permission)
 end
 
 def covered_by_patterns?(command, patterns)
-  patterns.any? { |pattern| File.fnmatch?(pattern, command) }
+  patterns.any? do |pattern|
+    File.fnmatch?(pattern, command) ||
+      (pattern.end_with?(' *') && command == pattern[0...-2])
+  end
 end
 
 def normalized_command_for_coverage(command)

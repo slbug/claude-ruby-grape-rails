@@ -89,6 +89,23 @@ class PermissionsExtractorTests(unittest.TestCase):
         self.assertEqual(mixed["uncovered_groups"], [])
         self.assertEqual(repo_only["uncovered_groups"][0]["group"], "bundle exec rails db:migrate")
 
+    def test_trailing_star_permission_covers_bare_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            (repo / ".claude" / "settings.json").write_text(
+                json.dumps({"permissions": {"allow": ["Bash(git *)"]}}),
+                encoding="utf-8",
+            )
+            write_transcript(repo, tmp, "git")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        self.assertEqual(report["uncovered_groups"], [])
+
     def test_interpreter_grouping_keeps_script_targets_distinct(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
