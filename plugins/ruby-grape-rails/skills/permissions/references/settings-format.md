@@ -36,11 +36,12 @@ Rules are evaluated in this order: `deny -> ask -> allow`.
 ## Pattern Syntax
 
 - `Bash` or `Bash(*)` matches all Bash commands
-- `Bash(cmd *)` matches `cmd` plus arguments
+- `Bash(cmd *)` matches `cmd` with arguments, or the exact bare command `cmd`
 - `Bash(cmd)` is an exact match
 - the space before `*` matters:
-  - `Bash(git *)` matches `git diff`, `git add`
+  - `Bash(git *)` matches `git`, `git diff`, `git add`
   - `Bash(git*)` also matches `gitk`
+  - `Bash(git *)` keeps a word boundary, so it does not match `gitk`
 
 ### Deprecated Syntax
 
