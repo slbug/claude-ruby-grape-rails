@@ -248,7 +248,7 @@ set_active_plan() {
   [[ "$tmp_marker" == "${CLAUDE_DIR}/ACTIVE_PLAN."* ]] || return 1
 
   if ! (
-    # shellcheck disable=SC2329 # invoked via trap
+    # shellcheck disable=SC2317,SC2329 # invoked indirectly via trap
     cleanup_active_plan_tmp() {
       safe_remove_temp_file "${tmp_marker:-}" "${CLAUDE_DIR}/ACTIVE_PLAN.*" || true
     }
