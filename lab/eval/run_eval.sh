@@ -55,7 +55,7 @@ FAIL_UNDER="${RUBY_PLUGIN_EVAL_FAIL_UNDER:-0.90}"
 AGENT_FAIL_UNDER="${RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER:-0.85}"
 TRIGGER_FAIL_UNDER="${RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER:-0.90}"
 FAILURES=0
-CORE_SKILLS_REGEX='^(plan|work|review|verify|permissions|research)$'
+CORE_TRIGGER_SKILLS_REGEX='plan|work|review|verify|permissions|research'
 
 cd "$PROJECT_ROOT" || exit 1
 
@@ -171,13 +171,16 @@ should_run_changed_triggers() {
     return 0
   fi
 
-  local core_changed=""
-  core_changed=$(
+  if [[ -n "$(collect_changed_paths 'lab/eval/evals/')" ]]; then
+    return 0
+  fi
+
+  local entrypoint_changed=""
+  entrypoint_changed=$(
     collect_changed_paths "${PLUGIN_ROOT}/skills/" \
-      | sed -n "s|^${PLUGIN_ROOT}/skills/\\([^/]*\\)/.*|\\1|p" \
-      | grep -E "$CORE_SKILLS_REGEX" || true
+      | grep -E "^${PLUGIN_ROOT}/skills/(${CORE_TRIGGER_SKILLS_REGEX})/SKILL\\.md$" || true
   )
-  [[ -n "$core_changed" ]]
+  [[ -n "$entrypoint_changed" ]]
 }
 
 summarize_subject_scores() {

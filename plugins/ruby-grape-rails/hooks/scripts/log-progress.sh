@@ -22,6 +22,16 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 source "$ROOT_LIB"
 read_hook_input
 INPUT="$HOOK_INPUT_VALUE"
+case "${HOOK_INPUT_STATUS:-empty}" in
+  invalid)
+    echo "WARNING: ${HOOK_NAME} skipped progress logging because the hook payload was invalid." >&2
+    exit 0
+    ;;
+  truncated)
+    echo "WARNING: ${HOOK_NAME} skipped progress logging because the hook payload was truncated." >&2
+    exit 0
+    ;;
+esac
 LIB="${SCRIPT_DIR}/active-plan-lib.sh"
 [[ -r "$LIB" && ! -L "$LIB" ]] || emit_missing_dependency_block "active-plan-lib.sh"
 # shellcheck disable=SC1090,SC1091

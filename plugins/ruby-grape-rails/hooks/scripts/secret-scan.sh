@@ -91,6 +91,7 @@ if [[ -z "$BETTERLEAKS_PATH" || ! -x "$BETTERLEAKS_PATH" ]]; then
     exit 2
   fi
 
+  emit_missing_betterleaks_warning "${FILE_PATH:-this change}"
   exit 0
 fi
 

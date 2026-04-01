@@ -36,6 +36,7 @@ def validate_entries!(yaml)
   category_required = %w[id name law_count]
   law_required = %w[id category title rule summary_text rationale subagent_text]
   category_ids = yaml['categories'].filter_map { |category| category['id'] if category.is_a?(Hash) }
+  law_ids = yaml['laws'].filter_map { |law| law['id'] if law.is_a?(Hash) }
   category_totals = Hash.new(0)
   errors = []
 
@@ -64,6 +65,11 @@ def validate_entries!(yaml)
 
     errors << "law[#{index}] references unknown category: #{law['category'].inspect}"
   end
+
+  duplicate_category_ids = category_ids.group_by(&:itself).select { |_id, entries| entries.length > 1 }.keys.sort
+  duplicate_law_ids = law_ids.group_by(&:itself).select { |_id, entries| entries.length > 1 }.keys.sort
+  errors << "duplicate category ids: #{duplicate_category_ids.join(', ')}" unless duplicate_category_ids.empty?
+  errors << "duplicate law ids: #{duplicate_law_ids.join(', ')}" unless duplicate_law_ids.empty?
 
   if yaml['total_laws'].to_i != yaml['laws'].length
     errors << "total_laws=#{yaml['total_laws']} does not match actual laws count=#{yaml['laws'].length}"

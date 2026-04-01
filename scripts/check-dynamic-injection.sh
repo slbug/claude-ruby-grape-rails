@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Blocks dynamic context injection syntax (!`command`) in tracked plugin and
-# contributor docs/config surfaces when git metadata is available. In non-git
-# contexts, it falls back to a best-effort scan of the same target paths.
+# contributor docs/config surfaces when git metadata is available. In true
+# non-git contexts, it falls back to a best-effort scan of the same target
+# paths. If .git metadata exists but git is unavailable, the script fails
+# closed instead of guessing tracked surfaces.
 # This feature executes shell commands at skill load time. The Ruby plugin does
 # not use it and treats it as unsafe in these surfaces.
 
@@ -55,6 +57,10 @@ if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
     [[ -f "${REPO_ROOT}/${file}" ]] || continue
     scan_file "${REPO_ROOT}/${file}"
   done < <(git -C "$REPO_ROOT" ls-files -z -- "${SCAN_TARGETS[@]}")
+elif [[ -d "${REPO_ROOT}/.git" ]]; then
+  echo "ERROR: tracked dynamic-injection scan requires git when .git metadata is present." >&2
+  echo "ERROR: install git or rerun from an environment where git is available." >&2
+  exit 1
 else
   for target in "${SCAN_TARGETS[@]}"; do
     if [[ ! -e "${REPO_ROOT}/${target}" ]]; then

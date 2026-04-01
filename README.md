@@ -114,14 +114,17 @@ is the current wiring source of truth.
 
 ```bash
 git clone https://github.com/slbug/claude-ruby-grape-rails.git
+cd claude-ruby-grape-rails
+
+# Run these commands from the cloned repo root.
 
 # Option A: Test local working-tree changes directly
-claude --plugin-dir ./claude-ruby-grape-rails/plugins/ruby-grape-rails
+claude --plugin-dir ./plugins/ruby-grape-rails
 
 # Option B: Validate marketplace install flow
 # Note: marketplace.json now uses git-subdir source, so this installs the
 # published GitHub-backed plugin source, not your uncommitted working tree.
-/plugin marketplace add ./claude-ruby-grape-rails
+/plugin marketplace add .
 /plugin install ruby-grape-rails
 ```
 

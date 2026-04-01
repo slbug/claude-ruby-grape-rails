@@ -35,7 +35,7 @@ run_hook() {
   local target="$1"
   local code=0
 
-  [[ -f "$target" && ! -L "$target" ]] || return 0
+  [[ -f "$target" && ! -L "$target" ]] || emit_missing_dependency_block "$(path_basename "$target")"
 
   printf '%s' "$INPUT" | "$target"
   code=$?

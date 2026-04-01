@@ -125,6 +125,8 @@ rescue JSON::ParserError
   { allow: [], deny: [], invalid: true }
 rescue Errno::ENOENT
   { allow: [], deny: [], invalid: false }
+rescue Errno::EACCES, Errno::EPERM
+  { allow: [], deny: [], invalid: true }
 end
 
 def permission_to_glob(permission)
@@ -504,13 +506,13 @@ puts "Sessions scanned: #{recent_files.length} (last #{options[:days]} days)"
 puts "Additional recent sessions skipped by cap: #{truncated_session_files}" if truncated_session_files.positive?
 puts "Files capped at #{max_lines_per_file} lines: #{line_capped_files}" if line_capped_files.positive?
 puts "Malformed transcript lines skipped: #{malformed_lines}" if malformed_lines.positive?
-puts "Invalid settings files ignored: #{invalid_settings_files.length}" if invalid_settings_files.any?
+puts "Invalid or unreadable settings files ignored: #{invalid_settings_files.length}" if invalid_settings_files.any?
 puts "Transcript files skipped after disappearing: #{missing_session_files.length}" if missing_session_files.any?
 if truncated_session_files.positive? || line_capped_files.positive?
   puts 'WARNING: transcript scan was truncated by caps; recommendations are partial.'
 end
 puts 'WARNING: malformed transcript lines were skipped; recommendations may be incomplete.' if malformed_lines.positive?
-puts 'WARNING: malformed settings files were ignored; permission coverage may be incomplete.' if invalid_settings_files.any?
+puts 'WARNING: invalid or unreadable settings files were ignored; permission coverage may be incomplete.' if invalid_settings_files.any?
 puts 'WARNING: some transcript files disappeared during scanning; recommendations may be incomplete.' if missing_session_files.any?
 puts "Total Bash tool calls seen: #{total_bash_commands}"
 puts "Uncovered command groups: #{group_counts.length}"

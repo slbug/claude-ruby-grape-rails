@@ -33,6 +33,8 @@ WORKSPACE_ROOT_LIB = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/workspa
 FORMAT_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/format-ruby.sh"
 VERIFY_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/verify-ruby.sh"
 RUBYISH_POST_EDIT = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/rubyish-post-edit.sh"
+PLAN_STOP_REMINDER = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/plan-stop-reminder.sh"
+LOG_PROGRESS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/log-progress.sh"
 STOP_FAILURE_LOG = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/stop-failure-log.sh"
 ERROR_CRITIC = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/error-critic.sh"
 RUBY_FAILURE_HINTS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/ruby-failure-hints.sh"
@@ -44,6 +46,7 @@ FETCH_CLAUDE_DOCS = REPO_ROOT / "scripts/fetch-claude-docs.sh"
 RUN_EVAL = REPO_ROOT / "lab/eval/run_eval.sh"
 GENERATE_IRON_LAW_CONTENT = REPO_ROOT / "scripts/generate-iron-law-content.rb"
 GENERATE_IRON_LAW_OUTPUTS = REPO_ROOT / "scripts/generate-iron-law-outputs.sh"
+RUN_EVAL_TESTS = REPO_ROOT / "scripts/run-eval-tests.sh"
 
 
 def run_block_hook(
@@ -520,6 +523,49 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertFalse(verify_ran)
         self.assertFalse(debug_ran)
 
+    def test_rubyish_post_edit_blocks_when_delegate_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            wrapper = tmp / "rubyish-post-edit.sh"
+            wrapper.write_text(RUBYISH_POST_EDIT.read_text(encoding="utf-8"), encoding="utf-8")
+            wrapper.chmod(0o755)
+
+            (tmp / "workspace-root-lib.sh").write_text(
+                textwrap.dedent(
+                    """\
+                    #!/usr/bin/env bash
+                    path_basename() {
+                      local path="$1"
+                      printf '%s\\n' "${path##*/}"
+                    }
+                    read_hook_input() {
+                      HOOK_INPUT_VALUE=$(cat)
+                      HOOK_INPUT_STATUS=valid
+                    }
+                    """
+                ),
+                encoding="utf-8",
+            )
+            (tmp / "workspace-root-lib.sh").chmod(0o755)
+
+            for name in ("format-ruby.sh", "debug-statement-warning.sh"):
+                script = tmp / name
+                script.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+                script.chmod(0o755)
+
+            result = subprocess.run(
+                ["bash", str(wrapper)],
+                input=json.dumps({"tool_input": {"file_path": "app/demo.rb"}}),
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=dict(os.environ),
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("iron-law-verifier.sh is unavailable", result.stderr)
+
     def test_block_dangerous_ops_blocks_quoted_and_namespaced_db_tasks(self) -> None:
         for command in (
             'bundle exec rails "db:drop"',
@@ -863,6 +909,41 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(values, {})
 
+    def test_detect_stack_ignores_symlinked_packwerk_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as extdir:
+            tmp = Path(tmpdir)
+            (tmp / "Gemfile").write_text('source "https://rubygems.org"\n', encoding="utf-8")
+            external = Path(extdir) / "packwerk.yml"
+            external.write_text("enforce_dependencies: true\n", encoding="utf-8")
+            os.symlink(external, tmp / "packwerk.yml")
+
+            values = run_detect_stack(tmpdir)
+
+        self.assertEqual(values["PACKAGE_LAYOUT"], "single_app")
+        self.assertEqual(values["HAS_PACKWERK"], "false")
+
+    def test_detect_stack_ignores_unreadable_gemfile(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            gemfile = tmp / "Gemfile"
+            gemfile.write_text('source "https://rubygems.org"\n\ngem "rails"\n', encoding="utf-8")
+            gemfile.chmod(0)
+
+            values = run_detect_stack(tmpdir)
+
+        self.assertEqual(values.get("DETECTED_STACK", ""), "")
+
+    def test_detect_stack_reports_project_ruby_version_from_ruby_version_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / "Gemfile").write_text('source "https://rubygems.org"\n', encoding="utf-8")
+            (tmp / ".ruby-version").write_text("3.4.1\n", encoding="utf-8")
+
+            values = run_detect_stack(tmpdir)
+
+        self.assertEqual(values["RUBY_VERSION"], "3.4.1")
+        self.assertIn("INTERPRETER_RUBY_VERSION", values)
+
     def test_detect_stack_finds_nested_package_manifests(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -1003,6 +1084,36 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("cannot inspect the hook payload because jq is unavailable", result.stderr)
 
+    def test_security_reminder_fails_closed_on_invalid_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+
+            result = run_workspace_hook_raw(SECURITY_REMINDER, tmpdir, "{not-json")
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("could not safely inspect an invalid hook payload", result.stderr)
+
+    def test_plan_stop_reminder_fails_closed_on_invalid_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+
+            result = run_workspace_hook_raw(PLAN_STOP_REMINDER, tmpdir, "{not-json")
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("could not safely inspect an invalid hook payload", result.stderr)
+
+    def test_log_progress_warns_and_skips_invalid_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+
+            result = run_workspace_hook_raw(LOG_PROGRESS, tmpdir, "{not-json")
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("skipped progress logging because the hook payload was invalid", result.stderr)
+
     def test_inject_iron_laws_no_longer_requires_jq(self) -> None:
         env = dict(os.environ)
         env["PATH"] = "/usr/bin:/bin"
@@ -1083,6 +1194,37 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 2)
         self.assertIn("Potential secret detected", result.stderr)
+
+    def test_secret_scan_warns_when_betterleaks_is_missing_in_default_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            target = tmp / "demo.txt"
+            target.write_text("safe text\n", encoding="utf-8")
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            for name in ("dirname", "jq", "grep", "git", "head", "pwd", "readlink", "rm", "mkdir", "cp", "mktemp", "mv", "sed", "wc", "find", "cut", "stat", "date", "tail", "tr"):
+                source = shutil.which(name)
+                self.assertIsNotNone(source, name)
+                os.symlink(source, fake_bin / name)
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["BETTERLEAKS_PATH"] = ""
+            env["RUBY_PLUGIN_HOOK_MODE"] = "default"
+            env["PATH"] = str(fake_bin)
+
+            result = subprocess.run(
+                ["/bin/bash", str(SECRET_SCAN)],
+                input=json.dumps({"tool_input": {"file_path": str(target)}}),
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Betterleaks not available", result.stderr)
 
     def test_secret_scan_blocks_strict_recent_change_scan_when_git_is_unavailable(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1717,7 +1859,7 @@ class RuntimeScriptTests(unittest.TestCase):
             env["RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_BYTES"] = "1"
 
             result = subprocess.run(
-                ["bash", str(script_copy)],
+                ["/bin/bash", str(script_copy)],
                 capture_output=True,
                 text=True,
                 cwd=tmp,
@@ -1729,6 +1871,38 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("results are partial", result.stderr)
         self.assertIn("cannot be trusted", result.stderr)
         self.assertIn("RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_FILES", result.stderr)
+
+    def test_check_dynamic_injection_requires_git_when_git_metadata_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            script_dir = tmp / "scripts"
+            script_dir.mkdir()
+            script_copy = script_dir / "check-dynamic-injection.sh"
+            script_copy.write_text(CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8")
+            os.chmod(script_copy, 0o755)
+            (tmp / ".git").mkdir()
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            dirname_path = shutil.which("dirname")
+            grep_path = shutil.which("grep")
+            self.assertIsNotNone(dirname_path)
+            self.assertIsNotNone(grep_path)
+            os.symlink(dirname_path, fake_bin / "dirname")
+            os.symlink(grep_path, fake_bin / "grep")
+            env = dict(os.environ)
+            env["PATH"] = str(fake_bin)
+
+            result = subprocess.run(
+                ["/bin/bash", str(script_copy)],
+                capture_output=True,
+                text=True,
+                cwd=tmp,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("requires git when .git metadata is present", result.stderr)
 
     def test_run_eval_marks_include_untracked_as_local_only(self) -> None:
         env = dict(os.environ)
@@ -1869,6 +2043,38 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("npm is required for linting in --ci mode", result.stderr)
 
+    def test_run_eval_tests_resolves_repo_root_when_invoked_through_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            symlink_path = tmp / "run-eval-tests.sh"
+            os.symlink(RUN_EVAL_TESTS, symlink_path)
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            python3 = fake_bin / "python3"
+            python3.write_text(
+                "#!/usr/bin/env bash\n"
+                "if [[ \"${1:-}\" == \"-c\" ]]; then\n"
+                "  exit 0\n"
+                "fi\n"
+                "pwd\n",
+                encoding="utf-8",
+            )
+            python3.chmod(0o755)
+            env = dict(os.environ)
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+
+            result = subprocess.run(
+                ["bash", str(symlink_path)],
+                capture_output=True,
+                text=True,
+                cwd=tmp,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), str(REPO_ROOT))
+
     def test_fetch_claude_docs_unknown_argument_uses_stderr(self) -> None:
         result = subprocess.run(
             ["bash", str(FETCH_CLAUDE_DOCS), "--bogus"],
@@ -1946,6 +2152,58 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1)
         self.assertIn("does not match", result.stderr)
+
+    def test_generate_iron_law_content_rejects_duplicate_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            yaml_path = tmp / "iron-laws.yml"
+            yaml_path.write_text(
+                textwrap.dedent(
+                    """
+                    version: "1"
+                    last_updated: "2026-04-01"
+                    total_laws: 2
+                    categories:
+                      - id: data
+                        name: Data
+                        law_count: 1
+                      - id: data
+                        name: More Data
+                        law_count: 1
+                    laws:
+                      - id: 1
+                        category: data
+                        title: One
+                        rule: Do it
+                        summary_text: One
+                        rationale: Why
+                        subagent_text: One
+                      - id: 1
+                        category: data
+                        title: Two
+                        rule: Do it again
+                        summary_text: Two
+                        rationale: Why
+                        subagent_text: Two
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            env = dict(os.environ)
+            env["RUBY_PLUGIN_IRON_LAWS_YAML"] = str(yaml_path)
+            result = subprocess.run(
+                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "readme"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("duplicate category ids", result.stderr)
+        self.assertIn("duplicate law ids", result.stderr)
 
     def test_generate_iron_law_outputs_help_succeeds(self) -> None:
         result = subprocess.run(

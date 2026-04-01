@@ -330,6 +330,8 @@ Workflow convention with hook-level detection support:
 ### Testing locally
 
 ```bash
+# Run these commands from the repo root.
+
 # Option A: Test local working-tree changes directly
 claude --plugin-dir ./plugins/ruby-grape-rails
 
@@ -760,7 +762,7 @@ Minimum runtime: `python3` 3.10+ for `lab/eval/`.
   artifact and provenance checks
 - `make security-injection` / `npm run security:injection`
 - `make eval-tests` / `npm run eval:test` for the default contributor test
-  path (prefers `pytest` when installed, otherwise falls back to `unittest`)
+  path (`unittest` discovery)
 - `make eval-tests-pytest` / `npm run eval:test:pytest` for explicit `pytest`
   runs
 - `make eval-baseline`

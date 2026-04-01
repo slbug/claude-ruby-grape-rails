@@ -346,6 +346,26 @@ class PermissionsExtractorTests(unittest.TestCase):
         )
         self.assertEqual(report["uncovered_groups"][0]["group"], "bundle exec rubocop")
 
+    def test_unreadable_settings_files_are_reported_without_crashing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            settings = repo / ".claude" / "settings.json"
+            settings.write_text(json.dumps({"permissions": {"allow": ["Bash(bundle *)"]}}), encoding="utf-8")
+            settings.chmod(0)
+            write_transcript(repo, tmp, "bundle exec rubocop")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        self.assertEqual(
+            [Path(path).resolve() for path in report["invalid_settings_files"]],
+            [settings.resolve()],
+        )
+        self.assertEqual(report["uncovered_groups"][0]["group"], "bundle exec rubocop")
+
     def test_deny_patterns_participate_in_deprecated_pattern_reporting(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)

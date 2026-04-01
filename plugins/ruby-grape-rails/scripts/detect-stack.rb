@@ -12,6 +12,38 @@ rescue SystemCallError
   false
 end
 
+def safe_read_file(path)
+  return nil unless safe_manifest_file?(path)
+
+  File.read(path)
+rescue SystemCallError
+  nil
+end
+
+def declared_ruby_version(gemfile_content)
+  ruby_version_file = safe_read_file('.ruby-version')
+  if ruby_version_file
+    version = ruby_version_file.each_line.map(&:strip).find { |line| !line.empty? && !line.start_with?('#') }
+    return version unless version.nil? || version.empty?
+  end
+
+  tool_versions = safe_read_file('.tool-versions')
+  if tool_versions
+    tool_versions.each_line do |line|
+      next if line.strip.empty? || line.lstrip.start_with?('#')
+      next unless line =~ /^\s*ruby\s+([^\s#]+)/
+
+      return Regexp.last_match(1)
+    end
+  end
+
+  if gemfile_content && !gemfile_content.empty? && gemfile_content =~ /^\s*ruby\s*(?:\(|\s)\s*['"]([^'"]+)['"]/
+    return Regexp.last_match(1)
+  end
+
+  nil
+end
+
 def manifest_root(start_dir)
   Pathname.new(start_dir).expand_path.ascend do |candidate|
     gemfile = candidate.join('Gemfile')
@@ -31,18 +63,19 @@ unless repo_root
 end
 
 Dir.chdir(repo_root) do
-gemfile = safe_manifest_file?('Gemfile') ? File.read('Gemfile') : ''
-lockfile = safe_manifest_file?('Gemfile.lock') ? File.read('Gemfile.lock') : ''
+gemfile = safe_read_file('Gemfile') || ''
+lockfile = safe_read_file('Gemfile.lock') || ''
 gemspec_contents = Dir.glob('*.gemspec').sort.filter_map do |path|
-  next unless File.file?(path) && !File.symlink?(path)
+  next unless safe_manifest_file?(path)
 
-  File.read(path)
+  safe_read_file(path)
 end
 gemfile_uses_gemspec = if gemfile.empty?
                          gemspec_contents.any?
                        else
                          gemfile.match?(/^\s*gemspec(?:\s*(?:\(|#|$)|$)/)
                        end
+project_ruby_version = declared_ruby_version(gemfile)
 
 # Detection helpers
 def gem_declared_in_manifest?(content, name)
@@ -282,7 +315,7 @@ detected.uniq!
 rails_version = versions['rails']
 
 package_dirs = modular_package_dirs
-packwerk = File.exist?('packwerk.yml')
+packwerk = safe_manifest_file?('packwerk.yml')
 package_layout =
   if packwerk
     'packwerk'
@@ -305,7 +338,8 @@ primary_orm =
 # Output for skill consumption
 activerecord_version = versions['activerecord'] || rails_version
 
-puts "RUBY_VERSION=#{RUBY_VERSION}"
+puts "RUBY_VERSION=#{project_ruby_version || RUBY_VERSION}"
+puts "INTERPRETER_RUBY_VERSION=#{RUBY_VERSION}" if project_ruby_version && project_ruby_version != RUBY_VERSION
 puts "RAILS_VERSION=#{rails_version}" if rails_version
 if orms.include?('active_record')
   if activerecord_version && !activerecord_version.to_s.empty?
