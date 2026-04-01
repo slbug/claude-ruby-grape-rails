@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import tempfile
 import textwrap
@@ -32,6 +33,14 @@ WORKSPACE_ROOT_LIB = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/workspa
 FORMAT_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/format-ruby.sh"
 VERIFY_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/verify-ruby.sh"
 RUBYISH_POST_EDIT = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/rubyish-post-edit.sh"
+STOP_FAILURE_LOG = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/stop-failure-log.sh"
+ERROR_CRITIC = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/error-critic.sh"
+PRECOMPACT_RULES = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/precompact-rules.sh"
+POSTCOMPACT_VERIFY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/postcompact-verify.sh"
+CHECK_DYNAMIC_INJECTION = REPO_ROOT / "scripts/check-dynamic-injection.sh"
+RUN_EVAL = REPO_ROOT / "lab/eval/run_eval.sh"
+GENERATE_IRON_LAW_CONTENT = REPO_ROOT / "scripts/generate-iron-law-content.rb"
+GENERATE_IRON_LAW_OUTPUTS = REPO_ROOT / "scripts/generate-iron-law-outputs.sh"
 
 
 def run_block_hook(
@@ -501,6 +510,11 @@ class RuntimeScriptTests(unittest.TestCase):
         result = run_block_hook('echo "RAILS_ENV=production"')
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stdout, "")
+
+    def test_block_dangerous_ops_does_not_split_quoted_operators(self) -> None:
+        for command in ('echo "safe && rails db:drop"', 'printf "x|rails db:drop"'):
+            result = run_block_hook(command)
+            self.assertEqual(result.returncode, 0, command)
 
     def test_block_dangerous_ops_fails_closed_on_truncated_hook_payload(self) -> None:
         result = run_block_hook(
@@ -993,6 +1007,31 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("could not update .runtime_env", result.stderr)
 
+    def test_detect_runtime_warns_when_runtime_env_final_move_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            (fake_bin / "mv").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+            os.chmod(fake_bin / "mv", 0o755)
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["RUBY_PLUGIN_DETECT_RUNTIME_QUIET"] = "1"
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+
+            result = subprocess.run(
+                ["bash", str(DETECT_RUNTIME)],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("final file move failed", result.stderr)
+
     def test_debug_statement_warning_detects_standalone_p_and_inline_puts(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -1026,6 +1065,34 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         self.assertNotIn("mapfile", result.stderr)
+
+    def test_pre_commit_hook_requires_python3_for_json_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
+            (tmp / "demo.json").write_text('{"ok": true}\n', encoding="utf-8")
+            subprocess.run(["git", "add", "demo.json"], cwd=tmp, check=True, capture_output=True)
+
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            real_git = shutil.which("git")
+            self.assertIsNotNone(real_git)
+            (fake_bin / "git").write_text(f"#!/bin/sh\nexec {real_git} \"$@\"\n", encoding="utf-8")
+            os.chmod(fake_bin / "git", 0o755)
+
+            env = dict(os.environ)
+            env["PATH"] = str(fake_bin)
+            result = subprocess.run(
+                ["/bin/bash", str(PRE_COMMIT_HOOK)],
+                capture_output=True,
+                text=True,
+                cwd=tmp,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("python3 not found", result.stderr)
 
     def test_detect_runtime_ignores_lefthook_comment_mentions(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1061,6 +1128,33 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertFalse(claude_dir.exists())
         for path in created_dirs:
             self.assertFalse(path.exists(), path)
+
+    def test_check_resume_blocks_invalid_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plan_dir = tmp / ".claude" / "plans" / "demo"
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "plan.md").write_text("- [ ] task\n", encoding="utf-8")
+
+            result = run_workspace_hook_raw(CHECK_RESUME, tmpdir, "{not-json")
+
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("could not safely inspect", result.stderr)
+
+    def test_stop_failure_log_skips_invalid_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plan_dir = tmp / ".claude" / "plans" / "demo"
+            plan_dir.mkdir(parents=True)
+            (tmp / ".claude" / "ACTIVE_PLAN").write_text(str(plan_dir) + "\n", encoding="utf-8")
+            (plan_dir / "plan.md").write_text("- [ ] task\n", encoding="utf-8")
+
+            result = run_workspace_hook_raw(STOP_FAILURE_LOG, tmpdir, "{not-json")
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("could not safely inspect", result.stderr)
+        self.assertFalse((plan_dir / "scratchpad.md").exists())
 
     def test_active_plan_marker_respects_numbered_unchecked_tasks(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1172,6 +1266,146 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("Scratchpad notes ready in 2 plan(s):", result.stdout)
         self.assertIn("active (ACTIVE)", result.stdout)
         self.assertIn("noted", result.stdout)
+
+    def test_error_critic_surfaces_repeated_failure_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload = {
+                "tool_input": {"command": "bundle exec rspec spec/models"},
+                "error": "expected: 1\ngot: 0",
+                "session_id": "abc123",
+            }
+            first = run_workspace_hook(ERROR_CRITIC, tmpdir, payload)
+            second = run_workspace_hook(ERROR_CRITIC, tmpdir, payload)
+
+        self.assertEqual(first.returncode, 0)
+        self.assertEqual(first.stdout, "")
+        self.assertEqual(second.returncode, 0)
+        self.assertIn("REPEATED FAILURE", second.stdout)
+
+    def test_precompact_rules_surfaces_active_plan_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plan_dir = tmp / ".claude" / "plans" / "demo"
+            research_dir = plan_dir / "research"
+            research_dir.mkdir(parents=True)
+            (tmp / ".claude" / "ACTIVE_PLAN").write_text(str(plan_dir) + "\n", encoding="utf-8")
+            (research_dir / "notes.md").write_text("x\n", encoding="utf-8")
+
+            result = run_workspace_hook(PRECOMPACT_RULES, tmpdir, {})
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("PRESERVE ACROSS COMPACTION", result.stderr)
+
+    def test_postcompact_verify_surfaces_active_plan_reminder(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plan_dir = tmp / ".claude" / "plans" / "demo"
+            plan_dir.mkdir(parents=True)
+            (tmp / ".claude" / "ACTIVE_PLAN").write_text(str(plan_dir) + "\n", encoding="utf-8")
+            (plan_dir / "plan.md").write_text("- [ ] task\n", encoding="utf-8")
+
+            result = run_workspace_hook(POSTCOMPACT_VERIFY, tmpdir, {})
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("POST-COMPACTION", result.stderr)
+        self.assertIn(".claude/plans/demo/plan.md", result.stderr)
+
+    def test_check_dynamic_injection_warns_when_fallback_scan_is_partial(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            script_dir = tmp / "scripts"
+            script_dir.mkdir()
+            script_copy = script_dir / "check-dynamic-injection.sh"
+            script_copy.write_text(CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8")
+            os.chmod(script_copy, 0o755)
+            plugin_dir = tmp / "plugins"
+            plugin_dir.mkdir()
+            (plugin_dir / "doc.md").write_text("x" * 32, encoding="utf-8")
+            env = dict(os.environ)
+            env["RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_BYTES"] = "1"
+
+            result = subprocess.run(
+                ["bash", str(script_copy)],
+                capture_output=True,
+                text=True,
+                cwd=tmp,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("results are partial", result.stderr)
+        self.assertIn("scanned subset", result.stderr)
+
+    def test_run_eval_marks_include_untracked_as_local_only(self) -> None:
+        env = dict(os.environ)
+        env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = "0"
+        env["RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER"] = "0"
+        env["RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER"] = "0"
+        result = subprocess.run(
+            ["bash", str(RUN_EVAL), "--changed", "--include-untracked"],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+            env=env,
+        )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("local-only and non-comparable", result.stdout)
+
+    def test_generate_iron_law_content_rejects_mismatched_counts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            yaml_path = tmp / "iron-laws.yml"
+            yaml_path.write_text(
+                textwrap.dedent(
+                    """
+                    version: "1"
+                    last_updated: "2026-04-01"
+                    total_laws: 2
+                    categories:
+                      - id: data
+                        name: Data
+                        law_count: 2
+                    laws:
+                      - id: 1
+                        category: data
+                        title: One
+                        rule: Do it
+                        summary_text: One
+                        rationale: Why
+                        subagent_text: One
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            env = dict(os.environ)
+            env["RUBY_PLUGIN_IRON_LAWS_YAML"] = str(yaml_path)
+            result = subprocess.run(
+                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "readme"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("does not match", result.stderr)
+
+    def test_generate_iron_law_outputs_help_succeeds(self) -> None:
+        result = subprocess.run(
+            ["bash", str(GENERATE_IRON_LAW_OUTPUTS), "--help"],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Regenerate Iron Law projections", result.stdout)
 
 
 if __name__ == "__main__":

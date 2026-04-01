@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Run deterministic contributor evals for the Ruby plugin.
+# Run contributor evals for the Ruby plugin.
+# Default and CI modes score tracked surfaces; --include-untracked is
+# intentionally local-only and non-comparable.
 #
 # Usage:
 #   ./lab/eval/run_eval.sh              # Lint + injection check + tracked changed surfaces

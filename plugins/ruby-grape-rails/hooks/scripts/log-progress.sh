@@ -28,6 +28,7 @@ LIB="${SCRIPT_DIR}/active-plan-lib.sh"
 source "$LIB"
 
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
+command -v grep >/dev/null 2>&1 || emit_missing_dependency_block "grep"
 
 clear_stale_lock() {
   local lock_dir="$1"

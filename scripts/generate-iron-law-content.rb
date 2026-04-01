@@ -4,7 +4,8 @@
 require 'json'
 require 'yaml'
 
-YAML_SOURCE = File.expand_path('../plugins/ruby-grape-rails/references/iron-laws.yml', __dir__)
+DEFAULT_YAML_SOURCE = File.expand_path('../plugins/ruby-grape-rails/references/iron-laws.yml', __dir__)
+YAML_SOURCE = ENV.fetch('RUBY_PLUGIN_IRON_LAWS_YAML', DEFAULT_YAML_SOURCE)
 
 unless File.exist?(YAML_SOURCE)
   puts "Error: YAML source not found: #{YAML_SOURCE}"
@@ -35,6 +36,7 @@ def validate_entries!(yaml)
   category_required = %w[id name law_count]
   law_required = %w[id category title rule summary_text rationale subagent_text]
   category_ids = yaml['categories'].filter_map { |category| category['id'] if category.is_a?(Hash) }
+  category_totals = Hash.new(0)
   errors = []
 
   yaml['categories'].each_with_index do |category, index|
@@ -61,6 +63,26 @@ def validate_entries!(yaml)
     next if category_ids.include?(law['category'])
 
     errors << "law[#{index}] references unknown category: #{law['category'].inspect}"
+  end
+
+  if yaml['total_laws'].to_i != yaml['laws'].length
+    errors << "total_laws=#{yaml['total_laws']} does not match actual laws count=#{yaml['laws'].length}"
+  end
+
+  yaml['laws'].each do |law|
+    next unless law.is_a?(Hash) && law['category']
+
+    category_totals[law['category']] += 1
+  end
+
+  yaml['categories'].each_with_index do |category, index|
+    next unless category.is_a?(Hash) && category['id']
+
+    declared_count = category['law_count'].to_i
+    actual_count = category_totals[category['id']]
+    next if declared_count == actual_count
+
+    errors << "category[#{index}] #{category['id'].inspect} law_count=#{category['law_count']} does not match actual count=#{actual_count}"
   end
 
   return if errors.empty?

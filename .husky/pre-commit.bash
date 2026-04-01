@@ -37,6 +37,12 @@ done < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.json')
 if [[ ${#STAGED_JSON_FILES[@]} -gt 0 ]]; then
   echo "Validating staged JSON files..."
 
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "ERROR: python3 not found, cannot validate staged JSON files." >&2
+    echo "Install Python 3 before committing JSON changes." >&2
+    exit 1
+  fi
+
   for file in "${STAGED_JSON_FILES[@]}"; do
     if [[ -f "$file" ]]; then
       if ! python3 -m json.tool "$file" > /dev/null 2>&1; then

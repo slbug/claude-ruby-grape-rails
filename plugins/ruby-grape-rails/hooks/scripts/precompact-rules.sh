@@ -14,6 +14,7 @@ emit_missing_dependency_notice() {
   exit 2
 }
 
+command -v grep >/dev/null 2>&1 || emit_missing_dependency_notice "grep"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_notice "workspace-root-lib.sh"

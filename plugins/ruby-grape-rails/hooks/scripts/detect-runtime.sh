@@ -20,9 +20,15 @@ emit_runtime_temp_warning() {
   exit 0
 }
 
+emit_runtime_move_warning() {
+  echo "WARNING: ${HOOK_NAME} could not update .runtime_env because the final file move failed." >&2
+  exit 0
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 DEP_LIB="${SCRIPT_DIR}/ruby-dependency-lib.sh"
+command -v grep >/dev/null 2>&1 || emit_runtime_dependency_warning "grep"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_runtime_dependency_warning "workspace-root-lib.sh"
 [[ -r "$DEP_LIB" && ! -L "$DEP_LIB" ]] || emit_runtime_dependency_warning "ruby-dependency-lib.sh"
 # shellcheck disable=SC1090,SC1091
@@ -774,5 +780,5 @@ trap cleanup_runtime_env_tmp EXIT HUP INT TERM
   fi
 } > "$TMP_RUNTIME_ENV"
 
-mv -f -- "$TMP_RUNTIME_ENV" "$RUNTIME_ENV_FILE" || exit 0
+mv -f -- "$TMP_RUNTIME_ENV" "$RUNTIME_ENV_FILE" || emit_runtime_move_warning
 trap - EXIT HUP INT TERM

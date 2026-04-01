@@ -5,6 +5,10 @@ set -o pipefail
 # SessionStart hook: Surface existing scratchpads, auto-initialize missing
 # scratchpads for active/resumable plans, and highlight dead-end-heavy plans.
 
+command -v grep >/dev/null 2>&1 || {
+  echo "Warning: skipping check-scratchpad.sh because grep is unavailable" >&2
+  exit 0
+}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0

@@ -37,14 +37,94 @@ COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/nul
 
 normalize_command_segments() {
   local command_text="$1"
+  local current=""
+  local char=""
+  local next=""
+  local in_single=0
+  local in_double=0
+  local escaped=0
+  local i=0
+  local length=${#command_text}
 
-  command_text=${command_text//$'\r'/}
-  command_text=${command_text//$'\n'/;}
-  command_text=${command_text//&&/;}
-  command_text=${command_text//||/;}
-  command_text=${command_text//|/;}
+  flush_segment() {
+    local segment="$1"
 
-  printf '%s\n' "$command_text" | tr ';' '\n'
+    segment=$(trim_leading_whitespace "$segment")
+    segment=$(trim_trailing_whitespace "$segment")
+    [[ -n "$segment" ]] && printf '%s\n' "$segment"
+  }
+
+  while [[ "$i" -lt "$length" ]]; do
+    char="${command_text:$i:1}"
+    next=""
+    if [[ $(( i + 1 )) -lt "$length" ]]; then
+      next="${command_text:$(( i + 1 )):1}"
+    fi
+
+    if [[ "$escaped" -eq 1 ]]; then
+      current+="$char"
+      escaped=0
+      i=$(( i + 1 ))
+      continue
+    fi
+
+    if [[ "$in_single" -eq 0 && "$char" == "\\" ]]; then
+      current+="$char"
+      escaped=1
+      i=$(( i + 1 ))
+      continue
+    fi
+
+    if [[ "$char" == "'" && "$in_double" -eq 0 ]]; then
+      current+="$char"
+      if [[ "$in_single" -eq 1 ]]; then
+        in_single=0
+      else
+        in_single=1
+      fi
+      i=$(( i + 1 ))
+      continue
+    fi
+
+    if [[ "$char" == '"' && "$in_single" -eq 0 ]]; then
+      current+="$char"
+      if [[ "$in_double" -eq 1 ]]; then
+        in_double=0
+      else
+        in_double=1
+      fi
+      i=$(( i + 1 ))
+      continue
+    fi
+
+    if [[ "$in_single" -eq 0 && "$in_double" -eq 0 ]]; then
+      if [[ "$char" == "&" && "$next" == "&" ]]; then
+        flush_segment "$current"
+        current=""
+        i=$(( i + 2 ))
+        continue
+      fi
+
+      if [[ "$char" == "|" && "$next" == "|" ]]; then
+        flush_segment "$current"
+        current=""
+        i=$(( i + 2 ))
+        continue
+      fi
+
+      if [[ "$char" == "|" || "$char" == ";" || "$char" == $'\n' || "$char" == $'\r' ]]; then
+        flush_segment "$current"
+        current=""
+        i=$(( i + 1 ))
+        continue
+      fi
+    fi
+
+    current+="$char"
+    i=$(( i + 1 ))
+  done
+
+  flush_segment "$current"
 }
 
 trim_leading_whitespace() {

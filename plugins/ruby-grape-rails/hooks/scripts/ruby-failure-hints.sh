@@ -13,6 +13,7 @@ emit_missing_dependency_block() {
 }
 
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
+command -v grep >/dev/null 2>&1 || emit_missing_dependency_block "grep"
 
 COMMAND=$(jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
 [[ -n "$COMMAND" ]] || exit 0
