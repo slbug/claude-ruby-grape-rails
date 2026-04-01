@@ -138,7 +138,7 @@ resolve_project_root_from_dir() {
   local dir="$1"
   local normalized_dir
   local current
-  local git_root
+  local git_root=""
   local home_dir
 
   normalized_dir=$(normalize_workspace_dir "$dir") || return 1

@@ -22,6 +22,7 @@ PLUGIN_ROOT="plugins/ruby-grape-rails"
 MODE="--changed"
 INCLUDE_UNTRACKED=false
 AGAINST_REF=""
+AGAINST_MERGE_BASE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --changed|--all|--skills|--agents|--triggers|--ci)
@@ -67,20 +68,27 @@ have_head() {
   git rev-parse --verify HEAD >/dev/null 2>&1
 }
 
+resolve_against_merge_base() {
+  [[ -n "$AGAINST_REF" ]] || return 0
+  have_head || return 0
+
+  AGAINST_MERGE_BASE=$(git merge-base HEAD "$AGAINST_REF" 2>/dev/null || true)
+  if [[ -z "$AGAINST_MERGE_BASE" ]]; then
+    echo "ERROR: could not resolve merge-base with ${AGAINST_REF}; changed-surface scoring would be incomplete." >&2
+    echo "Use a valid branch/ref for --against or rerun without it." >&2
+    exit 1
+  fi
+}
+
+resolve_against_merge_base
+
 collect_changed_paths() {
   local prefix="$1"
   local lines=""
-  local merge_base=""
 
   if have_head; then
     if [[ -n "$AGAINST_REF" ]]; then
-      merge_base=$(git merge-base HEAD "$AGAINST_REF" 2>/dev/null || true)
-      if [[ -n "$merge_base" ]]; then
-        lines=$(git diff --name-only "${merge_base}..HEAD" -- "$prefix" 2>/dev/null || true)
-      else
-        echo "WARN: could not resolve merge-base with ${AGAINST_REF}; falling back to HEAD diff." >&2
-        lines=$(git diff --name-only HEAD -- "$prefix" 2>/dev/null || true)
-      fi
+      lines=$(git diff --name-only "${AGAINST_MERGE_BASE}..HEAD" -- "$prefix" 2>/dev/null || true)
     else
       lines=$(git diff --name-only HEAD -- "$prefix" 2>/dev/null || true)
     fi
@@ -337,7 +345,8 @@ echo "=== Ruby Plugin Eval ==="
 echo
 
 if [[ "$MODE" == "--changed" && "$INCLUDE_UNTRACKED" == "true" ]]; then
-  echo "NOTE: --include-untracked makes changed-mode results local-only and non-comparable."
+  echo "WARNING: --include-untracked makes changed-mode results local-only and non-comparable."
+  echo "WARNING: CI and review comparisons should use tracked surfaces only."
   echo
 fi
 

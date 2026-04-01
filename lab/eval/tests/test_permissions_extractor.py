@@ -17,9 +17,11 @@ def claude_project_slug(repo_root: Path) -> str:
     return str(resolved).replace("/", "-").replace(":", "-").replace("\\", "-")
 
 
-def run_extractor(repo_root: Path, home_dir: Path, *args: str) -> dict:
+def run_extractor(repo_root: Path, home_dir: Path, *args: str, env_updates: dict[str, str] | None = None) -> dict:
     env = dict(os.environ)
     env["HOME"] = str(home_dir)
+    if env_updates:
+        env.update(env_updates)
     result = subprocess.run(
         ["ruby", str(EXTRACT_PERMISSIONS), "--json", *args],
         cwd=repo_root,
@@ -218,6 +220,24 @@ class PermissionsExtractorTests(unittest.TestCase):
         self.assertEqual(report["malformed_lines"], 1)
         groups = {entry["group"] for entry in report["uncovered_groups"]}
         self.assertIn("bundle exec rubocop", groups)
+
+    def test_invalid_settings_files_are_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            (repo / ".claude" / "settings.json").write_text("{not-json}\n", encoding="utf-8")
+            write_transcript(repo, tmp, "bundle exec rubocop")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        self.assertEqual(
+            [Path(path).resolve() for path in report["invalid_settings_files"]],
+            [(repo / ".claude" / "settings.json").resolve()],
+        )
+        self.assertEqual(report["uncovered_groups"][0]["group"], "bundle exec rubocop")
 
 
 if __name__ == "__main__":

@@ -56,6 +56,27 @@ jobs:
             python3 -m json.tool "$file" > /dev/null
           done
 
+  shell:
+    name: Shell Syntax and Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Validate shell scripts
+        run: |
+          git ls-files -z '*.sh' '*.bash' | while IFS= read -r -d '' file; do
+            echo "Checking $file"
+            bash -n "$file"
+            shellcheck -x "$file"
+          done
+
   eval-tests:
     name: Eval Tests
     runs-on: ubuntu-latest

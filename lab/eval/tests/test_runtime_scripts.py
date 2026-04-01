@@ -429,6 +429,26 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("could not safely inspect an invalid hook payload", result.stderr)
 
+    def test_rubyish_post_edit_blocks_when_workspace_root_lib_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            wrapper = tmp / "rubyish-post-edit.sh"
+            wrapper.write_text(RUBYISH_POST_EDIT.read_text(encoding="utf-8"), encoding="utf-8")
+            wrapper.chmod(0o755)
+
+            result = subprocess.run(
+                ["bash", str(wrapper)],
+                input=json.dumps({"tool_input": {"file_path": "app/demo.rb"}}),
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=dict(os.environ),
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("workspace-root-lib.sh is unavailable", result.stderr)
+
     def test_rubyish_post_edit_stops_after_first_delegated_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -981,6 +1001,89 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("Potential secret detected", result.stderr)
 
+    def test_secret_scan_blocks_strict_recent_change_scan_when_git_is_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            fake = tmp / "betterleaks"
+            fake.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            fake.chmod(0o755)
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            real_jq = shutil.which("jq")
+            real_grep = shutil.which("grep")
+            self.assertIsNotNone(real_jq)
+            self.assertIsNotNone(real_grep)
+            (fake_bin / "jq").write_text(f"#!/bin/sh\nexec {real_jq} \"$@\"\n", encoding="utf-8")
+            (fake_bin / "grep").write_text(f"#!/bin/sh\nexec {real_grep} \"$@\"\n", encoding="utf-8")
+            (fake_bin / "git").write_text("#!/bin/sh\nexit 127\n", encoding="utf-8")
+            os.chmod(fake_bin / "jq", 0o755)
+            os.chmod(fake_bin / "grep", 0o755)
+            os.chmod(fake_bin / "git", 0o755)
+            payload = json.dumps({"tool_input": {}})
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["BETTERLEAKS_PATH"] = str(fake)
+            env["RUBY_PLUGIN_HOOK_MODE"] = "strict"
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+
+            result = subprocess.run(
+                ["bash", str(SECRET_SCAN)],
+                input=payload,
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("could not perform strict recent-change scanning", result.stderr)
+
+    def test_secret_scan_blocks_when_strict_recent_change_staging_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.email", "a@b.c"], cwd=tmp, check=True)
+            subprocess.run(["git", "config", "user.name", "t"], cwd=tmp, check=True)
+            (tmp / "tracked.txt").write_text("ok\n", encoding="utf-8")
+            subprocess.run(["git", "add", "tracked.txt"], cwd=tmp, check=True)
+            subprocess.run(["git", "commit", "--no-gpg-sign", "-m", "init"], cwd=tmp, check=True, capture_output=True)
+            (tmp / "untracked.txt").write_text("token=abc\n", encoding="utf-8")
+
+            fake = tmp / "betterleaks"
+            fake.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            fake.chmod(0o755)
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            real_git = shutil.which("git")
+            self.assertIsNotNone(real_git)
+            (fake_bin / "git").write_text(f"#!/bin/sh\nexec {real_git} \"$@\"\n", encoding="utf-8")
+            (fake_bin / "cp").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+            os.chmod(fake_bin / "git", 0o755)
+            os.chmod(fake_bin / "cp", 0o755)
+
+            payload = json.dumps({"tool_input": {}})
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["BETTERLEAKS_PATH"] = str(fake)
+            env["RUBY_PLUGIN_HOOK_MODE"] = "strict"
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+
+            result = subprocess.run(
+                ["bash", str(SECRET_SCAN)],
+                input=payload,
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("could not stage", result.stderr)
+
     def test_secret_scan_reports_tempdir_creation_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -1499,6 +1602,23 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         self.assertIn("local-only and non-comparable", result.stdout)
+
+    def test_run_eval_requires_valid_against_ref(self) -> None:
+        env = dict(os.environ)
+        env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = "0"
+        env["RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER"] = "0"
+        env["RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER"] = "0"
+        result = subprocess.run(
+            ["bash", str(RUN_EVAL), "--changed", "--against", "refs/does-not-exist"],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+            env=env,
+        )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("could not resolve merge-base", result.stderr)
 
     def test_run_eval_reports_tempfile_creation_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -18,6 +18,11 @@ emit_missing_dependency_block() {
   exit 2
 }
 
+emit_root_resolution_warning() {
+  echo "WARNING: ${HOOK_NAME} could not resolve the workspace root for strict secret scanning." >&2
+  echo "Fix the hook payload or workspace layout before continuing." >&2
+}
+
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 command -v grep >/dev/null 2>&1 || emit_missing_dependency_block "grep"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,8 +32,21 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 source "$ROOT_LIB"
 read_hook_input
 INPUT="$HOOK_INPUT_VALUE"
-REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
-[[ -n "$REPO_ROOT" ]] || exit 0
+FALLBACK_HOOK_MODE="${RUBY_PLUGIN_HOOK_MODE:-default}"
+REPO_ROOT=$(resolve_workspace_root "$INPUT") || {
+  if [[ "$FALLBACK_HOOK_MODE" == "strict" ]]; then
+    emit_root_resolution_warning
+    exit 2
+  fi
+  exit 0
+}
+if [[ -z "$REPO_ROOT" ]]; then
+  if [[ "$FALLBACK_HOOK_MODE" == "strict" ]]; then
+    emit_root_resolution_warning
+    exit 2
+  fi
+  exit 0
+fi
 HOOK_MODE=$(resolve_hook_mode "$REPO_ROOT")
 STRICT_SCAN_MAX_FILES="${RUBY_PLUGIN_SECRET_SCAN_MAX_FILES:-200}"
 
@@ -124,6 +142,21 @@ emit_scan_setup_failure_warning() {
   echo "Fix TMPDIR permissions or disk space to restore secret scanning." >&2
 }
 
+emit_recent_changes_scan_unavailable_warning() {
+  local reason="$1"
+
+  echo "WARNING: ${HOOK_NAME} could not perform strict recent-change scanning because ${reason}." >&2
+  echo "Provide a specific file path or restore Git access before continuing." >&2
+}
+
+emit_scan_staging_failure_warning() {
+  local source_label="$1"
+  local failures="$2"
+
+  echo "WARNING: ${HOOK_NAME} could not stage ${failures} file(s) for strict secret scanning from ${source_label}." >&2
+  echo "Recent-change coverage is incomplete; fix the filesystem permissions and retry." >&2
+}
+
 new_secret_scan_tmpdir() {
   local tmp_dir
 
@@ -195,6 +228,7 @@ copy_strict_scan_input() {
   local local_resolved
   local scanned=0
   local truncated=false
+  local copy_failures=0
 
   while IFS= read -r file; do
     [[ -n "$file" ]] || continue
@@ -206,11 +240,18 @@ copy_strict_scan_input() {
 
     local_resolved=$(resolve_workspace_file_path "$REPO_ROOT" "$file") || continue
     is_path_within_root "$REPO_ROOT" "$local_resolved" || continue
-    copy_into_tmpdir "$local_resolved" "$tmp_dir" 2>/dev/null || true
+    if ! copy_into_tmpdir "$local_resolved" "$tmp_dir" 2>/dev/null; then
+      copy_failures=$((copy_failures + 1))
+    fi
   done
 
   if [[ "$truncated" == "true" ]]; then
     emit_truncation_warning "$source_label" "$STRICT_SCAN_MAX_FILES"
+  fi
+
+  if [[ "$copy_failures" -gt 0 ]]; then
+    emit_scan_staging_failure_warning "$source_label" "$copy_failures"
+    return 1
   fi
 }
 
@@ -218,41 +259,49 @@ if [[ -z "$FILE_PATH" ]]; then
   # No specific file: only strict mode does broader recent-change scans.
   [[ "$HOOK_MODE" == "strict" ]] || exit 0
 
-  if (cd "$REPO_ROOT" && git rev-parse --git-dir >/dev/null 2>&1); then
-    TMP_DIR=$(new_secret_scan_tmpdir) || {
-      emit_scan_setup_failure_warning "recent changes"
-      exit 2
-    }
+  command -v git >/dev/null 2>&1 || {
+    emit_recent_changes_scan_unavailable_warning "git is unavailable"
+    exit 2
+  }
 
-    # shellcheck disable=SC2329 # invoked via trap
-    cleanup_secret_scan_tmpdir() {
-      safe_remove_temp_dir "${TMP_DIR:-}" "${TMPDIR:-/tmp}/rb-secret-scan.*" || true
-    }
-    trap cleanup_secret_scan_tmpdir EXIT HUP INT TERM
+  if ! (cd "$REPO_ROOT" && git rev-parse --git-dir >/dev/null 2>&1); then
+    emit_recent_changes_scan_unavailable_warning "Git metadata is unavailable"
+    exit 2
+  fi
 
-    if (cd "$REPO_ROOT" && git rev-parse --verify HEAD >/dev/null 2>&1); then
-      copy_strict_scan_input "$TMP_DIR" "changed and untracked files" < <(
-        cd "$REPO_ROOT" && {
-          git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null
-          git ls-files --others --exclude-standard 2>/dev/null
-        } | awk 'NF && !seen[$0]++'
-      )
-    else
-      copy_strict_scan_input "$TMP_DIR" "tracked and untracked files" < <(
-        cd "$REPO_ROOT" && git ls-files --cached --others --exclude-standard 2>/dev/null | awk 'NF && !seen[$0]++'
-      )
-    fi
+  TMP_DIR=$(new_secret_scan_tmpdir) || {
+    emit_scan_setup_failure_warning "recent changes"
+    exit 2
+  }
 
-    if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
-      if run_betterleaks_dir "$TMP_DIR"; then
-        if [[ -n "$BETTERLEAKS_RESULT" ]]; then
-          emit_secret_warning "recent changes" "$BETTERLEAKS_RESULT"
-          exit 2
-        fi
-      else
-        emit_scanner_failure_warning "recent changes" "$?" "$BETTERLEAKS_ERROR"
+  # shellcheck disable=SC2329 # invoked via trap
+  cleanup_secret_scan_tmpdir() {
+    safe_remove_temp_dir "${TMP_DIR:-}" "${TMPDIR:-/tmp}/rb-secret-scan.*" || true
+  }
+  trap cleanup_secret_scan_tmpdir EXIT HUP INT TERM
+
+  if (cd "$REPO_ROOT" && git rev-parse --verify HEAD >/dev/null 2>&1); then
+    copy_strict_scan_input "$TMP_DIR" "changed and untracked files" < <(
+      cd "$REPO_ROOT" && {
+        git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null
+        git ls-files --others --exclude-standard 2>/dev/null
+      } | awk 'NF && !seen[$0]++'
+    ) || exit 2
+  else
+    copy_strict_scan_input "$TMP_DIR" "tracked and untracked files" < <(
+      cd "$REPO_ROOT" && git ls-files --cached --others --exclude-standard 2>/dev/null | awk 'NF && !seen[$0]++'
+    ) || exit 2
+  fi
+
+  if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
+    if run_betterleaks_dir "$TMP_DIR"; then
+      if [[ -n "$BETTERLEAKS_RESULT" ]]; then
+        emit_secret_warning "recent changes" "$BETTERLEAKS_RESULT"
         exit 2
       fi
+    else
+      emit_scanner_failure_warning "recent changes" "$?" "$BETTERLEAKS_ERROR"
+      exit 2
     fi
   fi
 else

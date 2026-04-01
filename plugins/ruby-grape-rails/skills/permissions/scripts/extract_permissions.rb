@@ -111,17 +111,20 @@ rescue Errno::ENOENT
 end
 
 def load_permissions(settings_path)
-  return { allow: [], deny: [] } unless File.file?(settings_path)
+  return { allow: [], deny: [], invalid: false } unless File.file?(settings_path)
 
   data = JSON.parse(File.read(settings_path))
   permissions = data.fetch('permissions', {})
 
   {
     allow: Array(permissions['allow']).grep(String),
-    deny: Array(permissions['deny']).grep(String)
+    deny: Array(permissions['deny']).grep(String),
+    invalid: false
   }
-rescue JSON::ParserError, Errno::ENOENT
-  { allow: [], deny: [] }
+rescue JSON::ParserError
+  { allow: [], deny: [], invalid: true }
+rescue Errno::ENOENT
+  { allow: [], deny: [], invalid: false }
 end
 
 def permission_to_glob(permission)
@@ -315,8 +318,10 @@ settings_sources.unshift(File.expand_path('~/.claude/settings.json')) unless opt
 
 all_allow = []
 all_deny = []
+invalid_settings_files = []
 settings_sources.each do |path|
   permissions = load_permissions(path)
+  invalid_settings_files << path if permissions[:invalid]
   all_allow.concat(permissions[:allow])
   all_deny.concat(permissions[:deny])
 end
@@ -328,8 +333,21 @@ cutoff = Time.now - (options[:days] * 86_400)
 session_files = project_transcript_files(project_slug)
 max_session_files = positive_env_int('RUBY_PLUGIN_PERMISSIONS_MAX_SESSION_FILES', 200)
 max_lines_per_file = positive_env_int('RUBY_PLUGIN_PERMISSIONS_MAX_LINES_PER_FILE', 10_000)
-recent_candidates = session_files.select { |path| File.file?(path) && File.mtime(path) > cutoff }
-recent_files = recent_candidates.sort_by { |path| File.mtime(path) }.reverse.first(max_session_files)
+missing_session_files = []
+recent_candidates = session_files.filter_map do |path|
+  begin
+    next unless File.file?(path)
+
+    mtime = File.mtime(path)
+    next unless mtime > cutoff
+
+    { path: path, mtime: mtime }
+  rescue Errno::ENOENT
+    missing_session_files << path unless missing_session_files.include?(path)
+    next
+  end
+end
+recent_files = recent_candidates.sort_by { |entry| entry[:mtime] }.reverse.first(max_session_files).map { |entry| entry[:path] }
 truncated_session_files = [recent_candidates.length - recent_files.length, 0].max
 
 group_counts = Hash.new(0)
@@ -373,6 +391,7 @@ recent_files.each do |session_file|
   end
   line_capped_files += 1 if file_truncated
 rescue Errno::ENOENT
+  missing_session_files << session_file unless missing_session_files.include?(session_file)
   next
 end
 
@@ -400,6 +419,8 @@ report = {
   line_capped_files: line_capped_files,
   max_lines_per_file: max_lines_per_file,
   malformed_lines: malformed_lines,
+  invalid_settings_files: invalid_settings_files,
+  missing_session_files: missing_session_files,
   settings_scope: options[:repo_only] ? 'repo-only' : 'repo+global',
   scanned_files: recent_files,
   total_bash_commands: total_bash_commands,
@@ -431,10 +452,14 @@ puts "Sessions scanned: #{recent_files.length} (last #{options[:days]} days)"
 puts "Additional recent sessions skipped by cap: #{truncated_session_files}" if truncated_session_files.positive?
 puts "Files capped at #{max_lines_per_file} lines: #{line_capped_files}" if line_capped_files.positive?
 puts "Malformed transcript lines skipped: #{malformed_lines}" if malformed_lines.positive?
+puts "Invalid settings files ignored: #{invalid_settings_files.length}" if invalid_settings_files.any?
+puts "Transcript files skipped after disappearing: #{missing_session_files.length}" if missing_session_files.any?
 if truncated_session_files.positive? || line_capped_files.positive?
   puts 'WARNING: transcript scan was truncated by caps; recommendations are partial.'
 end
 puts 'WARNING: malformed transcript lines were skipped; recommendations may be incomplete.' if malformed_lines.positive?
+puts 'WARNING: malformed settings files were ignored; permission coverage may be incomplete.' if invalid_settings_files.any?
+puts 'WARNING: some transcript files disappeared during scanning; recommendations may be incomplete.' if missing_session_files.any?
 puts "Total Bash tool calls seen: #{total_bash_commands}"
 puts "Uncovered command groups: #{group_counts.length}"
 puts "Total avoidable prompts: #{group_counts.values.sum}"

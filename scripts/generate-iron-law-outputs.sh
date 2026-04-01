@@ -148,8 +148,8 @@ update_file() {
     return 1
   fi
 
-  if ! grep -q "$start_marker" "$file"; then
-    log_error "Markers not found in $file"
+  if ! grep -q "$start_marker" "$file" || ! grep -q "$end_marker" "$file"; then
+    log_error "Bounded replacement markers not found or malformed in $file"
     return 1
   fi
 
@@ -232,8 +232,8 @@ update_judge_file() {
     return 1
   fi
 
-  if ! grep -q "$judge_start_marker" "$judge_file"; then
-    log_error "Markers not found in $judge_file"
+  if ! grep -q "$judge_start_marker" "$judge_file" || ! grep -q "$judge_end_marker" "$judge_file"; then
+    log_error "Bounded replacement markers not found or malformed in $judge_file"
     return 1
   fi
 

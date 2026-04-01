@@ -25,6 +25,23 @@ ALLOW_PARTIAL=false
 CURL_CONNECT_TIMEOUT=10
 CURL_MAX_TIME=60
 
+require_command() {
+  local command_name="$1"
+
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "ERROR: required command not found: $command_name" >&2
+    exit 1
+  fi
+}
+
+emit_curl_failure_details() {
+  local err_file="${1:-}"
+
+  [[ -n "$err_file" && -s "$err_file" ]] || return 0
+  echo "  [curl] failure details:" >&2
+  sed -n '1,5p' "$err_file" >&2 || true
+}
+
 # All pages needed for plugin validation (~420KB total)
 PAGES=(
   "sub-agents.md"          # Agent frontmatter schema
@@ -58,6 +75,8 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+require_command curl
 
 cd "$REPO_ROOT"
 mkdir -p "$CACHE_DIR"
@@ -94,23 +113,29 @@ fetch_page() {
   local page="$1"
   local dest="${CACHE_DIR}/${page}"
   local url="${DOCS_BASE_URL}/${page}"
+  local err_file=""
 
   if is_fresh "$dest"; then
     echo "  [cached] $page (< ${MAX_AGE_HOURS}h old)"
     return 0
   fi
 
+  err_file=$(mktemp "${TMPDIR:-/tmp}/claude-docs-fetch.err.XXXXXX" 2>/dev/null || printf '')
+
   for attempt in 1 2 3; do
-    if curl -sfL --connect-timeout "$CURL_CONNECT_TIMEOUT" --max-time "$CURL_MAX_TIME" "$url" -o "$dest" 2>/dev/null; then
+    if curl -sfL --connect-timeout "$CURL_CONNECT_TIMEOUT" --max-time "$CURL_MAX_TIME" "$url" -o "$dest" 2>"${err_file:-/dev/null}"; then
       local size
       size=$(wc -c < "$dest")
       echo "  [fetched] $page (${size} bytes)"
+      [[ -n "$err_file" ]] && rm -f -- "$err_file"
       return 0
     fi
     [ "$attempt" -lt 3 ] && sleep $(( attempt * 2 ))
   done
 
   echo "  [FAILED] $page — could not download after 3 attempts"
+  emit_curl_failure_details "$err_file"
+  [[ -n "$err_file" ]] && rm -f -- "$err_file"
   safe_remove_cache_file "$dest" || true
   return 1
 }
@@ -121,15 +146,21 @@ echo ""
 
 echo "Fetching index..."
 index_failed=0
+index_err_file=""
 if is_fresh "${CACHE_DIR}/llms.txt"; then
   echo "  [cached] llms.txt (< ${MAX_AGE_HOURS}h old)"
 else
-  if curl -sfL --connect-timeout "$CURL_CONNECT_TIMEOUT" --max-time "$CURL_MAX_TIME" "$INDEX_URL" -o "${CACHE_DIR}/llms.txt" 2>/dev/null; then
+  index_err_file=$(mktemp "${TMPDIR:-/tmp}/claude-docs-index.err.XXXXXX" 2>/dev/null || printf '')
+  if curl -sfL --connect-timeout "$CURL_CONNECT_TIMEOUT" --max-time "$CURL_MAX_TIME" "$INDEX_URL" -o "${CACHE_DIR}/llms.txt" 2>"${index_err_file:-/dev/null}"; then
     page_count=$(grep -c '\.md' "${CACHE_DIR}/llms.txt" 2>/dev/null || echo "?")
     echo "  [fetched] llms.txt (${page_count} pages indexed)"
+    [[ -n "$index_err_file" ]] && rm -f -- "$index_err_file"
   else
     echo "  [FAILED] Could not fetch llms.txt"
     echo "  [WARNING] Required-page coverage cannot be fully verified without the index." >&2
+    emit_curl_failure_details "$index_err_file"
+    [[ -n "$index_err_file" ]] && rm -f -- "$index_err_file"
+    safe_remove_cache_file "${CACHE_DIR}/llms.txt" || true
     index_failed=1
   fi
 fi

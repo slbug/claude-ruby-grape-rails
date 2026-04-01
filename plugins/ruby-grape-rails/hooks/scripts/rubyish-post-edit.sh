@@ -4,7 +4,16 @@ set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
-[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+
+emit_missing_dependency_block() {
+  local dependency="$1"
+
+  echo "BLOCKED: rubyish-post-edit.sh cannot inspect Ruby edits because ${dependency} is unavailable." >&2
+  echo "Restore the dependency or disable the delegated post-edit hook explicitly before continuing." >&2
+  exit 2
+}
+
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
 read_hook_input
