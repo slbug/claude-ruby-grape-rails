@@ -159,6 +159,9 @@ def normalized_command_for_coverage(command)
   core_tokens.shift while core_tokens.first == 'env'
   core_tokens = core_tokens.drop_while { |token| token.match?(/\A[A-Za-z_][A-Za-z0-9_]*=.*/) }
   core_tokens = tokens if core_tokens.empty?
+  unless core_tokens.empty?
+    core_tokens[0] = core_tokens[0].sub(%r{\A\./(?=(bin|script)/)}, '')
+  end
   core_tokens.join(' ')
 end
 
@@ -178,6 +181,7 @@ def command_group(command)
   core_tokens = core_tokens.drop_while { |token| token.match?(/\A[A-Za-z_][A-Za-z0-9_]*=.*/) }
   core_tokens = tokens if core_tokens.empty?
   return first_line if core_tokens.empty?
+  core_tokens[0] = core_tokens[0].sub(%r{\A\./(?=(bin|script)/)}, '')
 
   if core_tokens[0] == 'bundle' && core_tokens[1] == 'exec'
     if core_tokens[2] == 'rails' && core_tokens[3]
@@ -264,15 +268,10 @@ def split_shell_commands(command)
       current = +''
       index += 1
     when '&'
-      if next_char == '&'
-        stripped = current.strip
-        commands << stripped unless stripped.empty?
-        current = +''
-        index += 2
-      else
-        current << char
-        index += 1
-      end
+      stripped = current.strip
+      commands << stripped unless stripped.empty?
+      current = +''
+      index += (next_char == '&' ? 2 : 1)
     when '|'
       if next_char == '|'
         stripped = current.strip

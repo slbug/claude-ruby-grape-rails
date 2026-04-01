@@ -554,7 +554,10 @@ class RuntimeScriptTests(unittest.TestCase):
             'ruby -e "system(\'rails db:drop\')"',
             "ruby -e 'system(%q{rails db:drop})'",
             "ruby -e 'system(%q(rails db:drop))'",
+            "ruby -e 'send(:system, %q{rails db:drop})'",
+            "ruby -e 'Kernel.send(:system, %q{rails db:drop})'",
             "ruby -e '`rails db:drop`'",
+            'ruby -e "cmd=\'rails db:drop\'; system(cmd)"',
             'ruby -e \'system("rails db:drop", exception: true)\'',
             "ruby -e 'exec(%Q{rails db:drop})'",
             "ruby -e 'system(%Q(rails db:drop))'",
@@ -584,6 +587,11 @@ class RuntimeScriptTests(unittest.TestCase):
             ('python3 -c "import os; os.system(\'rails db:drop\')"', "destructive Rails database command"),
             ('python3 -c "import os; os.system(\'redis-cli flushall\')"', "destructive Redis flush detected"),
             ('python3 -c "import os; os.system(\'RAILS_ENV=production rails db:migrate\')"', "production environment detected"),
+            ('python3 -c "import subprocess as s; s.run(\'rails db:drop\', shell=True)"', "destructive Rails database command"),
+            ('python3 -c "from subprocess import run; run(\'rails db:drop\', shell=True)"', "destructive Rails database command"),
+            ('python3 -c "import os; getattr(os, \'system\')(\'rails db:drop\')"', "destructive Rails database command"),
+            ('python3 -c "import os; cmd=\'rails db:drop\'; os.system(cmd)"', "destructive Rails database command"),
+            ('python3 -c "import subprocess; cmd=\'git push --force\'; subprocess.run(cmd, shell=True)"', "force push detected"),
         ):
             result = run_block_hook(command)
             self.assertEqual(result.returncode, 2, command)
@@ -1603,6 +1611,23 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("local-only and non-comparable", result.stdout)
 
+    def test_run_eval_warns_when_include_untracked_is_ignored_outside_changed(self) -> None:
+        env = dict(os.environ)
+        env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = "0"
+        env["RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER"] = "0"
+        env["RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER"] = "0"
+        result = subprocess.run(
+            ["bash", str(RUN_EVAL), "--ci", "--include-untracked"],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+            env=env,
+        )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("will be ignored for --ci", result.stdout)
+
     def test_run_eval_requires_valid_against_ref(self) -> None:
         env = dict(os.environ)
         env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = "0"
@@ -1619,6 +1644,26 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1)
         self.assertIn("could not resolve merge-base", result.stderr)
+
+    def test_run_eval_rejects_invalid_threshold_envs(self) -> None:
+        for env_name, mode in (
+            ("RUBY_PLUGIN_EVAL_FAIL_UNDER", "--skills"),
+            ("RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER", "--agents"),
+            ("RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER", "--triggers"),
+        ):
+            env = dict(os.environ)
+            env[env_name] = "not-a-number"
+            result = subprocess.run(
+                ["bash", str(RUN_EVAL), mode],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+            self.assertEqual(result.returncode, 1, env_name)
+            self.assertIn(f"{env_name} must be a finite numeric threshold", result.stderr)
 
     def test_run_eval_reports_tempfile_creation_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

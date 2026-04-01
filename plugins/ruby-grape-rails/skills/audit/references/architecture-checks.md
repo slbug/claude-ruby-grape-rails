@@ -21,17 +21,17 @@ For each service in `app/services/` or domain module:
 ```bash
 # Class count per service directory
 for dir in app/services/*/; do
-  echo "$(basename $dir): $(find $dir -name '*.rb' | wc -l) classes"
+  echo "$(basename "$dir"): $(find "$dir" -type f -name '*.rb' | wc -l) classes"
 done
 
 # Public method count
 rg "^  def [a-z]" app/services --type ruby | wc -l
 
 # Model count
-ls app/models/*.rb | wc -l
+find app/models -maxdepth 1 -type f -name '*.rb' 2>/dev/null | wc -l
 
-# Dependency analysis with bundle
-bundle viz --format dot
+# Dependency analysis from Gemfile.lock (works without bundle viz)
+ruby -e 'require "bundler"; puts Bundler::LockfileParser.new(Bundler.read_file("Gemfile.lock")).dependencies.keys.sort'
 ```
 
 ## Coupling Analysis
@@ -246,7 +246,7 @@ Custom/NoDirectDbInController:
 ### Using Pronto for CI
 
 ```yaml
-# .github/workflows/architecture.yml
+# Example dedicated workflow (or add these steps to an existing workflow)
 - name: Check Architecture
   run: |
     pronto run --runner architecture
@@ -290,8 +290,8 @@ end
 ### Check Dependency Graph
 
 ```bash
-# Using bundle viz for gem dependencies
-bundle viz --format dot
+# Gem dependency summary from Gemfile.lock
+ruby -e 'require "bundler"; puts Bundler::LockfileParser.new(Bundler.read_file("Gemfile.lock")).dependencies.keys.sort'
 
 # For internal dependencies, use grep
 rg "require.*services/" app --type ruby

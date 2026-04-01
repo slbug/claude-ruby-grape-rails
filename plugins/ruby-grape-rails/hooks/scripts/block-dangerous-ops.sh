@@ -325,6 +325,95 @@ join_literal_arguments_from_text() {
   printf '%s\n' "${literals[*]}"
 }
 
+resolve_percent_literal_expression() {
+  local expression="$1"
+  local percent_result=""
+
+  expression=$(trim_leading_whitespace "$expression")
+  expression=$(trim_trailing_whitespace "$expression")
+
+  if percent_result=$(extract_percent_literal_token "$expression" 2>/dev/null); then
+    printf '%s\n' "$percent_result" | sed -n '1p'
+    return 0
+  fi
+
+  return 1
+}
+
+extract_ruby_string_assignment() {
+  local ruby_code="$1"
+  local variable_name="$2"
+  local assignment_pattern
+  local assignment_tail=""
+  local literal=""
+
+  assignment_pattern="(^|[^[:alnum:]_])${variable_name}[[:space:]]*=[[:space:]]*"
+
+  if [[ "$ruby_code" =~ $assignment_pattern\'([^\']*)\' ]]; then
+    printf '%s\n' "${BASH_REMATCH[2]}"
+    return 0
+  fi
+
+  if [[ "$ruby_code" =~ $assignment_pattern\"([^\"]*)\" ]]; then
+    printf '%s\n' "${BASH_REMATCH[2]}"
+    return 0
+  fi
+
+  if [[ "$ruby_code" =~ $assignment_pattern(%[qQx][\(\{\[<].*) ]]; then
+    assignment_tail="${BASH_REMATCH[2]}"
+    literal=$(resolve_percent_literal_expression "$assignment_tail" || true)
+    [[ -n "$literal" ]] || return 1
+    printf '%s\n' "$literal"
+    return 0
+  fi
+
+  return 1
+}
+
+resolve_ruby_command_expression() {
+  local expression="$1"
+  local ruby_code="$2"
+  local literal=""
+
+  literal=$(join_literal_arguments_from_text "$expression" || true)
+  if [[ -n "$literal" ]]; then
+    printf '%s\n' "$literal"
+    return 0
+  fi
+
+  expression=$(trim_leading_whitespace "$expression")
+  expression=$(trim_trailing_whitespace "$expression")
+
+  if [[ "$expression" =~ ^([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*(,.*)?$ ]]; then
+    literal=$(extract_ruby_string_assignment "$ruby_code" "${BASH_REMATCH[1]}" || true)
+    [[ -n "$literal" ]] || return 1
+    printf '%s\n' "$literal"
+    return 0
+  fi
+
+  return 1
+}
+
+extract_python_string_assignment() {
+  local python_code="$1"
+  local variable_name="$2"
+  local assignment_pattern
+
+  assignment_pattern="(^|[^[:alnum:]_])${variable_name}[[:space:]]*=[[:space:]]*"
+
+  if [[ "$python_code" =~ $assignment_pattern\'([^\']*)\' ]]; then
+    printf '%s\n' "${BASH_REMATCH[2]}"
+    return 0
+  fi
+
+  if [[ "$python_code" =~ $assignment_pattern\"([^\"]*)\" ]]; then
+    printf '%s\n' "${BASH_REMATCH[2]}"
+    return 0
+  fi
+
+  return 1
+}
+
 collapse_duplicate_leading_token() {
   local command_text="$1"
   local first=""
@@ -425,7 +514,13 @@ extract_ruby_wrapper_payload() {
       ruby_code=$(trim_matching_outer_quotes "$rest")
       call_body=$(printf '%s' "$ruby_code" | sed -nE 's/.*(system|exec|spawn)\((.*)\).*/\2/p')
       if [[ -n "$call_body" ]]; then
-        nested_command=$(join_literal_arguments_from_text "$call_body" || true)
+        nested_command=$(resolve_ruby_command_expression "$call_body" "$ruby_code" || true)
+      fi
+      if [[ -z "$nested_command" ]]; then
+        call_body=$(printf '%s' "$ruby_code" | sed -nE 's/.*((Kernel\.)?(send|__send__))\([[:space:]]*:?(system|exec|spawn)[[:space:]]*,(.*)\).*/\5/p')
+        if [[ -n "$call_body" ]]; then
+          nested_command=$(resolve_ruby_command_expression "$call_body" "$ruby_code" || true)
+        fi
       fi
       if [[ -z "$nested_command" ]]; then
         nested_command=$(printf '%s' "$ruby_code" | sed -nE "s/.*(system|exec|spawn)\\([[:space:]]*'([^']*)'([[:space:]]*,.*)?\\).*/\\2/p")
@@ -444,6 +539,24 @@ extract_ruby_wrapper_payload() {
       fi
       if [[ -z "$nested_command" ]]; then
         nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*(system|exec|spawn)\([[:space:]]*%[qQ]<([^>]*)>([[:space:]]*,.*)?\).*/\2/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE "s/.*((Kernel\\.)?(send|__send__))\\([[:space:]]*:?(system|exec|spawn)[[:space:]]*,[[:space:]]*'([^']*)'([[:space:]]*,.*)?\\).*/\\5/p")
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*((Kernel\.)?(send|__send__))\([[:space:]]*:?(system|exec|spawn)[[:space:]]*,[[:space:]]*"([^"]*)"([[:space:]]*,.*)?\).*/\5/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*((Kernel\.)?(send|__send__))\([[:space:]]*:?(system|exec|spawn)[[:space:]]*,[[:space:]]*%[qQ]\{([^}]*)\}([[:space:]]*,.*)?\).*/\5/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*((Kernel\.)?(send|__send__))\([[:space:]]*:?(system|exec|spawn)[[:space:]]*,[[:space:]]*%[qQ]\(([^)]*)\)([[:space:]]*,.*)?\).*/\5/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*((Kernel\.)?(send|__send__))\([[:space:]]*:?(system|exec|spawn)[[:space:]]*,[[:space:]]*%[qQ]\[([^]]*)\]([[:space:]]*,.*)?\).*/\5/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$ruby_code" | sed -nE 's/.*((Kernel\.)?(send|__send__))\([[:space:]]*:?(system|exec|spawn)[[:space:]]*,[[:space:]]*%[qQ]<([^>]*)>([[:space:]]*,.*)?\).*/\5/p')
       fi
       if [[ -z "$nested_command" ]]; then
         # shellcheck disable=SC2016
@@ -502,13 +615,35 @@ extract_python_wrapper_payload() {
         nested_command=$(printf '%s' "$python_code" | sed -nE 's/.*os\.system\([[:space:]]*"([^"]*)"([[:space:]]*)\).*/\1/p')
       fi
       if [[ -z "$nested_command" ]]; then
-        nested_command=$(printf '%s' "$python_code" | sed -nE "s/.*subprocess\\.(run|call|Popen)\\([[:space:]]*'([^']*)'([[:space:]]*,[^)]*shell[[:space:]]*=[[:space:]]*True[^)]*)?\\).*/\\2/p")
+        nested_command=$(printf '%s' "$python_code" | sed -nE "s/.*getattr\\([[:space:]]*os[[:space:]]*,[[:space:]]*'system'[[:space:]]*\\)\\([[:space:]]*'([^']*)'([[:space:]]*)\\).*/\\1/p")
       fi
       if [[ -z "$nested_command" ]]; then
-        nested_command=$(printf '%s' "$python_code" | sed -nE 's/.*subprocess\.(run|call|Popen)\([[:space:]]*"([^"]*)"([[:space:]]*,[^)]*shell[[:space:]]*=[[:space:]]*True[^)]*)?\).*/\2/p')
+        nested_command=$(printf '%s' "$python_code" | sed -nE 's/.*getattr\([[:space:]]*os[[:space:]]*,[[:space:]]*"system"[[:space:]]*\)\([[:space:]]*"([^"]*)"([[:space:]]*)\).*/\1/p')
       fi
       if [[ -z "$nested_command" ]]; then
-        call_body=$(printf '%s' "$python_code" | sed -nE 's/.*subprocess\.(run|call|Popen|check_call|check_output)\((.*)\).*/\2/p')
+        nested_command=$(printf '%s' "$python_code" | sed -nE "s/.*(([A-Za-z_][A-Za-z0-9_]*)\\.)?(run|call|Popen|check_call|check_output)\\([[:space:]]*'([^']*)'([[:space:]]*,[^)]*shell[[:space:]]*=[[:space:]]*True[^)]*)?\\).*/\\4/p")
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$python_code" | sed -nE 's/.*(([A-Za-z_][A-Za-z0-9_]*)\.)?(run|call|Popen|check_call|check_output)\([[:space:]]*"([^"]*)"([[:space:]]*,[^)]*shell[[:space:]]*=[[:space:]]*True[^)]*)?\).*/\4/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        if [[ "$python_code" =~ os\.system\([[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*\) ]]; then
+          nested_command=$(extract_python_string_assignment "$python_code" "${BASH_REMATCH[1]}" || true)
+        fi
+      fi
+      if [[ -z "$nested_command" ]]; then
+        if [[ "$python_code" =~ getattr\([[:space:]]*os[[:space:]]*,[[:space:]]*['\"]system['\"][[:space:]]*\)\([[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*\) ]]; then
+          nested_command=$(extract_python_string_assignment "$python_code" "${BASH_REMATCH[1]}" || true)
+        fi
+      fi
+      if [[ -z "$nested_command" ]]; then
+        token=$(printf '%s' "$python_code" | sed -nE 's/.*(([A-Za-z_][A-Za-z0-9_]*)\.)?(run|call|Popen|check_call|check_output)\([[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*,[^)]*shell[[:space:]]*=[[:space:]]*True[^)]*\).*/\4/p')
+        if [[ -n "$token" ]]; then
+          nested_command=$(extract_python_string_assignment "$python_code" "$token" || true)
+        fi
+      fi
+      if [[ -z "$nested_command" ]]; then
+        call_body=$(printf '%s' "$python_code" | sed -nE 's/.*(([A-Za-z_][A-Za-z0-9_]*)\.)?(run|call|Popen|check_call|check_output)\((.*)\).*/\4/p')
         if [[ -n "$call_body" ]]; then
           nested_command=$(join_literal_arguments_from_text "$call_body" || true)
         fi

@@ -64,6 +64,31 @@ require_python_310() {
 
 require_python_310
 
+validate_threshold() {
+  local env_name="$1"
+  local value="$2"
+
+  if ! python3 - "$value" <<'PY' >/dev/null 2>&1
+import math
+import sys
+
+try:
+    value = float(sys.argv[1])
+except ValueError:
+    raise SystemExit(1)
+
+raise SystemExit(0 if math.isfinite(value) else 1)
+PY
+  then
+    echo "ERROR: ${env_name} must be a finite numeric threshold, got: ${value}" >&2
+    exit 1
+  fi
+}
+
+validate_threshold "RUBY_PLUGIN_EVAL_FAIL_UNDER" "$FAIL_UNDER"
+validate_threshold "RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER" "$AGENT_FAIL_UNDER"
+validate_threshold "RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER" "$TRIGGER_FAIL_UNDER"
+
 have_head() {
   git rev-parse --verify HEAD >/dev/null 2>&1
 }
@@ -343,6 +368,11 @@ run_all_triggers() {
 
 echo "=== Ruby Plugin Eval ==="
 echo
+
+if [[ "$MODE" != "--changed" && "$INCLUDE_UNTRACKED" == "true" ]]; then
+  echo "WARNING: --include-untracked only affects --changed mode and will be ignored for ${MODE}."
+  echo
+fi
 
 if [[ "$MODE" == "--changed" && "$INCLUDE_UNTRACKED" == "true" ]]; then
   echo "WARNING: --include-untracked makes changed-mode results local-only and non-comparable."

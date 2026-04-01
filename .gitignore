@@ -25,6 +25,7 @@ __pycache__/
 .claude/*
 !.claude/agents/
 !.claude/skills/
+!.claude/conventions.md
 .claude/docs-check/  # Runtime artifacts (docs-cache, reports, summaries)
 scratchpad/
 

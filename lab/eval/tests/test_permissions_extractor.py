@@ -190,6 +190,38 @@ class PermissionsExtractorTests(unittest.TestCase):
         groups = {entry["group"] for entry in report["uncovered_groups"]}
         self.assertIn("python3 -m pytest", groups)
 
+    def test_shell_aware_split_separates_background_operator(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            write_transcript(repo, tmp, "bundle install & rake db:migrate")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        groups = {entry["group"] for entry in report["uncovered_groups"]}
+        self.assertIn("bundle", groups)
+        self.assertIn("rake db:migrate", groups)
+
+    def test_dot_slash_binstub_commands_normalize_for_grouping_and_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            (repo / ".claude" / "settings.json").write_text(
+                json.dumps({"permissions": {"allow": ["Bash(bin/rails *)"]}}),
+                encoding="utf-8",
+            )
+            write_transcript(repo, tmp, "./bin/rails db:migrate")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        self.assertEqual(report["uncovered_groups"], [])
+
     def test_project_slug_with_glob_metacharacters_still_discovers_transcripts(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)

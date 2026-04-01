@@ -545,7 +545,7 @@ The plugin enforces **21 Iron Laws** that prevent common, costly mistakes:
 
 ### Enforcement
 
-- **Programmatic**: 6 programmatic detectors checked automatically on every file edit
+- **Programmatic**: 3 generic safety hooks run on every edit/write, plus 4 delegated Ruby-specific checks on Ruby-ish edits
 - **Behavioral**: All 21 laws injected into subagent context
 - **Review-time**: Full audit during `/rb:review`
 
@@ -716,7 +716,7 @@ Primary entrypoints:
   artifact fixtures
 - `make security-injection` or `npm run security:injection`
 - `make eval-tests` or `npm run eval:test` for the default contributor test
-  path (prefers `pytest` when installed, otherwise falls back to `unittest`)
+  path (`unittest` by default for deterministic cross-environment runs)
 - `make eval-tests-pytest` or `npm run eval:test:pytest` for explicit `pytest`
   runs
 - `make eval-baseline`
