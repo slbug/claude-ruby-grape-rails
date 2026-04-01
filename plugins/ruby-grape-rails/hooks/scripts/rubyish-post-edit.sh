@@ -30,14 +30,15 @@ run_hook() {
 
   printf '%s' "$INPUT" | "$target"
   code=$?
-  if [[ "$code" -ne 0 && "$STATUS" -eq 0 ]]; then
+  if [[ "$code" -ne 0 ]]; then
     STATUS=$code
+    return "$code"
   fi
 }
 
-run_hook "${SCRIPT_DIR}/iron-law-verifier.sh"
-run_hook "${SCRIPT_DIR}/format-ruby.sh"
-run_hook "${SCRIPT_DIR}/verify-ruby.sh"
-run_hook "${SCRIPT_DIR}/debug-statement-warning.sh"
+run_hook "${SCRIPT_DIR}/iron-law-verifier.sh" || exit "$STATUS"
+run_hook "${SCRIPT_DIR}/format-ruby.sh" || exit "$STATUS"
+run_hook "${SCRIPT_DIR}/verify-ruby.sh" || exit "$STATUS"
+run_hook "${SCRIPT_DIR}/debug-statement-warning.sh" || exit "$STATUS"
 
 exit "$STATUS"

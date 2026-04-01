@@ -318,6 +318,75 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("could not safely inspect an invalid hook payload", result.stderr)
 
+    def test_rubyish_post_edit_stops_after_first_delegated_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            wrapper = tmp / "rubyish-post-edit.sh"
+            wrapper.write_text(RUBYISH_POST_EDIT.read_text(encoding="utf-8"), encoding="utf-8")
+            wrapper.chmod(0o755)
+
+            (tmp / "workspace-root-lib.sh").write_text(
+                textwrap.dedent(
+                    """\
+                    #!/usr/bin/env bash
+                    read_hook_input() {
+                      HOOK_INPUT_VALUE=$(cat)
+                      HOOK_INPUT_STATUS=ok
+                    }
+                    """
+                ),
+                encoding="utf-8",
+            )
+            (tmp / "workspace-root-lib.sh").chmod(0o755)
+
+            for name, body in (
+                (
+                    "iron-law-verifier.sh",
+                    "#!/usr/bin/env bash\n"
+                    "echo ran > \"$(dirname \"$0\")/iron-law-ran\"\n"
+                    "exit 2\n",
+                ),
+                (
+                    "format-ruby.sh",
+                    "#!/usr/bin/env bash\n"
+                    "echo ran > \"$(dirname \"$0\")/format-ran\"\n",
+                ),
+                (
+                    "verify-ruby.sh",
+                    "#!/usr/bin/env bash\n"
+                    "echo ran > \"$(dirname \"$0\")/verify-ran\"\n",
+                ),
+                (
+                    "debug-statement-warning.sh",
+                    "#!/usr/bin/env bash\n"
+                    "echo ran > \"$(dirname \"$0\")/debug-ran\"\n",
+                ),
+            ):
+                script = tmp / name
+                script.write_text(body, encoding="utf-8")
+                script.chmod(0o755)
+
+            result = subprocess.run(
+                ["bash", str(wrapper)],
+                input=json.dumps({"tool_input": {"file_path": "app/demo.rb"}}),
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=dict(os.environ),
+            )
+
+            iron_law_ran = (tmp / "iron-law-ran").is_file()
+            format_ran = (tmp / "format-ran").exists()
+            verify_ran = (tmp / "verify-ran").exists()
+            debug_ran = (tmp / "debug-ran").exists()
+
+        self.assertEqual(result.returncode, 2)
+        self.assertTrue(iron_law_ran)
+        self.assertFalse(format_ran)
+        self.assertFalse(verify_ran)
+        self.assertFalse(debug_ran)
+
     def test_block_dangerous_ops_blocks_quoted_and_namespaced_db_tasks(self) -> None:
         for command in (
             'bundle exec rails "db:drop"',
