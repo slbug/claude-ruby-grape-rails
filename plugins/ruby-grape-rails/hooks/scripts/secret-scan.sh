@@ -274,7 +274,7 @@ if [[ -z "$FILE_PATH" ]]; then
     exit 2
   }
 
-  # shellcheck disable=SC2329 # invoked via trap
+  # shellcheck disable=SC2317,SC2329 # invoked indirectly via trap
   cleanup_secret_scan_tmpdir() {
     safe_remove_temp_dir "${TMP_DIR:-}" "${TMPDIR:-/tmp}/rb-secret-scan.*" || true
   }
@@ -315,7 +315,7 @@ else
       exit 2
     }
 
-    # shellcheck disable=SC2329 # invoked via trap
+    # shellcheck disable=SC2317,SC2329 # invoked indirectly via trap
     cleanup_single_secret_scan_tmpdir() {
       safe_remove_temp_dir "${TMP_DIR:-}" "${TMPDIR:-/tmp}/rb-secret-scan.*" || true
     }
