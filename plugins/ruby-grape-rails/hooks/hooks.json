@@ -225,6 +225,30 @@
           },
           {
             "type": "command",
+            "if": "Bash(bin/rspec *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(bin/rspec *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(./bin/rspec *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(./bin/rspec *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
             "if": "Bash(standardrb *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
             "timeout": 15
@@ -232,6 +256,30 @@
           {
             "type": "command",
             "if": "Bash(standardrb *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(bin/standardrb *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(bin/standardrb *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(./bin/standardrb *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(./bin/standardrb *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
             "timeout": 15
           },
@@ -249,6 +297,30 @@
           },
           {
             "type": "command",
+            "if": "Bash(bin/rubocop *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(bin/rubocop *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(./bin/rubocop *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(./bin/rubocop *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
             "if": "Bash(brakeman *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
             "timeout": 15
@@ -256,6 +328,30 @@
           {
             "type": "command",
             "if": "Bash(brakeman *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(bin/brakeman *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(bin/brakeman *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(./bin/brakeman *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(./bin/brakeman *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
             "timeout": 15
           }

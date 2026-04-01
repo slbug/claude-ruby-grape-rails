@@ -267,9 +267,17 @@ class RuntimeScriptTests(unittest.TestCase):
             "Bash(./bin/rake *)",
             "Bash(ruby *)",
             "Bash(rspec *)",
+            "Bash(bin/rspec *)",
+            "Bash(./bin/rspec *)",
             "Bash(standardrb *)",
+            "Bash(bin/standardrb *)",
+            "Bash(./bin/standardrb *)",
             "Bash(rubocop *)",
+            "Bash(bin/rubocop *)",
+            "Bash(./bin/rubocop *)",
             "Bash(brakeman *)",
+            "Bash(bin/brakeman *)",
+            "Bash(./bin/brakeman *)",
         }
         seen_filters = {hook.get("if") for hook in hook_entries}
         self.assertEqual(seen_filters, expected_filters)
