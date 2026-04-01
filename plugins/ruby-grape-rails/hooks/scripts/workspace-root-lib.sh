@@ -333,10 +333,14 @@ normalize_hook_mode() {
 }
 
 resolve_hook_mode() {
-  local root="${1:-$(resolve_workspace_root)}"
+  local root="${1:-}"
   local mode="${RUBY_PLUGIN_HOOK_MODE:-}"
   local claude_dir
   local mode_file
+
+  if [[ -z "$root" ]]; then
+    root=$(resolve_workspace_root "${CLAUDE_HOOK_INPUT:-}") || return 1
+  fi
 
   if [[ -n "$mode" ]]; then
     normalize_hook_mode "$mode"
