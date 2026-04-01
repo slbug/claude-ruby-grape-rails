@@ -1,6 +1,6 @@
 ---
 name: intent-detection
-description: "Internal router for ambiguous work requests. Load when user says \"add/build/implement feature\", \"fix/debug/investigate bug\", \"review/audit code\", \"refactor/clean up\", \"slow/performance\", \"PR comments\", \"research/evaluate library\", \"permission fatigue/settings.json\", or \"that fixed it\" — WITHOUT an explicit /rb: slash command."
+description: "Internal router for ambiguous requests. Use when the user describes feature work, bug fixes, review, refactors, research, permissions, or follow-up learning without an explicit `/rb:` command."
 user-invocable: false
 effort: low
 ---

@@ -5,6 +5,7 @@ tools: Read, Grep, Glob
 disallowedTools: Write, Edit, NotebookEdit
 model: sonnet
 effort: medium
+omitClaudeMd: true
 skills:
   - testing
   - sidekiq

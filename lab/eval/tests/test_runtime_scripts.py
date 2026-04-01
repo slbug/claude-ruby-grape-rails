@@ -18,11 +18,14 @@ SECURITY_REMINDER = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/security
 SECRET_SCAN = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/secret-scan.sh"
 DETECT_STACK = REPO_ROOT / "plugins/ruby-grape-rails/scripts/detect-stack.rb"
 DETECT_RUNTIME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime.sh"
+DETECT_RUNTIME_FAST = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime-fast.sh"
+DETECT_RUNTIME_ASYNC = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime-async.sh"
 DEBUG_STATEMENT_WARNING = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/debug-statement-warning.sh"
 HOOKS_JSON = REPO_ROOT / "plugins/ruby-grape-rails/hooks/hooks.json"
 PRE_COMMIT_HOOK = REPO_ROOT / ".husky/pre-commit.bash"
 CHECK_PENDING_PLANS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-pending-plans.sh"
 CHECK_RESUME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-resume.sh"
+CHECK_SCRATCHPAD = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-scratchpad.sh"
 SETUP_DIRS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/setup-dirs.sh"
 ACTIVE_PLAN_LIB = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/active-plan-lib.sh"
 WORKSPACE_ROOT_LIB = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/workspace-root-lib.sh"
@@ -198,9 +201,94 @@ class RuntimeScriptTests(unittest.TestCase):
             self.assertTrue(os.access(path, os.X_OK), path)
 
     def test_rubyish_post_edit_delegates_are_executable(self) -> None:
-        for path in (FORMAT_RUBY, VERIFY_RUBY, DEBUG_STATEMENT_WARNING):
+        for path in (IRON_LAW_VERIFIER, FORMAT_RUBY, VERIFY_RUBY, DEBUG_STATEMENT_WARNING):
             self.assertTrue(path.is_file(), path)
             self.assertTrue(os.access(path, os.X_OK), path)
+
+    def test_post_tool_use_routes_ruby_hooks_through_targeted_filters(self) -> None:
+        groups = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]["PostToolUse"]
+
+        broad_group = next(group for group in groups if group.get("matcher") == "Edit|Write")
+        broad_commands = {
+            hook.get("command", "").rsplit("/", 1)[-1]: hook
+            for hook in broad_group.get("hooks", [])
+        }
+        self.assertEqual(set(broad_commands), {"security-reminder.sh", "log-progress.sh", "secret-scan.sh"})
+        self.assertTrue(broad_commands["log-progress.sh"].get("async", False))
+
+        rubyish_expected = {
+            "*.rb",
+            "*.rake",
+            "*Gemfile",
+            "*Rakefile",
+            "*config.ru",
+        }
+        for matcher in ("Edit", "Write"):
+            group = next(group for group in groups if group.get("matcher") == matcher)
+            rubyish_hooks = [
+                hook
+                for hook in group.get("hooks", [])
+                if hook.get("command", "").endswith("/rubyish-post-edit.sh")
+            ]
+            self.assertEqual(
+                {hook.get("if") for hook in rubyish_hooks},
+                {f"{matcher}({pattern})" for pattern in rubyish_expected},
+            )
+
+        write_group = next(group for group in groups if group.get("matcher") == "Write")
+        plan_hook = next(
+            hook
+            for hook in write_group.get("hooks", [])
+            if hook.get("command", "").endswith("/plan-stop-reminder.sh")
+        )
+        self.assertEqual(plan_hook.get("if"), "Write(*plan.md)")
+
+        direct_commands = {
+            hook.get("command", "")
+            for group in groups
+            for hook in group.get("hooks", [])
+        }
+        self.assertNotIn(
+            "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/iron-law-verifier.sh",
+            direct_commands,
+        )
+
+    def test_post_tool_use_failure_hooks_are_filtered_to_ruby_command_families(self) -> None:
+        hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]["PostToolUseFailure"]
+        hook_entries = [hook for group in hooks for hook in group.get("hooks", [])]
+        self.assertTrue(hook_entries)
+        expected_filters = {
+            "Bash(bundle *)",
+            "Bash(rails *)",
+            "Bash(bin/rails *)",
+            "Bash(./bin/rails *)",
+            "Bash(rake *)",
+            "Bash(bin/rake *)",
+            "Bash(./bin/rake *)",
+            "Bash(ruby *)",
+            "Bash(rspec *)",
+            "Bash(standardrb *)",
+            "Bash(rubocop *)",
+            "Bash(brakeman *)",
+        }
+        seen_filters = {hook.get("if") for hook in hook_entries}
+        self.assertEqual(seen_filters, expected_filters)
+        self.assertTrue(all(hook.get("if") for hook in hook_entries))
+
+    def test_session_start_runtime_detection_uses_fast_sync_and_async_refresh_hooks(self) -> None:
+        hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]["SessionStart"]
+        commands = [
+            hook
+            for group in hooks
+            for hook in group.get("hooks", [])
+            if "detect-runtime" in hook.get("command", "")
+        ]
+        self.assertEqual(len(commands), 2)
+        fast_hook = next(hook for hook in commands if hook["command"].endswith("detect-runtime-fast.sh"))
+        async_hook = next(hook for hook in commands if hook["command"].endswith("detect-runtime-async.sh"))
+        self.assertFalse(fast_hook.get("async", False))
+        self.assertTrue(async_hook.get("async", False))
+        self.assertEqual(async_hook.get("statusMessage"), "Refreshing Ruby runtime context...")
 
     def test_rubyish_post_edit_fails_closed_on_invalid_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -524,6 +612,48 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("SHELLFIRM_AVAILABLE=true", runtime_env)
         self.assertIn("DCG_VERSION=0.9.0", runtime_env)
         self.assertIn("SHELLFIRM_VERSION=0.3.9", runtime_env)
+
+    def test_detect_runtime_fast_skips_optional_helper_version_probes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            for name in ("rtk", "dcg", "shellfirm"):
+                script = fake_bin / name
+                script.write_text(
+                    "#!/usr/bin/env bash\n"
+                    "if [[ \"${1:-}\" == \"--version\" || \"${1:-}\" == \"gain\" ]]; then\n"
+                    "  echo should-not-run >&2\n"
+                    "  exit 97\n"
+                    "fi\n"
+                    "exit 0\n",
+                    encoding="utf-8",
+                )
+                script.chmod(0o755)
+
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+            result = subprocess.run(
+                ["bash", str(DETECT_RUNTIME_FAST)],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+            runtime_env = (tmp / ".claude" / ".runtime_env").read_text(encoding="utf-8")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("should-not-run", result.stderr)
+        self.assertIn("RTK_AVAILABLE=true", runtime_env)
+        self.assertIn("DCG_AVAILABLE=true", runtime_env)
+        self.assertIn("SHELLFIRM_AVAILABLE=true", runtime_env)
+        self.assertNotIn("RTK_VERSION=", runtime_env)
+        self.assertNotIn("DCG_VERSION=", runtime_env)
+        self.assertNotIn("SHELLFIRM_VERSION=", runtime_env)
 
     def test_iron_law_verifier_fails_closed_when_jq_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -890,6 +1020,27 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("1 plan(s) have uncompleted tasks", pending.stdout)
         self.assertEqual(resume.returncode, 0, resume.stderr)
         self.assertIn("has 3 remaining tasks (1 done)", resume.stdout)
+
+    def test_check_scratchpad_auto_initializes_missing_scratchpad_for_active_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plan_dir = tmp / ".claude" / "plans" / "demo"
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "plan.md").write_text("# Demo\n\n- [ ] first task\n", encoding="utf-8")
+            (tmp / ".claude" / "ACTIVE_PLAN").write_text(str(plan_dir.resolve()) + "\n", encoding="utf-8")
+
+            result = run_workspace_hook(CHECK_SCRATCHPAD, tmpdir)
+            scratchpad = plan_dir / "scratchpad.md"
+            scratchpad_exists = scratchpad.is_file()
+            content = scratchpad.read_text(encoding="utf-8")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(scratchpad_exists)
+        self.assertIn("## Dead Ends", content)
+        self.assertIn("## Decisions", content)
+        self.assertIn("## Open Questions", content)
+        self.assertIn("## Handoff", content)
+        self.assertIn("Scratchpad notes ready in 1 plan(s):", result.stdout)
 
 
 if __name__ == "__main__":

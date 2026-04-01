@@ -6,23 +6,14 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/iron-law-verifier.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh",
             "timeout": 15
           },
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/log-progress.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/plan-stop-reminder.sh",
-            "timeout": 15
+            "timeout": 15,
+            "async": true
           },
           {
             "type": "command",
@@ -98,6 +89,12 @@
             "if": "Write(*config.ru)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
             "timeout": 45
+          },
+          {
+            "type": "command",
+            "if": "Write(*plan.md)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/plan-stop-reminder.sh",
+            "timeout": 15
           }
         ]
       }
@@ -120,11 +117,145 @@
         "hooks": [
           {
             "type": "command",
+            "if": "Bash(bundle *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
             "timeout": 15
           },
           {
             "type": "command",
+            "if": "Bash(bundle *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(rails *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(rails *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(bin/rails *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(bin/rails *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(./bin/rails *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(./bin/rails *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(rake *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(rake *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(bin/rake *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(bin/rake *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(./bin/rake *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(./bin/rake *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(ruby *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(ruby *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(rspec *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(rspec *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(standardrb *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(standardrb *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(rubocop *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(rubocop *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(brakeman *)",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-failure-hints.sh",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "if": "Bash(brakeman *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/error-critic.sh",
             "timeout": 15
           }
@@ -153,8 +284,15 @@
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime.sh",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-fast.sh",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-async.sh",
+            "timeout": 30,
+            "statusMessage": "Refreshing Ruby runtime context...",
+            "async": true
           }
         ]
       },

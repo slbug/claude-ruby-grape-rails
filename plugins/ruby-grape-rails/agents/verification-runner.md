@@ -6,6 +6,7 @@ disallowedTools: Write, Edit, NotebookEdit
 model: haiku
 effort: low
 background: true
+omitClaudeMd: true
 skills:
   - testing
 ---

@@ -9,6 +9,11 @@ that catch the bugs your tests won't. It is now stack-aware enough to handle
 mixed Active Record + Sequel repos and Packwerk-style modular monoliths
 without flattening everything into generic Rails advice.
 
+The plugin also keeps the runtime path leaner than older builds: read-only
+agents skip contributor-only `CLAUDE.md` context via `omitClaudeMd`, session
+start writes a fast runtime snapshot before a quiet async refresh, and active
+plans keep structured scratchpads for dead ends, decisions, and handoffs.
+
 ```bash
 # You describe the feature. The plugin figures out the rest.
 /rb:plan Add real-time comment notifications
@@ -83,9 +88,13 @@ or warning instead of silently disabling those checks.
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-Ruby Edit/Write automation is delegated through
+Ruby-ish Edit/Write automation is delegated through
 [rubyish-post-edit.sh](plugins/ruby-grape-rails/hooks/scripts/rubyish-post-edit.sh),
-which fans out to formatting, syntax, and debug checks.
+which fans out to Iron Law verification, formatting, syntax, and debug checks
+for `*.rb`, `*.rake`, `Gemfile`, `Rakefile`, and `config.ru`. Generic safety
+hooks stay separate: security reminders and secret scanning still watch all
+edits/writes, progress logging now runs async, and the plan STOP reminder fires
+only on `Write(*plan.md)`.
 [hooks.json](plugins/ruby-grape-rails/hooks/hooks.json)
 is the current wiring source of truth.
 
@@ -214,11 +223,19 @@ The plugin implements a **Plan, Work, Verify, Review, Compound** lifecycle. Each
 
 - **Filesystem is the state machine.** Each phase reads from the previous phase's output. No hidden state.
 - **Plan namespaces.** Each plan owns its implementation-state artifacts in `.claude/plans/{slug}/` -- plan, research, summaries, progress, scratchpad.
+- **Scratchpads are durable workflow memory.** Dead ends, decisions, and
+  handoffs survive long sessions and compaction instead of living only in chat.
 - **Reviews are standalone artifacts.** Reviewer outputs live under `.claude/reviews/`, not inside plan namespaces.
 - **Plan checkboxes track progress.** `[x]` = done, `[ ]` = pending. `/rb:work` finds the first unchecked task and continues.
 - **One plan = one work unit.** Large features get split into multiple plans. Each is self-contained.
 - **Agents are automatic.** The plugin spawns specialist agents behind the scenes. You don't manage them directly.
+- **Read-only agents stay lean.** Most specialist reviewers and analyzers set
+  `omitClaudeMd: true`, so subagents keep product/runtime context while
+  skipping contributor-only repo guidance.
 - **The stack is detected, not guessed.** `/rb:init` and SessionStart hooks identify Rails/Grape/Sidekiq/Karafka, Active Record vs Sequel, and Packwerk/modular package layouts before giving guidance.
+- **Session start is split into fast sync + async refresh.** You get immediate
+  stack context from the quick snapshot while slower helper-version probes
+  refresh in the background.
 - **Fresh research is reused, not re-bought.** `/rb:plan` checks
   `.claude/research/` and prior plan research before respawning
   duplicate topic-research agents.

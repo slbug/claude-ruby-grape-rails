@@ -125,7 +125,7 @@ def frontmatter_field(content: str, field: str, expected: Any | None = None, **_
     return True, f"Frontmatter '{field}' present"
 
 
-def description_length(content: str, min: int = 50, max: int = 280, **_: Any) -> tuple[bool, str]:
+def description_length(content: str, min: int = 50, max: int = 250, **_: Any) -> tuple[bool, str]:
     desc = str(parse_frontmatter(content).get("description", ""))
     size = len(desc)
     passed = min <= size <= max

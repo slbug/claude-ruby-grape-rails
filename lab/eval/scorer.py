@@ -50,7 +50,7 @@ def default_eval(skill_path: str) -> EvalDefinition:
                 "triggering": {
                     "weight": 0.15,
                     "checks": [
-                        {"type": "description_length", "min": 60, "max": 320, "desc": "Description length"},
+                        {"type": "description_length", "min": 60, "max": 250, "desc": "Description length"},
                         {"type": "description_keywords", "min": 3, "desc": "Domain keywords"},
                         {"type": "description_structure", "desc": "Description has use/intent framing"},
                     ],

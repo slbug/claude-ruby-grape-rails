@@ -7,6 +7,25 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-04-01
+
+### Changed
+
+- **Read-only agent context is leaner and more predictable** — shipped skill and
+  agent evals now enforce Claude's practical `250`-character description
+  budget, contributor docs call it out explicitly, and read-only specialist
+  agents now opt into `omitClaudeMd: true` so they keep product/runtime context
+  while skipping contributor-only guidance.
+- **Session startup now feels faster without dropping runtime awareness** —
+  startup writes a fast `.runtime_env` snapshot first, pushes slower helper
+  probing into an async background refresh, and initializes missing scratchpads
+  earlier for active or resumable plans.
+- **Hook routing is more selective on the hot path** — Ruby-ish post-edit work
+  now flows through `rubyish-post-edit.sh` for Iron Law verification,
+  formatting, syntax checks, and debug-statement warnings, progress logging is
+  async, the plan STOP reminder runs only for `Write(*plan.md)`, and
+  `PostToolUseFailure` stays narrowed to Ruby-relevant Bash command families.
+
 ## [1.7.1] - 2026-03-29
 
 ### Changed

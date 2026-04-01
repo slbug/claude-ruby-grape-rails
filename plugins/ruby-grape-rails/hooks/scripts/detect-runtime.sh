@@ -94,6 +94,7 @@ LEFTHOOK_COMMAND=""
 VERIFY_COMPOSITE_AVAILABLE=false
 VERIFY_COMPOSITE_COMMAND=""
 VERIFY_COMPOSITE_SOURCE=""
+FAST_RUNTIME_MODE="${RUBY_PLUGIN_DETECT_RUNTIME_FAST:-0}"
 
 emit_shell_assignment() {
   local key="$1"
@@ -492,7 +493,7 @@ if command -v lefthook >/dev/null 2>&1; then
   LEFTHOOK_AVAILABLE=true
   [[ -n "$LEFTHOOK_COMMAND" ]] || LEFTHOOK_COMMAND="lefthook"
   add_tool "lefthook"
-  if [[ -z "$LEFTHOOK_VERSION" ]]; then
+  if [[ "$FAST_RUNTIME_MODE" != "1" && -z "$LEFTHOOK_VERSION" ]]; then
     LEFTHOOK_VERSION=$(lefthook version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
     [[ -n "$LEFTHOOK_VERSION" ]] || LEFTHOOK_VERSION=$(lefthook --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
   fi
@@ -572,18 +573,18 @@ elif [[ -x "/opt/homebrew/bin/betterleaks" ]]; then
   add_tool "betterleaks"
 fi
 
-if [[ -n "$RTK_PATH" ]]; then
+if [[ -n "$RTK_PATH" && "$FAST_RUNTIME_MODE" != "1" ]]; then
   RTK_VERSION=$("$RTK_PATH" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || printf '%s' "unknown")
   if "$RTK_PATH" gain --help >/dev/null 2>&1; then
     RTK_GAIN_AVAILABLE=true
   fi
 fi
 
-if [[ -n "$DCG_PATH" ]]; then
+if [[ -n "$DCG_PATH" && "$FAST_RUNTIME_MODE" != "1" ]]; then
   DCG_VERSION=$("$DCG_PATH" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || printf '%s' "unknown")
 fi
 
-if [[ -n "$SHELLFIRM_PATH" ]]; then
+if [[ -n "$SHELLFIRM_PATH" && "$FAST_RUNTIME_MODE" != "1" ]]; then
   SHELLFIRM_VERSION=$("$SHELLFIRM_PATH" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || printf '%s' "unknown")
 fi
 

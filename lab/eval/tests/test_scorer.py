@@ -29,6 +29,15 @@ class ScorerTests(unittest.TestCase):
         completeness_checks = [check.check_type for check in eval_def.dimensions["completeness"].checks]
         self.assertNotIn("section_exists", completeness_checks)
 
+    def test_default_skill_eval_uses_public_250_char_description_budget(self) -> None:
+        eval_def = default_eval("plugins/ruby-grape-rails/skills/runtime-integration/SKILL.md")
+        description_check = next(
+            check
+            for check in eval_def.dimensions["triggering"].checks
+            if check.check_type == "description_length"
+        )
+        self.assertEqual(description_check.params["max"], 250)
+
     def test_runtime_integration_skill_refs_score_without_alias_false_negatives(self) -> None:
         runtime_path = next(path for path in find_all_skills() if path.endswith("/runtime-integration/SKILL.md"))
         result = score_skill(runtime_path)
@@ -53,6 +62,41 @@ class ScorerTests(unittest.TestCase):
             if assertion.check_type == "permission_mode_valid"
         )
         self.assertTrue(permission_assertion.passed)
+
+    def test_default_agent_eval_requires_omit_claudemd_for_read_only_agents(self) -> None:
+        agent_path = next(path for path in find_all_agents() if path.endswith("/verification-runner.md"))
+        result = score_agent(agent_path)
+        omit_assertion = next(
+            assertion
+            for assertion in result.dimensions["safety"].assertions
+            if assertion.check_type == "omit_claudemd_coherent"
+        )
+        self.assertTrue(omit_assertion.passed)
+
+    def test_default_agent_eval_rejects_omit_claudemd_for_write_capable_agents(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            agent_path = Path(tmpdir) / "sample-agent.md"
+            agent_path.write_text(
+                "---\n"
+                "name: sample-agent\n"
+                "description: Coordinate the workflow and write summaries for the parent agent.\n"
+                "tools: Read, Write, Grep, Glob\n"
+                "disallowedTools: Edit, NotebookEdit\n"
+                "effort: medium\n"
+                "omitClaudeMd: true\n"
+                "---\n"
+                "# Sample Agent\n",
+                encoding="utf-8",
+            )
+
+            result = score_agent(str(agent_path))
+
+        omit_assertion = next(
+            assertion
+            for assertion in result.dimensions["safety"].assertions
+            if assertion.check_type == "omit_claudemd_coherent"
+        )
+        self.assertFalse(omit_assertion.passed)
 
     def test_trigger_scoring_and_overlap(self) -> None:
         trigger_results = score_all()

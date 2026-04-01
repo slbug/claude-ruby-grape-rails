@@ -35,6 +35,7 @@ run_hook() {
   fi
 }
 
+run_hook "${SCRIPT_DIR}/iron-law-verifier.sh"
 run_hook "${SCRIPT_DIR}/format-ruby.sh"
 run_hook "${SCRIPT_DIR}/verify-ruby.sh"
 run_hook "${SCRIPT_DIR}/debug-statement-warning.sh"

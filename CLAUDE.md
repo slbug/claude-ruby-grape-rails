@@ -9,6 +9,18 @@ and WSL. Native Windows is not currently supported.
 
 This plugin provides **agentic workflow orchestration** with specialist agents and reference skills for Ruby/Rails/Grape development.
 
+Current Plugin Posture:
+
+- **Lean read-only agents**: read-only specialists default to `omitClaudeMd: true`
+  unless they actually need contributor-only repo guidance at runtime
+- **Fast first-turn context**: SessionStart writes a quick runtime snapshot,
+  then refreshes slower probes asynchronously in the background
+- **Structured workflow memory**: active plans keep canonical scratchpads for
+  dead ends, decisions, hypotheses, and handoffs
+- **Targeted post-edit routing**: generic safety hooks stay broad, while
+  Ruby-ish formatting / Iron Law / syntax / debug checks route through a single
+  delegated `rubyish-post-edit.sh` fan-out
+
 ## Workflow Architecture
 
 The plugin implements a **Plan → Work → Verify → Review → Compound** lifecycle:
@@ -160,7 +172,12 @@ skills:
 - Use `memory: project` for agents that benefit from cross-session learning (orchestrators, pattern analysts).
   Note: `memory` auto-enables Read, Write, Edit — only add to agents that already have Write access
 - Preload relevant skills via `skills:` field
+- Add `omitClaudeMd: true` for read-only agents with no `Write` tool
+  unless they have a concrete need for contributor guidance from `CLAUDE.md`
+  at runtime. Iron Laws still arrive through `SubagentStart`.
 - Target under 300 lines when practical
+- Keep agent descriptions at `<= 250` characters so Claude does not silently
+  truncate them in the internal skill/agent listing context
 
 ### Skills
 
@@ -181,6 +198,8 @@ skills/{name}/
 - Include "Iron Laws" section for critical rules
 - Move detailed examples to `references/`
 - No `triggers:` field (use `description` for auto-loading)
+- Keep skill descriptions at `<= 250` characters. Longer descriptions are
+  silently truncated by Claude's listing budget and hurt routing quality.
 
 **Colon in Skill Names (Compatibility Risk):**
 
@@ -217,8 +236,8 @@ Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
 {
   "hooks": {
     "PreToolUse": [...],            // Block dangerous ops (rails/bin/rails/rake db:drop variants, force push, RAILS_ENV=production)
-    "PostToolUse": [...],          // Format + Iron Law verify + security + progress + plan STOP + debug stmt
-    "PostToolUseFailure": [...],   // Ruby failure hints + error critic for bundle commands
+    "PostToolUse": [...],           // Generic safety + targeted Ruby/post-plan hooks
+    "PostToolUseFailure": [...],   // Ruby failure hints + error critic for Ruby-relevant Bash failures
     "SubagentStart": [...],        // Iron Laws injection into all subagents
     "SessionStart": [...],         // Setup dirs + runtime tool detection + resume detection
     "FileChanged": [...],          // Runtime refresh when Gemfile/Rakefile/gemspec/lefthook files change
@@ -240,23 +259,32 @@ Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
   `./bin/rake db:drop/reset/purge`, `bundle exec rake db:drop/reset/purge`,
   equivalent `bundle exec bin/...` and env-prefixed forms, `git push --force`,
   and `RAILS_ENV=production`
-- `PostToolUse` (Edit|Write): Multiple scripts run in sequence:
-  - `iron-law-verifier.sh`: **Programmatic Iron Law verification** (scans code for violations) — all Edit|Write
-  - `security-reminder.sh`: Security Iron Laws for auth files — all Edit|Write
-  - `log-progress.sh`: Async progress logging — all Edit|Write
-  - `plan-stop-reminder.sh`: Plan STOP reminder on plan.md write — all Edit|Write
-  - `secret-scan.sh`: Secret scanning with hook-mode gating — all Edit|Write
-  - `rubyish-post-edit.sh`: Ruby-ish Edit/Write fan-out for `*.rb`, `*.rake`, `*Gemfile`, `*Rakefile`, and `*config.ru`; delegates to `format-ruby.sh`, `verify-ruby.sh`, and `debug-statement-warning.sh`
-- `PostToolUseFailure` (Bash): Ruby-specific debugging hints when bundle exec fails,
-  **error critic** that detects repeated failures and escalates to structured analysis (both via `additionalContext`)
+- `PostToolUse` (Edit|Write, broad safety layer):
+  - `security-reminder.sh`: Security Iron Laws for auth/sensitive files
+  - `log-progress.sh`: Async progress logging
+  - `secret-scan.sh`: Secret scanning with hook-mode gating
+- `PostToolUse` (Ruby-ish Edit/Write, declarative `if` filters):
+  - `rubyish-post-edit.sh`: fan-out for `*.rb`, `*.rake`, `*Gemfile`,
+    `*Rakefile`, and `*config.ru`
+  - delegates to `iron-law-verifier.sh`, `format-ruby.sh`,
+    `verify-ruby.sh`, and `debug-statement-warning.sh`
+- `PostToolUse` (`Write(*plan.md)` only):
+  - `plan-stop-reminder.sh`: STOP reminder when a new or replaced `plan.md`
+    lands on disk
+- `PostToolUseFailure` (Bash): Ruby-specific debugging hints and **error critic**
+  only for Ruby-relevant Bash failures (`bundle`, `rails`, `rake`, `ruby`,
+  `rspec`, `standardrb`, `rubocop`, `brakeman`) via declarative `if` filters
 - `SubagentStart`: Inject all Iron Laws into every spawned subagent via `additionalContext` (addresses zero skill auto-loading gap)
 - `PreCompact`: Warn before compaction about the active plan/work/full state so
   the next turn re-reads the right artifacts after compaction
 - `PostCompact`: Advise Claude which active plan artifacts to re-read after
   compaction when unchecked tasks still exist
-- `SessionStart` (all): Setup `.claude/` directories + consolidated runtime detection
-  - `detect-runtime.sh`: Detect Ruby/Rails version, stack gems, verification tools, local helper tools, Lefthook coverage, and active hook mode
-- `SessionStart` (startup|resume only): Scratchpad check + resume workflow detection + workflow hints
+- `SessionStart` (all): Setup `.claude/` directories + fast runtime snapshot,
+  plus async background runtime refresh
+  - `detect-runtime-fast.sh`: quick first-turn runtime snapshot and `.runtime_env`
+  - `detect-runtime-async.sh`: quiet full refresh for helper versions and slower probes
+- `SessionStart` (startup|resume only): Scratchpad auto-init/check +
+  resume workflow detection + workflow hints
 - `FileChanged` (Gemfile|Gemfile.lock|Rakefile|lefthook|justfile|*.gemspec): Re-runs `detect-runtime-file-changed.sh` to refresh `.claude/.runtime_env` when core project files change mid-session
 - `CwdChanged`: Re-runs `detect-runtime-file-changed.sh` to keep runtime detection aligned when the session moves between repos or package roots
 - `Stop`: Warn if plans have unchecked tasks
@@ -417,7 +445,9 @@ Only trim when content is purely informational and not execution-critical.
 - [ ] Frontmatter complete
 - [ ] `disallowedTools: Write, Edit, NotebookEdit` for review agents
 - [ ] `Write` allowed for agents that output reports (e.g., research agents, context-supervisor)
+- [ ] `omitClaudeMd: true` for read-only agents unless they specifically need contributor guidance at runtime
 - [ ] Skills preloaded
+- [ ] Description at or under 250 chars
 - [ ] Under target (300 lines), hard limit only if justified by inline subagent prompts
 
 ### New skill
@@ -426,6 +456,7 @@ Only trim when content is purely informational and not execution-critical.
 - [ ] "Iron Laws" section
 - [ ] `references/` for details
 - [ ] No `triggers:` field
+- [ ] Description at or under 250 chars
 
 ### New workflow skill
 

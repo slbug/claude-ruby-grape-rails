@@ -1,6 +1,6 @@
 ---
 name: rb:pr-review
-description: Address PR review comments — fetch, categorize, draft responses, optionally fix code. Use whenever the user has PR feedback to address, mentions review comments, or shares a PR URL or number. Also use when the user asks to respond to or fix reviewer suggestions.
+description: "Address PR review comments: fetch them, categorize them, draft responses, and optionally fix code. Use when the user has PR feedback, reviewer suggestions, or shares a PR number or URL."
 argument-hint: <PR number or URL> [--fix]
 disable-model-invocation: true
 effort: high

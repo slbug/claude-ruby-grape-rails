@@ -5,6 +5,7 @@ tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
 model: sonnet
 effort: medium
+omitClaudeMd: true
 skills:
   - active-record-patterns
 ---

@@ -6,6 +6,7 @@ disallowedTools: Write, Edit, NotebookEdit, Bash
 model: haiku
 effort: low
 background: true
+omitClaudeMd: true
 ---
 
 # Web Research Worker

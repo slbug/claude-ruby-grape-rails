@@ -6,6 +6,7 @@ disallowedTools: Write, Edit, NotebookEdit
 model: sonnet
 effort: medium
 maxTurns: 30
+omitClaudeMd: true
 skills:
   - ruby-idioms
   - active-record-patterns
