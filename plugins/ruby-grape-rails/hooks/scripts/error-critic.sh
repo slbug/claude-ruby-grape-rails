@@ -79,8 +79,12 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   exit 0
 fi
 cleanup_error_critic() {
-  [[ -n "$TRIMMED_LOG" ]] && safe_remove_temp_file "$TRIMMED_LOG" "${FAILURE_DIR}/trimmed.*" 2>/dev/null || true
-  [[ -n "$TMP_COUNT" ]] && safe_remove_temp_file "$TMP_COUNT" "${FAILURE_DIR}/count.*" 2>/dev/null || true
+  if [[ -n "$TRIMMED_LOG" ]]; then
+    safe_remove_temp_file "$TRIMMED_LOG" "${FAILURE_DIR}/trimmed.*" 2>/dev/null || true
+  fi
+  if [[ -n "$TMP_COUNT" ]]; then
+    safe_remove_temp_file "$TMP_COUNT" "${FAILURE_DIR}/count.*" 2>/dev/null || true
+  fi
   rmdir -- "$LOCK_DIR" 2>/dev/null || true
 }
 trap cleanup_error_critic EXIT HUP INT TERM
