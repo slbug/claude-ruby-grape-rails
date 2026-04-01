@@ -55,13 +55,17 @@ Important current constraints:
 - `Agent(...)` is the current syntax for restricting spawned subagents
   - `Task(...)` may still appear as historical alias in docs, but contributor
     guidance should prefer `Agent(...)`
+- `omitClaudeMd` is currently a repo policy choice, not a cached-docs
+  compatibility baseline, unless the cached docs start documenting it later
 
 Checks:
 
 1. Confirm plugin agents only use fields currently documented for plugin agents.
 2. Confirm `tools` / `disallowedTools` use currently documented tool names.
 3. Confirm any `skills:` references point to real shipped skills.
-4. Treat new documented fields as `INFO`, not as automatic repo defects.
+4. Treat `omitClaudeMd` enforcement as repo policy unless cached docs explicitly
+   document it.
+5. Treat new documented fields as `INFO`, not as automatic repo defects.
 
 ## Skill Validation
 
@@ -94,6 +98,8 @@ Checks:
    it.
 4. When `paths:` is present, confirm the glob patterns are repo-relevant rather
    than treating the field itself as suspicious.
+5. Treat skill descriptions over `250` characters as a `WARNING`, because the
+   cached docs explicitly say Claude truncates them in the skill listing.
 
 ## Hook Validation
 
@@ -149,6 +155,10 @@ Important current constraints:
     - `PermissionRequest`
 - `FileChanged` uses `matcher` for watched filenames, so do not lint it as a
   normal tool matcher only
+- `async` is documented only for `type: "command"` hooks
+- async hooks cannot block or control Claude after they start, so control fields
+  such as `decision`, `permissionDecision`, or `continue` should not be treated
+  as meaningful on async handlers
 
 Checks:
 
@@ -156,7 +166,10 @@ Checks:
 2. Flag undocumented events and hook types as `BLOCKER`.
 3. Treat `if` usage outside tool events as `WARNING` or `BLOCKER` depending on
    whether it disables the handler.
-4. Validate `${CLAUDE_PLUGIN_ROOT}` references against real repo paths.
+4. Treat async usage on non-`command` hooks as a docs issue.
+5. When a hook is async, do not file control-output behavior as supported unless
+   the cached docs explicitly say it is.
+6. Validate `${CLAUDE_PLUGIN_ROOT}` references against real repo paths.
    - in this repo, those targets live under `plugins/ruby-grape-rails/...`
    - inside the packaged plugin root, the same files appear as paths like
      `hooks/hooks.json` or `.claude-plugin/plugin.json`
