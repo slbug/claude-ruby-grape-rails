@@ -11,8 +11,8 @@ This plugin provides **agentic workflow orchestration** with specialist agents a
 
 Current Plugin Posture:
 
-- **Lean read-only agents**: read-only specialists default to `omitClaudeMd: true`
-  unless they actually need contributor-only repo guidance at runtime
+- **Lean read-only agents**: shipped read-only specialists use
+  `omitClaudeMd: true` so they skip contributor-only repo guidance at runtime
 - **Fast first-turn context**: SessionStart writes a quick runtime snapshot,
   then refreshes slower probes asynchronously in the background
 - **Structured workflow memory**: active plans keep canonical scratchpads for
@@ -172,9 +172,9 @@ skills:
 - Use `memory: project` for agents that benefit from cross-session learning (orchestrators, pattern analysts).
   Note: `memory` auto-enables Read, Write, Edit — only add to agents that already have Write access
 - Preload relevant skills via `skills:` field
-- Add `omitClaudeMd: true` for read-only agents with no `Write` tool
-  unless they have a concrete need for contributor guidance from `CLAUDE.md`
-  at runtime. Iron Laws still arrive through `SubagentStart`.
+- Add `omitClaudeMd: true` for shipped read-only agents with no `Write` tool.
+  Iron Laws still arrive through `SubagentStart`, so read-only specialists do
+  not need contributor-only `CLAUDE.md` guidance in their runtime context.
 - Target under 300 lines when practical
 - Keep agent descriptions at `<= 250` characters so Claude does not silently
   truncate them in the internal skill/agent listing context
@@ -445,7 +445,7 @@ Only trim when content is purely informational and not execution-critical.
 - [ ] Frontmatter complete
 - [ ] `disallowedTools: Write, Edit, NotebookEdit` for review agents
 - [ ] `Write` allowed for agents that output reports (e.g., research agents, context-supervisor)
-- [ ] `omitClaudeMd: true` for read-only agents unless they specifically need contributor guidance at runtime
+- [ ] `omitClaudeMd: true` for shipped read-only agents
 - [ ] Skills preloaded
 - [ ] Description at or under 250 chars
 - [ ] Under target (300 lines), hard limit only if justified by inline subagent prompts
