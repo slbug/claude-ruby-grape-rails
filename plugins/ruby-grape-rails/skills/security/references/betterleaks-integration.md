@@ -103,7 +103,7 @@ This makes HTTP requests to verify if API keys are active.
 Add to your CI pipeline:
 
 ```yaml
-# .github/workflows/secrets.yml
+# Example workflow file in your app repo: .github/workflows/secrets.yml
 name: Secrets Scan
 on: [push, pull_request]
 jobs:

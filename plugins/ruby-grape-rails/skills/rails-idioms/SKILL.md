@@ -1,6 +1,6 @@
 ---
 name: rails-idioms
-description: Idiomatic Rails patterns for controllers, params, responders, callbacks, jobs, and application structure. Load when working in app/, config/routes.rb, or service/controller boundaries. Covers Rails 7.x through 8.x including Solid Queue, Solid Cache, Solid Cable, Thruster, and Kamal 2 deployment.
+description: Idiomatic Rails patterns for controllers, params, callbacks, jobs, and application structure. Load when working in `app/`, `config/routes.rb`, or service/controller boundaries across Rails 7.x and 8.x.
 user-invocable: false
 effort: medium
 ---

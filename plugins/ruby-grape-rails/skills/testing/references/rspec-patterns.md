@@ -187,7 +187,7 @@ end
 Split tests across CI machines for faster runs:
 
 ```yaml
-# .github/workflows/test.yml
+# Example workflow file in your app repo: .github/workflows/test.yml
 strategy:
   matrix:
     ci_node_index: [0, 1, 2, 3]

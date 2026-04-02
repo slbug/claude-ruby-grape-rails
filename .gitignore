@@ -20,11 +20,10 @@ __pycache__/
 .worktrees/
 
 # Claude Code local files (user-specific)
-# Ignore contents but track agents and commands
+# Ignore contents but track shared agents and skills
 !.claude/
 .claude/*
 !.claude/agents/
-!.claude/commands/
 !.claude/skills/
 !.claude/conventions.md
 .claude/docs-check/  # Runtime artifacts (docs-cache, reports, summaries)

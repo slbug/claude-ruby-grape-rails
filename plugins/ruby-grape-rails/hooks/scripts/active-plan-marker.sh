@@ -16,6 +16,10 @@ set -o pipefail
 #   active-plan-marker.sh validate               # Validate marker is still valid
 #
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+command -v grep >/dev/null 2>&1 || {
+  echo "Error: grep is required for active-plan-marker.sh" >&2
+  exit 1
+}
 LIB="${SCRIPT_DIR}/active-plan-lib.sh"
 [[ -r "$LIB" && ! -L "$LIB" ]] || exit 1
 # shellcheck disable=SC1090,SC1091

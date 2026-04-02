@@ -7,6 +7,8 @@ set -o pipefail
 #
 # Hook input: JSON via stdin with .tool_input.file_path
 # Exit 2 with stderr message to surface warning to Claude
+# Policy: secret scanning now fails closed when payload/root/scanner coverage
+# cannot be trusted.
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
@@ -18,7 +20,19 @@ emit_missing_dependency_block() {
   exit 2
 }
 
+emit_root_resolution_block() {
+  echo "BLOCKED: ${HOOK_NAME} could not resolve the workspace root for secret scanning." >&2
+  echo "Fix the hook payload or workspace layout before continuing." >&2
+}
+
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
+command -v grep >/dev/null 2>&1 || emit_missing_dependency_block "grep"
+command -v cat >/dev/null 2>&1 || emit_missing_dependency_block "cat"
+command -v cp >/dev/null 2>&1 || emit_missing_dependency_block "cp"
+command -v find >/dev/null 2>&1 || emit_missing_dependency_block "find"
+command -v mkdir >/dev/null 2>&1 || emit_missing_dependency_block "mkdir"
+command -v mktemp >/dev/null 2>&1 || emit_missing_dependency_block "mktemp"
+command -v sed >/dev/null 2>&1 || emit_missing_dependency_block "sed"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
@@ -26,8 +40,14 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 source "$ROOT_LIB"
 read_hook_input
 INPUT="$HOOK_INPUT_VALUE"
-REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
-[[ -n "$REPO_ROOT" ]] || exit 0
+REPO_ROOT=$(resolve_workspace_root "$INPUT") || {
+  emit_root_resolution_block
+  exit 2
+}
+if [[ -z "$REPO_ROOT" ]]; then
+  emit_root_resolution_block
+  exit 2
+fi
 HOOK_MODE=$(resolve_hook_mode "$REPO_ROOT")
 STRICT_SCAN_MAX_FILES="${RUBY_PLUGIN_SECRET_SCAN_MAX_FILES:-200}"
 
@@ -49,30 +69,30 @@ fi
 BETTERLEAKS_RESULT=""
 BETTERLEAKS_ERROR=""
 
-emit_missing_betterleaks_warning() {
+emit_missing_betterleaks_block() {
   local target="$1"
 
-  echo "⚠️  Betterleaks not available; secret scan skipped for ${target}" >&2
+  echo "BLOCKED: Betterleaks is unavailable; ${HOOK_NAME} cannot scan ${target} for secrets." >&2
   echo "Install betterleaks or set BETTERLEAKS_PATH to restore secret scanning." >&2
+}
+
+payload_secret_snippet() {
+  printf '%s' "$INPUT" | jq -r '(.tool_input.content // .tool_input.new_string // empty)' 2>/dev/null
 }
 
 input_has_secret_indicators() {
   local snippet
 
-  snippet=$(printf '%s' "$INPUT" | jq -r '(.tool_input.content // .tool_input.new_string // empty)' 2>/dev/null) || snippet=""
+  snippet=$(payload_secret_snippet 2>/dev/null) || snippet=""
   [[ -n "$snippet" ]] || return 1
 
   printf '%s' "$snippet" | grep -Eqi \
-    '(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|api[_-]?key|secret|token|client_secret|aws_secret_access_key|xox[baprs]-|ghp_[A-Za-z0-9]{20,})'
+    '(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|api[_-]?key[[:space:]]*[:=]|client_secret[[:space:]]*[:=]|aws_secret_access_key[[:space:]]*[:=]|authorization[[:space:]]*:[[:space:]]*bearer[[:space:]]+[A-Za-z0-9._-]+|xox[baprs]-|ghp_[A-Za-z0-9]{20,})'
 }
 
 if [[ -z "$BETTERLEAKS_PATH" || ! -x "$BETTERLEAKS_PATH" ]]; then
-  if [[ "$HOOK_MODE" == "strict" ]] || input_has_secret_indicators; then
-    emit_missing_betterleaks_warning "${FILE_PATH:-this change}"
-    exit 2
-  fi
-
-  exit 0
+  emit_missing_betterleaks_block "${FILE_PATH:-this change}"
+  exit 2
 fi
 
 is_binaryish_path() {
@@ -121,6 +141,21 @@ emit_scan_setup_failure_warning() {
 
   echo "⚠️  Betterleaks setup failed for ${target}; secret scan could not create a temporary workspace." >&2
   echo "Fix TMPDIR permissions or disk space to restore secret scanning." >&2
+}
+
+emit_recent_changes_scan_unavailable_warning() {
+  local reason="$1"
+
+  echo "BLOCKED: ${HOOK_NAME} could not perform strict recent-change scanning because ${reason}." >&2
+  echo "Provide a specific file path or restore Git access before continuing." >&2
+}
+
+emit_scan_staging_failure_warning() {
+  local source_label="$1"
+  local failures="$2"
+
+  echo "BLOCKED: ${HOOK_NAME} could not stage ${failures} file(s) for strict secret scanning from ${source_label}." >&2
+  echo "Recent-change coverage is incomplete; fix the filesystem permissions and retry." >&2
 }
 
 new_secret_scan_tmpdir() {
@@ -187,6 +222,17 @@ copy_into_tmpdir() {
   cp "$source_path" "$target_file"
 }
 
+write_inline_payload_to_tmpdir() {
+  local snippet="$1"
+  local tmp_dir="$2"
+  local target_dir="${tmp_dir}/inline"
+  local target_file="${target_dir}/payload.txt"
+
+  [[ -n "$snippet" ]] || return 1
+  mkdir -p -- "$target_dir" || return 1
+  printf '%s\n' "$snippet" > "$target_file"
+}
+
 copy_strict_scan_input() {
   local tmp_dir="$1"
   local source_label="$2"
@@ -194,6 +240,7 @@ copy_strict_scan_input() {
   local local_resolved
   local scanned=0
   local truncated=false
+  local copy_failures=0
 
   while IFS= read -r file; do
     [[ -n "$file" ]] || continue
@@ -205,53 +252,100 @@ copy_strict_scan_input() {
 
     local_resolved=$(resolve_workspace_file_path "$REPO_ROOT" "$file") || continue
     is_path_within_root "$REPO_ROOT" "$local_resolved" || continue
-    copy_into_tmpdir "$local_resolved" "$tmp_dir" 2>/dev/null || true
+    if ! copy_into_tmpdir "$local_resolved" "$tmp_dir" 2>/dev/null; then
+      copy_failures=$((copy_failures + 1))
+    fi
   done
 
   if [[ "$truncated" == "true" ]]; then
     emit_truncation_warning "$source_label" "$STRICT_SCAN_MAX_FILES"
   fi
+
+  if [[ "$copy_failures" -gt 0 ]]; then
+    emit_scan_staging_failure_warning "$source_label" "$copy_failures"
+    return 1
+  fi
 }
 
 if [[ -z "$FILE_PATH" ]]; then
-  # No specific file: only strict mode does broader recent-change scans.
-  [[ "$HOOK_MODE" == "strict" ]] || exit 0
-
-  if (cd "$REPO_ROOT" && git rev-parse --git-dir >/dev/null 2>&1); then
+  inline_snippet=$(payload_secret_snippet 2>/dev/null || printf '')
+  if [[ -n "$inline_snippet" ]]; then
     TMP_DIR=$(new_secret_scan_tmpdir) || {
-      emit_scan_setup_failure_warning "recent changes"
+      emit_scan_setup_failure_warning "inline hook payload"
       exit 2
     }
 
-    # shellcheck disable=SC2329 # invoked via trap
-    cleanup_secret_scan_tmpdir() {
+    # shellcheck disable=SC2317,SC2329 # invoked indirectly via trap
+    cleanup_inline_secret_scan_tmpdir() {
       safe_remove_temp_dir "${TMP_DIR:-}" "${TMPDIR:-/tmp}/rb-secret-scan.*" || true
     }
-    trap cleanup_secret_scan_tmpdir EXIT HUP INT TERM
+    trap cleanup_inline_secret_scan_tmpdir EXIT HUP INT TERM
 
-    if (cd "$REPO_ROOT" && git rev-parse --verify HEAD >/dev/null 2>&1); then
-      copy_strict_scan_input "$TMP_DIR" "changed and untracked files" < <(
-        cd "$REPO_ROOT" && {
-          git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null
-          git ls-files --others --exclude-standard 2>/dev/null
-        } | awk 'NF && !seen[$0]++'
-      )
-    else
-      copy_strict_scan_input "$TMP_DIR" "tracked and untracked files" < <(
-        cd "$REPO_ROOT" && git ls-files --cached --others --exclude-standard 2>/dev/null | awk 'NF && !seen[$0]++'
-      )
-    fi
+    write_inline_payload_to_tmpdir "$inline_snippet" "$TMP_DIR" || {
+      emit_scan_setup_failure_warning "inline hook payload"
+      exit 2
+    }
 
-    if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
-      if run_betterleaks_dir "$TMP_DIR"; then
-        if [[ -n "$BETTERLEAKS_RESULT" ]]; then
-          emit_secret_warning "recent changes" "$BETTERLEAKS_RESULT"
-          exit 2
-        fi
-      else
-        emit_scanner_failure_warning "recent changes" "$?" "$BETTERLEAKS_ERROR"
+    if run_betterleaks_dir "$TMP_DIR"; then
+      if [[ -n "$BETTERLEAKS_RESULT" ]]; then
+        emit_secret_warning "inline hook payload" "$BETTERLEAKS_RESULT"
         exit 2
       fi
+    else
+      emit_scanner_failure_warning "inline hook payload" "$?" "$BETTERLEAKS_ERROR"
+      exit 2
+    fi
+
+    exit 0
+  fi
+
+  # No specific file: only strict mode does broader recent-change scans.
+  [[ "$HOOK_MODE" == "strict" ]] || exit 0
+
+  command -v git >/dev/null 2>&1 || {
+    emit_recent_changes_scan_unavailable_warning "git is unavailable"
+    exit 2
+  }
+  command -v awk >/dev/null 2>&1 || emit_missing_dependency_block "awk"
+
+  if ! (cd "$REPO_ROOT" && git rev-parse --git-dir >/dev/null 2>&1); then
+    emit_recent_changes_scan_unavailable_warning "Git metadata is unavailable"
+    exit 2
+  fi
+
+  TMP_DIR=$(new_secret_scan_tmpdir) || {
+    emit_scan_setup_failure_warning "recent changes"
+    exit 2
+  }
+
+  # shellcheck disable=SC2317,SC2329 # invoked indirectly via trap
+  cleanup_secret_scan_tmpdir() {
+    safe_remove_temp_dir "${TMP_DIR:-}" "${TMPDIR:-/tmp}/rb-secret-scan.*" || true
+  }
+  trap cleanup_secret_scan_tmpdir EXIT HUP INT TERM
+
+  if (cd "$REPO_ROOT" && git rev-parse --verify HEAD >/dev/null 2>&1); then
+    copy_strict_scan_input "$TMP_DIR" "changed and untracked files" < <(
+      cd "$REPO_ROOT" && {
+        git diff --name-only --diff-filter=ACMR HEAD -- 2>/dev/null
+        git ls-files --others --exclude-standard 2>/dev/null
+      } | awk 'NF && !seen[$0]++'
+    ) || exit 2
+  else
+    copy_strict_scan_input "$TMP_DIR" "tracked and untracked files" < <(
+      cd "$REPO_ROOT" && git ls-files --cached --others --exclude-standard 2>/dev/null | awk 'NF && !seen[$0]++'
+    ) || exit 2
+  fi
+
+  if find "$TMP_DIR" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
+    if run_betterleaks_dir "$TMP_DIR"; then
+      if [[ -n "$BETTERLEAKS_RESULT" ]]; then
+        emit_secret_warning "recent changes" "$BETTERLEAKS_RESULT"
+        exit 2
+      fi
+    else
+      emit_scanner_failure_warning "recent changes" "$?" "$BETTERLEAKS_ERROR"
+      exit 2
     fi
   fi
 else
@@ -265,7 +359,7 @@ else
       exit 2
     }
 
-    # shellcheck disable=SC2329 # invoked via trap
+    # shellcheck disable=SC2317,SC2329 # invoked indirectly via trap
     cleanup_single_secret_scan_tmpdir() {
       safe_remove_temp_dir "${TMP_DIR:-}" "${TMPDIR:-/tmp}/rb-secret-scan.*" || true
     }

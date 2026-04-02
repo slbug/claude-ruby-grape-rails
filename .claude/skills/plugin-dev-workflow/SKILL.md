@@ -85,6 +85,10 @@ For research/review artifact changes, also consult:
 
 - `${CLAUDE_SKILL_DIR}/references/output-verification-checklist.md`
 
+`CLAUDE_SKILL_DIR` is a Claude skill-runtime helper variable that resolves to
+this skill directory. When reading the file standalone outside Claude, replace
+it with `.claude/skills/plugin-dev-workflow`.
+
 ## Release Discipline
 
 When a change is user-visible:

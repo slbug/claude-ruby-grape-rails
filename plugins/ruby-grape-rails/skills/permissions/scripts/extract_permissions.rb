@@ -3,20 +3,22 @@
 
 require 'json'
 require 'optparse'
+require 'open3'
 require 'pathname'
 require 'shellwords'
 require 'time'
+require 'digest'
 
 options = {
   days: 14,
   json: false,
   limit: 30,
-  repo_only: false,
+  include_global: false,
   dry_run: false
 }
 
 OptionParser.new do |parser|
-  parser.banner = 'Usage: extract_permissions.rb [--days N] [--json] [--limit N] [--repo-only] [--dry-run]'
+  parser.banner = 'Usage: extract_permissions.rb [--days N] [--json] [--limit N] [--include-global] [--dry-run]'
 
   parser.on('--days N', Integer, 'Only scan sessions from the last N days') do |days|
     options[:days] = days
@@ -30,8 +32,12 @@ OptionParser.new do |parser|
     options[:limit] = limit
   end
 
-  parser.on('--repo-only', 'Ignore ~/.claude/settings.json and only use repo-local settings') do
-    options[:repo_only] = true
+  parser.on('--include-global', 'Also include ~/.claude/settings.json in addition to repo-local settings') do
+    options[:include_global] = true
+  end
+
+  parser.on('--repo-only', 'Only use repo-local settings (default; kept for backward compatibility)') do
+    # This is the default behavior, flag kept for backward compatibility
   end
 
   parser.on('--dry-run', 'Accepted for skill parity; extractor output is already read-only') do
@@ -52,8 +58,9 @@ end
 def find_repo_root(start_dir)
   path = Pathname.new(start_dir).expand_path
   git_root = begin
-    root = `git -C #{Shellwords.escape(path.to_s)} rev-parse --show-toplevel 2>/dev/null`.strip
-    root unless root.empty?
+    root, status = Open3.capture2e('git', '-C', path.to_s, 'rev-parse', '--show-toplevel')
+    normalized_root = root.strip
+    normalized_root unless !status.success? || normalized_root.empty?
   rescue StandardError
     nil
   end
@@ -93,22 +100,91 @@ def positive_env_int(name, default)
   value
 end
 
+def canonical_repo_root(repo_root)
+  Pathname.new(repo_root).expand_path.realpath.to_s
+rescue StandardError
+  Pathname.new(repo_root).expand_path.to_s
+end
+
 def claude_project_slug(repo_root)
-  repo_root.tr('/:\\', '-')
+  canonical_root = canonical_repo_root(repo_root)
+  base = canonical_root.tr('/:\\', '-')
+  digest = Digest::SHA256.hexdigest(canonical_root)[0, 12]
+  "#{base}-#{digest}"
+end
+
+def project_transcript_files(project_slug)
+  project_dir = File.join(transcript_projects_root, project_slug)
+  return [] unless File.directory?(project_dir)
+
+  Dir.children(project_dir)
+     .grep(/\.jsonl\z/)
+     .map { |entry| File.join(project_dir, entry) }
+     .select do |path|
+       stat = File.lstat(path)
+       stat.file? && !stat.symlink?
+     rescue Errno::ENOENT, Errno::EACCES, Errno::EPERM
+       false
+     end
+     .sort
+rescue Errno::ENOENT
+  []
+end
+
+def transcript_projects_root
+  configured_root = ENV['RUBY_PLUGIN_PERMISSIONS_PROJECTS_DIR'].to_s.strip
+  configured_root = ENV['CLAUDE_PROJECTS_DIR'].to_s.strip if configured_root.empty?
+  configured_root = '~/.claude/projects' if configured_root.empty?
+
+  File.expand_path(configured_root)
+end
+
+def mode_bit_readable_file?(path)
+  stat = File.stat(path)
+  return false if (stat.mode & 0o444).zero?
+
+  true
+rescue Errno::ENOENT
+  nil
+rescue Errno::EACCES, Errno::EPERM
+  false
+end
+
+def regular_non_symlink_file?(path)
+  stat = File.lstat(path)
+  stat.file? && !stat.symlink?
+rescue Errno::ENOENT
+  nil
+rescue Errno::EACCES, Errno::EPERM
+  false
 end
 
 def load_permissions(settings_path)
-  return { allow: [], deny: [] } unless File.file?(settings_path)
+  file_type = regular_non_symlink_file?(settings_path)
+  return { allow: [], deny: [], invalid: false } if file_type.nil?
+  return { allow: [], deny: [], invalid: true } unless file_type
+
+  readability = mode_bit_readable_file?(settings_path)
+  return { allow: [], deny: [], invalid: false } if readability.nil?
+  return { allow: [], deny: [], invalid: true } unless readability
 
   data = JSON.parse(File.read(settings_path))
+  return { allow: [], deny: [], invalid: true } unless data.is_a?(Hash)
+
   permissions = data.fetch('permissions', {})
+  return { allow: [], deny: [], invalid: true } unless permissions.is_a?(Hash)
 
   {
     allow: Array(permissions['allow']).grep(String),
-    deny: Array(permissions['deny']).grep(String)
+    deny: Array(permissions['deny']).grep(String),
+    invalid: false
   }
-rescue JSON::ParserError, Errno::ENOENT
-  { allow: [], deny: [] }
+rescue JSON::ParserError
+  { allow: [], deny: [], invalid: true }
+rescue Errno::ENOENT
+  { allow: [], deny: [], invalid: false }
+rescue Errno::EACCES, Errno::EPERM
+  { allow: [], deny: [], invalid: true }
 end
 
 def permission_to_glob(permission)
@@ -122,7 +198,10 @@ def permission_to_glob(permission)
 end
 
 def covered_by_patterns?(command, patterns)
-  patterns.any? { |pattern| File.fnmatch?(pattern, command) }
+  patterns.any? do |pattern|
+    File.fnmatch?(pattern, command) ||
+      (pattern.end_with?(' *') && command == pattern[0...-2])
+  end
 end
 
 def normalized_command_for_coverage(command)
@@ -140,6 +219,7 @@ def normalized_command_for_coverage(command)
   core_tokens.shift while core_tokens.first == 'env'
   core_tokens = core_tokens.drop_while { |token| token.match?(/\A[A-Za-z_][A-Za-z0-9_]*=.*/) }
   core_tokens = tokens if core_tokens.empty?
+  core_tokens[0] = core_tokens[0].sub(%r{\A\./(?=(bin|script)/)}, '') unless core_tokens.empty?
   core_tokens.join(' ')
 end
 
@@ -159,6 +239,37 @@ def command_group(command)
   core_tokens = core_tokens.drop_while { |token| token.match?(/\A[A-Za-z_][A-Za-z0-9_]*=.*/) }
   core_tokens = tokens if core_tokens.empty?
   return first_line if core_tokens.empty?
+
+  core_tokens[0] = core_tokens[0].sub(%r{\A\./(?=(bin|script)/)}, '')
+
+  if core_tokens[0] == 'git'
+    option_takes_value = lambda do |token|
+      %w[
+        -C
+        -c
+        --git-dir
+        --work-tree
+        --namespace
+        --super-prefix
+        --config-env
+        --exec-path
+      ].include?(token)
+    end
+
+    index = 1
+    while index < core_tokens.length
+      token = core_tokens[index]
+      break unless token.start_with?('-')
+
+      index += if option_takes_value.call(token)
+                 2
+               else
+                 1
+               end
+    end
+
+    return core_tokens[index] ? "git #{core_tokens[index]}" : 'git'
+  end
 
   if core_tokens[0] == 'bundle' && core_tokens[1] == 'exec'
     if core_tokens[2] == 'rails' && core_tokens[3]
@@ -189,6 +300,10 @@ end
 
 def split_shell_commands(command)
   normalized = command.gsub(/\\\n/, ' ')
+  parser_segments = split_shell_commands_with_shfmt(normalized)
+  return parser_segments if parser_segments.any?
+  return [normalized.strip] if normalized.match?(/(^|[[:space:];(|&])<<-?\s*['"]?[A-Za-z_][A-Za-z0-9_]*['"]?/)
+
   commands = []
   current = +''
   in_single = false
@@ -231,6 +346,14 @@ def split_shell_commands(command)
       escaped = true
       current << char
       index += 1
+    when '#'
+      if current.empty? || current[-1].match?(/[[:space:];|&()]/)
+        index += 1
+        index += 1 while index < normalized.length && normalized[index] != "\n"
+      else
+        current << char
+        index += 1
+      end
     when "'"
       in_single = true
       current << char
@@ -245,13 +368,19 @@ def split_shell_commands(command)
       current = +''
       index += 1
     when '&'
+      prev_char = index.positive? ? normalized[index - 1] : nil
       if next_char == '&'
         stripped = current.strip
         commands << stripped unless stripped.empty?
         current = +''
         index += 2
-      else
+      elsif ['>', '<'].include?(prev_char) || next_char == '>'
         current << char
+        index += 1
+      else
+        stripped = current.strip
+        commands << stripped unless stripped.empty?
+        current = +''
         index += 1
       end
     when '|'
@@ -261,8 +390,10 @@ def split_shell_commands(command)
         current = +''
         index += 2
       else
-        current << char
-        index += 1
+        stripped = current.strip
+        commands << stripped unless stripped.empty?
+        current = +''
+        index += (next_char == '&' ? 2 : 1)
       end
     else
       current << char
@@ -275,7 +406,45 @@ def split_shell_commands(command)
   commands
 end
 
+def shfmt_segment(source, node)
+  start = node.dig('Pos', 'Offset')
+  stop = node.dig('End', 'Offset')
+  return nil unless start.is_a?(Integer) && stop.is_a?(Integer) && stop >= start
+
+  segment = source[start...stop].to_s.strip
+  segment.empty? ? nil : segment
+end
+
+def collect_shfmt_command_segments(node, source, segments)
+  return unless node.is_a?(Hash)
+
+  case node['Type']
+  when 'CallExpr'
+    segment = shfmt_segment(source, node)
+    segments << segment if segment
+  when 'BinaryCmd'
+    collect_shfmt_command_segments(node['X'], source, segments)
+    collect_shfmt_command_segments(node['Y'], source, segments)
+  end
+end
+
+def split_shell_commands_with_shfmt(command)
+  stdout, status = Open3.capture2e('shfmt', '--to-json', '-filename', 'hook-input.sh', stdin_data: command)
+  return [] unless status.success?
+
+  ast = JSON.parse(stdout)
+  segments = []
+  Array(ast['Stmts']).each do |stmt|
+    collect_shfmt_command_segments(stmt['Cmd'], command, segments)
+  end
+
+  segments.uniq
+rescue Errno::ENOENT, JSON::ParserError
+  []
+end
+
 def extract_bash_commands(entry)
+  return [] unless entry.is_a?(Hash)
   return [] unless entry['type'] == 'assistant'
 
   Array(entry.dig('message', 'content')).flat_map do |block|
@@ -291,17 +460,18 @@ end
 
 repo_root = find_repo_root(Dir.pwd)
 project_slug = claude_project_slug(repo_root)
-project_transcript_glob = File.expand_path("~/.claude/projects/#{project_slug}/*.jsonl")
 settings_sources = [
   File.join(repo_root, '.claude/settings.json'),
   File.join(repo_root, '.claude/settings.local.json')
 ]
-settings_sources.unshift(File.expand_path('~/.claude/settings.json')) unless options[:repo_only]
+settings_sources.unshift(File.expand_path('~/.claude/settings.json')) if options[:include_global]
 
 all_allow = []
 all_deny = []
+invalid_settings_files = []
 settings_sources.each do |path|
   permissions = load_permissions(path)
+  invalid_settings_files << path if permissions[:invalid]
   all_allow.concat(permissions[:allow])
   all_deny.concat(permissions[:deny])
 end
@@ -310,11 +480,24 @@ allow_globs = all_allow.filter_map { |permission| permission_to_glob(permission)
 deny_globs = all_deny.filter_map { |permission| permission_to_glob(permission) }
 
 cutoff = Time.now - (options[:days] * 86_400)
-session_files = Dir.glob(project_transcript_glob)
+session_files = project_transcript_files(project_slug)
 max_session_files = positive_env_int('RUBY_PLUGIN_PERMISSIONS_MAX_SESSION_FILES', 200)
 max_lines_per_file = positive_env_int('RUBY_PLUGIN_PERMISSIONS_MAX_LINES_PER_FILE', 10_000)
-recent_candidates = session_files.select { |path| File.file?(path) && File.mtime(path) > cutoff }
-recent_files = recent_candidates.sort_by { |path| File.mtime(path) }.reverse.first(max_session_files)
+missing_session_files = []
+recent_candidates = session_files.filter_map do |path|
+  next unless File.file?(path)
+
+  mtime = File.mtime(path)
+  next unless mtime > cutoff
+
+  { path: path, mtime: mtime }
+rescue Errno::ENOENT
+  missing_session_files << path unless missing_session_files.include?(path)
+  next
+end
+recent_files = recent_candidates.sort_by do |entry|
+  entry[:mtime]
+end.reverse.first(max_session_files).map { |entry| entry[:path] }
 truncated_session_files = [recent_candidates.length - recent_files.length, 0].max
 
 group_counts = Hash.new(0)
@@ -322,6 +505,7 @@ examples = {}
 total_bash_commands = 0
 ignored_denied = 0
 line_capped_files = 0
+malformed_lines = 0
 
 recent_files.each do |session_file|
   file_truncated = false
@@ -335,6 +519,7 @@ recent_files.each do |session_file|
     begin
       entry = JSON.parse(line)
     rescue JSON::ParserError
+      malformed_lines += 1
       next
     end
 
@@ -356,18 +541,21 @@ recent_files.each do |session_file|
   end
   line_capped_files += 1 if file_truncated
 rescue Errno::ENOENT
+  missing_session_files << session_file unless missing_session_files.include?(session_file)
   next
 end
 
-deprecated_patterns = all_allow.select do |permission|
+all_patterns = all_allow + all_deny
+
+deprecated_patterns = all_patterns.select do |permission|
   permission.start_with?('Bash(') && permission.include?(':*)')
 end.uniq.sort
-garbage_patterns = all_allow.select do |permission|
+garbage_patterns = all_patterns.select do |permission|
   permission.match?(/\ABash\((done|fi|then|do|EOF|EOT|RUBY|BASH)\)\z/) ||
     permission.include?('__NEW_LINE_')
 end.uniq.sort
 
-duplicate_patterns = all_allow
+duplicate_patterns = all_patterns
                      .group_by { |permission| permission }
                      .select { |_permission, entries| entries.length > 1 }
                      .keys
@@ -376,13 +564,18 @@ duplicate_patterns = all_allow
 report = {
   repo_root: repo_root,
   project_slug: project_slug,
+  transcript_projects_root: transcript_projects_root,
   days: options[:days],
+  settings_sources: settings_sources,
   scanned_sessions: recent_files.length,
   available_sessions_in_window: recent_candidates.length,
   truncated_session_files: truncated_session_files,
   line_capped_files: line_capped_files,
   max_lines_per_file: max_lines_per_file,
-  settings_scope: options[:repo_only] ? 'repo-only' : 'repo+global',
+  malformed_lines: malformed_lines,
+  invalid_settings_files: invalid_settings_files,
+  missing_session_files: missing_session_files,
+  settings_scope: options[:include_global] ? 'repo+global' : 'repo-only',
   scanned_files: recent_files,
   total_bash_commands: total_bash_commands,
   ignored_denied_commands: ignored_denied,
@@ -400,6 +593,15 @@ report = {
   duplicate_patterns: duplicate_patterns
 }
 
+warnings = []
+if options[:days] == 14
+  warnings << 'Default 14-day lookback can miss infrequent monthly or quarterly commands; rerun with --days 30 or --days 90 for broader coverage.'
+end
+if options[:include_global]
+  warnings << 'Including ~/.claude/settings.json can pull unrelated personal permissions into this repo audit.'
+end
+report[:warnings] = warnings if warnings.any?
+
 if options[:json]
   puts JSON.pretty_generate(report)
   exit 0
@@ -407,14 +609,27 @@ end
 
 puts "Repo root: #{repo_root}"
 puts "Project transcript scope: #{project_slug}"
-puts "Settings scope: #{options[:repo_only] ? 'repo-only' : 'repo + ~/.claude/settings.json'}"
+puts "Transcript projects root: #{transcript_projects_root}"
+puts "Settings scope: #{options[:include_global] ? 'repo + ~/.claude/settings.json' : 'repo-only'}"
+puts "Settings sources considered: #{settings_sources.join(', ')}"
 puts 'Dry-run: extractor is read-only; no settings changes were written.' if options[:dry_run]
 puts "Sessions scanned: #{recent_files.length} (last #{options[:days]} days)"
 puts "Additional recent sessions skipped by cap: #{truncated_session_files}" if truncated_session_files.positive?
 puts "Files capped at #{max_lines_per_file} lines: #{line_capped_files}" if line_capped_files.positive?
+puts "Malformed transcript lines skipped: #{malformed_lines}" if malformed_lines.positive?
+puts "Invalid or unreadable settings files ignored: #{invalid_settings_files.length}" if invalid_settings_files.any?
+puts "Transcript files skipped after disappearing: #{missing_session_files.length}" if missing_session_files.any?
 if truncated_session_files.positive? || line_capped_files.positive?
   puts 'WARNING: transcript scan was truncated by caps; recommendations are partial.'
 end
+puts 'WARNING: malformed transcript lines were skipped; recommendations may be incomplete.' if malformed_lines.positive?
+if invalid_settings_files.any?
+  puts 'WARNING: invalid or unreadable settings files were ignored; permission coverage may be incomplete.'
+end
+if missing_session_files.any?
+  puts 'WARNING: some transcript files disappeared during scanning; recommendations may be incomplete.'
+end
+warnings.each { |warning| puts "WARNING: #{warning}" }
 puts "Total Bash tool calls seen: #{total_bash_commands}"
 puts "Uncovered command groups: #{group_counts.length}"
 puts "Total avoidable prompts: #{group_counts.values.sum}"

@@ -9,6 +9,11 @@ that catch the bugs your tests won't. It is now stack-aware enough to handle
 mixed Active Record + Sequel repos and Packwerk-style modular monoliths
 without flattening everything into generic Rails advice.
 
+The plugin also keeps the runtime path leaner than older builds: read-only
+agents skip contributor-only `CLAUDE.md` context via `omitClaudeMd`, session
+start writes a fast runtime snapshot before a quiet async refresh, and active
+plans keep structured scratchpads for dead ends, decisions, and handoffs.
+
 ```bash
 # You describe the feature. The plugin figures out the rest.
 /rb:plan Add real-time comment notifications
@@ -19,7 +24,7 @@ without flattening everything into generic Rails advice.
 
 /rb:work .claude/plans/comment-notifications/plan.md
 # Implements task by task. Verification checkpoints at key milestones.
-# Stops cold if code violates an Iron Law.
+# Stops on programmatic Iron Law violations and pushes the rest into review-time checks.
 
 /rb:review
 # 4 specialist agents audit in parallel:
@@ -31,9 +36,12 @@ No prompt engineering. No "please check for N+1 queries." The plugin auto-loads
 the right domain knowledge based on what files you're editing and enforces rules
 that prevent the mistakes Ruby developers actually make in production.
 
-Hook prerequisites: core hook guardrails expect `bash`, `jq`, and `grep`. If a
-required dependency is missing, the plugin now surfaces an explicit hook error
-or warning instead of silently disabling those checks.
+Hook prerequisites: core hook guardrails expect `bash`, `jq`, `grep`, and
+standard Unix utilities available on macOS/Linux/WSL such as `head`,
+`readlink`, `awk`, `cksum`, `mktemp`, `sed`, `find`, `cp`, `mv`, `rm`, `tr`,
+`wc`, `cat`, and `mkdir`. If a required dependency is missing, the plugin now
+surfaces an explicit hook error or warning instead of silently disabling those
+checks.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -75,7 +83,7 @@ or warning instead of silently disabling those checks.
 │    sidekiq-specialist              auto-format · ruby-syntax-check  │
 │    deployment-validator            iron-law-verify · security-scan  │
 │    ruby-gem-researcher             debug-stmt-detect · error-critic │
-│    web-researcher                  progress-tracking · block-danger │
+│    web-researcher                  progress-tracking · db/prod/git guard │
 │                                                                     │
 │  ───────────────────────────────────────────────────────────        │
 │  21 Iron Laws · Runtime Tooling · plan→work→verify→review→compound  │
@@ -83,9 +91,20 @@ or warning instead of silently disabling those checks.
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-Ruby Edit/Write automation is delegated through
+Ruby-ish Edit/Write automation is delegated through
 [rubyish-post-edit.sh](plugins/ruby-grape-rails/hooks/scripts/rubyish-post-edit.sh),
-which fans out to formatting, syntax, and debug checks.
+which fans out to Iron Law verification, formatting, syntax, and debug checks
+for `*.rb`, `*.rake`, `Gemfile`, `Rakefile`, and `config.ru`. Generic safety
+hooks stay separate: the security reminder is now advisory, secret scanning
+still watches all edits/writes and blocks when coverage cannot be trusted,
+progress logging runs async, and the plan STOP reminder fires only on
+`Write(*plan.md)`. `block-dangerous-ops.sh` currently blocks four
+command families: destructive Rails/Rake DB tasks, Redis flushes, git force
+pushes, and production-environment commands.
+Default secret scanning is targeted per edit or inline payload and now fails
+closed when the workspace root or scanner cannot be trusted. Strict mode
+broadens that to recent-change sweeps and also fails closed when that broader
+coverage cannot be trusted.
 [hooks.json](plugins/ruby-grape-rails/hooks/hooks.json)
 is the current wiring source of truth.
 
@@ -105,14 +124,17 @@ is the current wiring source of truth.
 
 ```bash
 git clone https://github.com/slbug/claude-ruby-grape-rails.git
+cd claude-ruby-grape-rails
+
+# Run these commands from the cloned repo root.
 
 # Option A: Test local working-tree changes directly
-claude --plugin-dir ./claude-ruby-grape-rails/plugins/ruby-grape-rails
+claude --plugin-dir ./plugins/ruby-grape-rails
 
 # Option B: Validate marketplace install flow
 # Note: marketplace.json now uses git-subdir source, so this installs the
 # published GitHub-backed plugin source, not your uncommitted working tree.
-/plugin marketplace add ./claude-ruby-grape-rails
+/plugin marketplace add .
 /plugin install ruby-grape-rails
 ```
 
@@ -201,7 +223,7 @@ The plugin implements a **Plan, Work, Verify, Review, Compound** lifecycle. Each
 /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
      │           │            │              │              │
      ↓           ↓            ↓              ↓              ↓
-.claude/plans/{slug}/  (in namespace) (in namespace) (in namespace) .claude/solutions/
+.claude/plans/{slug}/  (namespace)  (namespace)  (namespace)  .claude/solutions/
 ```
 
 - **Plan** -- Research agents analyze your codebase in parallel, then synthesize a structured implementation plan
@@ -214,11 +236,19 @@ The plugin implements a **Plan, Work, Verify, Review, Compound** lifecycle. Each
 
 - **Filesystem is the state machine.** Each phase reads from the previous phase's output. No hidden state.
 - **Plan namespaces.** Each plan owns its implementation-state artifacts in `.claude/plans/{slug}/` -- plan, research, summaries, progress, scratchpad.
+- **Scratchpads are durable workflow memory.** Dead ends, decisions, and
+  handoffs survive long sessions and compaction instead of living only in chat.
 - **Reviews are standalone artifacts.** Reviewer outputs live under `.claude/reviews/`, not inside plan namespaces.
 - **Plan checkboxes track progress.** `[x]` = done, `[ ]` = pending. `/rb:work` finds the first unchecked task and continues.
 - **One plan = one work unit.** Large features get split into multiple plans. Each is self-contained.
 - **Agents are automatic.** The plugin spawns specialist agents behind the scenes. You don't manage them directly.
+- **Read-only agents stay lean.** Most specialist reviewers and analyzers set
+  `omitClaudeMd: true`, so subagents keep product/runtime context while
+  skipping contributor-only repo guidance.
 - **The stack is detected, not guessed.** `/rb:init` and SessionStart hooks identify Rails/Grape/Sidekiq/Karafka, Active Record vs Sequel, and Packwerk/modular package layouts before giving guidance.
+- **Session start is split into fast sync + async refresh.** You get immediate
+  stack context from the quick snapshot while slower helper-version probes
+  refresh in the background.
 - **Fresh research is reused, not re-bought.** `/rb:plan` checks
   `.claude/research/` and prior plan research before respawning
   duplicate topic-research agents.
@@ -528,7 +558,7 @@ The plugin enforces **21 Iron Laws** that prevent common, costly mistakes:
 
 ### Enforcement
 
-- **Programmatic**: 6 programmatic detectors checked automatically on every file edit
+- **Programmatic**: 6 programmatic detectors checked automatically on targeted Ruby-ish edits
 - **Behavioral**: All 21 laws injected into subagent context
 - **Review-time**: Full audit during `/rb:review`
 
@@ -679,51 +709,55 @@ PRs welcome! See [CLAUDE.md](CLAUDE.md) for development conventions.
 
 ### Development rules
 
-- Skills: ~100 lines SKILL.md + `references/` for details
+- Skills: keep `SKILL.md` concise and push most detail into `references/`;
+  prefer roughly `100-200` lines for new skills, but allow larger framework or
+  workflow skills when splitting further would make routing or navigation worse
 - Agents: under 300 lines, `disallowedTools` for reviewers
-- All markdown passes `npm run lint`
+- Markdown-only edits should pass `npm run lint:markdown`; `npm run lint`
+  runs the full local lint/validation bundle
+
+### Contributor prerequisites
+
+Local contributor workflows require more than `npm ci` alone:
+
+- `python3` `3.10+` for eval tooling and release checks
+- `ruby` for YAML validation and Ruby maintenance scripts
+- `shellcheck` for `npm run lint`, `make ci`, and local shell pre-commit checks
+- Claude Code CLI for `npm run validate` / `make validate`
+- `jq` for local hook/runtime script validation
+
+Practical bootstrap:
+
+- `npm ci`
+- `npm run doctor`
+
+If `npm run validate` reports `claude` missing, install it with:
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
 
 ### Eval workflow
 
-The repo includes a deterministic contributor eval foundation under
-`lab/eval/`. `1.7.0` adds separate artifact-quality checks for research/review
-outputs. It requires `python3` 3.10+ for the stdlib typing syntax used by the
-eval tooling.
+The canonical contributor eval workflow now lives in
+[CLAUDE.md](CLAUDE.md#contributor-eval-workflow). Use that section for the full
+command matrix and caveats.
 
-Primary entrypoints:
+Common entrypoints:
 
 - `make eval` or `npm run eval` for lint + injection check + changed surfaces
-- `make eval-all` or `npm run eval:all` for the full structural snapshot
 - `make eval-ci` or `npm run eval:ci` for the contributor CI gate
-- `make eval-output` or `npm run eval:output` for deterministic research/review
-  artifact fixtures
-- `make security-injection` or `npm run security:injection`
 - `make eval-tests` or `npm run eval:test` for the default contributor test
-  path (prefers `pytest` when installed, otherwise falls back to `unittest`)
-- `make eval-tests-pytest` or `npm run eval:test:pytest` for explicit `pytest`
-  runs
-- `make eval-baseline`
-- `make eval-compare`
-- `make eval-overlap`
-- `make eval-hard-corpus`
-
-Current scope:
-
-- six high-leverage skill evals: `plan`, `work`, `review`, `verify`,
-  `permissions`, `research`
-- deterministic research/review output fixtures under `lab/eval/fixtures/output/`
-- shipped provenance template under
-  `plugins/ruby-grape-rails/references/output-verification/`
-- structural scoring for all shipped agents
-- deterministic trigger corpora plus confusable-pair / hard-corpus generation
+  path (`unittest` by default for deterministic cross-environment runs)
+- contributor eval tooling requires `python3` 3.10+
 
 Notes:
 
-- `eval-output` is separate from `eval-all` / `eval-ci` for now.
-- `--include-untracked` is available for local changed-mode exploration, but it
-  intentionally makes results non-comparable and is not part of `eval-ci`.
-- The contributor-only output-verification checklist lives under
-  `.claude/skills/plugin-dev-workflow/references/`.
+- `--include-untracked` is local-only for changed-mode exploration and is not
+  part of `eval-ci`
+- `scripts/check-dynamic-injection.sh` expects git metadata for comparable
+  tracked-file scans and now refuses broad non-git fallback scans
+- local pre-commit checks staged Markdown, JSON, and shell syntax; CI is broader
 
 ### Docs-check and session analytics
 

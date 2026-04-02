@@ -9,6 +9,18 @@ and WSL. Native Windows is not currently supported.
 
 This plugin provides **agentic workflow orchestration** with specialist agents and reference skills for Ruby/Rails/Grape development.
 
+Current Plugin Posture:
+
+- **Lean read-only agents**: shipped read-only specialists use
+  `omitClaudeMd: true` so they skip contributor-only repo guidance at runtime
+- **Fast first-turn context**: SessionStart writes a quick runtime snapshot,
+  then refreshes slower probes asynchronously in the background
+- **Structured workflow memory**: active plans keep canonical scratchpads for
+  dead ends, decisions, hypotheses, and handoffs
+- **Targeted post-edit routing**: generic safety hooks stay broad, while
+  Ruby-ish formatting / Iron Law / syntax / debug checks route through a single
+  delegated `rubyish-post-edit.sh` fan-out
+
 ## Workflow Architecture
 
 The plugin implements a **Plan → Work → Verify → Review → Compound** lifecycle:
@@ -17,7 +29,7 @@ The plugin implements a **Plan → Work → Verify → Review → Compound** lif
 /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
      │           │            │              │              │
      ↓           ↓            ↓              ↓              ↓
-.claude/plans/{slug}/  (in namespace) (in namespace) (in namespace) .claude/solutions/
+.claude/plans/{slug}/  (namespace)  (namespace)  (namespace)  .claude/solutions/
 ```
 
 **Key principle**: Filesystem is the state machine. Each phase reads from previous phase's output. Solutions feed back into future cycles.
@@ -160,7 +172,12 @@ skills:
 - Use `memory: project` for agents that benefit from cross-session learning (orchestrators, pattern analysts).
   Note: `memory` auto-enables Read, Write, Edit — only add to agents that already have Write access
 - Preload relevant skills via `skills:` field
+- Add `omitClaudeMd: true` for shipped read-only agents with no `Write` tool.
+  Iron Laws still arrive through `SubagentStart`, so read-only specialists do
+  not need contributor-only `CLAUDE.md` guidance in their runtime context.
 - Target under 300 lines when practical
+- Keep agent descriptions at `<= 250` characters so Claude does not silently
+  truncate them in the internal skill/agent listing context
 
 ### Skills
 
@@ -170,17 +187,21 @@ Skills provide domain knowledge with progressive disclosure.
 
 ```
 skills/{name}/
-├── SKILL.md           # target ~100 lines; move detail to references/
+├── SKILL.md           # prefer ~100-200 lines; move bulky examples to references/
 └── references/        # Detailed content
     └── *.md
 ```
 
 **Rules:**
 
-- SKILL.md: target ~100 lines (~500 tokens) when practical
+- SKILL.md: prefer ~100-200 lines for new skills when practical; larger
+  framework/workflow skills are acceptable when further splitting would make
+  routing or navigation worse
 - Include "Iron Laws" section for critical rules
 - Move detailed examples to `references/`
 - No `triggers:` field (use `description` for auto-loading)
+- Keep skill descriptions at `<= 250` characters. Longer descriptions are
+  silently truncated by Claude's listing budget and hurt routing quality.
 
 **Colon in Skill Names (Compatibility Risk):**
 
@@ -217,8 +238,8 @@ Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
 {
   "hooks": {
     "PreToolUse": [...],            // Block dangerous ops (rails/bin/rails/rake db:drop variants, force push, RAILS_ENV=production)
-    "PostToolUse": [...],          // Format + Iron Law verify + security + progress + plan STOP + debug stmt
-    "PostToolUseFailure": [...],   // Ruby failure hints + error critic for bundle commands
+    "PostToolUse": [...],           // Generic safety + targeted Ruby/post-plan hooks
+    "PostToolUseFailure": [...],   // Ruby failure hints + error critic for Ruby-relevant Bash failures
     "SubagentStart": [...],        // Iron Laws injection into all subagents
     "SessionStart": [...],         // Setup dirs + runtime tool detection + resume detection
     "FileChanged": [...],          // Runtime refresh when Gemfile/Rakefile/gemspec/lefthook files change
@@ -238,25 +259,35 @@ Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
   `./bin/rails db:drop/reset/purge`, `bundle exec rails db:drop/reset/purge`,
   `rake db:drop/reset/purge`, `bin/rake db:drop/reset/purge`,
   `./bin/rake db:drop/reset/purge`, `bundle exec rake db:drop/reset/purge`,
-  equivalent `bundle exec bin/...` and env-prefixed forms, `git push --force`,
-  and `RAILS_ENV=production`
-- `PostToolUse` (Edit|Write): Multiple scripts run in sequence:
-  - `iron-law-verifier.sh`: **Programmatic Iron Law verification** (scans code for violations) — all Edit|Write
-  - `security-reminder.sh`: Security Iron Laws for auth files — all Edit|Write
-  - `log-progress.sh`: Async progress logging — all Edit|Write
-  - `plan-stop-reminder.sh`: Plan STOP reminder on plan.md write — all Edit|Write
-  - `secret-scan.sh`: Secret scanning with hook-mode gating — all Edit|Write
-  - `rubyish-post-edit.sh`: Ruby-ish Edit/Write fan-out for `*.rb`, `*.rake`, `*Gemfile`, `*Rakefile`, and `*config.ru`; delegates to `format-ruby.sh`, `verify-ruby.sh`, and `debug-statement-warning.sh`
-- `PostToolUseFailure` (Bash): Ruby-specific debugging hints when bundle exec fails,
-  **error critic** that detects repeated failures and escalates to structured analysis (both via `additionalContext`)
+  equivalent `bundle exec bin/...` and env-prefixed forms, Redis flushes
+  (`redis-cli flushall` / `flushdb`), `git push --force`, and
+  `RAILS_ENV=production`
+- `PostToolUse` (Edit|Write, broad safety layer):
+  - `security-reminder.sh`: Security Iron Laws for auth/sensitive files
+  - `log-progress.sh`: Async progress logging
+  - `secret-scan.sh`: Secret scanning with hook-mode gating
+- `PostToolUse` (Ruby-ish Edit/Write, declarative `if` filters):
+  - `rubyish-post-edit.sh`: fan-out for `*.rb`, `*.rake`, `*Gemfile`,
+    `*Rakefile`, and `*config.ru`
+  - delegates to `iron-law-verifier.sh`, `format-ruby.sh`,
+    `verify-ruby.sh`, and `debug-statement-warning.sh`
+- `PostToolUse` (`Write(*plan.md)` only):
+  - `plan-stop-reminder.sh`: STOP reminder when a new or replaced `plan.md`
+    lands on disk
+- `PostToolUseFailure` (Bash): Ruby-specific debugging hints and **error critic**
+  only for Ruby-relevant Bash failures (`bundle`, `rails`, `rake`, `ruby`,
+  `rspec`, `standardrb`, `rubocop`, `brakeman`) via declarative `if` filters
 - `SubagentStart`: Inject all Iron Laws into every spawned subagent via `additionalContext` (addresses zero skill auto-loading gap)
 - `PreCompact`: Warn before compaction about the active plan/work/full state so
   the next turn re-reads the right artifacts after compaction
 - `PostCompact`: Advise Claude which active plan artifacts to re-read after
   compaction when unchecked tasks still exist
-- `SessionStart` (all): Setup `.claude/` directories + consolidated runtime detection
-  - `detect-runtime.sh`: Detect Ruby/Rails version, stack gems, verification tools, local helper tools, Lefthook coverage, and active hook mode
-- `SessionStart` (startup|resume only): Scratchpad check + resume workflow detection + workflow hints
+- `SessionStart` (all): Setup `.claude/` directories + fast runtime snapshot,
+  plus async background runtime refresh
+  - `detect-runtime-fast.sh`: quick first-turn runtime snapshot and `.runtime_env`
+  - `detect-runtime-async.sh`: quiet full refresh for helper versions and slower probes
+- `SessionStart` (startup|resume only): Scratchpad auto-init/check +
+  resume workflow detection + workflow hints
 - `FileChanged` (Gemfile|Gemfile.lock|Rakefile|lefthook|justfile|*.gemspec): Re-runs `detect-runtime-file-changed.sh` to refresh `.claude/.runtime_env` when core project files change mid-session
 - `CwdChanged`: Re-runs `detect-runtime-file-changed.sh` to keep runtime detection aligned when the session moves between repos or package roots
 - `Stop`: Warn if plans have unchecked tasks
@@ -297,23 +328,13 @@ Workflow convention with hook-level detection support:
 - `SubagentStart` uses `hookSpecificOutput.additionalContext` to inject context into subagents
 - `PostToolUseFailure` uses `hookSpecificOutput.additionalContext` for debugging hints
 
-### Runtime Tooling Integration
-
-The plugin integrates with Tidewave Rails for runtime operations:
-
-- `/rb:runtime execute` - Ruby code execution via `mcp__tidewave__project_eval`
-- `/rb:runtime query` - SQL execution via `mcp__tidewave__execute_sql_query`
-- `/rb:runtime docs` - Documentation via `mcp__tidewave__get_docs`
-- `/rb:runtime logs` - Log reading via `mcp__tidewave__get_logs`
-- Tidewave gem detection via `Gemfile` parsing
-
-**Note:** Runtime features require Tidewave Rails gem (`bundle add tidewave --group development`) and Tidewave MCP tool access.
-
 ## Development
 
 ### Testing locally
 
 ```bash
+# Run these commands from the repo root.
+
 # Option A: Test local working-tree changes directly
 claude --plugin-dir ./plugins/ruby-grape-rails
 
@@ -343,20 +364,22 @@ claude --plugin-dir ./plugins/ruby-grape-rails
 
 ### Adding new skill
 
-1. Create `plugins/ruby-grape-rails/skills/{name}/SKILL.md` (target ~100 lines)
+1. Create `plugins/ruby-grape-rails/skills/{name}/SKILL.md` (prefer ~100-200 lines for new skills)
 2. Create `references/` with detailed content
 3. For workflow skills, document integration with cycle
 
 ### Setup
 
 ```bash
-npm install  # Pre-commit hooks + linting
+npm ci  # Pre-commit hooks + linting with the committed lockfile
+npm run doctor  # Verify shellcheck, Claude CLI, python3/ruby/jq, and optional betterleaks
 ```
 
 ### Linting
 
 ```bash
-npm run lint       # Check all markdown
+npm run lint       # Run the full local lint/validation bundle
+npm run lint:markdown  # Check markdown only
 npm run lint:fix   # Auto-fix issues
 ```
 
@@ -364,7 +387,10 @@ npm run lint:fix   # Auto-fix issues
 
 ```bash
 # Validate plugin structure and manifest
-claude plugin validate plugins/ruby-grape-rails
+npm run validate
+
+# Validate version alignment + changelog heading/footer integrity
+python3 scripts/check-release-metadata.py
 
 # Should pass without errors before committing changes
 ```
@@ -381,6 +407,24 @@ npm run eval:output
 
 This scores tracked fixture artifacts under `lab/eval/fixtures/output/` and is
 the canonical contributor check for provenance/report contract changes.
+
+### Hook Failure Policy
+
+Keep hook behavior explicit when editing scripts under
+`plugins/ruby-grape-rails/hooks/scripts/`:
+
+- advisory hooks warn or skip on degraded state and must say so clearly:
+  `detect-runtime.sh`, `check-resume.sh`, `log-progress.sh`
+- delegated Ruby post-edit guardrails fail closed once they are selected for a
+  Ruby-ish path:
+  `rubyish-post-edit.sh`, `format-ruby.sh`, `verify-ruby.sh`,
+  `debug-statement-warning.sh`
+- security-sensitive hooks should fail closed in strict/high-confidence cases
+  and document any narrower advisory fallback explicitly:
+  `secret-scan.sh`, `block-dangerous-ops.sh`
+
+Do not leave this implicit. Add or update a short policy comment near the top
+of the hook when behavior changes.
 
 ## Size Guidelines
 
@@ -417,15 +461,18 @@ Only trim when content is purely informational and not execution-critical.
 - [ ] Frontmatter complete
 - [ ] `disallowedTools: Write, Edit, NotebookEdit` for review agents
 - [ ] `Write` allowed for agents that output reports (e.g., research agents, context-supervisor)
+- [ ] `omitClaudeMd: true` for shipped read-only agents
 - [ ] Skills preloaded
+- [ ] Description at or under 250 chars
 - [ ] Under target (300 lines), hard limit only if justified by inline subagent prompts
 
 ### New skill
 
-- [ ] SKILL.md under target (~100 lines), hard limit for command skills (~185)
+- [ ] SKILL.md keeps only routing-critical guidance inline; bulky examples live in `references/`
 - [ ] "Iron Laws" section
 - [ ] `references/` for details
 - [ ] No `triggers:` field
+- [ ] Description at or under 250 chars
 
 ### New workflow skill
 
@@ -467,21 +514,6 @@ categories: Added, Changed, Fixed, Removed.
 - if preparing the next release, move that work into the target version section
   and bump all three versioned metadata files together
 
-## Backlog
-
-### Potential New Agents
-
-1. **Ruby concurrency advisor** — Thread-safety and concurrency specialist
-   - **Scope**: Concurrent Ruby, Thread safety, Ractor usage, Sidekiq concurrency patterns
-   - **Status**: Consider for v2.0
-
-2. **Hotwire architect** — Complex Hotwire/Turbo architecture specialist
-   - **Scope**: Nested frames, Stimulus controller architecture, cable connections
-   - **Current coverage**: `rails-architect` agent covers general Rails patterns
-   - **Status**: Consider if `rails-architect` proves too general for complex Hotwire apps
-
----
-
 # Claude Code Behavioral Instructions
 
 **CRITICAL**: These instructions OVERRIDE default behavior for Ruby/Rails/Grape projects in this codebase.
@@ -504,9 +536,11 @@ When working on Ruby/Rails/Grape code, ALWAYS load relevant skills based on file
 | `app/api/**/*.rb`, `*_api.rb`, `app/apis/**/*.rb` | `grape-idioms` | `plugins/ruby-grape-rails/skills/grape-idioms/references/grape-patterns.md` |
 | `*.rb` | `ruby-idioms` | Always check Iron Laws |
 
-**Hook prerequisites:** core hook automation expects `bash`, `jq`, and `grep`
-to be available. When those dependencies are missing, hooks now surface an
-explicit error or warning instead of silently disabling guardrails.
+**Hook prerequisites:** core hook automation expects `bash`, `jq`, `grep`, and
+standard Unix utilities (`head`, `readlink`, `awk`, `cksum`, `mktemp`, `sed`,
+`find`, `cp`, `mv`, `rm`, `tr`, `wc`, `cat`, `mkdir`) to be available. When
+those dependencies are missing, hooks now surface an explicit error or warning
+instead of silently disabling guardrails.
 
 **Note on job files**: Load `rails-idioms` instead of `sidekiq` when `config/environments/production.rb` contains `solid_queue` (Rails 8+ default).
 
@@ -568,70 +602,17 @@ When fixing a bug in a file that has named variants (e.g., `seller_account/form.
 `buyer_account/form.rb`, `occupier_account/form.rb`), proactively grep for all sibling files and
 check if the same bug exists in each variant. Do this BEFORE implementing the fix, not after.
 
-<!-- IRON_LAWS_START -->
+Iron Laws are maintained in `iron-laws.yml` and projected into shipped plugin
+artifacts.
 
-<!-- GENERATED FROM iron-laws.yml — DO NOT EDIT -->
+When `iron-laws.yml` changes, rerun:
 
-## Iron Laws Enforcement (NON-NEGOTIABLE)
-
-These rules are NEVER violated. If code would violate them, **STOP and explain** before proceeding:
-
-### Active Record Iron Laws
-
-1. **Decimal for Money** — NEVER use float for money — use decimal or integer (cents)
-2. **Parameterized Queries** — ALWAYS use parameterized queries — never interpolate user input into SQL strings
-3. **Eager Loading** — USE includes/preload for associations — avoids N+1 queries
-4. **Commit-Safe Enqueueing in Active Record** — IN Active Record code, use after_commit not after_save when enqueueing jobs that depend on committed data
-5. **Transaction Boundaries** — WRAP multi-step operations in transactions — use ActiveRecord::Base.transaction
-6. **No Validation Bypass** — NO update_columns, update_column, or save(validate: false) in normal flows
-7. **No default_scope** — NO default_scope — use explicit named scopes only
-
-### Sidekiq Iron Laws
-
-8. **Idempotent Jobs** — Jobs MUST be idempotent — safe to retry
-9. **JSON-Safe Arguments** — Args use JSON-safe types only — no symbols, no Ruby objects, no procs
-10. **No ORM Objects in Args** — NEVER store ORM objects in args — store IDs, not records
-11. **Commit-Safe Enqueueing** — ALWAYS enqueue jobs after commit using the active ORM or transaction hook — not after_save or inline before commit
-
-### Security Iron Laws
-
-12. **No Eval** — NO eval with user input — code injection vulnerability
-13. **Explicit Authorization** — AUTHORIZE in EVERY controller action — do not trust before_action alone
-14. **No Unsafe HTML** — NEVER use html_safe or raw with untrusted content — XSS vulnerability
-15. **No SQL Concatenation** — NO SQL string concatenation — always use parameterized queries
-
-### Ruby Iron Laws
-
-16. **method_missing Requires respond_to_missing?** — NO method_missing without respond_to_missing? — breaks introspection
-17. **Supervise Background Processes** — SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers in production
-18. **Rescue StandardError** — DON'T RESCUE Exception — only rescue StandardError or specific classes
-
-### Hotwire/Turbo Iron Laws
-
-19. **No DB Queries in Turbo Streams** — NEVER query DB in Turbo Stream responses — pre-compute everything before broadcast
-20. **Use turbo_frame_tag** — ALWAYS use turbo_frame_tag for partial updates — prevents full page reloads
-
-### Verification Iron Laws
-
-21. **Verify Before Claiming Done** — VERIFY BEFORE CLAIMING DONE — never say 'should work' or 'this fixes it.' Run bundle exec rspec or bin/rails test and show the result
-
-### Violation Response
-
-When detecting a potential Iron Law violation:
-
-```
-STOP: This code would violate Iron Law [number]: [description]
-
-What you wrote:
-[problematic code]
-
-Correct pattern:
-[fixed code]
-
-Should I apply this fix?
+```bash
+bash scripts/generate-iron-law-outputs.sh
 ```
 
-<!-- IRON_LAWS_END -->
+This refreshes the generated hook/runtime projections, including the shipped
+injector/verifier surfaces.
 
 ## Framework Detection
 
@@ -664,26 +645,8 @@ When working on code, automatically consult relevant reference documentation bef
 
 ### Auto-Load Rules
 
-| File/Code Pattern | Skill | References to Consult |
-|-------------------|-------|----------------------|
-| `*_controller.rb` | rails-contexts, rails-idioms | routing-patterns.md |
-| `*_controller.rb` + JSON | rails-contexts | json-api-patterns.md |
-| `app/services/*`, `app/interactors/*`, `lib/**/*.rb` | rails-contexts, ruby-contexts | context-patterns.md |
-| `db/migrate/*` | active-record-patterns, safe-migrations | migrations.md |
-| `class.*ApplicationRecord` | active-record-patterns | validations.md |
-| `scope :`, `where(`, `joins(` | active-record-patterns | queries.md |
-| `app/jobs/*`, `*job.rb` | sidekiq or rails-idioms | job-patterns.md |
-| `include Sidekiq::Job` | sidekiq | job-patterns.md, queue-config.md |
-| `*auth*`, `*session*` | security | authentication.md, authorization.md |
-| `*_spec.rb` | testing | rspec-patterns.md |
-| `spec/factories/*` | testing | factory-patterns.md |
-| `spec/system/*` | testing | system-testing.md |
-| `app/views/*` | hotwire-patterns | components.md, forms-uploads.md |
-| `turbo_frame_tag` | hotwire-patterns | async-streams.md |
-| `data-controller` | hotwire-patterns | js-interop.md |
-| `Dockerfile`, `fly.toml` | deploy | docker-config.md, flyio-config.md |
-| `lib/tasks/*.rake` | ruby-idioms | rake-tasks.md |
-| `app/api/**/*.rb`, `*_api.rb`, `app/apis/**/*.rb` | grape-idioms | grape-patterns.md |
+See the [Automatic Skill Loading](#automatic-skill-loading) section above for
+the canonical auto-load routing table by file pattern.
 
 ### Consultation Behavior
 
@@ -809,7 +772,7 @@ Minimum runtime: `python3` 3.10+ for `lab/eval/`.
   artifact and provenance checks
 - `make security-injection` / `npm run security:injection`
 - `make eval-tests` / `npm run eval:test` for the default contributor test
-  path (prefers `pytest` when installed, otherwise falls back to `unittest`)
+  path (`unittest` discovery)
 - `make eval-tests-pytest` / `npm run eval:test:pytest` for explicit `pytest`
   runs
 - `make eval-baseline`
@@ -822,6 +785,8 @@ Notes:
 - `eval-output` is separate from `eval-all` / `eval-ci` for now.
 - `--include-untracked` is available for local changed-mode exploration, but it
   intentionally makes results non-comparable and is not part of `eval-ci`.
+- `check-dynamic-injection.sh` expects git metadata for comparable tracked-file
+  scans.
 
 Current `lab/eval/` scope:
 
@@ -857,7 +822,6 @@ these are the main still-unadopted features worth tracking:
 - `http` hook type for external telemetry/logging
 - `SubagentStop` for specialist completion metrics
 - `SessionEnd` for cleanup of temporary artifacts
-- hook `environment` field if it materially simplifies script wiring
 
 ### Skills
 

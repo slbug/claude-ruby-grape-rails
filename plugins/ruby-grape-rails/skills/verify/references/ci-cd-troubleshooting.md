@@ -7,7 +7,7 @@ CI/CD configuration and troubleshooting guides for Ruby/Rails verification.
 ### GitHub Actions
 
 ```yaml
-# .github/workflows/verify.yml
+# Example workflow file in your app repo: .github/workflows/verify.yml
 name: Verify
 
 on: [push, pull_request]

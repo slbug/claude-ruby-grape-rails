@@ -138,7 +138,7 @@ resolve_project_root_from_dir() {
   local dir="$1"
   local normalized_dir
   local current
-  local git_root
+  local git_root=""
   local home_dir
 
   normalized_dir=$(normalize_workspace_dir "$dir") || return 1
@@ -333,10 +333,14 @@ normalize_hook_mode() {
 }
 
 resolve_hook_mode() {
-  local root="${1:-$(resolve_workspace_root)}"
+  local root="${1:-}"
   local mode="${RUBY_PLUGIN_HOOK_MODE:-}"
   local claude_dir
   local mode_file
+
+  if [[ -z "$root" ]]; then
+    root=$(resolve_workspace_root "${CLAUDE_HOOK_INPUT:-}") || return 1
+  fi
 
   if [[ -n "$mode" ]]; then
     normalize_hook_mode "$mode"
@@ -358,4 +362,45 @@ resolve_hook_mode() {
   fi
 
   printf '%s\n' "default"
+}
+
+detect_hook_log_root() {
+  local input="${1:-${CLAUDE_HOOK_INPUT:-}}"
+  local root=""
+
+  root=$(resolve_workspace_root "$input" 2>/dev/null || true)
+  if [[ -z "$root" ]]; then
+    root=$(resolve_project_root_from_dir "${PWD:-.}" 2>/dev/null || true)
+  fi
+
+  [[ -n "$root" ]] || return 1
+  printf '%s\n' "$root"
+}
+
+append_hook_degradation_log() {
+  local hook_name="$1"
+  local reason="$2"
+  local input="${3:-${CLAUDE_HOOK_INPUT:-}}"
+  local root=""
+  local claude_dir=""
+  local log_dir=""
+  local log_file=""
+  local timestamp=""
+
+  [[ -n "$hook_name" && -n "$reason" ]] || return 1
+
+  root=$(detect_hook_log_root "$input") || return 1
+  claude_dir="${root}/.claude"
+  [[ ! -L "$claude_dir" ]] || return 1
+
+  log_dir="${claude_dir}/.logs"
+  [[ ! -L "$log_dir" ]] || return 1
+  mkdir -p -- "$log_dir" 2>/dev/null || return 1
+
+  log_file="${log_dir}/hook-degradations.log"
+  if [[ -e "$log_file" ]]; then
+    [[ -f "$log_file" && ! -L "$log_file" ]] || return 1
+  fi
+  timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || printf '%s' 'unknown-time')"
+  printf '[%s] %s: %s\n' "$timestamp" "$hook_name" "$reason" >>"$log_file" 2>/dev/null || return 1
 }

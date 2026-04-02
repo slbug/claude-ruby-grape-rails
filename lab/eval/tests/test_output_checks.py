@@ -109,6 +109,17 @@ No actual entries here.
         passed, _ = output_checks.has_provenance_external_evidence(content)
         self.assertFalse(passed)
 
+    def test_provenance_external_evidence_rejects_placeholder_urls(self) -> None:
+        content = """# Provenance: sample
+
+## Claim Log
+
+1. [VERIFIED] "placeholder discussion link should not count as valid external evidence"
+   - Evidence: <https://github.com/example/project/discussions/0000> [T1]
+"""
+        passed, _ = output_checks.provenance_external_evidence_is_non_placeholder(content)
+        self.assertFalse(passed)
+
     def test_has_research_decision_section_accepts_executive_summary(self) -> None:
         content = """# Research: sample
 

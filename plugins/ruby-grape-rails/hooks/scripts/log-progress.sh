@@ -4,6 +4,8 @@ set -o pipefail
 
 # PostToolUse hook: Log file modifications to active progress file
 # Uses explicit active-plan marker with fallback to heuristic detection
+# Policy: advisory observability hook; degraded payloads warn/skip instead of
+# blocking the edit itself.
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
@@ -22,12 +24,23 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 source "$ROOT_LIB"
 read_hook_input
 INPUT="$HOOK_INPUT_VALUE"
+case "${HOOK_INPUT_STATUS:-empty}" in
+  invalid)
+    echo "WARNING: ${HOOK_NAME} skipped progress logging because the hook payload was invalid." >&2
+    exit 0
+    ;;
+  truncated)
+    echo "WARNING: ${HOOK_NAME} skipped progress logging because the hook payload was truncated." >&2
+    exit 0
+    ;;
+esac
 LIB="${SCRIPT_DIR}/active-plan-lib.sh"
 [[ -r "$LIB" && ! -L "$LIB" ]] || emit_missing_dependency_block "active-plan-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$LIB"
 
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
+command -v grep >/dev/null 2>&1 || emit_missing_dependency_block "grep"
 
 clear_stale_lock() {
   local lock_dir="$1"

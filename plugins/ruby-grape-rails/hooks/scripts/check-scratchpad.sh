@@ -2,17 +2,28 @@
 set -o nounset
 set -o pipefail
 
-# SessionStart hook: Surface existing scratchpads and dead-end-heavy
-# plans before the user resumes work.
+# SessionStart hook: Surface existing scratchpads, auto-initialize missing
+# scratchpads for active/resumable plans, and highlight dead-end-heavy plans.
 
+command -v grep >/dev/null 2>&1 || {
+  echo "Warning: skipping check-scratchpad.sh because grep is unavailable" >&2
+  exit 0
+}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
-# shellcheck disable=SC2034 # consumed by active-plan-lib during sourcing
 read_hook_input
+# shellcheck disable=SC2034 # consumed by active-plan-lib during sourcing
 INPUT="$HOOK_INPUT_VALUE"
+case "${HOOK_INPUT_STATUS:-empty}" in
+  truncated|invalid)
+    echo "Warning: skipping check-scratchpad.sh because hook input was ${HOOK_INPUT_STATUS}" >&2
+    append_hook_degradation_log "check-scratchpad.sh" "scratchpad reminder skipped because hook input was ${HOOK_INPUT_STATUS}" "$INPUT" || true
+    exit 0
+    ;;
+esac
 LIB="${SCRIPT_DIR}/active-plan-lib.sh"
 [[ -r "$LIB" && ! -L "$LIB" ]] || exit 0
 # shellcheck disable=SC1090,SC1091
@@ -30,16 +41,23 @@ scratchpads=()
 shopt -s nullglob
 for plan_dir in "${PLANS_DIR}"/*; do
   [[ -d "$plan_dir" && ! -L "$plan_dir" ]] || continue
+  scratchpad_file="${plan_dir}/scratchpad.md"
 
   needs_scratchpad=false
-  [[ "$plan_dir" == "$ACTIVE_PLAN" ]] && needs_scratchpad=true
-  [[ -f "${plan_dir}/plan.md" && ! -L "${plan_dir}/plan.md" ]] && needs_scratchpad=true
-  [[ -f "${plan_dir}/progress.md" && ! -L "${plan_dir}/progress.md" ]] && needs_scratchpad=true
-  [[ -d "${plan_dir}/research" && ! -L "${plan_dir}/research" ]] && needs_scratchpad=true
-  [[ "$needs_scratchpad" == "true" ]] || continue
+  if [[ "$plan_dir" == "$ACTIVE_PLAN" ]]; then
+    needs_scratchpad=true
+  elif plan_has_unchecked_tasks "${plan_dir}/plan.md"; then
+    needs_scratchpad=true
+  elif [[ -d "${plan_dir}/research" && ! -L "${plan_dir}/research" && ! -f "${plan_dir}/plan.md" ]]; then
+    needs_scratchpad=true
+  fi
 
-  if [[ -f "${plan_dir}/scratchpad.md" && ! -L "${plan_dir}/scratchpad.md" ]]; then
-    scratchpads+=("${plan_dir}/scratchpad.md")
+  if [[ "$needs_scratchpad" == "true" ]]; then
+    ensure_scratchpad_file "$plan_dir" "$(get_plan_intent "$plan_dir" 2>/dev/null || true)" || true
+  fi
+
+  if [[ -f "$scratchpad_file" && ! -L "$scratchpad_file" ]]; then
+    scratchpads+=("$scratchpad_file")
   fi
 done
 shopt -u nullglob
@@ -47,7 +65,7 @@ shopt -u nullglob
 COUNT=${#scratchpads[@]}
 
 if [[ "$COUNT" -gt 0 ]]; then
-  echo "Existing scratchpad notes found in $COUNT plan(s):"
+  echo "Scratchpad notes ready in $COUNT plan(s):"
   for file in "${scratchpads[@]}"; do
     [[ -f "$file" ]] || continue
     plan_dir=$(path_dirname "$file")

@@ -12,11 +12,18 @@ INPUT="$HOOK_INPUT_VALUE"
 case "${HOOK_INPUT_STATUS:-empty}" in
   truncated|invalid)
     echo "Warning: skipping setup-dirs.sh because hook input was ${HOOK_INPUT_STATUS}" >&2
+    append_hook_degradation_log "setup-dirs.sh" "session directory bootstrap skipped because hook input was ${HOOK_INPUT_STATUS}" "$INPUT" || true
     exit 0
     ;;
 esac
-REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
-[[ -n "$REPO_ROOT" ]] || exit 0
+REPO_ROOT=$(resolve_workspace_root "$INPUT") || {
+  append_hook_degradation_log "setup-dirs.sh" "session directory bootstrap skipped because workspace root could not be resolved" "$INPUT" || true
+  exit 0
+}
+if [[ -z "$REPO_ROOT" ]]; then
+  append_hook_degradation_log "setup-dirs.sh" "session directory bootstrap skipped because workspace root could not be resolved" "$INPUT" || true
+  exit 0
+fi
 CLAUDE_DIR="${REPO_ROOT}/.claude"
 
 [[ ! -L "$CLAUDE_DIR" ]] || exit 0

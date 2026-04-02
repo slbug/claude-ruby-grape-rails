@@ -52,13 +52,14 @@ def default_eval(agent_path: str) -> EvalDefinition:
                     "checks": [
                         {"type": "disallowed_tools_present", "desc": "Has disallowed tools"},
                         {"type": "read_only_tools_coherent", "desc": "Tool restrictions coherent"},
+                        {"type": "omit_claudemd_coherent", "desc": "CLAUDE.md loading is scoped correctly"},
                         {"type": "no_dangerous_patterns", "desc": "No catastrophic patterns"},
                     ],
                 },
                 "consistency": {
                     "weight": 0.20,
                     "checks": [
-                        {"type": "description_length", "min": 60, "max": 320, "desc": "Description length"},
+                        {"type": "description_length", "min": 60, "max": 250, "desc": "Description length"},
                         {"type": "description_keywords", "min": 3, "desc": "Description keywords"},
                         {"type": "action_density", "min_ratio": 0.10, "desc": "Action density"},
                     ],

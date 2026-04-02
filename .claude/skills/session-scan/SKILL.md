@@ -12,9 +12,11 @@ sessions. This is contributor analytics, not release gating.
 
 ## Requirements
 
-Requires `ccrider` MCP. If not available:
+Interactive session discovery requires `ccrider` MCP. If it is unavailable:
 
-> ccrider MCP is required. See: <https://github.com/neilberkman/ccrider>
+> ccrider MCP is unavailable. You can still run
+> `references/compute-metrics.py` manually on local transcript exports, but
+> this skill cannot discover sessions automatically without ccrider.
 
 ## Important Caveat
 

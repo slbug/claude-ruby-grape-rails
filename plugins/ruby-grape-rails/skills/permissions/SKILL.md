@@ -1,7 +1,7 @@
 ---
 name: rb:permissions
 description: Analyze recent Claude Code sessions and recommend safe Bash permission entries for Ruby/Rails/Grape workflows in settings.json. Use when repeated approval prompts slow work or the user asks to reduce prompts, allow commands, or fix permissions.
-argument-hint: "[--days=14] [--limit=30] [--repo-only] [--dry-run]"
+argument-hint: "[--days=14] [--limit=30] [--include-global] [--dry-run]"
 effort: low
 ---
 # Permission Analyzer
@@ -22,8 +22,8 @@ writing.
 
 ## Arguments
 
-`$ARGUMENTS` — `--days=N` (default: 14), `--limit=N`, `--repo-only`,
-`--dry-run`.
+`$ARGUMENTS` — `--days=N` (default: 14), `--limit=N`, `--include-global`,
+`--dry-run`. Repo-local settings are the default scope.
 
 ## Iron Laws
 
@@ -41,10 +41,13 @@ writing.
 Run the canonical extractor first:
 
 ```bash
-ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days "${DAYS:-14}" ${REPO_ONLY:+--repo-only} ${LIMIT:+--limit "${LIMIT}"} ${DRY_RUN:+--dry-run}
+ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days "${DAYS:-14}" ${INCLUDE_GLOBAL:+--include-global} ${LIMIT:+--limit "${LIMIT}"} ${DRY_RUN:+--dry-run}
 ```
 
 See `${CLAUDE_SKILL_DIR}/references/extraction-script.md` for the output format.
+Keep repo-local settings as the default audit scope; only add
+`--include-global` when the contributor explicitly wants personal
+`~/.claude/settings.json` policy folded into the recommendations.
 
 Do not skip straight to writing settings. The extraction step is the evidence.
 

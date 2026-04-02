@@ -7,6 +7,53 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-04-02
+
+### Changed
+
+- **Read-only agent context is leaner and more predictable** — shipped skill and
+  agent evals now enforce Claude's practical `250`-character description
+  budget, contributor docs call it out explicitly, and read-only specialist
+  agents now opt into `omitClaudeMd: true` so they keep product/runtime context
+  while skipping contributor-only guidance.
+- **Session startup now feels faster without dropping runtime awareness** —
+  startup writes a fast `.runtime_env` snapshot first, pushes slower helper
+  probing into an async background refresh, and initializes missing scratchpads
+  earlier for active or resumable plans.
+- **Hook routing is more selective on the hot path** — Ruby-ish post-edit work
+  now flows through `rubyish-post-edit.sh` for Iron Law verification,
+  formatting, syntax checks, and debug-statement warnings, progress logging is
+  async, the plan STOP reminder runs only for `Write(*plan.md)`, and
+  `PostToolUseFailure` stays narrowed to Ruby-relevant Bash command families.
+- **Runtime and contributor failure paths are clearer under degraded conditions** —
+  `detect-runtime.sh` now warns when runtime state directories cannot be
+  prepared, `error-critic.sh` warns when hook-state storage or updates fail,
+  `run_eval.sh` now distinguishes the scoring gate from runtime tests and emits
+  explicit temporary-file errors, and changed-mode eval no longer treats
+  deleted or moved changed skills/agents as note-only skips.
+- **Contributor integrity checks are stricter and less lossy** —
+  fallback dynamic-injection scans now fail when coverage is partial, the
+  permissions extractor no longer relies on glob-interpolated transcript paths
+  and now reports malformed JSONL lines, and contributor verification docs now
+  point at concrete output fixtures instead of only the parent directory.
+- **Contributor validation is now wired into the main quality gates** —
+  local `ci` entrypoints now include `claude plugin validate`, and the GitHub
+  Actions workflow now runs a dedicated plugin-structure validation job instead
+  of relying on docs or manual contributor discipline alone.
+- **Background-agent orchestration guidance now matches current Claude Code
+  behavior** — stale `TaskOutput` instructions were removed from the planning
+  workflow, and the contributor guidance now consistently treats background
+  agent completion as notification-driven with explicit reads of written output
+  files.
+- **Agent turn limits are now explicit across the shipped specialist set** —
+  the remaining Ruby agents now declare `maxTurns`, which makes runaway-agent
+  protection more consistent beyond the core orchestrators.
+- **Permission extraction is more robust and shell-aware** — the permissions
+  extractor now supports transcript-root overrides for contributor analysis,
+  rejects malformed settings/transcript shapes without crashing, and uses
+  parser-backed shell splitting when `shfmt` is available while preserving the
+  safer fallback behavior when it is not.
+
 ## [1.7.1] - 2026-03-29
 
 ### Changed
@@ -276,9 +323,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `eval-skills`, `eval-agents`, and `eval-triggers` expose clearer targeted
   modes.
 - **Contributor eval tests now support pytest cleanly** — the repo now ships
-  `pytest.ini`, explicit `pytest` test commands, and a default eval-test
-  wrapper that prefers `pytest` when installed while keeping the existing
-  `unittest` path working.
+  `pytest.ini`, explicit `pytest` test commands, and a deterministic default
+  eval-test wrapper based on `unittest` while keeping the explicit `pytest`
+  path available.
 - **`/rb:state-audit` examples now prefer `rg` over brittle `grep -r`
   patterns** — state-audit guidance now avoids shell-globstar-dependent
   examples and uses faster ripgrep commands instead.
@@ -919,6 +966,21 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.7.2...HEAD
+[1.7.2]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.2
+[1.7.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.1
+[1.7.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.0
+[1.6.3]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.6.3
+[1.6.2]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.6.2
+[1.6.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.6.1
+[1.6.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.6.0
+[1.5.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.5.0
+[1.4.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.4.0
+[1.3.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.3.1
+[1.3.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.3.0
+[1.2.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.2.0
+[1.1.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.1.1
+[1.1.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.1.0
 [1.0.4]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.4
 [1.0.3]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.3
 [1.0.2]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.2

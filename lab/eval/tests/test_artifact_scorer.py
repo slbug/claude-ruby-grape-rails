@@ -26,6 +26,7 @@ class ArtifactScorerTests(unittest.TestCase):
                 "research_tiered_sources",
                 "research_inline_tiers",
                 "research_decision_section",
+                "research_non_placeholder_sources",
                 "research_provenance_external_evidence",
                 "provenance_tier_summary",
                 "provenance_required_fixes",

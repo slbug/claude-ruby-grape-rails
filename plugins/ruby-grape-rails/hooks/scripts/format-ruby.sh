@@ -7,6 +7,8 @@ set -o pipefail
 #
 # Hook input: JSON via stdin with .tool_input.file_path
 # Auto-fixes formatting issues when possible
+# Policy: delegated Ruby post-edit guardrail; once selected for a Ruby-ish path,
+# payload and path-resolution failures block rather than silently skipping.
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
@@ -30,6 +32,15 @@ source "$ROOT_LIB"
 source "$DEP_LIB"
 read_hook_input
 INPUT="$HOOK_INPUT_VALUE"
+
+emit_format_block() {
+  local reason="$1"
+  local remediation="$2"
+
+  echo "BLOCKED: ${HOOK_NAME} could not run automatic Ruby formatting because ${reason}." >&2
+  echo "$remediation" >&2
+}
+
 if [[ -z "$INPUT" ]]; then
   case "${HOOK_INPUT_STATUS:-empty}" in
     truncated|invalid)
@@ -39,17 +50,57 @@ if [[ -z "$INPUT" ]]; then
       ;;
   esac
 fi
-REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
-[[ -n "$REPO_ROOT" ]] || exit 0
+REPO_ROOT=$(resolve_workspace_root "$INPUT") || {
+  emit_format_block \
+    "the workspace root could not be resolved" \
+    "Fix the hook payload or workspace layout before retrying automatic Ruby formatting."
+  exit 2
+}
+[[ -n "$REPO_ROOT" ]] || {
+  emit_format_block \
+    "the workspace root could not be resolved" \
+    "Fix the hook payload or workspace layout before retrying automatic Ruby formatting."
+  exit 2
+}
 PROJECT_GEMFILE="${REPO_ROOT}/Gemfile"
 PROJECT_LOCKFILE="${REPO_ROOT}/Gemfile.lock"
 
-FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
-[[ -n "$FILE_PATH" ]] || exit 0
-FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || exit 0
-[[ -f "$FILE_PATH" ]] || exit 0
-[[ ! -L "$FILE_PATH" ]] || exit 0
-is_path_within_root "$REPO_ROOT" "$FILE_PATH" || exit 0
+FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || {
+  emit_format_block \
+    "tool_input.file_path could not be parsed" \
+    "Fix the hook payload before retrying automatic Ruby formatting."
+  exit 2
+}
+[[ -n "$FILE_PATH" ]] || {
+  emit_format_block \
+    "tool_input.file_path was missing" \
+    "Fix the hook payload before retrying automatic Ruby formatting."
+  exit 2
+}
+FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || {
+  emit_format_block \
+    "the edited path could not be resolved inside the workspace" \
+    "Fix the hook payload before retrying automatic Ruby formatting."
+  exit 2
+}
+[[ -f "$FILE_PATH" ]] || {
+  emit_format_block \
+    "the edited file was not found" \
+    "Retry once the file exists on disk again."
+  exit 2
+}
+[[ ! -L "$FILE_PATH" ]] || {
+  emit_format_block \
+    "the edited file was a symlink" \
+    "Use a regular file path before retrying automatic Ruby formatting."
+  exit 2
+}
+is_path_within_root "$REPO_ROOT" "$FILE_PATH" || {
+  emit_format_block \
+    "the edited path resolved outside the workspace" \
+    "Fix the hook payload before retrying automatic Ruby formatting."
+  exit 2
+}
 
 BASE_NAME=$(path_basename "$FILE_PATH")
 case "$BASE_NAME" in
@@ -61,6 +112,16 @@ has_gem() {
   local gem_name="$1"
   ruby_plugin_repo_declares_gem "$REPO_ROOT" "$PROJECT_GEMFILE" "$gem_name" ||
     ruby_plugin_lock_has_gem "$PROJECT_LOCKFILE" "$gem_name"
+}
+
+gem_declared_now() {
+  local gem_name="$1"
+  ruby_plugin_repo_declares_gem "$REPO_ROOT" "$PROJECT_GEMFILE" "$gem_name"
+}
+
+gem_locked_now() {
+  local gem_name="$1"
+  ruby_plugin_lock_has_gem "$PROJECT_LOCKFILE" "$gem_name"
 }
 
 printf -v QUOTED_PATH '%q' "$FILE_PATH"
@@ -82,13 +143,35 @@ report_formatter_failure() {
 }
 
 emit_tempfile_failure_warning() {
-  echo "⚠️  Ruby formatting skipped for ${FILE_PATH} because a temporary file could not be created." >&2
+  echo "BLOCKED: ${HOOK_NAME} could not run automatic Ruby formatting for ${FILE_PATH} because a temporary file could not be created." >&2
   echo "Fix TMPDIR permissions or disk space to restore automatic Ruby formatting." >&2
 }
 
+emit_ambiguous_formatter_warning() {
+  echo "WARNING: ${HOOK_NAME} skipped automatic Ruby formatting for ${FILE_PATH} because formatter dependencies are in transition between Gemfile and Gemfile.lock." >&2
+  echo "Finish the formatter dependency change, refresh the lockfile, then rerun formatting explicitly." >&2
+}
+
+STANDARD_DECLARED=false
+STANDARD_LOCKED=false
+RUBOCOP_DECLARED=false
+RUBOCOP_LOCKED=false
+
+gem_declared_now standard && STANDARD_DECLARED=true
+gem_locked_now standard && STANDARD_LOCKED=true
+gem_declared_now rubocop && RUBOCOP_DECLARED=true
+gem_locked_now rubocop && RUBOCOP_LOCKED=true
+
+if [[ "$BASE_NAME" == "Gemfile" || "$BASE_NAME" == "Gemfile.lock" ]]; then
+  if [[ "$STANDARD_DECLARED" != "$STANDARD_LOCKED" || "$RUBOCOP_DECLARED" != "$RUBOCOP_LOCKED" ]]; then
+    emit_ambiguous_formatter_warning
+    exit 0
+  fi
+fi
+
 if has_gem standard; then
   if ! command -v bundle >/dev/null 2>&1; then
-    echo "⚠️  Ruby formatting skipped for ${FILE_PATH} because Bundler is not available." >&2
+    echo "BLOCKED: ${HOOK_NAME} could not run automatic Ruby formatting for ${FILE_PATH} because Bundler is not available." >&2
     echo "Install Bundler to restore automatic StandardRB formatting." >&2
     exit 2
   fi
@@ -106,7 +189,7 @@ if has_gem standard; then
   safe_remove_temp_file "${ERR_FILE:-}" "${TMPDIR:-/tmp}/ruby-format.*" || true
 elif has_gem rubocop; then
   if ! command -v bundle >/dev/null 2>&1; then
-    echo "⚠️  Ruby formatting skipped for ${FILE_PATH} because Bundler is not available." >&2
+    echo "BLOCKED: ${HOOK_NAME} could not run automatic Ruby formatting for ${FILE_PATH} because Bundler is not available." >&2
     echo "Install Bundler to restore automatic RuboCop formatting." >&2
     exit 2
   fi

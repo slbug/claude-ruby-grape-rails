@@ -6,6 +6,7 @@ disallowedTools: Write, Edit, NotebookEdit
 model: opus
 effort: high
 maxTurns: 25
+omitClaudeMd: true
 skills:
   - ruby-idioms
   - security

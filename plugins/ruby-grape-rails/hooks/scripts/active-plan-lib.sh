@@ -45,7 +45,7 @@ fi
 CLAUDE_DIR="${REPO_ROOT}/.claude"
 PLANS_DIR="${CLAUDE_DIR}/plans"
 ACTIVE_PLAN_MARKER="${CLAUDE_DIR}/ACTIVE_PLAN"
-MARKDOWN_UNCHECKED_TASK_PATTERN='^[[:space:]]*([-*+]|[0-9]+\.)[[:space:]]+\[ \]'
+MARKDOWN_UNCHECKED_TASK_PATTERN='^[[:space:]]*(([-*+]|[0-9]+\.)[[:space:]]+)?\[ \]'
 
 resolve_plan_dir() {
   local plan_dir="$1"
@@ -58,17 +58,25 @@ resolve_plan_dir() {
   fi
 }
 
+canonicalize_existing_dir() {
+  local path="$1"
+
+  [[ -d "$path" && ! -L "$path" ]] || return 1
+  (cd "$path" >/dev/null 2>&1 && pwd -P) || return 1
+}
+
 is_valid_plan_dir() {
   local input_plan_dir="$1"
   local plan_dir
+  local canonical_plan_dir
+  local canonical_plans_dir
 
   [[ -n "$input_plan_dir" ]] || return 1
-  [[ "$input_plan_dir" != *".."* ]] || return 1
 
   plan_dir=$(resolve_plan_dir "$input_plan_dir") || return 1
-  [[ "$plan_dir" == "${PLANS_DIR}/"* ]] || return 1
-  [[ -d "$plan_dir" ]] || return 1
-  [[ ! -L "$plan_dir" ]] || return 1
+  canonical_plan_dir=$(canonicalize_existing_dir "$plan_dir") || return 1
+  canonical_plans_dir=$(canonicalize_existing_dir "$PLANS_DIR") || return 1
+  [[ "$canonical_plan_dir" == "${canonical_plans_dir}/"* ]] || return 1
 }
 
 get_file_mtime() {
@@ -248,7 +256,7 @@ set_active_plan() {
   [[ "$tmp_marker" == "${CLAUDE_DIR}/ACTIVE_PLAN."* ]] || return 1
 
   if ! (
-    # shellcheck disable=SC2329 # invoked via trap
+    # shellcheck disable=SC2317,SC2329 # invoked indirectly via trap
     cleanup_active_plan_tmp() {
       safe_remove_temp_file "${tmp_marker:-}" "${CLAUDE_DIR}/ACTIVE_PLAN.*" || true
     }

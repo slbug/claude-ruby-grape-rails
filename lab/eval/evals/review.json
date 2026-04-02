@@ -29,7 +29,7 @@
     "triggering": {
       "weight": 0.14,
       "checks": [
-        { "type": "description_length", "min": 70, "max": 260, "desc": "Description length" },
+        { "type": "description_length", "min": 70, "max": 250, "desc": "Description length" },
         { "type": "description_keywords", "min": 4, "desc": "Review keywords" }
       ]
     },

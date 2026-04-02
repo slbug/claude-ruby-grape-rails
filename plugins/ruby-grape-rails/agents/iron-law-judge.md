@@ -5,6 +5,8 @@ tools: Read, Grep, Glob
 disallowedTools: Write, Edit, NotebookEdit
 model: sonnet
 effort: medium
+maxTurns: 15
+omitClaudeMd: true
 skills:
   - iron-laws
   - active-record-patterns

@@ -5,7 +5,9 @@ tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
 model: haiku
 effort: low
+maxTurns: 10
 background: true
+omitClaudeMd: true
 skills:
   - testing
 ---

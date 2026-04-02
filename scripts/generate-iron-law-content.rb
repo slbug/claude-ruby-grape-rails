@@ -4,7 +4,8 @@
 require 'json'
 require 'yaml'
 
-YAML_SOURCE = File.expand_path('../plugins/ruby-grape-rails/references/iron-laws.yml', __dir__)
+DEFAULT_YAML_SOURCE = File.expand_path('../plugins/ruby-grape-rails/references/iron-laws.yml', __dir__)
+YAML_SOURCE = ENV.fetch('RUBY_PLUGIN_IRON_LAWS_YAML', DEFAULT_YAML_SOURCE)
 
 unless File.exist?(YAML_SOURCE)
   puts "Error: YAML source not found: #{YAML_SOURCE}"
@@ -35,7 +36,31 @@ def validate_entries!(yaml)
   category_required = %w[id name law_count]
   law_required = %w[id category title rule summary_text rationale subagent_text]
   category_ids = yaml['categories'].filter_map { |category| category['id'] if category.is_a?(Hash) }
+  law_ids = yaml['laws'].filter_map { |law| law['id'] if law.is_a?(Hash) }
+  category_totals = Hash.new(0)
   errors = []
+
+  blank_string = lambda do |value|
+    value.is_a?(String) && value.strip.empty?
+  end
+
+  nonblank_string = lambda do |value|
+    value.is_a?(String) && !value.strip.empty?
+  end
+
+  integer_value = lambda do |value|
+    return value if value.is_a?(Integer)
+    return nil unless value.is_a?(String)
+
+    stripped = value.strip
+    return nil unless stripped.match?(/\A\d+\z/)
+
+    stripped.to_i
+  end
+
+  integerish = lambda do |value|
+    !integer_value.call(value).nil?
+  end
 
   yaml['categories'].each_with_index do |category, index|
     unless category.is_a?(Hash)
@@ -43,10 +68,24 @@ def validate_entries!(yaml)
       next
     end
 
-    missing = category_required.reject { |key| category[key] }
-    next if missing.empty?
+    missing = category_required.reject { |key| category.key?(key) && !category[key].nil? }
+    errors << "category[#{index}] missing: #{missing.join(', ')}" unless missing.empty?
+    next unless missing.empty?
 
-    errors << "category[#{index}] missing: #{missing.join(', ')}"
+    %w[id name].each do |key|
+      value = category[key]
+      next if nonblank_string.call(value)
+
+      if blank_string.call(value)
+        errors << "category[#{index}] #{key} must not be blank"
+      else
+        errors << "category[#{index}] #{key} must be a non-blank String"
+      end
+    end
+
+    unless integerish.call(category['law_count'])
+      errors << "category[#{index}] law_count must be an integer"
+    end
   end
 
   yaml['laws'].each_with_index do |law, index|
@@ -55,12 +94,63 @@ def validate_entries!(yaml)
       next
     end
 
-    missing = law_required.reject { |key| law[key] }
+    missing = law_required.reject { |key| law.key?(key) && !law[key].nil? }
     errors << "law[#{index}] missing: #{missing.join(', ')}" unless missing.empty?
+    if missing.empty?
+      unless law['id'].is_a?(Integer) || nonblank_string.call(law['id'])
+        if blank_string.call(law['id'])
+          errors << "law[#{index}] id must not be blank"
+        else
+          errors << "law[#{index}] id must be an Integer or non-blank String"
+        end
+      end
+
+      %w[category title rule summary_text rationale subagent_text].each do |key|
+        value = law[key]
+        next if nonblank_string.call(value)
+
+        if blank_string.call(value)
+          errors << "law[#{index}] #{key} must not be blank"
+        else
+          errors << "law[#{index}] #{key} must be a non-blank String"
+        end
+      end
+    end
+
     next unless law.key?('category') && law['category']
     next if category_ids.include?(law['category'])
 
     errors << "law[#{index}] references unknown category: #{law['category'].inspect}"
+  end
+
+  duplicate_category_ids = category_ids.group_by(&:itself).select { |_id, entries| entries.length > 1 }.keys.sort
+  duplicate_law_ids = law_ids.group_by(&:itself).select { |_id, entries| entries.length > 1 }.keys.sort
+  errors << "duplicate category ids: #{duplicate_category_ids.join(', ')}" unless duplicate_category_ids.empty?
+  errors << "duplicate law ids: #{duplicate_law_ids.join(', ')}" unless duplicate_law_ids.empty?
+
+  total_laws = integer_value.call(yaml['total_laws'])
+  if total_laws.nil?
+    errors << 'total_laws must be an integer'
+  elsif total_laws != yaml['laws'].length
+    errors << "total_laws=#{yaml['total_laws']} does not match actual laws count=#{yaml['laws'].length}"
+  end
+
+  yaml['laws'].each do |law|
+    next unless law.is_a?(Hash) && law['category']
+
+    category_totals[law['category']] += 1
+  end
+
+  yaml['categories'].each_with_index do |category, index|
+    next unless category.is_a?(Hash) && category['id']
+
+    declared_count = integer_value.call(category['law_count'])
+    next if declared_count.nil?
+
+    actual_count = category_totals[category['id']]
+    next if declared_count == actual_count
+
+    errors << "category[#{index}] #{category['id'].inspect} law_count=#{category['law_count']} does not match actual count=#{actual_count}"
   end
 
   return if errors.empty?
@@ -74,39 +164,6 @@ validate_entries!(yaml)
 
 def law_count_label(count)
   "#{count} #{count == 1 ? 'law' : 'laws'}"
-end
-
-# Generate CLAUDE.md section
-def generate_claude_section(yaml)
-  puts '## Iron Laws Enforcement (NON-NEGOTIABLE)'
-  puts ''
-  puts 'These rules are NEVER violated. If code would violate them, **STOP and explain** before proceeding:'
-  puts ''
-
-  yaml['categories'].each do |cat|
-    puts "### #{cat['name']} Iron Laws"
-    puts ''
-    yaml['laws'].select { |l| l['category'] == cat['id'] }.each do |law|
-      puts "#{law['id']}. **#{law['title']}** — #{law['rule']}"
-    end
-    puts ''
-  end
-
-  puts '### Violation Response'
-  puts ''
-  puts 'When detecting a potential Iron Law violation:'
-  puts ''
-  puts '```'
-  puts 'STOP: This code would violate Iron Law [number]: [description]'
-  puts ''
-  puts 'What you wrote:'
-  puts '[problematic code]'
-  puts ''
-  puts 'Correct pattern:'
-  puts '[fixed code]'
-  puts ''
-  puts 'Should I apply this fix?'
-  puts '```'
 end
 
 # Generate injectable template section
@@ -131,6 +188,11 @@ def generate_injectable_section(yaml)
   end
 end
 
+# Escape pipe characters for markdown tables
+def escape_table_cell(text)
+  text.to_s.gsub('|', '\|')
+end
+
 # Generate tutorial section
 def generate_tutorial_section(yaml)
   puts "### Iron Laws (#{yaml['total_laws']} Rules, Always Enforced)"
@@ -143,7 +205,7 @@ def generate_tutorial_section(yaml)
   puts '|-----|-----|'
 
   yaml['laws'].first(7).each do |law|
-    puts "| #{law['title']} | #{law['rationale']} |"
+    puts "| #{escape_table_cell(law['title'])} | #{escape_table_cell(law['rationale'])} |"
   end
 end
 
@@ -247,14 +309,14 @@ def generate_readme(yaml)
                 .select { |l| l['category'] == cat['id'] }
                 .map { |l| l['summary_text'] }
                 .join('; ')
-    puts "| #{cat['name']} | #{cat['law_count']} | #{law_names} |"
+    puts "| #{escape_table_cell(cat['name'])} | #{cat['law_count']} | #{escape_table_cell(law_names)} |"
   end
 
   puts ''
   puts '### Enforcement'
   puts ''
   programmatic_count = yaml['laws'].filter_map { |law| law['detector_id'] }.uniq.count
-  puts "- **Programmatic**: #{programmatic_count} programmatic detectors checked automatically on every file edit"
+  puts "- **Programmatic**: #{programmatic_count} programmatic detectors checked automatically on targeted Ruby-ish edits"
   puts "- **Behavioral**: All #{yaml['total_laws']} laws injected into subagent context"
   puts '- **Review-time**: Full audit during `/rb:review`'
   puts ''
@@ -278,8 +340,6 @@ end
 
 # Main
 case ARGV[0]
-when 'claude'
-  generate_claude_section(yaml)
 when 'injectable'
   generate_injectable_section(yaml)
 when 'tutorial'
@@ -293,6 +353,6 @@ when 'readme'
 when 'judge'
   generate_judge_section(yaml)
 else
-  puts "Usage: #{$PROGRAM_NAME} [claude|injectable|tutorial|injector|canonical|readme|judge]"
+  puts "Usage: #{$PROGRAM_NAME} [injectable|tutorial|injector|canonical|readme|judge]"
   exit 1
 end

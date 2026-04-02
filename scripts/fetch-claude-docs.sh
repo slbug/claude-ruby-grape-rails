@@ -13,7 +13,12 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+case "$SCRIPT_PATH" in
+  */*) SCRIPT_BASE_DIR="${SCRIPT_PATH%/*}" ;;
+  *) SCRIPT_BASE_DIR="." ;;
+esac
+SCRIPT_DIR="$(cd "${SCRIPT_BASE_DIR}" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DOCS_BASE_URL="https://code.claude.com/docs/en"
 INDEX_URL="https://code.claude.com/docs/llms.txt"
@@ -24,6 +29,23 @@ INDEX_ONLY=false
 ALLOW_PARTIAL=false
 CURL_CONNECT_TIMEOUT=10
 CURL_MAX_TIME=60
+
+require_command() {
+  local command_name="$1"
+
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "ERROR: required command not found: $command_name" >&2
+    exit 1
+  fi
+}
+
+emit_curl_failure_details() {
+  local err_file="${1:-}"
+
+  [[ -n "$err_file" && -s "$err_file" ]] || return 0
+  echo "  [curl] failure details:" >&2
+  sed -n '1,5p' "$err_file" >&2 || true
+}
 
 # All pages needed for plugin validation (~420KB total)
 PAGES=(
@@ -53,14 +75,84 @@ for arg in "$@"; do
       exit 0
       ;;
     *)
-      echo "Unknown argument: $arg"
+      echo "Unknown argument: $arg" >&2
       exit 1
       ;;
   esac
 done
 
+require_command curl
+require_command date
+require_command grep
+require_command mkdir
+require_command mktemp
+require_command mv
+require_command rm
+require_command sed
+require_command stat
+require_command wc
+
 cd "$REPO_ROOT"
 mkdir -p "$CACHE_DIR"
+
+validate_cache_target() {
+  local target="$1"
+  local parent_dir="${target%/*}"
+  local canonical_parent=""
+
+  [[ "$target" == "${CACHE_DIR}/"* ]] || {
+    echo "ERROR: cache target outside docs cache: $target" >&2
+    return 1
+  }
+
+  canonical_parent=$(cd "$parent_dir" >/dev/null 2>&1 && pwd -P) || {
+    echo "ERROR: cache target parent is missing or unsafe: $parent_dir" >&2
+    return 1
+  }
+
+  [[ "$canonical_parent" == "$CACHE_DIR" || "$canonical_parent" == "${CACHE_DIR}/"* ]] || {
+    echo "ERROR: cache target parent resolves outside docs cache: $target" >&2
+    return 1
+  }
+
+  if [[ -e "$target" ]]; then
+    [[ -f "$target" ]] || {
+      echo "ERROR: cache target exists and is not a regular file: $target" >&2
+      return 1
+    }
+    [[ ! -L "$target" ]] || {
+      echo "ERROR: cache target is a symlink (refusing to overwrite): $target" >&2
+      return 1
+    }
+  fi
+}
+
+new_cache_temp_file() {
+  local target="$1"
+  local parent_dir="${target%/*}"
+  local base_name="${target##*/}"
+
+  validate_cache_target "$target" || return 1
+  mktemp "${parent_dir}/.tmp.${base_name}.XXXXXX"
+}
+
+safe_remove_cache_temp_file() {
+  local path="${1:-}"
+  local parent_dir="${2:-}"
+
+  [[ -n "$path" && -n "$parent_dir" ]] || return 0
+  [[ "$path" == "${parent_dir}/.tmp."* ]] || return 1
+  [[ -f "$path" && ! -L "$path" ]] || return 1
+  rm -f -- "${path:?}"
+}
+
+atomic_move_cache_file() {
+  local temp_file="$1"
+  local target="$2"
+
+  validate_cache_target "$target" || return 1
+  mv -f -- "$temp_file" "$target"
+}
 
 # Get file modification time (portable: Linux + macOS)
 file_mtime() {
@@ -94,23 +186,42 @@ fetch_page() {
   local page="$1"
   local dest="${CACHE_DIR}/${page}"
   local url="${DOCS_BASE_URL}/${page}"
+  local err_file=""
+  local tmp_file=""
 
   if is_fresh "$dest"; then
     echo "  [cached] $page (< ${MAX_AGE_HOURS}h old)"
     return 0
   fi
 
+  validate_cache_target "$dest" || return 1
+  err_file=$(mktemp "${TMPDIR:-/tmp}/claude-docs-fetch.err.XXXXXX" 2>/dev/null || printf '')
+  tmp_file=$(new_cache_temp_file "$dest") || {
+    [[ -n "$err_file" ]] && rm -f -- "$err_file"
+    return 1
+  }
+
   for attempt in 1 2 3; do
-    if curl -sfL --connect-timeout "$CURL_CONNECT_TIMEOUT" --max-time "$CURL_MAX_TIME" "$url" -o "$dest" 2>/dev/null; then
+    if curl -sfL --connect-timeout "$CURL_CONNECT_TIMEOUT" --max-time "$CURL_MAX_TIME" "$url" -o "$tmp_file" 2>"${err_file:-/dev/null}"; then
+      if ! atomic_move_cache_file "$tmp_file" "$dest"; then
+        emit_curl_failure_details "$err_file"
+        safe_remove_cache_temp_file "$tmp_file" "${dest%/*}" || true
+        [[ -n "$err_file" ]] && rm -f -- "$err_file"
+        return 1
+      fi
       local size
       size=$(wc -c < "$dest")
       echo "  [fetched] $page (${size} bytes)"
+      [[ -n "$err_file" ]] && rm -f -- "$err_file"
       return 0
     fi
     [ "$attempt" -lt 3 ] && sleep $(( attempt * 2 ))
   done
 
   echo "  [FAILED] $page — could not download after 3 attempts"
+  emit_curl_failure_details "$err_file"
+  [[ -n "$err_file" ]] && rm -f -- "$err_file"
+  safe_remove_cache_temp_file "$tmp_file" "${dest%/*}" || true
   safe_remove_cache_file "$dest" || true
   return 1
 }
@@ -121,15 +232,35 @@ echo ""
 
 echo "Fetching index..."
 index_failed=0
+index_err_file=""
+index_tmp_file=""
 if is_fresh "${CACHE_DIR}/llms.txt"; then
   echo "  [cached] llms.txt (< ${MAX_AGE_HOURS}h old)"
 else
-  if curl -sfL --connect-timeout "$CURL_CONNECT_TIMEOUT" --max-time "$CURL_MAX_TIME" "$INDEX_URL" -o "${CACHE_DIR}/llms.txt" 2>/dev/null; then
-    page_count=$(grep -c '\.md' "${CACHE_DIR}/llms.txt" 2>/dev/null || echo "?")
+  validate_cache_target "${CACHE_DIR}/llms.txt" || exit 1
+  index_err_file=$(mktemp "${TMPDIR:-/tmp}/claude-docs-index.err.XXXXXX" 2>/dev/null || printf '')
+  index_tmp_file=$(new_cache_temp_file "${CACHE_DIR}/llms.txt") || {
+    [[ -n "$index_err_file" ]] && rm -f -- "$index_err_file"
+    exit 1
+  }
+  if curl -sfL --connect-timeout "$CURL_CONNECT_TIMEOUT" --max-time "$CURL_MAX_TIME" "$INDEX_URL" -o "$index_tmp_file" 2>"${index_err_file:-/dev/null}"; then
+    if ! atomic_move_cache_file "$index_tmp_file" "${CACHE_DIR}/llms.txt"; then
+      emit_curl_failure_details "$index_err_file"
+      [[ -n "$index_err_file" ]] && rm -f -- "$index_err_file"
+      safe_remove_cache_temp_file "$index_tmp_file" "$CACHE_DIR" || true
+      exit 1
+    fi
+    page_count=$(grep -c '\.md' "${CACHE_DIR}/llms.txt" 2>/dev/null || true)
+    [[ -n "$page_count" ]] || page_count="?"
     echo "  [fetched] llms.txt (${page_count} pages indexed)"
+    [[ -n "$index_err_file" ]] && rm -f -- "$index_err_file"
   else
     echo "  [FAILED] Could not fetch llms.txt"
     echo "  [WARNING] Required-page coverage cannot be fully verified without the index." >&2
+    emit_curl_failure_details "$index_err_file"
+    [[ -n "$index_err_file" ]] && rm -f -- "$index_err_file"
+    safe_remove_cache_temp_file "$index_tmp_file" "$CACHE_DIR" || true
+    safe_remove_cache_file "${CACHE_DIR}/llms.txt" || true
     index_failed=1
   fi
 fi

@@ -44,6 +44,7 @@ def compare_snapshots(baseline: dict, current: dict) -> dict:
                 "baseline": round(before, 4),
                 "current": round(after, 4),
                 "delta": round(after - before, 4),
+                "added": name not in baseline_subject and name in current_subject,
                 "removed": name in baseline_subject and name not in current_subject,
             }
         results[subject] = entries
@@ -60,6 +61,7 @@ def compare_snapshots(baseline: dict, current: dict) -> dict:
             "baseline": round(before, 4),
             "current": round(after, 4),
             "delta": round(after - before, 4),
+            "added": name not in baseline_triggers and name in current_triggers,
             "removed": name in baseline_triggers and name not in current_triggers,
         }
     results["triggers"] = trigger_entries

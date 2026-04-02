@@ -5,20 +5,39 @@ set -o pipefail
 # StopFailure hook: persist API-failure context to the active plan scratchpad.
 # Output is ignored for StopFailure, so this hook focuses on durable resume state.
 
+HOOK_NAME="${BASH_SOURCE[0]##*/}"
+
+emit_missing_dependency_notice() {
+  local dependency="$1"
+
+  echo "WARNING: ${HOOK_NAME} cannot persist stop-failure context because ${dependency} is unavailable." >&2
+  exit 0
+}
+
+command -v grep >/dev/null 2>&1 || emit_missing_dependency_notice "grep"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
-[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
+[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_notice "workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$ROOT_LIB"
 read_hook_input
 INPUT="$HOOK_INPUT_VALUE"
+if [[ -z "$INPUT" ]]; then
+  case "${HOOK_INPUT_STATUS:-empty}" in
+    truncated|invalid)
+      echo "WARNING: ${HOOK_NAME} could not safely inspect a ${HOOK_INPUT_STATUS} hook payload." >&2
+      append_hook_degradation_log "$HOOK_NAME" "stop-failure context was not persisted because hook input was ${HOOK_INPUT_STATUS}" "$INPUT" || true
+      exit 0
+      ;;
+  esac
+fi
 
 LIB="${SCRIPT_DIR}/active-plan-lib.sh"
-[[ -r "$LIB" && ! -L "$LIB" ]] || exit 0
+[[ -r "$LIB" && ! -L "$LIB" ]] || emit_missing_dependency_notice "active-plan-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$LIB"
 SCRATCHPAD_LIB="${SCRIPT_DIR}/scratchpad-lib.sh"
-[[ -r "$SCRATCHPAD_LIB" && ! -L "$SCRATCHPAD_LIB" ]] || exit 0
+[[ -r "$SCRATCHPAD_LIB" && ! -L "$SCRATCHPAD_LIB" ]] || emit_missing_dependency_notice "scratchpad-lib.sh"
 # shellcheck disable=SC1090,SC1091
 source "$SCRATCHPAD_LIB"
 

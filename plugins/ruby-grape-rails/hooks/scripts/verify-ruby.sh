@@ -2,6 +2,9 @@
 set -o nounset
 set -o pipefail
 
+# Policy: delegated Ruby post-edit guardrail; once selected for a Ruby-ish path,
+# payload and path-resolution failures block rather than silently skipping.
+
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
 emit_missing_dependency_block() {
@@ -10,6 +13,14 @@ emit_missing_dependency_block() {
   echo "BLOCKED: ${HOOK_NAME} cannot inspect the hook payload because ${dependency} is unavailable." >&2
   echo "Install the missing dependency or disable the hook explicitly before continuing." >&2
   exit 2
+}
+
+emit_verify_block() {
+  local reason="$1"
+  local remediation="$2"
+
+  echo "BLOCKED: ${HOOK_NAME} could not run automatic Ruby verification because ${reason}." >&2
+  echo "$remediation" >&2
 }
 
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
@@ -29,28 +40,70 @@ if [[ -z "$INPUT" ]]; then
       ;;
   esac
 fi
-REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
-[[ -n "$REPO_ROOT" ]] || exit 0
+REPO_ROOT=$(resolve_workspace_root "$INPUT") || {
+  emit_verify_block \
+    "the workspace root could not be resolved" \
+    "Fix the hook payload or workspace layout before retrying automatic Ruby verification."
+  exit 2
+}
+if [[ -z "$REPO_ROOT" ]]; then
+  emit_verify_block \
+    "the workspace root could not be resolved" \
+    "Fix the hook payload or workspace layout before retrying automatic Ruby verification."
+  exit 2
+fi
 
-FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
-[[ -n "$FILE_PATH" ]] || exit 0
-FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || exit 0
-[[ -f "$FILE_PATH" ]] || exit 0
-[[ ! -L "$FILE_PATH" ]] || exit 0
-is_path_within_root "$REPO_ROOT" "$FILE_PATH" || exit 0
+FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || {
+  emit_verify_block \
+    "tool_input.file_path could not be parsed" \
+    "Fix the hook payload before retrying automatic Ruby verification."
+  exit 2
+}
+if [[ -z "$FILE_PATH" ]]; then
+  emit_verify_block \
+    "tool_input.file_path was missing" \
+    "Fix the hook payload before retrying automatic Ruby verification."
+  exit 2
+fi
+FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || {
+  emit_verify_block \
+    "the edited path could not be resolved inside the workspace" \
+    "Fix the hook payload before retrying automatic Ruby verification."
+  exit 2
+}
+[[ -f "$FILE_PATH" ]] || {
+  emit_verify_block \
+    "the edited file was not found" \
+    "Retry once the file exists on disk again."
+  exit 2
+}
+[[ ! -L "$FILE_PATH" ]] || {
+  emit_verify_block \
+    "the edited file was a symlink" \
+    "Use a regular file path before retrying automatic Ruby verification."
+  exit 2
+}
+is_path_within_root "$REPO_ROOT" "$FILE_PATH" || {
+  emit_verify_block \
+    "the edited path resolved outside the workspace" \
+    "Fix the hook payload before retrying automatic Ruby verification."
+  exit 2
+}
 
 BASE_NAME=$(path_basename "$FILE_PATH")
 
 emit_tempfile_failure_warning() {
-  echo "⚠️  Ruby syntax verification skipped for ${FILE_PATH} because a temporary file could not be created." >&2
-  echo "Fix TMPDIR permissions or disk space to restore automatic Ruby verification." >&2
+  emit_verify_block \
+    "a temporary file could not be created for ${FILE_PATH}" \
+    "Fix TMPDIR permissions or disk space to restore automatic Ruby verification."
 }
 
 case "$BASE_NAME" in
   *.rb|*.rake|Gemfile|Rakefile|config.ru)
     if ! command -v ruby >/dev/null 2>&1; then
-      echo "⚠️  Ruby syntax check skipped for ${FILE_PATH} because ruby is not available." >&2
-      echo "Install Ruby to restore automatic syntax verification." >&2
+      emit_verify_block \
+        "ruby is not available for ${FILE_PATH}" \
+        "Install Ruby to restore automatic syntax verification."
       exit 2
     fi
     TMP_OUTPUT=$(mktemp "${TMPDIR:-/tmp}/rb-verify.XXXXXX") || {

@@ -11,6 +11,10 @@ LOCAL_EVIDENCE_RE = re.compile(
     re.MULTILINE,
 )
 EXTERNAL_EVIDENCE_RE = re.compile(r"^\s*-\s*Evidence:\s+<?https?://[^ >]+>?\s+\[T[1-5]\]$", re.MULTILINE)
+PLACEHOLDER_EXTERNAL_RE = re.compile(
+    r"https?://(?:example\.com\b|[^ >]+/(?:discussions|issues)/0+\b)",
+    re.IGNORECASE,
+)
 
 
 def _normalize_newlines(content: str) -> str:
@@ -76,6 +80,17 @@ def has_research_decision_section(content: str) -> tuple[bool, str]:
         content,
     )
     return bool(match), "Decision-oriented section present" if match else "Missing summary/recommendation section"
+
+
+def has_non_placeholder_sources(content: str) -> tuple[bool, str]:
+    body = _section(content, "Sources")
+    urls = re.findall(r"https?://[^ >]+", body)
+    placeholders = [url for url in urls if PLACEHOLDER_EXTERNAL_RE.search(url)]
+    return (
+        (True, "No placeholder-like source URLs found")
+        if not placeholders
+        else (False, f"Placeholder-like source URLs found: {placeholders[:2]}")
+    )
 
 
 def has_review_title(content: str) -> tuple[bool, str]:
@@ -177,6 +192,17 @@ def has_provenance_external_evidence(content: str) -> tuple[bool, str]:
     body = _section(content, "Claim Log")
     count = len(EXTERNAL_EVIDENCE_RE.findall(body))
     return count >= 1, f"{count} external evidence line(s) present"
+
+
+def provenance_external_evidence_is_non_placeholder(content: str) -> tuple[bool, str]:
+    body = _section(content, "Claim Log")
+    urls = re.findall(r"https?://[^ >]+", body)
+    placeholders = [url for url in urls if PLACEHOLDER_EXTERNAL_RE.search(url)]
+    return (
+        (True, "No placeholder-like provenance URLs found")
+        if not placeholders
+        else (False, f"Placeholder-like provenance URLs found: {placeholders[:2]}")
+    )
 
 
 def has_provenance_local_evidence(content: str) -> tuple[bool, str]:

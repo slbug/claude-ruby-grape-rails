@@ -5,6 +5,8 @@ set -o pipefail
 # Detect Ruby runtime environment and available tooling.
 # This hook populates context at SessionStart and refreshes .runtime_env when
 # watched files change.
+# Policy: advisory runtime snapshot; dependency/setup failures warn and keep the
+# session running instead of blocking startup.
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
@@ -20,9 +22,20 @@ emit_runtime_temp_warning() {
   exit 0
 }
 
+emit_runtime_move_warning() {
+  echo "WARNING: ${HOOK_NAME} could not update .runtime_env because the final file move failed." >&2
+  exit 0
+}
+
+emit_runtime_setup_warning() {
+  echo "WARNING: ${HOOK_NAME} could not update .runtime_env because the runtime state directory could not be prepared." >&2
+  exit 0
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 DEP_LIB="${SCRIPT_DIR}/ruby-dependency-lib.sh"
+command -v grep >/dev/null 2>&1 || emit_runtime_dependency_warning "grep"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_runtime_dependency_warning "workspace-root-lib.sh"
 [[ -r "$DEP_LIB" && ! -L "$DEP_LIB" ]] || emit_runtime_dependency_warning "ruby-dependency-lib.sh"
 # shellcheck disable=SC1090,SC1091
@@ -94,6 +107,7 @@ LEFTHOOK_COMMAND=""
 VERIFY_COMPOSITE_AVAILABLE=false
 VERIFY_COMPOSITE_COMMAND=""
 VERIFY_COMPOSITE_SOURCE=""
+FAST_RUNTIME_MODE="${RUBY_PLUGIN_DETECT_RUNTIME_FAST:-0}"
 
 emit_shell_assignment() {
   local key="$1"
@@ -492,7 +506,7 @@ if command -v lefthook >/dev/null 2>&1; then
   LEFTHOOK_AVAILABLE=true
   [[ -n "$LEFTHOOK_COMMAND" ]] || LEFTHOOK_COMMAND="lefthook"
   add_tool "lefthook"
-  if [[ -z "$LEFTHOOK_VERSION" ]]; then
+  if [[ "$FAST_RUNTIME_MODE" != "1" && -z "$LEFTHOOK_VERSION" ]]; then
     LEFTHOOK_VERSION=$(lefthook version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
     [[ -n "$LEFTHOOK_VERSION" ]] || LEFTHOOK_VERSION=$(lefthook --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
   fi
@@ -561,29 +575,28 @@ fi
 if command -v betterleaks >/dev/null 2>&1; then
   BETTERLEAKS_PATH=$(command -v betterleaks)
   add_tool "betterleaks"
-elif [[ -x "$HOME/.local/bin/betterleaks" ]]; then
-  BETTERLEAKS_PATH="$HOME/.local/bin/betterleaks"
-  add_tool "betterleaks"
-elif [[ -x "/usr/local/bin/betterleaks" ]]; then
-  BETTERLEAKS_PATH="/usr/local/bin/betterleaks"
-  add_tool "betterleaks"
-elif [[ -x "/opt/homebrew/bin/betterleaks" ]]; then
-  BETTERLEAKS_PATH="/opt/homebrew/bin/betterleaks"
-  add_tool "betterleaks"
+elif [[ -n "${RUBY_PLUGIN_BETTERLEAKS_FALLBACK_PATHS:-}" ]]; then
+  IFS=':' read -r -a betterleaks_fallback_paths <<< "${RUBY_PLUGIN_BETTERLEAKS_FALLBACK_PATHS}"
+  for betterleaks_candidate in "${betterleaks_fallback_paths[@]}"; do
+    [[ -n "$betterleaks_candidate" && -x "$betterleaks_candidate" ]] || continue
+    BETTERLEAKS_PATH="$betterleaks_candidate"
+    add_tool "betterleaks"
+    break
+  done
 fi
 
-if [[ -n "$RTK_PATH" ]]; then
+if [[ -n "$RTK_PATH" && "$FAST_RUNTIME_MODE" != "1" ]]; then
   RTK_VERSION=$("$RTK_PATH" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || printf '%s' "unknown")
   if "$RTK_PATH" gain --help >/dev/null 2>&1; then
     RTK_GAIN_AVAILABLE=true
   fi
 fi
 
-if [[ -n "$DCG_PATH" ]]; then
+if [[ -n "$DCG_PATH" && "$FAST_RUNTIME_MODE" != "1" ]]; then
   DCG_VERSION=$("$DCG_PATH" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || printf '%s' "unknown")
 fi
 
-if [[ -n "$SHELLFIRM_PATH" ]]; then
+if [[ -n "$SHELLFIRM_PATH" && "$FAST_RUNTIME_MODE" != "1" ]]; then
   SHELLFIRM_VERSION=$("$SHELLFIRM_PATH" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || printf '%s' "unknown")
 fi
 
@@ -614,7 +627,8 @@ fi
 # Export runtime environment to file for other scripts
 RUNTIME_ENV_FILE="${CLAUDE_DIR}/.runtime_env"
 [[ ! -L "$CLAUDE_DIR" ]] || exit 0
-mkdir -p -- "$CLAUDE_DIR" || exit 0
+mkdir -p -- "$CLAUDE_DIR" || emit_runtime_setup_warning
+[[ -d "$CLAUDE_DIR" ]] || emit_runtime_setup_warning
 
 if [[ -L "$RUNTIME_ENV_FILE" ]]; then
   exit 0
@@ -773,5 +787,5 @@ trap cleanup_runtime_env_tmp EXIT HUP INT TERM
   fi
 } > "$TMP_RUNTIME_ENV"
 
-mv -f -- "$TMP_RUNTIME_ENV" "$RUNTIME_ENV_FILE" || exit 0
+mv -f -- "$TMP_RUNTIME_ENV" "$RUNTIME_ENV_FILE" || emit_runtime_move_warning
 trap - EXIT HUP INT TERM

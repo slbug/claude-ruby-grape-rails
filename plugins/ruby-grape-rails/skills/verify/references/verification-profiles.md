@@ -7,7 +7,7 @@ local feedback loops.
 
 ```bash
 #!/bin/bash
-# .github/workflows/ruby.yml or similar
+# Example workflow step in your app repo: .github/workflows/ruby.yml or similar
 
 set -e
 

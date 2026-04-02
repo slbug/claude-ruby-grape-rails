@@ -5,6 +5,8 @@ tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
 model: opus
 effort: high
+maxTurns: 15
+omitClaudeMd: true
 skills:
   - security
   - rails-contexts

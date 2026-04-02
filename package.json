@@ -1,11 +1,18 @@
 {
   "name": "ruby-grape-rails-plugin",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "private": true,
   "description": "Claude Code plugin for Ruby, Rails, Grape, PostgreSQL, Redis, and Sidekiq development",
   "scripts": {
-    "lint": "git ls-files -z '*.md' | xargs -0 markdownlint --",
+    "lint": "npm run lint:markdown && npm run validate:yaml && npm run validate:json && npm run validate:shell",
+    "lint:markdown": "git ls-files -z '*.md' | xargs -0 markdownlint --",
+    "validate:yaml": "bash scripts/validate-yaml.sh",
+    "validate:json": "bash scripts/validate-json.sh",
+    "validate:shell": "bash scripts/validate-shell.sh",
     "lint:fix": "git ls-files -z '*.md' | xargs -0 markdownlint --fix --",
+    "release:check": "python3 scripts/check-release-metadata.py",
+    "validate": "bash scripts/validate-plugin.sh",
+    "doctor": "bash scripts/check-contributor-prereqs.sh",
     "eval": "bash lab/eval/run_eval.sh --changed",
     "eval:all": "bash lab/eval/run_eval.sh --all",
     "eval:ci": "bash lab/eval/run_eval.sh --ci",
@@ -22,9 +29,12 @@
     "eval:test": "bash scripts/run-eval-tests.sh",
     "eval:test:pytest": "python3 -m pytest lab/eval/tests -v",
     "eval:test:unittest": "python3 -m unittest discover -s lab/eval/tests -p 'test_*.py' -t . -v",
+    "eval-tests": "npm run eval:test",
+    "eval-tests-pytest": "npm run eval:test:pytest",
+    "eval-tests-unittest": "npm run eval:test:unittest",
     "security:injection": "bash scripts/check-dynamic-injection.sh",
-    "ci": "npm run eval:test && npm run eval:ci",
-    "prepare": "husky || true"
+    "ci": "npm run doctor && npm run lint && npm run release:check && npm run validate && npm run eval:test && npm run eval:ci",
+    "prepare": "husky"
   },
   "devDependencies": {
     "husky": "^9.0.0",

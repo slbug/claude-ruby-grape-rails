@@ -109,10 +109,22 @@ RESEARCH_CHECKS: tuple[CheckSpec, ...] = (
         output_checks.has_research_decision_section,
     ),
     CheckSpec(
+        "research_non_placeholder_sources",
+        "Sources avoid placeholder URLs",
+        "artifact",
+        output_checks.has_non_placeholder_sources,
+    ),
+    CheckSpec(
         "research_provenance_external_evidence",
         "Provenance records external evidence",
         "provenance",
         output_checks.has_provenance_external_evidence,
+    ),
+    CheckSpec(
+        "research_provenance_non_placeholder_sources",
+        "Provenance avoids placeholder URLs",
+        "provenance",
+        output_checks.provenance_external_evidence_is_non_placeholder,
     ),
 ) + COMMON_PROVENANCE_CHECKS
 
@@ -176,6 +188,7 @@ FIXTURES: dict[str, tuple[FixtureSpec, ...]] = {
                 "research_tiered_sources",
                 "research_inline_tiers",
                 "research_decision_section",
+                "research_non_placeholder_sources",
                 "research_provenance_external_evidence",
                 "provenance_tier_summary",
                 "provenance_required_fixes",

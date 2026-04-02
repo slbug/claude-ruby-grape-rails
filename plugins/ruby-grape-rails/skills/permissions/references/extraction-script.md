@@ -15,31 +15,37 @@ ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 14 --json
 Other useful flags:
 
 ```bash
-ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 30 --limit 50 --repo-only
+ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 30 --limit 50 --include-global
 ```
 
 Validation rules:
 
 - `--days` must be `0` or greater.
 - `--limit` must be greater than `0`.
-- `--repo-only` ignores `~/.claude/settings.json`.
+- repo-local settings are the default scope.
+- `--repo-only` is accepted for explicitness and keeps the default behavior.
+- `--include-global` also loads `~/.claude/settings.json`.
 - `--dry-run` is accepted for skill parity; the extractor is read-only either
   way.
+- malformed-but-parseable settings/transcript entries are ignored and reported
+  as invalid instead of crashing the extractor.
 
 ## What It Scans
 
 - Claude session JSONL files for the current repo only:
   `~/.claude/projects/{project-slug}/*.jsonl`
+- Override the transcript root when needed with:
+  - `RUBY_PLUGIN_PERMISSIONS_PROJECTS_DIR`
+  - or `CLAUDE_PROJECTS_DIR`
 - Repo scope resolved from the current git root when available, otherwise from
   repo-local markers such as:
   - `.claude/settings.json`
   - `.claude/settings.local.json`
   - `Gemfile`
 - Current permissions from:
-  - `~/.claude/settings.json`
   - `.claude/settings.json`
   - `.claude/settings.local.json`
-  - or only repo-local settings when `--repo-only` is set
+  - and, when `--include-global` is set, `~/.claude/settings.json`
 
 ## What It Reports
 
@@ -51,6 +57,7 @@ Validation rules:
 - obvious garbage permission entries
 - duplicate permission entries
 - scan truncation metadata when large session windows are capped
+- the exact settings sources considered during the audit
 
 ## Output Notes
 
@@ -63,6 +70,9 @@ Validation rules:
   and `10000` lines per file. Override with:
   - `RUBY_PLUGIN_PERMISSIONS_MAX_SESSION_FILES`
   - `RUBY_PLUGIN_PERMISSIONS_MAX_LINES_PER_FILE`
+- When `--include-global` is used, check the reported settings-source list so
+  personal `~/.claude/settings.json` policy does not get mistaken for
+  repo-local defaults.
 
 Use the extractor output as evidence, then classify the groups with
 `risk-classification.md` before proposing settings changes.

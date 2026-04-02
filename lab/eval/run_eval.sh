@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# Run deterministic contributor evals for the Ruby plugin.
+# Run contributor evals for the Ruby plugin.
+# Changed mode now keeps lint and injection checks scoped to changed tracked
+# surfaces; --include-untracked remains intentionally local-only and
+# non-comparable.
 #
 # Usage:
-#   ./lab/eval/run_eval.sh              # Lint + injection check + tracked changed surfaces
+#   ./lab/eval/run_eval.sh              # changed-only lint + injection + tracked changed surfaces
 #   ./lab/eval/run_eval.sh --changed    # Same as default
 #   ./lab/eval/run_eval.sh --changed --against origin/main  # branch-style diff vs merge-base
 #   ./lab/eval/run_eval.sh --changed --include-untracked  # local-only expansion
@@ -10,36 +13,42 @@
 #   ./lab/eval/run_eval.sh --skills     # Core skills only
 #   ./lab/eval/run_eval.sh --agents     # All agents only
 #   ./lab/eval/run_eval.sh --triggers   # Trigger corpora only
-#   ./lab/eval/run_eval.sh --ci         # CI gate for all tracked eval surfaces
+#   ./lab/eval/run_eval.sh --ci         # tracked scoring gate (runtime tests run separately)
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+case "$SCRIPT_PATH" in
+*/*) SCRIPT_BASE_DIR="${SCRIPT_PATH%/*}" ;;
+*) SCRIPT_BASE_DIR="." ;;
+esac
+SCRIPT_DIR="$(cd "${SCRIPT_BASE_DIR}" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PLUGIN_ROOT="plugins/ruby-grape-rails"
 MODE="--changed"
 INCLUDE_UNTRACKED=false
 AGAINST_REF=""
+AGAINST_MERGE_BASE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --changed|--all|--skills|--agents|--triggers|--ci)
-      MODE="$1"
-      ;;
-    --include-untracked)
-      INCLUDE_UNTRACKED=true
-      ;;
-    --against)
-      shift
-      if [[ $# -eq 0 ]]; then
-        echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]" >&2
-        exit 1
-      fi
-      AGAINST_REF="$1"
-      ;;
-    *)
+  --changed | --all | --skills | --agents | --triggers | --ci)
+    MODE="$1"
+    ;;
+  --include-untracked)
+    INCLUDE_UNTRACKED=true
+    ;;
+  --against)
+    shift
+    if [[ $# -eq 0 ]]; then
       echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]" >&2
       exit 1
-      ;;
+    fi
+    AGAINST_REF="$1"
+    ;;
+  *)
+    echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]" >&2
+    exit 1
+    ;;
   esac
   shift
 done
@@ -47,7 +56,7 @@ FAIL_UNDER="${RUBY_PLUGIN_EVAL_FAIL_UNDER:-0.90}"
 AGENT_FAIL_UNDER="${RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER:-0.85}"
 TRIGGER_FAIL_UNDER="${RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER:-0.90}"
 FAILURES=0
-CORE_SKILLS_REGEX='^(plan|work|review|verify|permissions|research)$'
+CORE_TRIGGER_SKILLS_REGEX='plan|work|review|verify|permissions|research'
 
 cd "$PROJECT_ROOT" || exit 1
 
@@ -61,40 +70,151 @@ require_python_310() {
 
 require_python_310
 
+require_command() {
+  local command_name="$1"
+  local reason="$2"
+
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "ERROR: ${command_name} is required for ${reason}." >&2
+    exit 1
+  fi
+}
+
+require_git_for_mode() {
+  case "$MODE" in
+  --changed | --all | --ci)
+    require_command git "git-aware eval path selection in ${MODE} mode"
+    ;;
+  esac
+
+  if [[ -n "$AGAINST_REF" ]] || [[ "$INCLUDE_UNTRACKED" == "true" ]]; then
+    require_command git "git-aware changed-surface selection"
+  fi
+}
+
+require_git_for_mode
+require_command mktemp "temporary file creation for score aggregation"
+
+require_changed_path_tools() {
+  case "$MODE" in
+  --changed)
+    require_command awk "changed-surface path filtering and deduplication"
+    require_command grep "changed-surface path filtering and selection"
+    require_command sed "changed-surface path filtering"
+    require_command sort "changed-surface path deduplication"
+    ;;
+  esac
+}
+
+require_changed_path_tools
+
+validate_threshold() {
+  local env_name="$1"
+  local value="$2"
+
+  if ! python3 - "$value" <<'PY' >/dev/null 2>&1; then
+import math
+import sys
+
+try:
+    value = float(sys.argv[1])
+except ValueError:
+    raise SystemExit(1)
+
+raise SystemExit(0 if math.isfinite(value) and 0.0 <= value <= 1.0 else 1)
+PY
+    echo "ERROR: ${env_name} must be a finite numeric threshold between 0 and 1, got: ${value}" >&2
+    exit 1
+  fi
+}
+
+validate_threshold "RUBY_PLUGIN_EVAL_FAIL_UNDER" "$FAIL_UNDER"
+validate_threshold "RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER" "$AGENT_FAIL_UNDER"
+validate_threshold "RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER" "$TRIGGER_FAIL_UNDER"
+
+json_array_from_lines() {
+  python3 -c '
+import json
+import sys
+
+print(json.dumps([line.rstrip("\n") for line in sys.stdin]))
+'
+}
+
 have_head() {
   git rev-parse --verify HEAD >/dev/null 2>&1
 }
 
+resolve_against_merge_base() {
+  [[ -n "$AGAINST_REF" ]] || return 0
+  have_head || return 0
+
+  AGAINST_MERGE_BASE=$(git merge-base HEAD "$AGAINST_REF" 2>/dev/null || true)
+  if [[ -z "$AGAINST_MERGE_BASE" ]]; then
+    echo "ERROR: could not resolve merge-base with ${AGAINST_REF}; changed-surface scoring would be incomplete." >&2
+    echo "Use a valid branch/ref for --against or rerun without it." >&2
+    exit 1
+  fi
+}
+
+resolve_against_merge_base
+
 collect_changed_paths() {
   local prefix="$1"
   local lines=""
-  local merge_base=""
+  local -a path_args=()
+
+  if [[ -n "$prefix" ]]; then
+    path_args=(-- "$prefix")
+  fi
+
+  collect_diff_paths() {
+    local status=""
+    local path=""
+    local old_path=""
+
+    while IFS= read -r -d '' status; do
+      [[ -n "$status" ]] || continue
+      case "$status" in
+      R* | C*)
+        # The old path is intentionally ignored; changed-mode scoring only uses
+        # the current tree path for renamed/copied files.
+        # shellcheck disable=SC2034
+        IFS= read -r -d '' old_path || break
+        IFS= read -r -d '' path || break
+        printf '%s\n' "$path"
+        ;;
+      D*)
+        IFS= read -r -d '' path || break
+        printf '__DELETED__:%s\n' "$path"
+        ;;
+      *)
+        IFS= read -r -d '' path || break
+        printf '%s\n' "$path"
+        ;;
+      esac
+    done
+  }
 
   if have_head; then
     if [[ -n "$AGAINST_REF" ]]; then
-      merge_base=$(git merge-base HEAD "$AGAINST_REF" 2>/dev/null || true)
-      if [[ -n "$merge_base" ]]; then
-        lines=$(git diff --name-only "${merge_base}..HEAD" -- "$prefix" 2>/dev/null || true)
-      else
-        echo "WARN: could not resolve merge-base with ${AGAINST_REF}; falling back to HEAD diff." >&2
-        lines=$(git diff --name-only HEAD -- "$prefix" 2>/dev/null || true)
-      fi
+      lines=$(git diff --name-status -z -M "${AGAINST_MERGE_BASE}..HEAD" "${path_args[@]}" 2>/dev/null | collect_diff_paths || true)
     else
-      lines=$(git diff --name-only HEAD -- "$prefix" 2>/dev/null || true)
+      lines=$(git diff --name-status -z -M HEAD "${path_args[@]}" 2>/dev/null | collect_diff_paths || true)
     fi
 
     local staged=""
-    staged=$(git diff --cached --name-only -- "$prefix" 2>/dev/null || true)
+    staged=$(git diff --cached --name-status -z -M "${path_args[@]}" 2>/dev/null | collect_diff_paths || true)
     if [[ -n "$staged" ]]; then
       lines=$(printf '%s\n%s\n' "$lines" "$staged")
     fi
   else
-    lines=$(git ls-files -- "$prefix" 2>/dev/null || true)
+    lines=$(git ls-files "${path_args[@]}" 2>/dev/null || true)
   fi
 
   if [[ "$INCLUDE_UNTRACKED" == "true" ]]; then
     local untracked=""
-    untracked=$(git ls-files --others --exclude-standard -- "$prefix" 2>/dev/null || true)
+    untracked=$(git ls-files --others --exclude-standard "${path_args[@]}" 2>/dev/null || true)
     if [[ -n "$untracked" ]]; then
       lines=$(printf '%s\n%s\n' "$lines" "$untracked")
     fi
@@ -104,16 +224,46 @@ collect_changed_paths() {
 }
 
 collect_changed_skill_names() {
-  collect_changed_paths "${PLUGIN_ROOT}/skills/" \
-    | sed -n "s|^${PLUGIN_ROOT}/skills/\\([^/]*\\)/.*|\\1|p" \
-    | awk 'NF' \
-    | sort -u
+  collect_changed_paths "${PLUGIN_ROOT}/skills/" |
+    grep -Ev '^__DELETED__:' |
+    sed -n "s|^${PLUGIN_ROOT}/skills/\\([^/]*\\)/.*|\\1|p" |
+    awk 'NF' |
+    sort -u
+}
+
+collect_deleted_skill_names() {
+  collect_changed_paths "${PLUGIN_ROOT}/skills/" |
+    sed -n "s|^__DELETED__:${PLUGIN_ROOT}/skills/\\([^/]*\\)/.*|\\1|p" |
+    awk 'NF' |
+    sort -u
 }
 
 collect_changed_agent_paths() {
-  collect_changed_paths "${PLUGIN_ROOT}/agents/" \
-    | grep -E "^${PLUGIN_ROOT}/agents/.+\.md$" \
-    | sort -u || true
+  collect_changed_paths "${PLUGIN_ROOT}/agents/" |
+    grep -Ev '^__DELETED__:' |
+    grep -E "^${PLUGIN_ROOT}/agents/.+\.md$" |
+    sort -u || true
+}
+
+collect_deleted_agent_names() {
+  collect_changed_paths "${PLUGIN_ROOT}/agents/" |
+    sed -n "s|^__DELETED__:${PLUGIN_ROOT}/agents/\\([^/]*\\)\\.md$|\\1|p" |
+    awk 'NF' |
+    sort -u
+}
+
+collect_changed_markdown_paths() {
+  collect_changed_paths "" |
+    grep -Ev '^__DELETED__:' |
+    grep -E '\.md$' ||
+    true
+}
+
+collect_changed_injection_paths() {
+  collect_changed_paths "" |
+    grep -Ev '^__DELETED__:' |
+    grep -E '\.(md|json|yml|yaml)$' ||
+    true
 }
 
 should_run_changed_triggers() {
@@ -121,21 +271,27 @@ should_run_changed_triggers() {
     return 0
   fi
 
-  local core_changed=""
-  core_changed=$(
-    collect_changed_paths "${PLUGIN_ROOT}/skills/" \
-      | sed -n "s|^${PLUGIN_ROOT}/skills/\\([^/]*\\)/.*|\\1|p" \
-      | grep -E "$CORE_SKILLS_REGEX" || true
+  if [[ -n "$(collect_changed_paths 'lab/eval/evals/')" ]]; then
+    return 0
+  fi
+
+  local entrypoint_changed=""
+  entrypoint_changed=$(
+    collect_changed_paths "${PLUGIN_ROOT}/skills/" |
+      grep -E "^${PLUGIN_ROOT}/skills/(${CORE_TRIGGER_SKILLS_REGEX})/SKILL\\.md$" || true
   )
-  [[ -n "$core_changed" ]]
+  [[ -n "$entrypoint_changed" ]]
 }
 
 summarize_subject_scores() {
   local label="$1"
   local threshold="$2"
   local payload_file
-  payload_file="$(mktemp "${TMPDIR:-/tmp}/rb-eval-scores.XXXXXX")"
-  cat > "$payload_file"
+  payload_file="$(mktemp "${TMPDIR:-/tmp}/rb-eval-scores.XXXXXX")" || {
+    echo "ERROR: could not create a temporary score payload file." >&2
+    return 1
+  }
+  cat >"$payload_file"
   local status=0
   python3 - "$label" "$threshold" "$payload_file" <<'PY' || status=$?
 import json
@@ -168,8 +324,11 @@ PY
 summarize_triggers() {
   local threshold="$1"
   local payload_file
-  payload_file="$(mktemp "${TMPDIR:-/tmp}/rb-eval-triggers.XXXXXX")"
-  cat > "$payload_file"
+  payload_file="$(mktemp "${TMPDIR:-/tmp}/rb-eval-triggers.XXXXXX")" || {
+    echo "ERROR: could not create a temporary trigger payload file." >&2
+    return 1
+  }
+  cat >"$payload_file"
   local status=0
   python3 - "$threshold" "$payload_file" <<'PY' || status=$?
 import json
@@ -207,10 +366,57 @@ PY
 }
 
 run_lint() {
+  if [[ "$MODE" == "--changed" ]]; then
+    local markdown_files=()
+    local file=""
+
+    while IFS= read -r file; do
+      [[ -n "$file" ]] || continue
+      markdown_files+=("$file")
+    done < <(collect_changed_markdown_paths)
+
+    if [[ ${#markdown_files[@]} -eq 0 ]]; then
+      echo "  No changed markdown files detected."
+      return 0
+    fi
+
+    require_command npm "linting changed markdown files in ${MODE} mode"
+    echo "  Linting ${#markdown_files[@]} changed markdown file(s)."
+    npm exec -- markdownlint -- "${markdown_files[@]}"
+    return 0
+  fi
+
+  require_command npm "linting in ${MODE} mode"
   npm run lint --silent
 }
 
 run_injection_check() {
+  if [[ "$MODE" == "--changed" ]]; then
+    local scan_paths=()
+    local path=""
+    local manifest_file=""
+
+    while IFS= read -r path; do
+      [[ -n "$path" ]] || continue
+      scan_paths+=("$path")
+    done < <(collect_changed_injection_paths)
+
+    if [[ ${#scan_paths[@]} -eq 0 ]]; then
+      echo "  No changed markdown/JSON/YAML files detected for injection scan."
+      return 0
+    fi
+
+    manifest_file="$(mktemp "${TMPDIR:-/tmp}/rb-dynamic-injection.XXXXXX")" || {
+      echo "ERROR: could not create a temporary manifest for changed-surface injection scanning." >&2
+      return 1
+    }
+    printf '%s\n' "${scan_paths[@]}" > "$manifest_file"
+    local status=0
+    bash scripts/check-dynamic-injection.sh --manifest "$manifest_file" || status=$?
+    rm -f -- "$manifest_file"
+    return "$status"
+  fi
+
   bash scripts/check-dynamic-injection.sh
 }
 
@@ -230,10 +436,14 @@ run_changed_skills() {
 
   echo "  Scoring ${#skills_to_check[@]} changed skills: ${skills_to_check[*]}"
 
-  local result="{"
-  local first=true
-  local skill=""
+  local -a skill_names=()
+  local -a skill_scores=()
   local missing_skills=()
+  local deleted_skills=()
+  while IFS= read -r skill; do
+    [[ -n "$skill" ]] || continue
+    deleted_skills+=("$skill")
+  done < <(collect_deleted_skill_names)
   for skill in "${skills_to_check[@]}"; do
     local path="${PLUGIN_ROOT}/skills/${skill}/SKILL.md"
     if [[ ! -f "$path" ]]; then
@@ -243,18 +453,52 @@ run_changed_skills() {
 
     local score=""
     score="$(python3 -m lab.eval.scorer "$path")"
-    if [[ "$first" == true ]]; then
-      first=false
-    else
-      result+=","
-    fi
-    result+="\"${skill}\":${score}"
+    skill_names+=("$skill")
+    skill_scores+=("$score")
   done
-  result+="}"
 
   if [[ ${#missing_skills[@]} -gt 0 ]]; then
-    echo "  NOTE: deleted or moved changed skills were skipped: ${missing_skills[*]}" >&2
+    echo "  WARNING: skipping deleted or moved changed skills: ${missing_skills[*]}" >&2
   fi
+  if [[ ${#deleted_skills[@]} -gt 0 ]]; then
+    echo "  NOTE: deleted changed skills are not scorable on the current tree: ${deleted_skills[*]}" >&2
+  fi
+
+  if [[ ${#skill_names[@]} -eq 0 ]]; then
+    echo "  No scorable changed skills remain after skipping deleted or moved paths."
+    return 0
+  fi
+
+  _RUN_EVAL_NAMES="$(printf '%s\n' "${skill_names[@]}" | json_array_from_lines)"
+  export _RUN_EVAL_NAMES
+  _RUN_EVAL_SCORES="$(printf '%s\n' "${skill_scores[@]}" | json_array_from_lines)"
+  export _RUN_EVAL_SCORES
+
+  # Build JSON using Python for proper escaping and handling
+  local result
+  result="$(
+    python3 -c '
+import json
+import sys
+import os
+
+names_json = os.environ.get("_RUN_EVAL_NAMES", "[]")
+scores_json = os.environ.get("_RUN_EVAL_SCORES", "[]")
+names = json.loads(names_json)
+scores = json.loads(scores_json)
+
+if len(names) != len(scores):
+    print("ERROR: mismatched names and scores count", file=sys.stderr)
+    sys.exit(1)
+
+result = {}
+for name, score in zip(names, scores):
+    result[name] = json.loads(score)
+print(json.dumps(result))
+' <<<""
+  )"
+
+  unset _RUN_EVAL_NAMES _RUN_EVAL_SCORES
 
   printf '%s\n' "$result" | summarize_subject_scores "skills" "$FAIL_UNDER"
 }
@@ -278,16 +522,21 @@ run_changed_agents() {
     return 0
   fi
 
-  local agent_names=()
+  local changed_agent_names=()
   local path=""
   for path in "${agent_paths[@]}"; do
-    agent_names+=("$(basename "$path" .md)")
+    changed_agent_names+=("$(basename "$path" .md)")
   done
-  echo "  Scoring ${#agent_paths[@]} changed agents: ${agent_names[*]}"
+  echo "  Scoring ${#agent_paths[@]} changed agents: ${changed_agent_names[*]}"
 
-  local result="{"
-  local first=true
+  local -a agent_names=()
+  local -a agent_scores=()
   local missing_agents=()
+  local deleted_agents=()
+  while IFS= read -r agent_name; do
+    [[ -n "$agent_name" ]] || continue
+    deleted_agents+=("$agent_name")
+  done < <(collect_deleted_agent_names)
   for path in "${agent_paths[@]}"; do
     local agent_name
     agent_name="$(basename "$path" .md)"
@@ -297,18 +546,52 @@ run_changed_agents() {
     fi
     local score=""
     score="$(python3 -m lab.eval.agent_scorer "$path")"
-    if [[ "$first" == true ]]; then
-      first=false
-    else
-      result+=","
-    fi
-    result+="\"${agent_name}\":${score}"
+    agent_names+=("$agent_name")
+    agent_scores+=("$score")
   done
-  result+="}"
 
   if [[ ${#missing_agents[@]} -gt 0 ]]; then
-    echo "  NOTE: deleted or moved changed agents were skipped: ${missing_agents[*]}" >&2
+    echo "  WARNING: skipping deleted or moved changed agents: ${missing_agents[*]}" >&2
   fi
+  if [[ ${#deleted_agents[@]} -gt 0 ]]; then
+    echo "  NOTE: deleted changed agents are not scorable on the current tree: ${deleted_agents[*]}" >&2
+  fi
+
+  if [[ ${#agent_names[@]} -eq 0 ]]; then
+    echo "  No scorable changed agents remain after skipping deleted or moved paths."
+    return 0
+  fi
+
+  _RUN_EVAL_NAMES="$(printf '%s\n' "${agent_names[@]}" | json_array_from_lines)"
+  export _RUN_EVAL_NAMES
+  _RUN_EVAL_SCORES="$(printf '%s\n' "${agent_scores[@]}" | json_array_from_lines)"
+  export _RUN_EVAL_SCORES
+
+  # Build JSON using Python for proper escaping and handling
+  local result
+  result="$(
+    python3 -c '
+import json
+import sys
+import os
+
+names_json = os.environ.get("_RUN_EVAL_NAMES", "[]")
+scores_json = os.environ.get("_RUN_EVAL_SCORES", "[]")
+names = json.loads(names_json)
+scores = json.loads(scores_json)
+
+if len(names) != len(scores):
+    print("ERROR: mismatched names and scores count", file=sys.stderr)
+    sys.exit(1)
+
+result = {}
+for name, score in zip(names, scores):
+    result[name] = json.loads(score)
+print(json.dumps(result))
+' <<<""
+  )"
+
+  unset _RUN_EVAL_NAMES _RUN_EVAL_SCORES
 
   printf '%s\n' "$result" | summarize_subject_scores "agents" "$AGENT_FAIL_UNDER"
 }
@@ -316,6 +599,42 @@ run_changed_agents() {
 run_all_agents() {
   echo "  Scoring all shipped agents"
   python3 -m lab.eval.agent_scorer --all | summarize_subject_scores "agents" "$AGENT_FAIL_UNDER"
+}
+
+run_noncore_skill_advisory() {
+  local threshold="$1"
+
+  python3 - "$threshold" <<'PY'
+import json
+import subprocess
+import sys
+
+threshold = float(sys.argv[1])
+core = {"plan", "work", "review", "verify", "permissions", "research"}
+payload = json.loads(
+    subprocess.check_output(
+        [sys.executable, "-m", "lab.eval.scorer", "--all"],
+        text=True,
+    )
+)
+low = sorted(
+    (
+        (name, round(data.get("composite", 0.0), 3))
+        for name, data in payload.items()
+        if isinstance(data, dict)
+        and name not in core
+        and data.get("composite", 0.0) < threshold
+    ),
+    key=lambda item: (item[1], item[0]),
+)
+
+if not low:
+    print(f"  Non-core skill advisory: all shipped skills meet {threshold:.2f}.")
+    raise SystemExit(0)
+
+summary = ", ".join(f"{name}={score:.3f}" for name, score in low)
+print(f"  WARNING: non-core skills below {threshold:.2f}: {summary}")
+PY
 }
 
 run_all_triggers() {
@@ -326,8 +645,14 @@ run_all_triggers() {
 echo "=== Ruby Plugin Eval ==="
 echo
 
+if [[ "$MODE" != "--changed" && "$INCLUDE_UNTRACKED" == "true" ]]; then
+  echo "WARNING: --include-untracked only affects --changed mode and will be ignored for ${MODE}."
+  echo
+fi
+
 if [[ "$MODE" == "--changed" && "$INCLUDE_UNTRACKED" == "true" ]]; then
-  echo "NOTE: --include-untracked makes changed-mode results local-only and non-comparable."
+  echo "WARNING: --include-untracked makes changed-mode results local-only and non-comparable."
+  echo "WARNING: CI and review comparisons should use tracked surfaces only."
   echo
 fi
 
@@ -337,74 +662,84 @@ if [[ "$MODE" == "--changed" && -n "$AGAINST_REF" ]]; then
 fi
 
 case "$MODE" in
-  --changed)
-    echo "--- Lint ---"
-    run_lint || FAILURES=$((FAILURES + 1))
+--changed)
+  echo "--- Lint ---"
+  run_lint || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Injection Guard ---"
+  run_injection_check || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Skills (changed) ---"
+  run_changed_skills || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Agents (changed) ---"
+  run_changed_agents || FAILURES=$((FAILURES + 1))
+  if should_run_changed_triggers; then
     echo
-    echo "--- Injection Guard ---"
-    run_injection_check || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Skills (changed) ---"
-    run_changed_skills || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Agents (changed) ---"
-    run_changed_agents || FAILURES=$((FAILURES + 1))
-    if should_run_changed_triggers; then
-      echo
-      echo "--- Triggers (changed context) ---"
-      run_all_triggers || FAILURES=$((FAILURES + 1))
-    fi
-    ;;
-  --all)
-    echo "--- Lint ---"
-    run_lint || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Injection Guard ---"
-    run_injection_check || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Skills (core) ---"
-    run_all_skills || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Agents (all) ---"
-    run_all_agents || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Triggers ---"
+    echo "--- Triggers (changed context) ---"
     run_all_triggers || FAILURES=$((FAILURES + 1))
-    ;;
-  --skills)
-    echo "--- Skills (core) ---"
-    run_all_skills || FAILURES=$((FAILURES + 1))
-    ;;
-  --agents)
-    echo "--- Agents (all) ---"
-    run_all_agents || FAILURES=$((FAILURES + 1))
-    ;;
-  --triggers)
-    echo "--- Triggers ---"
-    run_all_triggers || FAILURES=$((FAILURES + 1))
-    ;;
-  --ci)
-    echo "--- CI Gate: lint + injection check + core skills + all agents + triggers ---"
-    echo
-    echo "--- Lint ---"
-    run_lint || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Injection Guard ---"
-    run_injection_check || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Skills (core) ---"
-    run_all_skills || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Agents (all) ---"
-    run_all_agents || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Triggers ---"
-    run_all_triggers || FAILURES=$((FAILURES + 1))
-    ;;
-  *)
-    echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]"
-    exit 1
-    ;;
+  fi
+  echo
+  echo "NOTE: changed mode is partial coverage. It only lints changed markdown, scans changed markdown/JSON/YAML for dynamic injection, and scores changed tracked skills/agents."
+  echo "NOTE: use --all or --ci for full tracked contributor checks."
+  ;;
+--all)
+  echo "--- Lint ---"
+  run_lint || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Injection Guard ---"
+  run_injection_check || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Skills (core) ---"
+  run_all_skills || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Agents (all) ---"
+  run_all_agents || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Triggers ---"
+  run_all_triggers || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Non-core Skill Advisory ---"
+  run_noncore_skill_advisory "$FAIL_UNDER"
+  ;;
+--skills)
+  echo "--- Skills (core) ---"
+  run_all_skills || FAILURES=$((FAILURES + 1))
+  ;;
+--agents)
+  echo "--- Agents (all) ---"
+  run_all_agents || FAILURES=$((FAILURES + 1))
+  ;;
+--triggers)
+  echo "--- Triggers ---"
+  run_all_triggers || FAILURES=$((FAILURES + 1))
+  ;;
+--ci)
+  echo "--- CI Scoring Gate: lint + injection check + core skills + all agents + triggers ---"
+  echo "NOTE: runtime tests run separately via npm run eval:test or npm run ci."
+  echo
+  echo "--- Lint ---"
+  run_lint || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Injection Guard ---"
+  run_injection_check || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Skills (core) ---"
+  run_all_skills || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Agents (all) ---"
+  run_all_agents || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Triggers ---"
+  run_all_triggers || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Non-core Skill Advisory ---"
+  run_noncore_skill_advisory "$FAIL_UNDER"
+  ;;
+*)
+  echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]"
+  exit 1
+  ;;
 esac
 
 if [[ $FAILURES -gt 0 ]]; then

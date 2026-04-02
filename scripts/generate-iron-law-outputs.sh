@@ -3,7 +3,7 @@
 # Generate Iron Law outputs from canonical YAML source
 # Usage: ./scripts/generate-iron-law-outputs.sh [target]
 #   target: optional specific target to regenerate
-#           (readme|claude|canonical|init|tutorial|injector|judge|all)
+#           (readme|canonical|init|tutorial|injector|judge|all)
 #
 # This script delegates to generate-iron-law-content.rb for actual content generation
 #
@@ -23,15 +23,24 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 log_info() {
-  echo -e "${GREEN}[INFO]${NC} $1"
+  printf '%b %s\n' "${GREEN}[INFO]${NC}" "$1"
 }
 
 log_warn() {
-  echo -e "${YELLOW}[WARN]${NC} $1"
+  printf '%b %s\n' "${YELLOW}[WARN]${NC}" "$1"
 }
 
 log_error() {
-  echo -e "${RED}[ERROR]${NC} $1"
+  printf '%b %s\n' "${RED}[ERROR]${NC}" "$1"
+}
+
+require_command() {
+  local command_name="$1"
+
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    log_error "Required command not found: ${command_name}"
+    exit 1
+  fi
 }
 
 show_usage() {
@@ -42,7 +51,6 @@ Regenerate Iron Law projections from plugins/ruby-grape-rails/references/iron-la
 
 Targets:
   readme     Update bounded Iron Laws section in README.md
-  claude     Update bounded Iron Laws section in CLAUDE.md
   canonical  Regenerate canonical-registry.md
   init       Update bounded Iron Laws section in init injectable template
   tutorial   Update bounded Iron Laws section in intro tutorial content
@@ -57,10 +65,17 @@ EOF
 
 valid_target() {
   case "$1" in
-    readme|claude|canonical|init|tutorial|injector|judge|all) return 0 ;;
+    readme|canonical|init|tutorial|injector|judge|all) return 0 ;;
     *) return 1 ;;
   esac
 }
+
+require_command ruby
+require_command grep
+require_command mktemp
+require_command mv
+require_command chmod
+require_command rm
 
 canonicalize_dir() {
   local path="$1"
@@ -149,8 +164,8 @@ update_file() {
     return 1
   fi
 
-  if ! grep -q "$start_marker" "$file"; then
-    log_error "Markers not found in $file"
+  if ! grep -q "$start_marker" "$file" || ! grep -q "$end_marker" "$file"; then
+    log_error "Bounded replacement markers not found or malformed in $file"
     return 1
   fi
 
@@ -233,8 +248,8 @@ update_judge_file() {
     return 1
   fi
 
-  if ! grep -q "$judge_start_marker" "$judge_file"; then
-    log_error "Markers not found in $judge_file"
+  if ! grep -q "$judge_start_marker" "$judge_file" || ! grep -q "$judge_end_marker" "$judge_file"; then
+    log_error "Bounded replacement markers not found or malformed in $judge_file"
     return 1
   fi
 
@@ -285,13 +300,6 @@ generate_all() {
     readme|all)
       log_info "Generating README.md section..."
       update_file "${REPO_ROOT}/README.md" "readme"
-      ;;
-  esac
-
-  case "$target" in
-    claude|all)
-      log_info "Generating CLAUDE.md section..."
-      update_file "${REPO_ROOT}/CLAUDE.md" "claude"
       ;;
   esac
 
@@ -353,11 +361,6 @@ fi
 
 if [[ ! -f "$YAML_SOURCE" ]]; then
   log_error "YAML source not found: $YAML_SOURCE"
-  exit 1
-fi
-
-if ! command -v ruby >/dev/null 2>&1; then
-  log_error "ruby is required to generate Iron Law outputs"
   exit 1
 fi
 

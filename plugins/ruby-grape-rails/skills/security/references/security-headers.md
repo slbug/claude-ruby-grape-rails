@@ -124,8 +124,8 @@ brakeman -o brakeman_report.html
 gem install bundler-audit
 bundle-audit check --update
 
-# Add to CI
-# .github/workflows/security.yml
+# Add to CI in your app repo
+# Example workflow file: .github/workflows/security.yml
 ```
 
 ## Security Checklist

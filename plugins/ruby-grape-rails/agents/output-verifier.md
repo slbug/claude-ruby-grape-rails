@@ -5,6 +5,8 @@ tools: Read, Grep, Glob, WebFetch, WebSearch
 disallowedTools: Write, Edit, NotebookEdit
 model: sonnet
 effort: medium
+maxTurns: 15
+omitClaudeMd: true
 ---
 
 # Output Verifier
