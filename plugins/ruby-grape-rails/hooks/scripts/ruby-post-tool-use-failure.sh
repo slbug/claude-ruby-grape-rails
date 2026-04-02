@@ -4,7 +4,17 @@ set -o pipefail
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INPUT=$(cat)
+
+# Source workspace-root-lib.sh for read_hook_input helper
+ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
+if [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]]; then
+  # shellcheck disable=SC1090,SC1091
+  source "$ROOT_LIB"
+fi
+
+# Read hook input with size validation and JSON checking
+read_hook_input
+INPUT="${HOOK_INPUT_VALUE:-}"
 LAST_HOOK_OUTPUT=""
 
 emit_missing_hook_block() {
@@ -22,6 +32,12 @@ run_hook() {
   local code=0
   local stdout_file=""
   local stderr_file=""
+
+  if ! command -v mktemp >/dev/null 2>&1; then
+    echo "BLOCKED: ${HOOK_NAME} cannot run ${target_name} because mktemp is unavailable." >&2
+    echo "Install mktemp before retrying the failed Ruby command." >&2
+    return 2
+  fi
 
   if [[ ! -f "$target" || -L "$target" ]]; then
     emit_missing_hook_block "$target_name"

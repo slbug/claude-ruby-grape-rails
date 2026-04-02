@@ -93,7 +93,13 @@ require_git_for_mode() {
 
 require_git_for_mode
 require_command mktemp "temporary file creation for score aggregation"
-require_command jq "JSON array construction for score aggregation"
+
+# jq is only needed for --changed mode JSON construction
+case "$MODE" in
+--changed)
+  require_command jq "JSON array construction for ${MODE} mode"
+  ;;
+esac
 
 validate_threshold() {
   local env_name="$1"

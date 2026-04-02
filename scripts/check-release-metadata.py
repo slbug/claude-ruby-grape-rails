@@ -67,7 +67,13 @@ def main() -> int:
         errors.append("package.json is missing a string version.")
         current_version = ""
 
-    marketplace_version = marketplace_dict.get("metadata", {}).get("version")
+    # Validate metadata is a dict before accessing version
+    metadata = marketplace_dict.get("metadata", {})
+    if not isinstance(metadata, dict):
+        errors.append("marketplace.json metadata must be a JSON object")
+        marketplace_version = None
+    else:
+        marketplace_version = metadata.get("version")
     plugin_version = plugin_dict.get("version")
 
     # Select plugin by name instead of assuming index 0
