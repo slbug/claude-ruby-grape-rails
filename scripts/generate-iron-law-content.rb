@@ -48,8 +48,18 @@ def validate_entries!(yaml)
     value.is_a?(String) && !value.strip.empty?
   end
 
+  integer_value = lambda do |value|
+    return value if value.is_a?(Integer)
+    return nil unless value.is_a?(String)
+
+    stripped = value.strip
+    return nil unless stripped.match?(/\A\d+\z/)
+
+    stripped.to_i
+  end
+
   integerish = lambda do |value|
-    value.is_a?(Integer) || (value.is_a?(String) && value.match?(/\A\d+\z/))
+    !integer_value.call(value).nil?
   end
 
   yaml['categories'].each_with_index do |category, index|
@@ -118,7 +128,10 @@ def validate_entries!(yaml)
   errors << "duplicate category ids: #{duplicate_category_ids.join(', ')}" unless duplicate_category_ids.empty?
   errors << "duplicate law ids: #{duplicate_law_ids.join(', ')}" unless duplicate_law_ids.empty?
 
-  if yaml['total_laws'].to_i != yaml['laws'].length
+  total_laws = integer_value.call(yaml['total_laws'])
+  if total_laws.nil?
+    errors << 'total_laws must be an integer'
+  elsif total_laws != yaml['laws'].length
     errors << "total_laws=#{yaml['total_laws']} does not match actual laws count=#{yaml['laws'].length}"
   end
 
@@ -131,7 +144,9 @@ def validate_entries!(yaml)
   yaml['categories'].each_with_index do |category, index|
     next unless category.is_a?(Hash) && category['id']
 
-    declared_count = category['law_count'].to_i
+    declared_count = integer_value.call(category['law_count'])
+    next if declared_count.nil?
+
     actual_count = category_totals[category['id']]
     next if declared_count == actual_count
 
