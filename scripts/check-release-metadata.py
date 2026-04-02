@@ -55,7 +55,14 @@ def main() -> int:
             print(f"ERROR: {error}", file=sys.stderr)
         return 1
 
-    changelog_text = CHANGELOG.read_text(encoding="utf-8")
+    try:
+        changelog_text = CHANGELOG.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        print(f"ERROR: {CHANGELOG} not found", file=sys.stderr)
+        return 1
+    except OSError as e:
+        print(f"ERROR: could not read {CHANGELOG}: {e}", file=sys.stderr)
+        return 1
 
     # Type-safe access after validation
     package_dict: dict = package  # type: ignore[assignment]
