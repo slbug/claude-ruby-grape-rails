@@ -383,8 +383,10 @@ run_changed_skills() {
   fi
 
   # Export names and scores as JSON arrays via environment variables
-  export _RUN_EVAL_NAMES="$(printf '%s\n' "${skill_names[@]}" | jq -R . | jq -s .)"
-  export _RUN_EVAL_SCORES="$(printf '%s\n' "${skill_scores[@]}" | jq -R . | jq -s .)"
+  _RUN_EVAL_NAMES="$(printf '%s\n' "${skill_names[@]}" | jq -R . | jq -s .)"
+  export _RUN_EVAL_NAMES
+  _RUN_EVAL_SCORES="$(printf '%s\n' "${skill_scores[@]}" | jq -R . | jq -s .)"
+  export _RUN_EVAL_SCORES
 
   # Build JSON using Python for proper escaping and handling
   local result
@@ -475,8 +477,10 @@ run_changed_agents() {
   fi
 
   # Export names and scores as JSON arrays via environment variables
-  export _RUN_EVAL_NAMES="$(printf '%s\n' "${agent_names[@]}" | jq -R . | jq -s .)"
-  export _RUN_EVAL_SCORES="$(printf '%s\n' "${agent_scores[@]}" | jq -R . | jq -s .)"
+  _RUN_EVAL_NAMES="$(printf '%s\n' "${agent_names[@]}" | jq -R . | jq -s .)"
+  export _RUN_EVAL_NAMES
+  _RUN_EVAL_SCORES="$(printf '%s\n' "${agent_scores[@]}" | jq -R . | jq -s .)"
+  export _RUN_EVAL_SCORES
 
   # Build JSON using Python for proper escaping and handling
   local result
