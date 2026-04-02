@@ -15,5 +15,5 @@ require_command ruby
 
 git ls-files -z '*.yml' '*.yaml' | while IFS= read -r -d '' file; do
   echo "Validating $file"
-  ruby -e 'require "psych"; Psych.parse_stream(File.read(ARGV[0], encoding: "UTF-8"))' "$file" > /dev/null
+  ruby -e 'require "psych"; Psych.parse_stream(File.read(ARGV[0], encoding: "UTF-8"))' "$file" >/dev/null
 done

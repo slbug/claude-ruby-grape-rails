@@ -47,20 +47,20 @@ if [[ -f "$RUNTIME_ENV_PATH" && ! -L "$RUNTIME_ENV_PATH" ]]; then
   DCG_AVAILABLE_CACHED=$(grep -E '^DCG_AVAILABLE=' "$RUNTIME_ENV_PATH" | tail -n 1 | cut -d= -f2-)
   SHELLFIRM_AVAILABLE_CACHED=$(grep -E '^SHELLFIRM_AVAILABLE=' "$RUNTIME_ENV_PATH" | tail -n 1 | cut -d= -f2-)
 fi
-command -v betterleaks &> /dev/null && echo "Betterleaks: available"
+command -v betterleaks &>/dev/null && echo "Betterleaks: available"
 if [[ "$RTK_AVAILABLE_CACHED" == "true" ]]; then
   echo "RTK: available (cached)"
-elif command -v rtk &> /dev/null; then
+elif command -v rtk &>/dev/null; then
   echo "RTK: available"
 fi
 if [[ "$DCG_AVAILABLE_CACHED" == "true" ]]; then
   echo "DCG: available (cached)"
-elif command -v dcg &> /dev/null; then
+elif command -v dcg &>/dev/null; then
   echo "DCG: available"
 fi
 if [[ "$SHELLFIRM_AVAILABLE_CACHED" == "true" ]]; then
   echo "Shellfirm: available (cached)"
-elif command -v shellfirm &> /dev/null; then
+elif command -v shellfirm &>/dev/null; then
   echo "Shellfirm: available"
 fi
 ```

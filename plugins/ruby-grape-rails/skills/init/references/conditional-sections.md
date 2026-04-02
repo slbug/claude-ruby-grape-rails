@@ -135,5 +135,5 @@ ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
 # treat that as a plugin/detection issue rather than guessing.
 
 # Betterleaks detection
-command -v betterleaks &> /dev/null && echo "betterleaks"
+command -v betterleaks &>/dev/null && echo "betterleaks"
 ```

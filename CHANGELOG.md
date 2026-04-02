@@ -7,6 +7,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.7.3] - 2026-04-02
+
+### Changed
+
+- Adjust shell redirection patterns in hook scripts and documentation to improve
+  compatibility with shellfirm security tooling.
+
 ## [1.7.2] - 2026-04-02
 
 ### Changed
@@ -966,7 +973,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.7.2...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.7.3...HEAD
+[1.7.3]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.3
 [1.7.2]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.2
 [1.7.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.1
 [1.7.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.0

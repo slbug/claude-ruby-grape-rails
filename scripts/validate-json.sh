@@ -15,5 +15,5 @@ require_command python3
 
 git ls-files -z '*.json' | while IFS= read -r -d '' file; do
   echo "Validating $file"
-  python3 -m json.tool "$file" > /dev/null
+  python3 -m json.tool "$file" >/dev/null
 done
