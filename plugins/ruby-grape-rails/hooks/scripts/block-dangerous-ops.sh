@@ -12,6 +12,7 @@ emit_missing_dependency_block() {
 
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 command -v grep >/dev/null 2>&1 || emit_missing_dependency_block "grep"
+SHFMT_BIN="$(command -v shfmt 2>/dev/null || true)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
@@ -46,6 +47,52 @@ COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/nul
 [[ -n "$COMMAND" ]] || emit_payload_schema_block "tool_input.command was missing"
 REPO_ROOT="$(resolve_workspace_root "$INPUT" 2>/dev/null || true)"
 
+command_to_shfmt_ast() {
+  local command_text="$1"
+
+  [[ -n "$SHFMT_BIN" ]] || return 1
+  printf '%s\n' "$command_text" | "$SHFMT_BIN" --to-json -filename hook-input.sh 2>/dev/null
+}
+
+slice_command_text_range() {
+  local command_text="$1"
+  local start="$2"
+  local end="$3"
+  local length=0
+
+  [[ "$start" =~ ^[0-9]+$ && "$end" =~ ^[0-9]+$ ]] || return 1
+  [[ "$end" -ge "$start" ]] || return 1
+  length=$(( end - start ))
+  printf '%s\n' "${command_text:start:length}"
+}
+
+normalize_command_segments_with_shfmt() {
+  local command_text="$1"
+  local ast=""
+  local start=""
+  local end=""
+  local segment=""
+  local emitted=0
+
+  ast=$(command_to_shfmt_ast "$command_text") || return 1
+
+  while IFS=$'\t' read -r start end; do
+    [[ "$start" =~ ^[0-9]+$ && "$end" =~ ^[0-9]+$ ]] || continue
+    segment=$(slice_command_text_range "$command_text" "$start" "$end" || true)
+    [[ -n "$segment" ]] || continue
+    segment=$(trim_leading_whitespace "$segment")
+    segment=$(trim_trailing_whitespace "$segment")
+    [[ -n "$segment" ]] || continue
+    printf '%s\n' "$segment"
+    emitted=1
+  done < <(
+    printf '%s' "$ast" |
+      jq -r '.Stmts[]? | "\(.Pos.Offset // -1)\t\(.Cmd.End.Offset // .End.Offset // -1)"' 2>/dev/null
+  )
+
+  [[ "$emitted" -eq 1 ]]
+}
+
 normalize_command_segments() {
   local command_text="$1"
   local current=""
@@ -65,6 +112,10 @@ normalize_command_segments() {
     segment=$(trim_trailing_whitespace "$segment")
     [[ -n "$segment" ]] && printf '%s\n' "$segment"
   }
+
+  if normalize_command_segments_with_shfmt "$command_text"; then
+    return 0
+  fi
 
   while [[ "$i" -lt "$length" ]]; do
     char="${command_text:$i:1}"
@@ -463,12 +514,81 @@ collapse_duplicate_leading_token() {
 LEADING_ENV_PREFIXES_RESULT=""
 STRIPPED_COMMAND_RESULT=""
 
+split_leading_env_prefixes_with_shfmt() {
+  local segment="$1"
+  local ast=""
+  local stmt_count=0
+  local cmd_type=""
+  local cmd_end=""
+  local assigns_count=0
+  local arg_starts=()
+  local arg_values=()
+  local first_command_index=-1
+  local arg_value=""
+  local prefix_end=0
+
+  ast=$(command_to_shfmt_ast "$segment") || return 1
+  stmt_count=$(printf '%s' "$ast" | jq -r '(.Stmts | length) // 0' 2>/dev/null) || return 1
+  [[ "$stmt_count" -eq 1 ]] || return 1
+
+  cmd_type=$(printf '%s' "$ast" | jq -r '.Stmts[0].Cmd.Type // empty' 2>/dev/null) || return 1
+  [[ "$cmd_type" == "CallExpr" ]] || return 1
+  cmd_end=$(printf '%s' "$ast" | jq -r '.Stmts[0].Cmd.End.Offset // -1' 2>/dev/null) || return 1
+  [[ "$cmd_end" =~ ^[0-9]+$ ]] || return 1
+  assigns_count=$(printf '%s' "$ast" | jq -r '(.Stmts[0].Cmd.Assigns | length) // 0' 2>/dev/null) || return 1
+
+  while IFS=$'\t' read -r arg_start arg_value; do
+    [[ "$arg_start" =~ ^[0-9]+$ ]] || continue
+    arg_starts+=("$arg_start")
+    arg_values+=("$arg_value")
+  done < <(
+    printf '%s' "$ast" |
+      jq -r '.Stmts[0].Cmd.Args[]? | "\(.Pos.Offset // -1)\t\((.Parts | map(select(.Type == "Lit") | .Value) | join("")) // "")"' 2>/dev/null
+  )
+
+  if [[ "$assigns_count" -gt 0 ]]; then
+    if [[ "${#arg_starts[@]}" -gt 0 ]]; then
+      prefix_end="${arg_starts[0]}"
+    else
+      prefix_end="$cmd_end"
+    fi
+  elif [[ "${#arg_values[@]}" -gt 0 && "${arg_values[0]}" == "env" ]]; then
+    first_command_index=1
+    while [[ "$first_command_index" -lt "${#arg_values[@]}" ]]; do
+      arg_value="${arg_values[$first_command_index]}"
+      if [[ "$arg_value" == -* ]] || [[ "$arg_value" =~ ^[A-Za-z_][A-Za-z0-9_]*=.*$ ]]; then
+        first_command_index=$(( first_command_index + 1 ))
+        continue
+      fi
+      break
+    done
+
+    if [[ "$first_command_index" -lt "${#arg_starts[@]}" ]]; then
+      prefix_end="${arg_starts[$first_command_index]}"
+    else
+      prefix_end="$cmd_end"
+    fi
+  else
+    return 1
+  fi
+
+  LEADING_ENV_PREFIXES_RESULT=$(slice_command_text_range "$segment" 0 "$prefix_end" || true)
+  STRIPPED_COMMAND_RESULT=$(slice_command_text_range "$segment" "$prefix_end" "$cmd_end" || true)
+  LEADING_ENV_PREFIXES_RESULT=$(trim_trailing_whitespace "$LEADING_ENV_PREFIXES_RESULT")
+  STRIPPED_COMMAND_RESULT=$(trim_leading_whitespace "$STRIPPED_COMMAND_RESULT")
+  return 0
+}
+
 split_leading_env_prefixes() {
   local segment
   local prefix=""
   local assignment=""
 
   segment=$(trim_leading_whitespace "$1")
+
+  if split_leading_env_prefixes_with_shfmt "$segment"; then
+    return 0
+  fi
 
   while :; do
     if [[ "$segment" =~ ^env[[:space:]]+ ]]; then
@@ -935,16 +1055,21 @@ is_production_env_command() {
   local candidate
   local production_env_active=false
   local segment
+  local probe_command=""
 
   while IFS= read -r candidate; do
     split_leading_env_prefixes "$candidate"
+    probe_command="$candidate"
+    if [[ -n "$STRIPPED_COMMAND_RESULT" ]]; then
+      probe_command="$STRIPPED_COMMAND_RESULT"
+    fi
     if [[ -n "$LEADING_ENV_PREFIXES_RESULT" && -n "$STRIPPED_COMMAND_RESULT" ]] &&
-      printf '%s' "$LEADING_ENV_PREFIXES_RESULT" | grep -qiE '(^|[[:space:]])(RAILS_ENV|RACK_ENV)=["'\'']?(prod|production)["'\'']?([[:space:]]|$)' &&
+      printf '%s' "$LEADING_ENV_PREFIXES_RESULT" | grep -qiE '(^|[[:space:]])(RAILS_ENV|RACK_ENV)=((["'\'']?(prod|production)["'\'']?)|\$\([^)]*(prod|production)[^)]*\))([[:space:]]|$)' &&
       ! is_harmless_env_probe "$STRIPPED_COMMAND_RESULT"; then
       return 0
     fi
 
-    if candidate_mentions_production_env "$candidate" && ! is_harmless_env_probe "$candidate"; then
+    if candidate_mentions_production_env "$candidate" && ! is_harmless_env_probe "$probe_command"; then
       return 0
     fi
   done < <(emit_command_variants_for_stream "$command_text")

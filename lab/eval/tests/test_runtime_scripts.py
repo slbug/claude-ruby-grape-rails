@@ -665,6 +665,72 @@ class RuntimeScriptTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2, command)
             self.assertIn("production environment detected", result.stderr)
 
+    def test_block_dangerous_ops_uses_shfmt_to_allow_harmless_probe_with_cmdsub_prefix(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            fake_shfmt = tmp / "shfmt"
+            fake_shfmt.write_text(
+                textwrap.dedent(
+                    """\
+                    #!/bin/sh
+                    cat >/dev/null
+                    cat <<'JSON'
+                    {
+                      "Type": "File",
+                      "Stmts": [
+                        {
+                          "Pos": {"Offset": 0},
+                          "End": {"Offset": 38},
+                          "Cmd": {
+                            "Type": "CallExpr",
+                            "Pos": {"Offset": 0},
+                            "End": {"Offset": 38},
+                            "Assigns": [
+                              {
+                                "Name": {"Value": "RAILS_ENV"},
+                                "Value": {
+                                  "Parts": [
+                                    {
+                                      "Type": "CmdSubst",
+                                      "Stmts": [
+                                        {
+                                          "Cmd": {
+                                            "Type": "CallExpr",
+                                            "Args": [
+                                              {"Parts": [{"Type": "Lit", "Value": "printf"}]},
+                                              {"Parts": [{"Type": "Lit", "Value": "production"}]}
+                                            ]
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            ],
+                            "Args": [
+                              {"Pos": {"Offset": 31}, "Parts": [{"Type": "Lit", "Value": "echo"}]},
+                              {"Pos": {"Offset": 36}, "Parts": [{"Type": "Lit", "Value": "ok"}]}
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                    JSON
+                    """
+                ),
+                encoding="utf-8",
+            )
+            fake_shfmt.chmod(0o755)
+
+            result = run_block_hook(
+                "RAILS_ENV=$(printf production) echo ok",
+                extra_env={"PATH": f"{tmpdir}{os.pathsep}{os.environ.get('PATH', '')}"},
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
     def test_block_dangerous_ops_blocks_single_background_operator_variants(self) -> None:
         for command, expected in (
             ("echo ok & git push --force origin main", "force push detected"),
