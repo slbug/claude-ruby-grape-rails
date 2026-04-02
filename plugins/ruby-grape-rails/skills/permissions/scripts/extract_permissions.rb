@@ -406,21 +406,39 @@ def split_shell_commands(command)
   commands
 end
 
+def shfmt_segment(source, node)
+  start = node.dig('Pos', 'Offset')
+  stop = node.dig('End', 'Offset')
+  return nil unless start.is_a?(Integer) && stop.is_a?(Integer) && stop >= start
+
+  segment = source[start...stop].to_s.strip
+  segment.empty? ? nil : segment
+end
+
+def collect_shfmt_command_segments(node, source, segments)
+  return unless node.is_a?(Hash)
+
+  case node['Type']
+  when 'CallExpr'
+    segment = shfmt_segment(source, node)
+    segments << segment if segment
+  when 'BinaryCmd'
+    collect_shfmt_command_segments(node['X'], source, segments)
+    collect_shfmt_command_segments(node['Y'], source, segments)
+  end
+end
+
 def split_shell_commands_with_shfmt(command)
   stdout, status = Open3.capture2e('shfmt', '--to-json', '-filename', 'hook-input.sh', stdin_data: command)
   return [] unless status.success?
 
   ast = JSON.parse(stdout)
-  Array(ast['Stmts']).filter_map do |stmt|
-    start = stmt.dig('Pos', 'Offset')
-    stop = stmt.dig('Cmd', 'End', 'Offset') || stmt.dig('End', 'Offset')
-    next unless start.is_a?(Integer) && stop.is_a?(Integer) && stop >= start
-
-    segment = command[start...stop].to_s.strip
-    next if segment.empty?
-
-    segment
+  segments = []
+  Array(ast['Stmts']).each do |stmt|
+    collect_shfmt_command_segments(stmt['Cmd'], command, segments)
   end
+
+  segments.uniq
 rescue Errno::ENOENT, JSON::ParserError
   []
 end

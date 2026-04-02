@@ -152,10 +152,9 @@ whether fresh research already exists:
 
 ## Waiting for Agents
 
-Call TaskOutput for each background agent. If TaskOutput shows
-the agent is still running, **wait and check again**. Do NOT
-proceed to plan generation until every agent status is
-"completed" (not "still running").
+You'll be notified as each background agent completes. Read each
+agent's output file to collect results. Do NOT proceed to plan
+generation until every agent has completed.
 
 Then run `context-supervisor` over:
 
@@ -330,8 +329,8 @@ plan with deeper research instead of creating a new one.
    `.claude/plans/{slug}/research/{topic-slug}.md` and return ONLY a
    500-word summary. Spawn all in ONE Tool Use block with
    `run_in_background: true`
-4. **Wait for ALL agents** -- Call `TaskOutput(task_id, block: true)`
-   for every spawned agent. Do NOT proceed until all complete
+4. **Wait for ALL agents** -- You'll be notified as each completes.
+   Read each agent's output file. Do NOT proceed until all complete
 5. **Enhance plan** -- Add implementation detail, resolve spikes,
    add verification criteria, note risk from compound docs
 6. **Present diff summary** -- Show what was enhanced

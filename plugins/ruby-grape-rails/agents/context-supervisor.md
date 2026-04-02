@@ -5,6 +5,7 @@ tools: Read, Write, Grep, Glob
 disallowedTools: Edit, NotebookEdit, Bash
 model: haiku
 effort: low
+maxTurns: 10
 ---
 
 # Context Supervisor

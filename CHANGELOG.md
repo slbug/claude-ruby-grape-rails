@@ -7,7 +7,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [1.7.2] - 2026-04-01
+## [1.7.2] - 2026-04-02
 
 ### Changed
 
@@ -36,6 +36,23 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   permissions extractor no longer relies on glob-interpolated transcript paths
   and now reports malformed JSONL lines, and contributor verification docs now
   point at concrete output fixtures instead of only the parent directory.
+- **Contributor validation is now wired into the main quality gates** —
+  local `ci` entrypoints now include `claude plugin validate`, and the GitHub
+  Actions workflow now runs a dedicated plugin-structure validation job instead
+  of relying on docs or manual contributor discipline alone.
+- **Background-agent orchestration guidance now matches current Claude Code
+  behavior** — stale `TaskOutput` instructions were removed from the planning
+  workflow, and the contributor guidance now consistently treats background
+  agent completion as notification-driven with explicit reads of written output
+  files.
+- **Agent turn limits are now explicit across the shipped specialist set** —
+  the remaining Ruby agents now declare `maxTurns`, which makes runaway-agent
+  protection more consistent beyond the core orchestrators.
+- **Permission extraction is more robust and shell-aware** — the permissions
+  extractor now supports transcript-root overrides for contributor analysis,
+  rejects malformed settings/transcript shapes without crashing, and uses
+  parser-backed shell splitting when `shfmt` is available while preserving the
+  safer fallback behavior when it is not.
 
 ## [1.7.1] - 2026-03-29
 
