@@ -4,6 +4,11 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "Skipping local pre-commit checks outside a Git worktree."
+  exit 0
+fi
+
 # Run markdown linting on staged .md files
 STAGED_MD_FILES=()
 while IFS= read -r -d '' file; do
@@ -49,6 +54,23 @@ if [[ ${#STAGED_JSON_FILES[@]} -gt 0 ]]; then
         echo "Invalid JSON: $file"
         exit 1
       fi
+    fi
+  done
+fi
+
+# Validate staged shell syntax
+STAGED_SHELL_FILES=()
+while IFS= read -r -d '' file; do
+  STAGED_SHELL_FILES+=("$file")
+done < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.sh' '*.bash' '.husky/pre-commit')
+
+if [[ ${#STAGED_SHELL_FILES[@]} -gt 0 ]]; then
+  echo "Checking staged shell syntax..."
+
+  for file in "${STAGED_SHELL_FILES[@]}"; do
+    if [[ -f "$file" ]] && ! bash -n "$file"; then
+      echo "Shell syntax error: $file"
+      exit 1
     fi
   done
 fi

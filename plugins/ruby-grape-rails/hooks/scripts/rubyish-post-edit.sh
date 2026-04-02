@@ -2,6 +2,10 @@
 set -o nounset
 set -o pipefail
 
+# Delegated Ruby-ish post-edit entrypoint.
+# Policy: fail closed on malformed payloads or missing delegates, but aggregate
+# delegate diagnostics so one failure does not mask later high-signal warnings.
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 
@@ -30,6 +34,7 @@ case "${HOOK_INPUT_STATUS:-empty}" in
     ;;
 esac
 STATUS=0
+FAILURES=0
 
 run_hook() {
   local target="$1"
@@ -40,14 +45,24 @@ run_hook() {
   printf '%s' "$INPUT" | "$target"
   code=$?
   if [[ "$code" -ne 0 ]]; then
-    STATUS=$code
-    return "$code"
+    FAILURES=$((FAILURES + 1))
+    if [[ "$code" -eq 2 ]]; then
+      STATUS=2
+    elif [[ "$STATUS" -eq 0 ]]; then
+      STATUS=$code
+    fi
   fi
+
+  return 0
 }
 
-run_hook "${SCRIPT_DIR}/iron-law-verifier.sh" || exit "$STATUS"
-run_hook "${SCRIPT_DIR}/format-ruby.sh" || exit "$STATUS"
-run_hook "${SCRIPT_DIR}/verify-ruby.sh" || exit "$STATUS"
-run_hook "${SCRIPT_DIR}/debug-statement-warning.sh" || exit "$STATUS"
+run_hook "${SCRIPT_DIR}/iron-law-verifier.sh"
+run_hook "${SCRIPT_DIR}/format-ruby.sh"
+run_hook "${SCRIPT_DIR}/verify-ruby.sh"
+run_hook "${SCRIPT_DIR}/debug-statement-warning.sh"
+
+if [[ "$FAILURES" -gt 1 ]]; then
+  echo "BLOCKED: rubyish-post-edit.sh saw ${FAILURES} delegated post-edit failures; see diagnostics above." >&2
+fi
 
 exit "$STATUS"

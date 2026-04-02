@@ -454,7 +454,7 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("workspace-root-lib.sh is unavailable", result.stderr)
 
-    def test_rubyish_post_edit_stops_after_first_delegated_failure(self) -> None:
+    def test_rubyish_post_edit_aggregates_delegate_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             wrapper = tmp / "rubyish-post-edit.sh"
@@ -485,7 +485,8 @@ class RuntimeScriptTests(unittest.TestCase):
                 (
                     "format-ruby.sh",
                     "#!/usr/bin/env bash\n"
-                    "echo ran > \"$(dirname \"$0\")/format-ran\"\n",
+                    "echo ran > \"$(dirname \"$0\")/format-ran\"\n"
+                    "exit 2\n",
                 ),
                 (
                     "verify-ruby.sh",
@@ -519,9 +520,10 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 2)
         self.assertTrue(iron_law_ran)
-        self.assertFalse(format_ran)
-        self.assertFalse(verify_ran)
-        self.assertFalse(debug_ran)
+        self.assertTrue(format_ran)
+        self.assertTrue(verify_ran)
+        self.assertTrue(debug_ran)
+        self.assertIn("delegated post-edit failures", result.stderr)
 
     def test_rubyish_post_edit_blocks_when_delegate_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -742,7 +744,7 @@ class RuntimeScriptTests(unittest.TestCase):
             self.assertIn(expected, result.stderr)
 
     def test_block_dangerous_ops_blocks_ruby_script_file_wrapper(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmpdir:
             tmp = Path(tmpdir)
             script = tmp / "drop.rb"
             script.write_text('system("rails db:drop")\n', encoding="utf-8")
@@ -753,7 +755,7 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("destructive Rails database command", result.stderr)
 
     def test_block_dangerous_ops_blocks_python_script_file_wrapper(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmpdir:
             tmp = Path(tmpdir)
             script = tmp / "drop.py"
             script.write_text('import os\nos.system("rails db:drop")\n', encoding="utf-8")
@@ -762,6 +764,17 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 2)
         self.assertIn("destructive Rails database command", result.stderr)
+
+    def test_block_dangerous_ops_does_not_inspect_wrapper_sources_outside_repo_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            script = tmp / "drop.rb"
+            script.write_text('system("rails db:drop")\n', encoding="utf-8")
+
+            result = run_block_hook(f"ruby {script}")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
 
     def test_block_dangerous_ops_does_not_treat_echo_as_production_command(self) -> None:
         result = run_block_hook('echo "RAILS_ENV=production"')
@@ -1320,7 +1333,7 @@ class RuntimeScriptTests(unittest.TestCase):
             target.write_text("safe text\n", encoding="utf-8")
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
-            for name in ("dirname", "jq", "grep", "git", "head", "pwd", "readlink", "rm", "mkdir", "cp", "mktemp", "mv", "sed", "wc", "find", "cut", "stat", "date", "tail", "tr"):
+            for name in ("dirname", "jq", "grep", "git", "head", "pwd", "readlink", "rm", "mkdir", "cp", "mktemp", "mv", "sed", "wc", "find", "cut", "stat", "date", "tail", "tr", "cat"):
                 source = shutil.which(name)
                 self.assertIsNotNone(source, name)
                 os.symlink(source, fake_bin / name)
@@ -1505,6 +1518,48 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("temporary file could not be created", result.stderr)
 
+    def test_format_ruby_skips_gemfile_when_formatter_dependency_state_is_transitional(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            gemfile = tmp / "Gemfile"
+            gemfile.write_text('source "https://rubygems.org"\ngem "standard"\n', encoding="utf-8")
+            (tmp / "Gemfile.lock").write_text(
+                textwrap.dedent(
+                    """
+                    GEM
+                      specs:
+                        rubocop (1.80.0)
+
+                    DEPENDENCIES
+                      rubocop
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            fake_bundle = fake_bin / "bundle"
+            fake_bundle.write_text("#!/usr/bin/env bash\nexit 99\n", encoding="utf-8")
+            fake_bundle.chmod(0o755)
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+
+            result = subprocess.run(
+                ["bash", str(FORMAT_RUBY)],
+                input=json.dumps({"tool_input": {"file_path": str(gemfile)}}),
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("formatter dependencies are in transition", result.stderr)
+
     def test_format_ruby_blocks_when_bundler_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -1589,14 +1644,14 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("BLOCKED", result.stderr)
         self.assertNotIn("skipped", result.stderr)
 
-    def test_verify_ruby_warns_when_file_path_is_missing(self) -> None:
+    def test_verify_ruby_blocks_when_file_path_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             (tmp / ".claude").mkdir()
 
             result = run_workspace_hook(VERIFY_RUBY, tmpdir, {"tool_input": {}})
 
-        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 2)
         self.assertIn("tool_input.file_path was missing", result.stderr)
 
     def test_detect_runtime_warns_when_runtime_env_tempfile_cannot_be_created(self) -> None:
@@ -2092,7 +2147,7 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("POST-COMPACTION", result.stderr)
         self.assertIn(".claude/plans/demo/plan.md", result.stderr)
 
-    def test_check_dynamic_injection_warns_when_fallback_scan_is_partial(self) -> None:
+    def test_check_dynamic_injection_errors_when_git_is_missing_for_tracked_scan(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             script_dir = tmp / "scripts"
@@ -2104,7 +2159,6 @@ class RuntimeScriptTests(unittest.TestCase):
             plugin_dir.mkdir()
             (plugin_dir / "doc.md").write_text("x" * 32, encoding="utf-8")
             env = dict(os.environ)
-            env["RUBY_PLUGIN_DYNAMIC_INJECTION_ALLOW_FALLBACK"] = "1"
             env["RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_BYTES"] = "1"
 
             result = subprocess.run(
@@ -2117,32 +2171,8 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 1)
-        self.assertIn("results are partial", result.stderr)
-        self.assertIn("cannot be trusted", result.stderr)
-        self.assertIn("RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_FILES", result.stderr)
-
-    def test_check_dynamic_injection_requires_opt_in_for_non_git_fallback(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmp = Path(tmpdir)
-            script_dir = tmp / "scripts"
-            script_dir.mkdir()
-            script_copy = script_dir / "check-dynamic-injection.sh"
-            script_copy.write_text(CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8")
-            os.chmod(script_copy, 0o755)
-            (tmp / "CHANGELOG.md").write_text("safe\n", encoding="utf-8")
-
-            result = subprocess.run(
-                ["/bin/bash", str(script_copy)],
-                capture_output=True,
-                text=True,
-                cwd=tmp,
-                check=False,
-                env=dict(os.environ),
-            )
-
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("requires git metadata for comparable results", result.stderr)
-        self.assertIn("RUBY_PLUGIN_DYNAMIC_INJECTION_ALLOW_FALLBACK=1", result.stderr)
+        self.assertIn("tracked dynamic-injection scan requires git when .git metadata is present", result.stderr)
+        self.assertIn("install git and rerun from a repository checkout", result.stderr)
 
     def test_check_dynamic_injection_scans_tracked_top_level_docs(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2167,6 +2197,33 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1)
         self.assertIn("Dynamic context injection found", result.stdout)
+
+    def test_check_dynamic_injection_ignores_bang_methods_inside_inline_code(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            script_dir = tmp / "scripts"
+            script_dir.mkdir()
+            script_copy = script_dir / "check-dynamic-injection.sh"
+            script_copy.write_text(CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8")
+            os.chmod(script_copy, 0o755)
+            subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
+            (tmp / "README.md").write_text(
+                "- Use `disable_ddl_transaction!` with `algorithm: :concurrently`\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "README.md"], cwd=tmp, check=True, capture_output=True)
+
+            result = subprocess.run(
+                ["/bin/bash", str(script_copy)],
+                capture_output=True,
+                text=True,
+                cwd=tmp,
+                check=False,
+                env=dict(os.environ),
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("No dynamic context injection found.", result.stdout)
 
     def test_check_dynamic_injection_requires_git_when_git_metadata_exists(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2198,7 +2255,7 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 1)
-        self.assertIn("requires git when .git metadata is present", result.stderr)
+        self.assertIn("git is required for tracked dynamic-injection scanning", result.stderr)
 
     def test_check_dynamic_injection_requires_git_when_git_metadata_is_a_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2230,38 +2287,85 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 1)
-        self.assertIn("requires git when .git metadata is present", result.stderr)
+        self.assertIn("git is required for tracked dynamic-injection scanning", result.stderr)
 
     def test_run_eval_marks_include_untracked_as_local_only(self) -> None:
-        env = dict(os.environ)
-        env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = "0"
-        env["RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER"] = "0"
-        env["RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER"] = "0"
-        result = subprocess.run(
-            ["bash", str(RUN_EVAL), "--changed", "--include-untracked"],
-            capture_output=True,
-            text=True,
-            cwd=REPO_ROOT,
-            check=False,
-            env=env,
-        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            real_git = shutil.which("git")
+            self.assertIsNotNone(real_git)
+            (fake_bin / "npm").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            (fake_bin / "git").write_text(
+                "#!/usr/bin/env bash\n"
+                f"REAL_GIT={shlex.quote(real_git)}\n"
+                "case \"$*\" in\n"
+                "  'rev-parse --verify HEAD') exit 0 ;;\n"
+                "  'diff --name-status -z -M HEAD -- plugins/ruby-grape-rails/skills/') exit 0 ;;\n"
+                "  'diff --cached --name-status -z -M -- plugins/ruby-grape-rails/skills/') exit 0 ;;\n"
+                "  'diff --name-status -z -M HEAD -- plugins/ruby-grape-rails/agents/') exit 0 ;;\n"
+                "  'diff --cached --name-status -z -M -- plugins/ruby-grape-rails/agents/') exit 0 ;;\n"
+                "  'diff --name-status -z -M HEAD -- lab/eval/triggers/') exit 0 ;;\n"
+                "  'diff --cached --name-status -z -M -- lab/eval/triggers/') exit 0 ;;\n"
+                "  'diff --name-status -z -M HEAD -- lab/eval/evals/') exit 0 ;;\n"
+                "  'diff --cached --name-status -z -M -- lab/eval/evals/') exit 0 ;;\n"
+                "  'ls-files --others --exclude-standard -- plugins/ruby-grape-rails/skills/') exit 0 ;;\n"
+                "  'ls-files --others --exclude-standard -- plugins/ruby-grape-rails/agents/') exit 0 ;;\n"
+                "  'ls-files --others --exclude-standard -- lab/eval/triggers/') exit 0 ;;\n"
+                "  'ls-files --others --exclude-standard -- lab/eval/evals/') exit 0 ;;\n"
+                "esac\n"
+                "exec \"$REAL_GIT\" \"$@\"\n",
+                encoding="utf-8",
+            )
+            os.chmod(fake_bin / "npm", 0o755)
+            os.chmod(fake_bin / "git", 0o755)
+            env = dict(os.environ)
+            env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = "0"
+            env["RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER"] = "0"
+            env["RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER"] = "0"
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+            result = subprocess.run(
+                ["bash", str(RUN_EVAL), "--changed", "--include-untracked"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
 
         self.assertEqual(result.returncode, 0)
         self.assertIn("local-only and non-comparable", result.stdout)
 
     def test_run_eval_warns_when_include_untracked_is_ignored_outside_changed(self) -> None:
-        env = dict(os.environ)
-        env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = "0"
-        env["RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER"] = "0"
-        env["RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER"] = "0"
-        result = subprocess.run(
-            ["bash", str(RUN_EVAL), "--ci", "--include-untracked"],
-            capture_output=True,
-            text=True,
-            cwd=REPO_ROOT,
-            check=False,
-            env=env,
-        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            real_git = shutil.which("git")
+            self.assertIsNotNone(real_git)
+            (fake_bin / "npm").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            (fake_bin / "git").write_text(
+                "#!/usr/bin/env bash\n"
+                f"REAL_GIT={shlex.quote(real_git)}\n"
+                "exec \"$REAL_GIT\" \"$@\"\n",
+                encoding="utf-8",
+            )
+            os.chmod(fake_bin / "npm", 0o755)
+            os.chmod(fake_bin / "git", 0o755)
+            env = dict(os.environ)
+            env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = "0"
+            env["RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER"] = "0"
+            env["RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER"] = "0"
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+            result = subprocess.run(
+                ["bash", str(RUN_EVAL), "--ci", "--include-untracked"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
 
         self.assertEqual(result.returncode, 0)
         self.assertIn("will be ignored for --ci", result.stdout)
@@ -2349,10 +2453,13 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin.mkdir()
             python3_path = shutil.which("python3")
             dirname_path = shutil.which("dirname")
+            git_path = shutil.which("git")
             self.assertIsNotNone(python3_path)
             self.assertIsNotNone(dirname_path)
+            self.assertIsNotNone(git_path)
             os.symlink(python3_path, fake_bin / "python3")
             os.symlink(dirname_path, fake_bin / "dirname")
+            os.symlink(git_path, fake_bin / "git")
             env = dict(os.environ)
             env["PATH"] = str(fake_bin)
             env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = "0"
@@ -2385,20 +2492,21 @@ class RuntimeScriptTests(unittest.TestCase):
                 "#!/usr/bin/env bash\n"
                 f"REAL_GIT={shlex.quote(real_git)}\n"
                 "case \"$*\" in\n"
-                "  'diff --name-only HEAD -- plugins/ruby-grape-rails/skills/')\n"
-                "    printf '%s\\n' 'plugins/ruby-grape-rails/skills/plan/SKILL.md' 'plugins/ruby-grape-rails/skills/missing/SKILL.md'\n"
+                "  'rev-parse --verify HEAD') exit 0 ;;\n"
+                "  'diff --name-status -z -M HEAD -- plugins/ruby-grape-rails/skills/')\n"
+                "    printf 'M\\0plugins/ruby-grape-rails/skills/plan/SKILL.md\\0R100\\0plugins/ruby-grape-rails/skills/old/SKILL.md\\0plugins/ruby-grape-rails/skills/missing/SKILL.md\\0'\n"
                 "    exit 0\n"
                 "    ;;\n"
-                "  'diff --cached --name-only -- plugins/ruby-grape-rails/skills/') exit 0 ;;\n"
-                "  'diff --name-only HEAD -- plugins/ruby-grape-rails/agents/')\n"
-                "    printf '%s\\n' 'plugins/ruby-grape-rails/agents/ruby-reviewer.md' 'plugins/ruby-grape-rails/agents/missing.md'\n"
+                "  'diff --cached --name-status -z -M -- plugins/ruby-grape-rails/skills/') exit 0 ;;\n"
+                "  'diff --name-status -z -M HEAD -- plugins/ruby-grape-rails/agents/')\n"
+                "    printf 'M\\0plugins/ruby-grape-rails/agents/ruby-reviewer.md\\0R100\\0plugins/ruby-grape-rails/agents/old.md\\0plugins/ruby-grape-rails/agents/missing.md\\0'\n"
                 "    exit 0\n"
                 "    ;;\n"
-                "  'diff --cached --name-only -- plugins/ruby-grape-rails/agents/') exit 0 ;;\n"
-                "  'diff --name-only HEAD -- lab/eval/triggers/') exit 0 ;;\n"
-                "  'diff --cached --name-only -- lab/eval/triggers/') exit 0 ;;\n"
-                "  'diff --name-only HEAD -- lab/eval/evals/') exit 0 ;;\n"
-                "  'diff --cached --name-only -- lab/eval/evals/') exit 0 ;;\n"
+                "  'diff --cached --name-status -z -M -- plugins/ruby-grape-rails/agents/') exit 0 ;;\n"
+                "  'diff --name-status -z -M HEAD -- lab/eval/triggers/') exit 0 ;;\n"
+                "  'diff --cached --name-status -z -M -- lab/eval/triggers/') exit 0 ;;\n"
+                "  'diff --name-status -z -M HEAD -- lab/eval/evals/') exit 0 ;;\n"
+                "  'diff --cached --name-status -z -M -- lab/eval/evals/') exit 0 ;;\n"
                 "esac\n"
                 "exec \"$REAL_GIT\" \"$@\"\n",
                 encoding="utf-8",

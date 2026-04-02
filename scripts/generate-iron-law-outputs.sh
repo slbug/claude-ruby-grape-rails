@@ -34,6 +34,15 @@ log_error() {
   echo -e "${RED}[ERROR]${NC} $1"
 }
 
+require_command() {
+  local command_name="$1"
+
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    log_error "Required command not found: ${command_name}"
+    exit 1
+  fi
+}
+
 show_usage() {
   cat <<'EOF'
 Usage: ./scripts/generate-iron-law-outputs.sh [target]
@@ -60,6 +69,13 @@ valid_target() {
     *) return 1 ;;
   esac
 }
+
+require_command ruby
+require_command grep
+require_command mktemp
+require_command mv
+require_command chmod
+require_command rm
 
 canonicalize_dir() {
   local path="$1"

@@ -12,6 +12,10 @@ emit_missing_dependency_block() {
 
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 command -v grep >/dev/null 2>&1 || emit_missing_dependency_block "grep"
+command -v sed >/dev/null 2>&1 || emit_missing_dependency_block "sed"
+command -v head >/dev/null 2>&1 || emit_missing_dependency_block "head"
+command -v wc >/dev/null 2>&1 || emit_missing_dependency_block "wc"
+command -v tr >/dev/null 2>&1 || emit_missing_dependency_block "tr"
 SHFMT_BIN="$(command -v shfmt 2>/dev/null || true)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
@@ -621,23 +625,15 @@ strip_leading_env_prefixes() {
 resolve_wrapper_source_path() {
   local raw_path="$1"
   local candidate=""
-  local dir=""
-  local base=""
-  local resolved_dir=""
 
   [[ -n "$raw_path" ]] || return 1
   [[ "$raw_path" != "-" ]] || return 1
+  [[ -n "${REPO_ROOT:-}" ]] || return 1
 
-  case "$raw_path" in
-    /*) candidate="$raw_path" ;;
-    *) candidate="${REPO_ROOT:-${PWD:-.}}/${raw_path#./}" ;;
-  esac
-
-  dir=$(path_dirname "$candidate") || return 1
-  base=$(path_basename "$candidate") || return 1
-  [[ -d "$dir" ]] || return 1
-  resolved_dir=$(cd "$dir" >/dev/null 2>&1 && pwd -P) || return 1
-  printf '%s\n' "${resolved_dir}/${base}"
+  candidate=$(resolve_workspace_file_path "$REPO_ROOT" "$raw_path" || true)
+  [[ -n "$candidate" ]] || return 1
+  is_path_within_root "$REPO_ROOT" "$candidate" || return 1
+  printf '%s\n' "$candidate"
 }
 
 read_wrapper_source_file() {

@@ -4,6 +4,8 @@ set -o pipefail
 
 # PostToolUse hook: Log file modifications to active progress file
 # Uses explicit active-plan marker with fallback to heuristic detection
+# Policy: advisory observability hook; degraded payloads warn/skip instead of
+# blocking the edit itself.
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 

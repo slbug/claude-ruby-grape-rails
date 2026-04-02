@@ -79,6 +79,7 @@ PLUGIN_COMMAND_RE = re.compile(r"/(?:(?:rb)|(?:ruby-grape-rails)):[a-z][a-z0-9_-
 SKILL_COMMAND_RE = re.compile(
     r"/(?:(?:rb)|(?:ruby-grape-rails)|(?:hotwire)):[a-z][a-z0-9_-]*"
 )
+SCAFFOLDING_PREFIX_RE = re.compile(r"^\s*Base directory for this skill:")
 
 
 def sigmoid(raw):
@@ -115,7 +116,7 @@ def extract_plugin_commands(user_msgs):
     """Extract shipped plugin commands while ignoring contributor analyzers."""
     commands = []
     for text in user_msgs:
-        if text.startswith("Base directory for this skill:"):
+        if SCAFFOLDING_PREFIX_RE.match(text):
             continue
         found = PLUGIN_COMMAND_RE.findall(text)
         for command in found:
@@ -219,7 +220,7 @@ TOOL_NAME_PATTERN = (
 TOOL_MENTION_RE = re.compile(
     rf"(?:`(?P<backtick>{TOOL_NAME_PATTERN})`|"
     rf"\btool:(?P<prefixed>{TOOL_NAME_PATTERN})\b|"
-    rf"\b(?P<call>{TOOL_NAME_PATTERN})\s*\()"
+    rf"\b(?P<call>{TOOL_NAME_PATTERN})\s*\((?P<call_args>[^)]*)\))"
 )
 SHELL_FENCE_RE = re.compile(r"```(?:bash|sh|zsh|shell)\s*\n(.*?)```", re.DOTALL | re.I)
 PROMPT_COMMAND_RE = re.compile(r"^\s*(?:\$|>)\s+(.+?)\s*$")
@@ -273,9 +274,11 @@ def extract_tool_positions(messages):
             inferred_bash_commands = _infer_bash_commands_from_text(content)
             mentioned = []
             for match in TOOL_MENTION_RE.finditer(content):
-                name = match.group("backtick") or match.group("prefixed") or match.group(
-                    "call"
-                )
+                name = match.group("backtick") or match.group("prefixed") or match.group("call")
+                if match.group("call"):
+                    call_args = (match.group("call_args") or "").strip()
+                    if call_args and "=" not in call_args and '"' not in call_args and "'" not in call_args:
+                        continue
                 if name:
                     mentioned.append(name)
             for name in mentioned:
@@ -893,7 +896,7 @@ def _locate_skill_invocations(user_msgs, all_messages):
             user_idx += 1
             continue
 
-        if text.startswith("Base directory for this skill:"):
+        if SCAFFOLDING_PREFIX_RE.match(text):
             user_idx += 1
             continue
 

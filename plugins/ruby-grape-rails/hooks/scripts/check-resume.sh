@@ -3,6 +3,8 @@ set -o nounset
 set -o pipefail
 
 # SessionStart hook: Detect plans with remaining tasks
+# Policy: advisory session-start reminder; degraded payload/root resolution
+# should avoid blocking startup.
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
 emit_missing_dependency_block() {

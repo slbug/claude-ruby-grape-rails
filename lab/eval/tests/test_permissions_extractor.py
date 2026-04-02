@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -14,17 +15,25 @@ EXTRACT_PERMISSIONS = REPO_ROOT / "plugins/ruby-grape-rails/skills/permissions/s
 
 def claude_project_slug(repo_root: Path) -> str:
     resolved = repo_root.resolve()
-    return str(resolved).replace("/", "-").replace(":", "-").replace("\\", "-")
+    base = str(resolved).replace("/", "-").replace(":", "-").replace("\\", "-")
+    digest = hashlib.sha256(str(resolved).encode("utf-8")).hexdigest()[:12]
+    return f"{base}-{digest}"
 
 
-def run_extractor(repo_root: Path, home_dir: Path, *args: str, env_updates: dict[str, str] | None = None) -> dict:
+def run_extractor(
+    repo_root: Path,
+    home_dir: Path,
+    *args: str,
+    env_updates: dict[str, str] | None = None,
+    cwd: Path | None = None,
+) -> dict:
     env = dict(os.environ)
     env["HOME"] = str(home_dir)
     if env_updates:
         env.update(env_updates)
     result = subprocess.run(
         ["ruby", str(EXTRACT_PERMISSIONS), "--json", *args],
-        cwd=repo_root,
+        cwd=cwd or repo_root,
         capture_output=True,
         text=True,
         check=False,
@@ -73,7 +82,7 @@ class PermissionsExtractorTests(unittest.TestCase):
         self.assertEqual(report["settings_scope"], "repo-only")
         self.assertEqual(report["uncovered_groups"][0]["group"], "bundle exec rails db:migrate")
 
-    def test_repo_only_ignores_global_allowlist(self) -> None:
+    def test_default_scope_ignores_global_allowlist(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             repo = tmp / "repo"
@@ -87,13 +96,34 @@ class PermissionsExtractorTests(unittest.TestCase):
             )
             write_transcript(repo, tmp, "env RAILS_ENV=test bundle exec rails db:migrate")
 
-            mixed = run_extractor(repo, tmp, "--days", "30")
+            default_scope = run_extractor(repo, tmp, "--days", "30")
+            include_global = run_extractor(repo, tmp, "--days", "30", "--include-global")
             repo_only = run_extractor(repo, tmp, "--days", "30", "--repo-only")
 
-        self.assertEqual(mixed["settings_scope"], "repo+global")
+        self.assertEqual(default_scope["settings_scope"], "repo-only")
+        self.assertEqual(include_global["settings_scope"], "repo+global")
         self.assertEqual(repo_only["settings_scope"], "repo-only")
-        self.assertEqual(mixed["uncovered_groups"], [])
+        self.assertEqual(default_scope["uncovered_groups"][0]["group"], "bundle exec rails db:migrate")
+        self.assertEqual(include_global["uncovered_groups"], [])
         self.assertEqual(repo_only["uncovered_groups"][0]["group"], "bundle exec rails db:migrate")
+
+    def test_nested_repo_root_wins_over_parent_markers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            parent = tmp / "parent"
+            parent.mkdir()
+            (parent / "Gemfile").write_text('source "https://rubygems.org"\n', encoding="utf-8")
+            repo = parent / "child-repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            nested = repo / "nested" / "pkg"
+            nested.mkdir(parents=True)
+            write_transcript(repo, tmp, "bundle exec rubocop")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only", cwd=nested)
+
+        self.assertEqual(Path(report["repo_root"]).resolve(), repo.resolve())
 
     def test_trailing_star_permission_covers_bare_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

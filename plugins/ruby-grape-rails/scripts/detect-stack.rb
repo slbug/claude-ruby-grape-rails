@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require 'pathname'
+require 'shellwords'
 
 # Detect stack dependencies and repository layout for /rb:init.
 # Outputs simple "key=value" pairs for consumption by init skill.
@@ -22,6 +23,16 @@ def safe_read_file(path)
 
   File.read(path)
 rescue SystemCallError
+  nil
+end
+
+def git_repo_root(start_dir)
+  path = Pathname.new(start_dir).expand_path
+  root = `git -C #{Shellwords.escape(path.to_s)} rev-parse --show-toplevel 2>/dev/null`.strip
+  return nil if root.empty?
+
+  Pathname.new(root).expand_path.to_s
+rescue StandardError
   nil
 end
 
@@ -50,12 +61,16 @@ def declared_ruby_version(gemfile_content)
 end
 
 def manifest_root(start_dir)
+  git_root = git_repo_root(start_dir)
+
   Pathname.new(start_dir).expand_path.ascend do |candidate|
     gemfile = candidate.join('Gemfile')
     gemspecs = Dir.glob(candidate.join('*.gemspec').to_s)
 
     return candidate.to_s if safe_manifest_file?(gemfile.to_s) ||
                              gemspecs.any? { |path| safe_manifest_file?(path) }
+
+    break if git_root && candidate.to_s == git_root
   end
 
   nil

@@ -384,6 +384,9 @@ npm run lint:fix   # Auto-fix issues
 # Validate plugin structure and manifest
 claude plugin validate plugins/ruby-grape-rails
 
+# Validate version alignment + changelog heading/footer integrity
+python3 scripts/check-release-metadata.py
+
 # Should pass without errors before committing changes
 ```
 
@@ -399,6 +402,24 @@ npm run eval:output
 
 This scores tracked fixture artifacts under `lab/eval/fixtures/output/` and is
 the canonical contributor check for provenance/report contract changes.
+
+### Hook Failure Policy
+
+Keep hook behavior explicit when editing scripts under
+`plugins/ruby-grape-rails/hooks/scripts/`:
+
+- advisory hooks warn or skip on degraded state and must say so clearly:
+  `detect-runtime.sh`, `check-resume.sh`, `log-progress.sh`
+- delegated Ruby post-edit guardrails fail closed once they are selected for a
+  Ruby-ish path:
+  `rubyish-post-edit.sh`, `format-ruby.sh`, `verify-ruby.sh`,
+  `debug-statement-warning.sh`
+- security-sensitive hooks should fail closed in strict/high-confidence cases
+  and document any best-effort default-mode behavior:
+  `secret-scan.sh`, `block-dangerous-ops.sh`
+
+Do not leave this implicit. Add or update a short policy comment near the top
+of the hook when behavior changes.
 
 ## Size Guidelines
 

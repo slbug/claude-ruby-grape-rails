@@ -99,6 +99,9 @@ edits/writes, progress logging now runs async, and the plan STOP reminder fires
 only on `Write(*plan.md)`. `block-dangerous-ops.sh` currently blocks four
 command families: destructive Rails/Rake DB tasks, Redis flushes, git force
 pushes, and production-environment commands.
+Default secret scanning is targeted and best-effort per edit or inline payload;
+strict mode broadens that to recent-change sweeps and fails closed when that
+coverage cannot be trusted.
 [hooks.json](plugins/ruby-grape-rails/hooks/hooks.json)
 is the current wiring source of truth.
 
@@ -703,7 +706,8 @@ PRs welcome! See [CLAUDE.md](CLAUDE.md) for development conventions.
 
 ### Development rules
 
-- Skills: ~100 lines SKILL.md + `references/` for details
+- Skills: keep `SKILL.md` concise and push most detail into `references/`;
+  treat `~100 lines` as guidance, not a hard cap
 - Agents: under 300 lines, `disallowedTools` for reviewers
 - All markdown passes `npm run lint`
 
@@ -719,15 +723,15 @@ Common entrypoints:
 - `make eval-ci` or `npm run eval:ci` for the contributor CI gate
 - `make eval-tests` or `npm run eval:test` for the default contributor test
   path (`unittest` by default for deterministic cross-environment runs)
+- contributor eval tooling requires `python3` 3.10+
 
 Notes:
 
 - `--include-untracked` is local-only for changed-mode exploration and is not
   part of `eval-ci`
 - `scripts/check-dynamic-injection.sh` expects git metadata for comparable
-  tracked-file scans; set `RUBY_PLUGIN_DYNAMIC_INJECTION_ALLOW_FALLBACK=1` only
-  when you intentionally want the broader non-git fallback scan
-- local pre-commit only checks staged Markdown and JSON; CI is broader
+  tracked-file scans and now refuses broad non-git fallback scans
+- local pre-commit checks staged Markdown, JSON, and shell syntax; CI is broader
 
 ### Docs-check and session analytics
 

@@ -6,17 +6,19 @@ require 'optparse'
 require 'pathname'
 require 'shellwords'
 require 'time'
+require 'digest'
 
 options = {
   days: 14,
   json: false,
   limit: 30,
-  repo_only: false,
+  repo_only: true,
+  include_global: false,
   dry_run: false
 }
 
 OptionParser.new do |parser|
-  parser.banner = 'Usage: extract_permissions.rb [--days N] [--json] [--limit N] [--repo-only] [--dry-run]'
+  parser.banner = 'Usage: extract_permissions.rb [--days N] [--json] [--limit N] [--repo-only] [--include-global] [--dry-run]'
 
   parser.on('--days N', Integer, 'Only scan sessions from the last N days') do |days|
     options[:days] = days
@@ -30,8 +32,14 @@ OptionParser.new do |parser|
     options[:limit] = limit
   end
 
-  parser.on('--repo-only', 'Ignore ~/.claude/settings.json and only use repo-local settings') do
+  parser.on('--repo-only', 'Only use repo-local settings (default)') do
     options[:repo_only] = true
+    options[:include_global] = false
+  end
+
+  parser.on('--include-global', 'Also include ~/.claude/settings.json in addition to repo-local settings') do
+    options[:repo_only] = false
+    options[:include_global] = true
   end
 
   parser.on('--dry-run', 'Accepted for skill parity; extractor output is already read-only') do
@@ -93,8 +101,17 @@ def positive_env_int(name, default)
   value
 end
 
+def canonical_repo_root(repo_root)
+  Pathname.new(repo_root).expand_path.realpath.to_s
+rescue StandardError
+  Pathname.new(repo_root).expand_path.to_s
+end
+
 def claude_project_slug(repo_root)
-  repo_root.tr('/:\\', '-')
+  canonical_root = canonical_repo_root(repo_root)
+  base = canonical_root.tr('/:\\', '-')
+  digest = Digest::SHA256.hexdigest(canonical_root)[0, 12]
+  "#{base}-#{digest}"
 end
 
 def project_transcript_files(project_slug)
@@ -397,7 +414,7 @@ settings_sources = [
   File.join(repo_root, '.claude/settings.json'),
   File.join(repo_root, '.claude/settings.local.json')
 ]
-settings_sources.unshift(File.expand_path('~/.claude/settings.json')) unless options[:repo_only]
+settings_sources.unshift(File.expand_path('~/.claude/settings.json')) if options[:include_global]
 
 all_allow = []
 all_deny = []
@@ -506,7 +523,7 @@ report = {
   malformed_lines: malformed_lines,
   invalid_settings_files: invalid_settings_files,
   missing_session_files: missing_session_files,
-  settings_scope: options[:repo_only] ? 'repo-only' : 'repo+global',
+  settings_scope: options[:include_global] ? 'repo+global' : 'repo-only',
   scanned_files: recent_files,
   total_bash_commands: total_bash_commands,
   ignored_denied_commands: ignored_denied,
@@ -531,7 +548,8 @@ end
 
 puts "Repo root: #{repo_root}"
 puts "Project transcript scope: #{project_slug}"
-puts "Settings scope: #{options[:repo_only] ? 'repo-only' : 'repo + ~/.claude/settings.json'}"
+puts "Settings scope: #{options[:include_global] ? 'repo + ~/.claude/settings.json' : 'repo-only'}"
+puts 'WARNING: including ~/.claude/settings.json can pull unrelated personal permissions into this repo audit.' if options[:include_global]
 puts 'Dry-run: extractor is read-only; no settings changes were written.' if options[:dry_run]
 puts "Sessions scanned: #{recent_files.length} (last #{options[:days]} days)"
 puts "Additional recent sessions skipped by cap: #{truncated_session_files}" if truncated_session_files.positive?

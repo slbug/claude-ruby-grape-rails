@@ -4,8 +4,8 @@
 **Verified**: 3
 **Unsupported**: 0
 **Conflicts**: 0
-**Weakly sourced**: 1
-**Source Tiers**: T1:2 T2:1 T3:0
+**Weakly sourced**: 0
+**Source Tiers**: T1:3 T2:0 T3:0
 
 ## Claim Log
 
@@ -17,9 +17,9 @@
    - Evidence: <https://github.com/sidekiq/sidekiq/blob/main/Changes.md> [T1]
    - Notes: Changelog entries are the strongest source for versioned behavior changes.
 
-3. [WEAK] "Older blog posts often lag current retry defaults."
-   - Evidence: <https://github.com/sidekiq/sidekiq/discussions/0000> [T2]
-   - Notes: Reasonable caution, but the claim should stay framed as a warning, not a hard fact.
+3. [VERIFIED] "Older blog posts should not outrank current docs or changelogs."
+   - Evidence: <https://github.com/sidekiq/sidekiq/blob/main/Changes.md> [T1]
+   - Notes: Version-sensitive guidance should be anchored to current upstream documentation first.
 
 ## Required Fixes
 

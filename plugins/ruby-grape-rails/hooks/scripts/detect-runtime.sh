@@ -5,6 +5,8 @@ set -o pipefail
 # Detect Ruby runtime environment and available tooling.
 # This hook populates context at SessionStart and refreshes .runtime_env when
 # watched files change.
+# Policy: advisory runtime snapshot; dependency/setup failures warn and keep the
+# session running instead of blocking startup.
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
@@ -573,15 +575,14 @@ fi
 if command -v betterleaks >/dev/null 2>&1; then
   BETTERLEAKS_PATH=$(command -v betterleaks)
   add_tool "betterleaks"
-elif [[ -x "$HOME/.local/bin/betterleaks" ]]; then
-  BETTERLEAKS_PATH="$HOME/.local/bin/betterleaks"
-  add_tool "betterleaks"
-elif [[ -x "/usr/local/bin/betterleaks" ]]; then
-  BETTERLEAKS_PATH="/usr/local/bin/betterleaks"
-  add_tool "betterleaks"
-elif [[ -x "/opt/homebrew/bin/betterleaks" ]]; then
-  BETTERLEAKS_PATH="/opt/homebrew/bin/betterleaks"
-  add_tool "betterleaks"
+elif [[ -n "${RUBY_PLUGIN_BETTERLEAKS_FALLBACK_PATHS:-}" ]]; then
+  IFS=':' read -r -a betterleaks_fallback_paths <<< "${RUBY_PLUGIN_BETTERLEAKS_FALLBACK_PATHS}"
+  for betterleaks_candidate in "${betterleaks_fallback_paths[@]}"; do
+    [[ -n "$betterleaks_candidate" && -x "$betterleaks_candidate" ]] || continue
+    BETTERLEAKS_PATH="$betterleaks_candidate"
+    add_tool "betterleaks"
+    break
+  done
 fi
 
 if [[ -n "$RTK_PATH" && "$FAST_RUNTIME_MODE" != "1" ]]; then

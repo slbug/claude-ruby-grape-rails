@@ -15,14 +15,16 @@ ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 14 --json
 Other useful flags:
 
 ```bash
-ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 30 --limit 50 --repo-only
+ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 30 --limit 50 --include-global
 ```
 
 Validation rules:
 
 - `--days` must be `0` or greater.
 - `--limit` must be greater than `0`.
-- `--repo-only` ignores `~/.claude/settings.json`.
+- repo-local settings are the default scope.
+- `--repo-only` is accepted for explicitness and keeps the default behavior.
+- `--include-global` also loads `~/.claude/settings.json`.
 - `--dry-run` is accepted for skill parity; the extractor is read-only either
   way.
 
@@ -36,10 +38,9 @@ Validation rules:
   - `.claude/settings.local.json`
   - `Gemfile`
 - Current permissions from:
-  - `~/.claude/settings.json`
   - `.claude/settings.json`
   - `.claude/settings.local.json`
-  - or only repo-local settings when `--repo-only` is set
+  - and, when `--include-global` is set, `~/.claude/settings.json`
 
 ## What It Reports
 

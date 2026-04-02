@@ -1,10 +1,13 @@
-.PHONY: lint security-injection eval eval-all eval-ci eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-stress eval-tests eval-tests-pytest eval-tests-unittest ci
+.PHONY: lint security-injection release-metadata eval eval-all eval-ci eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-stress eval-tests eval-tests-pytest eval-tests-unittest ci
 
 lint:
 	npm run lint
 
 security-injection:
 	bash scripts/check-dynamic-injection.sh
+
+release-metadata:
+	python3 scripts/check-release-metadata.py
 
 eval:
 	bash lab/eval/run_eval.sh --changed
@@ -54,4 +57,4 @@ eval-tests-pytest:
 eval-tests-unittest:
 	python3 -m unittest discover -s lab/eval/tests -p 'test_*.py' -t . -v
 
-ci: eval-tests eval-ci
+ci: release-metadata eval-tests eval-ci

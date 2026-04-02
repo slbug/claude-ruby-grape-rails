@@ -2,6 +2,9 @@
 set -o nounset
 set -o pipefail
 
+# Policy: delegated Ruby post-edit guardrail; once selected for a Ruby-ish path,
+# payload and path-resolution failures block rather than silently skipping.
+
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
 emit_missing_dependency_block() {
@@ -10,12 +13,6 @@ emit_missing_dependency_block() {
   echo "BLOCKED: ${HOOK_NAME} cannot inspect the hook payload because ${dependency} is unavailable." >&2
   echo "Install the missing dependency or disable the hook explicitly before continuing." >&2
   exit 2
-}
-
-emit_verify_skip_warning() {
-  local reason="$1"
-
-  echo "WARNING: ${HOOK_NAME} skipped automatic Ruby verification because ${reason}." >&2
 }
 
 emit_verify_block() {
@@ -44,37 +41,53 @@ if [[ -z "$INPUT" ]]; then
   esac
 fi
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || {
-  emit_verify_skip_warning "the workspace root could not be resolved"
-  exit 0
+  emit_verify_block \
+    "the workspace root could not be resolved" \
+    "Fix the hook payload or workspace layout before retrying automatic Ruby verification."
+  exit 2
 }
 if [[ -z "$REPO_ROOT" ]]; then
-  emit_verify_skip_warning "the workspace root could not be resolved"
-  exit 0
+  emit_verify_block \
+    "the workspace root could not be resolved" \
+    "Fix the hook payload or workspace layout before retrying automatic Ruby verification."
+  exit 2
 fi
 
 FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || {
-  emit_verify_skip_warning "tool_input.file_path could not be parsed"
-  exit 0
+  emit_verify_block \
+    "tool_input.file_path could not be parsed" \
+    "Fix the hook payload before retrying automatic Ruby verification."
+  exit 2
 }
 if [[ -z "$FILE_PATH" ]]; then
-  emit_verify_skip_warning "tool_input.file_path was missing"
-  exit 0
+  emit_verify_block \
+    "tool_input.file_path was missing" \
+    "Fix the hook payload before retrying automatic Ruby verification."
+  exit 2
 fi
 FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || {
-  emit_verify_skip_warning "the edited path could not be resolved inside the workspace"
-  exit 0
+  emit_verify_block \
+    "the edited path could not be resolved inside the workspace" \
+    "Fix the hook payload before retrying automatic Ruby verification."
+  exit 2
 }
 [[ -f "$FILE_PATH" ]] || {
-  emit_verify_skip_warning "the edited file was not found"
-  exit 0
+  emit_verify_block \
+    "the edited file was not found" \
+    "Retry once the file exists on disk again."
+  exit 2
 }
 [[ ! -L "$FILE_PATH" ]] || {
-  emit_verify_skip_warning "the edited file was a symlink"
-  exit 0
+  emit_verify_block \
+    "the edited file was a symlink" \
+    "Use a regular file path before retrying automatic Ruby verification."
+  exit 2
 }
 is_path_within_root "$REPO_ROOT" "$FILE_PATH" || {
-  emit_verify_skip_warning "the edited path resolved outside the workspace"
-  exit 0
+  emit_verify_block \
+    "the edited path resolved outside the workspace" \
+    "Fix the hook payload before retrying automatic Ruby verification."
+  exit 2
 }
 
 BASE_NAME=$(path_basename "$FILE_PATH")

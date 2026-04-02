@@ -79,6 +79,20 @@ require_command() {
   fi
 }
 
+require_git_for_mode() {
+  case "$MODE" in
+    --changed|--all|--ci)
+      require_command git "git-aware eval path selection in ${MODE} mode"
+      ;;
+  esac
+
+  if [[ -n "$AGAINST_REF" ]] || [[ "$INCLUDE_UNTRACKED" == "true" ]]; then
+    require_command git "git-aware changed-surface selection"
+  fi
+}
+
+require_git_for_mode
+
 validate_threshold() {
   local env_name="$1"
   local value="$2"
@@ -126,15 +140,43 @@ collect_changed_paths() {
   local prefix="$1"
   local lines=""
 
+  collect_diff_paths() {
+    local status=""
+    local path=""
+    local old_path=""
+
+    while IFS= read -r -d '' status; do
+      [[ -n "$status" ]] || continue
+      case "$status" in
+        R*|C*)
+          # The old path is intentionally ignored; changed-mode scoring only uses
+          # the current tree path for renamed/copied files.
+          # shellcheck disable=SC2034
+          IFS= read -r -d '' old_path || break
+          IFS= read -r -d '' path || break
+          printf '%s\n' "$path"
+          ;;
+        D*)
+          IFS= read -r -d '' path || break
+          printf '__DELETED__:%s\n' "$path"
+          ;;
+        *)
+          IFS= read -r -d '' path || break
+          printf '%s\n' "$path"
+          ;;
+      esac
+    done
+  }
+
   if have_head; then
     if [[ -n "$AGAINST_REF" ]]; then
-      lines=$(git diff --name-only "${AGAINST_MERGE_BASE}..HEAD" -- "$prefix" 2>/dev/null || true)
+      lines=$(git diff --name-status -z -M "${AGAINST_MERGE_BASE}..HEAD" -- "$prefix" 2>/dev/null | collect_diff_paths || true)
     else
-      lines=$(git diff --name-only HEAD -- "$prefix" 2>/dev/null || true)
+      lines=$(git diff --name-status -z -M HEAD -- "$prefix" 2>/dev/null | collect_diff_paths || true)
     fi
 
     local staged=""
-    staged=$(git diff --cached --name-only -- "$prefix" 2>/dev/null || true)
+    staged=$(git diff --cached --name-status -z -M -- "$prefix" 2>/dev/null | collect_diff_paths || true)
     if [[ -n "$staged" ]]; then
       lines=$(printf '%s\n%s\n' "$lines" "$staged")
     fi
@@ -155,15 +197,31 @@ collect_changed_paths() {
 
 collect_changed_skill_names() {
   collect_changed_paths "${PLUGIN_ROOT}/skills/" \
+    | grep -Ev '^__DELETED__:' \
     | sed -n "s|^${PLUGIN_ROOT}/skills/\\([^/]*\\)/.*|\\1|p" \
+    | awk 'NF' \
+    | sort -u
+}
+
+collect_deleted_skill_names() {
+  collect_changed_paths "${PLUGIN_ROOT}/skills/" \
+    | sed -n "s|^__DELETED__:${PLUGIN_ROOT}/skills/\\([^/]*\\)/.*|\\1|p" \
     | awk 'NF' \
     | sort -u
 }
 
 collect_changed_agent_paths() {
   collect_changed_paths "${PLUGIN_ROOT}/agents/" \
+    | grep -Ev '^__DELETED__:' \
     | grep -E "^${PLUGIN_ROOT}/agents/.+\.md$" \
     | sort -u || true
+}
+
+collect_deleted_agent_names() {
+  collect_changed_paths "${PLUGIN_ROOT}/agents/" \
+    | sed -n "s|^__DELETED__:${PLUGIN_ROOT}/agents/\\([^/]*\\)\\.md$|\\1|p" \
+    | awk 'NF' \
+    | sort -u
 }
 
 should_run_changed_triggers() {
@@ -294,6 +352,11 @@ run_changed_skills() {
   local first=true
   local skill=""
   local missing_skills=()
+  local deleted_skills=()
+  while IFS= read -r skill; do
+    [[ -n "$skill" ]] || continue
+    deleted_skills+=("$skill")
+  done < <(collect_deleted_skill_names)
   for skill in "${skills_to_check[@]}"; do
     local path="${PLUGIN_ROOT}/skills/${skill}/SKILL.md"
     if [[ ! -f "$path" ]]; then
@@ -314,6 +377,9 @@ run_changed_skills() {
 
   if [[ ${#missing_skills[@]} -gt 0 ]]; then
     echo "  WARNING: skipping deleted or moved changed skills: ${missing_skills[*]}" >&2
+  fi
+  if [[ ${#deleted_skills[@]} -gt 0 ]]; then
+    echo "  NOTE: deleted changed skills are not scorable on the current tree: ${deleted_skills[*]}" >&2
   fi
 
   if [[ "$first" == true ]]; then
@@ -353,6 +419,11 @@ run_changed_agents() {
   local result="{"
   local first=true
   local missing_agents=()
+  local deleted_agents=()
+  while IFS= read -r agent_name; do
+    [[ -n "$agent_name" ]] || continue
+    deleted_agents+=("$agent_name")
+  done < <(collect_deleted_agent_names)
   for path in "${agent_paths[@]}"; do
     local agent_name
     agent_name="$(basename "$path" .md)"
@@ -373,6 +444,9 @@ run_changed_agents() {
 
   if [[ ${#missing_agents[@]} -gt 0 ]]; then
     echo "  WARNING: skipping deleted or moved changed agents: ${missing_agents[*]}" >&2
+  fi
+  if [[ ${#deleted_agents[@]} -gt 0 ]]; then
+    echo "  NOTE: deleted changed agents are not scorable on the current tree: ${deleted_agents[*]}" >&2
   fi
 
   if [[ "$first" == true ]]; then

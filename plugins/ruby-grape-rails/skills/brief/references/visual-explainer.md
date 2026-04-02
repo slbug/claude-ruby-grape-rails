@@ -52,11 +52,9 @@ is a complement for complex cases.
 
 ## Installation
 
-```bash
-# Via Claude Code
-# Clone to ~/.claude/skills/visual-explainer
-git clone https://github.com/nicobailon/visual-explainer ~/.claude/skills/visual-explainer
-```
+`visual-explainer` is a third-party skill and is not vendored by this repo.
+Install it separately using the upstream instructions, ideally pinned to a
+reviewed tag or commit rather than an unversioned default branch.
 
 See the [visual-explainer README](https://github.com/nicobailon/visual-explainer)
-for full setup instructions.
+for setup details.

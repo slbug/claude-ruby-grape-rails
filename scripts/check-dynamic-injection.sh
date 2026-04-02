@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # Blocks dynamic context injection syntax (!`command`) in tracked markdown, JSON,
-# and YAML surfaces. When git metadata is available, the tracked manifest comes
-# from `git ls-files`. In true non-git contexts, a broad filesystem fallback is
-# available only when explicitly opted in. If .git metadata exists but git is
-# unavailable, the script fails closed instead of guessing tracked surfaces.
+# and YAML surfaces. The tracked manifest always comes from `git ls-files`; this
+# script no longer broad-scans the filesystem because that produces
+# non-comparable results and can block on unrelated untracked content.
 # This feature executes shell commands at skill load time. The Ruby plugin does
 # not use it and treats it as unsafe in these surfaces.
 
@@ -12,34 +11,43 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 TRACKED_PATTERNS=('*.md' '*.json' '*.yml' '*.yaml')
-ALLOW_FALLBACK="${RUBY_PLUGIN_DYNAMIC_INJECTION_ALLOW_FALLBACK:-0}"
-MAX_FALLBACK_FILES="${RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_FILES:-500}"
-MAX_FALLBACK_BYTES="${RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_BYTES:-5242880}"
-# shellcheck disable=SC2016
-PATTERN='(^|[^[:alnum:]_`])!`[^`]+`'
 FOUND=0
-FALLBACK_PARTIAL=0
-FALLBACK_FILES_SCANNED=0
-FALLBACK_BYTES_SCANNED=0
 
-positive_int_or_default() {
-  local raw="$1"
-  local fallback="$2"
-  if [[ "$raw" =~ ^[1-9][0-9]*$ ]]; then
-    printf '%s\n' "$raw"
-  else
-    printf '%s\n' "$fallback"
+require_command() {
+  local command_name="$1"
+
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "ERROR: ${command_name} is required for tracked dynamic-injection scanning." >&2
+    exit 1
   fi
 }
-
-MAX_FALLBACK_FILES="$(positive_int_or_default "$MAX_FALLBACK_FILES" 500)"
-MAX_FALLBACK_BYTES="$(positive_int_or_default "$MAX_FALLBACK_BYTES" 5242880)"
 
 scan_file() {
   local file="$1"
   local matches
 
-  matches=$(grep -En -- "$PATTERN" "$file" 2>/dev/null || true)
+  matches=$(
+    awk '
+      {
+        in_inline_code = 0
+        line = $0
+        line_length = length(line)
+
+        for (i = 1; i <= line_length; i++) {
+          char = substr(line, i, 1)
+          if (char == "`") {
+            in_inline_code = !in_inline_code
+            continue
+          }
+
+          if (!in_inline_code && char == "!" && i < line_length && substr(line, i + 1, 1) == "`") {
+            printf "%d:%s\n", NR, line
+            next
+          }
+        }
+      }
+    ' "$file" 2>/dev/null || true
+  )
 
   if [[ -n "$matches" ]]; then
     echo "BLOCKED: Dynamic context injection found:"
@@ -49,42 +57,18 @@ scan_file() {
   fi
 }
 
+require_command git
+require_command awk
+
 if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
   while IFS= read -r -d '' file; do
     [[ -f "${REPO_ROOT}/${file}" ]] || continue
     scan_file "${REPO_ROOT}/${file}"
   done < <(git -C "$REPO_ROOT" ls-files -z -- "${TRACKED_PATTERNS[@]}")
-elif [[ -e "${REPO_ROOT}/.git" ]]; then
-  echo "ERROR: tracked dynamic-injection scan requires git when .git metadata is present." >&2
-  echo "ERROR: install git or rerun from an environment where git is available." >&2
-  exit 1
 else
-  case "$ALLOW_FALLBACK" in
-    1|true|TRUE|yes|YES) ;;
-    *)
-      echo "ERROR: tracked dynamic-injection scan requires git metadata for comparable results." >&2
-      echo "ERROR: set RUBY_PLUGIN_DYNAMIC_INJECTION_ALLOW_FALLBACK=1 to run the broader non-git fallback scan intentionally." >&2
-      exit 1
-      ;;
-  esac
-
-  while IFS= read -r -d '' file; do
-    [[ -n "$file" && -f "$file" ]] || continue
-    file_size=$(wc -c < "$file" 2>/dev/null || echo 0)
-    if [[ "$FALLBACK_FILES_SCANNED" -ge "$MAX_FALLBACK_FILES" ]] ||
-      [[ $(( FALLBACK_BYTES_SCANNED + file_size )) -gt "$MAX_FALLBACK_BYTES" ]]; then
-      FALLBACK_PARTIAL=1
-      break
-    fi
-    FALLBACK_FILES_SCANNED=$((FALLBACK_FILES_SCANNED + 1))
-    FALLBACK_BYTES_SCANNED=$((FALLBACK_BYTES_SCANNED + file_size))
-    scan_file "$file"
-  done < <(
-    find "$REPO_ROOT" \
-      \( -path "$REPO_ROOT/.git" -o -path "$REPO_ROOT/node_modules" \) -prune -o \
-      -type f \( -name '*.md' -o -name '*.json' -o -name '*.yml' -o -name '*.yaml' \) \
-      -print0 2>/dev/null || true
-  )
+  echo "ERROR: tracked dynamic-injection scan requires git when .git metadata is present." >&2
+  echo "ERROR: install git and rerun from a repository checkout with comparable tracked-file metadata." >&2
+  exit 1
 fi
 
 if [[ "$FOUND" -eq 1 ]]; then
@@ -94,13 +78,6 @@ if [[ "$FOUND" -eq 1 ]]; then
   echo
   echo "The !\`command\` syntax executes shell commands and injects stdout into Claude context."
   echo "Do not use it in tracked plugin or contributor docs/config files. Use normal tools/agents instead."
-  exit 1
-fi
-
-if [[ "$FALLBACK_PARTIAL" -eq 1 ]]; then
-  echo "ERROR: fallback dynamic-injection scan hit file/size caps; results are partial." >&2
-  echo "ERROR: a clean result cannot be trusted because only the scanned subset was checked." >&2
-  echo "ERROR: raise RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_FILES and/or RUBY_PLUGIN_DYNAMIC_INJECTION_MAX_BYTES to scan a larger fallback set." >&2
   exit 1
 fi
 

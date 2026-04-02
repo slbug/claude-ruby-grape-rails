@@ -56,6 +56,17 @@ jobs:
             python3 -m json.tool "$file" > /dev/null
           done
 
+  release-metadata:
+    name: Release Metadata
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate release metadata and changelog links
+        run: python3 scripts/check-release-metadata.py
+
   shell:
     name: Shell Syntax and Lint
     runs-on: ubuntu-latest

@@ -949,6 +949,21 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.7.2...HEAD
+[1.7.2]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.2
+[1.7.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.1
+[1.7.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.0
+[1.6.3]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.6.3
+[1.6.2]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.6.2
+[1.6.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.6.1
+[1.6.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.6.0
+[1.5.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.5.0
+[1.4.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.4.0
+[1.3.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.3.1
+[1.3.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.3.0
+[1.2.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.2.0
+[1.1.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.1.1
+[1.1.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.1.0
 [1.0.4]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.4
 [1.0.3]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.3
 [1.0.2]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.0.2

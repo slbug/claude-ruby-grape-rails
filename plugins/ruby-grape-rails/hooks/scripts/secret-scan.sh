@@ -7,6 +7,8 @@ set -o pipefail
 #
 # Hook input: JSON via stdin with .tool_input.file_path
 # Exit 2 with stderr message to surface warning to Claude
+# Policy: default mode is best-effort with warnings; strict mode fails closed
+# when broader recent-change coverage cannot be trusted.
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
@@ -25,6 +27,12 @@ emit_root_resolution_warning() {
 
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 command -v grep >/dev/null 2>&1 || emit_missing_dependency_block "grep"
+command -v cat >/dev/null 2>&1 || emit_missing_dependency_block "cat"
+command -v cp >/dev/null 2>&1 || emit_missing_dependency_block "cp"
+command -v find >/dev/null 2>&1 || emit_missing_dependency_block "find"
+command -v mkdir >/dev/null 2>&1 || emit_missing_dependency_block "mkdir"
+command -v mktemp >/dev/null 2>&1 || emit_missing_dependency_block "mktemp"
+command -v sed >/dev/null 2>&1 || emit_missing_dependency_block "sed"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
@@ -77,14 +85,18 @@ emit_missing_betterleaks_warning() {
   echo "Install betterleaks or set BETTERLEAKS_PATH to restore secret scanning." >&2
 }
 
+payload_secret_snippet() {
+  printf '%s' "$INPUT" | jq -r '(.tool_input.content // .tool_input.new_string // empty)' 2>/dev/null
+}
+
 input_has_secret_indicators() {
   local snippet
 
-  snippet=$(printf '%s' "$INPUT" | jq -r '(.tool_input.content // .tool_input.new_string // empty)' 2>/dev/null) || snippet=""
+  snippet=$(payload_secret_snippet 2>/dev/null) || snippet=""
   [[ -n "$snippet" ]] || return 1
 
   printf '%s' "$snippet" | grep -Eqi \
-    '(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|api[_-]?key|secret|token|client_secret|aws_secret_access_key|xox[baprs]-|ghp_[A-Za-z0-9]{20,})'
+    '(AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|api[_-]?key[[:space:]]*[:=]|client_secret[[:space:]]*[:=]|aws_secret_access_key[[:space:]]*[:=]|authorization[[:space:]]*:[[:space:]]*bearer[[:space:]]+[A-Za-z0-9._-]+|xox[baprs]-|ghp_[A-Za-z0-9]{20,})'
 }
 
 if [[ -z "$BETTERLEAKS_PATH" || ! -x "$BETTERLEAKS_PATH" ]]; then
@@ -224,6 +236,17 @@ copy_into_tmpdir() {
   cp "$source_path" "$target_file"
 }
 
+write_inline_payload_to_tmpdir() {
+  local snippet="$1"
+  local tmp_dir="$2"
+  local target_dir="${tmp_dir}/inline"
+  local target_file="${target_dir}/payload.txt"
+
+  [[ -n "$snippet" ]] || return 1
+  mkdir -p -- "$target_dir" || return 1
+  printf '%s\n' "$snippet" > "$target_file"
+}
+
 copy_strict_scan_input() {
   local tmp_dir="$1"
   local source_label="$2"
@@ -259,6 +282,37 @@ copy_strict_scan_input() {
 }
 
 if [[ -z "$FILE_PATH" ]]; then
+  inline_snippet=$(payload_secret_snippet 2>/dev/null || printf '')
+  if [[ -n "$inline_snippet" ]]; then
+    TMP_DIR=$(new_secret_scan_tmpdir) || {
+      emit_scan_setup_failure_warning "inline hook payload"
+      exit 2
+    }
+
+    # shellcheck disable=SC2317,SC2329 # invoked indirectly via trap
+    cleanup_inline_secret_scan_tmpdir() {
+      safe_remove_temp_dir "${TMP_DIR:-}" "${TMPDIR:-/tmp}/rb-secret-scan.*" || true
+    }
+    trap cleanup_inline_secret_scan_tmpdir EXIT HUP INT TERM
+
+    write_inline_payload_to_tmpdir "$inline_snippet" "$TMP_DIR" || {
+      emit_scan_setup_failure_warning "inline hook payload"
+      exit 2
+    }
+
+    if run_betterleaks_dir "$TMP_DIR"; then
+      if [[ -n "$BETTERLEAKS_RESULT" ]]; then
+        emit_secret_warning "inline hook payload" "$BETTERLEAKS_RESULT"
+        exit 2
+      fi
+    else
+      emit_scanner_failure_warning "inline hook payload" "$?" "$BETTERLEAKS_ERROR"
+      exit 2
+    fi
+
+    exit 0
+  fi
+
   # No specific file: only strict mode does broader recent-change scans.
   [[ "$HOOK_MODE" == "strict" ]] || exit 0
 
@@ -266,6 +320,7 @@ if [[ -z "$FILE_PATH" ]]; then
     emit_recent_changes_scan_unavailable_warning "git is unavailable"
     exit 2
   }
+  command -v awk >/dev/null 2>&1 || emit_missing_dependency_block "awk"
 
   if ! (cd "$REPO_ROOT" && git rev-parse --git-dir >/dev/null 2>&1); then
     emit_recent_changes_scan_unavailable_warning "Git metadata is unavailable"
