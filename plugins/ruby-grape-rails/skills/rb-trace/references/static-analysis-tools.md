@@ -217,7 +217,7 @@ end
 Pronto runs analysis on changed files in CI:
 
 ```yaml
-# .github/workflows/pronto.yml
+# Example workflow file in your app repo: .github/workflows/pronto.yml
 name: Pronto
 on: [pull_request]
 

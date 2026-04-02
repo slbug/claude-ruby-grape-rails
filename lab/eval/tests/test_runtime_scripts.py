@@ -1701,6 +1701,29 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(resume.returncode, 0, resume.stderr)
         self.assertIn("has 3 remaining tasks (1 done)", resume.stdout)
 
+    def test_check_resume_counts_bare_markdown_checkboxes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plan_dir = tmp / ".claude" / "plans" / "demo"
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "plan.md").write_text(
+                textwrap.dedent(
+                    """
+                    # Demo
+
+                    [ ] investigate race condition
+                    [x] document findings
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+
+            resume = run_workspace_hook(CHECK_RESUME, tmpdir)
+
+        self.assertEqual(resume.returncode, 0, resume.stderr)
+        self.assertIn("has 1 remaining tasks (1 done)", resume.stdout)
+
     def test_check_scratchpad_auto_initializes_missing_scratchpad_for_active_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -1946,6 +1969,38 @@ class RuntimeScriptTests(unittest.TestCase):
             script_copy.write_text(CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8")
             os.chmod(script_copy, 0o755)
             (tmp / ".git").mkdir()
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            dirname_path = shutil.which("dirname")
+            grep_path = shutil.which("grep")
+            self.assertIsNotNone(dirname_path)
+            self.assertIsNotNone(grep_path)
+            os.symlink(dirname_path, fake_bin / "dirname")
+            os.symlink(grep_path, fake_bin / "grep")
+            env = dict(os.environ)
+            env["PATH"] = str(fake_bin)
+
+            result = subprocess.run(
+                ["/bin/bash", str(script_copy)],
+                capture_output=True,
+                text=True,
+                cwd=tmp,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("requires git when .git metadata is present", result.stderr)
+
+    def test_check_dynamic_injection_requires_git_when_git_metadata_is_a_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            script_dir = tmp / "scripts"
+            script_dir.mkdir()
+            script_copy = script_dir / "check-dynamic-injection.sh"
+            script_copy.write_text(CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8")
+            os.chmod(script_copy, 0o755)
+            (tmp / ".git").write_text("gitdir: /tmp/worktrees/demo\n", encoding="utf-8")
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             dirname_path = shutil.which("dirname")

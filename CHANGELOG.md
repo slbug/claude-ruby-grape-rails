@@ -306,9 +306,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `eval-skills`, `eval-agents`, and `eval-triggers` expose clearer targeted
   modes.
 - **Contributor eval tests now support pytest cleanly** — the repo now ships
-  `pytest.ini`, explicit `pytest` test commands, and a default eval-test
-  wrapper that prefers `pytest` when installed while keeping the existing
-  `unittest` path working.
+  `pytest.ini`, explicit `pytest` test commands, and a deterministic default
+  eval-test wrapper based on `unittest` while keeping the explicit `pytest`
+  path available.
 - **`/rb:state-audit` examples now prefer `rg` over brittle `grep -r`
   patterns** — state-audit guidance now avoids shell-globstar-dependent
   examples and uses faster ripgrep commands instead.

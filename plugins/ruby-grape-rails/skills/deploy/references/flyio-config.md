@@ -231,7 +231,7 @@ end
 ## CI/CD with GitHub Actions
 
 ```yaml
-# .github/workflows/fly.yml
+# Example workflow file in your app repo: .github/workflows/fly.yml
 name: Fly Deploy
 
 on:

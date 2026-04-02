@@ -7,7 +7,12 @@ require 'pathname'
 # Outputs simple "key=value" pairs for consumption by init skill.
 
 def safe_manifest_file?(path)
-  File.file?(path) && !File.symlink?(path)
+  return false unless File.file?(path) && !File.symlink?(path)
+
+  stat = File.stat(path)
+  return false if (stat.mode & 0o444).zero?
+
+  true
 rescue SystemCallError
   false
 end

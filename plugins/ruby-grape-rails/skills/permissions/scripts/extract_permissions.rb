@@ -115,8 +115,23 @@ rescue Errno::ENOENT
   []
 end
 
+def mode_bit_readable_file?(path)
+  stat = File.stat(path)
+  return false if (stat.mode & 0o444).zero?
+
+  true
+rescue Errno::ENOENT
+  nil
+rescue Errno::EACCES, Errno::EPERM
+  false
+end
+
 def load_permissions(settings_path)
   return { allow: [], deny: [], invalid: false } unless File.file?(settings_path)
+
+  readability = mode_bit_readable_file?(settings_path)
+  return { allow: [], deny: [], invalid: false } if readability.nil?
+  return { allow: [], deny: [], invalid: true } unless readability
 
   data = JSON.parse(File.read(settings_path))
   permissions = data.fetch('permissions', {})

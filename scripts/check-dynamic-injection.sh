@@ -57,7 +57,7 @@ if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
     [[ -f "${REPO_ROOT}/${file}" ]] || continue
     scan_file "${REPO_ROOT}/${file}"
   done < <(git -C "$REPO_ROOT" ls-files -z -- "${SCAN_TARGETS[@]}")
-elif [[ -d "${REPO_ROOT}/.git" ]]; then
+elif [[ -e "${REPO_ROOT}/.git" ]]; then
   echo "ERROR: tracked dynamic-injection scan requires git when .git metadata is present." >&2
   echo "ERROR: install git or rerun from an environment where git is available." >&2
   exit 1
