@@ -368,7 +368,7 @@ claude --plugin-dir ./plugins/ruby-grape-rails
 ### Setup
 
 ```bash
-npm install  # Pre-commit hooks + linting
+npm ci  # Pre-commit hooks + linting with the committed lockfile
 ```
 
 ### Linting
@@ -775,6 +775,9 @@ Notes:
 - `eval-output` is separate from `eval-all` / `eval-ci` for now.
 - `--include-untracked` is available for local changed-mode exploration, but it
   intentionally makes results non-comparable and is not part of `eval-ci`.
+- `check-dynamic-injection.sh` expects git metadata for comparable tracked-file
+  scans; only set `RUBY_PLUGIN_DYNAMIC_INJECTION_ALLOW_FALLBACK=1` when you
+  intentionally want the broader non-git fallback scan.
 
 Current `lab/eval/` scope:
 

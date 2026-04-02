@@ -82,13 +82,13 @@ report_formatter_failure() {
 }
 
 emit_tempfile_failure_warning() {
-  echo "⚠️  Ruby formatting skipped for ${FILE_PATH} because a temporary file could not be created." >&2
+  echo "BLOCKED: ${HOOK_NAME} could not run automatic Ruby formatting for ${FILE_PATH} because a temporary file could not be created." >&2
   echo "Fix TMPDIR permissions or disk space to restore automatic Ruby formatting." >&2
 }
 
 if has_gem standard; then
   if ! command -v bundle >/dev/null 2>&1; then
-    echo "⚠️  Ruby formatting skipped for ${FILE_PATH} because Bundler is not available." >&2
+    echo "BLOCKED: ${HOOK_NAME} could not run automatic Ruby formatting for ${FILE_PATH} because Bundler is not available." >&2
     echo "Install Bundler to restore automatic StandardRB formatting." >&2
     exit 2
   fi
@@ -106,7 +106,7 @@ if has_gem standard; then
   safe_remove_temp_file "${ERR_FILE:-}" "${TMPDIR:-/tmp}/ruby-format.*" || true
 elif has_gem rubocop; then
   if ! command -v bundle >/dev/null 2>&1; then
-    echo "⚠️  Ruby formatting skipped for ${FILE_PATH} because Bundler is not available." >&2
+    echo "BLOCKED: ${HOOK_NAME} could not run automatic Ruby formatting for ${FILE_PATH} because Bundler is not available." >&2
     echo "Install Bundler to restore automatic RuboCop formatting." >&2
     exit 2
   fi

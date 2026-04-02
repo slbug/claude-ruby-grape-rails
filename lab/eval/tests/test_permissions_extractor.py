@@ -401,6 +401,25 @@ class PermissionsExtractorTests(unittest.TestCase):
         )
         self.assertEqual(report["uncovered_groups"][0]["group"], "bundle exec rubocop")
 
+    def test_symlinked_repo_settings_files_are_reported_invalid(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            target = tmp / "real-settings.json"
+            target.write_text(json.dumps({"permissions": {"allow": ["Bash(bundle *)"]}}), encoding="utf-8")
+            settings = repo / ".claude" / "settings.json"
+            os.symlink(target, settings)
+            write_transcript(repo, tmp, "bundle exec rubocop")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        self.assertEqual(len(report["invalid_settings_files"]), 1)
+        self.assertTrue(report["invalid_settings_files"][0].endswith("/repo/.claude/settings.json"))
+        self.assertEqual(report["uncovered_groups"][0]["group"], "bundle exec rubocop")
+
     def test_deny_patterns_participate_in_deprecated_pattern_reporting(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)

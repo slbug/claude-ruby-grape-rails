@@ -115,6 +115,7 @@ Current documented hook events include:
 - `UserPromptSubmit`
 - `PreToolUse`
 - `PermissionRequest`
+- `PermissionDenied`
 - `PostToolUse`
 - `PostToolUseFailure`
 - `Notification`

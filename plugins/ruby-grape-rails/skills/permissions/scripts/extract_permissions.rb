@@ -126,8 +126,19 @@ rescue Errno::EACCES, Errno::EPERM
   false
 end
 
+def regular_non_symlink_file?(path)
+  stat = File.lstat(path)
+  stat.file? && !stat.symlink?
+rescue Errno::ENOENT
+  nil
+rescue Errno::EACCES, Errno::EPERM
+  false
+end
+
 def load_permissions(settings_path)
-  return { allow: [], deny: [], invalid: false } unless File.file?(settings_path)
+  file_type = regular_non_symlink_file?(settings_path)
+  return { allow: [], deny: [], invalid: false } if file_type.nil?
+  return { allow: [], deny: [], invalid: true } unless file_type
 
   readability = mode_bit_readable_file?(settings_path)
   return { allow: [], deny: [], invalid: false } if readability.nil?

@@ -71,7 +71,7 @@ jobs:
 
       - name: Validate shell scripts
         run: |
-          git ls-files -z '*.sh' '*.bash' | while IFS= read -r -d '' file; do
+          git ls-files -z '*.sh' '*.bash' '.husky/pre-commit' | while IFS= read -r -d '' file; do
             echo "Checking $file"
             bash -n "$file"
             shellcheck -x "$file"

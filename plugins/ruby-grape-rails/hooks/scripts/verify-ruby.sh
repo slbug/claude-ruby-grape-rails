@@ -18,6 +18,14 @@ emit_verify_skip_warning() {
   echo "WARNING: ${HOOK_NAME} skipped automatic Ruby verification because ${reason}." >&2
 }
 
+emit_verify_block() {
+  local reason="$1"
+  local remediation="$2"
+
+  echo "BLOCKED: ${HOOK_NAME} could not run automatic Ruby verification because ${reason}." >&2
+  echo "$remediation" >&2
+}
+
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
@@ -72,15 +80,17 @@ is_path_within_root "$REPO_ROOT" "$FILE_PATH" || {
 BASE_NAME=$(path_basename "$FILE_PATH")
 
 emit_tempfile_failure_warning() {
-  echo "⚠️  Ruby syntax verification skipped for ${FILE_PATH} because a temporary file could not be created." >&2
-  echo "Fix TMPDIR permissions or disk space to restore automatic Ruby verification." >&2
+  emit_verify_block \
+    "a temporary file could not be created for ${FILE_PATH}" \
+    "Fix TMPDIR permissions or disk space to restore automatic Ruby verification."
 }
 
 case "$BASE_NAME" in
   *.rb|*.rake|Gemfile|Rakefile|config.ru)
     if ! command -v ruby >/dev/null 2>&1; then
-      echo "⚠️  Ruby syntax check skipped for ${FILE_PATH} because ruby is not available." >&2
-      echo "Install Ruby to restore automatic syntax verification." >&2
+      emit_verify_block \
+        "ruby is not available for ${FILE_PATH}" \
+        "Install Ruby to restore automatic syntax verification."
       exit 2
     fi
     TMP_OUTPUT=$(mktemp "${TMPDIR:-/tmp}/rb-verify.XXXXXX") || {

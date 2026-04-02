@@ -44,12 +44,14 @@ TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null) || emit_p
 
 COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || emit_payload_schema_block "tool_input.command could not be parsed"
 [[ -n "$COMMAND" ]] || emit_payload_schema_block "tool_input.command was missing"
+REPO_ROOT="$(resolve_workspace_root "$INPUT" 2>/dev/null || true)"
 
 normalize_command_segments() {
   local command_text="$1"
   local current=""
   local char=""
   local next=""
+  local prev=""
   local in_single=0
   local in_double=0
   local escaped=0
@@ -67,6 +69,10 @@ normalize_command_segments() {
   while [[ "$i" -lt "$length" ]]; do
     char="${command_text:$i:1}"
     next=""
+    prev=""
+    if [[ "$i" -gt 0 ]]; then
+      prev="${command_text:$(( i - 1 )):1}"
+    fi
     if [[ $(( i + 1 )) -lt "$length" ]]; then
       next="${command_text:$(( i + 1 )):1}"
     fi
@@ -112,6 +118,13 @@ normalize_command_segments() {
         flush_segment "$current"
         current=""
         i=$(( i + 2 ))
+        continue
+      fi
+
+      if [[ "$char" == "&" && "$prev" != ">" && "$prev" != "<" && "$next" != ">" ]]; then
+        flush_segment "$current"
+        current=""
+        i=$(( i + 1 ))
         continue
       fi
 
@@ -485,6 +498,41 @@ strip_leading_env_prefixes() {
   printf '%s\n' "$STRIPPED_COMMAND_RESULT"
 }
 
+resolve_wrapper_source_path() {
+  local raw_path="$1"
+  local candidate=""
+  local dir=""
+  local base=""
+  local resolved_dir=""
+
+  [[ -n "$raw_path" ]] || return 1
+  [[ "$raw_path" != "-" ]] || return 1
+
+  case "$raw_path" in
+    /*) candidate="$raw_path" ;;
+    *) candidate="${REPO_ROOT:-${PWD:-.}}/${raw_path#./}" ;;
+  esac
+
+  dir=$(path_dirname "$candidate") || return 1
+  base=$(path_basename "$candidate") || return 1
+  [[ -d "$dir" ]] || return 1
+  resolved_dir=$(cd "$dir" >/dev/null 2>&1 && pwd -P) || return 1
+  printf '%s\n' "${resolved_dir}/${base}"
+}
+
+read_wrapper_source_file() {
+  local script_path="$1"
+  local max_bytes="${RUBY_PLUGIN_WRAPPER_INSPECT_MAX_BYTES:-65536}"
+  local file_size=0
+
+  [[ "$max_bytes" =~ ^[1-9][0-9]*$ ]] || max_bytes=65536
+  [[ -f "$script_path" && ! -L "$script_path" ]] || return 1
+  file_size=$(wc -c < "$script_path" 2>/dev/null || echo 0)
+  [[ "$file_size" -le "$max_bytes" ]] || return 1
+
+  LC_ALL=C head -c "$max_bytes" -- "$script_path" 2>/dev/null
+}
+
 extract_shell_wrapper_payload() {
   local segment
 
@@ -505,6 +553,8 @@ extract_ruby_wrapper_payload() {
   local ruby_code
   local nested_command=""
   local call_body
+  local script_path=""
+  local script_body=""
 
   segment=$(trim_enclosing_grouping "$1")
   [[ "$segment" == ruby[[:space:]]* ]] || return 1
@@ -515,9 +565,6 @@ extract_ruby_wrapper_payload() {
     [[ -n "$rest" ]] || return 1
 
     token="${rest%%[[:space:]]*}"
-    if [[ "$token" == "$rest" ]]; then
-      return 1
-    fi
 
     if [[ "$token" == "-e" ]]; then
       rest="${rest#"$token"}"
@@ -589,8 +636,47 @@ extract_ruby_wrapper_payload() {
       return 0
     fi
 
-    [[ "$token" == -* ]] || return 1
-    rest="${rest#"$token"}"
+    if [[ "$token" != -* ]]; then
+      script_path=$(resolve_wrapper_source_path "$token" || true)
+      [[ -n "$script_path" ]] || return 1
+      script_body=$(read_wrapper_source_file "$script_path" || true)
+      [[ -n "$script_body" ]] || return 1
+      call_body=$(printf '%s' "$script_body" | sed -nE 's/.*(system|exec|spawn)\((.*)\).*/\2/p')
+      if [[ -n "$call_body" ]]; then
+        nested_command=$(resolve_ruby_command_expression "$call_body" "$script_body" || true)
+      fi
+      if [[ -z "$nested_command" ]]; then
+        call_body=$(printf '%s' "$script_body" | sed -nE 's/.*((Kernel\.)?(send|__send__))\([[:space:]]*:?(system|exec|spawn)[[:space:]]*,(.*)\).*/\5/p')
+        if [[ -n "$call_body" ]]; then
+          nested_command=$(resolve_ruby_command_expression "$call_body" "$script_body" || true)
+        fi
+      fi
+      if [[ -z "$nested_command" ]]; then
+        # shellcheck disable=SC2016
+        nested_command=$(printf '%s' "$script_body" | sed -nE 's/.*`([^`]*)`.*/\1/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$script_body" | sed -nE 's/.*%x\{([^}]*)\}.*/\1/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$script_body" | sed -nE 's/.*%x\(([^)]*)\).*/\1/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$script_body" | sed -nE 's/.*%x\[([^]]*)\].*/\1/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$script_body" | sed -nE 's/.*%x<([^>]*)>.*/\1/p')
+      fi
+      [[ -n "$nested_command" ]] || return 1
+      printf '%s\n' "$nested_command"
+      return 0
+    fi
+
+    if [[ "$token" == "$rest" ]]; then
+      rest=""
+    else
+      rest="${rest#"$token"}"
+    fi
   done
 
   return 1
@@ -603,6 +689,8 @@ extract_python_wrapper_payload() {
   local python_code
   local nested_command=""
   local call_body
+  local script_path=""
+  local script_body=""
 
   segment=$(trim_enclosing_grouping "$1")
   [[ "$segment" =~ ^python([0-9]+(\.[0-9]+)?)?([[:space:]]|$) ]] || return 1
@@ -613,9 +701,6 @@ extract_python_wrapper_payload() {
     [[ -n "$rest" ]] || return 1
 
     token="${rest%%[[:space:]]*}"
-    if [[ "$token" == "$rest" ]]; then
-      return 1
-    fi
 
     if [[ "$token" == "-c" ]]; then
       rest="${rest#"$token"}"
@@ -670,8 +755,66 @@ extract_python_wrapper_payload() {
       return 0
     fi
 
-    [[ "$token" == -* ]] || return 1
-    rest="${rest#"$token"}"
+    if [[ "$token" != -* ]]; then
+      script_path=$(resolve_wrapper_source_path "$token" || true)
+      [[ -n "$script_path" ]] || return 1
+      script_body=$(read_wrapper_source_file "$script_path" || true)
+      [[ -n "$script_body" ]] || return 1
+      nested_command=$(printf '%s' "$script_body" | sed -nE "s/.*os\\.system\\([[:space:]]*'([^']*)'([[:space:]]*)\\).*/\\1/p")
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$script_body" | sed -nE 's/.*os\.system\([[:space:]]*"([^"]*)"([[:space:]]*)\).*/\1/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$script_body" | sed -nE "s/.*getattr\\([[:space:]]*os[[:space:]]*,[[:space:]]*'system'[[:space:]]*\\)\\([[:space:]]*'([^']*)'([[:space:]]*)\\).*/\\1/p")
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$script_body" | sed -nE 's/.*getattr\([[:space:]]*os[[:space:]]*,[[:space:]]*"system"[[:space:]]*\)\([[:space:]]*"([^"]*)"([[:space:]]*)\).*/\1/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$script_body" | sed -nE "s/.*(([A-Za-z_][A-Za-z0-9_]*)\\.)?(run|call|Popen|check_call|check_output)\\([[:space:]]*'([^']*)'([[:space:]]*,[^)]*shell[[:space:]]*=[[:space:]]*True[^)]*)?\\).*/\\4/p")
+      fi
+      if [[ -z "$nested_command" ]]; then
+        nested_command=$(printf '%s' "$script_body" | sed -nE 's/.*(([A-Za-z_][A-Za-z0-9_]*)\.)?(run|call|Popen|check_call|check_output)\([[:space:]]*"([^"]*)"([[:space:]]*,[^)]*shell[[:space:]]*=[[:space:]]*True[^)]*)?\).*/\4/p')
+      fi
+      if [[ -z "$nested_command" ]]; then
+        if [[ "$script_body" =~ os\.system\([[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*\) ]]; then
+          nested_command=$(extract_python_string_assignment "$script_body" "${BASH_REMATCH[1]}" || true)
+        fi
+      fi
+      if [[ -z "$nested_command" ]]; then
+        if [[ "$script_body" =~ getattr\([[:space:]]*os[[:space:]]*,[[:space:]]*['\"]system['\"][[:space:]]*\)\([[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*\) ]]; then
+          nested_command=$(extract_python_string_assignment "$script_body" "${BASH_REMATCH[1]}" || true)
+        fi
+      fi
+      if [[ -z "$nested_command" ]]; then
+        token=$(printf '%s' "$script_body" | sed -nE 's/.*(([A-Za-z_][A-Za-z0-9_]*)\.)?(run|call|Popen|check_call|check_output)\([[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*,[^)]*shell[[:space:]]*=[[:space:]]*True[^)]*\).*/\4/p')
+        if [[ -n "$token" ]]; then
+          nested_command=$(extract_python_string_assignment "$script_body" "$token" || true)
+        fi
+      fi
+      if [[ -z "$nested_command" ]]; then
+        call_body=$(printf '%s' "$script_body" | sed -nE 's/.*(([A-Za-z_][A-Za-z0-9_]*)\.)?(run|call|Popen|check_call|check_output)\((.*)\).*/\4/p')
+        if [[ -n "$call_body" ]]; then
+          nested_command=$(join_literal_arguments_from_text "$call_body" || true)
+        fi
+      fi
+      if [[ -z "$nested_command" ]]; then
+        call_body=$(printf '%s' "$script_body" | sed -nE 's/.*os\.execv[p]?\((.*)\).*/\1/p')
+        if [[ -n "$call_body" ]]; then
+          nested_command=$(join_literal_arguments_from_text "$call_body" || true)
+          nested_command=$(collapse_duplicate_leading_token "$nested_command")
+        fi
+      fi
+      [[ -n "$nested_command" ]] || return 1
+      printf '%s\n' "$nested_command"
+      return 0
+    fi
+
+    if [[ "$token" == "$rest" ]]; then
+      rest=""
+    else
+      rest="${rest#"$token"}"
+    fi
   done
 
   return 1
@@ -765,11 +908,11 @@ is_harmless_env_probe() {
 }
 
 candidate_mentions_production_env() {
-  printf '%s' "$1" | grep -qiE '(^|[[:space:]])(RAILS_ENV|RACK_ENV)=["'\'']?(prod|production)["'\'']?([[:space:]]|$)'
+  printf '%s' "$1" | grep -qiE '(^|[[:space:]])(RAILS_ENV|RACK_ENV)=((["'\'']?(prod|production)["'\'']?)|\$\([^)]*(prod|production)[^)]*\))([[:space:]]|$)'
 }
 
 segment_exports_production_env() {
-  printf '%s' "$1" | grep -qiE '^[[:space:]]*export([[:space:]]+[^[:space:]]+)*[[:space:]]+(RAILS_ENV|RACK_ENV)=["'\'']?(prod|production)["'\'']?([[:space:]]|$)'
+  printf '%s' "$1" | grep -qiE '^[[:space:]]*export([[:space:]]+[^[:space:]]+)*[[:space:]]+(RAILS_ENV|RACK_ENV)=((["'\'']?(prod|production)["'\'']?)|\$\([^)]*(prod|production)[^)]*\))([[:space:]]|$)'
 }
 
 segment_clears_production_env() {

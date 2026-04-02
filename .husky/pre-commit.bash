@@ -53,4 +53,4 @@ if [[ ${#STAGED_JSON_FILES[@]} -gt 0 ]]; then
   done
 fi
 
-echo "Pre-commit checks passed!"
+echo "Pre-commit checks passed! Note: CI also runs broader repo-wide YAML, shell, and eval checks."

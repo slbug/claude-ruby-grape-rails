@@ -313,8 +313,12 @@ run_changed_skills() {
   result+="}"
 
   if [[ ${#missing_skills[@]} -gt 0 ]]; then
-    echo "  ERROR: deleted or moved changed skills cannot be scored: ${missing_skills[*]}" >&2
-    return 1
+    echo "  WARNING: skipping deleted or moved changed skills: ${missing_skills[*]}" >&2
+  fi
+
+  if [[ "$first" == true ]]; then
+    echo "  No scorable changed skills remain after skipping deleted or moved paths."
+    return 0
   fi
 
   printf '%s\n' "$result" | summarize_subject_scores "skills" "$FAIL_UNDER"
@@ -368,8 +372,12 @@ run_changed_agents() {
   result+="}"
 
   if [[ ${#missing_agents[@]} -gt 0 ]]; then
-    echo "  ERROR: deleted or moved changed agents cannot be scored: ${missing_agents[*]}" >&2
-    return 1
+    echo "  WARNING: skipping deleted or moved changed agents: ${missing_agents[*]}" >&2
+  fi
+
+  if [[ "$first" == true ]]; then
+    echo "  No scorable changed agents remain after skipping deleted or moved paths."
+    return 0
   fi
 
   printf '%s\n' "$result" | summarize_subject_scores "agents" "$AGENT_FAIL_UNDER"

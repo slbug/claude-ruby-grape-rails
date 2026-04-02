@@ -24,7 +24,7 @@ plans keep structured scratchpads for dead ends, decisions, and handoffs.
 
 /rb:work .claude/plans/comment-notifications/plan.md
 # Implements task by task. Verification checkpoints at key milestones.
-# Stops cold if code violates an Iron Law.
+# Stops on programmatic Iron Law violations and pushes the rest into review-time checks.
 
 /rb:review
 # 4 specialist agents audit in parallel:
@@ -82,7 +82,7 @@ hook error or warning instead of silently disabling those checks.
 │    sidekiq-specialist              auto-format · ruby-syntax-check  │
 │    deployment-validator            iron-law-verify · security-scan  │
 │    ruby-gem-researcher             debug-stmt-detect · error-critic │
-│    web-researcher                  progress-tracking · block-danger │
+│    web-researcher                  progress-tracking · db/prod/git guard │
 │                                                                     │
 │  ───────────────────────────────────────────────────────────        │
 │  21 Iron Laws · Runtime Tooling · plan→work→verify→review→compound  │
@@ -96,7 +96,9 @@ which fans out to Iron Law verification, formatting, syntax, and debug checks
 for `*.rb`, `*.rake`, `Gemfile`, `Rakefile`, and `config.ru`. Generic safety
 hooks stay separate: security reminders and secret scanning still watch all
 edits/writes, progress logging now runs async, and the plan STOP reminder fires
-only on `Write(*plan.md)`.
+only on `Write(*plan.md)`. `block-dangerous-ops.sh` currently blocks four
+command families: destructive Rails/Rake DB tasks, Redis flushes, git force
+pushes, and production-environment commands.
 [hooks.json](plugins/ruby-grape-rails/hooks/hooks.json)
 is the current wiring source of truth.
 
@@ -707,45 +709,25 @@ PRs welcome! See [CLAUDE.md](CLAUDE.md) for development conventions.
 
 ### Eval workflow
 
-The repo includes a deterministic contributor eval foundation under
-`lab/eval/`. `1.7.0` adds separate artifact-quality checks for research/review
-outputs. It requires `python3` 3.10+ for the stdlib typing syntax used by the
-eval tooling.
+The canonical contributor eval workflow now lives in
+[CLAUDE.md](CLAUDE.md#contributor-eval-workflow). Use that section for the full
+command matrix and caveats.
 
-Primary entrypoints:
+Common entrypoints:
 
 - `make eval` or `npm run eval` for lint + injection check + changed surfaces
-- `make eval-all` or `npm run eval:all` for the full structural snapshot
 - `make eval-ci` or `npm run eval:ci` for the contributor CI gate
-- `make eval-output` or `npm run eval:output` for deterministic research/review
-  artifact fixtures
-- `make security-injection` or `npm run security:injection`
 - `make eval-tests` or `npm run eval:test` for the default contributor test
   path (`unittest` by default for deterministic cross-environment runs)
-- `make eval-tests-pytest` or `npm run eval:test:pytest` for explicit `pytest`
-  runs
-- `make eval-baseline`
-- `make eval-compare`
-- `make eval-overlap`
-- `make eval-hard-corpus`
-
-Current scope:
-
-- six high-leverage skill evals: `plan`, `work`, `review`, `verify`,
-  `permissions`, `research`
-- deterministic research/review output fixtures under `lab/eval/fixtures/output/`
-- shipped provenance template under
-  `plugins/ruby-grape-rails/references/output-verification/`
-- structural scoring for all shipped agents
-- deterministic trigger corpora plus confusable-pair / hard-corpus generation
 
 Notes:
 
-- `eval-output` is separate from `eval-all` / `eval-ci` for now.
-- `--include-untracked` is available for local changed-mode exploration, but it
-  intentionally makes results non-comparable and is not part of `eval-ci`.
-- The contributor-only output-verification checklist lives under
-  `.claude/skills/plugin-dev-workflow/references/`.
+- `--include-untracked` is local-only for changed-mode exploration and is not
+  part of `eval-ci`
+- `scripts/check-dynamic-injection.sh` expects git metadata for comparable
+  tracked-file scans; set `RUBY_PLUGIN_DYNAMIC_INJECTION_ALLOW_FALLBACK=1` only
+  when you intentionally want the broader non-git fallback scan
+- local pre-commit only checks staged Markdown and JSON; CI is broader
 
 ### Docs-check and session analytics
 
