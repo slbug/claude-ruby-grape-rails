@@ -311,6 +311,41 @@ class PermissionsExtractorTests(unittest.TestCase):
         self.assertEqual(report["scanned_sessions"], 1)
         self.assertEqual(report["uncovered_groups"][0]["group"], "bundle exec rubocop")
 
+    def test_symlinked_transcript_files_are_ignored(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            transcript_dir = transcript_dir_for(repo, tmp)
+            transcript_dir.mkdir(parents=True, exist_ok=True)
+            external = tmp / "external.jsonl"
+            external.write_text(
+                json.dumps(
+                    {
+                        "type": "assistant",
+                        "message": {
+                            "content": [
+                                {
+                                    "type": "tool_use",
+                                    "name": "Bash",
+                                    "input": {"command": "bundle exec rubocop"},
+                                }
+                            ]
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            os.symlink(external, transcript_dir / "link.jsonl")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        self.assertEqual(report["scanned_sessions"], 0)
+        self.assertEqual(report["uncovered_groups"], [])
+
     def test_malformed_transcript_lines_are_counted(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)

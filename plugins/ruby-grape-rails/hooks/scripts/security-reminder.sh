@@ -12,6 +12,12 @@ emit_missing_dependency_block() {
   exit 2
 }
 
+emit_skip_warning() {
+  local reason="$1"
+
+  echo "WARNING: ${HOOK_NAME} skipped security-sensitive file detection because ${reason}." >&2
+}
+
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 command -v grep >/dev/null 2>&1 || emit_missing_dependency_block "grep"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -31,13 +37,31 @@ case "${HOOK_INPUT_STATUS:-empty}" in
     exit 2
     ;;
 esac
-REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
-[[ -n "$REPO_ROOT" ]] || exit 0
+REPO_ROOT=$(resolve_workspace_root "$INPUT") || {
+  emit_skip_warning "the workspace root could not be resolved"
+  exit 0
+}
+if [[ -z "$REPO_ROOT" ]]; then
+  emit_skip_warning "the workspace root could not be resolved"
+  exit 0
+fi
 
-FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 0
-[[ -n "$FILE_PATH" ]] || exit 0
-FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || exit 0
-is_path_within_root "$REPO_ROOT" "$FILE_PATH" || exit 0
+FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || {
+  emit_skip_warning "tool_input.file_path could not be parsed"
+  exit 0
+}
+if [[ -z "$FILE_PATH" ]]; then
+  emit_skip_warning "tool_input.file_path was missing"
+  exit 0
+fi
+FILE_PATH=$(resolve_workspace_file_path "$REPO_ROOT" "$FILE_PATH") || {
+  emit_skip_warning "the edited path could not be resolved inside the workspace"
+  exit 0
+}
+is_path_within_root "$REPO_ROOT" "$FILE_PATH" || {
+  emit_skip_warning "the edited path resolved outside the workspace"
+  exit 0
+}
 
 FILE_NAME=$(path_basename "$FILE_PATH")
 LOWER_PATH=$(printf '%s' "$FILE_PATH" | tr '[:upper:]' '[:lower:]')

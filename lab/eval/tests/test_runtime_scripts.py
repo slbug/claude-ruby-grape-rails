@@ -682,6 +682,14 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("could not safely inspect a truncated hook payload", result.stderr)
 
+    def test_block_dangerous_ops_blocks_when_command_field_is_missing(self) -> None:
+        result = run_block_hook(
+            "rails db:drop",
+            payload_override=json.dumps({"tool_name": "Bash", "tool_input": {}}),
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("tool_input.command was missing", result.stderr)
+
     def test_block_dangerous_ops_uses_default_limit_when_hook_byte_env_is_invalid(self) -> None:
         result = run_block_hook(
             "rails db:drop",
@@ -1094,6 +1102,16 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("could not safely inspect an invalid hook payload", result.stderr)
 
+    def test_security_reminder_warns_when_file_path_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+
+            result = run_workspace_hook(SECURITY_REMINDER, tmpdir, {"tool_input": {}})
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("tool_input.file_path was missing", result.stderr)
+
     def test_plan_stop_reminder_fails_closed_on_invalid_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -1225,6 +1243,25 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         self.assertIn("Betterleaks not available", result.stderr)
+
+    def test_secret_scan_warns_when_default_mode_cannot_resolve_workspace_root(self) -> None:
+        env = dict(os.environ)
+        env.pop("CLAUDE_PROJECT_DIR", None)
+        env["BETTERLEAKS_PATH"] = ""
+        env["RUBY_PLUGIN_HOOK_MODE"] = "default"
+
+        result = subprocess.run(
+            ["bash", str(SECRET_SCAN)],
+            input=json.dumps({"tool_input": {}}),
+            capture_output=True,
+            text=True,
+            cwd="/",
+            check=False,
+            env=env,
+        )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("could not resolve the workspace root for secret scanning", result.stderr)
 
     def test_secret_scan_blocks_strict_recent_change_scan_when_git_is_unavailable(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1391,6 +1428,16 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 2)
         self.assertIn("temporary file could not be created", result.stderr)
+
+    def test_verify_ruby_warns_when_file_path_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+
+            result = run_workspace_hook(VERIFY_RUBY, tmpdir, {"tool_input": {}})
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("tool_input.file_path was missing", result.stderr)
 
     def test_detect_runtime_warns_when_runtime_env_tempfile_cannot_be_created(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1816,6 +1863,24 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("could not safely inspect an invalid hook payload", result.stderr)
 
+    def test_ruby_failure_hints_distinguishes_truncated_payloads(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES"] = "10"
+            result = subprocess.run(
+                ["bash", str(RUBY_FAILURE_HINTS)],
+                input=json.dumps({"tool_input": {"command": "bundle exec rspec spec/models"}}),
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("could not safely inspect a truncated hook payload", result.stderr)
+
     def test_precompact_rules_surfaces_active_plan_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -2217,6 +2282,14 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("Regenerate Iron Law projections", result.stdout)
         self.assertNotIn("claude", result.stdout)
+        self.assertNotIn("changelog", result.stdout.lower())
+
+    def test_iron_law_generation_targets_do_not_reference_removed_outputs(self) -> None:
+        yaml_text = (
+            REPO_ROOT / "plugins/ruby-grape-rails/references/iron-laws.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn('file: "CHANGELOG.md"', yaml_text)
 
 
 if __name__ == "__main__":

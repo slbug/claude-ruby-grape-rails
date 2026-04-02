@@ -21,8 +21,12 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 source "$ROOT_LIB"
 read_hook_input
 case "${HOOK_INPUT_STATUS:-ok}" in
-  invalid|truncated)
+  invalid)
     echo "BLOCKED: ${HOOK_NAME} could not safely inspect an invalid hook payload." >&2
+    exit 2
+    ;;
+  truncated)
+    echo "BLOCKED: ${HOOK_NAME} could not safely inspect a truncated hook payload." >&2
     exit 2
     ;;
 esac

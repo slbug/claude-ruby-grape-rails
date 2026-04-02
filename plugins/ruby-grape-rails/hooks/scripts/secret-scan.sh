@@ -19,7 +19,7 @@ emit_missing_dependency_block() {
 }
 
 emit_root_resolution_warning() {
-  echo "WARNING: ${HOOK_NAME} could not resolve the workspace root for strict secret scanning." >&2
+  echo "WARNING: ${HOOK_NAME} could not resolve the workspace root for secret scanning." >&2
   echo "Fix the hook payload or workspace layout before continuing." >&2
 }
 
@@ -38,6 +38,7 @@ REPO_ROOT=$(resolve_workspace_root "$INPUT") || {
     emit_root_resolution_warning
     exit 2
   fi
+  emit_root_resolution_warning
   exit 0
 }
 if [[ -z "$REPO_ROOT" ]]; then
@@ -45,6 +46,7 @@ if [[ -z "$REPO_ROOT" ]]; then
     emit_root_resolution_warning
     exit 2
   fi
+  emit_root_resolution_warning
   exit 0
 fi
 HOOK_MODE=$(resolve_hook_mode "$REPO_ROOT")

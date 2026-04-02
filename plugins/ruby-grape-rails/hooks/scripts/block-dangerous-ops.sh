@@ -29,11 +29,21 @@ if [[ -z "$INPUT" ]]; then
       ;;
   esac
 fi
-TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null) || exit 0
+
+emit_payload_schema_block() {
+  local reason="$1"
+
+  echo "BLOCKED: block-dangerous-ops.sh could not safely inspect the command because ${reason}." >&2
+  echo "Fix the hook payload schema before re-running this command." >&2
+  exit 2
+}
+
+TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null) || emit_payload_schema_block "tool_name could not be parsed"
+[[ -n "$TOOL" ]] || emit_payload_schema_block "tool_name was missing"
 [[ "$TOOL" == "Bash" ]] || exit 0
 
-COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
-[[ -n "$COMMAND" ]] || exit 0
+COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || emit_payload_schema_block "tool_input.command could not be parsed"
+[[ -n "$COMMAND" ]] || emit_payload_schema_block "tool_input.command was missing"
 
 normalize_command_segments() {
   local command_text="$1"

@@ -36,9 +36,11 @@ No prompt engineering. No "please check for N+1 queries." The plugin auto-loads
 the right domain knowledge based on what files you're editing and enforces rules
 that prevent the mistakes Ruby developers actually make in production.
 
-Hook prerequisites: core hook guardrails expect `bash`, `jq`, and `grep`. If a
-required dependency is missing, the plugin now surfaces an explicit hook error
-or warning instead of silently disabling those checks.
+Hook prerequisites: core hook guardrails expect `bash`, `jq`, `grep`, and
+standard Unix utilities available on macOS/Linux/WSL such as `head`,
+`readlink`, `awk`, `cksum`, `mktemp`, `sed`, `find`, `cp`, `mv`, `rm`, and
+`tr`. If a required dependency is missing, the plugin now surfaces an explicit
+hook error or warning instead of silently disabling those checks.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐

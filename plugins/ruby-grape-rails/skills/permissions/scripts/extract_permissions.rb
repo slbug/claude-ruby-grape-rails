@@ -104,7 +104,12 @@ def project_transcript_files(project_slug)
   Dir.children(project_dir)
      .grep(/\.jsonl\z/)
      .map { |entry| File.join(project_dir, entry) }
-     .select { |path| File.file?(path) }
+     .select do |path|
+       stat = File.lstat(path)
+       stat.file? && !stat.symlink?
+     rescue Errno::ENOENT, Errno::EACCES, Errno::EPERM
+       false
+     end
      .sort
 rescue Errno::ENOENT
   []
