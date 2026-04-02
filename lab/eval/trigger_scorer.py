@@ -35,6 +35,8 @@ def normalize_prompt(prompt: str) -> str:
 def load_all_descriptions() -> dict[str, str]:
     descriptions: dict[str, str] = {}
     for skill_dir in sorted(SKILLS_DIR.iterdir()):
+        if not skill_dir.is_dir():
+            continue
         skill_file = skill_dir / "SKILL.md"
         if not skill_file.is_file():
             continue

@@ -58,17 +58,25 @@ resolve_plan_dir() {
   fi
 }
 
+canonicalize_existing_dir() {
+  local path="$1"
+
+  [[ -d "$path" && ! -L "$path" ]] || return 1
+  (cd "$path" >/dev/null 2>&1 && pwd -P) || return 1
+}
+
 is_valid_plan_dir() {
   local input_plan_dir="$1"
   local plan_dir
+  local canonical_plan_dir
+  local canonical_plans_dir
 
   [[ -n "$input_plan_dir" ]] || return 1
-  [[ "$input_plan_dir" != *".."* ]] || return 1
 
   plan_dir=$(resolve_plan_dir "$input_plan_dir") || return 1
-  [[ "$plan_dir" == "${PLANS_DIR}/"* ]] || return 1
-  [[ -d "$plan_dir" ]] || return 1
-  [[ ! -L "$plan_dir" ]] || return 1
+  canonical_plan_dir=$(canonicalize_existing_dir "$plan_dir") || return 1
+  canonical_plans_dir=$(canonicalize_existing_dir "$PLANS_DIR") || return 1
+  [[ "$canonical_plan_dir" == "${canonical_plans_dir}/"* ]] || return 1
 }
 
 get_file_mtime() {

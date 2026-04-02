@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Blocks dynamic context injection syntax (!`command`) in tracked markdown, JSON,
-# and YAML surfaces. The tracked manifest always comes from `git ls-files`; this
-# script no longer broad-scans the filesystem because that produces
-# non-comparable results and can block on unrelated untracked content.
+# and YAML surfaces. Default mode scans tracked files from `git ls-files`.
+# `--manifest` provides a deterministic fallback manifest for changed-only or
+# non-git environments without broad filesystem scans.
 # This feature executes shell commands at skill load time. The Ruby plugin does
 # not use it and treats it as unsafe in these surfaces.
 
@@ -10,16 +10,54 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT_REAL="$(cd "${REPO_ROOT}" && pwd -P)"
 TRACKED_PATTERNS=('*.md' '*.json' '*.yml' '*.yaml')
 FOUND=0
+MANIFEST_FILE=""
+
+show_usage() {
+  cat <<'EOF'
+Usage: bash scripts/check-dynamic-injection.sh [--manifest PATH]
+
+Default behavior scans tracked Markdown/JSON/YAML files from `git ls-files`.
+Use `--manifest PATH` with a newline-delimited file list to run the same check
+without Git metadata or on a narrowed changed-file set.
+EOF
+}
 
 require_command() {
   local command_name="$1"
+  local reason="${2:-dynamic-injection scanning}"
 
   if ! command -v "$command_name" >/dev/null 2>&1; then
-    echo "ERROR: ${command_name} is required for tracked dynamic-injection scanning." >&2
+    echo "ERROR: ${command_name} is required for ${reason}." >&2
     exit 1
   fi
+}
+
+canonicalize_existing_file() {
+  local path="$1"
+  local parent_dir=""
+  local canonical_parent=""
+
+  [[ -f "$path" && ! -L "$path" ]] || return 1
+  parent_dir="$(dirname "$path")"
+  canonical_parent="$(cd "$parent_dir" >/dev/null 2>&1 && pwd -P)" || return 1
+  printf '%s/%s\n' "$canonical_parent" "$(basename "$path")"
+}
+
+resolve_manifest_path() {
+  local candidate="$1"
+  local resolved=""
+
+  [[ -n "$candidate" ]] || return 1
+  if [[ "$candidate" != /* ]]; then
+    candidate="${REPO_ROOT}/${candidate}"
+  fi
+
+  resolved="$(canonicalize_existing_file "$candidate")" || return 1
+  [[ "$resolved" == "${REPO_ROOT_REAL}/"* ]] || return 1
+  printf '%s\n' "$resolved"
 }
 
 scan_file() {
@@ -28,9 +66,31 @@ scan_file() {
 
   matches=$(
     awk '
+      BEGIN {
+        in_fence = 0
+        fence_marker = ""
+      }
+
       {
-        in_inline_code = 0
         line = $0
+        trimmed = line
+        sub(/^[[:space:]]+/, "", trimmed)
+
+        if (!in_fence && (trimmed ~ /^```/ || trimmed ~ /^~~~/)) {
+          fence_marker = substr(trimmed, 1, 3)
+          in_fence = 1
+          next
+        }
+
+        if (in_fence) {
+          if ((fence_marker == "```" && trimmed ~ /^```/) || (fence_marker == "~~~" && trimmed ~ /^~~~/)) {
+            in_fence = 0
+            fence_marker = ""
+          }
+          next
+        }
+
+        in_inline_code = 0
         line_length = length(line)
 
         for (i = 1; i <= line_length; i++) {
@@ -57,18 +117,62 @@ scan_file() {
   fi
 }
 
-require_command git
-require_command awk
+scan_manifest() {
+  local listed_path=""
+  local resolved_path=""
 
-if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
-  while IFS= read -r -d '' file; do
-    [[ -f "${REPO_ROOT}/${file}" ]] || continue
-    scan_file "${REPO_ROOT}/${file}"
-  done < <(git -C "$REPO_ROOT" ls-files -z -- "${TRACKED_PATTERNS[@]}")
+  [[ -n "$MANIFEST_FILE" ]] || return 1
+  [[ -f "$MANIFEST_FILE" && ! -L "$MANIFEST_FILE" ]] || {
+    echo "ERROR: manifest file is missing or unsafe: ${MANIFEST_FILE}" >&2
+    exit 1
+  }
+
+  while IFS= read -r listed_path; do
+    [[ -n "$listed_path" ]] || continue
+    resolved_path="$(resolve_manifest_path "$listed_path")" || continue
+    scan_file "$resolved_path"
+  done < "$MANIFEST_FILE"
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --manifest)
+      shift
+      [[ $# -gt 0 ]] || {
+        echo "ERROR: --manifest requires a file path." >&2
+        exit 1
+      }
+      MANIFEST_FILE="$1"
+      ;;
+    -h|--help)
+      show_usage
+      exit 0
+      ;;
+    *)
+      echo "ERROR: unknown argument: $1" >&2
+      show_usage >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+require_command awk "dynamic-injection scanning"
+
+if [[ -n "$MANIFEST_FILE" ]]; then
+  scan_manifest
 else
-  echo "ERROR: tracked dynamic-injection scan requires git when .git metadata is NOT available." >&2
-  echo "ERROR: install git and rerun from a repository checkout with comparable tracked-file metadata." >&2
-  exit 1
+  require_command git "tracked dynamic-injection scanning"
+  if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    while IFS= read -r -d '' file; do
+      [[ -f "${REPO_ROOT}/${file}" ]] || continue
+      scan_file "${REPO_ROOT}/${file}"
+    done < <(git -C "$REPO_ROOT" ls-files -z -- "${TRACKED_PATTERNS[@]}")
+  else
+    echo "ERROR: tracked dynamic-injection scan requires git metadata or an explicit --manifest <file>." >&2
+    echo "ERROR: rerun from a repository checkout with Git metadata, or pass a newline-delimited manifest for a comparable file set." >&2
+    exit 1
+  fi
 fi
 
 if [[ "$FOUND" -eq 1 ]]; then

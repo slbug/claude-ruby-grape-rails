@@ -23,15 +23,15 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 log_info() {
-  echo -e "${GREEN}[INFO]${NC} $1"
+  printf '%b %s\n' "${GREEN}[INFO]${NC}" "$1"
 }
 
 log_warn() {
-  echo -e "${YELLOW}[WARN]${NC} $1"
+  printf '%b %s\n' "${YELLOW}[WARN]${NC}" "$1"
 }
 
 log_error() {
-  echo -e "${RED}[ERROR]${NC} $1"
+  printf '%b %s\n' "${RED}[ERROR]${NC}" "$1"
 }
 
 require_command() {
@@ -361,11 +361,6 @@ fi
 
 if [[ ! -f "$YAML_SOURCE" ]]; then
   log_error "YAML source not found: $YAML_SOURCE"
-  exit 1
-fi
-
-if ! command -v ruby >/dev/null 2>&1; then
-  log_error "ruby is required to generate Iron Law outputs"
   exit 1
 fi
 

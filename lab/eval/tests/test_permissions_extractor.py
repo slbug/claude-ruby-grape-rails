@@ -68,6 +68,41 @@ def transcript_dir_for(repo_root: Path, home_dir: Path) -> Path:
 
 
 class PermissionsExtractorTests(unittest.TestCase):
+    def test_malformed_settings_permissions_shape_is_reported_without_crashing(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            (repo / ".claude").mkdir()
+            (repo / ".claude" / "settings.json").write_text(
+                json.dumps({"permissions": []}),
+                encoding="utf-8",
+            )
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        invalid_paths = {str(Path(path).resolve()) for path in report["invalid_settings_files"]}
+        self.assertIn(str((repo / ".claude" / "settings.json").resolve()), invalid_paths)
+        self.assertEqual(report["settings_scope"], "repo-only")
+
+    def test_non_object_transcript_entries_are_ignored_without_crashing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            transcript_dir = transcript_dir_for(repo, tmp)
+            transcript_dir.mkdir(parents=True, exist_ok=True)
+            (transcript_dir / "session.jsonl").write_text("[]\n", encoding="utf-8")
+
+            report = run_extractor(repo, tmp, "--days", "30", "--repo-only")
+
+        self.assertEqual(report["total_bash_commands"], 0)
+        self.assertEqual(report["uncovered_groups"], [])
+
     def test_dry_run_flag_is_accepted_for_skill_parity(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -106,6 +141,46 @@ class PermissionsExtractorTests(unittest.TestCase):
         self.assertEqual(default_scope["uncovered_groups"][0]["group"], "bundle exec rails db:migrate")
         self.assertEqual(include_global["uncovered_groups"], [])
         self.assertEqual(repo_only["uncovered_groups"][0]["group"], "bundle exec rails db:migrate")
+
+    def test_transcript_root_can_be_overridden(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            repo = tmp / "repo"
+            repo.mkdir()
+            (repo / ".git").mkdir()
+            custom_projects = tmp / "custom-projects"
+            custom_projects.mkdir()
+            slug = claude_project_slug(repo)
+            transcript_dir = custom_projects / slug
+            transcript_dir.mkdir(parents=True)
+            payload = {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "name": "Bash",
+                            "input": {"command": "bundle exec rubocop"},
+                        }
+                    ]
+                },
+            }
+            (transcript_dir / "session.jsonl").write_text(
+                json.dumps(payload) + "\n",
+                encoding="utf-8",
+            )
+
+            report = run_extractor(
+                repo,
+                tmp,
+                "--days",
+                "30",
+                "--repo-only",
+                env_updates={"RUBY_PLUGIN_PERMISSIONS_PROJECTS_DIR": str(custom_projects)},
+            )
+
+        self.assertEqual(report["transcript_projects_root"], str(custom_projects))
+        self.assertEqual(report["uncovered_groups"][0]["group"], "bundle exec rubocop")
 
     def test_nested_repo_root_wins_over_parent_markers(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

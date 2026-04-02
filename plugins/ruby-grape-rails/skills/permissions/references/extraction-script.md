@@ -27,11 +27,16 @@ Validation rules:
 - `--include-global` also loads `~/.claude/settings.json`.
 - `--dry-run` is accepted for skill parity; the extractor is read-only either
   way.
+- malformed-but-parseable settings/transcript entries are ignored and reported
+  as invalid instead of crashing the extractor.
 
 ## What It Scans
 
 - Claude session JSONL files for the current repo only:
   `~/.claude/projects/{project-slug}/*.jsonl`
+- Override the transcript root when needed with:
+  - `RUBY_PLUGIN_PERMISSIONS_PROJECTS_DIR`
+  - or `CLAUDE_PROJECTS_DIR`
 - Repo scope resolved from the current git root when available, otherwise from
   repo-local markers such as:
   - `.claude/settings.json`
@@ -52,6 +57,7 @@ Validation rules:
 - obvious garbage permission entries
 - duplicate permission entries
 - scan truncation metadata when large session windows are capped
+- the exact settings sources considered during the audit
 
 ## Output Notes
 
@@ -64,6 +70,9 @@ Validation rules:
   and `10000` lines per file. Override with:
   - `RUBY_PLUGIN_PERMISSIONS_MAX_SESSION_FILES`
   - `RUBY_PLUGIN_PERMISSIONS_MAX_LINES_PER_FILE`
+- When `--include-global` is used, check the reported settings-source list so
+  personal `~/.claude/settings.json` policy does not get mistaken for
+  repo-local defaults.
 
 Use the extractor output as evidence, then classify the groups with
 `risk-classification.md` before proposing settings changes.

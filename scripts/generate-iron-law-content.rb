@@ -40,16 +40,23 @@ def validate_entries!(yaml)
   category_totals = Hash.new(0)
   errors = []
 
+  blank_string = lambda do |value|
+    value.is_a?(String) && value.strip.empty?
+  end
+
   yaml['categories'].each_with_index do |category, index|
     unless category.is_a?(Hash)
       errors << "category[#{index}] must be a mapping, got #{category.class}"
       next
     end
 
-    missing = category_required.reject { |key| category[key] }
-    next if missing.empty?
+    missing = category_required.reject { |key| category.key?(key) }
+    errors << "category[#{index}] missing: #{missing.join(', ')}" unless missing.empty?
+    next unless missing.empty?
 
-    errors << "category[#{index}] missing: #{missing.join(', ')}"
+    %w[id name].each do |key|
+      errors << "category[#{index}] #{key} must not be blank" if blank_string.call(category[key])
+    end
   end
 
   yaml['laws'].each_with_index do |law, index|
@@ -58,8 +65,14 @@ def validate_entries!(yaml)
       next
     end
 
-    missing = law_required.reject { |key| law[key] }
+    missing = law_required.reject { |key| law.key?(key) }
     errors << "law[#{index}] missing: #{missing.join(', ')}" unless missing.empty?
+    if missing.empty?
+      %w[id category title rule summary_text rationale subagent_text].each do |key|
+        errors << "law[#{index}] #{key} must not be blank" if blank_string.call(law[key])
+      end
+    end
+
     next unless law.key?('category') && law['category']
     next if category_ids.include?(law['category'])
 

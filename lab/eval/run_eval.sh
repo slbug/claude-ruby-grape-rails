@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Run contributor evals for the Ruby plugin.
-# Default and CI modes score tracked surfaces; --include-untracked is
-# intentionally local-only and non-comparable.
+# Changed mode now keeps lint and injection checks scoped to changed tracked
+# surfaces; --include-untracked remains intentionally local-only and
+# non-comparable.
 #
 # Usage:
-#   ./lab/eval/run_eval.sh              # Lint + injection check + tracked changed surfaces
+#   ./lab/eval/run_eval.sh              # changed-only lint + injection + tracked changed surfaces
 #   ./lab/eval/run_eval.sh --changed    # Same as default
 #   ./lab/eval/run_eval.sh --changed --against origin/main  # branch-style diff vs merge-base
 #   ./lab/eval/run_eval.sh --changed --include-untracked  # local-only expansion
@@ -146,6 +147,11 @@ resolve_against_merge_base
 collect_changed_paths() {
   local prefix="$1"
   local lines=""
+  local -a path_args=()
+
+  if [[ -n "$prefix" ]]; then
+    path_args=(-- "$prefix")
+  fi
 
   collect_diff_paths() {
     local status=""
@@ -177,23 +183,23 @@ collect_changed_paths() {
 
   if have_head; then
     if [[ -n "$AGAINST_REF" ]]; then
-      lines=$(git diff --name-status -z -M "${AGAINST_MERGE_BASE}..HEAD" -- "$prefix" 2>/dev/null | collect_diff_paths || true)
+      lines=$(git diff --name-status -z -M "${AGAINST_MERGE_BASE}..HEAD" "${path_args[@]}" 2>/dev/null | collect_diff_paths || true)
     else
-      lines=$(git diff --name-status -z -M HEAD -- "$prefix" 2>/dev/null | collect_diff_paths || true)
+      lines=$(git diff --name-status -z -M HEAD "${path_args[@]}" 2>/dev/null | collect_diff_paths || true)
     fi
 
     local staged=""
-    staged=$(git diff --cached --name-status -z -M -- "$prefix" 2>/dev/null | collect_diff_paths || true)
+    staged=$(git diff --cached --name-status -z -M "${path_args[@]}" 2>/dev/null | collect_diff_paths || true)
     if [[ -n "$staged" ]]; then
       lines=$(printf '%s\n%s\n' "$lines" "$staged")
     fi
   else
-    lines=$(git ls-files -- "$prefix" 2>/dev/null || true)
+    lines=$(git ls-files "${path_args[@]}" 2>/dev/null || true)
   fi
 
   if [[ "$INCLUDE_UNTRACKED" == "true" ]]; then
     local untracked=""
-    untracked=$(git ls-files --others --exclude-standard -- "$prefix" 2>/dev/null || true)
+    untracked=$(git ls-files --others --exclude-standard "${path_args[@]}" 2>/dev/null || true)
     if [[ -n "$untracked" ]]; then
       lines=$(printf '%s\n%s\n' "$lines" "$untracked")
     fi
@@ -229,6 +235,20 @@ collect_deleted_agent_names() {
     sed -n "s|^__DELETED__:${PLUGIN_ROOT}/agents/\\([^/]*\\)\\.md$|\\1|p" |
     awk 'NF' |
     sort -u
+}
+
+collect_changed_markdown_paths() {
+  collect_changed_paths "" |
+    grep -Ev '^__DELETED__:' |
+    grep -E '\.md$' ||
+    true
+}
+
+collect_changed_injection_paths() {
+  collect_changed_paths "" |
+    grep -Ev '^__DELETED__:' |
+    grep -E '\.(md|json|yml|yaml)$' ||
+    true
 }
 
 should_run_changed_triggers() {
@@ -332,10 +352,56 @@ PY
 
 run_lint() {
   require_command npm "linting in ${MODE} mode"
+
+  if [[ "$MODE" == "--changed" ]]; then
+    local markdown_files=()
+    local file=""
+
+    while IFS= read -r file; do
+      [[ -n "$file" ]] || continue
+      markdown_files+=("$file")
+    done < <(collect_changed_markdown_paths)
+
+    if [[ ${#markdown_files[@]} -eq 0 ]]; then
+      echo "  No changed markdown files detected."
+      return 0
+    fi
+
+    echo "  Linting ${#markdown_files[@]} changed markdown file(s)."
+    npm exec -- markdownlint -- "${markdown_files[@]}"
+    return 0
+  fi
+
   npm run lint --silent
 }
 
 run_injection_check() {
+  if [[ "$MODE" == "--changed" ]]; then
+    local scan_paths=()
+    local path=""
+    local manifest_file=""
+
+    while IFS= read -r path; do
+      [[ -n "$path" ]] || continue
+      scan_paths+=("$path")
+    done < <(collect_changed_injection_paths)
+
+    if [[ ${#scan_paths[@]} -eq 0 ]]; then
+      echo "  No changed markdown/JSON/YAML files detected for injection scan."
+      return 0
+    fi
+
+    manifest_file="$(mktemp "${TMPDIR:-/tmp}/rb-dynamic-injection.XXXXXX")" || {
+      echo "ERROR: could not create a temporary manifest for changed-surface injection scanning." >&2
+      return 1
+    }
+    printf '%s\n' "${scan_paths[@]}" > "$manifest_file"
+    local status=0
+    bash scripts/check-dynamic-injection.sh --manifest "$manifest_file" || status=$?
+    rm -f -- "$manifest_file"
+    return "$status"
+  fi
+
   bash scripts/check-dynamic-injection.sh
 }
 
@@ -442,12 +508,12 @@ run_changed_agents() {
     return 0
   fi
 
-  local agent_names=()
+  local changed_agent_names=()
   local path=""
   for path in "${agent_paths[@]}"; do
-    agent_names+=("$(basename "$path" .md)")
+    changed_agent_names+=("$(basename "$path" .md)")
   done
-  echo "  Scoring ${#agent_paths[@]} changed agents: ${agent_names[*]}"
+  echo "  Scoring ${#agent_paths[@]} changed agents: ${changed_agent_names[*]}"
 
   local -a agent_names=()
   local -a agent_scores=()

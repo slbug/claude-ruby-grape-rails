@@ -14,6 +14,8 @@ rg -n 'define_method|method_missing|public_send|send\(' app lib
 ## Circular Dependency Detection
 
 ```ruby
+require 'pathname'
+
 files = Dir["app/**/*.rb"]
 deps = {}
 

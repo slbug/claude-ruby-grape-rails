@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 
 
@@ -30,6 +31,31 @@ def validate_json_root(data: object, name: str) -> str | None:
     """Validate that loaded JSON is a dict. Returns error message or None."""
     if not isinstance(data, dict):
         return f"{name} root must be a JSON object, got {type(data).__name__}"
+    return None
+
+
+def extract_github_repo_slug(repo_field: object) -> str | None:
+    repo_url = ""
+    if isinstance(repo_field, str):
+        repo_url = repo_field.strip()
+    elif isinstance(repo_field, dict):
+        repo_url = str(repo_field.get("url", "")).strip()
+    else:
+        return None
+
+    if re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo_url):
+        return repo_url
+
+    normalized = re.sub(r"^git\+", "", repo_url)
+
+    for pattern in (
+        r"^https?://github\.com/(?P<slug>[^/\s]+/[^/\s]+?)(?:\.git)?/?$",
+        r"^(?:ssh://)?git@github\.com[:/](?P<slug>[^/\s]+/[^/\s]+?)(?:\.git)?/?$",
+    ):
+        match = re.match(pattern, normalized)
+        if match:
+            return match.group("slug")
+
     return None
 
 
@@ -142,8 +168,9 @@ def main() -> int:
             + ", ".join(missing_links)
         )
 
+    heading_counts = Counter(headings)
     duplicate_headings = sorted(
-        {heading for heading in headings if headings.count(heading) > 1}
+        heading for heading, count in heading_counts.items() if count > 1
     )
     if duplicate_headings:
         errors.append(
@@ -158,45 +185,19 @@ def main() -> int:
 
     unreleased_url = link_defs.get("Unreleased")
 
-    # Derive repo slug from package.json repository URL
-    # Handle both dict form {"type": "git", "url": "..."} and string form "owner/repo"
     repo_field = package_dict.get("repository", "")
-    if isinstance(repo_field, str):
-        # String form: "owner/repo" or "https://github.com/owner/repo"
-        if repo_field.startswith("https://github.com/"):
-            repo_url = repo_field
-        elif "/" in repo_field and " " not in repo_field:
-            # Assume "owner/repo" format
-            repo_url = f"https://github.com/{repo_field}.git"
-        else:
-            repo_url = ""
-    elif isinstance(repo_field, dict):
-        repo_url = repo_field.get("url", "")
+    repo_slug = extract_github_repo_slug(repo_field)
+    if repo_slug:
+        expected_unreleased = (
+            f"https://github.com/{repo_slug}/compare/v{current_version}...HEAD"
+            if current_version
+            else None
+        )
     else:
-        repo_url = ""
-
-    # Ensure repo_url is a string before regex matching
-    if not isinstance(repo_url, str):
         errors.append(
-            f"Cannot extract repository slug from package.json repository.url: invalid type {type(repo_url).__name__}"
+            f"Cannot extract repository slug from package.json repository field: {repo_field!r}"
         )
         expected_unreleased = None
-    else:
-        repo_match = re.match(
-            r"https://github\.com/([^/]+/[^/]+?)(?:\.git)?$", repo_url
-        )
-        if repo_match:
-            repo_slug = repo_match.group(1)
-            expected_unreleased = (
-                f"https://github.com/{repo_slug}/compare/v{current_version}...HEAD"
-                if current_version
-                else None
-            )
-        else:
-            errors.append(
-                f"Cannot extract repository slug from package.json repository.url: {repo_url!r}"
-            )
-            expected_unreleased = None
     if expected_unreleased and unreleased_url != expected_unreleased:
         errors.append(
             f"CHANGELOG.md [Unreleased] link={unreleased_url!r} does not match expected {expected_unreleased!r}."

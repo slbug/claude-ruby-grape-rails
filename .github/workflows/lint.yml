@@ -24,7 +24,7 @@ jobs:
         run: npm ci
 
       - name: Lint Markdown files
-        run: npm run lint
+        run: npm run lint:markdown
 
   yaml:
     name: YAML Lint
@@ -34,12 +34,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Lint YAML files
-        uses: ibiqlik/action-yamllint@v3
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
         with:
-          file_or_dir: .
-          config_file: .yamllint.yml
-          strict: false
+          ruby-version: "3.4"
+
+      - name: Validate YAML files
+        run: bash scripts/validate-yaml.sh
 
   json:
     name: JSON Validate
@@ -50,11 +51,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Validate JSON files
-        run: |
-          git ls-files -z '*.json' | while IFS= read -r -d '' file; do
-            echo "Validating $file"
-            python3 -m json.tool "$file" > /dev/null
-          done
+        run: bash scripts/validate-json.sh
 
   release-metadata:
     name: Release Metadata
@@ -81,12 +78,7 @@ jobs:
           sudo apt-get install -y shellcheck
 
       - name: Validate shell scripts
-        run: |
-          git ls-files -z '*.sh' '*.bash' '.husky/pre-commit' | while IFS= read -r -d '' file; do
-            echo "Checking $file"
-            bash -n "$file"
-            shellcheck -x "$file"
-          done
+        run: bash scripts/validate-shell.sh
 
   eval-tests:
     name: Eval Tests

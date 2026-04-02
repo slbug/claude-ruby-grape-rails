@@ -277,7 +277,6 @@ orms = []
   'grape' => 'grape',
   'sidekiq' => 'sidekiq',
   'karafka' => 'karafka',
-  'hotwire' => 'hotwire-rails',
   'solid_queue' => 'solid_queue',
   'mysql' => 'mysql2',
   'postgres' => 'pg'
@@ -287,6 +286,17 @@ orms = []
   detected << component
   version = lock_version(lockfile, gem_name)
   versions[component] = version if version
+end
+
+hotwire_gems = %w[hotwire-rails turbo-rails stimulus-rails]
+hotwire_versions = hotwire_gems.filter_map do |gem_name|
+  next unless repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, gem_name)
+
+  [gem_name, lock_version(lockfile, gem_name)]
+end
+if hotwire_versions.any?
+  detected << 'hotwire'
+  versions['hotwire'] = hotwire_versions.find { |_name, version| version }&.last
 end
 
 if repo_gem_present?(gemfile, lockfile, gemspec_contents, gemfile_uses_gemspec, 'redis') ||

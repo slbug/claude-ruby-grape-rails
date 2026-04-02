@@ -3,6 +3,7 @@
 
 require 'json'
 require 'optparse'
+require 'open3'
 require 'pathname'
 require 'shellwords'
 require 'time'
@@ -57,8 +58,9 @@ end
 def find_repo_root(start_dir)
   path = Pathname.new(start_dir).expand_path
   git_root = begin
-    root = `git -C #{Shellwords.escape(path.to_s)} rev-parse --show-toplevel 2>/dev/null`.strip
-    root unless root.empty?
+    root, status = Open3.capture2e('git', '-C', path.to_s, 'rev-parse', '--show-toplevel')
+    normalized_root = root.strip
+    normalized_root unless !status.success? || normalized_root.empty?
   rescue StandardError
     nil
   end
@@ -112,7 +114,7 @@ def claude_project_slug(repo_root)
 end
 
 def project_transcript_files(project_slug)
-  project_dir = File.expand_path("~/.claude/projects/#{project_slug}")
+  project_dir = File.join(transcript_projects_root, project_slug)
   return [] unless File.directory?(project_dir)
 
   Dir.children(project_dir)
@@ -127,6 +129,14 @@ def project_transcript_files(project_slug)
      .sort
 rescue Errno::ENOENT
   []
+end
+
+def transcript_projects_root
+  configured_root = ENV['RUBY_PLUGIN_PERMISSIONS_PROJECTS_DIR'].to_s.strip
+  configured_root = ENV['CLAUDE_PROJECTS_DIR'].to_s.strip if configured_root.empty?
+  configured_root = '~/.claude/projects' if configured_root.empty?
+
+  File.expand_path(configured_root)
 end
 
 def mode_bit_readable_file?(path)
@@ -159,7 +169,10 @@ def load_permissions(settings_path)
   return { allow: [], deny: [], invalid: true } unless readability
 
   data = JSON.parse(File.read(settings_path))
+  return { allow: [], deny: [], invalid: true } unless data.is_a?(Hash)
+
   permissions = data.fetch('permissions', {})
+  return { allow: [], deny: [], invalid: true } unless permissions.is_a?(Hash)
 
   {
     allow: Array(permissions['allow']).grep(String),
@@ -287,6 +300,8 @@ end
 
 def split_shell_commands(command)
   normalized = command.gsub(/\\\n/, ' ')
+  parser_segments = split_shell_commands_with_shfmt(normalized)
+  return parser_segments if parser_segments.any?
   return [normalized.strip] if normalized.match?(/(^|[[:space:];(|&])<<-?\s*['"]?[A-Za-z_][A-Za-z0-9_]*['"]?/)
 
   commands = []
@@ -391,7 +406,27 @@ def split_shell_commands(command)
   commands
 end
 
+def split_shell_commands_with_shfmt(command)
+  stdout, status = Open3.capture2e('shfmt', '--to-json', '-filename', 'hook-input.sh', stdin_data: command)
+  return [] unless status.success?
+
+  ast = JSON.parse(stdout)
+  Array(ast['Stmts']).filter_map do |stmt|
+    start = stmt.dig('Pos', 'Offset')
+    stop = stmt.dig('Cmd', 'End', 'Offset') || stmt.dig('End', 'Offset')
+    next unless start.is_a?(Integer) && stop.is_a?(Integer) && stop >= start
+
+    segment = command[start...stop].to_s.strip
+    next if segment.empty?
+
+    segment
+  end
+rescue Errno::ENOENT, JSON::ParserError
+  []
+end
+
 def extract_bash_commands(entry)
+  return [] unless entry.is_a?(Hash)
   return [] unless entry['type'] == 'assistant'
 
   Array(entry.dig('message', 'content')).flat_map do |block|
@@ -511,7 +546,9 @@ duplicate_patterns = all_patterns
 report = {
   repo_root: repo_root,
   project_slug: project_slug,
+  transcript_projects_root: transcript_projects_root,
   days: options[:days],
+  settings_sources: settings_sources,
   scanned_sessions: recent_files.length,
   available_sessions_in_window: recent_candidates.length,
   truncated_session_files: truncated_session_files,
@@ -545,7 +582,9 @@ end
 
 puts "Repo root: #{repo_root}"
 puts "Project transcript scope: #{project_slug}"
+puts "Transcript projects root: #{transcript_projects_root}"
 puts "Settings scope: #{options[:include_global] ? 'repo + ~/.claude/settings.json' : 'repo-only'}"
+puts "Settings sources considered: #{settings_sources.join(', ')}"
 if options[:include_global]
   puts 'WARNING: including ~/.claude/settings.json can pull unrelated personal permissions into this repo audit.'
 end

@@ -10,10 +10,9 @@ require_command() {
   fi
 }
 
-require_command readlink
-
 SCRIPT_SOURCE="${BASH_SOURCE[0]}"
 while [[ -L "$SCRIPT_SOURCE" ]]; do
+  require_command readlink
   SOURCE_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd -P)"
   LINK_TARGET="$(readlink "$SCRIPT_SOURCE")"
   if [[ "$LINK_TARGET" == /* ]]; then
