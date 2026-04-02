@@ -396,6 +396,20 @@ class RuntimeScriptTests(unittest.TestCase):
             )
             wrapper.chmod(0o755)
 
+            (tmp / "workspace-root-lib.sh").write_text(
+                textwrap.dedent(
+                    """\
+                    #!/usr/bin/env bash
+                    read_hook_input() {
+                      HOOK_INPUT_VALUE=$(cat)
+                      HOOK_INPUT_STATUS=ok
+                    }
+                    """
+                ),
+                encoding="utf-8",
+            )
+            (tmp / "workspace-root-lib.sh").chmod(0o755)
+
             (tmp / "ruby-failure-hints.sh").write_text(
                 "#!/usr/bin/env bash\n"
                 'printf \'%s\' \'{"hookSpecificOutput":{"hookEventName":"PostToolUseFailure","additionalContext":"hint"}}\'\n',
@@ -434,6 +448,20 @@ class RuntimeScriptTests(unittest.TestCase):
                 RUBY_POST_TOOL_USE_FAILURE.read_text(encoding="utf-8"), encoding="utf-8"
             )
             wrapper.chmod(0o755)
+
+            (tmp / "workspace-root-lib.sh").write_text(
+                textwrap.dedent(
+                    """\
+                    #!/usr/bin/env bash
+                    read_hook_input() {
+                      HOOK_INPUT_VALUE=$(cat)
+                      HOOK_INPUT_STATUS=ok
+                    }
+                    """
+                ),
+                encoding="utf-8",
+            )
+            (tmp / "workspace-root-lib.sh").chmod(0o755)
 
             (tmp / "ruby-failure-hints.sh").write_text(
                 '#!/usr/bin/env bash\necho ran > "$(dirname "$0")/hints-ran"\nexit 2\n',

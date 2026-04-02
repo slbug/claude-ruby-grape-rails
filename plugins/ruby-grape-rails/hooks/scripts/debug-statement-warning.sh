@@ -115,7 +115,10 @@ for pattern in \
   '(^|[^[:alnum:]_])debugger([^[:alnum:]_]|$)' \
   '(^|[^[:alnum:]_.#])puts([[:space:]]|\(|$)' \
   '(^|[^[:alnum:]_.#])pp([[:space:]]|\(|$)' \
-  '(^|[^[:alnum:]_.#])p([[:space:]]|\(|$)'; do
+  '(^|[^[:alnum:]_.#])p([[:space:]]|\(|$)' \
+  '\.puts([[:space:]]|\(|$)' \
+  '\.pp([[:space:]]|\(|$)' \
+  '\.p([[:space:]]|\(|$)'; do
   MATCH=$(grep -nEm 3 "$pattern" -- "$FILE_PATH" 2>/dev/null | grep -v '^[0-9]*:[[:space:]]*#')
   [[ -n "$MATCH" ]] && DEBUGS+="
 $MATCH"
