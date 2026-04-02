@@ -398,6 +398,9 @@ append_hook_degradation_log() {
   mkdir -p -- "$log_dir" 2>/dev/null || return 1
 
   log_file="${log_dir}/hook-degradations.log"
+  if [[ -e "$log_file" ]]; then
+    [[ -f "$log_file" && ! -L "$log_file" ]] || return 1
+  fi
   timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || printf '%s' 'unknown-time')"
   printf '[%s] %s: %s\n' "$timestamp" "$hook_name" "$reason" >>"$log_file" 2>/dev/null || return 1
 }

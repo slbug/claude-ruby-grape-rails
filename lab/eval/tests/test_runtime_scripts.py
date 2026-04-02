@@ -2223,6 +2223,22 @@ class RuntimeScriptTests(unittest.TestCase):
         for path in created_dirs:
             self.assertFalse(path.exists(), path)
 
+    def test_setup_dirs_does_not_follow_symlinked_degradation_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            log_dir = tmp / ".claude" / ".logs"
+            log_dir.mkdir(parents=True)
+            external_log = tmp / "external.log"
+            external_log.write_text("before\n", encoding="utf-8")
+            os.symlink(external_log, log_dir / "hook-degradations.log")
+
+            result = run_workspace_hook_raw(SETUP_DIRS, tmpdir, "{not-json")
+            external_log_contents = external_log.read_text(encoding="utf-8")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("skipping setup-dirs.sh because hook input was invalid", result.stderr)
+        self.assertEqual(external_log_contents, "before\n")
+
     def test_check_resume_blocks_invalid_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -2708,6 +2724,60 @@ class RuntimeScriptTests(unittest.TestCase):
             (tmp / "README.md").write_text("Literal danger: !`uname -a`\n", encoding="utf-8")
             manifest = tmp / "manifest.txt"
             manifest.write_text("README.md\n", encoding="utf-8")
+
+            result = subprocess.run(
+                ["/bin/bash", str(script_copy), "--manifest", str(manifest)],
+                capture_output=True,
+                text=True,
+                cwd=tmp,
+                check=False,
+                env=dict(os.environ),
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Dynamic context injection found", result.stdout)
+
+    def test_check_dynamic_injection_manifest_scans_invalid_utf8_markdown(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            script_dir = tmp / "scripts"
+            script_dir.mkdir()
+            script_copy = script_dir / "check-dynamic-injection.sh"
+            script_copy.write_text(
+                CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            os.chmod(script_copy, 0o755)
+            (tmp / "README.md").write_bytes(b"Literal danger: !`uname -a`\xff\n")
+            manifest = tmp / "manifest.txt"
+            manifest.write_text("README.md\n", encoding="utf-8")
+
+            result = subprocess.run(
+                ["/bin/bash", str(script_copy), "--manifest", str(manifest)],
+                capture_output=True,
+                text=True,
+                cwd=tmp,
+                check=False,
+                env=dict(os.environ),
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Dynamic context injection found", result.stdout)
+
+    def test_check_dynamic_injection_manifest_scans_invalid_utf8_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            script_dir = tmp / "scripts"
+            script_dir.mkdir()
+            script_copy = script_dir / "check-dynamic-injection.sh"
+            script_copy.write_text(
+                CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            os.chmod(script_copy, 0o755)
+            (tmp / "payload.json").write_bytes(
+                b'{"danger":"!`uname -a`\xff"}\n'
+            )
+            manifest = tmp / "manifest.txt"
+            manifest.write_text("payload.json\n", encoding="utf-8")
 
             result = subprocess.run(
                 ["/bin/bash", str(script_copy), "--manifest", str(manifest)],

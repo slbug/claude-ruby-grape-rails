@@ -15,6 +15,7 @@ TRACKED_PATTERNS=('*.md' '*.json' '*.yml' '*.yaml')
 FOUND=0
 MANIFEST_FILE=""
 MANIFEST_SKIPPED=0
+SCAN_ERRORS=0
 
 show_usage() {
   cat <<'EOF'
@@ -76,15 +77,23 @@ resolve_manifest_path() {
 scan_file() {
   local file="$1"
   local matches=""
+  local scan_status=0
 
   case "$file" in
     *.md)
-      matches="$(scan_markdown_file "$file" 2>/dev/null || true)"
+      matches="$(scan_markdown_file "$file" 2>&1)" || scan_status=$?
       ;;
     *.json|*.yml|*.yaml)
-      matches="$(scan_data_file "$file" 2>/dev/null || true)"
+      matches="$(scan_data_file "$file" 2>&1)" || scan_status=$?
       ;;
   esac
+
+  if [[ "$scan_status" -ne 0 ]]; then
+    echo "ERROR: could not scan ${file} for dynamic context injection." >&2
+    [[ -n "$matches" ]] && printf '%s\n' "$matches" >&2
+    SCAN_ERRORS=$((SCAN_ERRORS + 1))
+    return
+  fi
 
   if [[ -n "$matches" ]]; then
     echo "BLOCKED: Dynamic context injection found:"
@@ -102,8 +111,15 @@ import re
 import sys
 from pathlib import Path
 
+def printable(text: str) -> str:
+    return text.encode("utf-8", "backslashreplace").decode("utf-8")
+
 path = Path(sys.argv[1])
-text = path.read_text(encoding="utf-8")
+try:
+    text = path.read_text(encoding="utf-8", errors="surrogateescape")
+except OSError as exc:
+    print(f"ERROR: failed to read {path}: {exc}", file=sys.stderr)
+    raise SystemExit(1)
 
 in_fence = False
 fence_char = ""
@@ -155,7 +171,7 @@ for line_no, line in enumerate(text.splitlines(), start=1):
     for idx in range(len(line) - 1):
         if line[idx] == "!" and line[idx + 1] == "`":
             if open_start is not None or not in_safe_span(idx):
-                print(f"{line_no}:{line}")
+                print(f"{line_no}:{printable(line)}")
                 break
 PY
 }
@@ -167,10 +183,19 @@ scan_data_file() {
 import sys
 from pathlib import Path
 
+def printable(text: str) -> str:
+    return text.encode("utf-8", "backslashreplace").decode("utf-8")
+
 path = Path(sys.argv[1])
-for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+try:
+    text = path.read_text(encoding="utf-8", errors="surrogateescape")
+except OSError as exc:
+    print(f"ERROR: failed to read {path}: {exc}", file=sys.stderr)
+    raise SystemExit(1)
+
+for line_no, line in enumerate(text.splitlines(), start=1):
     if "!`" in line:
-        print(f"{line_no}:{line}")
+        print(f"{line_no}:{printable(line)}")
 PY
 }
 
@@ -261,6 +286,11 @@ if [[ "$FOUND" -eq 1 ]]; then
   echo
   echo "The !\`command\` syntax executes shell commands and injects stdout into Claude context."
   echo "Do not use it in tracked plugin or contributor docs/config files. Use normal tools/agents instead."
+  exit 1
+fi
+
+if [[ "$SCAN_ERRORS" -gt 0 ]]; then
+  echo "ERROR: dynamic-injection scanning could not read ${SCAN_ERRORS} file(s), so coverage is incomplete." >&2
   exit 1
 fi
 
