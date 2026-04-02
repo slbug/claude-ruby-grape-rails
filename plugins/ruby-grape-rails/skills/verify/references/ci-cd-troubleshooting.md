@@ -83,7 +83,7 @@ if ! bundle exec standardrb --format quiet; then
   exit 1
 fi
 
-if ! bundle exec rails zeitwerk:check > /dev/null 2>&1; then
+if ! bundle exec rails zeitwerk:check >/dev/null 2>&1; then
   echo "❌ Zeitwerk check failed"
   exit 1
 fi
