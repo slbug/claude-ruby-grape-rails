@@ -35,6 +35,10 @@ OptionParser.new do |parser|
     options[:include_global] = true
   end
 
+  parser.on('--repo-only', 'Only use repo-local settings (default; kept for backward compatibility)') do
+    # This is the default behavior, flag kept for backward compatibility
+  end
+
   parser.on('--dry-run', 'Accepted for skill parity; extractor output is already read-only') do
     options[:dry_run] = true
   end

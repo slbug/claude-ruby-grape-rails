@@ -12,35 +12,71 @@ import unittest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-BLOCK_DANGEROUS_OPS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/block-dangerous-ops.sh"
-IRON_LAW_VERIFIER = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/iron-law-verifier.sh"
-INJECT_IRON_LAWS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/inject-iron-laws.sh"
-SECURITY_REMINDER = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/security-reminder.sh"
+BLOCK_DANGEROUS_OPS = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/block-dangerous-ops.sh"
+)
+IRON_LAW_VERIFIER = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/iron-law-verifier.sh"
+)
+INJECT_IRON_LAWS = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/inject-iron-laws.sh"
+)
+SECURITY_REMINDER = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/security-reminder.sh"
+)
 SECRET_SCAN = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/secret-scan.sh"
 DETECT_STACK = REPO_ROOT / "plugins/ruby-grape-rails/scripts/detect-stack.rb"
 DETECT_RUNTIME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime.sh"
-DETECT_RUNTIME_FAST = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime-fast.sh"
-DETECT_RUNTIME_ASYNC = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime-async.sh"
-DEBUG_STATEMENT_WARNING = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/debug-statement-warning.sh"
+DETECT_RUNTIME_FAST = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime-fast.sh"
+)
+DETECT_RUNTIME_ASYNC = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime-async.sh"
+)
+DEBUG_STATEMENT_WARNING = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/debug-statement-warning.sh"
+)
 HOOKS_JSON = REPO_ROOT / "plugins/ruby-grape-rails/hooks/hooks.json"
 PRE_COMMIT_HOOK = REPO_ROOT / ".husky/pre-commit.bash"
-CHECK_PENDING_PLANS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-pending-plans.sh"
+CHECK_PENDING_PLANS = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-pending-plans.sh"
+)
 CHECK_RESUME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-resume.sh"
-CHECK_SCRATCHPAD = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-scratchpad.sh"
+CHECK_SCRATCHPAD = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-scratchpad.sh"
+)
 SETUP_DIRS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/setup-dirs.sh"
-ACTIVE_PLAN_LIB = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/active-plan-lib.sh"
-WORKSPACE_ROOT_LIB = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/workspace-root-lib.sh"
+ACTIVE_PLAN_LIB = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/active-plan-lib.sh"
+)
+WORKSPACE_ROOT_LIB = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/workspace-root-lib.sh"
+)
 FORMAT_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/format-ruby.sh"
 VERIFY_RUBY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/verify-ruby.sh"
-RUBYISH_POST_EDIT = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/rubyish-post-edit.sh"
-PLAN_STOP_REMINDER = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/plan-stop-reminder.sh"
+RUBYISH_POST_EDIT = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/rubyish-post-edit.sh"
+)
+PLAN_STOP_REMINDER = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/plan-stop-reminder.sh"
+)
 LOG_PROGRESS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/log-progress.sh"
-STOP_FAILURE_LOG = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/stop-failure-log.sh"
+STOP_FAILURE_LOG = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/stop-failure-log.sh"
+)
 ERROR_CRITIC = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/error-critic.sh"
-RUBY_FAILURE_HINTS = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/ruby-failure-hints.sh"
-RUBY_POST_TOOL_USE_FAILURE = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/ruby-post-tool-use-failure.sh"
-PRECOMPACT_RULES = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/precompact-rules.sh"
-POSTCOMPACT_VERIFY = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/postcompact-verify.sh"
+RUBY_FAILURE_HINTS = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/ruby-failure-hints.sh"
+)
+RUBY_POST_TOOL_USE_FAILURE = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/ruby-post-tool-use-failure.sh"
+)
+PRECOMPACT_RULES = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/precompact-rules.sh"
+)
+POSTCOMPACT_VERIFY = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/postcompact-verify.sh"
+)
 CHECK_DYNAMIC_INJECTION = REPO_ROOT / "scripts/check-dynamic-injection.sh"
 FETCH_CLAUDE_DOCS = REPO_ROOT / "scripts/fetch-claude-docs.sh"
 RUN_EVAL = REPO_ROOT / "lab/eval/run_eval.sh"
@@ -55,14 +91,18 @@ def run_block_hook(
     extra_env: dict[str, str] | None = None,
     payload_override: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    payload = json.dumps(
-        {
-            "tool_name": "Bash",
-            "tool_input": {
-                "command": command,
-            },
-        }
-    ) if payload_override is None else payload_override
+    payload = (
+        json.dumps(
+            {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": command,
+                },
+            }
+        )
+        if payload_override is None
+        else payload_override
+    )
     env = dict(os.environ)
     if extra_env:
         env.update(extra_env)
@@ -118,7 +158,9 @@ def run_detect_runtime(tmpdir: str, extra_path: str | None = None) -> str:
     return Path(tmpdir, ".claude", ".runtime_env").read_text(encoding="utf-8")
 
 
-def run_debug_statement_warning(repo_root: str, file_path: str) -> subprocess.CompletedProcess[str]:
+def run_debug_statement_warning(
+    repo_root: str, file_path: str
+) -> subprocess.CompletedProcess[str]:
     payload = json.dumps({"tool_input": {"file_path": file_path}})
     env = dict(os.environ)
     env["CLAUDE_PROJECT_DIR"] = repo_root
@@ -133,7 +175,9 @@ def run_debug_statement_warning(repo_root: str, file_path: str) -> subprocess.Co
     )
 
 
-def run_workspace_hook(script_path: Path, repo_root: str, payload: dict | None = None) -> subprocess.CompletedProcess[str]:
+def run_workspace_hook(
+    script_path: Path, repo_root: str, payload: dict | None = None
+) -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
     env["CLAUDE_PROJECT_DIR"] = repo_root
     return subprocess.run(
@@ -147,7 +191,9 @@ def run_workspace_hook(script_path: Path, repo_root: str, payload: dict | None =
     )
 
 
-def run_workspace_hook_raw(script_path: Path, repo_root: str, payload: str) -> subprocess.CompletedProcess[str]:
+def run_workspace_hook_raw(
+    script_path: Path, repo_root: str, payload: str
+) -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
     env["CLAUDE_PROJECT_DIR"] = repo_root
     return subprocess.run(
@@ -209,26 +255,40 @@ class RuntimeScriptTests(unittest.TestCase):
                     prefix = "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/"
                     if command.startswith(prefix):
                         relative = command[len("${CLAUDE_PLUGIN_ROOT}/") :]
-                        command_paths.add(REPO_ROOT / "plugins/ruby-grape-rails" / relative)
+                        command_paths.add(
+                            REPO_ROOT / "plugins/ruby-grape-rails" / relative
+                        )
 
         for path in sorted(command_paths):
             self.assertTrue(path.is_file(), path)
             self.assertTrue(os.access(path, os.X_OK), path)
 
     def test_rubyish_post_edit_delegates_are_executable(self) -> None:
-        for path in (IRON_LAW_VERIFIER, FORMAT_RUBY, VERIFY_RUBY, DEBUG_STATEMENT_WARNING):
+        for path in (
+            IRON_LAW_VERIFIER,
+            FORMAT_RUBY,
+            VERIFY_RUBY,
+            DEBUG_STATEMENT_WARNING,
+        ):
             self.assertTrue(path.is_file(), path)
             self.assertTrue(os.access(path, os.X_OK), path)
 
     def test_post_tool_use_routes_ruby_hooks_through_targeted_filters(self) -> None:
-        groups = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]["PostToolUse"]
+        groups = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"][
+            "PostToolUse"
+        ]
 
-        broad_group = next(group for group in groups if group.get("matcher") == "Edit|Write")
+        broad_group = next(
+            group for group in groups if group.get("matcher") == "Edit|Write"
+        )
         broad_commands = {
             hook.get("command", "").rsplit("/", 1)[-1]: hook
             for hook in broad_group.get("hooks", [])
         }
-        self.assertEqual(set(broad_commands), {"security-reminder.sh", "log-progress.sh", "secret-scan.sh"})
+        self.assertEqual(
+            set(broad_commands),
+            {"security-reminder.sh", "log-progress.sh", "secret-scan.sh"},
+        )
         self.assertTrue(broad_commands["log-progress.sh"].get("async", False))
 
         rubyish_expected = {
@@ -268,8 +328,12 @@ class RuntimeScriptTests(unittest.TestCase):
             direct_commands,
         )
 
-    def test_post_tool_use_failure_hooks_are_filtered_to_ruby_command_families(self) -> None:
-        hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]["PostToolUseFailure"]
+    def test_post_tool_use_failure_hooks_are_filtered_to_ruby_command_families(
+        self,
+    ) -> None:
+        hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"][
+            "PostToolUseFailure"
+        ]
         hook_entries = [hook for group in hooks for hook in group.get("hooks", [])]
         self.assertTrue(hook_entries)
         expected_filters = {
@@ -327,19 +391,21 @@ class RuntimeScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             wrapper = tmp / "ruby-post-tool-use-failure.sh"
-            wrapper.write_text(RUBY_POST_TOOL_USE_FAILURE.read_text(encoding="utf-8"), encoding="utf-8")
+            wrapper.write_text(
+                RUBY_POST_TOOL_USE_FAILURE.read_text(encoding="utf-8"), encoding="utf-8"
+            )
             wrapper.chmod(0o755)
 
             (tmp / "ruby-failure-hints.sh").write_text(
                 "#!/usr/bin/env bash\n"
-                "printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUseFailure\",\"additionalContext\":\"hint\"}}'\n",
+                'printf \'%s\' \'{"hookSpecificOutput":{"hookEventName":"PostToolUseFailure","additionalContext":"hint"}}\'\n',
                 encoding="utf-8",
             )
             (tmp / "ruby-failure-hints.sh").chmod(0o755)
 
             (tmp / "error-critic.sh").write_text(
                 "#!/usr/bin/env bash\n"
-                "printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUseFailure\",\"additionalContext\":\"critic\"}}'\n",
+                'printf \'%s\' \'{"hookSpecificOutput":{"hookEventName":"PostToolUseFailure","additionalContext":"critic"}}\'\n',
                 encoding="utf-8",
             )
             (tmp / "error-critic.sh").chmod(0o755)
@@ -364,20 +430,19 @@ class RuntimeScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             wrapper = tmp / "ruby-post-tool-use-failure.sh"
-            wrapper.write_text(RUBY_POST_TOOL_USE_FAILURE.read_text(encoding="utf-8"), encoding="utf-8")
+            wrapper.write_text(
+                RUBY_POST_TOOL_USE_FAILURE.read_text(encoding="utf-8"), encoding="utf-8"
+            )
             wrapper.chmod(0o755)
 
             (tmp / "ruby-failure-hints.sh").write_text(
-                "#!/usr/bin/env bash\n"
-                "echo ran > \"$(dirname \"$0\")/hints-ran\"\n"
-                "exit 2\n",
+                '#!/usr/bin/env bash\necho ran > "$(dirname "$0")/hints-ran"\nexit 2\n',
                 encoding="utf-8",
             )
             (tmp / "ruby-failure-hints.sh").chmod(0o755)
 
             (tmp / "error-critic.sh").write_text(
-                "#!/usr/bin/env bash\n"
-                "echo ran > \"$(dirname \"$0\")/critic-ran\"\n",
+                '#!/usr/bin/env bash\necho ran > "$(dirname "$0")/critic-ran"\n',
                 encoding="utf-8",
             )
             (tmp / "error-critic.sh").chmod(0o755)
@@ -399,8 +464,12 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertTrue(hints_ran)
         self.assertFalse(critic_ran)
 
-    def test_session_start_runtime_detection_uses_fast_sync_and_async_refresh_hooks(self) -> None:
-        hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]["SessionStart"]
+    def test_session_start_runtime_detection_uses_fast_sync_and_async_refresh_hooks(
+        self,
+    ) -> None:
+        hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"][
+            "SessionStart"
+        ]
         commands = [
             hook
             for group in hooks
@@ -408,11 +477,21 @@ class RuntimeScriptTests(unittest.TestCase):
             if "detect-runtime" in hook.get("command", "")
         ]
         self.assertEqual(len(commands), 2)
-        fast_hook = next(hook for hook in commands if hook["command"].endswith("detect-runtime-fast.sh"))
-        async_hook = next(hook for hook in commands if hook["command"].endswith("detect-runtime-async.sh"))
+        fast_hook = next(
+            hook
+            for hook in commands
+            if hook["command"].endswith("detect-runtime-fast.sh")
+        )
+        async_hook = next(
+            hook
+            for hook in commands
+            if hook["command"].endswith("detect-runtime-async.sh")
+        )
         self.assertFalse(fast_hook.get("async", False))
         self.assertTrue(async_hook.get("async", False))
-        self.assertEqual(async_hook.get("statusMessage"), "Refreshing Ruby runtime context...")
+        self.assertEqual(
+            async_hook.get("statusMessage"), "Refreshing Ruby runtime context..."
+        )
 
     def test_rubyish_post_edit_fails_closed_on_invalid_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -438,7 +517,9 @@ class RuntimeScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             wrapper = tmp / "rubyish-post-edit.sh"
-            wrapper.write_text(RUBYISH_POST_EDIT.read_text(encoding="utf-8"), encoding="utf-8")
+            wrapper.write_text(
+                RUBYISH_POST_EDIT.read_text(encoding="utf-8"), encoding="utf-8"
+            )
             wrapper.chmod(0o755)
 
             result = subprocess.run(
@@ -458,7 +539,9 @@ class RuntimeScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             wrapper = tmp / "rubyish-post-edit.sh"
-            wrapper.write_text(RUBYISH_POST_EDIT.read_text(encoding="utf-8"), encoding="utf-8")
+            wrapper.write_text(
+                RUBYISH_POST_EDIT.read_text(encoding="utf-8"), encoding="utf-8"
+            )
             wrapper.chmod(0o755)
 
             (tmp / "workspace-root-lib.sh").write_text(
@@ -479,24 +562,22 @@ class RuntimeScriptTests(unittest.TestCase):
                 (
                     "iron-law-verifier.sh",
                     "#!/usr/bin/env bash\n"
-                    "echo ran > \"$(dirname \"$0\")/iron-law-ran\"\n"
+                    'echo ran > "$(dirname "$0")/iron-law-ran"\n'
                     "exit 2\n",
                 ),
                 (
                     "format-ruby.sh",
                     "#!/usr/bin/env bash\n"
-                    "echo ran > \"$(dirname \"$0\")/format-ran\"\n"
+                    'echo ran > "$(dirname "$0")/format-ran"\n'
                     "exit 2\n",
                 ),
                 (
                     "verify-ruby.sh",
-                    "#!/usr/bin/env bash\n"
-                    "echo ran > \"$(dirname \"$0\")/verify-ran\"\n",
+                    '#!/usr/bin/env bash\necho ran > "$(dirname "$0")/verify-ran"\n',
                 ),
                 (
                     "debug-statement-warning.sh",
-                    "#!/usr/bin/env bash\n"
-                    "echo ran > \"$(dirname \"$0\")/debug-ran\"\n",
+                    '#!/usr/bin/env bash\necho ran > "$(dirname "$0")/debug-ran"\n',
                 ),
             ):
                 script = tmp / name
@@ -529,7 +610,9 @@ class RuntimeScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             wrapper = tmp / "rubyish-post-edit.sh"
-            wrapper.write_text(RUBYISH_POST_EDIT.read_text(encoding="utf-8"), encoding="utf-8")
+            wrapper.write_text(
+                RUBYISH_POST_EDIT.read_text(encoding="utf-8"), encoding="utf-8"
+            )
             wrapper.chmod(0o755)
 
             (tmp / "workspace-root-lib.sh").write_text(
@@ -593,7 +676,10 @@ class RuntimeScriptTests(unittest.TestCase):
             ('bash -lc "rails db:drop"', "destructive Rails database command"),
             ('sh -lc "git push --force"', "force push detected"),
             ('bash -lc "redis-cli flushall"', "destructive Redis flush detected"),
-            ('bash -lc "RAILS_ENV=production rails runner 1"', "production environment detected"),
+            (
+                'bash -lc "RAILS_ENV=production rails runner 1"',
+                "production environment detected",
+            ),
         ):
             result = run_block_hook(command)
             self.assertEqual(result.returncode, 2, command)
@@ -601,14 +687,14 @@ class RuntimeScriptTests(unittest.TestCase):
 
     def test_block_dangerous_ops_blocks_common_ruby_wrapper_forms(self) -> None:
         for command in (
-            'ruby -e "system(\'rails db:drop\')"',
+            "ruby -e \"system('rails db:drop')\"",
             "ruby -e 'system(%q{rails db:drop})'",
             "ruby -e 'system(%q(rails db:drop))'",
             "ruby -e 'send(:system, %q{rails db:drop})'",
             "ruby -e 'Kernel.send(:system, %q{rails db:drop})'",
             "ruby -e '`rails db:drop`'",
-            'ruby -e "cmd=\'rails db:drop\'; system(cmd)"',
-            'ruby -e \'system("rails db:drop", exception: true)\'',
+            "ruby -e \"cmd='rails db:drop'; system(cmd)\"",
+            "ruby -e 'system(\"rails db:drop\", exception: true)'",
             "ruby -e 'exec(%Q{rails db:drop})'",
             "ruby -e 'system(%Q(rails db:drop))'",
             "ruby -e '%x{rails db:drop}'",
@@ -620,11 +706,23 @@ class RuntimeScriptTests(unittest.TestCase):
 
     def test_block_dangerous_ops_blocks_array_style_wrapper_forms(self) -> None:
         for command, expected in (
-            ('ruby -e "system(\'git\',\'push\',\'--force\')"', "force push detected"),
-            ('ruby -e "exec(\'rails\',\'db:drop\')"', "destructive Rails database command"),
-            ('ruby -e "spawn(\'redis-cli\',\'flushall\')"', "destructive Redis flush detected"),
-            ('python3 -c "import subprocess; subprocess.run([\'git\', \'push\', \'--force\'])"', "force push detected"),
-            ('python3 -c "import os; os.execvp(\'git\', [\'git\', \'push\', \'--force\'])"', "force push detected"),
+            ("ruby -e \"system('git','push','--force')\"", "force push detected"),
+            (
+                "ruby -e \"exec('rails','db:drop')\"",
+                "destructive Rails database command",
+            ),
+            (
+                "ruby -e \"spawn('redis-cli','flushall')\"",
+                "destructive Redis flush detected",
+            ),
+            (
+                "python3 -c \"import subprocess; subprocess.run(['git', 'push', '--force'])\"",
+                "force push detected",
+            ),
+            (
+                "python3 -c \"import os; os.execvp('git', ['git', 'push', '--force'])\"",
+                "force push detected",
+            ),
             ("command git push --force", "force push detected"),
             ("builtin git push --force", "force push detected"),
         ):
@@ -634,14 +732,38 @@ class RuntimeScriptTests(unittest.TestCase):
 
     def test_block_dangerous_ops_blocks_common_python_wrapper_forms(self) -> None:
         for command, expected in (
-            ('python3 -c "import os; os.system(\'rails db:drop\')"', "destructive Rails database command"),
-            ('python3 -c "import os; os.system(\'redis-cli flushall\')"', "destructive Redis flush detected"),
-            ('python3 -c "import os; os.system(\'RAILS_ENV=production rails db:migrate\')"', "production environment detected"),
-            ('python3 -c "import subprocess as s; s.run(\'rails db:drop\', shell=True)"', "destructive Rails database command"),
-            ('python3 -c "from subprocess import run; run(\'rails db:drop\', shell=True)"', "destructive Rails database command"),
-            ('python3 -c "import os; getattr(os, \'system\')(\'rails db:drop\')"', "destructive Rails database command"),
-            ('python3 -c "import os; cmd=\'rails db:drop\'; os.system(cmd)"', "destructive Rails database command"),
-            ('python3 -c "import subprocess; cmd=\'git push --force\'; subprocess.run(cmd, shell=True)"', "force push detected"),
+            (
+                "python3 -c \"import os; os.system('rails db:drop')\"",
+                "destructive Rails database command",
+            ),
+            (
+                "python3 -c \"import os; os.system('redis-cli flushall')\"",
+                "destructive Redis flush detected",
+            ),
+            (
+                "python3 -c \"import os; os.system('RAILS_ENV=production rails db:migrate')\"",
+                "production environment detected",
+            ),
+            (
+                "python3 -c \"import subprocess as s; s.run('rails db:drop', shell=True)\"",
+                "destructive Rails database command",
+            ),
+            (
+                "python3 -c \"from subprocess import run; run('rails db:drop', shell=True)\"",
+                "destructive Rails database command",
+            ),
+            (
+                "python3 -c \"import os; getattr(os, 'system')('rails db:drop')\"",
+                "destructive Rails database command",
+            ),
+            (
+                "python3 -c \"import os; cmd='rails db:drop'; os.system(cmd)\"",
+                "destructive Rails database command",
+            ),
+            (
+                "python3 -c \"import subprocess; cmd='git push --force'; subprocess.run(cmd, shell=True)\"",
+                "force push detected",
+            ),
         ):
             result = run_block_hook(command)
             self.assertEqual(result.returncode, 2, command)
@@ -657,7 +779,9 @@ class RuntimeScriptTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2, command)
             self.assertIn(expected, result.stderr)
 
-    def test_block_dangerous_ops_blocks_production_env_assignments_beyond_prefixes(self) -> None:
+    def test_block_dangerous_ops_blocks_production_env_assignments_beyond_prefixes(
+        self,
+    ) -> None:
         for command in (
             "rails db:migrate RAILS_ENV=production",
             "export RAILS_ENV=production; rails db:migrate",
@@ -667,7 +791,9 @@ class RuntimeScriptTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2, command)
             self.assertIn("production environment detected", result.stderr)
 
-    def test_block_dangerous_ops_uses_shfmt_to_allow_harmless_probe_with_cmdsub_prefix(self) -> None:
+    def test_block_dangerous_ops_uses_shfmt_to_allow_harmless_probe_with_cmdsub_prefix(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             fake_shfmt = tmp / "shfmt"
@@ -733,11 +859,16 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "")
 
-    def test_block_dangerous_ops_blocks_single_background_operator_variants(self) -> None:
+    def test_block_dangerous_ops_blocks_single_background_operator_variants(
+        self,
+    ) -> None:
         for command, expected in (
             ("echo ok & git push --force origin main", "force push detected"),
             ("echo ok & rails db:drop", "destructive Rails database command"),
-            ("export RAILS_ENV=production & bundle exec rails db:migrate", "production environment detected"),
+            (
+                "export RAILS_ENV=production & bundle exec rails db:migrate",
+                "production environment detected",
+            ),
         ):
             result = run_block_hook(command)
             self.assertEqual(result.returncode, 2, command)
@@ -758,14 +889,18 @@ class RuntimeScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmpdir:
             tmp = Path(tmpdir)
             script = tmp / "drop.py"
-            script.write_text('import os\nos.system("rails db:drop")\n', encoding="utf-8")
+            script.write_text(
+                'import os\nos.system("rails db:drop")\n', encoding="utf-8"
+            )
 
             result = run_block_hook(f"python3 {script}")
 
         self.assertEqual(result.returncode, 2)
         self.assertIn("destructive Rails database command", result.stderr)
 
-    def test_block_dangerous_ops_does_not_inspect_wrapper_sources_outside_repo_root(self) -> None:
+    def test_block_dangerous_ops_does_not_inspect_wrapper_sources_outside_repo_root(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             script = tmp / "drop.rb"
@@ -776,7 +911,9 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "")
 
-    def test_block_dangerous_ops_does_not_treat_echo_as_production_command(self) -> None:
+    def test_block_dangerous_ops_does_not_treat_echo_as_production_command(
+        self,
+    ) -> None:
         result = run_block_hook('echo "RAILS_ENV=production"')
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stdout, "")
@@ -792,7 +929,9 @@ class RuntimeScriptTests(unittest.TestCase):
             extra_env={"RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES": "10"},
         )
         self.assertEqual(result.returncode, 2)
-        self.assertIn("could not safely inspect a truncated hook payload", result.stderr)
+        self.assertIn(
+            "could not safely inspect a truncated hook payload", result.stderr
+        )
 
     def test_block_dangerous_ops_blocks_when_command_field_is_missing(self) -> None:
         result = run_block_hook(
@@ -802,7 +941,9 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("tool_input.command was missing", result.stderr)
 
-    def test_block_dangerous_ops_uses_default_limit_when_hook_byte_env_is_invalid(self) -> None:
+    def test_block_dangerous_ops_uses_default_limit_when_hook_byte_env_is_invalid(
+        self,
+    ) -> None:
         result = run_block_hook(
             "rails db:drop",
             extra_env={"RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES": "abc"},
@@ -971,7 +1112,9 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(values["RAILS_VERSION"], "8.1.0")
         self.assertIn("rails", values["DETECTED_STACK"])
 
-    def test_detect_stack_ignores_transitive_lockfile_specs_for_gemspec_repo(self) -> None:
+    def test_detect_stack_ignores_transitive_lockfile_specs_for_gemspec_repo(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             (tmp / "Gemfile").write_text(
@@ -1016,7 +1159,10 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertNotIn("RAILS_VERSION", values)
 
     def test_detect_stack_ignores_symlinked_manifests(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as extdir:
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            tempfile.TemporaryDirectory() as extdir,
+        ):
             tmp = Path(tmpdir)
             external = Path(extdir) / "Gemfile"
             external.write_text(
@@ -1030,9 +1176,14 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(values, {})
 
     def test_detect_stack_ignores_symlinked_packwerk_marker(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as extdir:
+        with (
+            tempfile.TemporaryDirectory() as tmpdir,
+            tempfile.TemporaryDirectory() as extdir,
+        ):
             tmp = Path(tmpdir)
-            (tmp / "Gemfile").write_text('source "https://rubygems.org"\n', encoding="utf-8")
+            (tmp / "Gemfile").write_text(
+                'source "https://rubygems.org"\n', encoding="utf-8"
+            )
             external = Path(extdir) / "packwerk.yml"
             external.write_text("enforce_dependencies: true\n", encoding="utf-8")
             os.symlink(external, tmp / "packwerk.yml")
@@ -1046,17 +1197,23 @@ class RuntimeScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             gemfile = tmp / "Gemfile"
-            gemfile.write_text('source "https://rubygems.org"\n\ngem "rails"\n', encoding="utf-8")
+            gemfile.write_text(
+                'source "https://rubygems.org"\n\ngem "rails"\n', encoding="utf-8"
+            )
             gemfile.chmod(0)
 
             values = run_detect_stack(tmpdir)
 
         self.assertEqual(values.get("DETECTED_STACK", ""), "")
 
-    def test_detect_stack_reports_project_ruby_version_from_ruby_version_file(self) -> None:
+    def test_detect_stack_reports_project_ruby_version_from_ruby_version_file(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            (tmp / "Gemfile").write_text('source "https://rubygems.org"\n', encoding="utf-8")
+            (tmp / "Gemfile").write_text(
+                'source "https://rubygems.org"\n', encoding="utf-8"
+            )
             (tmp / ".ruby-version").write_text("3.4.1\n", encoding="utf-8")
 
             values = run_detect_stack(tmpdir)
@@ -1067,7 +1224,9 @@ class RuntimeScriptTests(unittest.TestCase):
     def test_detect_stack_finds_nested_package_manifests(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            (tmp / "Gemfile").write_text('source "https://rubygems.org"\n', encoding="utf-8")
+            (tmp / "Gemfile").write_text(
+                'source "https://rubygems.org"\n', encoding="utf-8"
+            )
             (tmp / "packs" / "billing" / "invoices").mkdir(parents=True)
             (tmp / "packs" / "billing" / "invoices" / "package.yml").write_text(
                 "enforce_dependencies: true\n",
@@ -1120,7 +1279,7 @@ class RuntimeScriptTests(unittest.TestCase):
                 script = fake_bin / name
                 script.write_text(
                     "#!/usr/bin/env bash\n"
-                    "if [[ \"${1:-}\" == \"--version\" || \"${1:-}\" == \"gain\" ]]; then\n"
+                    'if [[ "${1:-}" == "--version" || "${1:-}" == "gain" ]]; then\n'
                     "  echo should-not-run >&2\n"
                     "  exit 97\n"
                     "fi\n"
@@ -1176,7 +1335,9 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 2)
-        self.assertIn("cannot inspect the hook payload because jq is unavailable", result.stderr)
+        self.assertIn(
+            "cannot inspect the hook payload because jq is unavailable", result.stderr
+        )
 
     def test_security_reminder_fails_closed_when_jq_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1184,8 +1345,12 @@ class RuntimeScriptTests(unittest.TestCase):
             (tmp / ".claude").mkdir()
             app_dir = tmp / "app" / "controllers"
             app_dir.mkdir(parents=True)
-            (app_dir / "admin_controller.rb").write_text("class AdminController; end\n", encoding="utf-8")
-            payload = json.dumps({"tool_input": {"file_path": "app/controllers/admin_controller.rb"}})
+            (app_dir / "admin_controller.rb").write_text(
+                "class AdminController; end\n", encoding="utf-8"
+            )
+            payload = json.dumps(
+                {"tool_input": {"file_path": "app/controllers/admin_controller.rb"}}
+            )
             env = dict(os.environ)
             env["CLAUDE_PROJECT_DIR"] = tmpdir
             env["PATH"] = str(tmp / "bin")
@@ -1202,7 +1367,9 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 2)
-        self.assertIn("cannot inspect the hook payload because jq is unavailable", result.stderr)
+        self.assertIn(
+            "cannot inspect the hook payload because jq is unavailable", result.stderr
+        )
 
     def test_security_reminder_fails_closed_on_invalid_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1242,7 +1409,10 @@ class RuntimeScriptTests(unittest.TestCase):
             result = run_workspace_hook_raw(LOG_PROGRESS, tmpdir, "{not-json")
 
         self.assertEqual(result.returncode, 0)
-        self.assertIn("skipped progress logging because the hook payload was invalid", result.stderr)
+        self.assertIn(
+            "skipped progress logging because the hook payload was invalid",
+            result.stderr,
+        )
 
     def test_inject_iron_laws_no_longer_requires_jq(self) -> None:
         env = dict(os.environ)
@@ -1259,10 +1429,14 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         payload = json.loads(result.stdout)
-        self.assertEqual(payload["hookSpecificOutput"]["hookEventName"], "SubagentStart")
+        self.assertEqual(
+            payload["hookSpecificOutput"]["hookEventName"], "SubagentStart"
+        )
         self.assertIn("Iron Law 1", payload["hookSpecificOutput"]["additionalContext"])
 
-    def test_secret_scan_treats_stdout_findings_as_secret_hits_even_on_nonzero_exit(self) -> None:
+    def test_secret_scan_treats_stdout_findings_as_secret_hits_even_on_nonzero_exit(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             (tmp / ".claude").mkdir()
@@ -1290,18 +1464,23 @@ class RuntimeScriptTests(unittest.TestCase):
             tmp = Path(tmpdir)
             (tmp / ".claude").mkdir()
             subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
-            subprocess.run(["git", "config", "user.email", "a@b.c"], cwd=tmp, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "a@b.c"], cwd=tmp, check=True
+            )
             subprocess.run(["git", "config", "user.name", "t"], cwd=tmp, check=True)
             (tmp / "tracked.txt").write_text("ok\n", encoding="utf-8")
             subprocess.run(["git", "add", "tracked.txt"], cwd=tmp, check=True)
-            subprocess.run(["git", "commit", "--no-gpg-sign", "-m", "init"], cwd=tmp, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "commit", "--no-gpg-sign", "-m", "init"],
+                cwd=tmp,
+                check=True,
+                capture_output=True,
+            )
             (tmp / "untracked.txt").write_text("token=abc\n", encoding="utf-8")
 
             fake = tmp / "betterleaks"
             fake.write_text(
-                "#!/usr/bin/env bash\n"
-                "echo 'FOUND SECRET'\n"
-                "exit 0\n",
+                "#!/usr/bin/env bash\necho 'FOUND SECRET'\nexit 0\n",
                 encoding="utf-8",
             )
             fake.chmod(0o755)
@@ -1325,7 +1504,9 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("Potential secret detected", result.stderr)
 
-    def test_secret_scan_warns_when_betterleaks_is_missing_in_default_mode(self) -> None:
+    def test_secret_scan_warns_when_betterleaks_is_missing_in_default_mode(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             (tmp / ".claude").mkdir()
@@ -1333,7 +1514,29 @@ class RuntimeScriptTests(unittest.TestCase):
             target.write_text("safe text\n", encoding="utf-8")
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
-            for name in ("dirname", "jq", "grep", "git", "head", "pwd", "readlink", "rm", "mkdir", "cp", "mktemp", "mv", "sed", "wc", "find", "cut", "stat", "date", "tail", "tr", "cat"):
+            for name in (
+                "dirname",
+                "jq",
+                "grep",
+                "git",
+                "head",
+                "pwd",
+                "readlink",
+                "rm",
+                "mkdir",
+                "cp",
+                "mktemp",
+                "mv",
+                "sed",
+                "wc",
+                "find",
+                "cut",
+                "stat",
+                "date",
+                "tail",
+                "tr",
+                "cat",
+            ):
                 source = shutil.which(name)
                 self.assertIsNotNone(source, name)
                 os.symlink(source, fake_bin / name)
@@ -1356,7 +1559,9 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("Betterleaks not available", result.stderr)
 
-    def test_secret_scan_warns_when_default_mode_cannot_resolve_workspace_root(self) -> None:
+    def test_secret_scan_warns_when_default_mode_cannot_resolve_workspace_root(
+        self,
+    ) -> None:
         env = dict(os.environ)
         env.pop("CLAUDE_PROJECT_DIR", None)
         env["BETTERLEAKS_PATH"] = ""
@@ -1373,9 +1578,13 @@ class RuntimeScriptTests(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0)
-        self.assertIn("could not resolve the workspace root for secret scanning", result.stderr)
+        self.assertIn(
+            "could not resolve the workspace root for secret scanning", result.stderr
+        )
 
-    def test_secret_scan_blocks_strict_recent_change_scan_when_git_is_unavailable(self) -> None:
+    def test_secret_scan_blocks_strict_recent_change_scan_when_git_is_unavailable(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             (tmp / ".claude").mkdir()
@@ -1388,8 +1597,12 @@ class RuntimeScriptTests(unittest.TestCase):
             real_grep = shutil.which("grep")
             self.assertIsNotNone(real_jq)
             self.assertIsNotNone(real_grep)
-            (fake_bin / "jq").write_text(f"#!/bin/sh\nexec {real_jq} \"$@\"\n", encoding="utf-8")
-            (fake_bin / "grep").write_text(f"#!/bin/sh\nexec {real_grep} \"$@\"\n", encoding="utf-8")
+            (fake_bin / "jq").write_text(
+                f'#!/bin/sh\nexec {real_jq} "$@"\n', encoding="utf-8"
+            )
+            (fake_bin / "grep").write_text(
+                f'#!/bin/sh\nexec {real_grep} "$@"\n', encoding="utf-8"
+            )
             (fake_bin / "git").write_text("#!/bin/sh\nexit 127\n", encoding="utf-8")
             os.chmod(fake_bin / "jq", 0o755)
             os.chmod(fake_bin / "grep", 0o755)
@@ -1419,11 +1632,18 @@ class RuntimeScriptTests(unittest.TestCase):
             tmp = Path(tmpdir)
             (tmp / ".claude").mkdir()
             subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
-            subprocess.run(["git", "config", "user.email", "a@b.c"], cwd=tmp, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "a@b.c"], cwd=tmp, check=True
+            )
             subprocess.run(["git", "config", "user.name", "t"], cwd=tmp, check=True)
             (tmp / "tracked.txt").write_text("ok\n", encoding="utf-8")
             subprocess.run(["git", "add", "tracked.txt"], cwd=tmp, check=True)
-            subprocess.run(["git", "commit", "--no-gpg-sign", "-m", "init"], cwd=tmp, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "commit", "--no-gpg-sign", "-m", "init"],
+                cwd=tmp,
+                check=True,
+                capture_output=True,
+            )
             (tmp / "untracked.txt").write_text("token=abc\n", encoding="utf-8")
 
             fake = tmp / "betterleaks"
@@ -1433,7 +1653,9 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin.mkdir()
             real_git = shutil.which("git")
             self.assertIsNotNone(real_git)
-            (fake_bin / "git").write_text(f"#!/bin/sh\nexec {real_git} \"$@\"\n", encoding="utf-8")
+            (fake_bin / "git").write_text(
+                f'#!/bin/sh\nexec {real_git} "$@"\n', encoding="utf-8"
+            )
             (fake_bin / "cp").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
             os.chmod(fake_bin / "git", 0o755)
             os.chmod(fake_bin / "cp", 0o755)
@@ -1486,13 +1708,17 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 2)
-        self.assertIn("secret scan could not create a temporary workspace", result.stderr)
+        self.assertIn(
+            "secret scan could not create a temporary workspace", result.stderr
+        )
 
     def test_format_ruby_reports_tempfile_creation_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             (tmp / ".claude").mkdir()
-            (tmp / "Gemfile").write_text('source "https://rubygems.org"\ngem "standard"\n', encoding="utf-8")
+            (tmp / "Gemfile").write_text(
+                'source "https://rubygems.org"\ngem "standard"\n', encoding="utf-8"
+            )
             target = tmp / "demo.rb"
             target.write_text("puts :ok\n", encoding="utf-8")
             fake_bin = tmp / "bin"
@@ -1518,12 +1744,16 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("temporary file could not be created", result.stderr)
 
-    def test_format_ruby_skips_gemfile_when_formatter_dependency_state_is_transitional(self) -> None:
+    def test_format_ruby_skips_gemfile_when_formatter_dependency_state_is_transitional(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             (tmp / ".claude").mkdir()
             gemfile = tmp / "Gemfile"
-            gemfile.write_text('source "https://rubygems.org"\ngem "standard"\n', encoding="utf-8")
+            gemfile.write_text(
+                'source "https://rubygems.org"\ngem "standard"\n', encoding="utf-8"
+            )
             (tmp / "Gemfile.lock").write_text(
                 textwrap.dedent(
                     """
@@ -1564,7 +1794,9 @@ class RuntimeScriptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             (tmp / ".claude").mkdir()
-            (tmp / "Gemfile").write_text('source "https://rubygems.org"\ngem "standard"\n', encoding="utf-8")
+            (tmp / "Gemfile").write_text(
+                'source "https://rubygems.org"\ngem "standard"\n', encoding="utf-8"
+            )
             target = tmp / "demo.rb"
             target.write_text("puts :ok\n", encoding="utf-8")
             fake_bin = tmp / "bin"
@@ -1654,7 +1886,9 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("tool_input.file_path was missing", result.stderr)
 
-    def test_detect_runtime_warns_when_runtime_env_tempfile_cannot_be_created(self) -> None:
+    def test_detect_runtime_warns_when_runtime_env_tempfile_cannot_be_created(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             (tmp / ".claude").mkdir()
@@ -1679,7 +1913,9 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("could not update .runtime_env", result.stderr)
 
-    def test_detect_runtime_warns_when_runtime_state_dir_cannot_be_prepared(self) -> None:
+    def test_detect_runtime_warns_when_runtime_state_dir_cannot_be_prepared(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             (tmp / ".claude").write_text("not-a-directory\n", encoding="utf-8")
@@ -1763,13 +1999,17 @@ class RuntimeScriptTests(unittest.TestCase):
             tmp = Path(tmpdir)
             subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
             (tmp / "demo.json").write_text('{"ok": true}\n', encoding="utf-8")
-            subprocess.run(["git", "add", "demo.json"], cwd=tmp, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "add", "demo.json"], cwd=tmp, check=True, capture_output=True
+            )
 
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             real_git = shutil.which("git")
             self.assertIsNotNone(real_git)
-            (fake_bin / "git").write_text(f"#!/bin/sh\nexec {real_git} \"$@\"\n", encoding="utf-8")
+            (fake_bin / "git").write_text(
+                f'#!/bin/sh\nexec {real_git} "$@"\n', encoding="utf-8"
+            )
             os.chmod(fake_bin / "git", 0o755)
 
             env = dict(os.environ)
@@ -1816,7 +2056,9 @@ class RuntimeScriptTests(unittest.TestCase):
             ]
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("skipping setup-dirs.sh because hook input was invalid", result.stderr)
+        self.assertIn(
+            "skipping setup-dirs.sh because hook input was invalid", result.stderr
+        )
         self.assertFalse(claude_dir.exists())
         for path in created_dirs:
             self.assertFalse(path.exists(), path)
@@ -1830,8 +2072,7 @@ class RuntimeScriptTests(unittest.TestCase):
 
             result = run_workspace_hook_raw(CHECK_RESUME, tmpdir, "{not-json")
 
-        self.assertEqual(result.returncode, 2)
-        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.returncode, 0)
         self.assertIn("could not safely inspect", result.stderr)
 
     def test_stop_failure_log_skips_invalid_payload(self) -> None:
@@ -1839,7 +2080,9 @@ class RuntimeScriptTests(unittest.TestCase):
             tmp = Path(tmpdir)
             plan_dir = tmp / ".claude" / "plans" / "demo"
             plan_dir.mkdir(parents=True)
-            (tmp / ".claude" / "ACTIVE_PLAN").write_text(str(plan_dir) + "\n", encoding="utf-8")
+            (tmp / ".claude" / "ACTIVE_PLAN").write_text(
+                str(plan_dir) + "\n", encoding="utf-8"
+            )
             (plan_dir / "plan.md").write_text("- [ ] task\n", encoding="utf-8")
 
             result = run_workspace_hook_raw(STOP_FAILURE_LOG, tmpdir, "{not-json")
@@ -1853,7 +2096,9 @@ class RuntimeScriptTests(unittest.TestCase):
             tmp = Path(tmpdir)
             plan_dir = tmp / ".claude" / "plans" / "demo"
             plan_dir.mkdir(parents=True)
-            (plan_dir / "plan.md").write_text("# Demo\n\n1. [ ] first task\n", encoding="utf-8")
+            (plan_dir / "plan.md").write_text(
+                "# Demo\n\n1. [ ] first task\n", encoding="utf-8"
+            )
             active_marker = tmp / ".claude" / "ACTIVE_PLAN"
             active_marker.write_text(str(plan_dir.resolve()) + "\n", encoding="utf-8")
 
@@ -1869,7 +2114,9 @@ class RuntimeScriptTests(unittest.TestCase):
             tmp = Path(tmpdir)
             plan_dir = tmp / ".claude" / "plans" / "demo"
             plan_dir.mkdir(parents=True)
-            (plan_dir / "plan.md").write_text("# Demo\n\n* [ ] first task\n", encoding="utf-8")
+            (plan_dir / "plan.md").write_text(
+                "# Demo\n\n* [ ] first task\n", encoding="utf-8"
+            )
 
             result = run_active_plan_query(tmpdir)
 
@@ -1881,7 +2128,9 @@ class RuntimeScriptTests(unittest.TestCase):
             tmp = Path(tmpdir)
             plan_dir = tmp / ".claude" / "plans" / "demo"
             plan_dir.mkdir(parents=True)
-            (plan_dir / "plan.md").write_text("# Demo\n\n[ ] first task\n", encoding="utf-8")
+            (plan_dir / "plan.md").write_text(
+                "# Demo\n\n[ ] first task\n", encoding="utf-8"
+            )
 
             result = run_active_plan_query(tmpdir)
 
@@ -1908,7 +2157,9 @@ class RuntimeScriptTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            pending = run_workspace_hook(CHECK_PENDING_PLANS, tmpdir, {"stop_hook_active": False})
+            pending = run_workspace_hook(
+                CHECK_PENDING_PLANS, tmpdir, {"stop_hook_active": False}
+            )
             resume = run_workspace_hook(CHECK_RESUME, tmpdir)
 
         self.assertEqual(pending.returncode, 0, pending.stderr)
@@ -1939,13 +2190,19 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(resume.returncode, 0, resume.stderr)
         self.assertIn("has 1 remaining tasks (1 done)", resume.stdout)
 
-    def test_check_scratchpad_auto_initializes_missing_scratchpad_for_active_plan(self) -> None:
+    def test_check_scratchpad_auto_initializes_missing_scratchpad_for_active_plan(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             plan_dir = tmp / ".claude" / "plans" / "demo"
             plan_dir.mkdir(parents=True)
-            (plan_dir / "plan.md").write_text("# Demo\n\n- [ ] first task\n", encoding="utf-8")
-            (tmp / ".claude" / "ACTIVE_PLAN").write_text(str(plan_dir.resolve()) + "\n", encoding="utf-8")
+            (plan_dir / "plan.md").write_text(
+                "# Demo\n\n- [ ] first task\n", encoding="utf-8"
+            )
+            (tmp / ".claude" / "ACTIVE_PLAN").write_text(
+                str(plan_dir.resolve()) + "\n", encoding="utf-8"
+            )
 
             result = run_workspace_hook(CHECK_SCRATCHPAD, tmpdir)
             scratchpad = plan_dir / "scratchpad.md"
@@ -1960,26 +2217,38 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("## Handoff", content)
         self.assertIn("Scratchpad notes ready in 1 plan(s):", result.stdout)
 
-    def test_check_scratchpad_does_not_backfill_completed_historical_plans(self) -> None:
+    def test_check_scratchpad_does_not_backfill_completed_historical_plans(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             plans_dir = tmp / ".claude" / "plans"
 
             active_dir = plans_dir / "active"
             active_dir.mkdir(parents=True)
-            (active_dir / "plan.md").write_text("# Active\n\n- [ ] first task\n", encoding="utf-8")
+            (active_dir / "plan.md").write_text(
+                "# Active\n\n- [ ] first task\n", encoding="utf-8"
+            )
 
             complete_dir = plans_dir / "complete"
             complete_dir.mkdir(parents=True)
-            (complete_dir / "plan.md").write_text("# Complete\n\n- [x] done\n", encoding="utf-8")
+            (complete_dir / "plan.md").write_text(
+                "# Complete\n\n- [x] done\n", encoding="utf-8"
+            )
             (complete_dir / "progress.md").write_text("done\n", encoding="utf-8")
 
             noted_dir = plans_dir / "noted"
             noted_dir.mkdir(parents=True)
-            (noted_dir / "plan.md").write_text("# Noted\n\n- [x] done\n", encoding="utf-8")
-            (noted_dir / "scratchpad.md").write_text("# Scratchpad: noted\n", encoding="utf-8")
+            (noted_dir / "plan.md").write_text(
+                "# Noted\n\n- [x] done\n", encoding="utf-8"
+            )
+            (noted_dir / "scratchpad.md").write_text(
+                "# Scratchpad: noted\n", encoding="utf-8"
+            )
 
-            (tmp / ".claude" / "ACTIVE_PLAN").write_text(str(active_dir.resolve()) + "\n", encoding="utf-8")
+            (tmp / ".claude" / "ACTIVE_PLAN").write_text(
+                str(active_dir.resolve()) + "\n", encoding="utf-8"
+            )
 
             result = run_workspace_hook(CHECK_SCRATCHPAD, tmpdir)
             active_exists = (active_dir / "scratchpad.md").is_file()
@@ -2009,7 +2278,9 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(second.returncode, 0)
         self.assertIn("REPEATED FAILURE", second.stdout)
 
-    def test_error_critic_warns_when_hook_state_storage_cannot_be_prepared(self) -> None:
+    def test_error_critic_warns_when_hook_state_storage_cannot_be_prepared(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             (tmp / ".claude").write_text("not-a-directory\n", encoding="utf-8")
@@ -2058,7 +2329,19 @@ class RuntimeScriptTests(unittest.TestCase):
             tmp = Path(tmpdir)
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
-            for name in ("jq", "grep", "dirname", "mkdir", "mktemp", "mv", "rmdir", "tail", "head", "tr", "date"):
+            for name in (
+                "jq",
+                "grep",
+                "dirname",
+                "mkdir",
+                "mktemp",
+                "mv",
+                "rmdir",
+                "tail",
+                "head",
+                "tr",
+                "date",
+            ):
                 source = shutil.which(name)
                 self.assertIsNotNone(source, name)
                 os.symlink(source, fake_bin / name)
@@ -2108,7 +2391,9 @@ class RuntimeScriptTests(unittest.TestCase):
             env["RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES"] = "10"
             result = subprocess.run(
                 ["bash", str(RUBY_FAILURE_HINTS)],
-                input=json.dumps({"tool_input": {"command": "bundle exec rspec spec/models"}}),
+                input=json.dumps(
+                    {"tool_input": {"command": "bundle exec rspec spec/models"}}
+                ),
                 capture_output=True,
                 text=True,
                 cwd=REPO_ROOT,
@@ -2117,7 +2402,9 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 2)
-        self.assertIn("could not safely inspect a truncated hook payload", result.stderr)
+        self.assertIn(
+            "could not safely inspect a truncated hook payload", result.stderr
+        )
 
     def test_precompact_rules_surfaces_active_plan_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2125,7 +2412,9 @@ class RuntimeScriptTests(unittest.TestCase):
             plan_dir = tmp / ".claude" / "plans" / "demo"
             research_dir = plan_dir / "research"
             research_dir.mkdir(parents=True)
-            (tmp / ".claude" / "ACTIVE_PLAN").write_text(str(plan_dir) + "\n", encoding="utf-8")
+            (tmp / ".claude" / "ACTIVE_PLAN").write_text(
+                str(plan_dir) + "\n", encoding="utf-8"
+            )
             (research_dir / "notes.md").write_text("x\n", encoding="utf-8")
 
             result = run_workspace_hook(PRECOMPACT_RULES, tmpdir, {})
@@ -2138,7 +2427,9 @@ class RuntimeScriptTests(unittest.TestCase):
             tmp = Path(tmpdir)
             plan_dir = tmp / ".claude" / "plans" / "demo"
             plan_dir.mkdir(parents=True)
-            (tmp / ".claude" / "ACTIVE_PLAN").write_text(str(plan_dir) + "\n", encoding="utf-8")
+            (tmp / ".claude" / "ACTIVE_PLAN").write_text(
+                str(plan_dir) + "\n", encoding="utf-8"
+            )
             (plan_dir / "plan.md").write_text("- [ ] task\n", encoding="utf-8")
 
             result = run_workspace_hook(POSTCOMPACT_VERIFY, tmpdir, {})
@@ -2147,13 +2438,17 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("POST-COMPACTION", result.stderr)
         self.assertIn(".claude/plans/demo/plan.md", result.stderr)
 
-    def test_check_dynamic_injection_errors_when_git_is_missing_for_tracked_scan(self) -> None:
+    def test_check_dynamic_injection_errors_when_git_is_missing_for_tracked_scan(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             script_dir = tmp / "scripts"
             script_dir.mkdir()
             script_copy = script_dir / "check-dynamic-injection.sh"
-            script_copy.write_text(CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8")
+            script_copy.write_text(
+                CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8"
+            )
             os.chmod(script_copy, 0o755)
             plugin_dir = tmp / "plugins"
             plugin_dir.mkdir()
@@ -2171,7 +2466,10 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 1)
-        self.assertIn("tracked dynamic-injection scan requires git when .git metadata is present", result.stderr)
+        self.assertIn(
+            "tracked dynamic-injection scan requires git when .git metadata is NOT available",
+            result.stderr,
+        )
         self.assertIn("install git and rerun from a repository checkout", result.stderr)
 
     def test_check_dynamic_injection_scans_tracked_top_level_docs(self) -> None:
@@ -2180,11 +2478,17 @@ class RuntimeScriptTests(unittest.TestCase):
             script_dir = tmp / "scripts"
             script_dir.mkdir()
             script_copy = script_dir / "check-dynamic-injection.sh"
-            script_copy.write_text(CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8")
+            script_copy.write_text(
+                CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8"
+            )
             os.chmod(script_copy, 0o755)
             subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
-            (tmp / "CHANGELOG.md").write_text("## Change\n\n!`uname -a`\n", encoding="utf-8")
-            subprocess.run(["git", "add", "CHANGELOG.md"], cwd=tmp, check=True, capture_output=True)
+            (tmp / "CHANGELOG.md").write_text(
+                "## Change\n\n!`uname -a`\n", encoding="utf-8"
+            )
+            subprocess.run(
+                ["git", "add", "CHANGELOG.md"], cwd=tmp, check=True, capture_output=True
+            )
 
             result = subprocess.run(
                 ["/bin/bash", str(script_copy)],
@@ -2198,20 +2502,26 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("Dynamic context injection found", result.stdout)
 
-    def test_check_dynamic_injection_ignores_bang_methods_inside_inline_code(self) -> None:
+    def test_check_dynamic_injection_ignores_bang_methods_inside_inline_code(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             script_dir = tmp / "scripts"
             script_dir.mkdir()
             script_copy = script_dir / "check-dynamic-injection.sh"
-            script_copy.write_text(CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8")
+            script_copy.write_text(
+                CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8"
+            )
             os.chmod(script_copy, 0o755)
             subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
             (tmp / "README.md").write_text(
                 "- Use `disable_ddl_transaction!` with `algorithm: :concurrently`\n",
                 encoding="utf-8",
             )
-            subprocess.run(["git", "add", "README.md"], cwd=tmp, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "add", "README.md"], cwd=tmp, check=True, capture_output=True
+            )
 
             result = subprocess.run(
                 ["/bin/bash", str(script_copy)],
@@ -2225,13 +2535,17 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("No dynamic context injection found.", result.stdout)
 
-    def test_check_dynamic_injection_requires_git_when_git_metadata_exists(self) -> None:
+    def test_check_dynamic_injection_requires_git_when_git_metadata_exists(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             script_dir = tmp / "scripts"
             script_dir.mkdir()
             script_copy = script_dir / "check-dynamic-injection.sh"
-            script_copy.write_text(CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8")
+            script_copy.write_text(
+                CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8"
+            )
             os.chmod(script_copy, 0o755)
             (tmp / ".git").mkdir()
             fake_bin = tmp / "bin"
@@ -2255,15 +2569,21 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 1)
-        self.assertIn("git is required for tracked dynamic-injection scanning", result.stderr)
+        self.assertIn(
+            "git is required for tracked dynamic-injection scanning", result.stderr
+        )
 
-    def test_check_dynamic_injection_requires_git_when_git_metadata_is_a_file(self) -> None:
+    def test_check_dynamic_injection_requires_git_when_git_metadata_is_a_file(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             script_dir = tmp / "scripts"
             script_dir.mkdir()
             script_copy = script_dir / "check-dynamic-injection.sh"
-            script_copy.write_text(CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8")
+            script_copy.write_text(
+                CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8"
+            )
             os.chmod(script_copy, 0o755)
             (tmp / ".git").write_text("gitdir: /tmp/worktrees/demo\n", encoding="utf-8")
             fake_bin = tmp / "bin"
@@ -2287,7 +2607,9 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 1)
-        self.assertIn("git is required for tracked dynamic-injection scanning", result.stderr)
+        self.assertIn(
+            "git is required for tracked dynamic-injection scanning", result.stderr
+        )
 
     def test_run_eval_marks_include_untracked_as_local_only(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2296,11 +2618,13 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin.mkdir()
             real_git = shutil.which("git")
             self.assertIsNotNone(real_git)
-            (fake_bin / "npm").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            (fake_bin / "npm").write_text(
+                "#!/usr/bin/env bash\nexit 0\n", encoding="utf-8"
+            )
             (fake_bin / "git").write_text(
                 "#!/usr/bin/env bash\n"
                 f"REAL_GIT={shlex.quote(real_git)}\n"
-                "case \"$*\" in\n"
+                'case "$*" in\n'
                 "  'rev-parse --verify HEAD') exit 0 ;;\n"
                 "  'diff --name-status -z -M HEAD -- plugins/ruby-grape-rails/skills/') exit 0 ;;\n"
                 "  'diff --cached --name-status -z -M -- plugins/ruby-grape-rails/skills/') exit 0 ;;\n"
@@ -2315,7 +2639,7 @@ class RuntimeScriptTests(unittest.TestCase):
                 "  'ls-files --others --exclude-standard -- lab/eval/triggers/') exit 0 ;;\n"
                 "  'ls-files --others --exclude-standard -- lab/eval/evals/') exit 0 ;;\n"
                 "esac\n"
-                "exec \"$REAL_GIT\" \"$@\"\n",
+                'exec "$REAL_GIT" "$@"\n',
                 encoding="utf-8",
             )
             os.chmod(fake_bin / "npm", 0o755)
@@ -2337,18 +2661,22 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("local-only and non-comparable", result.stdout)
 
-    def test_run_eval_warns_when_include_untracked_is_ignored_outside_changed(self) -> None:
+    def test_run_eval_warns_when_include_untracked_is_ignored_outside_changed(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             real_git = shutil.which("git")
             self.assertIsNotNone(real_git)
-            (fake_bin / "npm").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            (fake_bin / "npm").write_text(
+                "#!/usr/bin/env bash\nexit 0\n", encoding="utf-8"
+            )
             (fake_bin / "git").write_text(
                 "#!/usr/bin/env bash\n"
                 f"REAL_GIT={shlex.quote(real_git)}\n"
-                "exec \"$REAL_GIT\" \"$@\"\n",
+                'exec "$REAL_GIT" "$@"\n',
                 encoding="utf-8",
             )
             os.chmod(fake_bin / "npm", 0o755)
@@ -2405,7 +2733,10 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
             self.assertEqual(result.returncode, 1, env_name)
-            self.assertIn(f"{env_name} must be a finite numeric threshold between 0 and 1", result.stderr)
+            self.assertIn(
+                f"{env_name} must be a finite numeric threshold between 0 and 1",
+                result.stderr,
+            )
 
     def test_run_eval_rejects_out_of_range_threshold_envs(self) -> None:
         for threshold in ("-1", "2"):
@@ -2421,7 +2752,9 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
             self.assertEqual(result.returncode, 1, threshold)
-            self.assertIn("must be a finite numeric threshold between 0 and 1", result.stderr)
+            self.assertIn(
+                "must be a finite numeric threshold between 0 and 1", result.stderr
+            )
 
     def test_run_eval_reports_tempfile_creation_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2454,12 +2787,15 @@ class RuntimeScriptTests(unittest.TestCase):
             python3_path = shutil.which("python3")
             dirname_path = shutil.which("dirname")
             git_path = shutil.which("git")
+            mktemp_path = shutil.which("mktemp")
             self.assertIsNotNone(python3_path)
             self.assertIsNotNone(dirname_path)
             self.assertIsNotNone(git_path)
+            self.assertIsNotNone(mktemp_path)
             os.symlink(python3_path, fake_bin / "python3")
             os.symlink(dirname_path, fake_bin / "dirname")
             os.symlink(git_path, fake_bin / "git")
+            os.symlink(mktemp_path, fake_bin / "mktemp")
             env = dict(os.environ)
             env["PATH"] = str(fake_bin)
             env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = "0"
@@ -2478,7 +2814,9 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("npm is required for linting in --ci mode", result.stderr)
 
-    def test_run_eval_changed_mode_skips_deleted_or_moved_paths_with_warning(self) -> None:
+    def test_run_eval_changed_mode_skips_deleted_or_moved_paths_with_warning(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             fake_bin = tmp / "bin"
@@ -2487,11 +2825,13 @@ class RuntimeScriptTests(unittest.TestCase):
             real_python3 = shutil.which("python3")
             self.assertIsNotNone(real_git)
             self.assertIsNotNone(real_python3)
-            (fake_bin / "npm").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            (fake_bin / "npm").write_text(
+                "#!/usr/bin/env bash\nexit 0\n", encoding="utf-8"
+            )
             (fake_bin / "git").write_text(
                 "#!/usr/bin/env bash\n"
                 f"REAL_GIT={shlex.quote(real_git)}\n"
-                "case \"$*\" in\n"
+                'case "$*" in\n'
                 "  'rev-parse --verify HEAD') exit 0 ;;\n"
                 "  'diff --name-status -z -M HEAD -- plugins/ruby-grape-rails/skills/')\n"
                 "    printf 'M\\0plugins/ruby-grape-rails/skills/plan/SKILL.md\\0R100\\0plugins/ruby-grape-rails/skills/old/SKILL.md\\0plugins/ruby-grape-rails/skills/missing/SKILL.md\\0'\n"
@@ -2508,7 +2848,7 @@ class RuntimeScriptTests(unittest.TestCase):
                 "  'diff --name-status -z -M HEAD -- lab/eval/evals/') exit 0 ;;\n"
                 "  'diff --cached --name-status -z -M -- lab/eval/evals/') exit 0 ;;\n"
                 "esac\n"
-                "exec \"$REAL_GIT\" \"$@\"\n",
+                'exec "$REAL_GIT" "$@"\n',
                 encoding="utf-8",
             )
             os.chmod(fake_bin / "npm", 0o755)
@@ -2530,10 +2870,16 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("skipping deleted or moved changed skills: missing", result.stderr)
-        self.assertIn("skipping deleted or moved changed agents: missing", result.stderr)
+        self.assertIn(
+            "skipping deleted or moved changed skills: missing", result.stderr
+        )
+        self.assertIn(
+            "skipping deleted or moved changed agents: missing", result.stderr
+        )
 
-    def test_run_eval_tests_resolves_repo_root_when_invoked_through_symlink(self) -> None:
+    def test_run_eval_tests_resolves_repo_root_when_invoked_through_symlink(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             symlink_path = tmp / "run-eval-tests.sh"
@@ -2543,7 +2889,7 @@ class RuntimeScriptTests(unittest.TestCase):
             python3 = fake_bin / "python3"
             python3.write_text(
                 "#!/usr/bin/env bash\n"
-                "if [[ \"${1:-}\" == \"-c\" ]]; then\n"
+                'if [[ "${1:-}" == "-c" ]]; then\n'
                 "  exit 0\n"
                 "fi\n"
                 "pwd\n",
@@ -2583,7 +2929,18 @@ class RuntimeScriptTests(unittest.TestCase):
             tmp = Path(tmpdir)
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
-            for name in ("curl", "date", "dirname", "mkdir", "mktemp", "mv", "rm", "sed", "stat", "wc"):
+            for name in (
+                "curl",
+                "date",
+                "dirname",
+                "mkdir",
+                "mktemp",
+                "mv",
+                "rm",
+                "sed",
+                "stat",
+                "wc",
+            ):
                 source = shutil.which(name)
                 self.assertIsNotNone(source, name)
                 os.symlink(source, fake_bin / name)

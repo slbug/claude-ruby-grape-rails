@@ -93,7 +93,6 @@ require_git_for_mode() {
 
 require_git_for_mode
 require_command mktemp "temporary file creation for score aggregation"
-require_command jq "JSON construction with proper escaping"
 
 validate_threshold() {
   local env_name="$1"
@@ -382,12 +381,18 @@ run_changed_skills() {
     return 0
   fi
 
-  # Build JSON using jq for proper escaping
+  # Build JSON using Python for proper escaping and handling
   local result
-  result="$(jq -n \
-    --argjson names "$(printf '%s\n' "${skill_names[@]}" | jq -R . | jq -s .)" \
-    --argjson scores "$(printf '%s\n' "${skill_scores[@]}" | jq -R . | jq -s .)" \
-    '[names, scores] | transpose | map({(.[0]): (.[1] | fromjson)}) | add // {}')"
+  result="$(python3 -c '
+import json
+import sys
+names = sys.argv[1::2]
+scores = sys.argv[2::2]
+result = {}
+for name, score in zip(names, scores):
+    result[name] = json.loads(score)
+print(json.dumps(result))
+' "${skill_names[@]}" "${skill_scores[@]}")"
 
   printf '%s\n' "$result" | summarize_subject_scores "skills" "$FAIL_UNDER"
 }
@@ -451,12 +456,18 @@ run_changed_agents() {
     return 0
   fi
 
-  # Build JSON using jq for proper escaping
+  # Build JSON using Python for proper escaping and handling
   local result
-  result="$(jq -n \
-    --argjson names "$(printf '%s\n' "${agent_names[@]}" | jq -R . | jq -s .)" \
-    --argjson scores "$(printf '%s\n' "${agent_scores[@]}" | jq -R . | jq -s .)" \
-    '[names, scores] | transpose | map({(.[0]): (.[1] | fromjson)}) | add // {}')"
+  result="$(python3 -c '
+import json
+import sys
+names = sys.argv[1::2]
+scores = sys.argv[2::2]
+result = {}
+for name, score in zip(names, scores):
+    result[name] = json.loads(score)
+print(json.dumps(result))
+' "${agent_names[@]}" "${agent_scores[@]}")"
 
   printf '%s\n' "$result" | summarize_subject_scores "agents" "$AGENT_FAIL_UNDER"
 }
