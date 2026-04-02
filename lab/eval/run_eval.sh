@@ -95,6 +95,19 @@ require_git_for_mode() {
 require_git_for_mode
 require_command mktemp "temporary file creation for score aggregation"
 
+require_changed_path_tools() {
+  case "$MODE" in
+  --changed)
+    require_command awk "changed-surface path filtering and deduplication"
+    require_command grep "changed-surface path filtering and selection"
+    require_command sed "changed-surface path filtering"
+    require_command sort "changed-surface path deduplication"
+    ;;
+  esac
+}
+
+require_changed_path_tools
+
 validate_threshold() {
   local env_name="$1"
   local value="$2"

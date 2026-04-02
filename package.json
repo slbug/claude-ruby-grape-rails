@@ -11,7 +11,8 @@
     "validate:shell": "bash scripts/validate-shell.sh",
     "lint:fix": "git ls-files -z '*.md' | xargs -0 markdownlint --fix --",
     "release:check": "python3 scripts/check-release-metadata.py",
-    "validate": "claude plugin validate plugins/ruby-grape-rails",
+    "validate": "bash scripts/validate-plugin.sh",
+    "doctor": "bash scripts/check-contributor-prereqs.sh",
     "eval": "bash lab/eval/run_eval.sh --changed",
     "eval:all": "bash lab/eval/run_eval.sh --all",
     "eval:ci": "bash lab/eval/run_eval.sh --ci",
@@ -32,7 +33,7 @@
     "eval-tests-pytest": "npm run eval:test:pytest",
     "eval-tests-unittest": "npm run eval:test:unittest",
     "security:injection": "bash scripts/check-dynamic-injection.sh",
-    "ci": "npm run lint && npm run release:check && npm run validate && npm run eval:test && npm run eval:ci",
+    "ci": "npm run doctor && npm run lint && npm run release:check && npm run validate && npm run eval:test && npm run eval:ci",
     "prepare": "husky"
   },
   "devDependencies": {

@@ -37,6 +37,17 @@ require_command() {
   fi
 }
 
+manifest_entry_must_be_tracked() {
+  local resolved_path="$1"
+  local relative_path=""
+
+  command -v git >/dev/null 2>&1 || return 0
+  git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1 || return 0
+
+  relative_path="${resolved_path#"${REPO_ROOT_REAL}"/}"
+  git -C "$REPO_ROOT" ls-files --error-unmatch -- "$relative_path" >/dev/null 2>&1
+}
+
 canonicalize_existing_file() {
   local path="$1"
   local parent_dir=""
@@ -64,52 +75,16 @@ resolve_manifest_path() {
 
 scan_file() {
   local file="$1"
-  local matches
+  local matches=""
 
-  matches=$(
-    awk '
-      BEGIN {
-        in_fence = 0
-        fence_marker = ""
-      }
-
-      {
-        line = $0
-        trimmed = line
-        sub(/^[[:space:]]+/, "", trimmed)
-
-        if (!in_fence && (trimmed ~ /^```/ || trimmed ~ /^~~~/)) {
-          fence_marker = substr(trimmed, 1, 3)
-          in_fence = 1
-          next
-        }
-
-        if (in_fence) {
-          if ((fence_marker == "```" && trimmed ~ /^```/) || (fence_marker == "~~~" && trimmed ~ /^~~~/)) {
-            in_fence = 0
-            fence_marker = ""
-          }
-          next
-        }
-
-        in_inline_code = 0
-        line_length = length(line)
-
-        for (i = 1; i <= line_length; i++) {
-          char = substr(line, i, 1)
-          if (char == "`") {
-            in_inline_code = !in_inline_code
-            continue
-          }
-
-          if (!in_inline_code && char == "!" && i < line_length && substr(line, i + 1, 1) == "`") {
-            printf "%d:%s\n", NR, line
-            next
-          }
-        }
-      }
-    ' "$file" 2>/dev/null || true
-  )
+  case "$file" in
+    *.md)
+      matches="$(scan_markdown_file "$file" 2>/dev/null || true)"
+      ;;
+    *.json|*.yml|*.yaml)
+      matches="$(scan_data_file "$file" 2>/dev/null || true)"
+      ;;
+  esac
 
   if [[ -n "$matches" ]]; then
     echo "BLOCKED: Dynamic context injection found:"
@@ -117,6 +92,86 @@ scan_file() {
     echo
     FOUND=1
   fi
+}
+
+scan_markdown_file() {
+  local file="$1"
+
+  python3 - "$file" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+
+in_fence = False
+fence_char = ""
+fence_len = 0
+
+for line_no, line in enumerate(text.splitlines(), start=1):
+    stripped = line.lstrip()
+    fence_match = re.match(r"^([`~]{3,})", stripped)
+
+    if not in_fence and fence_match:
+        fence = fence_match.group(1)
+        in_fence = True
+        fence_char = fence[0]
+        fence_len = len(fence)
+        continue
+
+    if in_fence:
+        close_match = re.match(rf"^({re.escape(fence_char)}{{{fence_len},}})", stripped)
+        if close_match:
+            in_fence = False
+            fence_char = ""
+            fence_len = 0
+        continue
+
+    spans = []
+    open_start = None
+    open_len = 0
+    i = 0
+    while i < len(line):
+        if line[i] != "`":
+            i += 1
+            continue
+        j = i
+        while j < len(line) and line[j] == "`":
+            j += 1
+        run_len = j - i
+        if open_start is None:
+            open_start = i
+            open_len = run_len
+        elif run_len == open_len:
+            spans.append((open_start, j))
+            open_start = None
+            open_len = 0
+        i = j
+
+    def in_safe_span(index):
+        return any(start <= index < end for start, end in spans)
+
+    for idx in range(len(line) - 1):
+        if line[idx] == "!" and line[idx + 1] == "`":
+            if open_start is not None or not in_safe_span(idx):
+                print(f"{line_no}:{line}")
+                break
+PY
+}
+
+scan_data_file() {
+  local file="$1"
+
+  python3 - "$file" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    if "!`" in line:
+        print(f"{line_no}:{line}")
+PY
 }
 
 scan_manifest() {
@@ -144,6 +199,11 @@ scan_manifest() {
         continue
         ;;
     esac
+    if ! manifest_entry_must_be_tracked "$resolved_path"; then
+      echo "ERROR: manifest entry is not tracked by git and cannot be used for a comparable scan: ${listed_path}" >&2
+      MANIFEST_SKIPPED=$((MANIFEST_SKIPPED + 1))
+      continue
+    fi
     scan_file "$resolved_path"
   done < "$MANIFEST_FILE"
 
@@ -176,7 +236,7 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-require_command awk "dynamic-injection scanning"
+require_command python3 "dynamic-injection scanning"
 
 if [[ -n "$MANIFEST_FILE" ]]; then
   scan_manifest

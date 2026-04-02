@@ -372,6 +372,7 @@ claude --plugin-dir ./plugins/ruby-grape-rails
 
 ```bash
 npm ci  # Pre-commit hooks + linting with the committed lockfile
+npm run doctor  # Verify shellcheck, Claude CLI, python3/ruby/jq, and optional betterleaks
 ```
 
 ### Linting
@@ -386,7 +387,7 @@ npm run lint:fix   # Auto-fix issues
 
 ```bash
 # Validate plugin structure and manifest
-claude plugin validate plugins/ruby-grape-rails
+npm run validate
 
 # Validate version alignment + changelog heading/footer integrity
 python3 scripts/check-release-metadata.py
@@ -537,9 +538,9 @@ When working on Ruby/Rails/Grape code, ALWAYS load relevant skills based on file
 
 **Hook prerequisites:** core hook automation expects `bash`, `jq`, `grep`, and
 standard Unix utilities (`head`, `readlink`, `awk`, `cksum`, `mktemp`, `sed`,
-`find`, `cp`, `mv`, `rm`, `tr`) to be available. When those dependencies are
-missing, hooks now surface an explicit error or warning instead of silently
-disabling guardrails.
+`find`, `cp`, `mv`, `rm`, `tr`, `wc`, `cat`, `mkdir`) to be available. When
+those dependencies are missing, hooks now surface an explicit error or warning
+instead of silently disabling guardrails.
 
 **Note on job files**: Load `rails-idioms` instead of `sidekiq` when `config/environments/production.rb` contains `solid_queue` (Rails 8+ default).
 

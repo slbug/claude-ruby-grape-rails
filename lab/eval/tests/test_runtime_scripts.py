@@ -83,6 +83,7 @@ RUN_EVAL = REPO_ROOT / "lab/eval/run_eval.sh"
 GENERATE_IRON_LAW_CONTENT = REPO_ROOT / "scripts/generate-iron-law-content.rb"
 GENERATE_IRON_LAW_OUTPUTS = REPO_ROOT / "scripts/generate-iron-law-outputs.sh"
 RUN_EVAL_TESTS = REPO_ROOT / "scripts/run-eval-tests.sh"
+VALIDATE_PLUGIN = REPO_ROOT / "scripts/validate-plugin.sh"
 
 
 def run_block_hook(
@@ -1420,7 +1421,7 @@ class RuntimeScriptTests(unittest.TestCase):
             "cannot inspect the hook payload because jq is unavailable", result.stderr
         )
 
-    def test_security_reminder_fails_closed_when_jq_is_missing(self) -> None:
+    def test_security_reminder_warns_when_jq_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             (tmp / ".claude").mkdir()
@@ -1447,20 +1448,20 @@ class RuntimeScriptTests(unittest.TestCase):
                 env=env,
             )
 
-        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.returncode, 0)
         self.assertIn(
             "cannot inspect the hook payload because jq is unavailable", result.stderr
         )
 
-    def test_security_reminder_fails_closed_on_invalid_payload(self) -> None:
+    def test_security_reminder_warns_on_invalid_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             (tmp / ".claude").mkdir()
 
             result = run_workspace_hook_raw(SECURITY_REMINDER, tmpdir, "{not-json")
 
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("could not safely inspect an invalid hook payload", result.stderr)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("could not inspect an invalid hook payload", result.stderr)
 
     def test_security_reminder_warns_when_file_path_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1469,8 +1470,27 @@ class RuntimeScriptTests(unittest.TestCase):
 
             result = run_workspace_hook(SECURITY_REMINDER, tmpdir, {"tool_input": {}})
 
-        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.returncode, 0)
         self.assertIn("tool_input.file_path was missing", result.stderr)
+
+    def test_security_reminder_is_advisory_for_security_sensitive_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+            target_dir = tmp / "app" / "controllers"
+            target_dir.mkdir(parents=True)
+            target = target_dir / "sessions_controller.rb"
+            target.write_text("class SessionsController; end\n", encoding="utf-8")
+
+            result = run_workspace_hook(
+                SECURITY_REMINDER,
+                tmpdir,
+                {"tool_input": {"file_path": "app/controllers/sessions_controller.rb"}},
+            )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("security-sensitive file detected", result.stderr.lower())
+        self.assertIn("/rb:review security", result.stderr)
 
     def test_plan_stop_reminder_fails_closed_on_invalid_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1638,7 +1658,7 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 2)
-        self.assertIn("Betterleaks not available", result.stderr)
+        self.assertIn("BLOCKED: Betterleaks is unavailable", result.stderr)
 
     def test_secret_scan_warns_when_default_mode_cannot_resolve_workspace_root(
         self,
@@ -1660,7 +1680,8 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 2)
         self.assertIn(
-            "could not resolve the workspace root for secret scanning", result.stderr
+            "BLOCKED: secret-scan.sh could not resolve the workspace root for secret scanning",
+            result.stderr,
         )
 
     def test_secret_scan_blocks_strict_recent_change_scan_when_git_is_unavailable(
@@ -2135,6 +2156,28 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1)
         self.assertIn("shellcheck not found", result.stderr)
+        self.assertIn("Install shellcheck", result.stderr)
+
+    def test_validate_plugin_reports_missing_claude_cli_with_install_guidance(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            env = dict(os.environ)
+            env["PATH"] = str(fake_bin)
+
+            result = subprocess.run(
+                ["/bin/bash", str(VALIDATE_PLUGIN)],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("claude is required for plugin validation", result.stderr)
+        self.assertIn("@anthropic-ai/claude-code", result.stderr)
 
     def test_detect_runtime_ignores_lefthook_comment_mentions(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2730,6 +2773,39 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("outside the supported markdown/json/yaml scan set", result.stderr)
 
+    def test_check_dynamic_injection_manifest_rejects_untracked_entries_in_git_repo(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            script_dir = tmp / "scripts"
+            script_dir.mkdir()
+            script_copy = script_dir / "check-dynamic-injection.sh"
+            script_copy.write_text(
+                CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            os.chmod(script_copy, 0o755)
+            subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
+            (tmp / "README.md").write_text("safe\n", encoding="utf-8")
+            (tmp / "notes.md").write_text("safe\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "add", "README.md"], cwd=tmp, check=True, capture_output=True
+            )
+            manifest = tmp / "manifest.txt"
+            manifest.write_text("README.md\nnotes.md\n", encoding="utf-8")
+
+            result = subprocess.run(
+                ["/bin/bash", str(script_copy), "--manifest", str(manifest)],
+                capture_output=True,
+                text=True,
+                cwd=tmp,
+                check=False,
+                env=dict(os.environ),
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("is not tracked by git", result.stderr)
+
     def test_check_dynamic_injection_scans_tracked_top_level_docs(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -2793,6 +2869,39 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("No dynamic context injection found.", result.stdout)
 
+    def test_check_dynamic_injection_blocks_when_unbalanced_backticks_hide_token(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            script_dir = tmp / "scripts"
+            script_dir.mkdir()
+            script_copy = script_dir / "check-dynamic-injection.sh"
+            script_copy.write_text(
+                CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            os.chmod(script_copy, 0o755)
+            subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
+            (tmp / "README.md").write_text(
+                'title: "prefix ` text !`uname -a`"\n',
+                encoding="utf-8",
+            )
+            subprocess.run(
+                ["git", "add", "README.md"], cwd=tmp, check=True, capture_output=True
+            )
+
+            result = subprocess.run(
+                ["/bin/bash", str(script_copy)],
+                capture_output=True,
+                text=True,
+                cwd=tmp,
+                check=False,
+                env=dict(os.environ),
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Dynamic context injection found", result.stdout)
+
     def test_check_dynamic_injection_ignores_fenced_code_examples(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -2848,12 +2957,15 @@ class RuntimeScriptTests(unittest.TestCase):
             dirname_path = shutil.which("dirname")
             grep_path = shutil.which("grep")
             awk_path = shutil.which("awk")
+            python3_path = shutil.which("python3")
             self.assertIsNotNone(dirname_path)
             self.assertIsNotNone(grep_path)
             self.assertIsNotNone(awk_path)
+            self.assertIsNotNone(python3_path)
             os.symlink(dirname_path, fake_bin / "dirname")
             os.symlink(grep_path, fake_bin / "grep")
             os.symlink(awk_path, fake_bin / "awk")
+            os.symlink(python3_path, fake_bin / "python3")
             env = dict(os.environ)
             env["PATH"] = str(fake_bin)
 
@@ -2889,12 +3001,15 @@ class RuntimeScriptTests(unittest.TestCase):
             dirname_path = shutil.which("dirname")
             grep_path = shutil.which("grep")
             awk_path = shutil.which("awk")
+            python3_path = shutil.which("python3")
             self.assertIsNotNone(dirname_path)
             self.assertIsNotNone(grep_path)
             self.assertIsNotNone(awk_path)
+            self.assertIsNotNone(python3_path)
             os.symlink(dirname_path, fake_bin / "dirname")
             os.symlink(grep_path, fake_bin / "grep")
             os.symlink(awk_path, fake_bin / "awk")
+            os.symlink(python3_path, fake_bin / "python3")
             env = dict(os.environ)
             env["PATH"] = str(fake_bin)
 

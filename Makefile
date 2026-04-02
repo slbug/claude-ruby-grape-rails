@@ -1,4 +1,4 @@
-.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate eval eval-all eval-ci eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-stress eval-tests eval-tests-pytest eval-tests-unittest ci
+.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate doctor eval eval-all eval-ci eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-stress eval-tests eval-tests-pytest eval-tests-unittest ci
 
 lint:
 	npm run lint
@@ -22,7 +22,10 @@ release-metadata:
 	python3 scripts/check-release-metadata.py
 
 validate:
-	claude plugin validate plugins/ruby-grape-rails
+	bash scripts/validate-plugin.sh
+
+doctor:
+	bash scripts/check-contributor-prereqs.sh
 
 eval:
 	bash lab/eval/run_eval.sh --changed
@@ -72,4 +75,4 @@ eval-tests-pytest:
 eval-tests-unittest:
 	python3 -m unittest discover -s lab/eval/tests -p 'test_*.py' -t . -v
 
-ci: lint release-metadata validate eval-tests eval-ci
+ci: doctor lint release-metadata validate eval-tests eval-ci

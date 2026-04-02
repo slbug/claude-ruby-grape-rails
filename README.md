@@ -38,9 +38,10 @@ that prevent the mistakes Ruby developers actually make in production.
 
 Hook prerequisites: core hook guardrails expect `bash`, `jq`, `grep`, and
 standard Unix utilities available on macOS/Linux/WSL such as `head`,
-`readlink`, `awk`, `cksum`, `mktemp`, `sed`, `find`, `cp`, `mv`, `rm`, and
-`tr`. If a required dependency is missing, the plugin now surfaces an explicit
-hook error or warning instead of silently disabling those checks.
+`readlink`, `awk`, `cksum`, `mktemp`, `sed`, `find`, `cp`, `mv`, `rm`, `tr`,
+`wc`, `cat`, and `mkdir`. If a required dependency is missing, the plugin now
+surfaces an explicit hook error or warning instead of silently disabling those
+checks.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -94,9 +95,10 @@ Ruby-ish Edit/Write automation is delegated through
 [rubyish-post-edit.sh](plugins/ruby-grape-rails/hooks/scripts/rubyish-post-edit.sh),
 which fans out to Iron Law verification, formatting, syntax, and debug checks
 for `*.rb`, `*.rake`, `Gemfile`, `Rakefile`, and `config.ru`. Generic safety
-hooks stay separate: security reminders and secret scanning still watch all
-edits/writes, progress logging now runs async, and the plan STOP reminder fires
-only on `Write(*plan.md)`. `block-dangerous-ops.sh` currently blocks four
+hooks stay separate: the security reminder is now advisory, secret scanning
+still watches all edits/writes and blocks when coverage cannot be trusted,
+progress logging runs async, and the plan STOP reminder fires only on
+`Write(*plan.md)`. `block-dangerous-ops.sh` currently blocks four
 command families: destructive Rails/Rake DB tasks, Redis flushes, git force
 pushes, and production-environment commands.
 Default secret scanning is targeted per edit or inline payload and now fails
@@ -713,6 +715,27 @@ PRs welcome! See [CLAUDE.md](CLAUDE.md) for development conventions.
 - Agents: under 300 lines, `disallowedTools` for reviewers
 - Markdown-only edits should pass `npm run lint:markdown`; `npm run lint`
   runs the full local lint/validation bundle
+
+### Contributor prerequisites
+
+Local contributor workflows require more than `npm ci` alone:
+
+- `python3` `3.10+` for eval tooling and release checks
+- `ruby` for YAML validation and Ruby maintenance scripts
+- `shellcheck` for `npm run lint`, `make ci`, and local shell pre-commit checks
+- Claude Code CLI for `npm run validate` / `make validate`
+- `jq` for local hook/runtime script validation
+
+Practical bootstrap:
+
+- `npm ci`
+- `npm run doctor`
+
+If `npm run validate` reports `claude` missing, install it with:
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
 
 ### Eval workflow
 

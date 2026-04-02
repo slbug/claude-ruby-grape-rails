@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MISSING=0
+
+check_required() {
+  local command_name="$1"
+  local hint="$2"
+
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "MISSING: ${command_name} — ${hint}" >&2
+    MISSING=1
+  fi
+}
+
+check_optional() {
+  local command_name="$1"
+  local hint="$2"
+
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "OPTIONAL: ${command_name} — ${hint}" >&2
+  fi
+}
+
+check_required git "required for tracked-file lint, eval changed-mode, and contributor workflows"
+check_required bash "required for hook and validation scripts"
+check_required python3 "required for eval tests and release checks (python3 3.10+)"
+check_required ruby "required for YAML validation and Ruby maintenance scripts"
+check_required jq "required for shipped hook payload parsing"
+check_required shellcheck "required for local shell linting and pre-commit shell validation"
+check_required claude "required for 'npm run validate' and 'make validate' (install with: npm install -g @anthropic-ai/claude-code)"
+check_optional betterleaks "optional for local secret-scan coverage outside CI"
+
+if [[ "$MISSING" -eq 1 ]]; then
+  echo "ERROR: contributor prerequisites are incomplete." >&2
+  exit 1
+fi
+
+echo "Contributor prerequisites look good."

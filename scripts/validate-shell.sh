@@ -6,6 +6,9 @@ require_command() {
 
   if ! command -v "$command_name" >/dev/null 2>&1; then
     echo "ERROR: ${command_name} is required for shell validation." >&2
+    if [[ "$command_name" == "shellcheck" ]]; then
+      echo "Install shellcheck with your system package manager before running local lint or pre-commit checks." >&2
+    fi
     exit 1
   fi
 }

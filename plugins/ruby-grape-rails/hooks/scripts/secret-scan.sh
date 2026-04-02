@@ -20,8 +20,8 @@ emit_missing_dependency_block() {
   exit 2
 }
 
-emit_root_resolution_warning() {
-  echo "WARNING: ${HOOK_NAME} could not resolve the workspace root for secret scanning." >&2
+emit_root_resolution_block() {
+  echo "BLOCKED: ${HOOK_NAME} could not resolve the workspace root for secret scanning." >&2
   echo "Fix the hook payload or workspace layout before continuing." >&2
 }
 
@@ -41,11 +41,11 @@ source "$ROOT_LIB"
 read_hook_input
 INPUT="$HOOK_INPUT_VALUE"
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || {
-  emit_root_resolution_warning
+  emit_root_resolution_block
   exit 2
 }
 if [[ -z "$REPO_ROOT" ]]; then
-  emit_root_resolution_warning
+  emit_root_resolution_block
   exit 2
 fi
 HOOK_MODE=$(resolve_hook_mode "$REPO_ROOT")
@@ -69,10 +69,10 @@ fi
 BETTERLEAKS_RESULT=""
 BETTERLEAKS_ERROR=""
 
-emit_missing_betterleaks_warning() {
+emit_missing_betterleaks_block() {
   local target="$1"
 
-  echo "⚠️  Betterleaks not available; secret scan skipped for ${target}" >&2
+  echo "BLOCKED: Betterleaks is unavailable; ${HOOK_NAME} cannot scan ${target} for secrets." >&2
   echo "Install betterleaks or set BETTERLEAKS_PATH to restore secret scanning." >&2
 }
 
@@ -91,7 +91,7 @@ input_has_secret_indicators() {
 }
 
 if [[ -z "$BETTERLEAKS_PATH" || ! -x "$BETTERLEAKS_PATH" ]]; then
-  emit_missing_betterleaks_warning "${FILE_PATH:-this change}"
+  emit_missing_betterleaks_block "${FILE_PATH:-this change}"
   exit 2
 fi
 
