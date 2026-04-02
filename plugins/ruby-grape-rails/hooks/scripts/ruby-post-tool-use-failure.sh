@@ -21,6 +21,17 @@ source "$ROOT_LIB"
 # Read hook input with size validation and JSON checking
 read_hook_input
 INPUT="${HOOK_INPUT_VALUE:-}"
+case "${HOOK_INPUT_STATUS:-empty}" in
+  truncated|invalid)
+    if [[ "${HOOK_INPUT_STATUS}" == "invalid" ]]; then
+      echo "BLOCKED: ${HOOK_NAME} could not safely inspect an invalid hook payload." >&2
+    else
+      echo "BLOCKED: ${HOOK_NAME} could not safely inspect a truncated hook payload." >&2
+    fi
+    echo "Fix the hook input before retrying delegated Ruby failure diagnostics." >&2
+    exit 2
+    ;;
+esac
 LAST_HOOK_OUTPUT=""
 
 emit_missing_hook_block() {

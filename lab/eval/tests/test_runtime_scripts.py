@@ -493,6 +493,59 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertTrue(hints_ran)
         self.assertFalse(critic_ran)
 
+    def test_ruby_post_tool_use_failure_blocks_invalid_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            wrapper = tmp / "ruby-post-tool-use-failure.sh"
+            wrapper.write_text(
+                RUBY_POST_TOOL_USE_FAILURE.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            wrapper.chmod(0o755)
+
+            (tmp / "workspace-root-lib.sh").write_text(
+                textwrap.dedent(
+                    """\
+                    #!/usr/bin/env bash
+                    read_hook_input() {
+                      HOOK_INPUT_VALUE=""
+                      HOOK_INPUT_STATUS=invalid
+                    }
+                    """
+                ),
+                encoding="utf-8",
+            )
+            (tmp / "workspace-root-lib.sh").chmod(0o755)
+
+            (tmp / "ruby-failure-hints.sh").write_text(
+                '#!/usr/bin/env bash\necho ran > "$(dirname "$0")/hints-ran"\n',
+                encoding="utf-8",
+            )
+            (tmp / "ruby-failure-hints.sh").chmod(0o755)
+
+            (tmp / "error-critic.sh").write_text(
+                '#!/usr/bin/env bash\necho ran > "$(dirname "$0")/critic-ran"\n',
+                encoding="utf-8",
+            )
+            (tmp / "error-critic.sh").chmod(0o755)
+
+            result = subprocess.run(
+                ["bash", str(wrapper)],
+                input="{not-json",
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=dict(os.environ),
+            )
+
+            hints_ran = (tmp / "hints-ran").exists()
+            critic_ran = (tmp / "critic-ran").exists()
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("could not safely inspect an invalid hook payload", result.stderr)
+        self.assertFalse(hints_ran)
+        self.assertFalse(critic_ran)
+
     def test_session_start_runtime_detection_uses_fast_sync_and_async_refresh_hooks(
         self,
     ) -> None:
