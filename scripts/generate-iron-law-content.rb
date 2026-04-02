@@ -44,18 +44,37 @@ def validate_entries!(yaml)
     value.is_a?(String) && value.strip.empty?
   end
 
+  nonblank_string = lambda do |value|
+    value.is_a?(String) && !value.strip.empty?
+  end
+
+  integerish = lambda do |value|
+    value.is_a?(Integer) || (value.is_a?(String) && value.match?(/\A\d+\z/))
+  end
+
   yaml['categories'].each_with_index do |category, index|
     unless category.is_a?(Hash)
       errors << "category[#{index}] must be a mapping, got #{category.class}"
       next
     end
 
-    missing = category_required.reject { |key| category.key?(key) }
+    missing = category_required.reject { |key| category.key?(key) && !category[key].nil? }
     errors << "category[#{index}] missing: #{missing.join(', ')}" unless missing.empty?
     next unless missing.empty?
 
     %w[id name].each do |key|
-      errors << "category[#{index}] #{key} must not be blank" if blank_string.call(category[key])
+      value = category[key]
+      next if nonblank_string.call(value)
+
+      if blank_string.call(value)
+        errors << "category[#{index}] #{key} must not be blank"
+      else
+        errors << "category[#{index}] #{key} must be a non-blank String"
+      end
+    end
+
+    unless integerish.call(category['law_count'])
+      errors << "category[#{index}] law_count must be an integer"
     end
   end
 
@@ -65,11 +84,26 @@ def validate_entries!(yaml)
       next
     end
 
-    missing = law_required.reject { |key| law.key?(key) }
+    missing = law_required.reject { |key| law.key?(key) && !law[key].nil? }
     errors << "law[#{index}] missing: #{missing.join(', ')}" unless missing.empty?
     if missing.empty?
-      %w[id category title rule summary_text rationale subagent_text].each do |key|
-        errors << "law[#{index}] #{key} must not be blank" if blank_string.call(law[key])
+      unless law['id'].is_a?(Integer) || nonblank_string.call(law['id'])
+        if blank_string.call(law['id'])
+          errors << "law[#{index}] id must not be blank"
+        else
+          errors << "law[#{index}] id must be an Integer or non-blank String"
+        end
+      end
+
+      %w[category title rule summary_text rationale subagent_text].each do |key|
+        value = law[key]
+        next if nonblank_string.call(value)
+
+        if blank_string.call(value)
+          errors << "law[#{index}] #{key} must not be blank"
+        else
+          errors << "law[#{index}] #{key} must be a non-blank String"
+        end
       end
     end
 

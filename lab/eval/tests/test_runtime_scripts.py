@@ -3641,6 +3641,91 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("duplicate category ids", result.stderr)
         self.assertIn("duplicate law ids", result.stderr)
 
+    def test_generate_iron_law_content_rejects_null_required_category_values(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            yaml_path = tmp / "iron-laws.yml"
+            yaml_path.write_text(
+                textwrap.dedent(
+                    """
+                    version: "1"
+                    last_updated: "2026-04-02"
+                    total_laws: 1
+                    categories:
+                      - id: ~
+                        name: ~
+                        law_count: ~
+                    laws:
+                      - id: 1
+                        category: data
+                        title: One
+                        rule: Do it
+                        summary_text: One
+                        rationale: Why
+                        subagent_text: One
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            env = dict(os.environ)
+            env["RUBY_PLUGIN_IRON_LAWS_YAML"] = str(yaml_path)
+            result = subprocess.run(
+                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "readme"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("category[0] missing: id, name, law_count", result.stderr)
+
+    def test_generate_iron_law_content_rejects_null_required_law_values(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            yaml_path = tmp / "iron-laws.yml"
+            yaml_path.write_text(
+                textwrap.dedent(
+                    """
+                    version: "1"
+                    last_updated: "2026-04-02"
+                    total_laws: 1
+                    categories:
+                      - id: data
+                        name: Data
+                        law_count: 1
+                    laws:
+                      - id: ~
+                        category: ~
+                        title: ~
+                        rule: ~
+                        summary_text: ~
+                        rationale: ~
+                        subagent_text: ~
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            env = dict(os.environ)
+            env["RUBY_PLUGIN_IRON_LAWS_YAML"] = str(yaml_path)
+            result = subprocess.run(
+                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "readme"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "law[0] missing: id, category, title, rule, summary_text, rationale, subagent_text",
+            result.stderr,
+        )
+
     def test_generate_iron_law_outputs_help_succeeds(self) -> None:
         result = subprocess.run(
             ["bash", str(GENERATE_IRON_LAW_OUTPUTS), "--help"],
