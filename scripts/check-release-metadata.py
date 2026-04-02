@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from collections import Counter
@@ -59,6 +60,14 @@ def extract_github_repo_slug(repo_field: object) -> str | None:
     return None
 
 
+def expected_marketplace_plugin_name(plugin_dict: dict) -> str | None:
+    override = str(plugin_dict.get("name", "")).strip()
+    env_override = str(os.environ.get("RUBY_PLUGIN_EXPECTED_MARKETPLACE_NAME", "")).strip()
+    if env_override:
+        return env_override
+    return override or None
+
+
 def main() -> int:
     errors: list[str] = []
 
@@ -109,7 +118,11 @@ def main() -> int:
         marketplace_version = metadata.get("version")
     plugin_version = plugin_dict.get("version")
 
-    # Select plugin by name instead of assuming index 0
+    expected_plugin_name = expected_marketplace_plugin_name(plugin_dict)
+    if not expected_plugin_name:
+        errors.append("plugin.json is missing a string name.")
+
+    # Select plugin by configured name instead of assuming index 0
     plugins = marketplace_dict.get("plugins", [])
     if not isinstance(plugins, list):
         errors.append("marketplace.json plugins must be a list")
@@ -119,12 +132,14 @@ def main() -> int:
             (
                 p
                 for p in plugins
-                if isinstance(p, dict) and p.get("name") == "ruby-grape-rails"
+                if isinstance(p, dict) and p.get("name") == expected_plugin_name
             ),
             None,
         )
         if ruby_plugin is None:
-            errors.append("ruby-grape-rails plugin not found in marketplace.json")
+            errors.append(
+                f"{expected_plugin_name or '<missing plugin name>'} plugin not found in marketplace.json"
+            )
 
     # Validate source is a dict before extracting ref
     if ruby_plugin:

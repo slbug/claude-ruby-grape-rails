@@ -4,11 +4,11 @@
   "private": true,
   "description": "Claude Code plugin for Ruby, Rails, Grape, PostgreSQL, Redis, and Sidekiq development",
   "scripts": {
-    "lint": "git ls-files -z '*.md' | xargs -0 markdownlint --",
+    "lint": "npm run lint:markdown && npm run validate:yaml && npm run validate:json && npm run validate:shell",
     "lint:markdown": "git ls-files -z '*.md' | xargs -0 markdownlint --",
-    "lint:yaml": "bash scripts/validate-yaml.sh",
-    "lint:json": "bash scripts/validate-json.sh",
-    "lint:shell": "bash scripts/validate-shell.sh",
+    "validate:yaml": "bash scripts/validate-yaml.sh",
+    "validate:json": "bash scripts/validate-json.sh",
+    "validate:shell": "bash scripts/validate-shell.sh",
     "lint:fix": "git ls-files -z '*.md' | xargs -0 markdownlint --fix --",
     "release:check": "python3 scripts/check-release-metadata.py",
     "validate": "claude plugin validate plugins/ruby-grape-rails",
@@ -32,7 +32,7 @@
     "eval-tests-pytest": "npm run eval:test:pytest",
     "eval-tests-unittest": "npm run eval:test:unittest",
     "security:injection": "bash scripts/check-dynamic-injection.sh",
-    "ci": "npm run lint:markdown && npm run lint:yaml && npm run lint:json && npm run lint:shell && npm run release:check && npm run validate && npm run eval:test && npm run eval:ci",
+    "ci": "npm run lint && npm run release:check && npm run validate && npm run eval:test && npm run eval:ci",
     "prepare": "husky"
   },
   "devDependencies": {

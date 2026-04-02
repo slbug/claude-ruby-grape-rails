@@ -593,6 +593,15 @@ report = {
   duplicate_patterns: duplicate_patterns
 }
 
+warnings = []
+if options[:days] == 14
+  warnings << 'Default 14-day lookback can miss infrequent monthly or quarterly commands; rerun with --days 30 or --days 90 for broader coverage.'
+end
+if options[:include_global]
+  warnings << 'Including ~/.claude/settings.json can pull unrelated personal permissions into this repo audit.'
+end
+report[:warnings] = warnings if warnings.any?
+
 if options[:json]
   puts JSON.pretty_generate(report)
   exit 0
@@ -603,9 +612,6 @@ puts "Project transcript scope: #{project_slug}"
 puts "Transcript projects root: #{transcript_projects_root}"
 puts "Settings scope: #{options[:include_global] ? 'repo + ~/.claude/settings.json' : 'repo-only'}"
 puts "Settings sources considered: #{settings_sources.join(', ')}"
-if options[:include_global]
-  puts 'WARNING: including ~/.claude/settings.json can pull unrelated personal permissions into this repo audit.'
-end
 puts 'Dry-run: extractor is read-only; no settings changes were written.' if options[:dry_run]
 puts "Sessions scanned: #{recent_files.length} (last #{options[:days]} days)"
 puts "Additional recent sessions skipped by cap: #{truncated_session_files}" if truncated_session_files.positive?
@@ -623,6 +629,7 @@ end
 if missing_session_files.any?
   puts 'WARNING: some transcript files disappeared during scanning; recommendations may be incomplete.'
 end
+warnings.each { |warning| puts "WARNING: #{warning}" }
 puts "Total Bash tool calls seen: #{total_bash_commands}"
 puts "Uncovered command groups: #{group_counts.length}"
 puts "Total avoidable prompts: #{group_counts.values.sum}"

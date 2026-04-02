@@ -99,8 +99,9 @@ edits/writes, progress logging now runs async, and the plan STOP reminder fires
 only on `Write(*plan.md)`. `block-dangerous-ops.sh` currently blocks four
 command families: destructive Rails/Rake DB tasks, Redis flushes, git force
 pushes, and production-environment commands.
-Default secret scanning is targeted and best-effort per edit or inline payload;
-strict mode broadens that to recent-change sweeps and fails closed when that
+Default secret scanning is targeted per edit or inline payload and now fails
+closed when the workspace root or scanner cannot be trusted. Strict mode
+broadens that to recent-change sweeps and also fails closed when that broader
 coverage cannot be trusted.
 [hooks.json](plugins/ruby-grape-rails/hooks/hooks.json)
 is the current wiring source of truth.
@@ -707,9 +708,11 @@ PRs welcome! See [CLAUDE.md](CLAUDE.md) for development conventions.
 ### Development rules
 
 - Skills: keep `SKILL.md` concise and push most detail into `references/`;
-  treat `~100 lines` as guidance, not a hard cap
+  prefer roughly `100-200` lines for new skills, but allow larger framework or
+  workflow skills when splitting further would make routing or navigation worse
 - Agents: under 300 lines, `disallowedTools` for reviewers
-- All markdown passes `npm run lint`
+- Markdown-only edits should pass `npm run lint:markdown`; `npm run lint`
+  runs the full local lint/validation bundle
 
 ### Eval workflow
 

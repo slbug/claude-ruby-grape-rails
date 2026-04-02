@@ -20,6 +20,7 @@ INPUT="$HOOK_INPUT_VALUE"
 case "${HOOK_INPUT_STATUS:-empty}" in
   truncated|invalid)
     echo "Warning: skipping check-scratchpad.sh because hook input was ${HOOK_INPUT_STATUS}" >&2
+    append_hook_degradation_log "check-scratchpad.sh" "scratchpad reminder skipped because hook input was ${HOOK_INPUT_STATUS}" "$INPUT" || true
     exit 0
     ;;
 esac

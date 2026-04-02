@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 from pathlib import Path
 import unittest
 
@@ -31,6 +32,26 @@ class ReleaseMetadataTests(unittest.TestCase):
             MODULE.extract_github_repo_slug({"type": "git", "url": "git@github.com:slbug/claude-ruby-grape-rails.git"}),
             "slbug/claude-ruby-grape-rails",
         )
+
+    def test_expected_marketplace_plugin_name_defaults_to_plugin_name(self) -> None:
+        self.assertEqual(
+            MODULE.expected_marketplace_plugin_name({"name": "forked-plugin"}),
+            "forked-plugin",
+        )
+
+    def test_expected_marketplace_plugin_name_accepts_env_override(self) -> None:
+        previous = os.environ.get("RUBY_PLUGIN_EXPECTED_MARKETPLACE_NAME")
+        os.environ["RUBY_PLUGIN_EXPECTED_MARKETPLACE_NAME"] = "renamed-plugin"
+        try:
+            self.assertEqual(
+                MODULE.expected_marketplace_plugin_name({"name": "forked-plugin"}),
+                "renamed-plugin",
+            )
+        finally:
+            if previous is None:
+                os.environ.pop("RUBY_PLUGIN_EXPECTED_MARKETPLACE_NAME", None)
+            else:
+                os.environ["RUBY_PLUGIN_EXPECTED_MARKETPLACE_NAME"] = previous
 
 
 if __name__ == "__main__":

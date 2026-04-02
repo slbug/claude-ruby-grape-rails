@@ -27,7 +27,7 @@ jobs:
         run: npm run lint:markdown
 
   yaml:
-    name: YAML Lint
+    name: YAML Syntax Validate
     runs-on: ubuntu-latest
 
     steps:
@@ -39,7 +39,7 @@ jobs:
         with:
           ruby-version: "3.4"
 
-      - name: Validate YAML files
+      - name: Validate YAML syntax
         run: bash scripts/validate-yaml.sh
 
   json:

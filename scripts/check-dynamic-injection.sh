@@ -14,14 +14,16 @@ REPO_ROOT_REAL="$(cd "${REPO_ROOT}" && pwd -P)"
 TRACKED_PATTERNS=('*.md' '*.json' '*.yml' '*.yaml')
 FOUND=0
 MANIFEST_FILE=""
+MANIFEST_SKIPPED=0
 
 show_usage() {
   cat <<'EOF'
 Usage: bash scripts/check-dynamic-injection.sh [--manifest PATH]
 
 Default behavior scans tracked Markdown/JSON/YAML files from `git ls-files`.
-Use `--manifest PATH` with a newline-delimited file list to run the same check
-without Git metadata or on a narrowed changed-file set.
+Use `--manifest PATH` with a newline-delimited file list to run the same
+Markdown/JSON/YAML scan set without Git metadata or on a narrowed changed-file
+set.
 EOF
 }
 
@@ -129,9 +131,26 @@ scan_manifest() {
 
   while IFS= read -r listed_path; do
     [[ -n "$listed_path" ]] || continue
-    resolved_path="$(resolve_manifest_path "$listed_path")" || continue
+    resolved_path="$(resolve_manifest_path "$listed_path")" || {
+      echo "ERROR: manifest entry could not be resolved inside the repository: ${listed_path}" >&2
+      MANIFEST_SKIPPED=$((MANIFEST_SKIPPED + 1))
+      continue
+    }
+    case "$resolved_path" in
+      *.md|*.json|*.yml|*.yaml) ;;
+      *)
+        echo "ERROR: manifest entry is outside the supported markdown/json/yaml scan set: ${listed_path}" >&2
+        MANIFEST_SKIPPED=$((MANIFEST_SKIPPED + 1))
+        continue
+        ;;
+    esac
     scan_file "$resolved_path"
   done < "$MANIFEST_FILE"
+
+  if [[ "$MANIFEST_SKIPPED" -gt 0 ]]; then
+    echo "ERROR: dynamic-injection manifest skipped ${MANIFEST_SKIPPED} invalid or unsupported entry(s)." >&2
+    exit 1
+  fi
 }
 
 while [[ $# -gt 0 ]]; do

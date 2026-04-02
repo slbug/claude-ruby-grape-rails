@@ -187,14 +187,16 @@ Skills provide domain knowledge with progressive disclosure.
 
 ```
 skills/{name}/
-├── SKILL.md           # target ~100 lines; move detail to references/
+├── SKILL.md           # prefer ~100-200 lines; move bulky examples to references/
 └── references/        # Detailed content
     └── *.md
 ```
 
 **Rules:**
 
-- SKILL.md: target ~100 lines (~500 tokens) when practical
+- SKILL.md: prefer ~100-200 lines for new skills when practical; larger
+  framework/workflow skills are acceptable when further splitting would make
+  routing or navigation worse
 - Include "Iron Laws" section for critical rules
 - Move detailed examples to `references/`
 - No `triggers:` field (use `description` for auto-loading)
@@ -257,8 +259,9 @@ Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
   `./bin/rails db:drop/reset/purge`, `bundle exec rails db:drop/reset/purge`,
   `rake db:drop/reset/purge`, `bin/rake db:drop/reset/purge`,
   `./bin/rake db:drop/reset/purge`, `bundle exec rake db:drop/reset/purge`,
-  equivalent `bundle exec bin/...` and env-prefixed forms, `git push --force`,
-  and `RAILS_ENV=production`
+  equivalent `bundle exec bin/...` and env-prefixed forms, Redis flushes
+  (`redis-cli flushall` / `flushdb`), `git push --force`, and
+  `RAILS_ENV=production`
 - `PostToolUse` (Edit|Write, broad safety layer):
   - `security-reminder.sh`: Security Iron Laws for auth/sensitive files
   - `log-progress.sh`: Async progress logging
@@ -361,7 +364,7 @@ claude --plugin-dir ./plugins/ruby-grape-rails
 
 ### Adding new skill
 
-1. Create `plugins/ruby-grape-rails/skills/{name}/SKILL.md` (target ~100 lines)
+1. Create `plugins/ruby-grape-rails/skills/{name}/SKILL.md` (prefer ~100-200 lines for new skills)
 2. Create `references/` with detailed content
 3. For workflow skills, document integration with cycle
 
@@ -374,7 +377,8 @@ npm ci  # Pre-commit hooks + linting with the committed lockfile
 ### Linting
 
 ```bash
-npm run lint       # Check all markdown
+npm run lint       # Run the full local lint/validation bundle
+npm run lint:markdown  # Check markdown only
 npm run lint:fix   # Auto-fix issues
 ```
 
@@ -415,7 +419,7 @@ Keep hook behavior explicit when editing scripts under
   `rubyish-post-edit.sh`, `format-ruby.sh`, `verify-ruby.sh`,
   `debug-statement-warning.sh`
 - security-sensitive hooks should fail closed in strict/high-confidence cases
-  and document any best-effort default-mode behavior:
+  and document any narrower advisory fallback explicitly:
   `secret-scan.sh`, `block-dangerous-ops.sh`
 
 Do not leave this implicit. Add or update a short policy comment near the top
@@ -463,7 +467,7 @@ Only trim when content is purely informational and not execution-critical.
 
 ### New skill
 
-- [ ] SKILL.md under target (~100 lines), hard limit for command skills (~185)
+- [ ] SKILL.md keeps only routing-critical guidance inline; bulky examples live in `references/`
 - [ ] "Iron Laws" section
 - [ ] `references/` for details
 - [ ] No `triggers:` field

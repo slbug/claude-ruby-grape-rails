@@ -26,6 +26,7 @@ if [[ -z "$INPUT" ]]; then
   case "${HOOK_INPUT_STATUS:-empty}" in
     truncated|invalid)
       echo "WARNING: ${HOOK_NAME} could not safely inspect a ${HOOK_INPUT_STATUS} hook payload." >&2
+      append_hook_degradation_log "$HOOK_NAME" "stop-failure context was not persisted because hook input was ${HOOK_INPUT_STATUS}" "$INPUT" || true
       exit 0
       ;;
   esac

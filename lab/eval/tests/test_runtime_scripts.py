@@ -1303,6 +1303,22 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(values["PACKAGE_LAYOUT"], "modular_monolith")
         self.assertIn("packs/billing/invoices", values["PACKAGE_LOCATIONS"])
 
+    def test_detect_stack_falls_back_to_ruby_project_markers_without_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
+            (tmp / "app").mkdir()
+            (tmp / "config").mkdir()
+            (tmp / "config" / "application.rb").write_text("# rails-ish\n", encoding="utf-8")
+            (tmp / "bin").mkdir()
+            (tmp / "bin" / "rails").write_text("#!/usr/bin/env ruby\n", encoding="utf-8")
+            os.chmod(tmp / "bin" / "rails", 0o755)
+
+            values = run_detect_stack(tmpdir)
+
+        self.assertEqual(values.get("FULL_RAILS_APP"), "true")
+        self.assertEqual(values.get("PACKAGE_LAYOUT"), "single_app")
+
     def test_detect_runtime_exports_dcg_and_shellfirm_when_installed(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -1453,7 +1469,7 @@ class RuntimeScriptTests(unittest.TestCase):
 
             result = run_workspace_hook(SECURITY_REMINDER, tmpdir, {"tool_input": {}})
 
-        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 2)
         self.assertIn("tool_input.file_path was missing", result.stderr)
 
     def test_plan_stop_reminder_fails_closed_on_invalid_payload(self) -> None:
@@ -1621,7 +1637,7 @@ class RuntimeScriptTests(unittest.TestCase):
                 env=env,
             )
 
-        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 2)
         self.assertIn("Betterleaks not available", result.stderr)
 
     def test_secret_scan_warns_when_default_mode_cannot_resolve_workspace_root(
@@ -1642,7 +1658,7 @@ class RuntimeScriptTests(unittest.TestCase):
             env=env,
         )
 
-        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 2)
         self.assertIn(
             "could not resolve the workspace root for secret scanning", result.stderr
         )
@@ -2091,6 +2107,35 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("python3 not found", result.stderr)
 
+    def test_pre_commit_hook_requires_shellcheck_for_shell_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            subprocess.run(["git", "init"], cwd=tmp, check=True, capture_output=True)
+            shell_file = tmp / "demo.sh"
+            shell_file.write_text("#!/usr/bin/env bash\necho ok\n", encoding="utf-8")
+            subprocess.run(["git", "add", "demo.sh"], cwd=tmp, check=True, capture_output=True)
+
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            for name in ("git", "npx", "python3", "bash"):
+                source = shutil.which(name)
+                self.assertIsNotNone(source, name)
+                os.symlink(source, fake_bin / name)
+
+            env = dict(os.environ)
+            env["PATH"] = str(fake_bin)
+            result = subprocess.run(
+                ["/bin/bash", str(PRE_COMMIT_HOOK)],
+                capture_output=True,
+                text=True,
+                cwd=tmp,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("shellcheck not found", result.stderr)
+
     def test_detect_runtime_ignores_lefthook_comment_mentions(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -2111,6 +2156,9 @@ class RuntimeScriptTests(unittest.TestCase):
             result = run_workspace_hook_raw(SETUP_DIRS, tmpdir, "{not-json")
 
             claude_dir = tmp / ".claude"
+            degradation_log = claude_dir / ".logs" / "hook-degradations.log"
+            log_exists = degradation_log.is_file()
+            log_content = degradation_log.read_text(encoding="utf-8") if log_exists else ""
             created_dirs = [
                 claude_dir / "plans",
                 claude_dir / "research",
@@ -2124,7 +2172,11 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn(
             "skipping setup-dirs.sh because hook input was invalid", result.stderr
         )
-        self.assertFalse(claude_dir.exists())
+        self.assertTrue(log_exists)
+        self.assertIn(
+            "session directory bootstrap skipped because hook input was invalid",
+            log_content,
+        )
         for path in created_dirs:
             self.assertFalse(path.exists(), path)
 
@@ -2136,9 +2188,17 @@ class RuntimeScriptTests(unittest.TestCase):
             (plan_dir / "plan.md").write_text("- [ ] task\n", encoding="utf-8")
 
             result = run_workspace_hook_raw(CHECK_RESUME, tmpdir, "{not-json")
+            degradation_log = tmp / ".claude" / ".logs" / "hook-degradations.log"
+            log_exists = degradation_log.is_file()
+            log_content = degradation_log.read_text(encoding="utf-8") if log_exists else ""
 
         self.assertEqual(result.returncode, 0)
         self.assertIn("could not safely inspect", result.stderr)
+        self.assertTrue(log_exists)
+        self.assertIn(
+            "resume reminder skipped because hook input was invalid",
+            log_content,
+        )
 
     def test_stop_failure_log_skips_invalid_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2151,10 +2211,37 @@ class RuntimeScriptTests(unittest.TestCase):
             (plan_dir / "plan.md").write_text("- [ ] task\n", encoding="utf-8")
 
             result = run_workspace_hook_raw(STOP_FAILURE_LOG, tmpdir, "{not-json")
+            degradation_log = tmp / ".claude" / ".logs" / "hook-degradations.log"
+            log_exists = degradation_log.is_file()
+            log_content = degradation_log.read_text(encoding="utf-8") if log_exists else ""
 
         self.assertEqual(result.returncode, 0)
         self.assertIn("could not safely inspect", result.stderr)
-        self.assertFalse((plan_dir / "scratchpad.md").exists())
+        self.assertTrue(log_exists)
+        self.assertIn(
+            "stop-failure context was not persisted because hook input was invalid",
+            log_content,
+        )
+
+    def test_check_scratchpad_logs_invalid_payload_degradation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            (tmp / ".claude").mkdir()
+
+            result = run_workspace_hook_raw(CHECK_SCRATCHPAD, tmpdir, "{not-json")
+            degradation_log = tmp / ".claude" / ".logs" / "hook-degradations.log"
+            log_exists = degradation_log.is_file()
+            log_content = degradation_log.read_text(encoding="utf-8") if log_exists else ""
+            scratchpad_exists = (tmp / ".claude" / "scratchpad.md").exists()
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("hook input was invalid", result.stderr)
+        self.assertTrue(log_exists)
+        self.assertIn(
+            "scratchpad reminder skipped because hook input was invalid",
+            log_content,
+        )
+        self.assertFalse(scratchpad_exists)
 
     def test_active_plan_marker_respects_numbered_unchecked_tasks(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2231,6 +2318,20 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("1 plan(s) have uncompleted tasks", pending.stdout)
         self.assertEqual(resume.returncode, 0, resume.stderr)
         self.assertIn("has 3 remaining tasks (1 done)", resume.stdout)
+
+    def test_check_pending_plans_does_not_suppress_output_on_stop_hook_active(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plan_dir = tmp / ".claude" / "plans" / "demo"
+            plan_dir.mkdir(parents=True)
+            (plan_dir / "plan.md").write_text("# Demo\n\n- [ ] task\n", encoding="utf-8")
+
+            pending = run_workspace_hook(
+                CHECK_PENDING_PLANS, tmpdir, {"stop_hook_active": True}
+            )
+
+        self.assertEqual(pending.returncode, 0, pending.stderr)
+        self.assertIn("1 plan(s) have uncompleted tasks", pending.stdout)
 
     def test_check_resume_counts_bare_markdown_checkboxes(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2577,6 +2678,58 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("Dynamic context injection found", result.stdout)
 
+    def test_check_dynamic_injection_manifest_rejects_unresolved_entries(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            script_dir = tmp / "scripts"
+            script_dir.mkdir()
+            script_copy = script_dir / "check-dynamic-injection.sh"
+            script_copy.write_text(
+                CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            os.chmod(script_copy, 0o755)
+            (tmp / "README.md").write_text("safe\n", encoding="utf-8")
+            manifest = tmp / "manifest.txt"
+            manifest.write_text("README.md\nmissing.md\n", encoding="utf-8")
+
+            result = subprocess.run(
+                ["/bin/bash", str(script_copy), "--manifest", str(manifest)],
+                capture_output=True,
+                text=True,
+                cwd=tmp,
+                check=False,
+                env=dict(os.environ),
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("manifest entry could not be resolved", result.stderr)
+
+    def test_check_dynamic_injection_manifest_rejects_unsupported_extensions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            script_dir = tmp / "scripts"
+            script_dir.mkdir()
+            script_copy = script_dir / "check-dynamic-injection.sh"
+            script_copy.write_text(
+                CHECK_DYNAMIC_INJECTION.read_text(encoding="utf-8"), encoding="utf-8"
+            )
+            os.chmod(script_copy, 0o755)
+            (tmp / "script.rb").write_text("!`uname -a`\n", encoding="utf-8")
+            manifest = tmp / "manifest.txt"
+            manifest.write_text("script.rb\n", encoding="utf-8")
+
+            result = subprocess.run(
+                ["/bin/bash", str(script_copy), "--manifest", str(manifest)],
+                capture_output=True,
+                text=True,
+                cwd=tmp,
+                check=False,
+                env=dict(os.environ),
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("outside the supported markdown/json/yaml scan set", result.stderr)
+
     def test_check_dynamic_injection_scans_tracked_top_level_docs(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -2881,6 +3034,68 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Linting 1 changed markdown file(s).", result.stdout)
+
+    def test_run_eval_changed_mode_does_not_require_npm_or_jq_when_no_changed_work_needs_them(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            fake_bin = tmp / "bin"
+            fake_bin.mkdir()
+            real_git = shutil.which("git")
+            self.assertIsNotNone(real_git)
+            (fake_bin / "git").write_text(
+                "#!/usr/bin/env bash\n"
+                f"REAL_GIT={shlex.quote(real_git)}\n"
+                'case "$*" in\n'
+                "  'rev-parse --verify HEAD') exit 0 ;;\n"
+                "  'diff --name-status -z -M HEAD') exit 0 ;;\n"
+                "  'diff --cached --name-status -z -M') exit 0 ;;\n"
+                "  'diff --name-status -z -M HEAD -- plugins/ruby-grape-rails/skills/') exit 0 ;;\n"
+                "  'diff --cached --name-status -z -M -- plugins/ruby-grape-rails/skills/') exit 0 ;;\n"
+                "  'diff --name-status -z -M HEAD -- plugins/ruby-grape-rails/agents/') exit 0 ;;\n"
+                "  'diff --cached --name-status -z -M -- plugins/ruby-grape-rails/agents/') exit 0 ;;\n"
+                "  'diff --name-status -z -M HEAD -- lab/eval/triggers/') exit 0 ;;\n"
+                "  'diff --cached --name-status -z -M -- lab/eval/triggers/') exit 0 ;;\n"
+                "  'diff --name-status -z -M HEAD -- lab/eval/evals/') exit 0 ;;\n"
+                "  'diff --cached --name-status -z -M -- lab/eval/evals/') exit 0 ;;\n"
+                "esac\n"
+                'exec "$REAL_GIT" "$@"\n',
+                encoding="utf-8",
+            )
+            (fake_bin / "npm").write_text(
+                "#!/usr/bin/env bash\necho 'npm should not be called' >&2\nexit 9\n",
+                encoding="utf-8",
+            )
+            (fake_bin / "jq").write_text(
+                "#!/usr/bin/env bash\necho 'jq should not be called' >&2\nexit 9\n",
+                encoding="utf-8",
+            )
+            os.chmod(fake_bin / "git", 0o755)
+            os.chmod(fake_bin / "npm", 0o755)
+            os.chmod(fake_bin / "jq", 0o755)
+            env = dict(os.environ)
+            env["PATH"] = f"{fake_bin}{os.pathsep}{env.get('PATH', '')}"
+            env["RUBY_PLUGIN_EVAL_FAIL_UNDER"] = "0"
+            env["RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER"] = "0"
+            env["RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER"] = "0"
+
+            result = subprocess.run(
+                ["bash", str(RUN_EVAL), "--changed"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("No changed markdown files detected.", result.stdout)
+        self.assertIn(
+            "No changed markdown/JSON/YAML files detected for injection scan.",
+            result.stdout,
+        )
+        self.assertIn("changed mode is partial coverage", result.stdout)
 
     def test_run_eval_warns_when_include_untracked_is_ignored_outside_changed(
         self,

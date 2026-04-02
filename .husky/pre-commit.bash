@@ -67,12 +67,22 @@ done < <(git diff --cached --name-only -z --diff-filter=ACM -- '*.sh' '*.bash' '
 if [[ ${#STAGED_SHELL_FILES[@]} -gt 0 ]]; then
   echo "Checking staged shell syntax..."
 
+  if ! command -v shellcheck >/dev/null 2>&1; then
+    echo "ERROR: shellcheck not found, cannot lint staged shell files." >&2
+    echo "Install shellcheck before committing shell changes." >&2
+    exit 1
+  fi
+
   for file in "${STAGED_SHELL_FILES[@]}"; do
     if [[ -f "$file" ]] && ! bash -n "$file"; then
       echo "Shell syntax error: $file"
       exit 1
     fi
+    if [[ -f "$file" ]] && ! shellcheck -x "$file"; then
+      echo "Shell lint error: $file"
+      exit 1
+    fi
   done
 fi
 
-echo "Pre-commit checks passed! Note: CI also runs broader repo-wide YAML, shell, and eval checks."
+echo "Pre-commit checks passed! Note: CI also runs broader repo-wide YAML syntax validation and eval checks."

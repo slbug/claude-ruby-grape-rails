@@ -76,9 +76,26 @@ def manifest_root(start_dir)
   nil
 end
 
+def ruby_marker_root(start_dir)
+  git_root = git_repo_root(start_dir)
+  file_markers = %w[config.ru Rakefile .ruby-version bin/rails script/rails config/application.rb]
+
+  Pathname.new(start_dir).expand_path.ascend do |candidate|
+    file_signal = file_markers.any? { |path| safe_manifest_file?(candidate.join(path).to_s) }
+    return candidate.to_s if file_signal
+
+    break if git_root && candidate.to_s == git_root
+  end
+
+  nil
+end
+
 repo_root = manifest_root(Dir.pwd)
 unless repo_root
-  puts '# No Gemfile or gemspec found'
+  repo_root = ruby_marker_root(Dir.pwd)
+end
+unless repo_root
+  puts '# No Gemfile, gemspec, or Ruby project markers found'
   exit 0
 end
 

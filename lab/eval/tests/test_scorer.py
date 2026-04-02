@@ -196,9 +196,9 @@ class ScorerTests(unittest.TestCase):
             "triggers": {"skills": {"plan": {"score": 1.0}, "verify": {"score": 0.7}}},
         }
         current = {
-            "skills": {"plan": {"composite": 0.95}},
-            "agents": {},
-            "triggers": {"skills": {"plan": {"score": 0.9}}},
+            "skills": {"plan": {"composite": 0.95}, "research": {"composite": 0.91}},
+            "agents": {"fresh": {"composite": 0.88}},
+            "triggers": {"skills": {"plan": {"score": 0.9}, "research": {"score": 0.92}}},
         }
 
         result = compare_snapshots(baseline, current)
@@ -206,10 +206,13 @@ class ScorerTests(unittest.TestCase):
         self.assertIn("verify", result["skills"])
         self.assertTrue(result["skills"]["verify"]["removed"])
         self.assertEqual(result["skills"]["verify"]["current"], 0.0)
+        self.assertTrue(result["skills"]["research"]["added"])
         self.assertIn("worker", result["agents"])
         self.assertTrue(result["agents"]["worker"]["removed"])
+        self.assertTrue(result["agents"]["fresh"]["added"])
         self.assertIn("verify", result["triggers"])
         self.assertTrue(result["triggers"]["verify"]["removed"])
+        self.assertTrue(result["triggers"]["research"]["added"])
 
 
 if __name__ == "__main__":

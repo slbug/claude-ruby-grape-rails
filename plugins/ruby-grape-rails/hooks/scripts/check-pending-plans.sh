@@ -36,10 +36,6 @@ REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 PLANS_DIR="${REPO_ROOT}/.claude/plans"
 
-if [[ "$(printf '%s' "$INPUT" | jq -r '.stop_hook_active // empty' 2>/dev/null)" == "true" ]]; then
-  exit 0
-fi
-
 # Use the same pattern as active-plan-lib.sh to ensure consistency
 MARKDOWN_UNCHECKED_TASK_PATTERN='^[[:space:]]*(([-*+]|[0-9]+\.)[[:space:]]+)?\[ \]'
 

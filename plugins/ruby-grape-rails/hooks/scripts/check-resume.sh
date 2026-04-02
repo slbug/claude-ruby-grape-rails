@@ -28,6 +28,7 @@ if [[ -z "$INPUT" ]]; then
   truncated | invalid)
     echo "WARNING: ${HOOK_NAME} could not safely inspect a ${HOOK_INPUT_STATUS} hook payload." >&2
     echo "Fix the hook input to enable plan resume reminders." >&2
+    append_hook_degradation_log "$HOOK_NAME" "resume reminder skipped because hook input was ${HOOK_INPUT_STATUS}" "$INPUT" || true
     exit 0
     ;;
   esac

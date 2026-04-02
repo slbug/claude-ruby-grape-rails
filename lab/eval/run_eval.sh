@@ -95,13 +95,6 @@ require_git_for_mode() {
 require_git_for_mode
 require_command mktemp "temporary file creation for score aggregation"
 
-# jq is only needed for --changed mode JSON construction
-case "$MODE" in
---changed)
-  require_command jq "JSON array construction for ${MODE} mode"
-  ;;
-esac
-
 validate_threshold() {
   local env_name="$1"
   local value="$2"
@@ -125,6 +118,15 @@ PY
 validate_threshold "RUBY_PLUGIN_EVAL_FAIL_UNDER" "$FAIL_UNDER"
 validate_threshold "RUBY_PLUGIN_EVAL_AGENT_FAIL_UNDER" "$AGENT_FAIL_UNDER"
 validate_threshold "RUBY_PLUGIN_EVAL_TRIGGER_FAIL_UNDER" "$TRIGGER_FAIL_UNDER"
+
+json_array_from_lines() {
+  python3 -c '
+import json
+import sys
+
+print(json.dumps([line.rstrip("\n") for line in sys.stdin]))
+'
+}
 
 have_head() {
   git rev-parse --verify HEAD >/dev/null 2>&1
@@ -351,8 +353,6 @@ PY
 }
 
 run_lint() {
-  require_command npm "linting in ${MODE} mode"
-
   if [[ "$MODE" == "--changed" ]]; then
     local markdown_files=()
     local file=""
@@ -367,11 +367,13 @@ run_lint() {
       return 0
     fi
 
+    require_command npm "linting changed markdown files in ${MODE} mode"
     echo "  Linting ${#markdown_files[@]} changed markdown file(s)."
     npm exec -- markdownlint -- "${markdown_files[@]}"
     return 0
   fi
 
+  require_command npm "linting in ${MODE} mode"
   npm run lint --silent
 }
 
@@ -454,10 +456,9 @@ run_changed_skills() {
     return 0
   fi
 
-  # Export names and scores as JSON arrays via environment variables
-  _RUN_EVAL_NAMES="$(printf '%s\n' "${skill_names[@]}" | jq -R . | jq -s .)"
+  _RUN_EVAL_NAMES="$(printf '%s\n' "${skill_names[@]}" | json_array_from_lines)"
   export _RUN_EVAL_NAMES
-  _RUN_EVAL_SCORES="$(printf '%s\n' "${skill_scores[@]}" | jq -R . | jq -s .)"
+  _RUN_EVAL_SCORES="$(printf '%s\n' "${skill_scores[@]}" | json_array_from_lines)"
   export _RUN_EVAL_SCORES
 
   # Build JSON using Python for proper escaping and handling
@@ -548,10 +549,9 @@ run_changed_agents() {
     return 0
   fi
 
-  # Export names and scores as JSON arrays via environment variables
-  _RUN_EVAL_NAMES="$(printf '%s\n' "${agent_names[@]}" | jq -R . | jq -s .)"
+  _RUN_EVAL_NAMES="$(printf '%s\n' "${agent_names[@]}" | json_array_from_lines)"
   export _RUN_EVAL_NAMES
-  _RUN_EVAL_SCORES="$(printf '%s\n' "${agent_scores[@]}" | jq -R . | jq -s .)"
+  _RUN_EVAL_SCORES="$(printf '%s\n' "${agent_scores[@]}" | json_array_from_lines)"
   export _RUN_EVAL_SCORES
 
   # Build JSON using Python for proper escaping and handling
@@ -586,6 +586,42 @@ print(json.dumps(result))
 run_all_agents() {
   echo "  Scoring all shipped agents"
   python3 -m lab.eval.agent_scorer --all | summarize_subject_scores "agents" "$AGENT_FAIL_UNDER"
+}
+
+run_noncore_skill_advisory() {
+  local threshold="$1"
+
+  python3 - "$threshold" <<'PY'
+import json
+import subprocess
+import sys
+
+threshold = float(sys.argv[1])
+core = {"plan", "work", "review", "verify", "permissions", "research"}
+payload = json.loads(
+    subprocess.check_output(
+        [sys.executable, "-m", "lab.eval.scorer", "--all"],
+        text=True,
+    )
+)
+low = sorted(
+    (
+        (name, round(data.get("composite", 0.0), 3))
+        for name, data in payload.items()
+        if isinstance(data, dict)
+        and name not in core
+        and data.get("composite", 0.0) < threshold
+    ),
+    key=lambda item: (item[1], item[0]),
+)
+
+if not low:
+    print(f"  Non-core skill advisory: all shipped skills meet {threshold:.2f}.")
+    raise SystemExit(0)
+
+summary = ", ".join(f"{name}={score:.3f}" for name, score in low)
+print(f"  WARNING: non-core skills below {threshold:.2f}: {summary}")
+PY
 }
 
 run_all_triggers() {
@@ -630,6 +666,9 @@ case "$MODE" in
     echo "--- Triggers (changed context) ---"
     run_all_triggers || FAILURES=$((FAILURES + 1))
   fi
+  echo
+  echo "NOTE: changed mode is partial coverage. It only lints changed markdown, scans changed markdown/JSON/YAML for dynamic injection, and scores changed tracked skills/agents."
+  echo "NOTE: use --all or --ci for full tracked contributor checks."
   ;;
 --all)
   echo "--- Lint ---"
@@ -646,6 +685,9 @@ case "$MODE" in
   echo
   echo "--- Triggers ---"
   run_all_triggers || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Non-core Skill Advisory ---"
+  run_noncore_skill_advisory "$FAIL_UNDER"
   ;;
 --skills)
   echo "--- Skills (core) ---"
@@ -677,6 +719,9 @@ case "$MODE" in
   echo
   echo "--- Triggers ---"
   run_all_triggers || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Non-core Skill Advisory ---"
+  run_noncore_skill_advisory "$FAIL_UNDER"
   ;;
 *)
   echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]"

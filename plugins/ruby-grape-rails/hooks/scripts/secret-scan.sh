@@ -7,8 +7,8 @@ set -o pipefail
 #
 # Hook input: JSON via stdin with .tool_input.file_path
 # Exit 2 with stderr message to surface warning to Claude
-# Policy: default mode is best-effort with warnings; strict mode fails closed
-# when broader recent-change coverage cannot be trusted.
+# Policy: secret scanning now fails closed when payload/root/scanner coverage
+# cannot be trusted.
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
@@ -40,22 +40,13 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 source "$ROOT_LIB"
 read_hook_input
 INPUT="$HOOK_INPUT_VALUE"
-FALLBACK_HOOK_MODE="${RUBY_PLUGIN_HOOK_MODE:-default}"
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || {
-  if [[ "$FALLBACK_HOOK_MODE" == "strict" ]]; then
-    emit_root_resolution_warning
-    exit 2
-  fi
   emit_root_resolution_warning
-  exit 0
+  exit 2
 }
 if [[ -z "$REPO_ROOT" ]]; then
-  if [[ "$FALLBACK_HOOK_MODE" == "strict" ]]; then
-    emit_root_resolution_warning
-    exit 2
-  fi
   emit_root_resolution_warning
-  exit 0
+  exit 2
 fi
 HOOK_MODE=$(resolve_hook_mode "$REPO_ROOT")
 STRICT_SCAN_MAX_FILES="${RUBY_PLUGIN_SECRET_SCAN_MAX_FILES:-200}"
@@ -100,13 +91,8 @@ input_has_secret_indicators() {
 }
 
 if [[ -z "$BETTERLEAKS_PATH" || ! -x "$BETTERLEAKS_PATH" ]]; then
-  if [[ "$HOOK_MODE" == "strict" ]] || input_has_secret_indicators; then
-    emit_missing_betterleaks_warning "${FILE_PATH:-this change}"
-    exit 2
-  fi
-
   emit_missing_betterleaks_warning "${FILE_PATH:-this change}"
-  exit 0
+  exit 2
 fi
 
 is_binaryish_path() {
