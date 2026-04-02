@@ -15,8 +15,15 @@ PLUGIN_JSON = ROOT / "plugins" / "ruby-grape-rails" / ".claude-plugin" / "plugin
 
 
 def load_json(path: Path) -> object:
-    with path.open(encoding="utf-8") as handle:
-        return json.load(handle)
+    try:
+        with path.open(encoding="utf-8") as handle:
+            return json.load(handle)
+    except FileNotFoundError:
+        print(f"ERROR: {path} not found", file=sys.stderr)
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"ERROR: {path} contains invalid JSON: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def validate_json_root(data: object, name: str) -> str | None:
@@ -128,7 +135,22 @@ def main() -> int:
     unreleased_url = link_defs.get("Unreleased")
 
     # Derive repo slug from package.json repository URL
-    repo_url = package_dict.get("repository", {}).get("url", "")
+    # Handle both dict form {"type": "git", "url": "..."} and string form "owner/repo"
+    repo_field = package_dict.get("repository", "")
+    if isinstance(repo_field, str):
+        # String form: "owner/repo" or "https://github.com/owner/repo"
+        if repo_field.startswith("https://github.com/"):
+            repo_url = repo_field
+        elif "/" in repo_field and " " not in repo_field:
+            # Assume "owner/repo" format
+            repo_url = f"https://github.com/{repo_field}.git"
+        else:
+            repo_url = ""
+    elif isinstance(repo_field, dict):
+        repo_url = repo_field.get("url", "")
+    else:
+        repo_url = ""
+
     repo_match = re.match(r"https://github\.com/([^/]+/[^/]+?)(?:\.git)?$", repo_url)
     if repo_match:
         repo_slug = repo_match.group(1)

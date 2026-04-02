@@ -93,6 +93,7 @@ require_git_for_mode() {
 
 require_git_for_mode
 require_command mktemp "temporary file creation for score aggregation"
+require_command jq "JSON array construction for score aggregation"
 
 validate_threshold() {
   local env_name="$1"
@@ -381,18 +382,35 @@ run_changed_skills() {
     return 0
   fi
 
+  # Export names and scores as JSON arrays via environment variables
+  export _RUN_EVAL_NAMES="$(printf '%s\n' "${skill_names[@]}" | jq -R . | jq -s .)"
+  export _RUN_EVAL_SCORES="$(printf '%s\n' "${skill_scores[@]}" | jq -R . | jq -s .)"
+
   # Build JSON using Python for proper escaping and handling
   local result
-  result="$(python3 -c '
+  result="$(
+    python3 -c '
 import json
 import sys
-names = sys.argv[1::2]
-scores = sys.argv[2::2]
+import os
+
+names_json = os.environ.get("_RUN_EVAL_NAMES", "[]")
+scores_json = os.environ.get("_RUN_EVAL_SCORES", "[]")
+names = json.loads(names_json)
+scores = json.loads(scores_json)
+
+if len(names) != len(scores):
+    print("ERROR: mismatched names and scores count", file=sys.stderr)
+    sys.exit(1)
+
 result = {}
 for name, score in zip(names, scores):
     result[name] = json.loads(score)
 print(json.dumps(result))
-' "${skill_names[@]}" "${skill_scores[@]}")"
+' <<<""
+  )"
+
+  unset _RUN_EVAL_NAMES _RUN_EVAL_SCORES
 
   printf '%s\n' "$result" | summarize_subject_scores "skills" "$FAIL_UNDER"
 }
@@ -456,18 +474,35 @@ run_changed_agents() {
     return 0
   fi
 
+  # Export names and scores as JSON arrays via environment variables
+  export _RUN_EVAL_NAMES="$(printf '%s\n' "${agent_names[@]}" | jq -R . | jq -s .)"
+  export _RUN_EVAL_SCORES="$(printf '%s\n' "${agent_scores[@]}" | jq -R . | jq -s .)"
+
   # Build JSON using Python for proper escaping and handling
   local result
-  result="$(python3 -c '
+  result="$(
+    python3 -c '
 import json
 import sys
-names = sys.argv[1::2]
-scores = sys.argv[2::2]
+import os
+
+names_json = os.environ.get("_RUN_EVAL_NAMES", "[]")
+scores_json = os.environ.get("_RUN_EVAL_SCORES", "[]")
+names = json.loads(names_json)
+scores = json.loads(scores_json)
+
+if len(names) != len(scores):
+    print("ERROR: mismatched names and scores count", file=sys.stderr)
+    sys.exit(1)
+
 result = {}
 for name, score in zip(names, scores):
     result[name] = json.loads(score)
 print(json.dumps(result))
-' "${agent_names[@]}" "${agent_scores[@]}")"
+' <<<""
+  )"
+
+  unset _RUN_EVAL_NAMES _RUN_EVAL_SCORES
 
   printf '%s\n' "$result" | summarize_subject_scores "agents" "$AGENT_FAIL_UNDER"
 }
