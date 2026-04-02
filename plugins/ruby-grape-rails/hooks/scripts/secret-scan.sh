@@ -146,7 +146,7 @@ emit_scan_setup_failure_warning() {
 emit_recent_changes_scan_unavailable_warning() {
   local reason="$1"
 
-  echo "WARNING: ${HOOK_NAME} could not perform strict recent-change scanning because ${reason}." >&2
+  echo "BLOCKED: ${HOOK_NAME} could not perform strict recent-change scanning because ${reason}." >&2
   echo "Provide a specific file path or restore Git access before continuing." >&2
 }
 
@@ -154,7 +154,7 @@ emit_scan_staging_failure_warning() {
   local source_label="$1"
   local failures="$2"
 
-  echo "WARNING: ${HOOK_NAME} could not stage ${failures} file(s) for strict secret scanning from ${source_label}." >&2
+  echo "BLOCKED: ${HOOK_NAME} could not stage ${failures} file(s) for strict secret scanning from ${source_label}." >&2
   echo "Recent-change coverage is incomplete; fix the filesystem permissions and retry." >&2
 }
 

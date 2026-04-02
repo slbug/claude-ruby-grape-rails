@@ -1727,6 +1727,7 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 2)
+        self.assertIn("BLOCKED:", result.stderr)
         self.assertIn("could not perform strict recent-change scanning", result.stderr)
 
     def test_secret_scan_blocks_when_strict_recent_change_staging_fails(self) -> None:
@@ -1780,6 +1781,7 @@ class RuntimeScriptTests(unittest.TestCase):
             )
 
         self.assertEqual(result.returncode, 2)
+        self.assertIn("BLOCKED:", result.stderr)
         self.assertIn("could not stage", result.stderr)
 
     def test_secret_scan_reports_tempdir_creation_failure(self) -> None:

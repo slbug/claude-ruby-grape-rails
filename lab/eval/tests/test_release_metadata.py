@@ -53,6 +53,11 @@ class ReleaseMetadataTests(unittest.TestCase):
             else:
                 os.environ["RUBY_PLUGIN_EXPECTED_MARKETPLACE_NAME"] = previous
 
+    def test_expected_marketplace_plugin_name_rejects_non_string_plugin_name(self) -> None:
+        self.assertIsNone(MODULE.expected_marketplace_plugin_name({"name": None}))
+        self.assertIsNone(MODULE.expected_marketplace_plugin_name({"name": 123}))
+        self.assertIsNone(MODULE.expected_marketplace_plugin_name({"name": []}))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -61,8 +61,11 @@ def extract_github_repo_slug(repo_field: object) -> str | None:
 
 
 def expected_marketplace_plugin_name(plugin_dict: dict) -> str | None:
-    override = str(plugin_dict.get("name", "")).strip()
-    env_override = str(os.environ.get("RUBY_PLUGIN_EXPECTED_MARKETPLACE_NAME", "")).strip()
+    override_value = plugin_dict.get("name")
+    override = override_value.strip() if isinstance(override_value, str) else ""
+
+    env_override_value = os.environ.get("RUBY_PLUGIN_EXPECTED_MARKETPLACE_NAME")
+    env_override = env_override_value.strip() if isinstance(env_override_value, str) else ""
     if env_override:
         return env_override
     return override or None
