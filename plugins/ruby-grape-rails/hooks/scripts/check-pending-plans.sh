@@ -25,11 +25,11 @@ read_hook_input
 INPUT="$HOOK_INPUT_VALUE"
 if [[ -z "$INPUT" ]]; then
   case "${HOOK_INPUT_STATUS:-empty}" in
-    truncated|invalid)
-      echo "BLOCKED: ${HOOK_NAME} could not safely inspect a ${HOOK_INPUT_STATUS} hook payload." >&2
-      echo "Fix the hook input before retrying the stop-time plan reminder." >&2
-      exit 2
-      ;;
+  truncated | invalid)
+    echo "BLOCKED: ${HOOK_NAME} could not safely inspect a ${HOOK_INPUT_STATUS} hook payload." >&2
+    echo "Fix the hook input before retrying the stop-time plan reminder." >&2
+    exit 2
+    ;;
   esac
 fi
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
@@ -40,10 +40,13 @@ if [[ "$(printf '%s' "$INPUT" | jq -r '.stop_hook_active // empty' 2>/dev/null)"
   exit 0
 fi
 
+# Use the same pattern as active-plan-lib.sh to ensure consistency
+MARKDOWN_UNCHECKED_TASK_PATTERN='^[[:space:]]*(([-*+]|[0-9]+\.)[[:space:]]+)?\[ \]'
+
 PENDING=0
 if [[ -d "$PLANS_DIR" ]]; then
   while IFS= read -r -d '' plan_file; do
-    if grep -qE -- '^[[:space:]]*([-*+]|[0-9]+\.)[[:space:]]+\[ \]' "$plan_file" 2>/dev/null; then
+    if grep -qE -- "$MARKDOWN_UNCHECKED_TASK_PATTERN" "$plan_file" 2>/dev/null; then
       PENDING=$((PENDING + 1))
     fi
   done < <(find "$PLANS_DIR" -name plan.md -type f -print0 2>/dev/null)

@@ -29,7 +29,7 @@ The plugin implements a **Plan → Work → Verify → Review → Compound** lif
 /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
      │           │            │              │              │
      ↓           ↓            ↓              ↓              ↓
-.claude/plans/{slug}/  (in namespace) (in namespace) (in namespace) .claude/solutions/
+.claude/plans/{slug}/  (namespace)  (namespace)  (namespace)  .claude/solutions/
 ```
 
 **Key principle**: Filesystem is the state machine. Each phase reads from previous phase's output. Solutions feed back into future cycles.
@@ -531,9 +531,11 @@ When working on Ruby/Rails/Grape code, ALWAYS load relevant skills based on file
 | `app/api/**/*.rb`, `*_api.rb`, `app/apis/**/*.rb` | `grape-idioms` | `plugins/ruby-grape-rails/skills/grape-idioms/references/grape-patterns.md` |
 | `*.rb` | `ruby-idioms` | Always check Iron Laws |
 
-**Hook prerequisites:** core hook automation expects `bash`, `jq`, and `grep`
-to be available. When those dependencies are missing, hooks now surface an
-explicit error or warning instead of silently disabling guardrails.
+**Hook prerequisites:** core hook automation expects `bash`, `jq`, `grep`, and
+standard Unix utilities (`head`, `readlink`, `awk`, `cksum`, `mktemp`, `sed`,
+`find`, `cp`, `mv`, `rm`, `tr`) to be available. When those dependencies are
+missing, hooks now surface an explicit error or warning instead of silently
+disabling guardrails.
 
 **Note on job files**: Load `rails-idioms` instead of `sidekiq` when `config/environments/production.rb` contains `solid_queue` (Rails 8+ default).
 
@@ -638,26 +640,8 @@ When working on code, automatically consult relevant reference documentation bef
 
 ### Auto-Load Rules
 
-| File/Code Pattern | Skill | References to Consult |
-|-------------------|-------|----------------------|
-| `*_controller.rb` | rails-contexts, rails-idioms | routing-patterns.md |
-| `*_controller.rb` + JSON | rails-contexts | json-api-patterns.md |
-| `app/services/*`, `app/interactors/*`, `lib/**/*.rb` | rails-contexts, ruby-contexts | context-patterns.md |
-| `db/migrate/*` | active-record-patterns, safe-migrations | migrations.md |
-| `class.*ApplicationRecord` | active-record-patterns | validations.md |
-| `scope :`, `where(`, `joins(` | active-record-patterns | queries.md |
-| `app/jobs/*`, `*job.rb` | sidekiq or rails-idioms | job-patterns.md |
-| `include Sidekiq::Job` | sidekiq | job-patterns.md, queue-config.md |
-| `*auth*`, `*session*` | security | authentication.md, authorization.md |
-| `*_spec.rb` | testing | rspec-patterns.md |
-| `spec/factories/*` | testing | factory-patterns.md |
-| `spec/system/*` | testing | system-testing.md |
-| `app/views/*` | hotwire-patterns | components.md, forms-uploads.md |
-| `turbo_frame_tag` | hotwire-patterns | async-streams.md |
-| `data-controller` | hotwire-patterns | js-interop.md |
-| `Dockerfile`, `fly.toml` | deploy | docker-config.md, flyio-config.md |
-| `lib/tasks/*.rake` | ruby-idioms | rake-tasks.md |
-| `app/api/**/*.rb`, `*_api.rb`, `app/apis/**/*.rb` | grape-idioms | grape-patterns.md |
+See the [Automatic Skill Loading](#automatic-skill-loading) section above for
+the canonical auto-load routing table by file pattern.
 
 ### Consultation Behavior
 
@@ -797,8 +781,7 @@ Notes:
 - `--include-untracked` is available for local changed-mode exploration, but it
   intentionally makes results non-comparable and is not part of `eval-ci`.
 - `check-dynamic-injection.sh` expects git metadata for comparable tracked-file
-  scans; only set `RUBY_PLUGIN_DYNAMIC_INJECTION_ALLOW_FALLBACK=1` when you
-  intentionally want the broader non-git fallback scan.
+  scans.
 
 Current `lab/eval/` scope:
 

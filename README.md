@@ -220,7 +220,7 @@ The plugin implements a **Plan, Work, Verify, Review, Compound** lifecycle. Each
 /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
      │           │            │              │              │
      ↓           ↓            ↓              ↓              ↓
-.claude/plans/{slug}/  (in namespace) (in namespace) (in namespace) .claude/solutions/
+.claude/plans/{slug}/  (namespace)  (namespace)  (namespace)  .claude/solutions/
 ```
 
 - **Plan** -- Research agents analyze your codebase in parallel, then synthesize a structured implementation plan

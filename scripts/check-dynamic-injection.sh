@@ -66,7 +66,7 @@ if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
     scan_file "${REPO_ROOT}/${file}"
   done < <(git -C "$REPO_ROOT" ls-files -z -- "${TRACKED_PATTERNS[@]}")
 else
-  echo "ERROR: tracked dynamic-injection scan requires git when .git metadata is present." >&2
+  echo "ERROR: tracked dynamic-injection scan requires git when .git metadata is NOT available." >&2
   echo "ERROR: install git and rerun from a repository checkout with comparable tracked-file metadata." >&2
   exit 1
 fi

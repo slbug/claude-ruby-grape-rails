@@ -3,6 +3,15 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+require_command() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "ERROR: $1 is required but not installed." >&2
+    exit 1
+  fi
+}
+
+require_command readlink
+
 SCRIPT_SOURCE="${BASH_SOURCE[0]}"
 while [[ -L "$SCRIPT_SOURCE" ]]; do
   SOURCE_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd -P)"

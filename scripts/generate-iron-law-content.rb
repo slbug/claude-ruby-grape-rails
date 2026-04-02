@@ -126,6 +126,11 @@ def generate_injectable_section(yaml)
   end
 end
 
+# Escape pipe characters for markdown tables
+def escape_table_cell(text)
+  text.to_s.gsub('|', '\|')
+end
+
 # Generate tutorial section
 def generate_tutorial_section(yaml)
   puts "### Iron Laws (#{yaml['total_laws']} Rules, Always Enforced)"
@@ -138,7 +143,7 @@ def generate_tutorial_section(yaml)
   puts '|-----|-----|'
 
   yaml['laws'].first(7).each do |law|
-    puts "| #{law['title']} | #{law['rationale']} |"
+    puts "| #{escape_table_cell(law['title'])} | #{escape_table_cell(law['rationale'])} |"
   end
 end
 
@@ -242,7 +247,7 @@ def generate_readme(yaml)
                 .select { |l| l['category'] == cat['id'] }
                 .map { |l| l['summary_text'] }
                 .join('; ')
-    puts "| #{cat['name']} | #{cat['law_count']} | #{law_names} |"
+    puts "| #{escape_table_cell(cat['name'])} | #{cat['law_count']} | #{escape_table_cell(law_names)} |"
   end
 
   puts ''

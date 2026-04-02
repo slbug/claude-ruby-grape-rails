@@ -12,13 +12,12 @@ options = {
   days: 14,
   json: false,
   limit: 30,
-  repo_only: true,
   include_global: false,
   dry_run: false
 }
 
 OptionParser.new do |parser|
-  parser.banner = 'Usage: extract_permissions.rb [--days N] [--json] [--limit N] [--repo-only] [--include-global] [--dry-run]'
+  parser.banner = 'Usage: extract_permissions.rb [--days N] [--json] [--limit N] [--include-global] [--dry-run]'
 
   parser.on('--days N', Integer, 'Only scan sessions from the last N days') do |days|
     options[:days] = days
@@ -32,13 +31,7 @@ OptionParser.new do |parser|
     options[:limit] = limit
   end
 
-  parser.on('--repo-only', 'Only use repo-local settings (default)') do
-    options[:repo_only] = true
-    options[:include_global] = false
-  end
-
   parser.on('--include-global', 'Also include ~/.claude/settings.json in addition to repo-local settings') do
-    options[:repo_only] = false
     options[:include_global] = true
   end
 
@@ -209,9 +202,7 @@ def normalized_command_for_coverage(command)
   core_tokens.shift while core_tokens.first == 'env'
   core_tokens = core_tokens.drop_while { |token| token.match?(/\A[A-Za-z_][A-Za-z0-9_]*=.*/) }
   core_tokens = tokens if core_tokens.empty?
-  unless core_tokens.empty?
-    core_tokens[0] = core_tokens[0].sub(%r{\A\./(?=(bin|script)/)}, '')
-  end
+  core_tokens[0] = core_tokens[0].sub(%r{\A\./(?=(bin|script)/)}, '') unless core_tokens.empty?
   core_tokens.join(' ')
 end
 
@@ -231,6 +222,7 @@ def command_group(command)
   core_tokens = core_tokens.drop_while { |token| token.match?(/\A[A-Za-z_][A-Za-z0-9_]*=.*/) }
   core_tokens = tokens if core_tokens.empty?
   return first_line if core_tokens.empty?
+
   core_tokens[0] = core_tokens[0].sub(%r{\A\./(?=(bin|script)/)}, '')
 
   if core_tokens[0] == 'git'
@@ -252,11 +244,11 @@ def command_group(command)
       token = core_tokens[index]
       break unless token.start_with?('-')
 
-      if option_takes_value.call(token)
-        index += 2
-      else
-        index += 1
-      end
+      index += if option_takes_value.call(token)
+                 2
+               else
+                 1
+               end
     end
 
     return core_tokens[index] ? "git #{core_tokens[index]}" : 'git'
@@ -292,6 +284,7 @@ end
 def split_shell_commands(command)
   normalized = command.gsub(/\\\n/, ' ')
   return [normalized.strip] if normalized.match?(/(^|[[:space:];(|&])<<-?\s*['"]?[A-Za-z_][A-Za-z0-9_]*['"]?/)
+
   commands = []
   current = +''
   in_single = false
@@ -362,7 +355,7 @@ def split_shell_commands(command)
         commands << stripped unless stripped.empty?
         current = +''
         index += 2
-      elsif prev_char == '>' || prev_char == '<' || next_char == '>'
+      elsif ['>', '<'].include?(prev_char) || next_char == '>'
         current << char
         index += 1
       else
@@ -435,19 +428,19 @@ max_session_files = positive_env_int('RUBY_PLUGIN_PERMISSIONS_MAX_SESSION_FILES'
 max_lines_per_file = positive_env_int('RUBY_PLUGIN_PERMISSIONS_MAX_LINES_PER_FILE', 10_000)
 missing_session_files = []
 recent_candidates = session_files.filter_map do |path|
-  begin
-    next unless File.file?(path)
+  next unless File.file?(path)
 
-    mtime = File.mtime(path)
-    next unless mtime > cutoff
+  mtime = File.mtime(path)
+  next unless mtime > cutoff
 
-    { path: path, mtime: mtime }
-  rescue Errno::ENOENT
-    missing_session_files << path unless missing_session_files.include?(path)
-    next
-  end
+  { path: path, mtime: mtime }
+rescue Errno::ENOENT
+  missing_session_files << path unless missing_session_files.include?(path)
+  next
 end
-recent_files = recent_candidates.sort_by { |entry| entry[:mtime] }.reverse.first(max_session_files).map { |entry| entry[:path] }
+recent_files = recent_candidates.sort_by do |entry|
+  entry[:mtime]
+end.reverse.first(max_session_files).map { |entry| entry[:path] }
 truncated_session_files = [recent_candidates.length - recent_files.length, 0].max
 
 group_counts = Hash.new(0)
@@ -549,7 +542,9 @@ end
 puts "Repo root: #{repo_root}"
 puts "Project transcript scope: #{project_slug}"
 puts "Settings scope: #{options[:include_global] ? 'repo + ~/.claude/settings.json' : 'repo-only'}"
-puts 'WARNING: including ~/.claude/settings.json can pull unrelated personal permissions into this repo audit.' if options[:include_global]
+if options[:include_global]
+  puts 'WARNING: including ~/.claude/settings.json can pull unrelated personal permissions into this repo audit.'
+end
 puts 'Dry-run: extractor is read-only; no settings changes were written.' if options[:dry_run]
 puts "Sessions scanned: #{recent_files.length} (last #{options[:days]} days)"
 puts "Additional recent sessions skipped by cap: #{truncated_session_files}" if truncated_session_files.positive?
@@ -561,8 +556,12 @@ if truncated_session_files.positive? || line_capped_files.positive?
   puts 'WARNING: transcript scan was truncated by caps; recommendations are partial.'
 end
 puts 'WARNING: malformed transcript lines were skipped; recommendations may be incomplete.' if malformed_lines.positive?
-puts 'WARNING: invalid or unreadable settings files were ignored; permission coverage may be incomplete.' if invalid_settings_files.any?
-puts 'WARNING: some transcript files disappeared during scanning; recommendations may be incomplete.' if missing_session_files.any?
+if invalid_settings_files.any?
+  puts 'WARNING: invalid or unreadable settings files were ignored; permission coverage may be incomplete.'
+end
+if missing_session_files.any?
+  puts 'WARNING: some transcript files disappeared during scanning; recommendations may be incomplete.'
+end
 puts "Total Bash tool calls seen: #{total_bash_commands}"
 puts "Uncovered command groups: #{group_counts.length}"
 puts "Total avoidable prompts: #{group_counts.values.sum}"

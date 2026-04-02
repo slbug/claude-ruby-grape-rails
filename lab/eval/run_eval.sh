@@ -18,8 +18,8 @@ set -euo pipefail
 
 SCRIPT_PATH="${BASH_SOURCE[0]}"
 case "$SCRIPT_PATH" in
-  */*) SCRIPT_BASE_DIR="${SCRIPT_PATH%/*}" ;;
-  *) SCRIPT_BASE_DIR="." ;;
+*/*) SCRIPT_BASE_DIR="${SCRIPT_PATH%/*}" ;;
+*) SCRIPT_BASE_DIR="." ;;
 esac
 SCRIPT_DIR="$(cd "${SCRIPT_BASE_DIR}" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
@@ -30,24 +30,24 @@ AGAINST_REF=""
 AGAINST_MERGE_BASE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --changed|--all|--skills|--agents|--triggers|--ci)
-      MODE="$1"
-      ;;
-    --include-untracked)
-      INCLUDE_UNTRACKED=true
-      ;;
-    --against)
-      shift
-      if [[ $# -eq 0 ]]; then
-        echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]" >&2
-        exit 1
-      fi
-      AGAINST_REF="$1"
-      ;;
-    *)
+  --changed | --all | --skills | --agents | --triggers | --ci)
+    MODE="$1"
+    ;;
+  --include-untracked)
+    INCLUDE_UNTRACKED=true
+    ;;
+  --against)
+    shift
+    if [[ $# -eq 0 ]]; then
       echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]" >&2
       exit 1
-      ;;
+    fi
+    AGAINST_REF="$1"
+    ;;
+  *)
+    echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]" >&2
+    exit 1
+    ;;
   esac
   shift
 done
@@ -81,9 +81,9 @@ require_command() {
 
 require_git_for_mode() {
   case "$MODE" in
-    --changed|--all|--ci)
-      require_command git "git-aware eval path selection in ${MODE} mode"
-      ;;
+  --changed | --all | --ci)
+    require_command git "git-aware eval path selection in ${MODE} mode"
+    ;;
   esac
 
   if [[ -n "$AGAINST_REF" ]] || [[ "$INCLUDE_UNTRACKED" == "true" ]]; then
@@ -92,12 +92,14 @@ require_git_for_mode() {
 }
 
 require_git_for_mode
+require_command mktemp "temporary file creation for score aggregation"
+require_command jq "JSON construction with proper escaping"
 
 validate_threshold() {
   local env_name="$1"
   local value="$2"
 
-  if ! python3 - "$value" <<'PY' >/dev/null 2>&1
+  if ! python3 - "$value" <<'PY' >/dev/null 2>&1; then
 import math
 import sys
 
@@ -108,7 +110,6 @@ except ValueError:
 
 raise SystemExit(0 if math.isfinite(value) and 0.0 <= value <= 1.0 else 1)
 PY
-  then
     echo "ERROR: ${env_name} must be a finite numeric threshold between 0 and 1, got: ${value}" >&2
     exit 1
   fi
@@ -148,22 +149,22 @@ collect_changed_paths() {
     while IFS= read -r -d '' status; do
       [[ -n "$status" ]] || continue
       case "$status" in
-        R*|C*)
-          # The old path is intentionally ignored; changed-mode scoring only uses
-          # the current tree path for renamed/copied files.
-          # shellcheck disable=SC2034
-          IFS= read -r -d '' old_path || break
-          IFS= read -r -d '' path || break
-          printf '%s\n' "$path"
-          ;;
-        D*)
-          IFS= read -r -d '' path || break
-          printf '__DELETED__:%s\n' "$path"
-          ;;
-        *)
-          IFS= read -r -d '' path || break
-          printf '%s\n' "$path"
-          ;;
+      R* | C*)
+        # The old path is intentionally ignored; changed-mode scoring only uses
+        # the current tree path for renamed/copied files.
+        # shellcheck disable=SC2034
+        IFS= read -r -d '' old_path || break
+        IFS= read -r -d '' path || break
+        printf '%s\n' "$path"
+        ;;
+      D*)
+        IFS= read -r -d '' path || break
+        printf '__DELETED__:%s\n' "$path"
+        ;;
+      *)
+        IFS= read -r -d '' path || break
+        printf '%s\n' "$path"
+        ;;
       esac
     done
   }
@@ -196,32 +197,32 @@ collect_changed_paths() {
 }
 
 collect_changed_skill_names() {
-  collect_changed_paths "${PLUGIN_ROOT}/skills/" \
-    | grep -Ev '^__DELETED__:' \
-    | sed -n "s|^${PLUGIN_ROOT}/skills/\\([^/]*\\)/.*|\\1|p" \
-    | awk 'NF' \
-    | sort -u
+  collect_changed_paths "${PLUGIN_ROOT}/skills/" |
+    grep -Ev '^__DELETED__:' |
+    sed -n "s|^${PLUGIN_ROOT}/skills/\\([^/]*\\)/.*|\\1|p" |
+    awk 'NF' |
+    sort -u
 }
 
 collect_deleted_skill_names() {
-  collect_changed_paths "${PLUGIN_ROOT}/skills/" \
-    | sed -n "s|^__DELETED__:${PLUGIN_ROOT}/skills/\\([^/]*\\)/.*|\\1|p" \
-    | awk 'NF' \
-    | sort -u
+  collect_changed_paths "${PLUGIN_ROOT}/skills/" |
+    sed -n "s|^__DELETED__:${PLUGIN_ROOT}/skills/\\([^/]*\\)/.*|\\1|p" |
+    awk 'NF' |
+    sort -u
 }
 
 collect_changed_agent_paths() {
-  collect_changed_paths "${PLUGIN_ROOT}/agents/" \
-    | grep -Ev '^__DELETED__:' \
-    | grep -E "^${PLUGIN_ROOT}/agents/.+\.md$" \
-    | sort -u || true
+  collect_changed_paths "${PLUGIN_ROOT}/agents/" |
+    grep -Ev '^__DELETED__:' |
+    grep -E "^${PLUGIN_ROOT}/agents/.+\.md$" |
+    sort -u || true
 }
 
 collect_deleted_agent_names() {
-  collect_changed_paths "${PLUGIN_ROOT}/agents/" \
-    | sed -n "s|^__DELETED__:${PLUGIN_ROOT}/agents/\\([^/]*\\)\\.md$|\\1|p" \
-    | awk 'NF' \
-    | sort -u
+  collect_changed_paths "${PLUGIN_ROOT}/agents/" |
+    sed -n "s|^__DELETED__:${PLUGIN_ROOT}/agents/\\([^/]*\\)\\.md$|\\1|p" |
+    awk 'NF' |
+    sort -u
 }
 
 should_run_changed_triggers() {
@@ -235,8 +236,8 @@ should_run_changed_triggers() {
 
   local entrypoint_changed=""
   entrypoint_changed=$(
-    collect_changed_paths "${PLUGIN_ROOT}/skills/" \
-      | grep -E "^${PLUGIN_ROOT}/skills/(${CORE_TRIGGER_SKILLS_REGEX})/SKILL\\.md$" || true
+    collect_changed_paths "${PLUGIN_ROOT}/skills/" |
+      grep -E "^${PLUGIN_ROOT}/skills/(${CORE_TRIGGER_SKILLS_REGEX})/SKILL\\.md$" || true
   )
   [[ -n "$entrypoint_changed" ]]
 }
@@ -249,7 +250,7 @@ summarize_subject_scores() {
     echo "ERROR: could not create a temporary score payload file." >&2
     return 1
   }
-  cat > "$payload_file"
+  cat >"$payload_file"
   local status=0
   python3 - "$label" "$threshold" "$payload_file" <<'PY' || status=$?
 import json
@@ -286,7 +287,7 @@ summarize_triggers() {
     echo "ERROR: could not create a temporary trigger payload file." >&2
     return 1
   }
-  cat > "$payload_file"
+  cat >"$payload_file"
   local status=0
   python3 - "$threshold" "$payload_file" <<'PY' || status=$?
 import json
@@ -348,9 +349,8 @@ run_changed_skills() {
 
   echo "  Scoring ${#skills_to_check[@]} changed skills: ${skills_to_check[*]}"
 
-  local result="{"
-  local first=true
-  local skill=""
+  local -a skill_names=()
+  local -a skill_scores=()
   local missing_skills=()
   local deleted_skills=()
   while IFS= read -r skill; do
@@ -366,14 +366,9 @@ run_changed_skills() {
 
     local score=""
     score="$(python3 -m lab.eval.scorer "$path")"
-    if [[ "$first" == true ]]; then
-      first=false
-    else
-      result+=","
-    fi
-    result+="\"${skill}\":${score}"
+    skill_names+=("$skill")
+    skill_scores+=("$score")
   done
-  result+="}"
 
   if [[ ${#missing_skills[@]} -gt 0 ]]; then
     echo "  WARNING: skipping deleted or moved changed skills: ${missing_skills[*]}" >&2
@@ -382,10 +377,17 @@ run_changed_skills() {
     echo "  NOTE: deleted changed skills are not scorable on the current tree: ${deleted_skills[*]}" >&2
   fi
 
-  if [[ "$first" == true ]]; then
+  if [[ ${#skill_names[@]} -eq 0 ]]; then
     echo "  No scorable changed skills remain after skipping deleted or moved paths."
     return 0
   fi
+
+  # Build JSON using jq for proper escaping
+  local result
+  result="$(jq -n \
+    --argjson names "$(printf '%s\n' "${skill_names[@]}" | jq -R . | jq -s .)" \
+    --argjson scores "$(printf '%s\n' "${skill_scores[@]}" | jq -R . | jq -s .)" \
+    '[names, scores] | transpose | map({(.[0]): (.[1] | fromjson)}) | add // {}')"
 
   printf '%s\n' "$result" | summarize_subject_scores "skills" "$FAIL_UNDER"
 }
@@ -416,8 +418,8 @@ run_changed_agents() {
   done
   echo "  Scoring ${#agent_paths[@]} changed agents: ${agent_names[*]}"
 
-  local result="{"
-  local first=true
+  local -a agent_names=()
+  local -a agent_scores=()
   local missing_agents=()
   local deleted_agents=()
   while IFS= read -r agent_name; do
@@ -433,14 +435,9 @@ run_changed_agents() {
     fi
     local score=""
     score="$(python3 -m lab.eval.agent_scorer "$path")"
-    if [[ "$first" == true ]]; then
-      first=false
-    else
-      result+=","
-    fi
-    result+="\"${agent_name}\":${score}"
+    agent_names+=("$agent_name")
+    agent_scores+=("$score")
   done
-  result+="}"
 
   if [[ ${#missing_agents[@]} -gt 0 ]]; then
     echo "  WARNING: skipping deleted or moved changed agents: ${missing_agents[*]}" >&2
@@ -449,10 +446,17 @@ run_changed_agents() {
     echo "  NOTE: deleted changed agents are not scorable on the current tree: ${deleted_agents[*]}" >&2
   fi
 
-  if [[ "$first" == true ]]; then
+  if [[ ${#agent_names[@]} -eq 0 ]]; then
     echo "  No scorable changed agents remain after skipping deleted or moved paths."
     return 0
   fi
+
+  # Build JSON using jq for proper escaping
+  local result
+  result="$(jq -n \
+    --argjson names "$(printf '%s\n' "${agent_names[@]}" | jq -R . | jq -s .)" \
+    --argjson scores "$(printf '%s\n' "${agent_scores[@]}" | jq -R . | jq -s .)" \
+    '[names, scores] | transpose | map({(.[0]): (.[1] | fromjson)}) | add // {}')"
 
   printf '%s\n' "$result" | summarize_subject_scores "agents" "$AGENT_FAIL_UNDER"
 }
@@ -487,75 +491,75 @@ if [[ "$MODE" == "--changed" && -n "$AGAINST_REF" ]]; then
 fi
 
 case "$MODE" in
-  --changed)
-    echo "--- Lint ---"
-    run_lint || FAILURES=$((FAILURES + 1))
+--changed)
+  echo "--- Lint ---"
+  run_lint || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Injection Guard ---"
+  run_injection_check || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Skills (changed) ---"
+  run_changed_skills || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Agents (changed) ---"
+  run_changed_agents || FAILURES=$((FAILURES + 1))
+  if should_run_changed_triggers; then
     echo
-    echo "--- Injection Guard ---"
-    run_injection_check || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Skills (changed) ---"
-    run_changed_skills || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Agents (changed) ---"
-    run_changed_agents || FAILURES=$((FAILURES + 1))
-    if should_run_changed_triggers; then
-      echo
-      echo "--- Triggers (changed context) ---"
-      run_all_triggers || FAILURES=$((FAILURES + 1))
-    fi
-    ;;
-  --all)
-    echo "--- Lint ---"
-    run_lint || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Injection Guard ---"
-    run_injection_check || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Skills (core) ---"
-    run_all_skills || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Agents (all) ---"
-    run_all_agents || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Triggers ---"
+    echo "--- Triggers (changed context) ---"
     run_all_triggers || FAILURES=$((FAILURES + 1))
-    ;;
-  --skills)
-    echo "--- Skills (core) ---"
-    run_all_skills || FAILURES=$((FAILURES + 1))
-    ;;
-  --agents)
-    echo "--- Agents (all) ---"
-    run_all_agents || FAILURES=$((FAILURES + 1))
-    ;;
-  --triggers)
-    echo "--- Triggers ---"
-    run_all_triggers || FAILURES=$((FAILURES + 1))
-    ;;
-  --ci)
-    echo "--- CI Scoring Gate: lint + injection check + core skills + all agents + triggers ---"
-    echo "NOTE: runtime tests run separately via npm run eval:test or npm run ci."
-    echo
-    echo "--- Lint ---"
-    run_lint || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Injection Guard ---"
-    run_injection_check || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Skills (core) ---"
-    run_all_skills || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Agents (all) ---"
-    run_all_agents || FAILURES=$((FAILURES + 1))
-    echo
-    echo "--- Triggers ---"
-    run_all_triggers || FAILURES=$((FAILURES + 1))
-    ;;
-  *)
-    echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]"
-    exit 1
-    ;;
+  fi
+  ;;
+--all)
+  echo "--- Lint ---"
+  run_lint || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Injection Guard ---"
+  run_injection_check || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Skills (core) ---"
+  run_all_skills || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Agents (all) ---"
+  run_all_agents || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Triggers ---"
+  run_all_triggers || FAILURES=$((FAILURES + 1))
+  ;;
+--skills)
+  echo "--- Skills (core) ---"
+  run_all_skills || FAILURES=$((FAILURES + 1))
+  ;;
+--agents)
+  echo "--- Agents (all) ---"
+  run_all_agents || FAILURES=$((FAILURES + 1))
+  ;;
+--triggers)
+  echo "--- Triggers ---"
+  run_all_triggers || FAILURES=$((FAILURES + 1))
+  ;;
+--ci)
+  echo "--- CI Scoring Gate: lint + injection check + core skills + all agents + triggers ---"
+  echo "NOTE: runtime tests run separately via npm run eval:test or npm run ci."
+  echo
+  echo "--- Lint ---"
+  run_lint || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Injection Guard ---"
+  run_injection_check || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Skills (core) ---"
+  run_all_skills || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Agents (all) ---"
+  run_all_agents || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Triggers ---"
+  run_all_triggers || FAILURES=$((FAILURES + 1))
+  ;;
+*)
+  echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]"
+  exit 1
+  ;;
 esac
 
 if [[ $FAILURES -gt 0 ]]; then

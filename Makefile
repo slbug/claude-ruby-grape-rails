@@ -33,7 +33,7 @@ eval-output:
 eval-baseline:
 	python3 -m lab.eval.baseline
 
-eval-compare:
+eval-compare: ## Compare eval results (requires: make eval-baseline first)
 	python3 -m lab.eval.compare --pretty
 
 eval-overlap:

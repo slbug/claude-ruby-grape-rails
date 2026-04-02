@@ -32,12 +32,12 @@ emit_debug_block() {
 
 if [[ -z "$INPUT" ]]; then
   case "${HOOK_INPUT_STATUS:-empty}" in
-    truncated|invalid)
-      emit_debug_block \
-        "the hook payload was ${HOOK_INPUT_STATUS}" \
-        "Fix the hook input before retrying the edit."
-      exit 2
-      ;;
+  truncated | invalid)
+    emit_debug_block \
+      "the hook payload was ${HOOK_INPUT_STATUS}" \
+      "Fix the hook input before retrying the edit."
+    exit 2
+    ;;
   esac
 fi
 
@@ -94,8 +94,8 @@ is_path_within_root "$REPO_ROOT" "$FILE_PATH" || {
 BASE_NAME=$(path_basename "$FILE_PATH")
 
 case "$BASE_NAME" in
-  *.rb|*.rake|Gemfile|Rakefile|config.ru) ;;
-  *) exit 0 ;;
+*.rb | *.rake | Gemfile | Rakefile | config.ru) ;;
+*) exit 0 ;;
 esac
 
 [[ "$FILE_PATH" != */spec/* ]] || exit 0
@@ -105,26 +105,9 @@ esac
 
 FILE_NAME="$BASE_NAME"
 DEBUGS=""
-SCAN_FILE="$FILE_PATH"
-TMP_SCAN_FILE=""
 
-if grep -Eq '^[[:space:]]*#' -- "$FILE_PATH" 2>/dev/null; then
-  TMP_SCAN_FILE=$(mktemp "${TMPDIR:-/tmp}/rb-debug-scan.XXXXXX") || {
-    emit_debug_block \
-      "a temporary file could not be created for comment filtering" \
-      "Fix TMPDIR permissions or disk space before retrying the edit."
-    exit 2
-  }
-  sed '/^[[:space:]]*#/d' -- "$FILE_PATH" > "$TMP_SCAN_FILE" 2>/dev/null || {
-    safe_remove_temp_file "${TMP_SCAN_FILE:-}" "${TMPDIR:-/tmp}/rb-debug-scan.*" || true
-    emit_debug_block \
-      "comment filtering failed" \
-      "Retry once the edited file can be read normally."
-    exit 2
-  }
-  SCAN_FILE="$TMP_SCAN_FILE"
-fi
-
+# Grep original file for matches, then filter out comment-only lines from output
+# to preserve original line numbers
 for pattern in \
   'binding\.pry' \
   'binding\.irb' \
@@ -133,12 +116,10 @@ for pattern in \
   '(^|[^[:alnum:]_.#])puts([[:space:]]|\(|$)' \
   '(^|[^[:alnum:]_.#])pp([[:space:]]|\(|$)' \
   '(^|[^[:alnum:]_.#])p([[:space:]]|\(|$)'; do
-  MATCH=$(grep -nEm 3 "$pattern" -- "$SCAN_FILE" 2>/dev/null)
+  MATCH=$(grep -nEm 3 "$pattern" -- "$FILE_PATH" 2>/dev/null | grep -v '^[0-9]*:[[:space:]]*#')
   [[ -n "$MATCH" ]] && DEBUGS+="
 $MATCH"
 done
-
-safe_remove_temp_file "${TMP_SCAN_FILE:-}" "${TMPDIR:-/tmp}/rb-debug-scan.*" || true
 
 if [[ -n "$DEBUGS" ]]; then
   cat >&2 <<MSG
