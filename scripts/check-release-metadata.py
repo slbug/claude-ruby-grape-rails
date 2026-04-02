@@ -100,7 +100,18 @@ def main() -> int:
         if ruby_plugin is None:
             errors.append("ruby-grape-rails plugin not found in marketplace.json")
 
-    marketplace_ref = ruby_plugin.get("source", {}).get("ref") if ruby_plugin else None
+    # Validate source is a dict before extracting ref
+    if ruby_plugin:
+        source = ruby_plugin.get("source")
+        if source is None:
+            marketplace_ref = None
+        elif isinstance(source, dict):
+            marketplace_ref = source.get("ref")
+        else:
+            errors.append("marketplace.json plugin source must be a JSON object")
+            marketplace_ref = None
+    else:
+        marketplace_ref = None
 
     if marketplace_version != current_version:
         errors.append(
@@ -164,19 +175,28 @@ def main() -> int:
     else:
         repo_url = ""
 
-    repo_match = re.match(r"https://github\.com/([^/]+/[^/]+?)(?:\.git)?$", repo_url)
-    if repo_match:
-        repo_slug = repo_match.group(1)
-        expected_unreleased = (
-            f"https://github.com/{repo_slug}/compare/v{current_version}...HEAD"
-            if current_version
-            else None
-        )
-    else:
+    # Ensure repo_url is a string before regex matching
+    if not isinstance(repo_url, str):
         errors.append(
-            f"Cannot extract repository slug from package.json repository.url: {repo_url!r}"
+            f"Cannot extract repository slug from package.json repository.url: invalid type {type(repo_url).__name__}"
         )
         expected_unreleased = None
+    else:
+        repo_match = re.match(
+            r"https://github\.com/([^/]+/[^/]+?)(?:\.git)?$", repo_url
+        )
+        if repo_match:
+            repo_slug = repo_match.group(1)
+            expected_unreleased = (
+                f"https://github.com/{repo_slug}/compare/v{current_version}...HEAD"
+                if current_version
+                else None
+            )
+        else:
+            errors.append(
+                f"Cannot extract repository slug from package.json repository.url: {repo_url!r}"
+            )
+            expected_unreleased = None
     if expected_unreleased and unreleased_url != expected_unreleased:
         errors.append(
             f"CHANGELOG.md [Unreleased] link={unreleased_url!r} does not match expected {expected_unreleased!r}."
