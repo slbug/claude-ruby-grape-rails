@@ -286,7 +286,7 @@ bundle exec rspec
 """
         passed, evidence = matchers.no_bash_blocks(content)
         self.assertFalse(passed)
-        self.assertIn("1", evidence)
+        self.assertIn("line(s):", evidence)
 
     def test_no_bash_blocks_ignores_plain_fenced_blocks(self) -> None:
         content = """---
@@ -325,7 +325,8 @@ bundle exec rubocop
 """
         passed, evidence = matchers.no_bash_blocks(content)
         self.assertFalse(passed)
-        self.assertIn("2", evidence)
+        self.assertIn("2 ```bash block(s)", evidence)
+        self.assertIn("line(s):", evidence)
 
 
 if __name__ == "__main__":

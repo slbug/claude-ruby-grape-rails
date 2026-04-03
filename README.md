@@ -570,22 +570,22 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 
 ### Workflow
 
-| Command                 | Description                                                  |
-| ----------------------- | ------------------------------------------------------------ |
-| `/rb:full <feature>`    | Full autonomous cycle (plan, work, verify, review, compound) |
-| `/rb:brainstorm <topic>`| Adaptive requirements gathering before planning              |
-| `/rb:plan <input>`      | Create implementation plan with specialist agents            |
-| `/rb:plan --existing`   | Enhance existing plan with deeper research                   |
-| `/rb:work <plan-file>`  | Execute plan tasks with verification                         |
-| `/rb:review [focus]`    | Multi-agent code review (4 parallel agents)                  |
-| `/rb:compound`          | Capture solved problem as reusable knowledge                 |
-| `/rb:triage`            | Interactive triage of review findings                        |
-| `/rb:document`          | Generate YARD/RDoc, README, ADRs                             |
-| `/rb:learn <lesson>`    | Capture lessons learned                                      |
-| `/rb:brief <plan>`      | Interactive plan walkthrough                                 |
-| `/rb:perf`              | Performance analysis with specialist agents                  |
-| `/rb:pr-review`         | Address PR review comments                                   |
-| `/rb:permissions`       | Analyze permission prompts and suggest safe settings entries  |
+| Command                  | Description                                                  |
+| -----------------------  | ------------------------------------------------------------ |
+| `/rb:full <feature>`     | Full autonomous cycle (plan, work, verify, review, compound) |
+| `/rb:brainstorm <topic>` | Adaptive requirements gathering before planning              |
+| `/rb:plan <input>`       | Create implementation plan with specialist agents            |
+| `/rb:plan --existing`    | Enhance existing plan with deeper research                   |
+| `/rb:work <plan-file>`   | Execute plan tasks with verification                         |
+| `/rb:review [focus]`     | Multi-agent code review (4 parallel agents)                  |
+| `/rb:compound`           | Capture solved problem as reusable knowledge                 |
+| `/rb:triage`             | Interactive triage of review findings                        |
+| `/rb:document`           | Generate YARD/RDoc, README, ADRs                             |
+| `/rb:learn <lesson>`     | Capture lessons learned                                      |
+| `/rb:brief <plan>`       | Interactive plan walkthrough                                 |
+| `/rb:perf`               | Performance analysis with specialist agents                  |
+| `/rb:pr-review`          | Address PR review comments                                   |
+| `/rb:permissions`        | Analyze permission prompts and suggest safe settings entries |
 
 ### Utility
 
