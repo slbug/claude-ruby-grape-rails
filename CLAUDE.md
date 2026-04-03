@@ -23,7 +23,7 @@ Current Plugin Posture:
 
 ## Workflow Architecture
 
-The plugin implements a **Plan → Work → Verify → Review → Compound** lifecycle:
+The plugin supports an optional **Brainstorm** discovery step before the core **Plan → Work → Verify → Review → Compound** lifecycle:
 
 ```
 /rb:brainstorm (optional) → /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound

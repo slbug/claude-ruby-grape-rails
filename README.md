@@ -217,7 +217,7 @@ and enforces [Iron Laws](#iron-laws-non-negotiable-rules) that prevent common Ru
 
 ### The Lifecycle
 
-The plugin implements a **Plan, Work, Verify, Review, Compound** lifecycle. Each phase produces artifacts in a namespaced directory:
+The plugin supports an optional **Brainstorm** discovery step before the core **Plan → Work → Verify → Review → Compound** lifecycle. Each phase produces artifacts in a namespaced directory:
 
 ```
 /rb:brainstorm (optional) → /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
