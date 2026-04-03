@@ -22,7 +22,7 @@ that `/rb:plan` consumes to skip clarification.
 [DECISION POINT]                 |
     ├─ Research ──> [RESEARCH] ──┘
     ├─ Continue interview ───────┘
-    ├─ Make a plan ──> STOP (suggest /rb:plan {slug})
+    ├─ Make a plan ──> STOP (suggest /rb:plan .claude/plans/{slug}/interview.md)
     ├─ Store & exit ──> STOP (artifacts saved)
     └─ Discuss ──> freeform ──> [DECISION POINT]
 ```

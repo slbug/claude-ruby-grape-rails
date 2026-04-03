@@ -27,8 +27,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Skills now instruct Claude via prose ("Run `bundle exec rspec`", "Use Grep to
   search...") instead of bash blocks. Works with CC v2.1.91's
   `disableSkillShellExecution` setting. Documentation/example blocks converted
-  to plain fenced blocks. No semantic loss — all command strings preserved in
-  backticks.
+  to plain fenced blocks. Shell commands preserved in backticks; tool-replaceable
+  commands (grep, find) converted to Claude tool references (Grep, Glob).
 - **Removed `disable-model-invocation` from plan, work, review, investigate** —
   Unblocks programmatic `Skill()` calls during workflow transitions
   (brainstorm→plan, work→review). Kept on research, pr-review, perf where

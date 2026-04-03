@@ -7,7 +7,7 @@
       "checks": [
         { "type": "frontmatter_field", "field": "name", "expected": "rb:brainstorm", "desc": "Has rb:brainstorm name" },
         { "type": "frontmatter_field", "field": "argument-hint", "desc": "Has argument hint" },
-        { "type": "frontmatter_field", "field": "disable-model-invocation", "expected": "True", "desc": "Has disable-model-invocation" },
+        { "type": "frontmatter_field", "field": "disable-model-invocation", "expected": true, "desc": "Has disable-model-invocation" },
         { "type": "section_exists", "section": "Phase 1: Adaptive Interview", "desc": "Has interview phase" },
         { "type": "section_exists", "section": "Phase 2: Decision Point (Mandatory)", "desc": "Has decision point phase" },
         { "type": "section_exists", "section": "Phase 3: Research (Diverge-Evaluate-Converge)", "desc": "Has research phase" },

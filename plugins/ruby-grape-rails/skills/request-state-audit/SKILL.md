@@ -36,10 +36,9 @@ Audit your Rails application for common state management issues that cause produ
 
 Search for patterns:
 
-Use Grep to search for `Current\.` in `app/jobs` and `app/workers` (Ruby files only)
-to find Current assignments in async code. Then use Grep to find `Thread.new`,
-`Concurrent`, `Async`, `Fiber.schedule` in `app/` and check results for `current`
-references.
+- Use Grep: pattern `Current\.`, path `app/jobs` and `app/workers`, glob `*.rb`
+- Use Grep: pattern `Thread\.new|Concurrent|Async|Fiber\.schedule`, path `app/`,
+  glob `*.rb`, context 5 — then check results for `current` references
 
 **Verify:**
 
@@ -54,11 +53,11 @@ See: [references/audit-procedures.md#currentattributes-usage](references/audit-p
 
 Detect session store type first:
 
-Use Grep to search for `config.session_store` in `config/initializers` and `config/application.rb` to detect the session store type.
+Use Grep: pattern `config\.session_store`, path `config/initializers` and `config/application.rb`.
 
 **For ActiveRecord session store:** In rails console, run `ActiveRecord::SessionStore::Session.pluck(:data).map { |d| d.to_s.bytesize }.max`.
 
-**For Cookie-based sessions:** Use Grep to search for `CookieOverflow` in `log/production.log`.
+**For Cookie-based sessions:** Use Grep: pattern `CookieOverflow`, path `log/production.log`.
 
 **For Cache/Redis-backed sessions:** Run `redis-cli --scan --pattern "*session*" | xargs -I {} redis-cli strlen {}` to measure session key sizes.
 
@@ -79,7 +78,7 @@ See: [references/audit-procedures.md#sessioncookie-bloat](references/audit-proce
 
 Check your application's actual Redis namespace configuration:
 
-Use Grep to search for `redis.*namespace|namespace.*redis` (case-insensitive) in `config/initializers` and `config/application.rb`.
+Use Grep: pattern `redis.*namespace|namespace.*redis`, path `config/initializers` and `config/application.rb`, case-insensitive.
 
 To find keys without TTL, run `redis-cli --scan | while read key; do ttl=$(redis-cli ttl "$key"); [ "$ttl" -lt 0 ] && echo "$key (no TTL)"; done`.
 
@@ -99,7 +98,8 @@ See: [references/audit-procedures.md#redis-key-namespace--ttl](references/audit-
 
 ### Step 4: Turbo Stream Safety
 
-Use Grep to search for `broadcast_` in `app/models` (Ruby files). Then use Grep to search for `<%.*\.(each|where|find)` in `app/views` with glob `*.turbo_stream.*` to find DB queries in Turbo Stream templates.
+- Use Grep: pattern `broadcast_`, path `app/models`, glob `*.rb`
+- Use Grep: pattern `<%.*\.(each|where|find)`, path `app/views`, glob `*.turbo_stream.*`
 
 **Verify:**
 
@@ -115,7 +115,8 @@ See also: [Hotwire State Analysis](references/hotwire-state-analysis.md) — Con
 
 Search for denormalization patterns:
 
-Use Grep to search for `update.*(count|total)` in `app/models` (Ruby files) to find counter updates. Use Grep to search for `Rails\.cache\.delete|expire_fragment` in `app/` to find manual cache invalidation.
+- Use Grep: pattern `update.*(count|total)`, path `app/models`, glob `*.rb`
+- Use Grep: pattern `Rails\.cache\.delete|expire_fragment`, path `app/`, glob `*.rb`
 
 **Verify:**
 
