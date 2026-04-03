@@ -1,7 +1,7 @@
 ---
 name: rails-patterns-analyst
 description: Analyzes a Ruby/Rails/Grape codebase for existing controller, endpoint, service, model, policy, serializer, and job patterns before planning or refactoring.
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit
 model: sonnet
 effort: medium
 maxTurns: 15

@@ -176,11 +176,16 @@ skills:
 - Use `memory: project` for agents that benefit from cross-session learning (orchestrators, pattern analysts).
   Note: `memory` auto-enables Read, Write, Edit — only add to agents that already have Write access
 - Preload relevant skills via `skills:` field
-- Prefer denylist-only tool access (`disallowedTools: Edit, NotebookEdit`) for
-  specialist agents that produce review/research artifacts. This follows the
+- Prefer denylist-only tool access over `tools:` allowlists. This follows the
   built-in agent pattern (Explore, Plan, Verification) — agents inherit all
-  tools implicitly and Write works reliably. Use `tools:` allowlists only for
-  agents with intentionally narrow tool sets (e.g., web-researcher, output-verifier).
+  tools implicitly and Write works reliably in foreground spawns.
+  - `disallowedTools: Edit, NotebookEdit` for agents that write artifacts
+    (review reports, research files)
+  - `disallowedTools: Write, Edit, NotebookEdit` for agents that only return
+    analysis in conversation (schema designer, call tracer, bug investigator,
+    dependency analyzer)
+  - `tools:` allowlists only for agents with intentionally narrow tool sets
+    (web-researcher, output-verifier, ruby-gem-researcher)
 - Add `omitClaudeMd: true` for shipped specialist agents that do not need
   contributor-only `CLAUDE.md` guidance at runtime. Iron Laws still arrive
   through `SubagentStart`. This applies to both denylist-only agents and
@@ -470,8 +475,8 @@ Only trim when content is purely informational and not execution-critical.
 ### New agent
 
 - [ ] Frontmatter complete
-- [ ] `disallowedTools: Edit, NotebookEdit` for agents that write artifacts but must not edit code
-- [ ] `tools:` allowlist only for agents with intentionally narrow tool sets (web-researcher, output-verifier)
+- [ ] `disallowedTools: Edit, NotebookEdit` for artifact-writing agents; add `Write` for conversation-only agents
+- [ ] `tools:` allowlist only for agents with intentionally narrow tool sets (web-researcher, output-verifier, ruby-gem-researcher)
 - [ ] `omitClaudeMd: true` for specialist agents that don't need contributor context
 - [ ] Skills preloaded
 - [ ] Description at or under 250 chars

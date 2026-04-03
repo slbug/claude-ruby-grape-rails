@@ -9,14 +9,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.8.1] - 2026-04-03
 
-### Fixed
+### Changed
 
-- **Revert reviewer agent "Output" wording back to "Write"** — The 1.8.0
-  agent wording change from "Write findings to..." to "Output findings for..."
-  caused reviewer subagents to stop writing their own artifact files on the
-  first run, forcing the orchestrator to re-spawn them. Reverted all 11
-  reviewer agents and the parallel-reviewer orchestrator back to "Write"
-  instructions so agents write their per-reviewer artifacts directly.
+- **Agent tool access migrated from allowlist to denylist pattern** — Removed
+  explicit `tools:` allowlists from 17 specialist agents and switched to
+  `disallowedTools:` only (denylist). This follows Claude Code's built-in agent
+  pattern (Explore, Plan, Verification) where agents inherit all tools
+  implicitly. Artifact-writing agents use `disallowedTools: Edit, NotebookEdit`
+  so they can Write their own review/research files. Conversation-only agents
+  (schema designer, call tracer, bug investigator, dependency analyzer) use
+  `disallowedTools: Write, Edit, NotebookEdit`. Agents with intentionally
+  narrow tool sets (web-researcher, output-verifier, ruby-gem-researcher) keep
+  `tools:` allowlists.
 
 ## [1.8.0] - 2026-04-03
 
