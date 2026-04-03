@@ -41,7 +41,7 @@ writing.
 Run the canonical extractor first:
 
 ```bash
-ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days "${DAYS:-14}" ${INCLUDE_GLOBAL:+--include-global} ${LIMIT:+--limit "${LIMIT}"} ${DRY_RUN:+--dry-run}
+extract-permissions --days "${DAYS:-14}" ${INCLUDE_GLOBAL:+--include-global} ${LIMIT:+--limit "${LIMIT}"} ${DRY_RUN:+--dry-run}
 ```
 
 See `${CLAUDE_SKILL_DIR}/references/extraction-script.md` for the output format.

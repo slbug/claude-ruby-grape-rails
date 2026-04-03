@@ -21,20 +21,20 @@ Check the project before writing anything.
 
 Detection rules:
 
-1. **Always run** `ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb` first.
+1. **Always run** `detect-stack` first.
 2. **Prefer exact `*_VERSION` values** from that script when writing the managed-block header.
 3. Use plain `detected` only as a last resort when a direct gem is present but no resolved lockfile version is available.
 4. **Never** use broad substring regexes like `/rails \(([^)]+)\)/` against raw `Gemfile.lock`; they can falsely match gems such as `rubocop-rails`.
 5. Read `DETECTED_ORMS`, `PACKAGE_LAYOUT`, `PACKAGE_LOCATIONS`, `HAS_PACKWERK`, and `PACKAGE_QUERY_NEEDED` from the detector before deciding what ORM/package guidance to inject.
 6. If `PACKAGE_QUERY_NEEDED=true`, ask the user: `No Packwerk detected. Do you have something similar implemented? Provide modules/packages location and their stack/ORM.`
-7. **Do not** reimplement stack detection inline in chat or ad-hoc Ruby snippets. `detect-stack.rb` is the source of truth.
-8. If `detect-stack.rb` is missing or fails, STOP and explain that plugin stack detection is unavailable instead of inventing a fallback parser.
+7. **Do not** reimplement stack detection inline in chat or ad-hoc Ruby snippets. `detect-stack` is the source of truth.
+8. If `detect-stack` is missing or fails, STOP and explain that plugin stack detection is unavailable instead of inventing a fallback parser.
 
 Use Ruby for detection (avoids fragile shell pipelines):
 
 ```bash
 # Detect Ruby version and stack dependencies
-ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
+detect-stack
 
 # External tools / cached runtime hints
 REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
@@ -68,7 +68,7 @@ fi
 When building the injected header:
 
 - omit Rails entirely when `RAILS_VERSION` is absent
-- prefer detected version values from `detect-stack.rb` / cached runtime state instead of hardcoded examples
+- prefer detected version values from `detect-stack` / cached runtime state instead of hardcoded examples
 - avoid degrading locked versions to `detected`
 - use `DETECTED_ORMS` to distinguish Active Record, Sequel, and mixed ORM repositories
 - use `PACKAGE_LAYOUT` / `PACKAGE_LOCATIONS` to decide whether package-boundary guidance belongs in the injected block

@@ -10,7 +10,7 @@ import unittest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-EXTRACT_PERMISSIONS = REPO_ROOT / "plugins/ruby-grape-rails/skills/permissions/scripts/extract_permissions.rb"
+EXTRACT_PERMISSIONS = REPO_ROOT / "plugins/ruby-grape-rails/bin/extract-permissions"
 
 
 def claude_project_slug(repo_root: Path) -> str:

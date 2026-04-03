@@ -18,7 +18,7 @@ options = {
 }
 
 OptionParser.new do |parser|
-  parser.banner = 'Usage: extract_permissions.rb [--days N] [--json] [--limit N] [--include-global] [--dry-run]'
+  parser.banner = 'Usage: extract-permissions [--days N] [--json] [--limit N] [--include-global] [--dry-run]'
 
   parser.on('--days N', Integer, 'Only scan sessions from the last N days') do |days|
     options[:days] = days
