@@ -78,7 +78,7 @@ At brainstorm start, detect and record:
 
 Record in `interview.md` under `## Codebase Context`.
 
-### Signal Detection
+## Signal Detection
 
 **Vague answers** ("something like...", "maybe", "whatever you think"):
 Probe deeper on the SAME dimension with a more specific question. Offer
