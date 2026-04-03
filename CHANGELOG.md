@@ -7,6 +7,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.7.4] - 2026-04-03
+
+### Changed
+
+- **Skill scripts moved to `bin/` for bare-command invocation** — `detect-stack`
+  and `extract-permissions` are now shipped under `plugins/ruby-grape-rails/bin/`
+  and added to the Bash tool's PATH when the plugin is enabled (CC v2.1.91+).
+  Skills invoke them as bare commands (`detect-stack`, `extract-permissions`)
+  instead of requiring `ruby "${CLAUDE_PLUGIN_ROOT}/scripts/..."` or
+  `ruby "${CLAUDE_SKILL_DIR}/scripts/..."` path resolution. Hook scripts that
+  call `detect-stack` use the updated relative path. Empty `scripts/`
+  directories removed.
+
 ## [1.7.3] - 2026-04-02
 
 ### Changed
@@ -973,7 +986,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.7.3...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.7.4...HEAD
+[1.7.4]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.4
 [1.7.3]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.3
 [1.7.2]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.2
 [1.7.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.1

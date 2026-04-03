@@ -25,7 +25,7 @@ SECURITY_REMINDER = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/security-reminder.sh"
 )
 SECRET_SCAN = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/secret-scan.sh"
-DETECT_STACK = REPO_ROOT / "plugins/ruby-grape-rails/scripts/detect-stack.rb"
+DETECT_STACK = REPO_ROOT / "plugins/ruby-grape-rails/bin/detect-stack"
 DETECT_RUNTIME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime.sh"
 DETECT_RUNTIME_FAST = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime-fast.sh"

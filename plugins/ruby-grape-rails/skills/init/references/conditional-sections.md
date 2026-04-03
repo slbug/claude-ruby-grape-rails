@@ -122,7 +122,7 @@ Use the Ruby detection script (avoids fragile shell pipelines):
 
 ```bash
 # Detect stack dependencies
-ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
+detect-stack
 
 # Prefer exact *_VERSION outputs from the script when composing the header.
 # Only fall back to "detected" when the direct gem is present but no resolved
@@ -130,7 +130,7 @@ ruby ${CLAUDE_PLUGIN_ROOT}/scripts/detect-stack.rb
 # Read DETECTED_ORMS / PACKAGE_LAYOUT / PACKAGE_LOCATIONS too.
 # If PACKAGE_QUERY_NEEDED=true, ask the user for module/package locations and stack details.
 
-# detect-stack.rb is the only supported stack detector.
+# detect-stack is the only supported stack detector.
 # Do not recreate its logic inline. If it is missing or fails, stop and
 # treat that as a plugin/detection issue rather than guessing.
 

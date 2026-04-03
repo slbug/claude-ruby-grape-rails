@@ -120,6 +120,9 @@ claude-ruby-grape-rails/
 │       │   ├── planning-orchestrator.md
 │       │   ├── context-supervisor.md     # Generic output compressor (haiku)
 │       │   └── ...
+│       ├── bin/                      # Plugin executables (added to Bash tool PATH)
+│       │   ├── detect-stack         # Ruby stack/package detection
+│       │   └── extract-permissions  # Session permission extraction
 │       ├── hooks/
 │       │   └── hooks.json           # Format, review-state, compaction, and failure hooks
 │       └── skills/                  # 50 skills

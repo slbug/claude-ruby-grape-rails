@@ -3,19 +3,19 @@
 Run the canonical Ruby extractor:
 
 ```bash
-ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 14
+extract-permissions --days 14
 ```
 
 Optional machine-readable output:
 
 ```bash
-ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 14 --json
+extract-permissions --days 14 --json
 ```
 
 Other useful flags:
 
 ```bash
-ruby "${CLAUDE_SKILL_DIR}/scripts/extract_permissions.rb" --days 30 --limit 50 --include-global
+extract-permissions --days 30 --limit 50 --include-global
 ```
 
 Validation rules:

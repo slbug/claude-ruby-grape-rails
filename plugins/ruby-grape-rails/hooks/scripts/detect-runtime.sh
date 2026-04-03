@@ -294,7 +294,7 @@ if [[ -f "$PROJECT_LOCKFILE" ]]; then
 fi
 
 # Detect richer stack/package signals via the shared init detector.
-STACK_DETECTOR="${SCRIPT_DIR}/../../scripts/detect-stack.rb"
+STACK_DETECTOR="${SCRIPT_DIR}/../../bin/detect-stack"
 DETECTED_STACK_RAW=""
 STACK_DETECTOR_OK=false
 if command -v ruby >/dev/null 2>&1 && [[ -f "$STACK_DETECTOR" && ! -L "$STACK_DETECTOR" ]]; then
