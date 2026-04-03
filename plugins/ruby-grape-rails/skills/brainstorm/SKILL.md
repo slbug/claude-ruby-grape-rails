@@ -43,7 +43,8 @@ Ask ONE question at a time. Track coverage across 6 dimensions:
 **Scoring:** 0 = uncovered, 1 = partial ("maybe some caching"), 2 = sufficient
 ("Redis cache for session tokens, 15min TTL").
 
-**Interview sufficient** when total score >= 8 out of 12.
+**Interview sufficient** when total score >= 8 out of 12 and every dimension
+has at least a score of 1.
 
 ### Question Order
 

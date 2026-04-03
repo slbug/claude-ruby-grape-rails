@@ -330,10 +330,15 @@ def no_bash_blocks(content: str, **_: Any) -> tuple[bool, str]:
     After the disableSkillShellExecution resilience conversion (v1.8.0),
     SKILL.md files should use prose instructions instead of bash blocks.
     """
-    hits = re.findall(r"^\s*```bash\s*$", content, re.MULTILINE)
-    return not hits, (
-        "no bash blocks" if not hits else f"found {len(hits)} ```bash block(s)"
-    )
+    matches = list(re.finditer(r"^\s*```bash\s*$", content, re.MULTILINE))
+    if not matches:
+        return True, "no bash blocks"
+
+    line_numbers = [content.count("\n", 0, m.start()) + 1 for m in matches]
+    preview = ", ".join(str(ln) for ln in line_numbers[:5])
+    if len(line_numbers) > 5:
+        preview = f"{preview}, ..."
+    return False, f"found {len(matches)} ```bash block(s) at line(s): {preview}"
 
 
 MATCHERS = {
