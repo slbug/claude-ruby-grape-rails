@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Create docs for the public-facing classes"
+    },
+    {
+      "prompt": "Help me with document patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Plan the new feature"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "Write YARD documentation for all public methods in this module",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if document needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Capture this debugging solution as reusable knowledge",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

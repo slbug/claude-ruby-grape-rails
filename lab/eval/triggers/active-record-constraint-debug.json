@@ -9,6 +9,9 @@
     },
     {
       "prompt": "ActiveRecord constraint error on save \u2014 how to diagnose?"
+    },
+    {
+      "prompt": "Help me with active record constraint debug patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Fix the N+1 query in the users controller"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "My validates_uniqueness_of works in tests but fails in production with a PG constraint error",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if active record constraint debug needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Add a database constraint for the email column in the users table",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Help me structure the Rails business logic layer"
+    },
+    {
+      "prompt": "Help me with rails contexts patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Set up Sidekiq job"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "My controller is 200 lines \u2014 help me extract services and interactors",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if rails contexts needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "What's the Rails idiom for this code pattern?",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Show me what this plugin can do"
+    },
+    {
+      "prompt": "Help me with intro patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Fix the bug in the controller"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "I just installed this \u2014 give me the guided tour",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if intro needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Configure the plugin settings for this repo",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

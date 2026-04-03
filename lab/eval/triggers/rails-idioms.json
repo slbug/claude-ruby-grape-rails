@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Help me follow Rails conventions for this feature"
+    },
+    {
+      "prompt": "Help me with rails idioms patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Review the deployment config"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "This works but it doesn't feel like the Rails way \u2014 show me the convention",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if rails idioms needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Organize this into proper service/context structure",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

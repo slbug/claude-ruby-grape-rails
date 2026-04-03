@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Add Hotwire live updates to the dashboard"
+    },
+    {
+      "prompt": "Help me with hotwire patterns patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Review the Grape API changes"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "The form submits but the page doesn't update \u2014 I think the Turbo Frame targeting is wrong",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if hotwire patterns needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Set up the iOS native bridge for the mobile app",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

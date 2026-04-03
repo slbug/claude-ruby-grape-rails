@@ -36,6 +36,10 @@
     {
       "prompt": "What's the right way to handle polymorphic associations with counter caches?",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if active record patterns needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
@@ -46,6 +50,10 @@
     {
       "prompt": "Analyze the N+1 queries in my controller index action",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

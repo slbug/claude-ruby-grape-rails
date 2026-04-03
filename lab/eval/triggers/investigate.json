@@ -9,6 +9,9 @@
     },
     {
       "prompt": "This error keeps happening \u2014 investigate the cause"
+    },
+    {
+      "prompt": "Help me with investigate patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Review the PR changes"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "We're in a debugging loop \u2014 3 consecutive bundle exec failures, need structured analysis",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if investigate needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Trace the request flow through the middleware stack",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

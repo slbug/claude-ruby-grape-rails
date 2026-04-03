@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Map how data flows through this endpoint"
+    },
+    {
+      "prompt": "Help me with rb trace patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Plan a new feature"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "Where does this param actually end up in the database?",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if rb trace needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Check the Packwerk boundary violations",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

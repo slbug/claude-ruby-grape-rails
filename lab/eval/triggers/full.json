@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Do the entire plan-work-verify-review cycle for adding auth"
+    },
+    {
+      "prompt": "Help me with full patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Fix this one bug quickly"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "Handle the entire lifecycle for adding a search feature \u2014 planning, coding, testing, review",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if full needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Create a detailed implementation plan for the search feature",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

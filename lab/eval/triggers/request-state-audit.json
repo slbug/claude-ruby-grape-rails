@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Analyze the authentication state through middleware"
+    },
+    {
+      "prompt": "Help me with request state audit patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Plan a new feature"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "Something is mutating the request state between middleware \u2014 audit the full chain",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if request state audit needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Trace how this param flows from controller to model",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

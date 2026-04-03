@@ -9,6 +9,9 @@
     },
     {
       "prompt": "What runtime environment does this project use?"
+    },
+    {
+      "prompt": "Help me with runtime integration patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Review the code changes"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "Which test runner and linter does this project actually use?",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if runtime integration needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Set up the deployment environment for production",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Configure Karafka producers and consumers for Rails"
+    },
+    {
+      "prompt": "Help me with karafka patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Fix the ActiveRecord query"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "Process events from the Kafka topic with idempotent consumption",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if karafka needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Set up an async background job for email delivery",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

@@ -9,6 +9,9 @@
     },
     {
       "prompt": "What's the dry-rb pattern for service objects?"
+    },
+    {
+      "prompt": "Help me with dry rb patterns patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Fix the Sidekiq job error"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "I want to replace my custom validation with dry-types contracts",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if dry rb patterns needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Add validates :email, presence: true to the model",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

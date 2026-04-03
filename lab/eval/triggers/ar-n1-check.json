@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Run an N+1 detection pass on the changed files"
+    },
+    {
+      "prompt": "Help me with ar n1 check patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Review my Sidekiq job for performance"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "The page loads slowly because of too many queries per user",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if ar n1 check needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Optimize the slow SQL query in the analytics dashboard",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

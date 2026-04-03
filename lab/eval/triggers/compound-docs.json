@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Show me the solution document structure"
+    },
+    {
+      "prompt": "Help me with compound docs patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Write API documentation for the users endpoint"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "I'm writing a solution doc \u2014 what fields are required in the YAML frontmatter?",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if compound docs needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Document the API endpoints for the admin panel",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

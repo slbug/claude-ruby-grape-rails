@@ -9,6 +9,9 @@
     },
     {
       "prompt": "I need code examples for Grape API versioning"
+    },
+    {
+      "prompt": "Help me with examples patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Review the latest commit"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "I'm new here \u2014 show me how things are done in this codebase",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if examples needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Walk me through the tutorial for this plugin",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }

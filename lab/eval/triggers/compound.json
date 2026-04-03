@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Save this debugging session as a solution for future reference"
+    },
+    {
+      "prompt": "Help me with compound patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -20,18 +23,29 @@
     },
     {
       "prompt": "Review the latest changes"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
     }
   ],
   "hard_should_trigger": [
     {
       "prompt": "This took an hour to solve \u2014 I want it documented so nobody wastes time on this again",
       "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if compound needs updating",
+      "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
       "prompt": "Extract the general pattern from this fix into a rule",
       "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
     }
   ]
 }
