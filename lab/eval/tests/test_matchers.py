@@ -288,6 +288,17 @@ disallowedTools: Edit, NotebookEdit
         self.assertTrue(passed)
         self.assertIn("Edit/NotebookEdit", evidence)
 
+    def test_read_only_coherent_accepts_expanded_denylist(self) -> None:
+        content = """---
+name: sample-agent
+description: Review Ruby code.
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
+---
+"""
+        passed, evidence = agent_matchers.read_only_tools_coherent(content)
+        self.assertTrue(passed)
+        self.assertIn("Edit/NotebookEdit", evidence)
+
     def test_read_only_coherent_fails_denylist_without_edit_blocked(self) -> None:
         content = """---
 name: sample-agent

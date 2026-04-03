@@ -62,6 +62,9 @@ Checks:
 
 1. Confirm plugin agents only use fields currently documented for plugin agents.
 2. Confirm `tools` / `disallowedTools` use currently documented tool names.
+   Note: shipped agents prefer denylist-only (no `tools:` field). A missing
+   `tools:` field is expected, not a gap — the agent inherits all tools minus
+   those in `disallowedTools`.
 3. Confirm any `skills:` references point to real shipped skills.
 4. Treat `omitClaudeMd` enforcement as repo policy unless cached docs explicitly
    document it.

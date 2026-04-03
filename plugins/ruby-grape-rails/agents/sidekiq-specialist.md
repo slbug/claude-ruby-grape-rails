@@ -1,7 +1,7 @@
 ---
 name: sidekiq-specialist
 description: Reviews Sidekiq job classes, queueing strategy, retries, idempotency, payload shape, and enqueue timing. Use when implementing or reviewing async workflows.
-disallowedTools: Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15

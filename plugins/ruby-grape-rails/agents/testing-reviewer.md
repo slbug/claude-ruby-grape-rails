@@ -1,7 +1,7 @@
 ---
 name: testing-reviewer
 description: Reviews Ruby/Rails/Grape test code for spec quality, fixture/factory discipline, request coverage, worker coverage, and anti-flake patterns.
-disallowedTools: Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15

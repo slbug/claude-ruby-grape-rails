@@ -1,7 +1,7 @@
 ---
 name: security-analyzer
 description: Reviews Ruby/Rails/Grape changes for authorization gaps, SQL safety issues, unsafe rendering, secrets handling, request-boundary problems, and Sidekiq security risks.
-disallowedTools: Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: opus
 effort: high
 maxTurns: 15

@@ -1,7 +1,7 @@
 ---
 name: ruby-reviewer
 description: Reviews Ruby/Rails/Grape changes for correctness, maintainability, boundary discipline, and idiomatic Ruby design.
-disallowedTools: Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15

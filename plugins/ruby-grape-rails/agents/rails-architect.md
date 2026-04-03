@@ -1,7 +1,7 @@
 ---
 name: rails-architect
 description: Advises on Rails and Grape interaction architecture, user-facing workflows, Hotwire patterns, and service-layer fit.
-disallowedTools: Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15

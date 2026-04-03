@@ -1,7 +1,7 @@
 ---
 name: parallel-reviewer
 description: Parallel review orchestrator for Ruby/Rails/Grape changes. Delegates to specialist reviewers instead of doing all analysis directly.
-disallowedTools: Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, EnterWorktree, ExitWorktree, Skill
 model: opus
 effort: high
 maxTurns: 25

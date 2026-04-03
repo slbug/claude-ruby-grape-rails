@@ -1,7 +1,7 @@
 ---
 name: ruby-runtime-advisor
 description: Advises on Ruby runtime, threading, connection-pool, and background execution tradeoffs for Rails/Grape systems.
-disallowedTools: Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15

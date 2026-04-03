@@ -1,7 +1,7 @@
 ---
 name: data-integrity-reviewer
 description: Reviews Active Record or Sequel models, migrations, and transactions for data integrity risks, rollback safety, and constraint gaps during review.
-disallowedTools: Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15

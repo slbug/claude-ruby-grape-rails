@@ -15,12 +15,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   explicit `tools:` allowlists from 17 specialist agents and switched to
   `disallowedTools:` only (denylist). This follows Claude Code's built-in agent
   pattern (Explore, Plan, Verification) where agents inherit all tools
-  implicitly. Artifact-writing agents use `disallowedTools: Edit, NotebookEdit`
-  so they can Write their own review/research files. Conversation-only agents
-  (schema designer, call tracer, bug investigator, dependency analyzer) use
-  `disallowedTools: Write, Edit, NotebookEdit`. Agents with intentionally
-  narrow tool sets (web-researcher, output-verifier, ruby-gem-researcher) keep
-  `tools:` allowlists.
+  implicitly. All specialists also block `Agent, EnterWorktree, ExitWorktree,
+  Skill` — tools not covered by hooks or shellfirm. Bash stays available
+  because `block-dangerous-ops.sh` and shellfirm guard shell commands.
+  Artifact-writing agents use `disallowedTools: Edit, NotebookEdit, Agent,
+  EnterWorktree, ExitWorktree, Skill`. Conversation-only agents add `Write`.
+  `parallel-reviewer` keeps `Agent` for spawning sub-reviewers. Agents with
+  intentionally narrow tool sets (web-researcher, output-verifier,
+  ruby-gem-researcher) keep `tools:` allowlists.
+- **Agent eval tooling updated for denylist-only pattern** — `tools_present`,
+  `read_only_tools_coherent`, and `omit_claudemd_coherent` matchers now
+  correctly handle agents without a `tools:` field. `read_only_tools_coherent`
+  requires `Edit` and `NotebookEdit` in the denylist. Six new unit tests cover
+  the denylist-only code paths.
 
 ## [1.8.0] - 2026-04-03
 

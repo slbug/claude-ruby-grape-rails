@@ -1,8 +1,7 @@
 ---
 name: skill-effectiveness-analyzer
 description: Analyze observational skill-monitor results and recommend evidence-backed follow-ups. Use after /skill-monitor when contributors want cautious improvement guidance.
-tools: Read, Grep, Glob, Write
-disallowedTools: Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 permissionMode: bypassPermissions
 model: sonnet
 ---
@@ -75,7 +74,7 @@ Every recommendation must include:
 
 ## Constraints
 
-1. Read-only analysis only.
+1. Analysis and reporting only. Do not modify shipped plugin files.
 2. Do not recommend changes without citing evidence.
 3. Prefer a few high-confidence recommendations over many weak ones.
 4. If the likely issue is stale docs or routing drift, say so directly.

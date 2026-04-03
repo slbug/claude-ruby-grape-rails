@@ -1,7 +1,7 @@
 ---
 name: dependency-analyzer
 description: Analyze dead code, circular requires, and cross-package coupling before refactor planning, cleanup review, or modular-monolith extraction in Rails/Grape codebases.
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Write, Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15
