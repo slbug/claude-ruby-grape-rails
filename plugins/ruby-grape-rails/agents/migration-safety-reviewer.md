@@ -1,8 +1,7 @@
 ---
 name: migration-safety-reviewer
 description: Reviews Active Record or Sequel migrations for locking risk, rollback safety, indexes, and constraint gaps before deployment review.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit
 model: sonnet
 effort: medium
 maxTurns: 15

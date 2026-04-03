@@ -176,9 +176,16 @@ skills:
 - Use `memory: project` for agents that benefit from cross-session learning (orchestrators, pattern analysts).
   Note: `memory` auto-enables Read, Write, Edit — only add to agents that already have Write access
 - Preload relevant skills via `skills:` field
-- Add `omitClaudeMd: true` for shipped read-only agents with no `Write` tool.
-  Iron Laws still arrive through `SubagentStart`, so read-only specialists do
-  not need contributor-only `CLAUDE.md` guidance in their runtime context.
+- Prefer denylist-only tool access (`disallowedTools: Edit, NotebookEdit`) for
+  specialist agents that produce review/research artifacts. This follows the
+  built-in agent pattern (Explore, Plan, Verification) — agents inherit all
+  tools implicitly and Write works reliably. Use `tools:` allowlists only for
+  agents with intentionally narrow tool sets (e.g., web-researcher, output-verifier).
+- Add `omitClaudeMd: true` for shipped specialist agents that do not need
+  contributor-only `CLAUDE.md` guidance at runtime. Iron Laws still arrive
+  through `SubagentStart`. This applies to both denylist-only agents and
+  allowlist agents — the criterion is whether the agent needs repo conventions,
+  not whether it has Write access.
 - Target under 300 lines when practical
 - Keep agent descriptions at `<= 250` characters so Claude does not silently
   truncate them in the internal skill/agent listing context
@@ -463,9 +470,9 @@ Only trim when content is purely informational and not execution-critical.
 ### New agent
 
 - [ ] Frontmatter complete
-- [ ] `disallowedTools: Write, Edit, NotebookEdit` for review agents
-- [ ] `Write` allowed for agents that output reports (e.g., research agents, context-supervisor)
-- [ ] `omitClaudeMd: true` for shipped read-only agents
+- [ ] `disallowedTools: Edit, NotebookEdit` for agents that write artifacts but must not edit code
+- [ ] `tools:` allowlist only for agents with intentionally narrow tool sets (web-researcher, output-verifier)
+- [ ] `omitClaudeMd: true` for specialist agents that don't need contributor context
 - [ ] Skills preloaded
 - [ ] Description at or under 250 chars
 - [ ] Under target (300 lines), hard limit only if justified by inline subagent prompts

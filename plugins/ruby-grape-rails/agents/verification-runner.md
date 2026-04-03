@@ -1,8 +1,7 @@
 ---
 name: verification-runner
 description: Runs the strongest available Ruby/Rails/Grape verification stack, preferring a repo-native composite verify wrapper when available, and reports the first failing step or a clean pass.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit
 model: haiku
 effort: low
 maxTurns: 10

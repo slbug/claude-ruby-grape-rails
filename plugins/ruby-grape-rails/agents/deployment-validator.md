@@ -1,8 +1,7 @@
 ---
 name: deployment-validator
 description: Reviews deployment configuration for Ruby/Rails/Grape applications, including Docker, Procfile/process layout, migrations, assets, environment config, and Sidekiq runtime concerns.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit
 model: sonnet
 effort: medium
 maxTurns: 15

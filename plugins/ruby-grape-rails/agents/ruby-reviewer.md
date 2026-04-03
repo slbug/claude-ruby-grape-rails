@@ -1,8 +1,7 @@
 ---
 name: ruby-reviewer
 description: Reviews Ruby/Rails/Grape changes for correctness, maintainability, boundary discipline, and idiomatic Ruby design.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit
 model: sonnet
 effort: medium
 maxTurns: 15
