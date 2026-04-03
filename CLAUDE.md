@@ -23,13 +23,13 @@ Current Plugin Posture:
 
 ## Workflow Architecture
 
-The plugin implements a **Plan → Work → Verify → Review → Compound** lifecycle:
+The plugin supports an optional **Brainstorm** discovery step before the core **Plan → Work → Verify → Review → Compound** lifecycle:
 
 ```
-/rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
-     │           │            │              │              │
-     ↓           ↓            ↓              ↓              ↓
-.claude/plans/{slug}/  (namespace)  (namespace)  (namespace)  .claude/solutions/
+/rb:brainstorm (optional) → /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
+                                │           │            │              │              │
+                                ↓           ↓            ↓              ↓              ↓
+                   .claude/plans/{slug}/  (namespace)  (namespace)  (namespace)  .claude/solutions/
 ```
 
 **Key principle**: Filesystem is the state machine. Each phase reads from previous phase's output. Solutions feed back into future cycles.
@@ -38,6 +38,7 @@ The plugin implements a **Plan → Work → Verify → Review → Compound** lif
 
 | Command | Phase | Input | Output |
 |---------|-------|-------|--------|
+| `/rb:brainstorm` | Discovery | Topic or feature idea | `.claude/plans/{slug}/interview.md` |
 | `/rb:plan` | Planning | Feature description | `.claude/plans/{slug}/plan.md` |
 | `/rb:plan --existing` | Enhancement | Plan file | Enhanced plan with research |
 | `/rb:brief` | Understanding | Plan file | Interactive walkthrough (ephemeral) |
@@ -125,7 +126,7 @@ claude-ruby-grape-rails/
 │       │   └── extract-permissions  # Session permission extraction
 │       ├── hooks/
 │       │   └── hooks.json           # Format, review-state, compaction, and failure hooks
-│       └── skills/                  # 50 skills
+│       └── skills/                  # 51 skills
 │           ├── work/                # Execution phase
 │           ├── full/                # Autonomous cycle
 │           ├── plan/                # Planning + deepening (--existing)
@@ -666,6 +667,7 @@ the canonical auto-load routing table by file pattern.
 | Bug fix, debug | `/rb:investigate` |
 | Small UI fix, CSS tweak, config change | `/rb:quick` |
 | Small change (<100 lines) | `/rb:quick` |
+| Explore ideas, gather requirements | `/rb:brainstorm` |
 | New feature (clear scope) | `/rb:plan` then `/rb:work` |
 | Understand a plan | `/rb:brief` |
 | Enhance existing plan | `/rb:plan --existing` |
@@ -697,7 +699,9 @@ the canonical auto-load routing table by file pattern.
 | Monitor observational skill signals | `/skill-monitor` |
 | Validate plugin against cached docs | `/docs-check` |
 
-**Workflow Commands**: `/rb:plan` -> `/rb:brief` (optional) -> `/rb:plan --existing` (optional) -> `/rb:work` -> `/rb:brief` (optional) -> `/rb:review` -> `/rb:triage` (optional) -> `/rb:compound`
+**Workflow Commands**: `/rb:brainstorm` (optional) -> `/rb:plan` -> `/rb:brief` (optional) ->
+`/rb:plan --existing` (optional) -> `/rb:work` -> `/rb:brief` (optional) ->
+`/rb:review` -> `/rb:triage` (optional) -> `/rb:compound`
 
 **Review → Follow-up Plan**: After `/rb:review`, if findings reveal scope gaps or missing coverage, use `/rb:triage .claude/reviews/{review-slug}.md` to turn selected findings into `.claude/plans/{slug}/plan.md`.
 

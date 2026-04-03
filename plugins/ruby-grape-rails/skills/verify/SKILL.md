@@ -88,9 +88,7 @@ Fallback rule:
 
 ### 1. Zeitwerk Check (full Rails apps)
 
-```bash
-bundle exec rails zeitwerk:check
-```
+Run `bundle exec rails zeitwerk:check`.
 
 Run this only when cached runtime state shows `FULL_RAILS_APP=true` or the repo
 clearly has a real Rails entrypoint (`bin/rails` or `script/rails`) or the
@@ -125,35 +123,17 @@ and rerun the check.
 
 #### StandardRB (preferred when `STANDARDRB_AVAILABLE=true`)
 
-```bash
-# Check only
-bundle exec standardrb
-
-# Auto-fix
-bundle exec standardrb --fix
-
-# Check specific files
-bundle exec standardrb app/models/user.rb app/services/
-```
+- Check: `bundle exec standardrb`
+- Auto-fix: `bundle exec standardrb --fix`
+- Specific files: `bundle exec standardrb app/models/user.rb app/services/`
 
 #### RuboCop (use when `STANDARDRB_AVAILABLE!=true` and `RUBOCOP_AVAILABLE=true`)
 
-```bash
-# Check only
-bundle exec rubocop
-
-# Auto-fix safe corrections
-bundle exec rubocop --autocorrect
-
-# Auto-fix all (including unsafe)
-bundle exec rubocop --autocorrect-all
-
-# Check specific files
-bundle exec rubocop app/models/user.rb
-
-# Run specific cop
-bundle exec rubocop --only Layout/LineLength
-```
+- Check: `bundle exec rubocop`
+- Auto-fix safe: `bundle exec rubocop --autocorrect`
+- Auto-fix all (including unsafe): `bundle exec rubocop --autocorrect-all`
+- Specific files: `bundle exec rubocop app/models/user.rb`
+- Specific cop: `bundle exec rubocop --only Layout/LineLength`
 
 **Critical Cops** (never ignore):
 
@@ -172,22 +152,11 @@ but only when the config clearly covers both categories.
 
 ### 3. Security Scan (Brakeman)
 
-```bash
-# Basic scan
-bundle exec brakeman
-
-# Quiet mode (errors only)
-bundle exec brakeman -q
-
-# Skip informational warnings
-bundle exec brakeman -w2
-
-# Output to file
-bundle exec brakeman -o brakeman-report.html
-
-# Ignore false positives (with reason)
-bundle exec brakeman -I
-```
+- Basic scan: `bundle exec brakeman`
+- Quiet mode (errors only): `bundle exec brakeman -q`
+- Skip informational: `bundle exec brakeman -w2`
+- Output to file: `bundle exec brakeman -o brakeman-report.html`
+- Ignore false positives: `bundle exec brakeman -I`
 
 **Never ignore**:
 
@@ -204,111 +173,57 @@ analysis, keep running the missing direct tool yourself.
 
 #### RSpec
 
-```bash
-# Full suite
-bundle exec rspec
-
-# Fail fast (stop on first failure)
-bundle exec rspec --fail-fast
-
-# Specific files
-bundle exec rspec spec/models/user_spec.rb
-
-# Specific line
-bundle exec rspec spec/models/user_spec.rb:45
-
-# Parallel (with parallel_tests gem)
-bundle exec parallel_rspec spec/
-```
+- Full suite: `bundle exec rspec`
+- Fail fast: `bundle exec rspec --fail-fast`
+- Specific files: `bundle exec rspec spec/models/user_spec.rb`
+- Specific line: `bundle exec rspec spec/models/user_spec.rb:45`
+- Parallel: `bundle exec parallel_rspec spec/`
 
 #### Minitest
 
-```bash
-# Full suite
-bundle exec rails test
-
-# Fail fast
-bundle exec rails test --fail-fast
-
-# Specific files
-bundle exec rails test test/models/user_test.rb
-
-# Specific line
-bundle exec rails test test/models/user_test.rb:45
-
-# System tests only
-bundle exec rails test:system
-```
+- Full suite: `bundle exec rails test`
+- Fail fast: `bundle exec rails test --fail-fast`
+- Specific files: `bundle exec rails test test/models/user_test.rb`
+- Specific line: `bundle exec rails test test/models/user_test.rb:45`
+- System tests: `bundle exec rails test:system`
 
 #### Test Selection
 
 Run tests based on what changed:
 
-```bash
-# If model changed → Run model tests
-bundle exec rspec spec/models/
-
-# If controller changed → Run controller + request tests  
-bundle exec rspec spec/controllers/ spec/requests/
-
-# If migration changed → No tests needed, but verify migration
-bundle exec rails db:migrate:status
-
-# If gem changed → Full suite
-bundle exec rspec
-```
+- Model changed → `bundle exec rspec spec/models/`
+- Controller changed → `bundle exec rspec spec/controllers/ spec/requests/`
+- Migration changed → `bundle exec rails db:migrate:status`
+- Gem changed → `bundle exec rspec` (full suite)
 
 ### 5. Type Checking (if present)
 
 #### Sorbet
 
-```bash
-# Check types
-bundle exec srb tc
-
-# Check with strictness suggestions
-bundle exec srb tc --suggest-typed
-```
+- Check types: `bundle exec srb tc`
+- With strictness suggestions: `bundle exec srb tc --suggest-typed`
 
 #### Steep
 
-```bash
-bundle exec steep check
-```
+Run `bundle exec steep check`.
 
 #### RBS
 
-```bash
-# Validate type signatures
-bundle exec rbs validate
-```
+Run `bundle exec rbs validate` to validate type signatures.
 
 ### 6. Database Verification
 
-```bash
-# Check pending migrations
-bundle exec rails db:migrate:status
-
-# Verify schema is up to date
-bundle exec rails db:migrate RAILS_ENV=test
-bundle exec rails db:schema:dump
-
-# Check for schema conflicts
-git diff db/schema.rb
-```
+- Check pending: `bundle exec rails db:migrate:status`
+- Verify schema: `bundle exec rails db:migrate RAILS_ENV=test` then `bundle exec rails db:schema:dump`
+- Check conflicts: `git diff db/schema.rb`
 
 ### 7. Diff-Scoped Review (Optional Pronto)
 
 Run this only after direct lint/security checks pass:
 
-```bash
-BASE_REF=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo origin/main || \
-  git rev-parse --verify main >/dev/null 2>&1 && echo main || \
-  git rev-parse --verify origin/master >/dev/null 2>&1 && echo origin/master || \
-  git rev-parse --verify master >/dev/null 2>&1 && echo master)
-
-[[ -n "$BASE_REF" ]] && bundle exec pronto run -c "$BASE_REF"
-```
+Detect the base ref by trying `git rev-parse --verify` against `origin/main`,
+`main`, `origin/master`, `master` in order. Set `BASE_REF` to the first that
+exists, then run `bundle exec pronto run -c "$BASE_REF"`.
 
 Use the first base ref that exists. Pronto is a last-step changed-files pass,
 not a replacement for StandardRB/RuboCop or Brakeman.
@@ -389,13 +304,8 @@ Or fix manually and re-run: /rb:verify
 
 ### Step 1: Identify the Issue
 
-```bash
-# Get detailed output
-bundle exec rspec --format documentation spec/failing_spec.rb
-
-# Run with backtrace
-bundle exec rspec --backtrace spec/failing_spec.rb
-```
+- Detailed output: `bundle exec rspec --format documentation spec/failing_spec.rb`
+- With backtrace: `bundle exec rspec --backtrace spec/failing_spec.rb`
 
 ### Step 2: Fix Strategy
 
@@ -410,13 +320,7 @@ bundle exec rspec --backtrace spec/failing_spec.rb
 
 ### Step 3: Re-verify
 
-```bash
-# After fix, re-run just that check
-bundle exec standardrb
-
-# Then full verification
-/rb:verify
-```
+After fixing, re-run just that check (e.g., `bundle exec standardrb`), then run `/rb:verify` for full verification.
 
 ## CI Integration & Troubleshooting
 

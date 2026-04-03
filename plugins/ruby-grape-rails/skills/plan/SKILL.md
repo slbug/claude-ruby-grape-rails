@@ -2,7 +2,6 @@
 name: rb:plan
 description: Use when you need an implementation plan for multi-file Rails or Grape features, Sidekiq changes, or risky migrations and refactors before coding starts. Also accepts review files and existing plans.
 argument-hint: <feature description OR path to review/plan file>
-disable-model-invocation: true
 effort: high
 ---
 # Plan Ruby/Rails/Grape Work
@@ -34,6 +33,26 @@ Plan a feature by spawning Ruby specialists, then write a structured plan with c
 ```
 
 Each phase has entry/exit criteria. Do not skip phases.
+
+## Interview Detection (from /rb:brainstorm)
+
+Before asking clarification questions, check for a brainstorm interview:
+
+1. Check `$ARGUMENTS` for a path containing `interview.md` (explicit path always wins)
+2. If no explicit path, glob `.claude/plans/*/interview.md` for files modified
+   within the last 24 hours. If multiple match, use the newest by mtime.
+
+If found with `Status: COMPLETE`:
+
+- Read the interview.md Summary and Coverage Details
+- Skip clarification questions — the interview IS the clarification
+- Use interview content as input for agent spawning (depth detection still applies)
+- Note in scratchpad: "Requirements from /rb:brainstorm interview"
+
+If found with `Status: IN_PROGRESS`:
+
+- Read what exists, note gaps in coverage
+- Ask ONLY about uncovered dimensions (don't re-ask covered ones)
 
 ## Research Phase
 
@@ -299,9 +318,7 @@ exists. Use the canonical structure from
 
 **After creating the plan, set the active plan marker:**
 
-```bash
-${CLAUDE_PLUGIN_ROOT}/hooks/scripts/active-plan-marker.sh set .claude/plans/{slug}
-```
+Run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/active-plan-marker.sh set .claude/plans/{slug}`.
 
 This marker allows `/rb:work` to auto-detect which plan to resume, enables session resume detection, and tracks the current active plan for context-aware operations.
 

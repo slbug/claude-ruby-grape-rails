@@ -8,6 +8,7 @@ effort: high
 
 `/rb:full` runs:
 
+0. `/rb:brainstorm` (optional) → if requirements are vague, run before planning
 1. `/rb:plan` → sets active plan marker
 2. `/rb:work` → uses marker to resume, clears on completion
 3. `/rb:verify` → validates implementation

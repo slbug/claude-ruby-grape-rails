@@ -93,6 +93,6 @@ Stop on the first failure, summarize the key error, and suggest the narrowest re
 
 When invoked by `/rb:review`:
 
-- Write `.claude/reviews/verification-runner/{review-slug}-{datesuffix}.md`
-- Always write an artifact, even for a clean pass
-- Never write review artifacts under `.claude/plans/...`
+- Output findings for `.claude/reviews/verification-runner/{review-slug}-{datesuffix}.md`
+- Always produce an artifact, even for a clean pass
+- Never target `.claude/plans/...` for review artifacts

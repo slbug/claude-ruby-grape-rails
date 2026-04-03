@@ -135,7 +135,7 @@ CMD ["thrust", "bundle", "exec", "puma", "-C", "config/puma.rb"]
 
 Thruster uses environment variables:
 
-```bash
+```
 # Required
 PORT=3000
 
@@ -204,25 +204,12 @@ healthcheck:
 
 ### Commands
 
-```bash
-# Setup servers
-kamal setup
-
-# Deploy
-kamal deploy
-
-# Rollback
-kamal rollback
-
-# Run command on servers
-kamal app exec 'rails db:migrate'
-
-# View logs
-kamal logs
-
-# Console
-kamal app exec --interactive 'rails console'
-```
+- Setup servers: `kamal setup`
+- Deploy: `kamal deploy`
+- Rollback: `kamal rollback`
+- Run command: `kamal app exec 'rails db:migrate'`
+- View logs: `kamal logs`
+- Console: `kamal app exec --interactive 'rails console'`
 
 ## Docker Deployment
 
@@ -341,7 +328,7 @@ config.assets.compile = false
 
 ### Required Environment Variables
 
-```bash
+```
 # Rails
 RAILS_ENV=production
 RAILS_MASTER_KEY=xxxxxxxxxxxx
@@ -366,13 +353,8 @@ RAILS_SERVE_STATIC_FILES=true
 
 ### Secrets Management
 
-```bash
-# Rails credentials (preferred)
-EDITOR=vim bundle exec rails credentials:edit
-
-# Or environment variables
-export RAILS_MASTER_KEY=$(cat config/master.key)
-```
+- Rails credentials (preferred): `EDITOR=vim bundle exec rails credentials:edit`
+- Or environment variables: `export RAILS_MASTER_KEY=$(cat config/master.key)`
 
 ## Web vs Worker Separation
 

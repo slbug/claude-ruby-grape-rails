@@ -40,9 +40,7 @@ writing.
 
 Run the canonical extractor first:
 
-```bash
-extract-permissions --days "${DAYS:-14}" ${INCLUDE_GLOBAL:+--include-global} ${LIMIT:+--limit "${LIMIT}"} ${DRY_RUN:+--dry-run}
-```
+Run `extract-permissions --days "${DAYS:-14}"` with optional flags `--include-global`, `--limit "${LIMIT}"`, and `--dry-run` as needed.
 
 See `${CLAUDE_SKILL_DIR}/references/extraction-script.md` for the output format.
 Keep repo-local settings as the default audit scope; only add

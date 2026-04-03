@@ -2,7 +2,7 @@
 
 **Claude Code is great. But it doesn't know that `default_scope` will bite you later, that `t.float` will corrupt your money fields, or that your Sidekiq job isn't idempotent.**
 
-This plugin does. It coordinates **23 specialist agents** and **50 skills** that plan, implement,
+This plugin does. It coordinates **23 specialist agents** and **51 skills** that plan, implement,
 review, and verify your Ruby/Rails/Grape code in parallel -- each with domain
 expertise, fresh context, and enforced [Iron Laws](#iron-laws-non-negotiable-rules)
 that catch the bugs your tests won't. It is now stack-aware enough to handle
@@ -48,7 +48,7 @@ checks.
 │  💎 Ruby/Rails/Grape Plugin for Claude Code                         │
 │                                                                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
-│  │    23    │    50    │   100+   │    11    │    21    │           │
+│  │    23    │    51    │   100+   │    11    │    21    │           │
 │  │  Agents  │  Skills  │   Refs   │  Events  │Iron Laws │           │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘           │
 │                                                                     │
@@ -217,13 +217,13 @@ and enforces [Iron Laws](#iron-laws-non-negotiable-rules) that prevent common Ru
 
 ### The Lifecycle
 
-The plugin implements a **Plan, Work, Verify, Review, Compound** lifecycle. Each phase produces artifacts in a namespaced directory:
+The plugin supports an optional **Brainstorm** discovery step before the core **Plan → Work → Verify → Review → Compound** lifecycle. Each phase produces artifacts in a namespaced directory:
 
 ```
-/rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
-     │           │            │              │              │
-     ↓           ↓            ↓              ↓              ↓
-.claude/plans/{slug}/  (namespace)  (namespace)  (namespace)  .claude/solutions/
+/rb:brainstorm (optional) → /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
+                                │           │            │              │              │
+                                ↓           ↓            ↓              ↓              ↓
+                   .claude/plans/{slug}/  (namespace)  (namespace)  (namespace)  .claude/solutions/
 ```
 
 - **Plan** -- Research agents analyze your codebase in parallel, then synthesize a structured implementation plan
@@ -570,21 +570,22 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 
 ### Workflow
 
-| Command                 | Description                                                  |
-| ----------------------- | ------------------------------------------------------------ |
-| `/rb:full <feature>`    | Full autonomous cycle (plan, work, verify, review, compound) |
-| `/rb:plan <input>`      | Create implementation plan with specialist agents            |
-| `/rb:plan --existing`   | Enhance existing plan with deeper research                   |
-| `/rb:work <plan-file>`  | Execute plan tasks with verification                         |
-| `/rb:review [focus]`    | Multi-agent code review (4 parallel agents)                  |
-| `/rb:compound`          | Capture solved problem as reusable knowledge                 |
-| `/rb:triage`            | Interactive triage of review findings                        |
-| `/rb:document`          | Generate YARD/RDoc, README, ADRs                             |
-| `/rb:learn <lesson>`    | Capture lessons learned                                      |
-| `/rb:brief <plan>`      | Interactive plan walkthrough                                 |
-| `/rb:perf`              | Performance analysis with specialist agents                  |
-| `/rb:pr-review`         | Address PR review comments                                   |
-| `/rb:permissions`       | Analyze permission prompts and suggest safe settings entries  |
+| Command                  | Description                                                  |
+| -----------------------  | ------------------------------------------------------------ |
+| `/rb:full <feature>`     | Full autonomous cycle (plan, work, verify, review, compound) |
+| `/rb:brainstorm <topic>` | Adaptive requirements gathering before planning              |
+| `/rb:plan <input>`       | Create implementation plan with specialist agents            |
+| `/rb:plan --existing`    | Enhance existing plan with deeper research                   |
+| `/rb:work <plan-file>`   | Execute plan tasks with verification                         |
+| `/rb:review [focus]`     | Multi-agent code review (4 parallel agents)                  |
+| `/rb:compound`           | Capture solved problem as reusable knowledge                 |
+| `/rb:triage`             | Interactive triage of review findings                        |
+| `/rb:document`           | Generate YARD/RDoc, README, ADRs                             |
+| `/rb:learn <lesson>`     | Capture lessons learned                                      |
+| `/rb:brief <plan>`       | Interactive plan walkthrough                                 |
+| `/rb:perf`               | Performance analysis with specialist agents                  |
+| `/rb:pr-review`          | Address PR review comments                                   |
+| `/rb:permissions`        | Analyze permission prompts and suggest safe settings entries |
 
 ### Utility
 

@@ -381,7 +381,7 @@ end
 
 ### From Review
 
-```bash
+```
 # After review completes
 /rb:review app/models/user.rb
 # → Creates review file
@@ -398,7 +398,7 @@ end
 
 If triage generated a plan with selected critical items:
 
-```bash
+```
 /rb:work .claude/plans/fix-user-model/plan.md
 # → Works on the selected findings as normal plan tasks
 ```

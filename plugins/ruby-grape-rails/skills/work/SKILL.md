@@ -2,7 +2,6 @@
 name: rb:work
 description: Use after /rb:plan to implement an existing checklist, resume active code changes, and verify each step in Active Record or Sequel work. Can resume the newest active plan automatically.
 argument-hint: <path to plan file>
-disable-model-invocation: true
 effort: high
 ---
 # Work
@@ -11,11 +10,9 @@ Execute the unchecked tasks from a plan file.
 
 ## Usage
 
-```bash
-/rb:work .claude/plans/user-auth/plan.md
-/rb:work .claude/plans/user-auth/plan.md --from P2-T3
-/rb:work
-```
+- `/rb:work .claude/plans/user-auth/plan.md`
+- `/rb:work .claude/plans/user-auth/plan.md --from P2-T3`
+- `/rb:work` (resumes the active plan)
 
 ## Iron Laws
 
@@ -290,9 +287,7 @@ When all tasks complete or user explicitly stops:
 
 1. **Clear the active plan marker** (prevents auto-resume on next `/rb:work`):
 
-   ```bash
-   ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/active-plan-marker.sh clear
-   ```
+   Run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/active-plan-marker.sh clear`.
 
 2. **Summarize progress** - what was accomplished
 

@@ -39,7 +39,8 @@
       "weight": 0.1,
       "checks": [
         { "type": "content_present", "pattern": "Do not skip phases|Do not skip", "desc": "Has anti-skip guidance" },
-        { "type": "no_dangerous_patterns", "desc": "No catastrophic patterns" }
+        { "type": "no_dangerous_patterns", "desc": "No catastrophic patterns" },
+        { "type": "no_bash_blocks", "desc": "No executable bash blocks" }
       ]
     },
     "clarity": {

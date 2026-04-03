@@ -26,17 +26,12 @@ and optionally apply code fixes.
 
 ### Step 1: Fetch PR Context
 
-```bash
-# Get PR metadata
-gh pr view {number} --json title,body,state,baseRefName,headRefName
+Fetch PR context:
 
-# Get all review comments (inline + general)
-gh api repos/{owner}/{repo}/pulls/{number}/comments --paginate
-gh api repos/{owner}/{repo}/pulls/{number}/reviews --paginate
-
-# Get the diff for context
-gh pr diff {number}
-```
+- Run `gh pr view {number} --json title,body,state,baseRefName,headRefName` for metadata
+- Run `gh api repos/{owner}/{repo}/pulls/{number}/comments --paginate` for inline comments
+- Run `gh api repos/{owner}/{repo}/pulls/{number}/reviews --paginate` for review data
+- Run `gh pr diff {number}` for the diff
 
 Parse the PR number from `$ARGUMENTS`. If a URL, extract the
 number from it. Detect `--fix` flag.
@@ -104,11 +99,7 @@ If `--fix` flag provided AND user approves:
 
 After user approves (may edit some):
 
-```bash
-# Post each response as a reply to the original comment
-gh api repos/{owner}/{repo}/pulls/{number}/comments/{id}/replies \
-  -f body="{response}"
-```
+Post each approved response with `gh api repos/{owner}/{repo}/pulls/{number}/comments/{id}/replies -f body="{response}"`.
 
 ## Iron Laws
 
