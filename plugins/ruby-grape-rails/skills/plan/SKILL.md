@@ -38,8 +38,9 @@ Each phase has entry/exit criteria. Do not skip phases.
 
 Before asking clarification questions, check for a brainstorm interview:
 
-1. Check `$ARGUMENTS` for a path containing `interview.md`
-2. Check `.claude/plans/*/interview.md` for recent files (<24h)
+1. Check `$ARGUMENTS` for a path containing `interview.md` (explicit path always wins)
+2. If no explicit path, glob `.claude/plans/*/interview.md` for files modified
+   within the last 24 hours. If multiple match, use the newest by mtime.
 
 If found with `Status: COMPLETE`:
 
