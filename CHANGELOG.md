@@ -7,6 +7,33 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-04-03
+
+### Added
+
+- **`/rb:brainstorm` — Adaptive requirements gathering** — New command skill
+  implementing an interview-research-synthesis loop for ideation before
+  planning. Asks context-aware questions across 6 dimensions (What, Why, Scope,
+  Where, How, Edge), runs codebase scans between questions, and offers parallel
+  research via `rails-patterns-analyst` + `web-researcher`. Produces
+  `interview.md` that `/rb:plan` consumes to skip clarification.
+- **`/rb:plan` interview detection** — Skips clarification when brainstorm
+  `interview.md` found with `Status: COMPLETE`.
+
+### Changed
+
+- **`disableSkillShellExecution` resilience** — All executable bash blocks in
+  SKILL.md files converted from fenced code blocks to inline prose instructions.
+  Skills now instruct Claude via prose ("Run `bundle exec rspec`", "Use Grep to
+  search...") instead of bash blocks. Works with CC v2.1.91's
+  `disableSkillShellExecution` setting. Documentation/example blocks converted
+  to plain fenced blocks. No semantic loss — all command strings preserved in
+  backticks.
+- **Removed `disable-model-invocation` from plan, work, review, investigate** —
+  Unblocks programmatic `Skill()` calls during workflow transitions
+  (brainstorm→plan, work→review). Kept on research, pr-review, perf where
+  unwanted auto-loading is a real risk.
+
 ## [1.7.4] - 2026-04-03
 
 ### Changed
@@ -986,7 +1013,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.7.4...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.8.0
 [1.7.4]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.4
 [1.7.3]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.3
 [1.7.2]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.2

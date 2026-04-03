@@ -6,8 +6,20 @@ summary; this reference has the complete workflow.
 ## Clarification Questions (when requirements are fuzzy)
 
 When the description is vague, unclear, or missing key details,
-ask clarifying questions **one at a time** before planning. This
-replaces the need for a separate brainstorm command.
+ask clarifying questions **one at a time** before planning.
+
+### When to Use /rb:brainstorm Instead
+
+Use `/rb:brainstorm` when:
+
+- 3+ clarification questions would be needed
+- User is unsure about scope or approach ("not sure how", "multiple ways")
+- Multiple valid architectural paths exist
+- Brainstorm produces `.claude/plans/{slug}/interview.md` with Status: COMPLETE
+- Plan consumes it: skips clarification, may skip patterns-analyst if
+  `codebase-scan.md` exists from brainstorm research
+
+### Inline Clarification (when brainstorm is not needed)
 
 **Signals that clarification is needed:**
 

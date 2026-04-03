@@ -38,7 +38,8 @@
       "checks": [
         { "type": "has_iron_laws", "min_count": 4, "desc": "Iron laws" },
         { "type": "content_present", "pattern": "verify|source|evidence", "desc": "Evidence-oriented guidance" },
-        { "type": "no_dangerous_patterns", "desc": "No catastrophic patterns" }
+        { "type": "no_dangerous_patterns", "desc": "No catastrophic patterns" },
+        { "type": "no_bash_blocks", "desc": "No executable bash blocks" }
       ]
     },
     "clarity": {

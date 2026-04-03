@@ -36,13 +36,9 @@ Generate documentation for newly implemented features.
 
 ### Step 0: Pre-check (avoid no-op runs)
 
-```bash
-# Check if any NEW .rb files exist in recent commits without assuming HEAD~5 exists
-BASE_REF=$(git rev-parse --verify HEAD~5 2>/dev/null || git rev-list --max-parents=0 HEAD 2>/dev/null | tail -1)
-if [[ -n "$BASE_REF" ]]; then
-  git diff --name-only --diff-filter=A "${BASE_REF}" HEAD -- '*.rb' | head -20
-fi
-```
+Run `git rev-parse --verify HEAD~5` to find a base ref (fall back to
+`git rev-list --max-parents=0 HEAD | tail -1` for shallow repos). Then run
+`git diff --name-only --diff-filter=A "$BASE_REF" HEAD -- '*.rb'` to list new Ruby files.
 
 If NO new `.rb` files were added (only modifications), skip the full
 audit and report: "No new modules — documentation coverage unchanged."

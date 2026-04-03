@@ -28,6 +28,7 @@ When user describes work WITHOUT specifying a `/rb:` command, analyze their inte
 | "that worked", "fixed it", "problem solved" | Knowledge capture | `/rb:compound` |
 | "enhance plan", "more detail", "deepen" | Plan enhancement | `/rb:plan --existing` |
 | "triage", "which findings", "prioritize fixes" | Finding triage | `/rb:triage` |
+| "brainstorm", "explore options", "not sure how", "multiple approaches", "what's the best way to architect" | Design exploration | `/rb:brainstorm` |
 
 ## Behavior
 

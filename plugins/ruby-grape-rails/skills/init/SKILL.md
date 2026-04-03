@@ -10,10 +10,8 @@ Install the Ruby/Rails/Grape behavioral instructions into the project `CLAUDE.md
 
 ## Usage
 
-```bash
-/rb:init
-/rb:init --update
-```
+- `/rb:init` — Fresh install
+- `/rb:init --update` — Update existing managed block
 
 ## Detect the Stack
 
@@ -32,38 +30,11 @@ Detection rules:
 
 Use Ruby for detection (avoids fragile shell pipelines):
 
-```bash
-# Detect Ruby version and stack dependencies
-detect-stack
-
-# External tools / cached runtime hints
-REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
-RUNTIME_ENV_PATH="${REPO_ROOT}/.claude/.runtime_env"
-RTK_AVAILABLE_CACHED=""
-DCG_AVAILABLE_CACHED=""
-SHELLFIRM_AVAILABLE_CACHED=""
-if [[ -f "$RUNTIME_ENV_PATH" && ! -L "$RUNTIME_ENV_PATH" ]]; then
-  RTK_AVAILABLE_CACHED=$(grep -E '^RTK_AVAILABLE=' "$RUNTIME_ENV_PATH" | tail -n 1 | cut -d= -f2-)
-  DCG_AVAILABLE_CACHED=$(grep -E '^DCG_AVAILABLE=' "$RUNTIME_ENV_PATH" | tail -n 1 | cut -d= -f2-)
-  SHELLFIRM_AVAILABLE_CACHED=$(grep -E '^SHELLFIRM_AVAILABLE=' "$RUNTIME_ENV_PATH" | tail -n 1 | cut -d= -f2-)
-fi
-command -v betterleaks &>/dev/null && echo "Betterleaks: available"
-if [[ "$RTK_AVAILABLE_CACHED" == "true" ]]; then
-  echo "RTK: available (cached)"
-elif command -v rtk &>/dev/null; then
-  echo "RTK: available"
-fi
-if [[ "$DCG_AVAILABLE_CACHED" == "true" ]]; then
-  echo "DCG: available (cached)"
-elif command -v dcg &>/dev/null; then
-  echo "DCG: available"
-fi
-if [[ "$SHELLFIRM_AVAILABLE_CACHED" == "true" ]]; then
-  echo "Shellfirm: available (cached)"
-elif command -v shellfirm &>/dev/null; then
-  echo "Shellfirm: available"
-fi
-```
+1. Run `detect-stack` to detect Ruby version and stack dependencies.
+2. Read `.claude/.runtime_env` (if present and non-symlink) for cached external tool
+   booleans: `RTK_AVAILABLE`, `DCG_AVAILABLE`, `SHELLFIRM_AVAILABLE`.
+3. Check `command -v betterleaks`, `command -v rtk`, `command -v dcg`,
+   `command -v shellfirm` as fallbacks when cached values are absent.
 
 When building the injected header:
 

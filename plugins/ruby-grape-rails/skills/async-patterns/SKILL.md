@@ -260,7 +260,7 @@ end
 
 ### Running Falcon
 
-```bash
+```
 # Development
 bundle exec falcon serve
 

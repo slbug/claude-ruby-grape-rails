@@ -59,6 +59,7 @@ def default_eval(skill_path: str) -> EvalDefinition:
                     "weight": 0.12,
                     "checks": [
                         {"type": "no_dangerous_patterns", "desc": "No catastrophic patterns"},
+                        {"type": "no_bash_blocks", "desc": "No executable bash blocks in SKILL.md"},
                     ],
                 },
                 "clarity": {

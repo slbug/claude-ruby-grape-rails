@@ -324,6 +324,18 @@ def no_dangerous_patterns(content: str, **_: Any) -> tuple[bool, str]:
     return not hits, "no catastrophic patterns" if not hits else f"dangerous patterns: {hits}"
 
 
+def no_bash_blocks(content: str, **_: Any) -> tuple[bool, str]:
+    """Detect executable ```bash blocks in skill SKILL.md content.
+
+    After the disableSkillShellExecution resilience conversion (v1.8.0),
+    SKILL.md files should use prose instructions instead of bash blocks.
+    """
+    hits = re.findall(r"^```bash\s*$", content, re.MULTILINE)
+    return not hits, (
+        "no bash blocks" if not hits else f"found {len(hits)} ```bash block(s)"
+    )
+
+
 MATCHERS = {
     "section_exists": section_exists,
     "frontmatter_field": frontmatter_field,
@@ -344,4 +356,5 @@ MATCHERS = {
     "valid_agent_refs": valid_agent_refs,
     "valid_file_refs": valid_file_refs,
     "no_dangerous_patterns": no_dangerous_patterns,
+    "no_bash_blocks": no_bash_blocks,
 }

@@ -18,11 +18,9 @@ effort: medium
 
 Use `/rb:secrets` to scan for leaked credentials with betterleaks:
 
-```bash
-/rb:secrets              # Scan current directory
-/rb:secrets --git        # Scan git history
-/rb:secrets --validate   # Validate secrets against live APIs
-```
+- `/rb:secrets` — Scan current directory
+- `/rb:secrets --git` — Scan git history
+- `/rb:secrets --validate` — Validate secrets against live APIs
 
 Install betterleaks: `brew install betterleaks`
 

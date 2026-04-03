@@ -12,7 +12,7 @@ Integrate with [Tidewave Rails](https://github.com/tidewave-ai/tidewave_rails) t
 
 Tidewave Rails must be installed in your project:
 
-```bash
+```
 bundle add tidewave --group development
 ```
 
@@ -36,7 +36,7 @@ And ensure Tidewave is [installed](https://github.com/tidewave-ai/tidewave_rails
 
 The `detect-runtime.sh` hook runs automatically at session start and detects:
 
-```bash
+```
 # Detected from Gemfile:
 TIDEWAVE_GEM_PRESENT=true
 TIDEWAVE_PROJECT_CAPABLE=true
@@ -61,7 +61,7 @@ If Tidewave is not detected, runtime commands will provide setup guidance.
 
 Display runtime capability status:
 
-```bash
+```
 /rb:runtime inspect
 ```
 
@@ -75,7 +75,7 @@ Shows:
 
 Execute Ruby code in Rails console context:
 
-```bash
+```
 /rb:runtime execute "User.recent.count"
 /rb:runtime execute "Rails.application.config.active_job.queue_adapter"
 ```
@@ -86,7 +86,7 @@ Execute Ruby code in Rails console context:
 
 Execute SQL queries directly against the database:
 
-```bash
+```
 /rb:runtime query "SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '1 day'"
 ```
 
@@ -96,7 +96,7 @@ Execute SQL queries directly against the database:
 
 Fetch documentation for your exact gem versions:
 
-```bash
+```
 /rb:runtime docs "ActiveRecord::QueryMethods"
 /rb:runtime docs "User#valid_email?"
 ```
@@ -107,7 +107,7 @@ Fetch documentation for your exact gem versions:
 
 Read application logs:
 
-```bash
+```
 /rb:runtime logs
 /rb:runtime logs error
 /rb:runtime logs warning
@@ -119,7 +119,7 @@ Read application logs:
 
 List all models/modules for quick discovery:
 
-```bash
+```
 /rb:runtime models
 ```
 
@@ -129,7 +129,7 @@ List all models/modules for quick discovery:
 
 Get source location for direct code reading:
 
-```bash
+```
 /rb:runtime source "User"
 /rb:runtime source "User#authenticate"
 ```
@@ -227,7 +227,7 @@ Without Tidewave, use:
 
 ### Investigating a Bug
 
-```bash
+```
 # Check recent errors
 /rb:runtime logs error
 
@@ -240,7 +240,7 @@ Without Tidewave, use:
 
 ### Planning with Live Data
 
-```bash
+```
 # Check current data volume
 /rb:runtime execute "User.where('created_at > ?', 1.year.ago).count"
 
@@ -250,7 +250,7 @@ Without Tidewave, use:
 
 ### Validating Implementation
 
-```bash
+```
 # After implementing a job
 /rb:runtime execute "MyJob.perform_later(123)"
 

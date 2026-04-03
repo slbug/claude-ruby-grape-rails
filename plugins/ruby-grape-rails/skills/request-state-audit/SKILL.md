@@ -36,13 +36,10 @@ Audit your Rails application for common state management issues that cause produ
 
 Search for patterns:
 
-```bash
-# Find Current assignments in jobs and async code
-rg -n --glob '*.rb' 'Current\.' app/jobs app/workers
-
-# Check for custom thread/fiber usage with Current
-rg -n -C 5 --glob '*.rb' 'Thread\.new|Concurrent|Async|Fiber\.schedule' app | rg -i 'current'
-```
+Use Grep to search for `Current\.` in `app/jobs` and `app/workers` (Ruby files only)
+to find Current assignments in async code. Then use Grep to find `Thread.new`,
+`Concurrent`, `Async`, `Fiber.schedule` in `app/` and check results for `current`
+references.
 
 **Verify:**
 
@@ -57,32 +54,13 @@ See: [references/audit-procedures.md#currentattributes-usage](references/audit-p
 
 Detect session store type first:
 
-```bash
-# Check configured session store
-rg -n 'config\.session_store' config/initializers config/application.rb
-```
+Use Grep to search for `config.session_store` in `config/initializers` and `config/application.rb` to detect the session store type.
 
-**For ActiveRecord session store:**
+**For ActiveRecord session store:** In rails console, run `ActiveRecord::SessionStore::Session.pluck(:data).map { |d| d.to_s.bytesize }.max`.
 
-```bash
-# In rails console
-ActiveRecord::SessionStore::Session.pluck(:data).map { |d| d.to_s.bytesize }.max
-```
+**For Cookie-based sessions:** Use Grep to search for `CookieOverflow` in `log/production.log`.
 
-**For Cookie-based sessions:**
-
-```bash
-# Check cookie size in browser dev tools or logs
-# Look for CookieOverflow errors in logs
-rg -n 'CookieOverflow' log/production.log
-```
-
-**For Cache/Redis-backed sessions:**
-
-```bash
-# Check session key sizes
-redis-cli --scan --pattern "*session*" | xargs -I {} redis-cli strlen {}
-```
+**For Cache/Redis-backed sessions:** Run `redis-cli --scan --pattern "*session*" | xargs -I {} redis-cli strlen {}` to measure session key sizes.
 
 **Thresholds:**
 
@@ -101,20 +79,9 @@ See: [references/audit-procedures.md#sessioncookie-bloat](references/audit-proce
 
 Check your application's actual Redis namespace configuration:
 
-```bash
-# Find Redis namespace in config
-rg -n -i 'redis.*namespace|namespace.*redis' config/initializers config/application.rb
-```
+Use Grep to search for `redis.*namespace|namespace.*redis` (case-insensitive) in `config/initializers` and `config/application.rb`.
 
-```bash
-# Find keys without TTL
-redis-cli --scan | while read key; do
-  ttl=$(redis-cli ttl "$key")
-  if [ "$ttl" -lt 0 ]; then
-    echo "$key (no TTL)"
-  fi
-done
-```
+To find keys without TTL, run `redis-cli --scan | while read key; do ttl=$(redis-cli ttl "$key"); [ "$ttl" -lt 0 ] && echo "$key (no TTL)"; done`.
 
 **Common namespace patterns** (check which your app uses):
 
@@ -132,13 +99,7 @@ See: [references/audit-procedures.md#redis-key-namespace--ttl](references/audit-
 
 ### Step 4: Turbo Stream Safety
 
-```bash
-# Find broadcast calls
-rg -n --glob '*.rb' 'broadcast_' app/models
-
-# Check for DB queries in turbo stream templates
-rg -n --glob '*.turbo_stream.*' '<%.*\.(each|where|find)' app/views
-```
+Use Grep to search for `broadcast_` in `app/models` (Ruby files). Then use Grep to search for `<%.*\.(each|where|find)` in `app/views` with glob `*.turbo_stream.*` to find DB queries in Turbo Stream templates.
 
 **Verify:**
 
@@ -154,13 +115,7 @@ See also: [Hotwire State Analysis](references/hotwire-state-analysis.md) — Con
 
 Search for denormalization patterns:
 
-```bash
-# Find counter updates
-rg -n --glob '*.rb' 'update.*(count|total)' app/models
-
-# Find manual cache invalidation
-rg -n --glob '*.rb' 'Rails\.cache\.delete|expire_fragment' app
-```
+Use Grep to search for `update.*(count|total)` in `app/models` (Ruby files) to find counter updates. Use Grep to search for `Rails\.cache\.delete|expire_fragment` in `app/` to find manual cache invalidation.
 
 **Verify:**
 

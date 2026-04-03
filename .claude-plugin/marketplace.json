@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Claude Code plugins by Alexander Grebennik",
-    "version": "1.7.4"
+    "version": "1.8.0"
   },
   "plugins": [
     {
@@ -19,7 +19,7 @@
         "source": "git-subdir",
         "url": "slbug/claude-ruby-grape-rails",
         "path": "plugins/ruby-grape-rails",
-        "ref": "v1.7.4"
+        "ref": "v1.8.0"
       },
       "category": "development",
       "tags": ["ruby", "rails", "grape", "postgres", "redis", "sidekiq"]

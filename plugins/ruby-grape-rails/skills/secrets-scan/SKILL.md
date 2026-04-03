@@ -12,15 +12,9 @@ Detect leaked secrets in your codebase using betterleaks.
 
 Requires betterleaks to be installed:
 
-```bash
-# macOS
-brew install betterleaks
-
-# Linux
-sudo dnf install betterleaks
-
-# Or download from https://github.com/betterleaks/betterleaks/releases
-```
+- macOS: `brew install betterleaks`
+- Linux: `sudo dnf install betterleaks`
+- Or download from the betterleaks releases page
 
 ## Usage
 

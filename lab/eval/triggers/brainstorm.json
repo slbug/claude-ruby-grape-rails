@@ -1,0 +1,27 @@
+{
+  "skill": "brainstorm",
+  "should_trigger": [
+    { "prompt": "I have a vague idea for a feature but I'm not sure how to approach it" },
+    { "prompt": "Let's brainstorm how to add real-time notifications to this Rails app" },
+    { "prompt": "I want to explore different approaches before we start planning" },
+    { "prompt": "Not sure what the best architecture would be for this, let's discuss options" },
+    { "prompt": "Can we brainstorm the requirements for a new payment integration?" }
+  ],
+  "should_not_trigger": [
+    { "prompt": "Create an implementation plan for adding email notifications" },
+    { "prompt": "Fix this N+1 query in the orders controller" },
+    { "prompt": "Review the changes on this branch" },
+    { "prompt": "Run the verification stack on my changes" },
+    { "prompt": "Research the best Ruby gem for distributed locking" }
+  ],
+  "hard_should_trigger": [
+    { "prompt": "I'm not sure how to approach this — multiple valid ways to do it, let's explore", "axis": "confusable" },
+    { "prompt": "Before planning, I want to gather requirements and explore options interactively", "axis": "boundary" },
+    { "prompt": "What's the best way to architect this? I need to think through trade-offs first", "axis": "confusable" }
+  ],
+  "hard_should_not_trigger": [
+    { "prompt": "I already know what I want, just create the implementation plan", "axis": "confusable" },
+    { "prompt": "The requirements are clear, plan the feature with specialist agents", "axis": "boundary" },
+    { "prompt": "Research this specific Ruby gem and give me sourced trade-offs", "axis": "confusable" }
+  ]
+}

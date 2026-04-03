@@ -255,5 +255,78 @@ omitClaudeMd: true
         self.assertIn("should not set omitClaudeMd", evidence)
 
 
+    # --- no_bash_blocks regression tests (v1.8.0) ---
+
+    def test_no_bash_blocks_passes_clean_skill(self) -> None:
+        content = """---
+name: rb:sample
+description: Use for Ruby verification and review workflows.
+---
+# Sample
+
+Run `bundle exec rspec` to verify.
+
+- Check: `bundle exec standardrb`
+- Auto-fix: `bundle exec standardrb --fix`
+"""
+        passed, evidence = matchers.no_bash_blocks(content)
+        self.assertTrue(passed)
+        self.assertEqual(evidence, "no bash blocks")
+
+    def test_no_bash_blocks_detects_bash_block(self) -> None:
+        content = """---
+name: rb:sample
+description: Use for Ruby verification.
+---
+# Sample
+
+```bash
+bundle exec rspec
+```
+"""
+        passed, evidence = matchers.no_bash_blocks(content)
+        self.assertFalse(passed)
+        self.assertIn("1", evidence)
+
+    def test_no_bash_blocks_ignores_plain_fenced_blocks(self) -> None:
+        content = """---
+name: rb:sample
+description: Use for Ruby verification.
+---
+# Sample
+
+```
+bundle exec rspec
+```
+
+```ruby
+User.find(1)
+```
+"""
+        passed, evidence = matchers.no_bash_blocks(content)
+        self.assertTrue(passed)
+
+    def test_no_bash_blocks_counts_multiple(self) -> None:
+        content = """---
+name: rb:sample
+description: Use for Ruby verification.
+---
+# Sample
+
+```bash
+bundle exec rspec
+```
+
+Some text.
+
+```bash
+bundle exec rubocop
+```
+"""
+        passed, evidence = matchers.no_bash_blocks(content)
+        self.assertFalse(passed)
+        self.assertIn("2", evidence)
+
+
 if __name__ == "__main__":
     unittest.main()

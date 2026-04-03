@@ -54,16 +54,9 @@ All solution documents use YAML frontmatter followed by markdown content. See:
 
 Search for existing solutions using:
 
-```bash
-# Find by symptom
-grep -r "symptom:" .claude/solutions/ | grep "N+1 query"
-
-# Find by category
-ls .claude/solutions/rails-issues/
-
-# Find by tag
-grep -r "tags:" .claude/solutions/ | grep "preload"
-```
+- By symptom: Use Grep to search for `symptom:` in `.claude/solutions/` matching the issue
+- By category: Use Glob to list `.claude/solutions/rails-issues/`
+- By tag: Use Grep to search for `tags:` in `.claude/solutions/` matching the keyword
 
 ## Integration with Other Skills
 
