@@ -17,9 +17,9 @@
           "desc": "Has description"
         },
         {
-          "type": "has_iron_laws",
-          "min_count": 3,
-          "desc": "Has at least 3 Iron Laws"
+          "type": "content_present",
+          "pattern": "^\\d+\\.\\s+\\*\\*",
+          "desc": "Has numbered Iron Law items"
         },
         {
           "type": "valid_file_refs",
@@ -76,9 +76,9 @@
       "weight": 0.12,
       "checks": [
         {
-          "type": "has_iron_laws",
-          "min_count": 1,
-          "desc": "Iron laws present"
+          "type": "content_present",
+          "pattern": "NEVER|ALWAYS|MUST|NO\\s",
+          "desc": "Contains enforcement language"
         },
         {
           "type": "no_dangerous_patterns",

@@ -19,8 +19,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   CLAUDE.md for project-specific conventions, auto-memory for cross-project
   lessons (with user consent), and .claude/solutions/ via /rb:compound for
   complex fix stories. New `learn-workflow.md` reference with detailed guidance.
-- **Plugin settings.json** — Ships `effort: medium` and `showTurnDuration: true`
-  as baseline defaults for all plugin users.
+- **Plugin settings.json** — Adds plugin-root `settings.json` with
+  `effort: medium` and `showTurnDuration: true`.
 - **Full 51/51 eval coverage** — Added 44 eval definitions covering all shipped
   skills. Wave 1 covers 18 workflow and diagnostic skills with heavier evals.
   Wave 2 covers 16 domain-reference skills with frontmatter and reference
