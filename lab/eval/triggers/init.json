@@ -1,0 +1,37 @@
+{
+  "skill": "init",
+  "should_trigger": [
+    {
+      "prompt": "Initialize the plugin for this new Rails project"
+    },
+    {
+      "prompt": "Set up the Ruby plugin in this repo"
+    },
+    {
+      "prompt": "Configure the plugin for first use"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Walk me through the plugin tutorial"
+    },
+    {
+      "prompt": "Plan a new feature"
+    },
+    {
+      "prompt": "Fix the broken test"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "I just installed the plugin \u2014 how do I get it running on my project?",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Show me a tutorial of all the plugin features",
+      "axis": "confusable"
+    }
+  ]
+}

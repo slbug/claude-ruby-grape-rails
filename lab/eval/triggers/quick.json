@@ -1,0 +1,37 @@
+{
+  "skill": "quick",
+  "should_trigger": [
+    {
+      "prompt": "Just fix this typo quickly"
+    },
+    {
+      "prompt": "Small CSS change \u2014 don't overthink it"
+    },
+    {
+      "prompt": "Quick config fix, no need for a plan"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Plan a large refactor of the auth system"
+    },
+    {
+      "prompt": "Do the full plan-work-review cycle"
+    },
+    {
+      "prompt": "Investigate the root cause of this complex bug"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "Change this one line in the config \u2014 super simple",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Fix this tricky bug that spans multiple files",
+      "axis": "confusable"
+    }
+  ]
+}

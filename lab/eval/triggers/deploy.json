@@ -1,0 +1,37 @@
+{
+  "skill": "deploy",
+  "should_trigger": [
+    {
+      "prompt": "Help me set up Docker deployment for this Rails app"
+    },
+    {
+      "prompt": "Review the production deployment configuration"
+    },
+    {
+      "prompt": "What's the best deploy strategy for this Rails app?"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Fix the test failures in CI"
+    },
+    {
+      "prompt": "Add a new Sidekiq background job"
+    },
+    {
+      "prompt": "Review the ActiveRecord migration"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "We need to deploy to production but the Dockerfile looks wrong",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "The CI pipeline is failing on the test step",
+      "axis": "confusable"
+    }
+  ]
+}

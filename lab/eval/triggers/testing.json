@@ -1,0 +1,37 @@
+{
+  "skill": "testing",
+  "should_trigger": [
+    {
+      "prompt": "What testing patterns should I use for this Rails feature?"
+    },
+    {
+      "prompt": "Help me write better RSpec tests with proper factories"
+    },
+    {
+      "prompt": "Best practices for test organization in Rails"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Fix the failing test"
+    },
+    {
+      "prompt": "Run the test suite"
+    },
+    {
+      "prompt": "Review the code for bugs"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "My test suite is slow \u2014 what factory and setup patterns will speed it up?",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Run bundle exec rspec and fix the failures",
+      "axis": "confusable"
+    }
+  ]
+}

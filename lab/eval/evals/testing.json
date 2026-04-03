@@ -1,0 +1,94 @@
+{
+  "skill": "testing",
+  "skill_path": "plugins/ruby-grape-rails/skills/testing/SKILL.md",
+  "dimensions": {
+    "completeness": {
+      "weight": 0.25,
+      "checks": [
+        {
+          "type": "frontmatter_field",
+          "field": "name",
+          "expected": "testing",
+          "desc": "Has testing name"
+        },
+        {
+          "type": "frontmatter_field",
+          "field": "description",
+          "desc": "Has description"
+        },
+        {
+          "type": "valid_file_refs",
+          "desc": "Valid file refs"
+        }
+      ]
+    },
+    "accuracy": {
+      "weight": 0.2,
+      "checks": [
+        {
+          "type": "valid_skill_refs",
+          "desc": "Valid skill refs"
+        }
+      ]
+    },
+    "conciseness": {
+      "weight": 0.1,
+      "checks": [
+        {
+          "type": "line_count",
+          "target": 21,
+          "tolerance": 42,
+          "desc": "Length near target"
+        },
+        {
+          "type": "max_section_lines",
+          "max": 55,
+          "desc": "Section size controlled"
+        }
+      ]
+    },
+    "triggering": {
+      "weight": 0.2,
+      "checks": [
+        {
+          "type": "description_length",
+          "min": 60,
+          "max": 250,
+          "desc": "Description length"
+        },
+        {
+          "type": "description_keywords",
+          "min": 3,
+          "desc": "Domain keywords"
+        }
+      ]
+    },
+    "safety": {
+      "weight": 0.1,
+      "checks": [
+        {
+          "type": "no_dangerous_patterns",
+          "desc": "No catastrophic patterns"
+        },
+        {
+          "type": "no_bash_blocks",
+          "desc": "No executable bash blocks"
+        }
+      ]
+    },
+    "clarity": {
+      "weight": 0.15,
+      "checks": [
+        {
+          "type": "no_duplication",
+          "desc": "No duplication"
+        },
+        {
+          "type": "workflow_step_coverage",
+          "min_sections": 1,
+          "desc": "Enough structure"
+        }
+      ]
+    }
+  }
+}

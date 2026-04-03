@@ -1,0 +1,37 @@
+{
+  "skill": "sequel-patterns",
+  "should_trigger": [
+    {
+      "prompt": "Help me with Sequel ORM query patterns"
+    },
+    {
+      "prompt": "What's the Sequel way to do this query?"
+    },
+    {
+      "prompt": "Migrate this ActiveRecord code to Sequel"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Write an ActiveRecord includes query"
+    },
+    {
+      "prompt": "Fix the Rails controller"
+    },
+    {
+      "prompt": "Add a Grape API endpoint"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "This model uses DB[:table] syntax \u2014 help me with the association",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Add has_many through to this ActiveRecord model",
+      "axis": "confusable"
+    }
+  ]
+}

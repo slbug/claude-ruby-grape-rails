@@ -1,0 +1,37 @@
+{
+  "skill": "ruby-idioms",
+  "should_trigger": [
+    {
+      "prompt": "What's the idiomatic Ruby way to write this?"
+    },
+    {
+      "prompt": "Make this code more Ruby-like"
+    },
+    {
+      "prompt": "Help me follow Ruby conventions and best practices"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "What's the Rails convention for this?"
+    },
+    {
+      "prompt": "Fix the Grape API endpoint"
+    },
+    {
+      "prompt": "Set up Sidekiq job processing"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "This method works but it's not very Rubyish \u2014 show me the elegant version",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Follow Rails conventions for this controller action",
+      "axis": "confusable"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "skill": "hotwire-native",
+  "should_trigger": [
+    {
+      "prompt": "Set up Hotwire Native for iOS/Android integration"
+    },
+    {
+      "prompt": "How do I handle native bridge elements in Hotwire Native?"
+    },
+    {
+      "prompt": "Configure the Turbo Native adapter for mobile"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Add a Turbo Frame to the dashboard page"
+    },
+    {
+      "prompt": "Fix the Stimulus controller for the form"
+    },
+    {
+      "prompt": "Set up Turbo Stream broadcasts for live updates"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "My mobile wrapper needs to communicate with the Rails backend through the native bridge",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Add Turbo Frames for lazy loading on mobile viewport",
+      "axis": "confusable"
+    }
+  ]
+}

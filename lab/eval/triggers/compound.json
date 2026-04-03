@@ -1,0 +1,37 @@
+{
+  "skill": "compound",
+  "should_trigger": [
+    {
+      "prompt": "That fix was tricky \u2014 let's capture it as reusable knowledge"
+    },
+    {
+      "prompt": "Compound this solved problem into a knowledge document"
+    },
+    {
+      "prompt": "Save this debugging session as a solution for future reference"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Learn from this mistake and capture the lesson"
+    },
+    {
+      "prompt": "Fix the N+1 query in the controller"
+    },
+    {
+      "prompt": "Review the latest changes"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "This took an hour to solve \u2014 I want it documented so nobody wastes time on this again",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Extract the general pattern from this fix into a rule",
+      "axis": "confusable"
+    }
+  ]
+}

@@ -812,8 +812,8 @@ Notes:
 
 Current `lab/eval/` scope:
 
-- core skill evals for `plan`, `work`, `review`, `verify`, `permissions`, and
-  `research`
+- full 51/51 skill eval coverage (all shipped skills)
+- full 51/51 trigger corpora (all shipped skills)
 - structural scoring for all shipped agents
 - deterministic trigger corpora and confusable-pair analysis
 - deterministic research/review artifact and provenance checks

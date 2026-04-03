@@ -1,0 +1,37 @@
+{
+  "skill": "document",
+  "should_trigger": [
+    {
+      "prompt": "Generate documentation for the API endpoints"
+    },
+    {
+      "prompt": "Document the architecture of this service"
+    },
+    {
+      "prompt": "Create docs for the public-facing classes"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Fix the broken endpoint"
+    },
+    {
+      "prompt": "Review the code changes"
+    },
+    {
+      "prompt": "Plan the new feature"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "Write YARD documentation for all public methods in this module",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Capture this debugging solution as reusable knowledge",
+      "axis": "confusable"
+    }
+  ]
+}

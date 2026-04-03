@@ -1,0 +1,37 @@
+{
+  "skill": "rb-boundaries",
+  "should_trigger": [
+    {
+      "prompt": "Analyze the module boundaries in this Rails app"
+    },
+    {
+      "prompt": "Check for boundary violations between packages"
+    },
+    {
+      "prompt": "Map the dependency graph between modules"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Trace a request through the stack"
+    },
+    {
+      "prompt": "Fix the ActiveRecord query"
+    },
+    {
+      "prompt": "Review the code changes"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "Our Packwerk packages have circular dependencies \u2014 help me untangle them",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Trace the call stack from controller to database",
+      "axis": "confusable"
+    }
+  ]
+}

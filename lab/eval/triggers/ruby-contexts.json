@@ -1,0 +1,37 @@
+{
+  "skill": "ruby-contexts",
+  "should_trigger": [
+    {
+      "prompt": "Help me understand Ruby module and class design patterns"
+    },
+    {
+      "prompt": "What Ruby context patterns should I use for this library?"
+    },
+    {
+      "prompt": "Organize this Ruby code with proper module structure"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Fix the Rails controller"
+    },
+    {
+      "prompt": "Add Grape API endpoint"
+    },
+    {
+      "prompt": "Set up deployment"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "This is a pure Ruby gem, not Rails \u2014 help me structure the modules",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Extract Rails services from the fat controller",
+      "axis": "confusable"
+    }
+  ]
+}

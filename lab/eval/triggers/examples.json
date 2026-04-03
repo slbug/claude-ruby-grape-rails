@@ -1,0 +1,37 @@
+{
+  "skill": "examples",
+  "should_trigger": [
+    {
+      "prompt": "Show me example patterns for Rails service objects"
+    },
+    {
+      "prompt": "Give me examples of how to use the plugin"
+    },
+    {
+      "prompt": "I need code examples for Grape API versioning"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Fix the broken test"
+    },
+    {
+      "prompt": "Plan a new feature"
+    },
+    {
+      "prompt": "Review the latest commit"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "I'm new here \u2014 show me how things are done in this codebase",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Walk me through the tutorial for this plugin",
+      "axis": "confusable"
+    }
+  ]
+}

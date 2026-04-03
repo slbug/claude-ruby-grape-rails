@@ -1,0 +1,37 @@
+{
+  "skill": "brief",
+  "should_trigger": [
+    {
+      "prompt": "Walk me through this plan so I understand it"
+    },
+    {
+      "prompt": "Brief me on the plan.md before I start working"
+    },
+    {
+      "prompt": "Explain this plan interactively \u2014 I have questions"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Create a new plan for the auth refactor"
+    },
+    {
+      "prompt": "Start working on the plan tasks"
+    },
+    {
+      "prompt": "Review the completed implementation"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "I want to understand what this plan does before approving it",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Enhance this existing plan with more research",
+      "axis": "confusable"
+    }
+  ]
+}

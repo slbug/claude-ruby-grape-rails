@@ -1,0 +1,37 @@
+{
+  "skill": "karafka",
+  "should_trigger": [
+    {
+      "prompt": "Help me set up a Karafka consumer for Kafka events"
+    },
+    {
+      "prompt": "What's the pattern for Karafka message processing?"
+    },
+    {
+      "prompt": "Configure Karafka producers and consumers for Rails"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Set up Sidekiq for background jobs"
+    },
+    {
+      "prompt": "Add a Turbo Stream broadcast"
+    },
+    {
+      "prompt": "Fix the ActiveRecord query"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "Process events from the Kafka topic with idempotent consumption",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Set up an async background job for email delivery",
+      "axis": "confusable"
+    }
+  ]
+}

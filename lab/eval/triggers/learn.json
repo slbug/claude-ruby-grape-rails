@@ -1,0 +1,37 @@
+{
+  "skill": "learn",
+  "should_trigger": [
+    {
+      "prompt": "I just corrected a mistake \u2014 capture the lesson"
+    },
+    {
+      "prompt": "Learn from this bug fix so it doesn't happen again"
+    },
+    {
+      "prompt": "That was wrong \u2014 save this correction for next time"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Capture this complex fix as a solution document"
+    },
+    {
+      "prompt": "Fix the broken test"
+    },
+    {
+      "prompt": "Plan the new feature"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "You kept making the same mistake \u2014 let's make sure you remember the right pattern",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Document this debugging story for future reference with full context",
+      "axis": "confusable"
+    }
+  ]
+}

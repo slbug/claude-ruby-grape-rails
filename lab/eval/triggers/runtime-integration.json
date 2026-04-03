@@ -1,0 +1,37 @@
+{
+  "skill": "runtime-integration",
+  "should_trigger": [
+    {
+      "prompt": "Check what runtime tools are available in this project"
+    },
+    {
+      "prompt": "Detect which Ruby version and gems are installed"
+    },
+    {
+      "prompt": "What runtime environment does this project use?"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Fix the failing test"
+    },
+    {
+      "prompt": "Plan a new feature"
+    },
+    {
+      "prompt": "Review the code changes"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "Which test runner and linter does this project actually use?",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Set up the deployment environment for production",
+      "axis": "confusable"
+    }
+  ]
+}

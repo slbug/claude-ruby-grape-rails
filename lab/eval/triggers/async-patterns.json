@@ -1,0 +1,37 @@
+{
+  "skill": "async-patterns",
+  "should_trigger": [
+    {
+      "prompt": "What's the best pattern for async processing in Rails?"
+    },
+    {
+      "prompt": "Help me with background job patterns and async workflows"
+    },
+    {
+      "prompt": "How should I handle async callbacks in my service objects?"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Fix the synchronous form submission bug"
+    },
+    {
+      "prompt": "Add a new Grape API endpoint"
+    },
+    {
+      "prompt": "Review the database migration"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "I need to process uploads in the background without blocking the request",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Set up a Sidekiq worker for email sending",
+      "axis": "confusable"
+    }
+  ]
+}

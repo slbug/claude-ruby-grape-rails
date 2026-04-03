@@ -1,0 +1,37 @@
+{
+  "skill": "sidekiq",
+  "should_trigger": [
+    {
+      "prompt": "Set up a Sidekiq job for background email processing"
+    },
+    {
+      "prompt": "How should I configure Sidekiq queues and workers?"
+    },
+    {
+      "prompt": "Fix the Sidekiq job that keeps failing"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Set up Karafka for event processing"
+    },
+    {
+      "prompt": "Fix the Rails controller action"
+    },
+    {
+      "prompt": "Add a database migration"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "My background job needs retry logic with exponential backoff",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Process Kafka events asynchronously",
+      "axis": "confusable"
+    }
+  ]
+}

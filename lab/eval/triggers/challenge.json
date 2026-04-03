@@ -1,0 +1,37 @@
+{
+  "skill": "challenge",
+  "should_trigger": [
+    {
+      "prompt": "Grill me on this code \u2014 find every weakness"
+    },
+    {
+      "prompt": "Challenge my implementation as a senior Ruby engineer would"
+    },
+    {
+      "prompt": "Play devil's advocate on my architecture decisions"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Review this PR for obvious bugs"
+    },
+    {
+      "prompt": "Help me fix the failing test"
+    },
+    {
+      "prompt": "Plan the authentication feature"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "Don't go easy on me \u2014 tear this apart and find the problems",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Review the changes and give me a summary of findings",
+      "axis": "confusable"
+    }
+  ]
+}

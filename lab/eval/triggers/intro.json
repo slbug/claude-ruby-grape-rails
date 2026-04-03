@@ -1,0 +1,37 @@
+{
+  "skill": "intro",
+  "should_trigger": [
+    {
+      "prompt": "Give me the plugin tutorial"
+    },
+    {
+      "prompt": "I'm new \u2014 walk me through the basics"
+    },
+    {
+      "prompt": "Show me what this plugin can do"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Initialize the plugin for this project"
+    },
+    {
+      "prompt": "Plan a new feature"
+    },
+    {
+      "prompt": "Fix the bug in the controller"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "I just installed this \u2014 give me the guided tour",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Configure the plugin settings for this repo",
+      "axis": "confusable"
+    }
+  ]
+}

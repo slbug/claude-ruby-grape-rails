@@ -1,0 +1,37 @@
+{
+  "skill": "grape-idioms",
+  "should_trigger": [
+    {
+      "prompt": "What's the idiomatic way to version my Grape API?"
+    },
+    {
+      "prompt": "Help me with Grape API authentication and serialization"
+    },
+    {
+      "prompt": "Best patterns for Grape endpoint design in Rails"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Fix the Rails controller action"
+    },
+    {
+      "prompt": "Add a Sidekiq background job"
+    },
+    {
+      "prompt": "Write ActiveRecord migration"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "My API endpoint uses Grape but the params validation feels wrong",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Add strong params to the Rails controller",
+      "axis": "confusable"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "skill": "ar-n1-check",
+  "should_trigger": [
+    {
+      "prompt": "Check my code for N+1 query problems"
+    },
+    {
+      "prompt": "I think there are N+1 queries in the posts controller"
+    },
+    {
+      "prompt": "Run an N+1 detection pass on the changed files"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Write a complex ActiveRecord join query"
+    },
+    {
+      "prompt": "Add a database migration for the orders table"
+    },
+    {
+      "prompt": "Review my Sidekiq job for performance"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "The page loads slowly because of too many queries per user",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Optimize the slow SQL query in the analytics dashboard",
+      "axis": "confusable"
+    }
+  ]
+}

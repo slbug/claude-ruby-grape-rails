@@ -1,0 +1,37 @@
+{
+  "skill": "compound-docs",
+  "should_trigger": [
+    {
+      "prompt": "What's the schema for solution documents?"
+    },
+    {
+      "prompt": "How should I format the frontmatter for a compound doc?"
+    },
+    {
+      "prompt": "Show me the solution document structure"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Capture this fix as a solution document"
+    },
+    {
+      "prompt": "Search existing solutions for N+1 patterns"
+    },
+    {
+      "prompt": "Write API documentation for the users endpoint"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "I'm writing a solution doc \u2014 what fields are required in the YAML frontmatter?",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Document the API endpoints for the admin panel",
+      "axis": "confusable"
+    }
+  ]
+}

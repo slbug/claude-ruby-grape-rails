@@ -1,0 +1,37 @@
+{
+  "skill": "safe-migrations",
+  "should_trigger": [
+    {
+      "prompt": "Is this migration safe to run in production?"
+    },
+    {
+      "prompt": "Check my migration for zero-downtime compatibility"
+    },
+    {
+      "prompt": "Review the database migration for safety issues"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Write an ActiveRecord query with joins"
+    },
+    {
+      "prompt": "Fix the model validation"
+    },
+    {
+      "prompt": "Add a new Grape endpoint"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "I'm adding an index on a large table \u2014 will this lock the table?",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Write a migration to add a new column to users",
+      "axis": "confusable"
+    }
+  ]
+}

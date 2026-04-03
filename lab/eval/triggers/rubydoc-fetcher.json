@@ -1,0 +1,37 @@
+{
+  "skill": "rubydoc-fetcher",
+  "should_trigger": [
+    {
+      "prompt": "Look up the documentation for this Ruby method"
+    },
+    {
+      "prompt": "Fetch the RubyDoc for the String class"
+    },
+    {
+      "prompt": "What does this Ruby stdlib method do?"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Write documentation for my code"
+    },
+    {
+      "prompt": "Fix the method implementation"
+    },
+    {
+      "prompt": "Review the API docs"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "I need to check the exact signature of Array#flat_map from the official docs",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Generate YARD docs for the public API",
+      "axis": "confusable"
+    }
+  ]
+}

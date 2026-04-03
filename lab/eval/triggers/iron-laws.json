@@ -1,0 +1,37 @@
+{
+  "skill": "iron-laws",
+  "should_trigger": [
+    {
+      "prompt": "What are the Iron Laws for this project?"
+    },
+    {
+      "prompt": "Check if my code violates any Iron Laws"
+    },
+    {
+      "prompt": "Show me the non-negotiable rules"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Review the code for general quality"
+    },
+    {
+      "prompt": "Plan a new feature"
+    },
+    {
+      "prompt": "Fix the test failure"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "Is there a rule that says I can't do this?",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Add a security check to the authorization flow",
+      "axis": "confusable"
+    }
+  ]
+}

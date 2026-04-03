@@ -1,0 +1,37 @@
+{
+  "skill": "triage",
+  "should_trigger": [
+    {
+      "prompt": "Triage these review findings and create a plan"
+    },
+    {
+      "prompt": "Turn the review results into actionable work items"
+    },
+    {
+      "prompt": "Prioritize the findings from the code review"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Review the code changes"
+    },
+    {
+      "prompt": "Plan a new feature from scratch"
+    },
+    {
+      "prompt": "Fix the bug directly"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "The review found 15 issues \u2014 help me decide which to fix now vs later",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Review the code and write up findings",
+      "axis": "confusable"
+    }
+  ]
+}

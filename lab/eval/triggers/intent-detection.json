@@ -1,0 +1,37 @@
+{
+  "skill": "intent-detection",
+  "should_trigger": [
+    {
+      "prompt": "What command should I use for this task?"
+    },
+    {
+      "prompt": "Route this request to the right workflow"
+    },
+    {
+      "prompt": "Help me pick the right /rb: command"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Plan a new feature for user auth"
+    },
+    {
+      "prompt": "Review the code changes"
+    },
+    {
+      "prompt": "Fix the failing test"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "I want to do something but I'm not sure which command to use",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Show me all available plugin commands and features",
+      "axis": "confusable"
+    }
+  ]
+}

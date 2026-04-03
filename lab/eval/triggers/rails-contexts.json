@@ -1,0 +1,37 @@
+{
+  "skill": "rails-contexts",
+  "should_trigger": [
+    {
+      "prompt": "How should I organize Rails service objects and contexts?"
+    },
+    {
+      "prompt": "What context patterns work for this domain boundary?"
+    },
+    {
+      "prompt": "Help me structure the Rails business logic layer"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Fix the ActiveRecord query"
+    },
+    {
+      "prompt": "Add a Grape API endpoint"
+    },
+    {
+      "prompt": "Set up Sidekiq job"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "My controller is 200 lines \u2014 help me extract services and interactors",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "What's the Rails idiom for this code pattern?",
+      "axis": "confusable"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "skill": "security",
+  "should_trigger": [
+    {
+      "prompt": "Review this code for security vulnerabilities"
+    },
+    {
+      "prompt": "Check the authentication and authorization implementation"
+    },
+    {
+      "prompt": "Audit the security of the API endpoints"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Scan for leaked API keys in the code"
+    },
+    {
+      "prompt": "Fix the failing test"
+    },
+    {
+      "prompt": "Plan a new feature"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "Is this endpoint vulnerable to SQL injection or XSS?",
+      "axis": "confusable"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Check if any secrets were committed to the repo",
+      "axis": "confusable"
+    }
+  ]
+}
