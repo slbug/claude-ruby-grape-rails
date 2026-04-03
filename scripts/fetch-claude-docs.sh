@@ -47,17 +47,26 @@ emit_curl_failure_details() {
   sed -n '1,5p' "$err_file" >&2 || true
 }
 
-# All pages needed for plugin validation (~420KB total)
+# All pages needed for plugin validation
 PAGES=(
-  "sub-agents.md"          # Agent frontmatter schema
-  "skills.md"              # Skill format and structure
-  "hooks.md"               # Hook events and types
-  "hooks-guide.md"         # Hook patterns and examples
-  "plugins-reference.md"   # plugin.json schema
-  "plugin-marketplaces.md" # marketplace.json schema
-  "plugins.md"             # General plugin creation
-  "settings.md"            # Permission modes
-  "mcp.md"                 # MCP server config
+  "sub-agents.md"               # Agent frontmatter schema
+  "skills.md"                   # Skill format and structure
+  "hooks.md"                    # Hook events and types
+  "hooks-guide.md"              # Hook patterns and examples
+  "plugins-reference.md"        # plugin.json schema
+  "plugin-marketplaces.md"      # marketplace.json schema
+  "plugins.md"                  # General plugin creation
+  "settings.md"                 # Permission modes
+  "mcp.md"                      # MCP server config
+  "tools-reference.md"          # Tool schema and examples
+  "agent-teams.md"              # Agent teams and collaboration features
+  "how-claude-code-works.md"    # Overview of Claude Code architecture and concepts
+  "third-party-integrations.md" # Supported third-party integrations and how to use them
+  "features-overview.md"        # Overview of key features and capabilities of Claude Code for plugin developers
+  "memory.md"                   # Memory types and usage guidelines
+  "overview.md"                 # High-level overview of Claude Code and its components
+  "permission-modes.md"         # Details on different permission modes and their implications for plugin behavior
+  "permissions.md"              # Comprehensive guide to permissions, including best practices for requesting and using them in plugins
 )
 
 # Parse arguments
