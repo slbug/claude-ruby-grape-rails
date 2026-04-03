@@ -52,11 +52,12 @@ def read_only_tools_coherent(content: str, **_: Any) -> tuple[bool, str]:
     disallowed = _coerce_tool_list(fm.get("disallowedTools", []))
     write_like_tools = {"Write", "Edit", "NotebookEdit"}
 
-    # Denylist-only agents: coherent if they have any disallowed tools
+    # Denylist-only agents must block at least Edit and NotebookEdit
+    required_denylist = {"Edit", "NotebookEdit"}
     if not tools and disallowed:
-        if write_like_tools.intersection(disallowed):
-            return True, "denylist-only with write restrictions"
-        return True, "denylist-only agent (Edit/NotebookEdit restrictions expected)"
+        if required_denylist.issubset(set(disallowed)):
+            return True, "denylist-only with Edit/NotebookEdit restrictions"
+        return False, "denylist-only agent must disallow Edit and NotebookEdit"
 
     if "Read" not in tools:
         return True, "no read tool; read-only coherence not applicable"
