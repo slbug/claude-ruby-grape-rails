@@ -244,8 +244,8 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 - **Agents are automatic.** The plugin spawns specialist agents behind the scenes. You don't manage them directly.
 - **Specialist agents stay lean.** Reviewers and analyzers set
   `omitClaudeMd: true` so subagents keep product/runtime context while
-  skipping contributor-only repo guidance. They write their own artifacts
-  but cannot edit project code.
+  skipping contributor-only repo guidance. They are instructed to write
+  only their own artifacts under `.claude/`, not edit project code.
 - **The stack is detected, not guessed.** `/rb:init` and SessionStart hooks identify Rails/Grape/Sidekiq/Karafka, Active Record vs Sequel, and Packwerk/modular package layouts before giving guidance.
 - **Session start is split into fast sync + async refresh.** You get immediate
   stack context from the quick snapshot while slower helper-version probes
@@ -714,7 +714,8 @@ PRs welcome! See [CLAUDE.md](CLAUDE.md) for development conventions.
 - Skills: keep `SKILL.md` concise and push most detail into `references/`;
   prefer roughly `100-200` lines for new skills, but allow larger framework or
   workflow skills when splitting further would make routing or navigation worse
-- Agents: under 300 lines, denylist-only `disallowedTools` (no `tools:` field) for specialists
+- Agents: under 300 lines; prefer denylist-only `disallowedTools` for
+  specialists, `tools:` allowlists only for intentionally narrow tool sets
 - Markdown-only edits should pass `npm run lint:markdown`; `npm run lint`
   runs the full local lint/validation bundle
 

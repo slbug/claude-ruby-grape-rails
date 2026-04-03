@@ -168,7 +168,8 @@ skills:
 - Use `opus` for primary workflow orchestrators and security-critical agents only
 - Use `sonnet` for secondary orchestrators (investigation, tracing) and judgment-heavy tasks
 - Use `haiku` for mechanical tasks: compression, verification, dependency analysis
-- Review agents are **read-only** (`disallowedTools: Write, Edit, NotebookEdit`)
+- Review agents write their own artifacts but must not edit project code
+  (`disallowedTools: Edit, NotebookEdit`)
 - Do **not** rely on `permissionMode` in shipped plugin agents
   - **Marketplace install**: Claude Code ignores `permissionMode` on plugin agents
   - **Workaround**: document `permissions.allow` rules in `.claude/settings.json` for required tools such as `Bash(bundle *)`, `Bash(rails *)`, `Bash(rake *)`, `Read(*)`, `Grep(*)`, and `Glob(*)`
@@ -475,7 +476,7 @@ Only trim when content is purely informational and not execution-critical.
 ### New agent
 
 - [ ] Frontmatter complete
-- [ ] `disallowedTools: Edit, NotebookEdit` for artifact-writing agents; add `Write` for conversation-only agents
+- [ ] `disallowedTools: Edit, NotebookEdit` for artifact-writing agents; add `Write` to `disallowedTools` for conversation-only agents
 - [ ] `tools:` allowlist only for agents with intentionally narrow tool sets (web-researcher, output-verifier, ruby-gem-researcher)
 - [ ] `omitClaudeMd: true` for specialist agents that don't need contributor context
 - [ ] Skills preloaded
