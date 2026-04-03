@@ -7,6 +7,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-04-03
+
+### Fixed
+
+- **Revert reviewer agent "Output" wording back to "Write"** — The 1.8.0
+  agent wording change from "Write findings to..." to "Output findings for..."
+  caused reviewer subagents to stop writing their own artifact files on the
+  first run, forcing the orchestrator to re-spawn them. Reverted all 11
+  reviewer agents and the parallel-reviewer orchestrator back to "Write"
+  instructions so agents write their per-reviewer artifacts directly.
+
 ## [1.8.0] - 2026-04-03
 
 ### Added
@@ -1013,7 +1024,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.8.1...HEAD
+[1.8.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.8.1
 [1.8.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.8.0
 [1.7.4]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.4
 [1.7.3]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.3

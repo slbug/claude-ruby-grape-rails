@@ -117,7 +117,7 @@ See `references/research-integration.md` for the full pattern.
 `run_in_background: true`:
 
 1. **`rails-patterns-analyst`**: "How does this codebase handle {topics}?"
-   Output saved to `.claude/plans/{slug}/research/codebase-scan.md`
+   Writes to `.claude/plans/{slug}/research/codebase-scan.md`
 2. **`web-researcher`**: "Ruby/Rails approaches to {topics}"
    Returns summary
 

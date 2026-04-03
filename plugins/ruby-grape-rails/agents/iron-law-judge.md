@@ -139,7 +139,7 @@ grep -r "rescue\s*$\|rescue\s*=>" app/ | grep -v "StandardError"
 ## Output Format
 
 When invoked by `/rb:review`, output findings for `.claude/reviews/iron-law-judge/{review-slug}-{datesuffix}.md`.
-Always produce an artifact, even for a clean pass. Never target `.claude/plans/...` for review artifacts.
+Always write an artifact, even for a clean pass. Never write review artifacts under `.claude/plans/...`.
 
 ```markdown
 ### Iron Law Violations

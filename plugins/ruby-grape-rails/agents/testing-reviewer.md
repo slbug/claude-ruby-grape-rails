@@ -29,6 +29,6 @@ Escalate severe gaps when public behavior changed without tests.
 
 When invoked by `/rb:review`:
 
-- Output findings for `.claude/reviews/testing-reviewer/{review-slug}-{datesuffix}.md`
-- Always produce an artifact, even for a clean pass
-- Never target `.claude/plans/...` for review artifacts
+- Write `.claude/reviews/testing-reviewer/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

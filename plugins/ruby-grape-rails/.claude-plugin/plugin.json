@@ -1,6 +1,6 @@
 {
   "name": "ruby-grape-rails",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Ruby/Rails/Grape development with specialist agents, Iron Laws, and verification workflows",
   "keywords": ["ruby", "rails", "grape", "postgres", "redis", "sidekiq"],
   "author": {
