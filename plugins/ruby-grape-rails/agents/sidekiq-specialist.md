@@ -1,8 +1,7 @@
 ---
 name: sidekiq-specialist
 description: Reviews Sidekiq job classes, queueing strategy, retries, idempotency, payload shape, and enqueue timing. Use when implementing or reviewing async workflows.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15
@@ -28,6 +27,6 @@ Check for:
 
 When invoked by `/rb:review`:
 
-- Output findings for `.claude/reviews/sidekiq-specialist/{review-slug}-{datesuffix}.md`
-- Always produce an artifact, even for a clean pass
-- Never target `.claude/plans/...` for review artifacts
+- Write `.claude/reviews/sidekiq-specialist/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

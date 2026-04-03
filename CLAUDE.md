@@ -168,7 +168,8 @@ skills:
 - Use `opus` for primary workflow orchestrators and security-critical agents only
 - Use `sonnet` for secondary orchestrators (investigation, tracing) and judgment-heavy tasks
 - Use `haiku` for mechanical tasks: compression, verification, dependency analysis
-- Review agents are **read-only** (`disallowedTools: Write, Edit, NotebookEdit`)
+- Review agents write their own artifacts but must not edit project code
+  (`disallowedTools: Edit, NotebookEdit`)
 - Do **not** rely on `permissionMode` in shipped plugin agents
   - **Marketplace install**: Claude Code ignores `permissionMode` on plugin agents
   - **Workaround**: document `permissions.allow` rules in `.claude/settings.json` for required tools such as `Bash(bundle *)`, `Bash(rails *)`, `Bash(rake *)`, `Read(*)`, `Grep(*)`, and `Glob(*)`
@@ -176,9 +177,23 @@ skills:
 - Use `memory: project` for agents that benefit from cross-session learning (orchestrators, pattern analysts).
   Note: `memory` auto-enables Read, Write, Edit — only add to agents that already have Write access
 - Preload relevant skills via `skills:` field
-- Add `omitClaudeMd: true` for shipped read-only agents with no `Write` tool.
-  Iron Laws still arrive through `SubagentStart`, so read-only specialists do
-  not need contributor-only `CLAUDE.md` guidance in their runtime context.
+- Prefer denylist-only tool access over `tools:` allowlists. This follows the
+  built-in agent pattern (Explore, Plan, Verification) — agents inherit all
+  tools implicitly and Write works reliably in foreground spawns.
+  - All denylist specialists also block `Agent, EnterWorktree, ExitWorktree,
+    Skill` — these aren't covered by hooks or shellfirm. Bash stays available
+    because hooks (`block-dangerous-ops.sh`) and shellfirm guard shell commands.
+  - Artifact-writing agents: `disallowedTools: Edit, NotebookEdit, Agent,
+    EnterWorktree, ExitWorktree, Skill`
+  - Conversation-only agents: add `Write` to the above
+  - `parallel-reviewer` keeps `Agent` (spawns sub-reviewers) but blocks the rest
+  - `tools:` allowlists only for agents with intentionally narrow tool sets
+    (web-researcher, output-verifier, ruby-gem-researcher)
+- Add `omitClaudeMd: true` for shipped specialist agents that do not need
+  contributor-only `CLAUDE.md` guidance at runtime. Iron Laws still arrive
+  through `SubagentStart`. This applies to both denylist-only agents and
+  allowlist agents — the criterion is whether the agent needs repo conventions,
+  not whether it has Write access.
 - Target under 300 lines when practical
 - Keep agent descriptions at `<= 250` characters so Claude does not silently
   truncate them in the internal skill/agent listing context
@@ -463,9 +478,9 @@ Only trim when content is purely informational and not execution-critical.
 ### New agent
 
 - [ ] Frontmatter complete
-- [ ] `disallowedTools: Write, Edit, NotebookEdit` for review agents
-- [ ] `Write` allowed for agents that output reports (e.g., research agents, context-supervisor)
-- [ ] `omitClaudeMd: true` for shipped read-only agents
+- [ ] `disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill` for artifact-writing agents; add `Write` for conversation-only agents
+- [ ] `tools:` allowlist only for agents with intentionally narrow tool sets (web-researcher, output-verifier, ruby-gem-researcher)
+- [ ] `omitClaudeMd: true` for specialist agents that don't need contributor context
 - [ ] Skills preloaded
 - [ ] Description at or under 250 chars
 - [ ] Under target (300 lines), hard limit only if justified by inline subagent prompts

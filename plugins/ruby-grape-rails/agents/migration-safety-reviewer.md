@@ -1,8 +1,7 @@
 ---
 name: migration-safety-reviewer
 description: Reviews Active Record or Sequel migrations for locking risk, rollback safety, indexes, and constraint gaps before deployment review.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15
@@ -134,8 +133,8 @@ end
 
 ## Output Format
 
-Output findings for `.claude/reviews/migration-safety-reviewer/{review-slug}-{datesuffix}.md`.
-Always produce an artifact, even for a clean pass. Never target `.claude/plans/...` for review artifacts.
+Write findings to `.claude/reviews/migration-safety-reviewer/{review-slug}-{datesuffix}.md`.
+Always write an artifact, even for a clean pass. Never write review artifacts under `.claude/plans/...`.
 
 ```markdown
 # Schema Drift Review

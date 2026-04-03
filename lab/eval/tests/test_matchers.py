@@ -255,6 +255,84 @@ omitClaudeMd: true
         self.assertIn("should not set omitClaudeMd", evidence)
 
 
+    # --- denylist-only agent matcher tests (v1.8.1) ---
+
+    def test_tools_present_accepts_denylist_only_agent(self) -> None:
+        content = """---
+name: sample-agent
+description: Review Ruby code.
+disallowedTools: Edit, NotebookEdit
+---
+"""
+        passed, evidence = agent_matchers.tools_present(content)
+        self.assertTrue(passed)
+        self.assertIn("denylist-only", evidence)
+
+    def test_tools_present_fails_when_no_tools_and_no_disallowed(self) -> None:
+        content = """---
+name: sample-agent
+description: Review Ruby code.
+---
+"""
+        passed, _ = agent_matchers.tools_present(content)
+        self.assertFalse(passed)
+
+    def test_read_only_coherent_accepts_denylist_with_edit_blocked(self) -> None:
+        content = """---
+name: sample-agent
+description: Review Ruby code.
+disallowedTools: Edit, NotebookEdit
+---
+"""
+        passed, evidence = agent_matchers.read_only_tools_coherent(content)
+        self.assertTrue(passed)
+        self.assertIn("Edit/NotebookEdit", evidence)
+
+    def test_read_only_coherent_accepts_expanded_denylist(self) -> None:
+        content = """---
+name: sample-agent
+description: Review Ruby code.
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
+---
+"""
+        passed, evidence = agent_matchers.read_only_tools_coherent(content)
+        self.assertTrue(passed)
+        self.assertIn("Edit/NotebookEdit", evidence)
+
+    def test_read_only_coherent_fails_denylist_without_edit_blocked(self) -> None:
+        content = """---
+name: sample-agent
+description: Review Ruby code.
+disallowedTools: Bash
+---
+"""
+        passed, evidence = agent_matchers.read_only_tools_coherent(content)
+        self.assertFalse(passed)
+        self.assertIn("must disallow", evidence)
+
+    def test_omit_claudemd_accepts_denylist_only_with_omit(self) -> None:
+        content = """---
+name: sample-agent
+description: Review Ruby code.
+disallowedTools: Edit, NotebookEdit
+omitClaudeMd: true
+---
+"""
+        passed, evidence = agent_matchers.omit_claudemd_coherent(content)
+        self.assertTrue(passed)
+        self.assertIn("specialist", evidence)
+
+    def test_omit_claudemd_accepts_denylist_only_without_omit(self) -> None:
+        content = """---
+name: sample-agent
+description: Orchestrate review workflow.
+disallowedTools: Edit, NotebookEdit
+---
+"""
+        passed, evidence = agent_matchers.omit_claudemd_coherent(content)
+        self.assertTrue(passed)
+        self.assertIn("acceptable", evidence)
+
     # --- no_bash_blocks regression tests (v1.8.0) ---
 
     def test_no_bash_blocks_passes_clean_skill(self) -> None:

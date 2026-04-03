@@ -1,8 +1,7 @@
 ---
 name: verification-runner
 description: Runs the strongest available Ruby/Rails/Grape verification stack, preferring a repo-native composite verify wrapper when available, and reports the first failing step or a clean pass.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: haiku
 effort: low
 maxTurns: 10
@@ -93,6 +92,6 @@ Stop on the first failure, summarize the key error, and suggest the narrowest re
 
 When invoked by `/rb:review`:
 
-- Output findings for `.claude/reviews/verification-runner/{review-slug}-{datesuffix}.md`
-- Always produce an artifact, even for a clean pass
-- Never target `.claude/plans/...` for review artifacts
+- Write `.claude/reviews/verification-runner/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

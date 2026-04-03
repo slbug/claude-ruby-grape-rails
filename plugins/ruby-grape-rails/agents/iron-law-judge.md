@@ -1,8 +1,7 @@
 ---
 name: iron-law-judge
 description: Checks Ruby/Rails/Grape code for project Iron Law violations using pattern analysis. Use proactively after code changes or during review.
-tools: Read, Grep, Glob
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15
@@ -138,8 +137,8 @@ grep -r "rescue\s*$\|rescue\s*=>" app/ | grep -v "StandardError"
 
 ## Output Format
 
-When invoked by `/rb:review`, output findings for `.claude/reviews/iron-law-judge/{review-slug}-{datesuffix}.md`.
-Always produce an artifact, even for a clean pass. Never target `.claude/plans/...` for review artifacts.
+When invoked by `/rb:review`, write `.claude/reviews/iron-law-judge/{review-slug}-{datesuffix}.md`.
+Always write an artifact, even for a clean pass. Never write review artifacts under `.claude/plans/...`.
 
 ```markdown
 ### Iron Law Violations

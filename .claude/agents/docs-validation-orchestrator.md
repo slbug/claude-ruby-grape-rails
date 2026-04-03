@@ -4,8 +4,7 @@ description: |
   CONTRIBUTOR TOOL - Coordinate focused docs validation for the Ruby plugin.
   Use when /docs-check needs to compare current cached Claude docs against a
   specific plugin surface without pasting large docs or file dumps into prompts.
-tools: Read, Write, Grep, Glob, Bash, Agent
-disallowedTools: Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, EnterWorktree, ExitWorktree, Skill
 permissionMode: bypassPermissions
 model: opus
 ---

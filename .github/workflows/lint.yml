@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  markdown:
-    name: Markdown Lint
+  lint:
+    name: Lint and Validate
     runs-on: ubuntu-latest
 
     steps:
@@ -26,56 +26,20 @@ jobs:
       - name: Lint Markdown files
         run: npm run lint:markdown
 
-  yaml:
-    name: YAML Syntax Validate
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.4"
+      - name: Validate JSON files
+        run: bash scripts/validate-json.sh
 
       - name: Validate YAML syntax
         run: bash scripts/validate-yaml.sh
 
-  json:
-    name: JSON Validate
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Validate JSON files
-        run: bash scripts/validate-json.sh
-
-  release-metadata:
-    name: Release Metadata
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
       - name: Validate release metadata and changelog links
         run: python3 scripts/check-release-metadata.py
 
-  validate:
-    name: Plugin Validate
-    runs-on: ubuntu-latest
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "20"
+      - name: Validate shell scripts
+        run: bash scripts/validate-shell.sh
 
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
@@ -83,24 +47,8 @@ jobs:
       - name: Validate plugin structure
         run: claude plugin validate plugins/ruby-grape-rails
 
-  shell:
-    name: Shell Syntax and Lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install shellcheck
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y shellcheck
-
-      - name: Validate shell scripts
-        run: bash scripts/validate-shell.sh
-
-  eval-tests:
-    name: Eval Tests
+  eval:
+    name: Eval CI
     runs-on: ubuntu-latest
 
     steps:
@@ -122,27 +70,6 @@ jobs:
 
       - name: Run eval tests
         run: npm run eval:test
-
-  eval-ci:
-    name: Eval CI
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "20"
-
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: npm ci
 
       - name: Run eval CI gate
         run: npm run eval:ci

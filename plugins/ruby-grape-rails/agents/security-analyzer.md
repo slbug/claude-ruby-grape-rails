@@ -1,8 +1,7 @@
 ---
 name: security-analyzer
 description: Reviews Ruby/Rails/Grape changes for authorization gaps, SQL safety issues, unsafe rendering, secrets handling, request-boundary problems, and Sidekiq security risks.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: opus
 effort: high
 maxTurns: 15
@@ -32,6 +31,6 @@ Only report issues with practical security or correctness impact.
 
 When invoked by `/rb:review`:
 
-- Output findings for `.claude/reviews/security-analyzer/{review-slug}-{datesuffix}.md`
-- Always produce an artifact, even for a clean pass
-- Never target `.claude/plans/...` for review artifacts
+- Write `.claude/reviews/security-analyzer/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

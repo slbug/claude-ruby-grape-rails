@@ -1,8 +1,7 @@
 ---
 name: ruby-reviewer
 description: Reviews Ruby/Rails/Grape changes for correctness, maintainability, boundary discipline, and idiomatic Ruby design.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15
@@ -30,6 +29,6 @@ Only report issues with real maintenance or behavior impact.
 
 When invoked by `/rb:review`:
 
-- Output findings for `.claude/reviews/ruby-reviewer/{review-slug}-{datesuffix}.md`
-- Always produce an artifact, even for a clean pass
-- Never target `.claude/plans/...` for review artifacts
+- Write `.claude/reviews/ruby-reviewer/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

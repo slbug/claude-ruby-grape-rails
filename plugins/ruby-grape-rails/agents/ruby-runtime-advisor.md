@@ -1,8 +1,7 @@
 ---
 name: ruby-runtime-advisor
 description: Advises on Ruby runtime, threading, connection-pool, and background execution tradeoffs for Rails/Grape systems.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15
@@ -25,6 +24,6 @@ Use for questions about:
 
 When invoked by `/rb:review`:
 
-- Output findings for `.claude/reviews/ruby-runtime-advisor/{review-slug}-{datesuffix}.md`
-- Always produce an artifact, even for a clean pass
-- Never target `.claude/plans/...` for review artifacts
+- Write `.claude/reviews/ruby-runtime-advisor/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

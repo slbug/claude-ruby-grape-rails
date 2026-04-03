@@ -1,8 +1,7 @@
 ---
 name: rails-architect
 description: Advises on Rails and Grape interaction architecture, user-facing workflows, Hotwire patterns, and service-layer fit.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15
@@ -26,6 +25,6 @@ Use this agent for:
 
 When invoked by `/rb:review`:
 
-- Output findings for `.claude/reviews/rails-architect/{review-slug}-{datesuffix}.md`
-- Always produce an artifact, even for a clean pass
-- Never target `.claude/plans/...` for review artifacts
+- Write `.claude/reviews/rails-architect/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

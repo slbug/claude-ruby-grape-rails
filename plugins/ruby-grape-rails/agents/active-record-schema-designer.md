@@ -1,8 +1,7 @@
 ---
 name: active-record-schema-designer
 description: Designs or reviews Active Record schemas, migrations, indexes, constraints, locking strategy, and query shape for Ruby/Rails/Grape applications.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Write, Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15

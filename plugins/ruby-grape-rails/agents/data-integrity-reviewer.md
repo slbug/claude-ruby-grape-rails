@@ -1,8 +1,7 @@
 ---
 name: data-integrity-reviewer
 description: Reviews Active Record or Sequel models, migrations, and transactions for data integrity risks, rollback safety, and constraint gaps during review.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15
@@ -214,8 +213,8 @@ end
 
 ## Output Format
 
-Output findings for `.claude/reviews/data-integrity-reviewer/{review-slug}-{datesuffix}.md`.
-Always produce an artifact, even for a clean pass. Never target `.claude/plans/...` for review artifacts.
+Write findings to `.claude/reviews/data-integrity-reviewer/{review-slug}-{datesuffix}.md`.
+Always write an artifact, even for a clean pass. Never write review artifacts under `.claude/plans/...`.
 
 ```markdown
 # Data Integrity Review

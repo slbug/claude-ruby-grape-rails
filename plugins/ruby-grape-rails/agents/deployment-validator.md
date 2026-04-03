@@ -1,8 +1,7 @@
 ---
 name: deployment-validator
 description: Reviews deployment configuration for Ruby/Rails/Grape applications, including Docker, Procfile/process layout, migrations, assets, environment config, and Sidekiq runtime concerns.
-tools: Read, Grep, Glob, Bash
-disallowedTools: Write, Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
 maxTurns: 15
@@ -24,6 +23,6 @@ Review for:
 
 When invoked by `/rb:review`:
 
-- Output findings for `.claude/reviews/deployment-validator/{review-slug}-{datesuffix}.md`
-- Always produce an artifact, even for a clean pass
-- Never target `.claude/plans/...` for review artifacts
+- Write `.claude/reviews/deployment-validator/{review-slug}-{datesuffix}.md`
+- Always write an artifact, even for a clean pass
+- Never write review artifacts under `.claude/plans/...`

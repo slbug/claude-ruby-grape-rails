@@ -7,6 +7,28 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-04-03
+
+### Changed
+
+- **Agent tool access migrated from allowlist to denylist pattern** — Removed
+  explicit `tools:` allowlists from 17 specialist agents and switched to
+  `disallowedTools:` only (denylist). This follows Claude Code's built-in agent
+  pattern (Explore, Plan, Verification) where agents inherit all tools
+  implicitly. All specialists also block `Agent, EnterWorktree, ExitWorktree,
+  Skill` — tools not covered by hooks or shellfirm. Bash stays available
+  because `block-dangerous-ops.sh` and shellfirm guard shell commands.
+  Artifact-writing agents use `disallowedTools: Edit, NotebookEdit, Agent,
+  EnterWorktree, ExitWorktree, Skill`. Conversation-only agents add `Write`.
+  `parallel-reviewer` keeps `Agent` for spawning sub-reviewers. Agents with
+  intentionally narrow tool sets (web-researcher, output-verifier,
+  ruby-gem-researcher) keep `tools:` allowlists.
+- **Agent eval tooling updated for denylist-only pattern** — `tools_present`,
+  `read_only_tools_coherent`, and `omit_claudemd_coherent` matchers now
+  correctly handle agents without a `tools:` field. `read_only_tools_coherent`
+  requires `Edit` and `NotebookEdit` in the denylist. Six new unit tests cover
+  the denylist-only code paths.
+
 ## [1.8.0] - 2026-04-03
 
 ### Added
@@ -1013,7 +1035,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.8.1...HEAD
+[1.8.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.8.1
 [1.8.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.8.0
 [1.7.4]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.4
 [1.7.3]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.3
