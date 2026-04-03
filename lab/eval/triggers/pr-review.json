@@ -1,0 +1,51 @@
+{
+  "skill": "pr-review",
+  "should_trigger": [
+    {
+      "prompt": "Review the PR comments and address them"
+    },
+    {
+      "prompt": "There are review comments on the pull request \u2014 help me respond"
+    },
+    {
+      "prompt": "Fetch and address the PR review feedback"
+    },
+    {
+      "prompt": "Help me with pr review patterns in my Ruby project"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Review my code changes locally"
+    },
+    {
+      "prompt": "Create a pull request for my changes"
+    },
+    {
+      "prompt": "Plan the implementation"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "The reviewer left comments on PR #42 \u2014 help me address each one",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if pr review needs updating",
+      "axis": "multi_step"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Review the code I just wrote for quality and correctness",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
+    }
+  ]
+}

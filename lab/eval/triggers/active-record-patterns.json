@@ -1,0 +1,59 @@
+{
+  "skill": "active-record-patterns",
+  "should_trigger": [
+    {
+      "prompt": "What's the idiomatic way to write this ActiveRecord scope?"
+    },
+    {
+      "prompt": "Help me with a complex AR query using joins and includes"
+    },
+    {
+      "prompt": "Best patterns for ActiveRecord callbacks in Rails"
+    },
+    {
+      "prompt": "How should I structure this has_many through relationship?"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Set up Sidekiq job for background processing"
+    },
+    {
+      "prompt": "Fix this Grape API serializer"
+    },
+    {
+      "prompt": "Review the deployment configuration"
+    },
+    {
+      "prompt": "Add a Stimulus controller for the form"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "My model uses STI but the query performance is bad",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "What's the right way to handle polymorphic associations with counter caches?",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if active record patterns needs updating",
+      "axis": "multi_step"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "This Sequel model needs a better query pattern",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "Analyze the N+1 queries in my controller index action",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
+    }
+  ]
+}

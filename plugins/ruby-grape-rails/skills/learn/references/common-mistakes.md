@@ -1,12 +1,13 @@
-# Common Mistakes - Reference
+# Common Mistakes — Reference
 
 > **READ-ONLY**: This file ships with the plugin. Do NOT edit it
 > at runtime — changes to cached plugin files are lost on update.
 > To capture new lessons, use `/rb:learn` which writes to
-> project CLAUDE.md or auto-memory.
+> project CLAUDE.md, auto-memory, or `.claude/solutions/`.
 
-Common Ruby/Rails/Grape mistakes and their fixes. Use as reference
-when checking if a lesson is already documented.
+Common Ruby/Rails/Grape mistakes and their fixes. `/rb:learn` checks
+this file during duplicate detection (Step 2). If the lesson is already
+here, skip it — tell the user and stop.
 
 Format:
 

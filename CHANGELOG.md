@@ -7,6 +7,37 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-04-03
+
+### Added
+
+- **`/rb:learn` upgraded to full learn-from-fix workflow** — Replaced 14-line
+  stub with 5-step workflow: identify root cause, check for duplicates across
+  4 knowledge stores (common-mistakes.md, project CLAUDE.md, .claude/solutions/,
+  auto-memory), decide destination based on scope, write lesson in standardized
+  format, suggest future detection. Supports three output destinations: project
+  CLAUDE.md for project-specific conventions, auto-memory for cross-project
+  lessons (with user consent), and .claude/solutions/ via /rb:compound for
+  complex fix stories. New `learn-workflow.md` reference with detailed guidance.
+- **Plugin settings.json** — Adds plugin-root `settings.json` with
+  `effort: medium` and `showTurnDuration: true`.
+- **Full 51/51 eval coverage** — Added 44 eval definitions covering all shipped
+  skills. Wave 1 covers 18 workflow and diagnostic skills with heavier evals.
+  Wave 2 covers 16 domain-reference skills with frontmatter and reference
+  checks. Wave 3 covers 10 small/stub skills with minimal evals. Achieves
+  Elixir-level eval parity (100% skill coverage).
+- **Full 51/51 trigger corpora** — Added 44 trigger files with should_trigger,
+  should_not_trigger, hard_should_trigger, and hard_should_not_trigger prompts
+  for routing quality regression detection.
+
+### Changed
+
+- **PostToolUse `security-reminder.sh` narrowed with declarative `if` filter** —
+  Now fires only on code and config files (*.rb,*.rake, *Gemfile, *Rakefile,
+  config/*,*.yml, *.env*, *.json) instead of all Edit|Write operations.
+  Editing markdown or documentation files no longer triggers the security
+  reminder. `secret-scan.sh` and `log-progress.sh` remain broad.
+
 ## [1.8.1] - 2026-04-03
 
 ### Changed
@@ -1035,7 +1066,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.8.1...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.9.0
 [1.8.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.8.1
 [1.8.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.8.0
 [1.7.4]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.7.4

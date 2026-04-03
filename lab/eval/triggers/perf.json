@@ -1,0 +1,51 @@
+{
+  "skill": "perf",
+  "should_trigger": [
+    {
+      "prompt": "Analyze the performance of this Rails action"
+    },
+    {
+      "prompt": "Find performance bottlenecks in the application"
+    },
+    {
+      "prompt": "Profile the slow endpoint and suggest optimizations"
+    },
+    {
+      "prompt": "Help me with perf patterns in my Ruby project"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Fix the N+1 query specifically"
+    },
+    {
+      "prompt": "Review code for correctness"
+    },
+    {
+      "prompt": "Plan a new feature"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "The page loads in 3 seconds \u2014 find out why it's so slow",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if perf needs updating",
+      "axis": "multi_step"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Check for N+1 queries in the users controller",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
+    }
+  ]
+}

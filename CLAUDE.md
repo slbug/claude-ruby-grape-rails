@@ -812,8 +812,8 @@ Notes:
 
 Current `lab/eval/` scope:
 
-- core skill evals for `plan`, `work`, `review`, `verify`, `permissions`, and
-  `research`
+- full 51/51 skill eval coverage (all shipped skills)
+- full 51/51 trigger corpora (all shipped skills)
 - structural scoring for all shipped agents
 - deterministic trigger corpora and confusable-pair analysis
 - deterministic research/review artifact and provenance checks
@@ -853,8 +853,8 @@ these are the main still-unadopted features worth tracking:
 ### Plugin
 
 - `${CLAUDE_PLUGIN_DATA}` for persistent plugin-managed state or caches
-- plugin-root `settings.json` expansion beyond the currently supported `agent`
-  behavior
+- plugin-root `settings.json` expansion beyond the currently shipped
+  `effort` and `showTurnDuration` defaults
 - `.lsp.json` LSP configuration, with Ruby LSP preferred if this is ever added
   Requires users to install LSP binary separately.
 

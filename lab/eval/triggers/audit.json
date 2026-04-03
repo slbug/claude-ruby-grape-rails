@@ -1,0 +1,51 @@
+{
+  "skill": "audit",
+  "should_trigger": [
+    {
+      "prompt": "Run a full project health audit on this Rails app"
+    },
+    {
+      "prompt": "Audit the codebase for quality and architecture issues"
+    },
+    {
+      "prompt": "Give me a comprehensive project health check"
+    },
+    {
+      "prompt": "Help me with audit patterns in my Ruby project"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Review the code I just changed"
+    },
+    {
+      "prompt": "Plan a new feature implementation"
+    },
+    {
+      "prompt": "Fix the failing test in the users spec"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "Before we start the big refactor, assess the overall codebase health",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if audit needs updating",
+      "axis": "multi_step"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Review the PR changes for correctness and style",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
+    }
+  ]
+}

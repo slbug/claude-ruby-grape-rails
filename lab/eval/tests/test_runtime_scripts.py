@@ -288,9 +288,33 @@ class RuntimeScriptTests(unittest.TestCase):
         }
         self.assertEqual(
             set(broad_commands),
-            {"security-reminder.sh", "log-progress.sh", "secret-scan.sh"},
+            {"log-progress.sh", "secret-scan.sh"},
         )
         self.assertTrue(broad_commands["log-progress.sh"].get("async", False))
+
+        # security-reminder.sh is narrowed to code/config files via
+        # separate Edit and Write groups with per-pattern if filters
+        security_expected = {
+            "*.rb", "*.rake", "*Gemfile", "*Rakefile",
+            "config/*", "*.yml", "*.env*", "*.json",
+        }
+        for matcher in ("Edit", "Write"):
+            security_group = next(
+                group for group in groups
+                if group.get("matcher") == matcher
+                and any(
+                    hook.get("command", "").endswith("/security-reminder.sh")
+                    for hook in group.get("hooks", [])
+                )
+            )
+            security_hooks = [
+                hook for hook in security_group.get("hooks", [])
+                if hook.get("command", "").endswith("/security-reminder.sh")
+            ]
+            self.assertEqual(
+                {hook.get("if") for hook in security_hooks},
+                {f"{matcher}({pattern})" for pattern in security_expected},
+            )
 
         rubyish_expected = {
             "*.rb",
@@ -300,10 +324,17 @@ class RuntimeScriptTests(unittest.TestCase):
             "*config.ru",
         }
         for matcher in ("Edit", "Write"):
-            group = next(group for group in groups if group.get("matcher") == matcher)
+            rubyish_group = next(
+                group for group in groups
+                if group.get("matcher") == matcher
+                and any(
+                    hook.get("command", "").endswith("/rubyish-post-edit.sh")
+                    for hook in group.get("hooks", [])
+                )
+            )
             rubyish_hooks = [
                 hook
-                for hook in group.get("hooks", [])
+                for hook in rubyish_group.get("hooks", [])
                 if hook.get("command", "").endswith("/rubyish-post-edit.sh")
             ]
             self.assertEqual(
@@ -311,13 +342,15 @@ class RuntimeScriptTests(unittest.TestCase):
                 {f"{matcher}({pattern})" for pattern in rubyish_expected},
             )
 
-        write_group = next(group for group in groups if group.get("matcher") == "Write")
-        plan_hook = next(
-            hook
-            for hook in write_group.get("hooks", [])
-            if hook.get("command", "").endswith("/plan-stop-reminder.sh")
-        )
-        self.assertEqual(plan_hook.get("if"), "Write(*plan.md)")
+        plan_hook_found = False
+        for group in groups:
+            if group.get("matcher") != "Write":
+                continue
+            for hook in group.get("hooks", []):
+                if hook.get("command", "").endswith("/plan-stop-reminder.sh"):
+                    self.assertEqual(hook.get("if"), "Write(*plan.md)")
+                    plan_hook_found = True
+        self.assertTrue(plan_hook_found, "plan-stop-reminder.sh not found")
 
         direct_commands = {
             hook.get("command", "")

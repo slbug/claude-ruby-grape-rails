@@ -1,0 +1,51 @@
+{
+  "skill": "learn",
+  "should_trigger": [
+    {
+      "prompt": "I just corrected a mistake \u2014 capture the lesson"
+    },
+    {
+      "prompt": "Learn from this bug fix so it doesn't happen again"
+    },
+    {
+      "prompt": "That was wrong \u2014 save this correction for next time"
+    },
+    {
+      "prompt": "Help me with learn patterns in my Ruby project"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Capture this complex fix as a solution document"
+    },
+    {
+      "prompt": "Fix the broken test"
+    },
+    {
+      "prompt": "Plan the new feature"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "You kept making the same mistake \u2014 let's make sure you remember the right pattern",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if learn needs updating",
+      "axis": "multi_step"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Document this debugging story for future reference with full context",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
+    }
+  ]
+}

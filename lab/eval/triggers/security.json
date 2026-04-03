@@ -1,0 +1,51 @@
+{
+  "skill": "security",
+  "should_trigger": [
+    {
+      "prompt": "Review this code for security vulnerabilities"
+    },
+    {
+      "prompt": "Check the authentication and authorization implementation"
+    },
+    {
+      "prompt": "Audit the security of the API endpoints"
+    },
+    {
+      "prompt": "Help me with security patterns in my Ruby project"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Scan for leaked API keys in the code"
+    },
+    {
+      "prompt": "Fix the failing test"
+    },
+    {
+      "prompt": "Plan a new feature"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "Is this endpoint vulnerable to SQL injection or XSS?",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if security needs updating",
+      "axis": "multi_step"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Check if any secrets were committed to the repo",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
+    }
+  ]
+}

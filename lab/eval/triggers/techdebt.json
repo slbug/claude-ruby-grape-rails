@@ -1,0 +1,51 @@
+{
+  "skill": "techdebt",
+  "should_trigger": [
+    {
+      "prompt": "Find and categorize the tech debt in this codebase"
+    },
+    {
+      "prompt": "What technical debt should we address first?"
+    },
+    {
+      "prompt": "Scan for code smells and debt indicators"
+    },
+    {
+      "prompt": "Help me with techdebt patterns in my Ruby project"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Review the code changes for bugs"
+    },
+    {
+      "prompt": "Plan a new feature"
+    },
+    {
+      "prompt": "Fix the performance issue"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "Before the sprint, inventory what cleanup work we've been deferring",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if techdebt needs updating",
+      "axis": "multi_step"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Do a project health audit covering all quality dimensions",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "skill": "ruby-contexts",
+  "should_trigger": [
+    {
+      "prompt": "Help me understand Ruby module and class design patterns"
+    },
+    {
+      "prompt": "What Ruby context patterns should I use for this library?"
+    },
+    {
+      "prompt": "Organize this Ruby code with proper module structure"
+    },
+    {
+      "prompt": "Help me with ruby contexts patterns in my Ruby project"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Fix the Rails controller"
+    },
+    {
+      "prompt": "Add Grape API endpoint"
+    },
+    {
+      "prompt": "Set up deployment"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "This is a pure Ruby gem, not Rails \u2014 help me structure the modules",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if ruby contexts needs updating",
+      "axis": "multi_step"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Extract Rails services from the fat controller",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
+    }
+  ]
+}
