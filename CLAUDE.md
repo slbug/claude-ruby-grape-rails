@@ -853,8 +853,8 @@ these are the main still-unadopted features worth tracking:
 ### Plugin
 
 - `${CLAUDE_PLUGIN_DATA}` for persistent plugin-managed state or caches
-- plugin-root `settings.json` expansion beyond the currently supported `agent`
-  behavior
+- plugin-root `settings.json` expansion beyond the currently shipped
+  `effort` and `showTurnDuration` defaults
 - `.lsp.json` LSP configuration, with Ruby LSP preferred if this is ever added
   Requires users to install LSP binary separately.
 
