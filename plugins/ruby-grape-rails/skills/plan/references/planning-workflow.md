@@ -16,8 +16,8 @@ Use `/rb:brainstorm` when:
 - User is unsure about scope or approach ("not sure how", "multiple ways")
 - Multiple valid architectural paths exist
 - Brainstorm produces `.claude/plans/{slug}/interview.md` with Status: COMPLETE
-- Plan consumes it: skips clarification, may skip patterns-analyst if
-  `codebase-scan.md` exists from brainstorm research
+- Plan consumes it: skips clarification, uses interview context to scope
+  agent research (current-code agents like `rails-patterns-analyst` still run)
 
 ### Inline Clarification (when brainstorm is not needed)
 

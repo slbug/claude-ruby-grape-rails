@@ -79,7 +79,7 @@ now. Ready to move to a plan, or is there a specific gap remaining?"
 When `/rb:plan` detects `.claude/plans/{slug}/interview.md` with research:
 
 1. **Skips clarification** — interview IS the clarification
-2. **May skip rails-patterns-analyst spawn** — `codebase-scan.md` already exists
-3. **May skip web-researcher** — external findings already exist
-4. **Uses approach selection** — if user chose an approach, plan focuses on it
-5. **Notes in scratchpad**: "Requirements from /rb:brainstorm interview"
+2. **Scopes agent research** — interview context narrows what agents look for
+   (current-code agents like `rails-patterns-analyst` still run)
+3. **Uses approach selection** — if user chose an approach, plan focuses on it
+4. **Notes in scratchpad**: "Requirements from /rb:brainstorm interview"
