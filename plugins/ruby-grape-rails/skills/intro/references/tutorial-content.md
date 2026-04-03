@@ -23,15 +23,19 @@ This plugin adds **specialist Ruby/Rails/Grape agents**, **auto-loaded knowledge
 
 ### The Core Concept
 
-Everything revolves around a 5-phase workflow cycle:
+Everything revolves around an optional discovery step and a 5-phase workflow cycle:
 
 ```text
-/rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
-   |             |            |              |              |
-   v             v            v              v              v
-  Research &   Execute     Full check     Parallel       Capture what
-   plan tasks   tasks       verify/test    code review    you learned
+/rb:brainstorm (optional) → /rb:plan → /rb:work → /rb:verify → /rb:review → /rb:compound
+                               |             |            |              |              |
+                               v             v            v              v              v
+                            Research &   Execute     Full check     Parallel       Capture what
+                             plan tasks   tasks       verify/test    code review    you learned
 ```
+
+Use `/rb:brainstorm` when requirements are vague or multiple approaches exist.
+It gathers requirements interactively and produces an `interview.md` that
+`/rb:plan` consumes. Skip it when requirements are already clear.
 
 Each phase reads from the previous phase's output. Plans become checkboxes. Checkboxes track progress. Reviews catch mistakes. Compound knowledge makes future work faster.
 
@@ -54,6 +58,9 @@ Each phase reads from the previous phase's output. Plans become checkboxes. Chec
 For features that need planning and review:
 
 ```bash
+# 0. Brainstorm (optional) — gather requirements when idea is vague
+/rb:brainstorm Add user avatars with S3 upload
+
 # 1. Plan — spawns research agents, outputs checkbox plan
 /rb:plan Add user avatars with S3 upload
 
@@ -87,9 +94,11 @@ Is it a bug?
   Yes --> /rb:investigate
   No  --> Is it < 100 lines?
             Yes --> /rb:quick
-            No  --> Do you want full autonomy?
-                      Yes --> /rb:full
-                      No  --> /rb:plan then /rb:work
+            No  --> Are requirements vague?
+                      Yes --> /rb:brainstorm then /rb:plan
+                      No  --> Do you want full autonomy?
+                                Yes --> /rb:full
+                                No  --> /rb:plan then /rb:work
 ```
 
 ### Deepening an Existing Plan
@@ -310,6 +319,7 @@ The plugin works best when all layers are active: `/rb:init` for persistent rule
 
 | Command | Phase |
 |---------|-------|
+| `/rb:brainstorm <topic>` | Gather requirements (optional, before plan) |
 | `/rb:plan <feature>` | Plan with research agents |
 | `/rb:plan --existing <file>` | Enhance existing plan |
 | `/rb:brief [plan file]` | Interactive plan walkthrough |
@@ -329,6 +339,10 @@ The plugin works best when all layers are active: `/rb:init` for persistent rule
 | `/rb:permissions` | Tune Claude Bash permissions from real session evidence |
 | `/rb:research <topic>` | Research with parallel workers, runtime tooling-first |
 | `/rb:pr-review <PR#>` | Address PR review comments |
+| `/rb:init` | Initialize plugin in a project |
+| `/rb:runtime` | Runtime tooling (Tidewave integration) |
+| `/rb:secrets` | Scan for leaked credentials |
+| `/rb:document` | Generate YARD/RDoc, README, ADRs |
 
 **Analysis:**
 
@@ -340,6 +354,8 @@ The plugin works best when all layers are active: `/rb:init` for persistent rule
 | `/rb:state-audit` | Hotwire/Turbo memory audit |
 | `/rb:boundaries` | Context boundary check |
 | `/rb:techdebt` | Technical debt analysis |
+| `/rb:constraint-debug` | ActiveRecord constraint violations |
+| `/rb:trace` | Build call trees to trace method flow |
 
 **Knowledge:**
 

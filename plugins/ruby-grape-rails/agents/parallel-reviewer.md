@@ -61,9 +61,9 @@ When parsing JSON, YAML, text, or command output during review:
 
 - Derive a filesystem-safe `review-slug` from the current branch name when it is meaningful; otherwise use a scope slug from the reviewed target.
 - Slugify by lowercasing, replacing `/` and whitespace with `-`, stripping characters outside `[a-z0-9._-]`, and collapsing repeated `-`.
-- Every spawned reviewer MUST write an artifact to `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`.
-- Reviewers MUST write an artifact even when the result is clean.
-- Do not allow reviewers to write artifacts under `.claude/plans/...`.
+- Every spawned reviewer MUST output findings for `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` (the caller writes the file).
+- Reviewers MUST produce an artifact even when the result is clean.
+- Review artifacts MUST NOT target `.claude/plans/...`.
 - Synthesize the final consolidated review to `.claude/reviews/{review-slug}.md`.
 - When `output-verifier` is used, write its result as
   `.claude/reviews/{review-slug}.provenance.md`.

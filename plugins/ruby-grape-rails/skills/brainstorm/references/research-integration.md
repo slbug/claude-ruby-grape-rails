@@ -7,7 +7,7 @@
 Spawn 2 agents in ONE Tool Use block with `run_in_background: true`:
 
 1. **`rails-patterns-analyst`**: "How does this codebase handle {topics}?"
-   - Writes findings to `.claude/plans/{slug}/research/codebase-scan.md`
+   - Output saved to `.claude/plans/{slug}/research/codebase-scan.md`
    - Focus: existing patterns, conventions, relevant modules
 
 2. **`web-researcher`**: "Ruby/Rails approaches to {topics}"
