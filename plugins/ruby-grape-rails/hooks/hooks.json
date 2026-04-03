@@ -6,12 +6,6 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Edit(*.rb)|Edit(*.rake)|Edit(*Gemfile)|Edit(*Rakefile)|Edit(config/*)|Edit(*.yml)|Edit(*.env*)|Edit(*.json)|Write(*.rb)|Write(*.rake)|Write(*Gemfile)|Write(*Rakefile)|Write(config/*)|Write(*.yml)|Write(*.env*)|Write(*.json)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh",
-            "timeout": 15
-          },
-          {
-            "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/log-progress.sh",
             "timeout": 15,
             "async": true
@@ -21,6 +15,32 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/secret-scan.sh",
             "timeout": 30
           }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          { "type": "command", "if": "Edit(*.rb)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Edit(*.rake)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Edit(*Gemfile)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Edit(*Rakefile)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Edit(config/*)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Edit(*.yml)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Edit(*.env*)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Edit(*.json)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          { "type": "command", "if": "Write(*.rb)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Write(*.rake)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Write(*Gemfile)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Write(*Rakefile)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Write(config/*)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Write(*.yml)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Write(*.env*)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
+          { "type": "command", "if": "Write(*.json)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 }
         ]
       },
       {

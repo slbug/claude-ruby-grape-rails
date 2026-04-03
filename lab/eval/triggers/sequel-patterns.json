@@ -11,7 +11,7 @@
       "prompt": "Migrate this ActiveRecord code to Sequel"
     },
     {
-      "prompt": "Help me with sequel patterns patterns in my Ruby project"
+      "prompt": "Help me with sequel patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

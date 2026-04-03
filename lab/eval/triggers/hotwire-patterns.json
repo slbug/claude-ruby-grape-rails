@@ -11,7 +11,7 @@
       "prompt": "Add Hotwire live updates to the dashboard"
     },
     {
-      "prompt": "Help me with hotwire patterns patterns in my Ruby project"
+      "prompt": "Help me with hotwire patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

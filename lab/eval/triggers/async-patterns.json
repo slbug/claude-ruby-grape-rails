@@ -11,7 +11,7 @@
       "prompt": "How should I handle async callbacks in my service objects?"
     },
     {
-      "prompt": "Help me with async patterns patterns in my Ruby project"
+      "prompt": "Help me with async patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
