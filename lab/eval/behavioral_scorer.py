@@ -103,7 +103,7 @@ def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
         return None
 
 
-def _extract_prompt(item) -> str:
+def extract_prompt(item) -> str:
     if isinstance(item, str):
         return item.strip()
     if isinstance(item, dict):
@@ -137,8 +137,8 @@ def score_skill(
     if not triggers:
         return {"skill": skill_name, "error": "no trigger file"}
 
-    should_trigger = [_extract_prompt(p) for p in triggers.get("should_trigger", [])]
-    should_not = [_extract_prompt(p) for p in triggers.get("should_not_trigger", [])]
+    should_trigger = [extract_prompt(p) for p in triggers.get("should_trigger", [])]
+    should_not = [extract_prompt(p) for p in triggers.get("should_not_trigger", [])]
 
     if limit > 0:
         should_trigger = should_trigger[:limit]

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from .schemas import EvalDefinition, EvalDimension, SubjectScore
@@ -221,12 +222,12 @@ def main() -> None:
 
     if args.save:
         RESULTS_PATH.write_text(output + "\n", encoding="utf-8")
-        print(f"\nResults saved to {RESULTS_PATH}", flush=True)
+        print(f"\nResults saved to {RESULTS_PATH}", file=sys.stderr, flush=True)
 
-    # Print summary
+    # Print summary to stderr so stdout stays valid JSON
     print(f"\nSummary: {len(results['signal'])} signal, "
           f"{len(results['guardrails'])} guardrails, "
-          f"{len(results['noise'])} noise")
+          f"{len(results['noise'])} noise", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -22,7 +22,7 @@ from ..trigger_scorer import (
     TRIGGERS_DIR,
     load_all_descriptions,
     load_trigger_file,
-    _extract_prompt,
+    extract_prompt,
     PROMPT_BUCKETS,
 )
 
@@ -50,7 +50,7 @@ def check_skill_name_leaks(
 
     for bucket in PROMPT_BUCKETS:
         for item in triggers.get(bucket, []):
-            prompt = _extract_prompt(item)
+            prompt = extract_prompt(item)
             if not prompt:
                 continue
 
@@ -106,7 +106,7 @@ def check_description_echo(
 
     for bucket in ("should_not_trigger", "hard_should_not_trigger"):
         for idx, item in enumerate(triggers.get(bucket, [])):
-            prompt = _extract_prompt(item)
+            prompt = extract_prompt(item)
             if not prompt:
                 continue
             prompt_tokens = _tokenize_for_overlap(prompt)
