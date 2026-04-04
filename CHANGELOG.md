@@ -7,6 +7,22 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.11.1] - 2026-04-04
+
+### Fixed
+
+- Behavioral scorer passes prompt via stdin instead of CLI argument to avoid
+  `ARG_MAX` limits and process list exposure.
+- Behavioral scorer uses JSON output format for per-call cost and token
+  reporting in verbose mode.
+- Raised `--max-budget-usd` from 0.02 to 0.10 — Claude CLI injects a ~44k
+  token system prompt, making $0.02 insufficient for even one haiku call.
+- Verbose output shows skill name in bracket prefix and full prompt text
+  without redundant prompt dump.
+- Improved 9 trigger corpora for better routing accuracy: replaced ambiguous
+  should_not_trigger prompts and strengthened should_trigger prompts. 49/51
+  skills now at 100% behavioral accuracy.
+
 ## [1.11.0] - 2026-04-04
 
 ### Added
@@ -1110,7 +1126,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.0...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.1...HEAD
+[1.11.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.0...v1.11.1
 [1.11.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.9.0

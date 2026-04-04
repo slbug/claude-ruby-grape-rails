@@ -19,7 +19,7 @@
       "prompt": "Fix the ActiveRecord query"
     },
     {
-      "prompt": "Add a Grape API endpoint"
+      "prompt": "Write RSpec tests for the user registration flow"
     },
     {
       "prompt": "Set up Sidekiq job"

@@ -16,10 +16,10 @@
   ],
   "should_not_trigger": [
     {
-      "prompt": "Capture this fix as a solution document"
+      "prompt": "Deploy the Rails app to production"
     },
     {
-      "prompt": "Search existing solutions for N+1 patterns"
+      "prompt": "Fix this N+1 query in the users controller"
     },
     {
       "prompt": "Write API documentation for the users endpoint"

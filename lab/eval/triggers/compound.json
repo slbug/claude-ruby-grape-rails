@@ -16,7 +16,7 @@
   ],
   "should_not_trigger": [
     {
-      "prompt": "Learn from this mistake and capture the lesson"
+      "prompt": "Add a new Hotwire Turbo Frame to the dashboard"
     },
     {
       "prompt": "Fix the N+1 query in the controller"

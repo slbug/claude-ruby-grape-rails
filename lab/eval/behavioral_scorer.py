@@ -54,33 +54,47 @@ List at most 3 skills, ordered by relevance."""
 
 def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
     """Ask haiku which skill(s) to route to. Returns skill names, or None on failure."""
-    if verbose:
-        print("\n--- PROMPT ---", file=sys.stderr)
-        print(prompt[:800] + ("..." if len(prompt) > 800 else ""), file=sys.stderr)
-        print("--- END PROMPT ---", file=sys.stderr)
     try:
         result = subprocess.run(
             [
-                "claude", "-p", prompt,
+                "claude", "-p", "-",
                 "--model", "haiku",
-                "--output-format", "text",
-                "--max-budget-usd", "0.02",
+                "--output-format", "json",
+                "--max-budget-usd", "0.10",
                 "--no-session-persistence",
             ],
+            input=prompt,
             capture_output=True, text=True, timeout=60,
         )
-        if verbose:
-            print(f"--- RESPONSE (rc={result.returncode}) ---", file=sys.stderr)
-            print(result.stdout.strip() or "(empty)", file=sys.stderr)
-            if result.stderr.strip():
-                print(f"STDERR: {result.stderr.strip()}", file=sys.stderr)
-            print("--- END RESPONSE ---", file=sys.stderr)
-
         if result.returncode != 0:
+            if verbose:
+                print(f"--- RESPONSE (rc={result.returncode}) ---", file=sys.stderr)
+                print(result.stdout.strip()[:200] or "(empty)", file=sys.stderr)
+                if result.stderr.strip():
+                    print(f"STDERR: {result.stderr.strip()[:200]}", file=sys.stderr)
+                print("--- END RESPONSE ---", file=sys.stderr)
             return None
 
+        # Parse JSON response
+        try:
+            data = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            if verbose:
+                print("ERROR: could not parse JSON response", file=sys.stderr)
+            return None
+
+        text = data.get("result", "")
+        if verbose:
+            cost = data.get("total_cost_usd", 0)
+            usage = data.get("usage", {})
+            in_tok = usage.get("input_tokens", 0) + usage.get("cache_creation_input_tokens", 0) + usage.get("cache_read_input_tokens", 0)
+            out_tok = usage.get("output_tokens", 0)
+            print(f"--- RESPONSE (${cost:.4f}, {in_tok}in/{out_tok}out) ---", file=sys.stderr)
+            print(text.strip() or "(empty)", file=sys.stderr)
+            print("--- END RESPONSE ---", file=sys.stderr)
+
         skills = []
-        for line in result.stdout.strip().split("\n"):
+        for line in text.strip().split("\n"):
             line = line.strip().lstrip("-*0123456789.) ").strip()
             if " — " in line:
                 line = line.split(" — ")[0].strip()
@@ -152,7 +166,7 @@ def score_skill(
         if not prompt:
             continue
         if verbose:
-            print(f"  [should_trigger {i}/{len(should_trigger)}] {prompt[:80]}", file=sys.stderr)
+            print(f"  [{skill_name} should_trigger {i}/{len(should_trigger)}] {prompt}", file=sys.stderr)
         full_prompt = build_routing_prompt(descriptions, prompt)
         chosen = run_haiku(full_prompt, verbose=verbose)
         if chosen is None:
@@ -175,7 +189,7 @@ def score_skill(
         if not prompt:
             continue
         if verbose:
-            print(f"  [should_not {i}/{len(should_not)}] {prompt[:80]}", file=sys.stderr)
+            print(f"  [{skill_name} should_not {i}/{len(should_not)}] {prompt}", file=sys.stderr)
         full_prompt = build_routing_prompt(descriptions, prompt)
         chosen = run_haiku(full_prompt, verbose=verbose)
         if chosen is None:

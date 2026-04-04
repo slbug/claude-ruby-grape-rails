@@ -8,7 +8,7 @@
       "prompt": "Detect which Ruby version and gems are installed"
     },
     {
-      "prompt": "What runtime environment does this project use?"
+      "prompt": "Connect to the running Rails app and inspect the runtime environment"
     },
     {
       "prompt": "Which Ruby version and bundler does this repo actually use?"

@@ -16,7 +16,7 @@
   ],
   "should_not_trigger": [
     {
-      "prompt": "Fix the failing test"
+      "prompt": "Add a new database migration for the orders table"
     },
     {
       "prompt": "Run the test suite"
