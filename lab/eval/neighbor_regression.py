@@ -52,24 +52,23 @@ def build_neighbor_map() -> dict[str, list[tuple[str, float]]]:
 
 
 def get_changed_skills() -> list[str]:
-    """Detect changed skills from git diff of SKILL.md files."""
-    try:
-        result = subprocess.run(
-            ["git", "diff", "--name-only", "HEAD"],
-            capture_output=True, text=True, timeout=10,
-        )
-        if result.returncode != 0:
-            return []
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        return []
+    """Detect changed skills from git diff of SKILL.md files (staged + unstaged)."""
+    skills: set[str] = set()
 
-    skills = set()
-    for line in result.stdout.strip().split("\n"):
-        line = line.strip()
-        if not line:
-            continue
-        # Match plugins/ruby-grape-rails/skills/*/SKILL.md
-        if "skills/" in line and line.endswith("SKILL.md"):
+    def _collect_from_diff(args: list[str]) -> None:
+        try:
+            result = subprocess.run(
+                ["git", "diff", "--name-only", *args],
+                capture_output=True, text=True, timeout=10,
+            )
+            if result.returncode != 0:
+                return
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return
+        for line in result.stdout.strip().split("\n"):
+            line = line.strip()
+            if not line or "skills/" not in line or not line.endswith("SKILL.md"):
+                continue
             parts = line.split("/")
             try:
                 idx = parts.index("skills")
@@ -78,27 +77,8 @@ def get_changed_skills() -> list[str]:
             except ValueError:
                 continue
 
-    # Also check unstaged changes
-    try:
-        result = subprocess.run(
-            ["git", "diff", "--name-only"],
-            capture_output=True, text=True, timeout=10,
-        )
-        if result.returncode == 0:
-            for line in result.stdout.strip().split("\n"):
-                line = line.strip()
-                if not line:
-                    continue
-                if "skills/" in line and line.endswith("SKILL.md"):
-                    parts = line.split("/")
-                    try:
-                        idx = parts.index("skills")
-                        if idx + 1 < len(parts):
-                            skills.add(parts[idx + 1])
-                    except ValueError:
-                        continue
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        pass
+    _collect_from_diff(["HEAD"])  # staged
+    _collect_from_diff([])        # unstaged
 
     return sorted(skills)
 

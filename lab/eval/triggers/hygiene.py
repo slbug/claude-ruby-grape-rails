@@ -45,7 +45,7 @@ def check_skill_name_leaks(
     skill_name: str,
     triggers: dict[str, Any],
 ) -> list[dict[str, str]]:
-    """Find prompts that contain /rb: prefixes or the target skill name literally."""
+    """Find prompts with /rb: prefixes, rb:name command refs, or multi-word skill names."""
     flags: list[dict[str, str]] = []
 
     for bucket in PROMPT_BUCKETS:
@@ -93,7 +93,7 @@ def check_skill_name_leaks(
 
 
 def check_description_echo(
-    _skill_name: str,
+    skill_name: str,  # noqa: ARG001 — kept for API symmetry
     description: str,
     triggers: dict[str, Any],
     threshold: float = 0.5,
