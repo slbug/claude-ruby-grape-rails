@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 
 from . import matchers
-from .schemas import AssertionResult, DimensionResult, EvalCheck, EvalDefinition, SubjectScore
+from .schemas import AssertionResult, DimensionResult, EvalCheck, EvalDefinition, EvalDimension, SubjectScore
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -131,17 +131,19 @@ def find_eval(skill_name: str) -> Path | None:
     return path if path.is_file() else None
 
 
-def score_all() -> dict[str, dict]:
+def score_all(behavioral: bool = False) -> dict[str, dict]:
     results: dict[str, dict] = {}
     for path in find_all_skills():
         skill_name = Path(path).parent.name
         eval_path = find_eval(skill_name)
         eval_def = EvalDefinition.from_file(eval_path) if eval_path else None
+        if behavioral:
+            eval_def = _inject_behavioral(eval_def or default_eval(path))
         results[skill_name] = score_skill(path, eval_def).to_dict()
     return results
 
 
-def score_core() -> dict[str, dict]:
+def score_core(behavioral: bool = False) -> dict[str, dict]:
     results: dict[str, dict] = {}
     for skill_name in CORE_SKILLS:
         skill_path = SKILLS_DIR / skill_name / "SKILL.md"
@@ -149,8 +151,97 @@ def score_core() -> dict[str, dict]:
             raise FileNotFoundError(f"Missing core skill file: {skill_path}")
         eval_path = find_eval(skill_name)
         eval_def = EvalDefinition.from_file(eval_path) if eval_path else None
+        if behavioral:
+            eval_def = _inject_behavioral(eval_def or default_eval(str(skill_path)))
         results[skill_name] = score_skill(str(skill_path), eval_def).to_dict()
     return results
+
+
+def _inject_behavioral(eval_def: EvalDefinition) -> EvalDefinition:
+    """Add the behavioral dimension to an eval definition (opt-in)."""
+    new_dims = dict(eval_def.dimensions)
+    new_dims["behavioral"] = EvalDimension(
+        name="behavioral",
+        weight=0.08,
+        checks=[
+            EvalCheck(check_type="behavioral_accuracy", description="Trigger accuracy >= 75%", params={}),
+            EvalCheck(check_type="behavioral_precision", description="Trigger precision >= 80%", params={}),
+            EvalCheck(check_type="behavioral_recall", description="Trigger recall >= 60%", params={}),
+        ],
+    )
+    return EvalDefinition(
+        subject=eval_def.subject,
+        subject_path=eval_def.subject_path,
+        dimensions=new_dims,
+    )
+
+
+def _get_behavioral_data(skill_path: str = "") -> dict:
+    """Load cached behavioral data for a skill. Returns dict with metrics or empty."""
+    from .dimensions.behavioral import RESULTS_DIR
+    skill_name = Path(skill_path).resolve().parent.name if skill_path else ""
+    cache_path = RESULTS_DIR / f"{skill_name}.json"
+    if not cache_path.is_file():
+        return {}
+    try:
+        data = json.loads(cache_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+    if "error" in data:
+        return {}
+    return data
+
+
+def _behavioral_accuracy(content: str, skill_path: str = "", **_) -> tuple[bool, str]:
+    data = _get_behavioral_data(skill_path)
+    if not data:
+        return True, "No behavioral cache (neutral)"
+    acc = data.get("accuracy", 0)
+    return acc >= 0.75, f"accuracy={acc:.0%} ({data.get('correct', 0)}/{data.get('total', 0)})"
+
+
+def _behavioral_precision(content: str, skill_path: str = "", **_) -> tuple[bool, str]:
+    data = _get_behavioral_data(skill_path)
+    if not data:
+        return True, "No behavioral cache (neutral)"
+    prec = data.get("precision", 0)
+    return prec >= 0.80, f"precision={prec:.0%} (tp={data.get('tp', 0)} fp={data.get('fp', 0)})"
+
+
+def _behavioral_recall(content: str, skill_path: str = "", **_) -> tuple[bool, str]:
+    data = _get_behavioral_data(skill_path)
+    if not data:
+        return True, "No behavioral cache (neutral)"
+    rec = data.get("recall", 0)
+    return rec >= 0.60, f"recall={rec:.0%} (tp={data.get('tp', 0)} fn={data.get('fn', 0)})"
+
+
+def _compare_scores() -> None:
+    """Print side-by-side base vs behavioral composite scores."""
+    base = score_all(behavioral=False)
+
+    matchers.MATCHERS["behavioral_accuracy"] = _behavioral_accuracy
+    matchers.MATCHERS["behavioral_precision"] = _behavioral_precision
+    matchers.MATCHERS["behavioral_recall"] = _behavioral_recall
+    behav = score_all(behavioral=True)
+
+    print(f"{'Skill':<35} {'Base':>7} {'+Behav':>7} {'Δ':>7}")
+    print("-" * 60)
+    changed = 0
+    for name in sorted(base.keys()):
+        s1 = base[name]["composite"]
+        s2 = behav[name]["composite"]
+        delta = s2 - s1
+        flag = " *" if abs(delta) > 0.001 else ""
+        if flag:
+            changed += 1
+        print(f"{name:<35} {s1:>7.4f} {s2:>7.4f} {delta:>+7.4f}{flag}")
+    total = len(base)
+    avg_base = sum(v["composite"] for v in base.values()) / total if total else 0
+    avg_behav = sum(v["composite"] for v in behav.values()) / total if total else 0
+    print("-" * 60)
+    print(f"{'Average':<35} {avg_base:>7.4f} {avg_behav:>7.4f} {avg_behav - avg_base:>+7.4f}")
+    print(f"\n{changed}/{total} skills changed")
 
 
 def main() -> None:
@@ -160,16 +251,27 @@ def main() -> None:
     parser.add_argument("--core", action="store_true", help="Score the core skill subset")
     parser.add_argument("--eval", help="Override eval definition JSON")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    parser.add_argument("--behavioral", action="store_true", help="Include behavioral routing dimension (requires cached results)")
+    parser.add_argument("--compare", action="store_true", help="Show base vs behavioral composite score diff table")
     parser.add_argument("--fail-under", type=float, help="Exit non-zero if composite score is below threshold")
     args = parser.parse_args()
 
+    if args.compare:
+        _compare_scores()
+        return
+
+    if args.behavioral:
+        matchers.MATCHERS["behavioral_accuracy"] = _behavioral_accuracy
+        matchers.MATCHERS["behavioral_precision"] = _behavioral_precision
+        matchers.MATCHERS["behavioral_recall"] = _behavioral_recall
+
     if args.all:
-        results = score_all()
+        results = score_all(behavioral=args.behavioral)
         print(json.dumps(results, indent=2 if args.pretty else None))
         return
 
     if args.core:
-        results = score_core()
+        results = score_core(behavioral=args.behavioral)
         print(json.dumps(results, indent=2 if args.pretty else None))
         return
 
@@ -183,6 +285,11 @@ def main() -> None:
         eval_path = find_eval(skill_name)
         if eval_path:
             eval_def = EvalDefinition.from_file(eval_path)
+
+    if eval_def and args.behavioral:
+        eval_def = _inject_behavioral(eval_def)
+    elif eval_def is None and args.behavioral:
+        eval_def = _inject_behavioral(default_eval(args.skill_path))
 
     result = score_skill(args.skill_path, eval_def)
     if args.fail_under is not None and result.composite < args.fail_under:
