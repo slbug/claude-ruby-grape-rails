@@ -126,4 +126,4 @@ For each BREAKING or DEPRECATION item, always:
 1. `grep -r "PATTERN" plugins/ruby-grape-rails/` — find all usages
 2. Check `hooks/hooks.json` — any hook referencing the feature
 3. Check CLAUDE.md — any instructions referencing this
-4. Check `2.0.0.md` — any deferred items affected
+4. Check the current planning/deferred-items file — any deferred items affected

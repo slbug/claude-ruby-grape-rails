@@ -64,7 +64,7 @@ def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
                 "claude", "-p", prompt,
                 "--model", "haiku",
                 "--output-format", "text",
-                "--max-budget-usd", "0.50",
+                "--max-budget-usd", "0.02",
                 "--no-session-persistence",
             ],
             capture_output=True, text=True, timeout=60,

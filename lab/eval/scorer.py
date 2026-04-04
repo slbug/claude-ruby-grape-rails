@@ -181,8 +181,6 @@ def _behavioral_check(content: str, skill_path: str = "", plugin_root: str = "",
     from .dimensions.behavioral import score as behavioral_score
 
     result = behavioral_score(content, skill_path=skill_path, plugin_root=plugin_root)
-    if not result.assertions:
-        return True, "No behavioral data (neutral)"
     all_passed = all(a.passed for a in result.assertions)
     evidence = "; ".join(a.evidence for a in result.assertions)
     return all_passed, evidence

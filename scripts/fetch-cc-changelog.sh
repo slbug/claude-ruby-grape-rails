@@ -62,7 +62,7 @@ if [[ -f "$STATE_FILE" ]] && [[ "$FETCH_ALL" == "false" ]]; then
   last_checked="$(head -1 "$STATE_FILE" | tr -d '[:space:]')"
 fi
 
-# Fetch releases (paginated, newest first)
+# Fetch releases (single page, newest first; PER_PAGE=100 covers current release count)
 tmp_file="$(mktemp "${TMPDIR:-/tmp}/cc-releases.XXXXXX")" || {
   echo "ERROR: could not create temporary file" >&2
   exit 1
