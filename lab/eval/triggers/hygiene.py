@@ -213,7 +213,9 @@ def main() -> None:
     if args.skill:
         result = score_skill(args.skill, descriptions)
         if args.summary:
-            if result.get("flags"):
+            if result.get("error"):
+                print(f"  {args.skill}: ERROR ({result['error']})")
+            elif result.get("flags"):
                 flag_summary = ", ".join(
                     f'{f["type"]}' for f in result["flags"][:3]
                 )
@@ -227,23 +229,30 @@ def main() -> None:
     if args.all:
         clean = []
         flagged = []
+        errors = []
 
         for path in sorted(TRIGGERS_DIR.glob("*.json")):
             if path.name.startswith("_"):
                 continue
             name = path.stem
             result = score_skill(name, descriptions)
-            if result.get("flags"):
+            if result.get("error"):
+                errors.append(result)
+            elif result.get("flags"):
                 flagged.append(result)
             else:
                 clean.append(name)
 
-        total = len(clean) + len(flagged)
+        total = len(clean) + len(flagged) + len(errors)
 
         if args.summary:
             print(f"Hygiene scan: {total} skills")
             print(f"  Clean: {len(clean)} skills")
             print(f"  Flagged: {len(flagged)} skills")
+            if errors:
+                print(f"  Errors: {len(errors)} skills")
+                for result in errors:
+                    print(f"    {result['skill']}: {result['error']}")
             for result in flagged:
                 # Group flags by type for concise display
                 type_counts: dict[str, list[str]] = {}
