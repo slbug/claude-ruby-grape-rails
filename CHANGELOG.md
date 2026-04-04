@@ -26,8 +26,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   with `--behavioral` flag on scorer. New commands: `make eval-behavioral` /
   `npm run eval:behavioral` (cache-first), `eval-behavioral-verbose` (with
   prompt/response debug), `eval-behavioral-fresh` (force re-run), and
-  `eval-behavioral-fresh-verbose`. Weight: 8% of composite when enabled.
-  Returns neutral 1.0 for skills without cached results.
+  `eval-behavioral-fresh-verbose`. Uses a configured weight of `0.08` when
+  enabled. Returns neutral 1.0 for skills without cached results.
 
 ## [1.9.0] - 2026-04-03
 

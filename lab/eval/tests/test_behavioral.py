@@ -8,12 +8,6 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-# Ensure project root is importable
-import sys
-PROJECT_ROOT = str(Path(__file__).resolve().parents[3])
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-
 from lab.eval.behavioral_scorer import (
     build_routing_prompt,
     content_hash,

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fetch Claude Code releases from GitHub API and extract new versions.
-# Policy: advisory — warns and exits cleanly on network/API failures.
+# Policy: informational — exits non-zero on missing deps, network/API/parse failures.
 #
 # Usage:
 #   ./scripts/fetch-cc-changelog.sh           # New versions since last check

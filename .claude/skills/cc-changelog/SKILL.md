@@ -4,7 +4,7 @@ description: |
   CONTRIBUTOR TOOL - Track CC changelog, extract new versions since last check,
   analyze impact on plugin (breaking changes, opportunities, deprecations).
   Run periodically or before releases. NOT part of the distributed plugin.
-argument-hint: "[--full|--set=VERSION]"
+argument-hint: "[--all|--set=VERSION]"
 effort: low
 ---
 
@@ -18,7 +18,7 @@ components (agents, skills, hooks, config).
 
 ```text
 /cc-changelog                  # Check for new CC versions, analyze impact
-/cc-changelog --full           # Re-analyze all versions (ignore last check)
+/cc-changelog --all            # Re-analyze all versions (ignore last check)
 /cc-changelog --set=2.1.85     # Reset last checked version (then re-run)
 ```
 
