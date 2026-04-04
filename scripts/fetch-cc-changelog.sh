@@ -26,7 +26,9 @@ STATE_DIR="${REPO_ROOT}/.claude/cc-changelog"
 STATE_FILE="${STATE_DIR}/last-checked-version.txt"
 RELEASES_URL="https://api.github.com/repos/anthropics/claude-code/releases"
 CURL_TIMEOUT=15
-PER_PAGE=30
+# GitHub returns at most 100 per page; CC has ~75 releases as of 2026-04.
+# If this exceeds 100, add Link-header pagination.
+PER_PAGE=100
 FETCH_ALL=false
 
 for arg in "$@"; do

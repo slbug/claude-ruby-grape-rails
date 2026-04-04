@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Behavioral trigger evaluation using haiku.
 
 Tests whether Claude routes user prompts to the correct skill
@@ -53,8 +52,8 @@ If no skill should be loaded, reply with "none".
 List at most 3 skills, ordered by relevance."""
 
 
-def run_haiku(prompt: str, verbose: bool = False) -> list[str]:
-    """Ask haiku which skill(s) to route to. Returns parsed skill names."""
+def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
+    """Ask haiku which skill(s) to route to. Returns skill names, or None on failure."""
     if verbose:
         print("\n--- PROMPT ---", file=sys.stderr)
         print(prompt[:800] + ("..." if len(prompt) > 800 else ""), file=sys.stderr)
@@ -78,7 +77,7 @@ def run_haiku(prompt: str, verbose: bool = False) -> list[str]:
             print("--- END RESPONSE ---", file=sys.stderr)
 
         if result.returncode != 0:
-            return []
+            return None
 
         skills = []
         for line in result.stdout.strip().split("\n"):
@@ -97,11 +96,11 @@ def run_haiku(prompt: str, verbose: bool = False) -> list[str]:
     except subprocess.TimeoutExpired:
         if verbose:
             print("TIMEOUT after 60s", file=sys.stderr)
-        return []
+        return None
     except Exception as exc:
         if verbose:
             print(f"ERROR: {exc}", file=sys.stderr)
-        return []
+        return None
 
 
 def _extract_prompt(item) -> str:
@@ -141,6 +140,8 @@ def score_skill(
 
     results = []
 
+    failures = 0
+
     for i, prompt in enumerate(should_trigger, 1):
         if not prompt:
             continue
@@ -148,6 +149,11 @@ def score_skill(
             print(f"  [should_trigger {i}/{len(should_trigger)}] {prompt[:80]}", file=sys.stderr)
         full_prompt = build_routing_prompt(descriptions, prompt)
         chosen = run_haiku(full_prompt, verbose=verbose)
+        if chosen is None:
+            failures += 1
+            if verbose:
+                print("  -> SKIPPED (haiku call failed)", file=sys.stderr)
+            continue
         correct = skill_name in chosen
         if verbose:
             status = "OK" if correct else "MISS"
@@ -166,6 +172,11 @@ def score_skill(
             print(f"  [should_not {i}/{len(should_not)}] {prompt[:80]}", file=sys.stderr)
         full_prompt = build_routing_prompt(descriptions, prompt)
         chosen = run_haiku(full_prompt, verbose=verbose)
+        if chosen is None:
+            failures += 1
+            if verbose:
+                print("  -> SKIPPED (haiku call failed)", file=sys.stderr)
+            continue
         correct = skill_name not in chosen
         if verbose:
             status = "OK" if correct else "FALSE_POS"
@@ -176,6 +187,9 @@ def score_skill(
             "chosen": chosen,
             "correct": correct,
         })
+
+    if not results and failures > 0:
+        return {"skill": skill_name, "error": f"all {failures} haiku calls failed"}
 
     total = len(results)
     correct_count = sum(1 for r in results if r["correct"])
@@ -196,6 +210,7 @@ def score_skill(
         "total": total,
         "correct": correct_count,
         "tp": tp, "fp": fp, "fn": fn,
+        "failures": failures,
         "content_hash": content_hash(skill_name, descriptions),
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "results": results,

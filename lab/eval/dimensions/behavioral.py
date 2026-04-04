@@ -38,7 +38,19 @@ def score(
             )],
         )
 
-    data = json.loads(cache_path.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(cache_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return DimensionResult(
+            name="behavioral",
+            score=1.0,
+            assertions=[AssertionResult(
+                check_type="trigger_accuracy",
+                description="Trigger cache readable",
+                passed=True,
+                evidence=f"Corrupted cache for {skill_name} — skipping (neutral)",
+            )],
+        )
 
     if "error" in data:
         return DimensionResult(

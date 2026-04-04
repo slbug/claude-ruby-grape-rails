@@ -34,7 +34,7 @@ stop.
 If `STATUS: NEW_VERSIONS` — continue with the changelog content below the
 header.
 
-For `--full`: run `bash scripts/fetch-cc-changelog.sh --all`
+For `--all`: run `bash scripts/fetch-cc-changelog.sh --all`
 For `--set=X`: run `bash scripts/fetch-cc-changelog.sh --set=X`, then re-run
 without flag.
 
