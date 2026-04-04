@@ -14,7 +14,8 @@
   ],
   "hard_should_trigger": [
     { "prompt": "Change this one line in the config — super simple", "axis": "confusable" },
-    { "prompt": "Fix the misspelling in this error message, nothing else", "axis": "confusable" }
+    { "prompt": "Fix the misspelling in this error message, nothing else", "axis": "confusable" },
+    { "prompt": "one line fix", "axis": "terse" }
   ],
   "hard_should_not_trigger": [
     { "prompt": "Fix this tricky bug that spans multiple files", "axis": "confusable" },

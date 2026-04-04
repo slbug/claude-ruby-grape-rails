@@ -9,6 +9,9 @@
     },
     {
       "prompt": "That was wrong — save this correction for next time"
+    },
+    {
+      "prompt": "Don't make that same mistake next time — remember this correction"
     }
   ],
   "should_not_trigger": [

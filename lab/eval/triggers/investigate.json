@@ -9,6 +9,9 @@
     },
     {
       "prompt": "This error keeps happening — investigate the cause"
+    },
+    {
+      "prompt": "Something is wrong with checkout but I can't tell where it breaks"
     }
   ],
   "should_not_trigger": [

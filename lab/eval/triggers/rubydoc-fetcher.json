@@ -9,6 +9,9 @@
     },
     {
       "prompt": "What does this Ruby stdlib method do?"
+    },
+    {
+      "prompt": "What arguments does Hash#transform_keys accept?"
     }
   ],
   "should_not_trigger": [

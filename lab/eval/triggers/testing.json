@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Best practices for test organization in Rails"
+    },
+    {
+      "prompt": "How should I structure shared contexts and let blocks in RSpec?"
     }
   ],
   "should_not_trigger": [

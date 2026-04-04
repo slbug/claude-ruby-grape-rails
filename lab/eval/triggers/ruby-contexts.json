@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Organize this Ruby code with proper module structure"
+    },
+    {
+      "prompt": "How should I organize namespaces in this plain Ruby library?"
     }
   ],
   "should_not_trigger": [

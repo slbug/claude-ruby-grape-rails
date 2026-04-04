@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Configure the Turbo Native adapter for mobile"
+    },
+    {
+      "prompt": "The mobile app needs path configuration for native screens"
     }
   ],
   "should_not_trigger": [

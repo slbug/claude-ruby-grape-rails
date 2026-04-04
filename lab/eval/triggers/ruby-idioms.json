@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Help me follow Ruby conventions and best practices"
+    },
+    {
+      "prompt": "Rewrite this loop using blocks and enumerables"
     }
   ],
   "should_not_trigger": [

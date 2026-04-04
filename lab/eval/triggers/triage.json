@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Prioritize the findings from the code review"
+    },
+    {
+      "prompt": "Sort these review findings by severity so I know what to fix first"
     }
   ],
   "should_not_trigger": [

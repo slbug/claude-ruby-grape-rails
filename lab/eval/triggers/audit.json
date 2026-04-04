@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Give me a comprehensive project health check"
+    },
+    {
+      "prompt": "How healthy is this codebase before we onboard new developers?"
     }
   ],
   "should_not_trigger": [

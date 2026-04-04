@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Profile the slow endpoint and suggest optimizations"
+    },
+    {
+      "prompt": "This request takes 5 seconds — where is the time going?"
     }
   ],
   "should_not_trigger": [

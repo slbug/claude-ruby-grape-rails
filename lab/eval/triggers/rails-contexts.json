@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Help me structure the Rails business logic layer"
+    },
+    {
+      "prompt": "Where should I put business logic that spans multiple models?"
     }
   ],
   "should_not_trigger": [

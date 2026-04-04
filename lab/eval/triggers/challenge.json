@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Play devil's advocate on my architecture decisions"
+    },
+    {
+      "prompt": "Poke holes in my approach — what am I missing?"
     }
   ],
   "should_not_trigger": [

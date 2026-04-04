@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Migrate this ActiveRecord code to Sequel"
+    },
+    {
+      "prompt": "How do I define associations in a Sequel model?"
     }
   ],
   "should_not_trigger": [

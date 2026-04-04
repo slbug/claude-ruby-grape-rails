@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Configure the plugin for first use"
+    },
+    {
+      "prompt": "This is a fresh Rails project — get the plugin ready to use"
     }
   ],
   "should_not_trigger": [

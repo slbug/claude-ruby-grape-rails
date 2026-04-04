@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Show me the non-negotiable rules"
+    },
+    {
+      "prompt": "List every mandatory rule I must follow in this project"
     }
   ],
   "should_not_trigger": [

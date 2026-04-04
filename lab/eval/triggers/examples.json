@@ -9,6 +9,9 @@
     },
     {
       "prompt": "I need code examples for Grape API versioning"
+    },
+    {
+      "prompt": "Can I see a reference implementation for this pattern?"
     }
   ],
   "should_not_trigger": [

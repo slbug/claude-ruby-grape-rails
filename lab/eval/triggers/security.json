@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Audit the security of the API endpoints"
+    },
+    {
+      "prompt": "Check this endpoint for CSRF and mass assignment vulnerabilities"
     }
   ],
   "should_not_trigger": [

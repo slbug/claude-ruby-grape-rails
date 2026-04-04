@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Map how data flows through this endpoint"
+    },
+    {
+      "prompt": "Show me every method that gets called when this endpoint runs"
     }
   ],
   "should_not_trigger": [

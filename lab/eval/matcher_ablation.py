@@ -12,7 +12,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .schemas import EvalDefinition, EvalDimension
+from .schemas import EvalDefinition, EvalDimension, SubjectScore
 from .scorer import default_eval, find_all_skills, find_eval, score_skill
 
 
@@ -26,7 +26,9 @@ def build_ablated_eval(
 ) -> EvalDefinition | None:
     """Return a new EvalDefinition with one check removed.
 
-    Returns None if removing the check would leave the dimension empty.
+    If removing the check empties the dimension, that dimension is dropped.
+    Returns None only if the dimension/check is invalid or if no dimensions
+    would remain.
     """
     dimension = eval_def.dimensions.get(dim_name)
     if dimension is None or check_idx >= len(dimension.checks):
@@ -80,12 +82,11 @@ def enumerate_checks(eval_defs: dict[str, EvalDefinition]) -> list[tuple[str, st
 def _score_all_skills(
     skill_paths: list[str],
     eval_defs: dict[str, EvalDefinition],
-) -> dict[str, float]:
-    """Score all skills and return composite scores keyed by skill path."""
-    scores: dict[str, float] = {}
+) -> dict[str, SubjectScore]:
+    """Score all skills and return SubjectScore objects keyed by skill path."""
+    scores: dict[str, SubjectScore] = {}
     for path in skill_paths:
-        result = score_skill(path, eval_defs[path])
-        scores[path] = result.composite
+        scores[path] = score_skill(path, eval_defs[path])
     return scores
 
 
@@ -139,8 +140,8 @@ def run_ablation(
 
             total_applicable += 1
 
-            # Check if this check passes in baseline
-            baseline_result = score_skill(path, eval_def)
+            # Check if this check passes in baseline (use cached result)
+            baseline_result = baseline_scores[path]
             dim_result = baseline_result.dimensions.get(dim_name)
             if dim_result:
                 for assertion in dim_result.assertions:
@@ -157,7 +158,7 @@ def run_ablation(
                 continue
 
             ablated_result = score_skill(path, ablated)
-            delta = ablated_result.composite - baseline_scores[path]
+            delta = ablated_result.composite - baseline_result.composite
             deltas.append(delta)
             if abs(delta) > 0.001:
                 skills_affected += 1

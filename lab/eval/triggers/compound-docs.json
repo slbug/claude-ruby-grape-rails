@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Show me the solution document structure"
+    },
+    {
+      "prompt": "What categories and tags are valid for solution files?"
     }
   ],
   "should_not_trigger": [

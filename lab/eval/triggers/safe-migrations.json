@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Review the database migration for safety issues"
+    },
+    {
+      "prompt": "Will this rename_column lock the table during deploy?"
     }
   ],
   "should_not_trigger": [

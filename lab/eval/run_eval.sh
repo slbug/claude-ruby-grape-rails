@@ -715,7 +715,7 @@ case "$MODE" in
   run_all_triggers || FAILURES=$((FAILURES + 1))
   ;;
 --ci)
-  echo "--- CI Scoring Gate: lint + injection check + core skills + all agents + triggers ---"
+  echo "--- CI Scoring Gate: lint + injection + skills + agents + triggers + ablation + hygiene ---"
   echo "NOTE: runtime tests run separately via npm run eval:test or npm run ci."
   echo
   echo "--- Lint ---"
@@ -732,6 +732,12 @@ case "$MODE" in
   echo
   echo "--- Triggers ---"
   run_all_triggers || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Ablation ---"
+  python3 -m lab.eval.matcher_ablation --all >/dev/null && echo "  Ablation analysis complete." || FAILURES=$((FAILURES + 1))
+  echo
+  echo "--- Hygiene ---"
+  python3 -m lab.eval.triggers.hygiene --all --summary || FAILURES=$((FAILURES + 1))
   echo
   echo "--- Non-core Skill Advisory ---"
   run_noncore_skill_advisory "$FAIL_UNDER"

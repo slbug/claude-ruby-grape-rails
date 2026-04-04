@@ -9,6 +9,9 @@
     },
     {
       "prompt": "ActiveRecord constraint error on save — how to diagnose?"
+    },
+    {
+      "prompt": "I get a NOT NULL violation but the value is definitely set"
     }
   ],
   "should_not_trigger": [

@@ -9,6 +9,9 @@
     },
     {
       "prompt": "What runtime environment does this project use?"
+    },
+    {
+      "prompt": "Which Ruby version and bundler does this repo actually use?"
     }
   ],
   "should_not_trigger": [

@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Help me follow Rails conventions for this feature"
+    },
+    {
+      "prompt": "Refactor this to use proper Rails conventions"
     }
   ],
   "should_not_trigger": [

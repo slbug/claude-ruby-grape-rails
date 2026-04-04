@@ -9,6 +9,9 @@
     },
     {
       "prompt": "What's the best deploy strategy for this Rails app?"
+    },
+    {
+      "prompt": "Configure the fly.toml and Dockerfile for this Rails app"
     }
   ],
   "should_not_trigger": [

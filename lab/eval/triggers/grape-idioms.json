@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Best patterns for Grape endpoint design in Rails"
+    },
+    {
+      "prompt": "How do I structure error handling across Grape endpoints?"
     }
   ],
   "should_not_trigger": [

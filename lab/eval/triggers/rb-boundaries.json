@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Map the dependency graph between modules"
+    },
+    {
+      "prompt": "Which modules are too tightly coupled in this app?"
     }
   ],
   "should_not_trigger": [

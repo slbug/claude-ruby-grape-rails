@@ -14,7 +14,8 @@
   ],
   "hard_should_trigger": [
     { "prompt": "I want to do something but I'm not sure which command to use", "axis": "confusable" },
-    { "prompt": "My first message: I have a complex task involving auth changes, what workflow fits?", "axis": "confusable" }
+    { "prompt": "My first message: I have a complex task involving auth changes, what workflow fits?", "axis": "confusable" },
+    { "prompt": "which command?", "axis": "terse" }
   ],
   "hard_should_not_trigger": [
     { "prompt": "Show me all available plugin commands and features", "axis": "confusable" },

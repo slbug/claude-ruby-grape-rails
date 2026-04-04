@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Run an N+1 detection pass on the changed files"
+    },
+    {
+      "prompt": "The index page fires hundreds of queries for 20 records"
     }
   ],
   "should_not_trigger": [

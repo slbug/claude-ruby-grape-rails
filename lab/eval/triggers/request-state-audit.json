@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Analyze the authentication state through middleware"
+    },
+    {
+      "prompt": "Where is current_user set and how does it survive the middleware stack?"
     }
   ],
   "should_not_trigger": [

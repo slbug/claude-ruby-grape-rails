@@ -9,6 +9,9 @@
     },
     {
       "prompt": "How should I handle async callbacks in my service objects?"
+    },
+    {
+      "prompt": "I need to chain multiple background steps that depend on each other"
     }
   ],
   "should_not_trigger": [

@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Save this debugging session as a solution for future reference"
+    },
+    {
+      "prompt": "We figured out the root cause — let's write it up so we don't forget"
     }
   ],
   "should_not_trigger": [

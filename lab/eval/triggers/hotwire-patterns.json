@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Add Hotwire live updates to the dashboard"
+    },
+    {
+      "prompt": "I want to broadcast model changes to the page in real time"
     }
   ],
   "should_not_trigger": [

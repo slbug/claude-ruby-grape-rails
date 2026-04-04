@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Show me what this plugin can do"
+    },
+    {
+      "prompt": "What commands and features are available in this plugin?"
     }
   ],
   "should_not_trigger": [

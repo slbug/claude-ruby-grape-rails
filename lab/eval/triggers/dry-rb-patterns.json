@@ -9,6 +9,9 @@
     },
     {
       "prompt": "What's the dry-rb pattern for service objects?"
+    },
+    {
+      "prompt": "Show me how to use dry-monads for railway-oriented flow"
     }
   ],
   "should_not_trigger": [

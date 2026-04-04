@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Explain this plan interactively — I have questions"
+    },
+    {
+      "prompt": "Can you give me a summary of what this plan involves?"
     }
   ],
   "should_not_trigger": [

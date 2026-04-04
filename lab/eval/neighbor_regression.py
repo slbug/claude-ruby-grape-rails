@@ -184,6 +184,7 @@ def run_regression_check(
         return True
 
     regressions = []
+    compared = 0
     for name, _overlap in test_set:
         baseline = load_baseline(name)
 
@@ -206,6 +207,7 @@ def run_regression_check(
             print(f"  {name}: error ({current['error']})")
             continue
 
+        compared += 1
         comparison = compare_results(name, baseline, current)
         status = "REGRESSION" if comparison["regression"] else "ok"
         print(
@@ -218,12 +220,15 @@ def run_regression_check(
         if comparison["regression"]:
             regressions.append(comparison)
 
+    if compared == 0:
+        print("  Result: SKIP (no baselines to compare against)")
+        return True
     if regressions:
         names = ", ".join(r["skill"] for r in regressions)
         print(f"  Result: FAIL (regressions in: {names})")
         return False
     else:
-        print("  Result: PASS (no regressions)")
+        print(f"  Result: PASS ({compared} skills compared, no regressions)")
         return True
 
 

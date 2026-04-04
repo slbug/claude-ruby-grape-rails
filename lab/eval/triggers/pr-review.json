@@ -9,6 +9,9 @@
     },
     {
       "prompt": "Fetch and address the PR review feedback"
+    },
+    {
+      "prompt": "Someone left feedback on my pull request, help me work through it"
     }
   ],
   "should_not_trigger": [
