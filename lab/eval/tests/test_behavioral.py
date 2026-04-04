@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from lab.eval.behavioral_scorer import (
+    _ROUTING_SYSTEM_PROMPT,
     build_routing_prompt,
     content_hash,
     score_skill,
@@ -71,10 +72,9 @@ class TestRoutingPrompt(unittest.TestCase):
         self.assertIn(user_input, prompt)
 
     def test_response_format_instructions(self):
-        """Prompt asks for skill names only."""
-        prompt = build_routing_prompt(SAMPLE_DESCRIPTIONS, "test")
-        self.assertIn("ONLY", prompt)
-        self.assertIn("skill name", prompt.lower())
+        """System prompt asks for skill names only."""
+        self.assertIn("ONLY", _ROUTING_SYSTEM_PROMPT)
+        self.assertIn("skill name", _ROUTING_SYSTEM_PROMPT.lower())
 
 
 class TestBehavioralDimension(unittest.TestCase):
