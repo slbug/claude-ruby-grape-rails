@@ -16,7 +16,7 @@
   ],
   "should_not_trigger": [
     {
-      "prompt": "Write a complex ActiveRecord join query"
+      "prompt": "Set up a new Sidekiq background job for sending emails"
     },
     {
       "prompt": "Add a database migration for the orders table"

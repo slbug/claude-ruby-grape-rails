@@ -2,7 +2,7 @@
   "skill": "rails-idioms",
   "should_trigger": [
     {
-      "prompt": "What's the Rails way to do this?"
+      "prompt": "What's the idiomatic Rails way to handle this controller logic?"
     },
     {
       "prompt": "Is this idiomatic Rails code?"

@@ -19,7 +19,7 @@
       "prompt": "Set up Sidekiq job for background processing"
     },
     {
-      "prompt": "Fix this Grape API serializer"
+      "prompt": "Configure the Docker deployment for production"
     },
     {
       "prompt": "Review the deployment configuration"
