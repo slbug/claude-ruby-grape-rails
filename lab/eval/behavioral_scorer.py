@@ -6,7 +6,7 @@ by sending all skill descriptions + one test prompt to haiku.
 Usage:
     python3 -m lab.eval.behavioral_scorer --skill plan       # Test one skill
     python3 -m lab.eval.behavioral_scorer --all               # Test all skills with triggers
-    python3 -m lab.eval.behavioral_scorer --all --cache       # Use cached results (no API calls)
+    python3 -m lab.eval.behavioral_scorer --all --cache       # Cache-only, skip stale/missing (no API calls)
     python3 -m lab.eval.behavioral_scorer --all --summary     # Summary only
 
 Cost: ~$0.001 per test prompt, ~$0.05 for all 51 skills × 8 prompts.
@@ -121,11 +121,14 @@ def score_skill(
     """Score trigger accuracy for one skill. Returns precision/recall/accuracy."""
     cache_path = RESULTS_DIR / f"{skill_name}.json"
 
-    if use_cache and cache_path.is_file():
-        cached = json.loads(cache_path.read_text(encoding="utf-8"))
-        expected_hash = content_hash(skill_name, descriptions)
-        if cached.get("content_hash") == expected_hash:
-            return cached
+    if use_cache:
+        if cache_path.is_file():
+            cached = json.loads(cache_path.read_text(encoding="utf-8"))
+            expected_hash = content_hash(skill_name, descriptions)
+            if cached.get("content_hash") == expected_hash:
+                return cached
+        # --cache is cache-only: skip skills without valid cache
+        return {"skill": skill_name, "error": "no valid cache (stale or missing)"}
 
     triggers = load_trigger_file(skill_name)
     if not triggers:
@@ -226,7 +229,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Test skill trigger accuracy with haiku")
     parser.add_argument("--skill", help="Test one skill")
     parser.add_argument("--all", action="store_true", help="Test all skills with trigger files")
-    parser.add_argument("--cache", action="store_true", help="Use cached results (skip API calls)")
+    parser.add_argument("--cache", action="store_true", help="Cache-only: use cached results, skip stale/missing (no API calls)")
     parser.add_argument("--summary", action="store_true", help="Print summary only")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON")
     parser.add_argument("--verbose", action="store_true", help="Show prompt/response for each API call")
