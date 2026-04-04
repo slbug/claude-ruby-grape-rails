@@ -9,7 +9,8 @@ Usage:
     python3 -m lab.eval.behavioral_scorer --all --cache       # Cache-only, skip stale/missing (no API calls)
     python3 -m lab.eval.behavioral_scorer --all --summary     # Summary only
 
-Cost: ~$0.001 per test prompt, ~$0.05 for all 51 skills × 8 prompts.
+Cost: Uses --bare mode to minimize per-call overhead.
+Observed: ~$10 for full 51-skill run without --bare, expected ~$1-2 with --bare.
 """
 
 from __future__ import annotations
@@ -25,6 +26,12 @@ from .trigger_scorer import load_all_descriptions, load_trigger_file, TRIGGERS_D
 
 RESULTS_DIR = TRIGGERS_DIR / "results"
 
+_ROUTING_SYSTEM_PROMPT = (
+    "You are a skill router. Given a list of skills and a user message, "
+    "reply with ONLY the skill name(s) that should be loaded, one per line. "
+    "If none, reply 'none'. List at most 3, ordered by relevance."
+)
+
 
 def content_hash(skill_name: str, descriptions: dict[str, str]) -> str:
     """Hash skill description + trigger corpus for cache invalidation."""
@@ -36,29 +43,39 @@ def content_hash(skill_name: str, descriptions: dict[str, str]) -> str:
 
 
 def build_routing_prompt(descriptions: dict[str, str], user_prompt: str) -> str:
-    """Build the routing prompt for haiku."""
+    """Build the routing prompt for haiku.
+
+    System-level instructions are in _ROUTING_SYSTEM_PROMPT (passed via --system-prompt).
+    This function builds only the user-turn content: skill list + user message.
+    """
     desc_list = "\n".join(
         f"- {name}: {desc[:150]}" for name, desc in sorted(descriptions.items())
     )
-    return f"""You are testing skill routing for a Claude Code plugin.
+    return (
+        f"Available skills:\n{desc_list}\n\n"
+        f'The user says: "{user_prompt}"'
+    )
 
-Given these available skills:
-{desc_list}
-
-The user says: "{user_prompt}"
-
-Which skill(s) should be loaded? Reply with ONLY the skill name(s), one per line.
-If no skill should be loaded, reply with "none".
-List at most 3 skills, ordered by relevance."""
+# Cost tracking accumulators (reset per main() run)
+_total_cost: float = 0.0
+_max_call_cost: float = 0.0
+_total_calls: int = 0
 
 
 def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
     """Ask haiku which skill(s) to route to. Returns skill names, or None on failure."""
+    global _total_cost, _max_call_cost, _total_calls
+    settings_path = str(TRIGGERS_DIR.parent / "bare_settings.json")
     try:
         result = subprocess.run(
             [
-                "claude", "-p", "-",
+                "claude", "--bare",
+                "--settings", settings_path,
+                "-p", "-",
                 "--model", "haiku",
+                "--system-prompt", _ROUTING_SYSTEM_PROMPT,
+                "--tools", "",
+                "--max-turns", "1",
                 "--output-format", "json",
                 "--max-budget-usd", "0.10",
                 "--no-session-persistence",
@@ -84,8 +101,12 @@ def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
             return None
 
         text = data.get("result", "")
+        cost = data.get("total_cost_usd", 0)
+        _total_calls += 1
+        _total_cost += cost
+        if cost > _max_call_cost:
+            _max_call_cost = cost
         if verbose:
-            cost = data.get("total_cost_usd", 0)
             usage = data.get("usage", {})
             in_tok = usage.get("input_tokens", 0) + usage.get("cache_creation_input_tokens", 0) + usage.get("cache_read_input_tokens", 0)
             out_tok = usage.get("output_tokens", 0)
@@ -256,6 +277,11 @@ def main() -> None:
 
     descriptions = load_all_descriptions()
 
+    global _total_cost, _max_call_cost, _total_calls
+    _total_cost = 0.0
+    _max_call_cost = 0.0
+    _total_calls = 0
+
     if args.skill:
         result = score_skill(args.skill, descriptions, args.cache,
                              verbose=args.verbose, limit=args.limit)
@@ -322,6 +348,17 @@ def main() -> None:
 
     else:
         parser.print_help()
+        return
+
+    # Cost summary (always printed to stderr when API calls were made)
+    if _total_calls > 0:
+        avg_cost = _total_cost / _total_calls
+        print(f"\n--- Cost Summary ---", file=sys.stderr)
+        print(f"  Total API calls: {_total_calls}", file=sys.stderr)
+        print(f"  Total cost:      ${_total_cost:.4f}", file=sys.stderr)
+        print(f"  Max single call: ${_max_call_cost:.4f}", file=sys.stderr)
+        print(f"  Avg per call:    ${avg_cost:.4f}", file=sys.stderr)
+        print(f"--------------------", file=sys.stderr)
 
 
 if __name__ == "__main__":
