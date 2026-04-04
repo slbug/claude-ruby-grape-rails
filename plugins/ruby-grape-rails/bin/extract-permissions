@@ -7,7 +7,6 @@ require 'open3'
 require 'pathname'
 require 'shellwords'
 require 'time'
-require 'digest'
 
 options = {
   days: 14,
@@ -69,16 +68,16 @@ def find_repo_root(start_dir)
   gemfile_candidate = nil
 
   path.ascend do |candidate|
-    claude_settings = (candidate + '.claude/settings.json').file? ||
-                      (candidate + '.claude/settings.local.json').file?
+    claude_settings = (candidate / '.claude/settings.json').file? ||
+                      (candidate / '.claude/settings.local.json').file?
     next if candidate.to_s == home_dir && claude_settings
 
     next if git_root && candidate.to_s != git_root && !candidate.to_s.start_with?("#{git_root}/")
 
-    return candidate.to_s if (candidate + '.git').exist?
+    return candidate.to_s if (candidate / '.git').exist?
 
     settings_candidate ||= candidate.to_s if claude_settings
-    gemfile_candidate ||= candidate.to_s if (candidate + 'Gemfile').file?
+    gemfile_candidate ||= candidate.to_s if (candidate / 'Gemfile').file?
 
     break if git_root && candidate.to_s == git_root
   end
@@ -91,11 +90,11 @@ def find_repo_root(start_dir)
 end
 
 def positive_env_int(name, default)
-  raw = ENV[name]
+  raw = ENV.fetch(name, nil)
   return default if raw.nil? || raw.empty?
 
   value = Integer(raw, exception: false)
-  return default unless value && value.positive?
+  return default unless value&.positive?
 
   value
 end
@@ -109,8 +108,20 @@ end
 def claude_project_slug(repo_root)
   canonical_root = canonical_repo_root(repo_root)
   base = canonical_root.tr('/:\\', '-')
-  digest = Digest::SHA256.hexdigest(canonical_root)[0, 12]
-  "#{base}-#{digest}"
+  projects_root = transcript_projects_root
+
+  # Try exact match first, then with hash suffix for forward compatibility
+  return base if File.directory?(File.join(projects_root, base))
+
+  # Scan for directories starting with the base slug
+  if File.directory?(projects_root)
+    Dir.children(projects_root).each do |entry|
+      return entry if entry.start_with?(base) && File.directory?(File.join(projects_root, entry))
+    end
+  end
+
+  # Fall back to base slug (will result in 0 sessions found)
+  base
 end
 
 def project_transcript_files(project_slug)
@@ -141,7 +152,7 @@ end
 
 def mode_bit_readable_file?(path)
   stat = File.stat(path)
-  return false if (stat.mode & 0o444).zero?
+  return false if stat.mode.nobits?(0o444)
 
   true
 rescue Errno::ENOENT
@@ -179,12 +190,10 @@ def load_permissions(settings_path)
     deny: Array(permissions['deny']).grep(String),
     invalid: false
   }
-rescue JSON::ParserError
+rescue JSON::ParserError, Errno::EACCES, Errno::EPERM
   { allow: [], deny: [], invalid: true }
 rescue Errno::ENOENT
   { allow: [], deny: [], invalid: false }
-rescue Errno::EACCES, Errno::EPERM
-  { allow: [], deny: [], invalid: true }
 end
 
 def permission_to_glob(permission)
@@ -279,27 +288,24 @@ def command_group(command)
     else
       core_tokens.join(' ')
     end
-  elsif %w[git rails bin/rails rake make just npm yarn pnpm lefthook].include?(core_tokens[0])
+  elsif %w[git rails bin/rails rake make just npm yarn pnpm lefthook].include?(core_tokens[0]) ||
+        core_tokens[0].start_with?('bin/') || core_tokens[0].start_with?('script/')
     core_tokens[1] ? core_tokens[0, 2].join(' ') : core_tokens[0]
   elsif %w[ruby python python3 node].include?(core_tokens[0])
     if core_tokens[1] == '-m' && core_tokens[2]
       core_tokens[0, 3].join(' ')
-    elsif core_tokens[1] == '-e'
-      core_tokens[0, 2].join(' ')
-    elsif core_tokens[1] && !core_tokens[1].start_with?('-')
+    elsif (core_tokens[1] && !core_tokens[1].start_with?('-')) || core_tokens[1] == '-e'
       core_tokens[0, 2].join(' ')
     else
       core_tokens[0]
     end
-  elsif core_tokens[0].start_with?('bin/') || core_tokens[0].start_with?('script/')
-    core_tokens[1] ? core_tokens[0, 2].join(' ') : core_tokens[0]
   else
     core_tokens[0]
   end
 end
 
 def split_shell_commands(command)
-  normalized = command.gsub(/\\\n/, ' ')
+  normalized = command.gsub("\\\n", ' ')
   parser_segments = split_shell_commands_with_shfmt(normalized)
   return parser_segments if parser_segments.any?
   return [normalized.strip] if normalized.match?(/(^|[[:space:];(|&])<<-?\s*['"]?[A-Za-z_][A-Za-z0-9_]*['"]?/)
@@ -384,17 +390,14 @@ def split_shell_commands(command)
         index += 1
       end
     when '|'
-      if next_char == '|'
-        stripped = current.strip
-        commands << stripped unless stripped.empty?
-        current = +''
-        index += 2
-      else
-        stripped = current.strip
-        commands << stripped unless stripped.empty?
-        current = +''
-        index += (next_char == '&' ? 2 : 1)
-      end
+      stripped = current.strip
+      commands << stripped unless stripped.empty?
+      current = +''
+      index += if next_char == '|'
+                 2
+               else
+                 (next_char == '&' ? 2 : 1)
+               end
     else
       current << char
       index += 1

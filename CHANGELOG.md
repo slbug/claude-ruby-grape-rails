@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.11.2] - 2026-04-04
+
+### Fixed
+
+- Fixed `extract-permissions` project slug detection — was appending a SHA256
+  hash suffix that Claude Code doesn't use, causing 0 sessions found. Now
+  detects the actual project directory by scanning `~/.claude/projects/`.
+
 ## [1.11.1] - 2026-04-04
 
 ### Fixed
@@ -1126,7 +1134,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.1...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.2...HEAD
+[1.11.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.1...v1.11.2
 [1.11.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.0...v1.11.1
 [1.11.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.9.0...v1.10.0
