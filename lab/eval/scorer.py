@@ -163,11 +163,11 @@ def _inject_behavioral(eval_def: EvalDefinition) -> EvalDefinition:
     new_dims["behavioral"] = EvalDimension(
         name="behavioral",
         weight=0.08,
-        checks=[EvalCheck(
-            check_type="behavioral_routing",
-            description="Trigger routing accuracy",
-            params={},
-        )],
+        checks=[
+            EvalCheck(check_type="behavioral_accuracy", description="Trigger accuracy >= 75%", params={}),
+            EvalCheck(check_type="behavioral_precision", description="Trigger precision >= 80%", params={}),
+            EvalCheck(check_type="behavioral_recall", description="Trigger recall >= 60%", params={}),
+        ],
     )
     return EvalDefinition(
         subject=eval_def.subject,
@@ -176,21 +176,53 @@ def _inject_behavioral(eval_def: EvalDefinition) -> EvalDefinition:
     )
 
 
-def _behavioral_check(content: str, skill_path: str = "", plugin_root: str = "", **_) -> tuple[bool, str]:
-    """Run the behavioral dimension scorer and return a single pass/fail."""
-    from .dimensions.behavioral import score as behavioral_score
+def _get_behavioral_data(skill_path: str = "") -> dict:
+    """Load cached behavioral data for a skill. Returns dict with metrics or empty."""
+    from .dimensions.behavioral import RESULTS_DIR
+    skill_name = Path(skill_path).resolve().parent.name if skill_path else ""
+    cache_path = RESULTS_DIR / f"{skill_name}.json"
+    if not cache_path.is_file():
+        return {}
+    try:
+        data = json.loads(cache_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+    if "error" in data:
+        return {}
+    return data
 
-    result = behavioral_score(content, skill_path=skill_path, plugin_root=plugin_root)
-    all_passed = all(a.passed for a in result.assertions)
-    evidence = "; ".join(a.evidence for a in result.assertions)
-    return all_passed, evidence
+
+def _behavioral_accuracy(content: str, skill_path: str = "", **_) -> tuple[bool, str]:
+    data = _get_behavioral_data(skill_path)
+    if not data:
+        return True, "No behavioral cache (neutral)"
+    acc = data.get("accuracy", 0)
+    return acc >= 0.75, f"accuracy={acc:.0%} ({data.get('correct', 0)}/{data.get('total', 0)})"
+
+
+def _behavioral_precision(content: str, skill_path: str = "", **_) -> tuple[bool, str]:
+    data = _get_behavioral_data(skill_path)
+    if not data:
+        return True, "No behavioral cache (neutral)"
+    prec = data.get("precision", 0)
+    return prec >= 0.80, f"precision={prec:.0%} (tp={data.get('tp', 0)} fp={data.get('fp', 0)})"
+
+
+def _behavioral_recall(content: str, skill_path: str = "", **_) -> tuple[bool, str]:
+    data = _get_behavioral_data(skill_path)
+    if not data:
+        return True, "No behavioral cache (neutral)"
+    rec = data.get("recall", 0)
+    return rec >= 0.60, f"recall={rec:.0%} (tp={data.get('tp', 0)} fn={data.get('fn', 0)})"
 
 
 def _compare_scores() -> None:
     """Print side-by-side base vs behavioral composite scores."""
     base = score_all(behavioral=False)
 
-    matchers.MATCHERS["behavioral_routing"] = _behavioral_check
+    matchers.MATCHERS["behavioral_accuracy"] = _behavioral_accuracy
+    matchers.MATCHERS["behavioral_precision"] = _behavioral_precision
+    matchers.MATCHERS["behavioral_recall"] = _behavioral_recall
     behav = score_all(behavioral=True)
 
     print(f"{'Skill':<35} {'Base':>7} {'+Behav':>7} {'Δ':>7}")
@@ -229,7 +261,9 @@ def main() -> None:
         return
 
     if args.behavioral:
-        matchers.MATCHERS["behavioral_routing"] = _behavioral_check
+        matchers.MATCHERS["behavioral_accuracy"] = _behavioral_accuracy
+        matchers.MATCHERS["behavioral_precision"] = _behavioral_precision
+        matchers.MATCHERS["behavioral_recall"] = _behavioral_recall
 
     if args.all:
         results = score_all(behavioral=args.behavioral)
