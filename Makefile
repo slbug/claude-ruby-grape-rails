@@ -1,4 +1,4 @@
-.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate doctor eval eval-all eval-ci eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-stress eval-tests eval-tests-pytest eval-tests-unittest ci
+.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate doctor eval eval-all eval-ci eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-behavioral eval-behavioral-verbose eval-behavioral-fresh eval-behavioral-fresh-verbose eval-stress eval-tests eval-tests-pytest eval-tests-unittest ci
 
 lint:
 	npm run lint
@@ -62,6 +62,22 @@ eval-confusable:
 
 eval-hard-corpus:
 	python3 -m lab.eval.triggers.generate_hard_corpus
+
+eval-behavioral:
+	python3 -m lab.eval.behavioral_scorer --all --cache --summary
+	python3 -m lab.eval.scorer --all --behavioral --pretty
+
+eval-behavioral-verbose:
+	python3 -m lab.eval.behavioral_scorer --all --cache --summary --verbose
+	python3 -m lab.eval.scorer --all --behavioral --pretty
+
+eval-behavioral-fresh:
+	python3 -m lab.eval.behavioral_scorer --all --summary
+	python3 -m lab.eval.scorer --all --behavioral --pretty
+
+eval-behavioral-fresh-verbose:
+	python3 -m lab.eval.behavioral_scorer --all --summary --verbose
+	python3 -m lab.eval.scorer --all --behavioral --pretty
 
 eval-stress:
 	python3 -m lab.eval.evaluator_stress_test

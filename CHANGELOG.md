@@ -7,6 +7,28 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-04-04
+
+### Added
+
+- **`/cc-changelog` contributor skill** — Track Claude Code version changes
+  against plugin surfaces (hooks, agents, skills, config). Fetches releases
+  from GitHub API, classifies entries as BREAKING/OPPORTUNITY/RELEVANT
+  FIX/DEPRECATION/INFO, and cross-references impact against hooks.json events,
+  skill/agent frontmatter, plugin.json manifest, and settings.json keys.
+  Includes `scripts/fetch-cc-changelog.sh` for GitHub releases API with
+  `--all` and `--set=VERSION` flags. State tracked in
+  `.claude/cc-changelog/last-checked-version.txt`.
+- **Behavioral eval dimension** — LLM-based trigger routing tests using Haiku.
+  Sends test prompts against all 51 skill descriptions, haiku picks 1-3 most
+  relevant skills, computes accuracy/precision/recall per skill. Results cached
+  in `lab/eval/triggers/results/` with content-hash invalidation. Activated
+  with `--behavioral` flag on scorer. New commands: `make eval-behavioral` /
+  `npm run eval:behavioral` (cache-first), `eval-behavioral-verbose` (with
+  prompt/response debug), `eval-behavioral-fresh` (force re-run), and
+  `eval-behavioral-fresh-verbose`. Weight: 8% of composite when enabled.
+  Returns neutral 1.0 for skills without cached results.
+
 ## [1.9.0] - 2026-04-03
 
 ### Added
@@ -1066,7 +1088,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.10.0...HEAD
+[1.10.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.9.0
 [1.8.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.8.1
 [1.8.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.8.0

@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 
 from . import matchers
-from .schemas import AssertionResult, DimensionResult, EvalCheck, EvalDefinition, SubjectScore
+from .schemas import AssertionResult, DimensionResult, EvalCheck, EvalDefinition, EvalDimension, SubjectScore
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -131,17 +131,19 @@ def find_eval(skill_name: str) -> Path | None:
     return path if path.is_file() else None
 
 
-def score_all() -> dict[str, dict]:
+def score_all(behavioral: bool = False) -> dict[str, dict]:
     results: dict[str, dict] = {}
     for path in find_all_skills():
         skill_name = Path(path).parent.name
         eval_path = find_eval(skill_name)
         eval_def = EvalDefinition.from_file(eval_path) if eval_path else None
+        if behavioral:
+            eval_def = _inject_behavioral(eval_def or default_eval(path))
         results[skill_name] = score_skill(path, eval_def).to_dict()
     return results
 
 
-def score_core() -> dict[str, dict]:
+def score_core(behavioral: bool = False) -> dict[str, dict]:
     results: dict[str, dict] = {}
     for skill_name in CORE_SKILLS:
         skill_path = SKILLS_DIR / skill_name / "SKILL.md"
@@ -149,8 +151,41 @@ def score_core() -> dict[str, dict]:
             raise FileNotFoundError(f"Missing core skill file: {skill_path}")
         eval_path = find_eval(skill_name)
         eval_def = EvalDefinition.from_file(eval_path) if eval_path else None
+        if behavioral:
+            eval_def = _inject_behavioral(eval_def or default_eval(str(skill_path)))
         results[skill_name] = score_skill(str(skill_path), eval_def).to_dict()
     return results
+
+
+def _inject_behavioral(eval_def: EvalDefinition) -> EvalDefinition:
+    """Add the behavioral dimension to an eval definition (opt-in)."""
+    new_dims = dict(eval_def.dimensions)
+    new_dims["behavioral"] = EvalDimension(
+        name="behavioral",
+        weight=0.08,
+        checks=[EvalCheck(
+            check_type="behavioral_routing",
+            description="Trigger routing accuracy",
+            params={},
+        )],
+    )
+    return EvalDefinition(
+        subject=eval_def.subject,
+        subject_path=eval_def.subject_path,
+        dimensions=new_dims,
+    )
+
+
+def _behavioral_check(content: str, skill_path: str = "", plugin_root: str = "", **_) -> tuple[bool, str]:
+    """Run the behavioral dimension scorer and return a single pass/fail."""
+    from .dimensions.behavioral import score as behavioral_score
+
+    result = behavioral_score(content, skill_path=skill_path, plugin_root=plugin_root)
+    if not result.assertions:
+        return True, "No behavioral data (neutral)"
+    all_passed = all(a.passed for a in result.assertions)
+    evidence = "; ".join(a.evidence for a in result.assertions)
+    return all_passed, evidence
 
 
 def main() -> None:
@@ -160,16 +195,20 @@ def main() -> None:
     parser.add_argument("--core", action="store_true", help="Score the core skill subset")
     parser.add_argument("--eval", help="Override eval definition JSON")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
+    parser.add_argument("--behavioral", action="store_true", help="Include behavioral routing dimension (requires cached results)")
     parser.add_argument("--fail-under", type=float, help="Exit non-zero if composite score is below threshold")
     args = parser.parse_args()
 
+    if args.behavioral:
+        matchers.MATCHERS["behavioral_routing"] = _behavioral_check
+
     if args.all:
-        results = score_all()
+        results = score_all(behavioral=args.behavioral)
         print(json.dumps(results, indent=2 if args.pretty else None))
         return
 
     if args.core:
-        results = score_core()
+        results = score_core(behavioral=args.behavioral)
         print(json.dumps(results, indent=2 if args.pretty else None))
         return
 
@@ -183,6 +222,11 @@ def main() -> None:
         eval_path = find_eval(skill_name)
         if eval_path:
             eval_def = EvalDefinition.from_file(eval_path)
+
+    if eval_def and args.behavioral:
+        eval_def = _inject_behavioral(eval_def)
+    elif eval_def is None and args.behavioral:
+        eval_def = _inject_behavioral(default_eval(args.skill_path))
 
     result = score_skill(args.skill_path, eval_def)
     if args.fail_under is not None and result.composite < args.fail_under:

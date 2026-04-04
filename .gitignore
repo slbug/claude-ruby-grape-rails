@@ -16,6 +16,9 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
+# Behavioral eval cached results (LLM-generated, not deterministic)
+lab/eval/triggers/results/
+
 # Git worktrees
 .worktrees/
 
@@ -27,6 +30,7 @@ __pycache__/
 !.claude/skills/
 !.claude/conventions.md
 .claude/docs-check/  # Runtime artifacts (docs-cache, reports, summaries)
+.claude/cc-changelog/  # CC changelog state (last-checked-version)
 scratchpad/
 
 .opencode/
