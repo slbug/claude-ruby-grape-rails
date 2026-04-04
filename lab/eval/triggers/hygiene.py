@@ -268,12 +268,15 @@ def main() -> None:
                 print(f"    {result['skill']}: {', '.join(parts)}")
         else:
             all_results = {r["skill"]: r for r in flagged}
+            for r in errors:
+                all_results[r["skill"]] = r
             for name in clean:
                 all_results[name] = {"skill": name, "contamination_score": 0.0, "flags": []}
             output = {
                 "total": total,
                 "clean": len(clean),
                 "flagged": len(flagged),
+                "errors": len(errors),
                 "skills": {k: all_results[k] for k in sorted(all_results)},
             }
             print(json.dumps(output, indent=2 if args.pretty else None))
