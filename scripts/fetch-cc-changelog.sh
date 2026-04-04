@@ -67,7 +67,7 @@ tmp_file="$(mktemp "${TMPDIR:-/tmp}/cc-releases.XXXXXX")" || {
   echo "ERROR: could not create temporary file" >&2
   exit 1
 }
-trap 'rm -f -- "$tmp_file"' EXIT
+trap 'rm -f -- "${tmp_file:?}"' EXIT
 
 http_code="$(curl -s -w '%{http_code}' \
   --connect-timeout "$CURL_TIMEOUT" \
@@ -104,7 +104,7 @@ filtered_file="$(mktemp "${TMPDIR:-/tmp}/cc-filtered.XXXXXX")" || {
   echo "ERROR: could not create temporary file" >&2
   exit 1
 }
-trap 'rm -f -- "$tmp_file" "$filtered_file"' EXIT
+trap 'rm -f -- "${tmp_file:?}" "${filtered_file:?}"' EXIT
 
 if [[ -n "$last_checked" ]] && [[ "$FETCH_ALL" == "false" ]]; then
   # Filter to versions newer than last_checked using jq + sort -V

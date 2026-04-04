@@ -123,7 +123,10 @@ def score_skill(
 
     if use_cache:
         if cache_path.is_file():
-            cached = json.loads(cache_path.read_text(encoding="utf-8"))
+            try:
+                cached = json.loads(cache_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                return {"skill": skill_name, "error": "corrupted cache file"}
             expected_hash = content_hash(skill_name, descriptions)
             if cached.get("content_hash") == expected_hash:
                 return cached
@@ -261,6 +264,9 @@ def main() -> None:
             print(f"  Testing {name}...", end="\n" if args.verbose else " ", flush=True, file=sys.stderr)
             result = score_skill(name, descriptions, args.cache,
                                  verbose=args.verbose, limit=args.limit)
+            if "error" in result:
+                print(f"SKIPPED ({result['error']})", file=sys.stderr)
+                continue
             all_results[name] = result
             total_accuracy += result.get("accuracy", 0)
             skills_tested += 1

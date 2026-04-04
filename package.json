@@ -29,6 +29,7 @@
     "eval:behavioral:verbose": "python3 -m lab.eval.behavioral_scorer --all --cache --summary --verbose && python3 -m lab.eval.scorer --all --behavioral --pretty",
     "eval:behavioral:fresh": "python3 -m lab.eval.behavioral_scorer --all --summary && python3 -m lab.eval.scorer --all --behavioral --pretty",
     "eval:behavioral:fresh:verbose": "python3 -m lab.eval.behavioral_scorer --all --summary --verbose && python3 -m lab.eval.scorer --all --behavioral --pretty",
+    "eval:behavioral:compare": "python3 -m lab.eval.scorer --compare",
     "eval:stress": "python3 -m lab.eval.evaluator_stress_test",
     "eval:test": "bash scripts/run-eval-tests.sh",
     "eval:test:pytest": "python3 -m pytest lab/eval/tests -v",

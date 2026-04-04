@@ -24,7 +24,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   relevant skills, computes accuracy/precision/recall per skill. Results cached
   in `lab/eval/triggers/results/` with content-hash invalidation. Activated
   with `--behavioral` flag on scorer. New commands: `make eval-behavioral` /
-  `npm run eval:behavioral` (cache-first), `eval-behavioral-verbose` (with
+  `npm run eval:behavioral` (cache-only), `eval-behavioral-verbose` (with
   prompt/response debug), `eval-behavioral-fresh` (force re-run), and
   `eval-behavioral-fresh-verbose`. Uses a configured weight of `0.08` when
   enabled. Returns neutral 1.0 for skills without cached results.

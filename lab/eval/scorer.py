@@ -188,6 +188,32 @@ def _behavioral_check(content: str, skill_path: str = "", plugin_root: str = "",
     return all_passed, evidence
 
 
+def _compare_scores() -> None:
+    """Print side-by-side base vs behavioral composite scores."""
+    base = score_all(behavioral=False)
+
+    matchers.MATCHERS["behavioral_routing"] = _behavioral_check
+    behav = score_all(behavioral=True)
+
+    print(f"{'Skill':<35} {'Base':>7} {'+Behav':>7} {'Δ':>7}")
+    print("-" * 60)
+    changed = 0
+    for name in sorted(base.keys()):
+        s1 = base[name]["composite"]
+        s2 = behav[name]["composite"]
+        delta = s2 - s1
+        flag = " *" if abs(delta) > 0.001 else ""
+        if flag:
+            changed += 1
+        print(f"{name:<35} {s1:>7.4f} {s2:>7.4f} {delta:>+7.4f}{flag}")
+    total = len(base)
+    avg_base = sum(v["composite"] for v in base.values()) / total if total else 0
+    avg_behav = sum(v["composite"] for v in behav.values()) / total if total else 0
+    print("-" * 60)
+    print(f"{'Average':<35} {avg_base:>7.4f} {avg_behav:>7.4f} {avg_behav - avg_base:>+7.4f}")
+    print(f"\n{changed}/{total} skills changed")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Score Ruby plugin skills deterministically")
     parser.add_argument("skill_path", nargs="?", help="Path to a SKILL.md file")
@@ -196,8 +222,13 @@ def main() -> None:
     parser.add_argument("--eval", help="Override eval definition JSON")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
     parser.add_argument("--behavioral", action="store_true", help="Include behavioral routing dimension (requires cached results)")
+    parser.add_argument("--compare", action="store_true", help="Show base vs behavioral composite score diff table")
     parser.add_argument("--fail-under", type=float, help="Exit non-zero if composite score is below threshold")
     args = parser.parse_args()
+
+    if args.compare:
+        _compare_scores()
+        return
 
     if args.behavioral:
         matchers.MATCHERS["behavioral_routing"] = _behavioral_check
