@@ -7,6 +7,28 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-04-04
+
+### Added
+
+- **Matcher ablation tooling** — leave-one-out analysis identifying signal vs
+  guardrail vs noise matchers across all 51 skills. New commands:
+  `make eval-ablation` / `npm run eval:ablation`.
+- **Neighbor regression tooling** — detects routing theft between confusable
+  skill pairs when descriptions change. Builds bidirectional neighbor map from
+  confusable pairs, flags accuracy drops >10%. New commands:
+  `make eval-neighbor` / `npm run eval:neighbor`.
+- **Contamination hygiene checks** — reusable scanner for trigger corpus leaks
+  (command refs, multi-word skill names, description echo, hard-corpus quality).
+  New commands: `make eval-hygiene` / `npm run eval:hygiene`.
+
+### Changed
+
+- Improved behavioral accuracy for 15 underperforming skills. Removed 43
+  generic "Help me with X patterns" trigger prompts (test contamination).
+  Tuned descriptions for `full`, `intent-detection`, and `quick` to improve
+  routing recall. All 3 critical skills rose from 62-75% to 100% accuracy.
+
 ## [1.10.0] - 2026-04-04
 
 ### Added
@@ -1088,7 +1110,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.0...HEAD
+[1.11.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.9.0
 [1.8.1]: https://github.com/slbug/claude-ruby-grape-rails/releases/tag/v1.8.1

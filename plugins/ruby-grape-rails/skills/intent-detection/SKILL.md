@@ -1,6 +1,6 @@
 ---
 name: intent-detection
-description: "Internal router for ambiguous requests. Use when the user describes feature work, bug fixes, review, refactors, research, permissions, or follow-up learning without an explicit `/rb:` command."
+description: "First-message command router. Use when the user's opening message describes work without specifying an /rb: command and needs help picking the right workflow."
 user-invocable: false
 effort: low
 ---

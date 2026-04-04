@@ -1,51 +1,23 @@
 {
   "skill": "quick",
   "should_trigger": [
-    {
-      "prompt": "Just fix this typo quickly"
-    },
-    {
-      "prompt": "Small CSS change \u2014 don't overthink it"
-    },
-    {
-      "prompt": "Quick config fix, no need for a plan"
-    },
-    {
-      "prompt": "Help me with quick patterns in my Ruby project"
-    }
+    { "prompt": "Just fix this typo in the controller" },
+    { "prompt": "Rename this variable, it's a one-line change" },
+    { "prompt": "Tiny config tweak, no planning needed" },
+    { "prompt": "Change this string literal, super trivial" }
   ],
   "should_not_trigger": [
-    {
-      "prompt": "Plan a large refactor of the auth system"
-    },
-    {
-      "prompt": "Do the full plan-work-review cycle"
-    },
-    {
-      "prompt": "Investigate the root cause of this complex bug"
-    },
-    {
-      "prompt": "Commit the current changes and push to the remote branch"
-    }
+    { "prompt": "Plan a large refactor of the auth system" },
+    { "prompt": "Do the full plan-work-review cycle" },
+    { "prompt": "Investigate the root cause of this complex bug" },
+    { "prompt": "Commit the current changes and push to the remote branch" }
   ],
   "hard_should_trigger": [
-    {
-      "prompt": "Change this one line in the config \u2014 super simple",
-      "axis": "confusable"
-    },
-    {
-      "prompt": "After fixing the bug, also check if quick needs updating",
-      "axis": "multi_step"
-    }
+    { "prompt": "Change this one line in the config — super simple", "axis": "confusable" },
+    { "prompt": "Fix the misspelling in this error message, nothing else", "axis": "confusable" }
   ],
   "hard_should_not_trigger": [
-    {
-      "prompt": "Fix this tricky bug that spans multiple files",
-      "axis": "confusable"
-    },
-    {
-      "prompt": "Fix this bug then run the test suite and review the results",
-      "axis": "multi_step"
-    }
+    { "prompt": "Fix this tricky bug that spans multiple files", "axis": "confusable" },
+    { "prompt": "Fix this bug then run the test suite and review the results", "axis": "multi_step" }
   ]
 }

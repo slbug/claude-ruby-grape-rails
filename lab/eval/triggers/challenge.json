@@ -2,16 +2,13 @@
   "skill": "challenge",
   "should_trigger": [
     {
-      "prompt": "Grill me on this code \u2014 find every weakness"
+      "prompt": "Grill me on this code — find every weakness"
     },
     {
       "prompt": "Challenge my implementation as a senior Ruby engineer would"
     },
     {
       "prompt": "Play devil's advocate on my architecture decisions"
-    },
-    {
-      "prompt": "Help me with challenge patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +27,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "Don't go easy on me \u2014 tear this apart and find the problems",
+      "prompt": "Don't go easy on me — tear this apart and find the problems",
       "axis": "confusable"
     },
     {

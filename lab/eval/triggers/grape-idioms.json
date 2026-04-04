@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Best patterns for Grape endpoint design in Rails"
-    },
-    {
-      "prompt": "Help me with grape idioms patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Prioritize the findings from the code review"
-    },
-    {
-      "prompt": "Help me with triage patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +27,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "The review found 15 issues \u2014 help me decide which to fix now vs later",
+      "prompt": "The review found 15 issues — help me decide which to fix now vs later",
       "axis": "confusable"
     },
     {

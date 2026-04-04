@@ -805,6 +805,12 @@ Minimum runtime: `python3` 3.10+ for `lab/eval/`.
   cache, re-run via `claude` CLI with Haiku access
 - `make eval-behavioral-fresh-verbose` / `npm run eval:behavioral:fresh:verbose`
   — fresh run with full prompt/response debug output
+- `make eval-ablation` / `npm run eval:ablation` for leave-one-out matcher
+  signal/noise classification (deterministic, no API calls)
+- `make eval-neighbor` / `npm run eval:neighbor` for confusable-pair
+  regression detection on changed skills (requires Haiku for fresh results)
+- `make eval-hygiene` / `npm run eval:hygiene` for trigger corpus
+  contamination scanning (deterministic)
 - `make eval-baseline`
 - `make eval-compare`
 - `make eval-overlap`

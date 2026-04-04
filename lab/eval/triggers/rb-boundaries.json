@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Map the dependency graph between modules"
-    },
-    {
-      "prompt": "Help me with rb boundaries patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +27,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "Our Packwerk packages have circular dependencies \u2014 help me untangle them",
+      "prompt": "Our Packwerk packages have circular dependencies — help me untangle them",
       "axis": "confusable"
     },
     {

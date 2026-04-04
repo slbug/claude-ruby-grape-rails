@@ -5,13 +5,10 @@
       "prompt": "Give me the plugin tutorial"
     },
     {
-      "prompt": "I'm new \u2014 walk me through the basics"
+      "prompt": "I'm new — walk me through the basics"
     },
     {
       "prompt": "Show me what this plugin can do"
-    },
-    {
-      "prompt": "Help me with intro patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +27,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "I just installed this \u2014 give me the guided tour",
+      "prompt": "I just installed this — give me the guided tour",
       "axis": "confusable"
     },
     {

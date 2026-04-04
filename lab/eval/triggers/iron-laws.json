@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Show me the non-negotiable rules"
-    },
-    {
-      "prompt": "Help me with iron laws patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

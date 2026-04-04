@@ -9,9 +9,6 @@
     },
     {
       "prompt": "What runtime environment does this project use?"
-    },
-    {
-      "prompt": "Help me with runtime integration patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

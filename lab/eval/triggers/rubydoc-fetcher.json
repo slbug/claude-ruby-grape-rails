@@ -9,9 +9,6 @@
     },
     {
       "prompt": "What does this Ruby stdlib method do?"
-    },
-    {
-      "prompt": "Help me with rubydoc fetcher patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

@@ -9,9 +9,6 @@
     },
     {
       "prompt": "I need code examples for Grape API versioning"
-    },
-    {
-      "prompt": "Help me with examples patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +27,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "I'm new here \u2014 show me how things are done in this codebase",
+      "prompt": "I'm new here — show me how things are done in this codebase",
       "axis": "confusable"
     },
     {

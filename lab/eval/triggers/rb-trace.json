@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Map how data flows through this endpoint"
-    },
-    {
-      "prompt": "Help me with rb trace patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

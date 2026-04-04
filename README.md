@@ -760,6 +760,12 @@ Common entrypoints:
   cache, re-run via Claude CLI with Haiku access
 - `make eval-behavioral-fresh-verbose` / `npm run eval:behavioral:fresh:verbose`
   — fresh run with full prompt/response debug output
+- `make eval-ablation` or `npm run eval:ablation` for matcher signal/noise
+  classification (deterministic, no API calls)
+- `make eval-neighbor` or `npm run eval:neighbor` for confusable-pair
+  regression detection on changed skills
+- `make eval-hygiene` or `npm run eval:hygiene` for trigger corpus
+  contamination scanning
 - contributor eval tooling requires `python3` 3.10+
 
 Notes:

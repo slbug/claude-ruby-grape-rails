@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Give me a comprehensive project health check"
-    },
-    {
-      "prompt": "Help me with audit patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

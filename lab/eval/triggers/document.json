@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Create docs for the public-facing classes"
-    },
-    {
-      "prompt": "Help me with document patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

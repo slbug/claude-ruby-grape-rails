@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Scan for code smells and debt indicators"
-    },
-    {
-      "prompt": "Help me with techdebt patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

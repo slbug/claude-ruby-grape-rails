@@ -2,16 +2,13 @@
   "skill": "learn",
   "should_trigger": [
     {
-      "prompt": "I just corrected a mistake \u2014 capture the lesson"
+      "prompt": "I just corrected a mistake — capture the lesson"
     },
     {
       "prompt": "Learn from this bug fix so it doesn't happen again"
     },
     {
-      "prompt": "That was wrong \u2014 save this correction for next time"
-    },
-    {
-      "prompt": "Help me with learn patterns in my Ruby project"
+      "prompt": "That was wrong — save this correction for next time"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +27,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "You kept making the same mistake \u2014 let's make sure you remember the right pattern",
+      "prompt": "You kept making the same mistake — let's make sure you remember the right pattern",
       "axis": "confusable"
     },
     {

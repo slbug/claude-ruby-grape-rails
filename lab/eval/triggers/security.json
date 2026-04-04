@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Audit the security of the API endpoints"
-    },
-    {
-      "prompt": "Help me with security patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

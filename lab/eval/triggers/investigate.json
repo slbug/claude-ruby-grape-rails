@@ -8,10 +8,7 @@
       "prompt": "Do a structured root-cause analysis on this bug"
     },
     {
-      "prompt": "This error keeps happening \u2014 investigate the cause"
-    },
-    {
-      "prompt": "Help me with investigate patterns in my Ruby project"
+      "prompt": "This error keeps happening — investigate the cause"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +27,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "We're in a debugging loop \u2014 3 consecutive bundle exec failures, need structured analysis",
+      "prompt": "We're in a debugging loop — 3 consecutive bundle exec failures, need structured analysis",
       "axis": "confusable"
     },
     {

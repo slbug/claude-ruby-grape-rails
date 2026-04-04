@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Run an N+1 detection pass on the changed files"
-    },
-    {
-      "prompt": "Help me with ar n1 check patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

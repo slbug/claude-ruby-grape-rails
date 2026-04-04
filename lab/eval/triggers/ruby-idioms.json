@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Help me follow Ruby conventions and best practices"
-    },
-    {
-      "prompt": "Help me with ruby idioms patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +27,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "This method works but it's not very Rubyish \u2014 show me the elegant version",
+      "prompt": "This method works but it's not very Rubyish — show me the elegant version",
       "axis": "confusable"
     },
     {

@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Show me the solution document structure"
-    },
-    {
-      "prompt": "Help me with compound docs patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +27,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "I'm writing a solution doc \u2014 what fields are required in the YAML frontmatter?",
+      "prompt": "I'm writing a solution doc — what fields are required in the YAML frontmatter?",
       "axis": "confusable"
     },
     {

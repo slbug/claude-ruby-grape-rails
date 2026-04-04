@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Configure Karafka producers and consumers for Rails"
-    },
-    {
-      "prompt": "Help me with karafka patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

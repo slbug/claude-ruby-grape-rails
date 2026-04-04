@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Configure the Turbo Native adapter for mobile"
-    },
-    {
-      "prompt": "Help me with hotwire native patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

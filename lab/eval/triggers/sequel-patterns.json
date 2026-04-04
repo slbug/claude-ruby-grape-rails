@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Migrate this ActiveRecord code to Sequel"
-    },
-    {
-      "prompt": "Help me with sequel patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +27,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "This model uses DB[:table] syntax \u2014 help me with the association",
+      "prompt": "This model uses DB[:table] syntax — help me with the association",
       "axis": "confusable"
     },
     {

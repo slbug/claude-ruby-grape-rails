@@ -1,6 +1,6 @@
 {
   "name": "ruby-grape-rails-plugin",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "private": true,
   "description": "Claude Code plugin for Ruby, Rails, Grape, PostgreSQL, Redis, and Sidekiq development",
   "scripts": {
@@ -25,6 +25,9 @@
     "eval:overlap": "python3 -m lab.eval.trigger_scorer --overlap --pretty",
     "eval:confusable": "python3 -m lab.eval.triggers.generate_confusable_pairs",
     "eval:hard-corpus": "python3 -m lab.eval.triggers.generate_hard_corpus",
+    "eval:ablation": "python3 -m lab.eval.matcher_ablation --all --pretty",
+    "eval:neighbor": "python3 -m lab.eval.neighbor_regression --changed",
+    "eval:hygiene": "python3 -m lab.eval.triggers.hygiene --all --summary",
     "eval:behavioral": "python3 -m lab.eval.behavioral_scorer --all --cache --summary && python3 -m lab.eval.scorer --all --behavioral --pretty",
     "eval:behavioral:verbose": "python3 -m lab.eval.behavioral_scorer --all --cache --summary --verbose && python3 -m lab.eval.scorer --all --behavioral --pretty",
     "eval:behavioral:fresh": "python3 -m lab.eval.behavioral_scorer --all --summary && python3 -m lab.eval.scorer --all --behavioral --pretty",

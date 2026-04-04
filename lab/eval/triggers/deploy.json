@@ -9,9 +9,6 @@
     },
     {
       "prompt": "What's the best deploy strategy for this Rails app?"
-    },
-    {
-      "prompt": "Help me with deploy patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

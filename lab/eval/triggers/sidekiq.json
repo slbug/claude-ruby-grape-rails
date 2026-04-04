@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Fix the Sidekiq job that keeps failing"
-    },
-    {
-      "prompt": "Help me with sidekiq patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [

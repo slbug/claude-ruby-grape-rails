@@ -1,51 +1,23 @@
 {
   "skill": "intent-detection",
   "should_trigger": [
-    {
-      "prompt": "What command should I use for this task?"
-    },
-    {
-      "prompt": "Route this request to the right workflow"
-    },
-    {
-      "prompt": "Help me pick the right /rb: command"
-    },
-    {
-      "prompt": "Help me with intent detection patterns in my Ruby project"
-    }
+    { "prompt": "I need to add a payment system but I'm not sure which workflow to use" },
+    { "prompt": "I want to do some work on this codebase, what's the right approach?" },
+    { "prompt": "Should I plan this or just jump in and fix it?" },
+    { "prompt": "I'm new here and have a task — which command fits my situation?" }
   ],
   "should_not_trigger": [
-    {
-      "prompt": "Plan a new feature for user auth"
-    },
-    {
-      "prompt": "Review the code changes"
-    },
-    {
-      "prompt": "Fix the failing test"
-    },
-    {
-      "prompt": "Commit the current changes and push to the remote branch"
-    }
+    { "prompt": "Plan a new feature for user auth" },
+    { "prompt": "Review the code changes" },
+    { "prompt": "Fix the failing test" },
+    { "prompt": "Commit the current changes and push to the remote branch" }
   ],
   "hard_should_trigger": [
-    {
-      "prompt": "I want to do something but I'm not sure which command to use",
-      "axis": "confusable"
-    },
-    {
-      "prompt": "After fixing the bug, also check if intent detection needs updating",
-      "axis": "multi_step"
-    }
+    { "prompt": "I want to do something but I'm not sure which command to use", "axis": "confusable" },
+    { "prompt": "My first message: I have a complex task involving auth changes, what workflow fits?", "axis": "confusable" }
   ],
   "hard_should_not_trigger": [
-    {
-      "prompt": "Show me all available plugin commands and features",
-      "axis": "confusable"
-    },
-    {
-      "prompt": "Fix this bug then run the test suite and review the results",
-      "axis": "multi_step"
-    }
+    { "prompt": "Show me all available plugin commands and features", "axis": "confusable" },
+    { "prompt": "Fix this bug then run the test suite and review the results", "axis": "multi_step" }
   ]
 }

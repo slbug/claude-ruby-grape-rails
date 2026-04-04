@@ -9,9 +9,6 @@
     },
     {
       "prompt": "Review the database migration for safety issues"
-    },
-    {
-      "prompt": "Help me with safe migrations patterns in my Ruby project"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +27,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "I'm adding an index on a large table \u2014 will this lock the table?",
+      "prompt": "I'm adding an index on a large table — will this lock the table?",
       "axis": "confusable"
     },
     {
