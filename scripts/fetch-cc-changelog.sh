@@ -142,9 +142,9 @@ while IFS= read -r ver; do
   body="$(jq -r --arg tag "v${ver}" '.[] | select(.tag_name == $tag) | .body // "(no release notes)"' "$tmp_file")"
   date="$(jq -r --arg tag "v${ver}" '.[] | select(.tag_name == $tag) | .published_at // "unknown"' "$tmp_file")"
 
-  echo "## ${ver} (${date})"
-  echo
-  echo "$body"
-  echo
-  echo "---"
+  printf '## %s (%s)\n' "$ver" "$date"
+  printf '\n'
+  printf '%s\n' "$body"
+  printf '\n'
+  printf '%s\n' "---"
 done <"$filtered_file"

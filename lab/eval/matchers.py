@@ -362,5 +362,6 @@ MATCHERS = {
     "valid_file_refs": valid_file_refs,
     "no_dangerous_patterns": no_dangerous_patterns,
     "no_bash_blocks": no_bash_blocks,
-    # behavioral_routing is registered dynamically by scorer.py when --behavioral is used
+    # behavioral_accuracy, behavioral_precision, behavioral_recall are
+    # registered dynamically by scorer.py when --behavioral is used
 }
