@@ -1,6 +1,6 @@
 ---
 name: rb:full
-description: "Full autonomous workflow for Ruby/Rails/Grape work: plan, implement, verify, review, and compound learnings."
+description: "Hands-off end-to-end lifecycle: autonomously runs plan, work, verify, review, and compound in one command with no user intervention needed."
 argument-hint: "<feature description OR plan path>"
 effort: high
 ---

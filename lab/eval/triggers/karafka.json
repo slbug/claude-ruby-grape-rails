@@ -11,7 +11,7 @@
       "prompt": "Configure Karafka producers and consumers for Rails"
     },
     {
-      "prompt": "Help me with karafka patterns in my Ruby project"
+      "prompt": "How do I handle dead letters and retries for Kafka consumers?"
     }
   ],
   "should_not_trigger": [

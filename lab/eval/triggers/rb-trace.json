@@ -11,7 +11,7 @@
       "prompt": "Map how data flows through this endpoint"
     },
     {
-      "prompt": "Help me with rb trace patterns in my Ruby project"
+      "prompt": "Show me every method that gets called when this endpoint runs"
     }
   ],
   "should_not_trigger": [

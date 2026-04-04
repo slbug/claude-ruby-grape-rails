@@ -1,6 +1,6 @@
 ---
 name: rb:quick
-description: Low-ceremony implementation path for small Ruby/Rails/Grape changes that do not need a full plan first.
+description: "Trivial one-line fixes, typos, and tiny config changes. Skips planning ceremony — just inspect, fix, verify. Use for obvious changes under ~20 lines."
 argument-hint: <task>
 effort: low
 ---

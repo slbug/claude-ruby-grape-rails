@@ -2,7 +2,7 @@
   "skill": "compound",
   "should_trigger": [
     {
-      "prompt": "That fix was tricky \u2014 let's capture it as reusable knowledge"
+      "prompt": "That fix was tricky — let's capture it as reusable knowledge"
     },
     {
       "prompt": "Compound this solved problem into a knowledge document"
@@ -11,7 +11,7 @@
       "prompt": "Save this debugging session as a solution for future reference"
     },
     {
-      "prompt": "Help me with compound patterns in my Ruby project"
+      "prompt": "We figured out the root cause — let's write it up so we don't forget"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +30,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "This took an hour to solve \u2014 I want it documented so nobody wastes time on this again",
+      "prompt": "This took an hour to solve — I want it documented so nobody wastes time on this again",
       "axis": "confusable"
     },
     {

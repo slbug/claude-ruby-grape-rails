@@ -11,7 +11,7 @@
       "prompt": "What's the dry-rb pattern for service objects?"
     },
     {
-      "prompt": "Help me with dry rb patterns in my Ruby project"
+      "prompt": "Show me how to use dry-monads for railway-oriented flow"
     }
   ],
   "should_not_trigger": [

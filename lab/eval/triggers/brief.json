@@ -8,10 +8,10 @@
       "prompt": "Brief me on the plan.md before I start working"
     },
     {
-      "prompt": "Explain this plan interactively \u2014 I have questions"
+      "prompt": "Explain this plan interactively — I have questions"
     },
     {
-      "prompt": "Help me with brief patterns in my Ruby project"
+      "prompt": "Can you give me a summary of what this plan involves?"
     }
   ],
   "should_not_trigger": [

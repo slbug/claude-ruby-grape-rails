@@ -11,7 +11,7 @@
       "prompt": "Best practices for test organization in Rails"
     },
     {
-      "prompt": "Help me with testing patterns in my Ruby project"
+      "prompt": "How should I structure shared contexts and let blocks in RSpec?"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +30,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "My test suite is slow \u2014 what factory and setup patterns will speed it up?",
+      "prompt": "My test suite is slow — what factory and setup patterns will speed it up?",
       "axis": "confusable"
     },
     {

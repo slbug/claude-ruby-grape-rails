@@ -11,7 +11,7 @@
       "prompt": "Help me follow Rails conventions for this feature"
     },
     {
-      "prompt": "Help me with rails idioms patterns in my Ruby project"
+      "prompt": "Refactor this to use proper Rails conventions"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +30,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "This works but it doesn't feel like the Rails way \u2014 show me the convention",
+      "prompt": "This works but it doesn't feel like the Rails way — show me the convention",
       "axis": "confusable"
     },
     {

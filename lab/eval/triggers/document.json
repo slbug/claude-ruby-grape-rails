@@ -11,7 +11,7 @@
       "prompt": "Create docs for the public-facing classes"
     },
     {
-      "prompt": "Help me with document patterns in my Ruby project"
+      "prompt": "Add inline documentation to the public methods in this module"
     }
   ],
   "should_not_trigger": [

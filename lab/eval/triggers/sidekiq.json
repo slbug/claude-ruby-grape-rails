@@ -11,7 +11,7 @@
       "prompt": "Fix the Sidekiq job that keeps failing"
     },
     {
-      "prompt": "Help me with sidekiq patterns in my Ruby project"
+      "prompt": "Configure queue priorities and concurrency for the workers"
     }
   ],
   "should_not_trigger": [

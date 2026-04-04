@@ -11,7 +11,7 @@
       "prompt": "Best patterns for Grape endpoint design in Rails"
     },
     {
-      "prompt": "Help me with grape idioms patterns in my Ruby project"
+      "prompt": "How do I structure error handling across Grape endpoints?"
     }
   ],
   "should_not_trigger": [

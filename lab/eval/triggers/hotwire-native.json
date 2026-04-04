@@ -11,7 +11,7 @@
       "prompt": "Configure the Turbo Native adapter for mobile"
     },
     {
-      "prompt": "Help me with hotwire native patterns in my Ruby project"
+      "prompt": "The mobile app needs path configuration for native screens"
     }
   ],
   "should_not_trigger": [

@@ -11,7 +11,7 @@
       "prompt": "Scan for code smells and debt indicators"
     },
     {
-      "prompt": "Help me with techdebt patterns in my Ruby project"
+      "prompt": "List the TODO and FIXME comments scattered across the codebase"
     }
   ],
   "should_not_trigger": [

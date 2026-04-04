@@ -11,7 +11,7 @@
       "prompt": "Add Hotwire live updates to the dashboard"
     },
     {
-      "prompt": "Help me with hotwire patterns in my Ruby project"
+      "prompt": "I want to broadcast model changes to the page in real time"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +30,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "The form submits but the page doesn't update \u2014 I think the Turbo Frame targeting is wrong",
+      "prompt": "The form submits but the page doesn't update — I think the Turbo Frame targeting is wrong",
       "axis": "confusable"
     },
     {

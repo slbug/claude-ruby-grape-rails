@@ -8,10 +8,10 @@
       "prompt": "Help me debug this foreign key constraint violation in Rails"
     },
     {
-      "prompt": "ActiveRecord constraint error on save \u2014 how to diagnose?"
+      "prompt": "ActiveRecord constraint error on save — how to diagnose?"
     },
     {
-      "prompt": "Help me with active record constraint debug patterns in my Ruby project"
+      "prompt": "I get a NOT NULL violation but the value is definitely set"
     }
   ],
   "should_not_trigger": [

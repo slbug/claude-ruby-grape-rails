@@ -1,51 +1,24 @@
 {
   "skill": "full",
   "should_trigger": [
-    {
-      "prompt": "Run the full autonomous workflow for this feature"
-    },
-    {
-      "prompt": "Take this feature from plan through review automatically"
-    },
-    {
-      "prompt": "Do the entire plan-work-verify-review cycle for adding auth"
-    },
-    {
-      "prompt": "Help me with full patterns in my Ruby project"
-    }
+    { "prompt": "Handle everything end-to-end — plan it, build it, verify it, review it, all in one go" },
+    { "prompt": "Take this feature from plan through review automatically" },
+    { "prompt": "I don't want to babysit this, just run the whole lifecycle hands-off" },
+    { "prompt": "Autonomously implement this feature from start to finish without me stepping in" }
   ],
   "should_not_trigger": [
-    {
-      "prompt": "Just plan this feature, don't implement yet"
-    },
-    {
-      "prompt": "Only review the code changes"
-    },
-    {
-      "prompt": "Fix this one bug quickly"
-    },
-    {
-      "prompt": "Commit the current changes and push to the remote branch"
-    }
+    { "prompt": "Just plan this feature, don't implement yet" },
+    { "prompt": "Only review the code changes" },
+    { "prompt": "Fix this one bug quickly" },
+    { "prompt": "Commit the current changes and push to the remote branch" }
   ],
   "hard_should_trigger": [
-    {
-      "prompt": "Handle the entire lifecycle for adding a search feature \u2014 planning, coding, testing, review",
-      "axis": "confusable"
-    },
-    {
-      "prompt": "After fixing the bug, also check if full needs updating",
-      "axis": "multi_step"
-    }
+    { "prompt": "Handle the entire lifecycle for adding a search feature — planning, coding, testing, review", "axis": "confusable" },
+    { "prompt": "I want you to autonomously plan, implement, and review this without me intervening", "axis": "confusable" },
+    { "prompt": "end to end", "axis": "terse" }
   ],
   "hard_should_not_trigger": [
-    {
-      "prompt": "Create a detailed implementation plan for the search feature",
-      "axis": "confusable"
-    },
-    {
-      "prompt": "Fix this bug then run the test suite and review the results",
-      "axis": "multi_step"
-    }
+    { "prompt": "Create a detailed implementation plan for the search feature", "axis": "confusable" },
+    { "prompt": "Fix this bug then run the test suite and review the results", "axis": "multi_step" }
   ]
 }

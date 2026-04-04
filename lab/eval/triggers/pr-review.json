@@ -5,13 +5,13 @@
       "prompt": "Review the PR comments and address them"
     },
     {
-      "prompt": "There are review comments on the pull request \u2014 help me respond"
+      "prompt": "There are review comments on the pull request — help me respond"
     },
     {
       "prompt": "Fetch and address the PR review feedback"
     },
     {
-      "prompt": "Help me with pr review patterns in my Ruby project"
+      "prompt": "Someone left feedback on my pull request, help me work through it"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +30,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "The reviewer left comments on PR #42 \u2014 help me address each one",
+      "prompt": "The reviewer left comments on PR #42 — help me address each one",
       "axis": "confusable"
     },
     {

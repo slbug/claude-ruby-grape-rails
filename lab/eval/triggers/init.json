@@ -11,7 +11,7 @@
       "prompt": "Configure the plugin for first use"
     },
     {
-      "prompt": "Help me with init patterns in my Ruby project"
+      "prompt": "This is a fresh Rails project — get the plugin ready to use"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +30,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "I just installed the plugin \u2014 how do I get it running on my project?",
+      "prompt": "I just installed the plugin — how do I get it running on my project?",
       "axis": "confusable"
     },
     {

@@ -11,7 +11,7 @@
       "prompt": "Help me structure the Rails business logic layer"
     },
     {
-      "prompt": "Help me with rails contexts patterns in my Ruby project"
+      "prompt": "Where should I put business logic that spans multiple models?"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +30,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "My controller is 200 lines \u2014 help me extract services and interactors",
+      "prompt": "My controller is 200 lines — help me extract services and interactors",
       "axis": "confusable"
     },
     {

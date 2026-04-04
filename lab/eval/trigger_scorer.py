@@ -20,7 +20,7 @@ PROMPT_BUCKETS = (
 )
 
 
-def _extract_prompt(item: Any) -> str:
+def extract_prompt(item: Any) -> str:
     if isinstance(item, str):
         return item.strip()
     if isinstance(item, dict):
@@ -62,7 +62,7 @@ def score_trigger_file(skill_name: str, data: dict[str, Any]) -> dict[str, Any]:
     all_prompts = []
     for bucket in PROMPT_BUCKETS:
         for item in data.get(bucket, []):
-            prompt = _extract_prompt(item)
+            prompt = extract_prompt(item)
             if prompt:
                 all_prompts.append((bucket, prompt))
 
@@ -98,7 +98,7 @@ def build_confusable_pairs(descriptions: dict[str, str], limit: int = 10) -> lis
         tokens = set(tokenize(desc))
         for bucket in ("should_trigger", "hard_should_trigger"):
             for item in data.get(bucket, []):
-                tokens.update(tokenize(_extract_prompt(item)))
+                tokens.update(tokenize(extract_prompt(item)))
         bundle[skill] = tokens
 
     pairs: list[dict[str, Any]] = []

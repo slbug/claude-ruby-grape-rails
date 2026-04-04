@@ -11,7 +11,7 @@
       "prompt": "Profile the slow endpoint and suggest optimizations"
     },
     {
-      "prompt": "Help me with perf patterns in my Ruby project"
+      "prompt": "This request takes 5 seconds — where is the time going?"
     }
   ],
   "should_not_trigger": [
@@ -30,7 +30,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "The page loads in 3 seconds \u2014 find out why it's so slow",
+      "prompt": "The page loads in 3 seconds — find out why it's so slow",
       "axis": "confusable"
     },
     {

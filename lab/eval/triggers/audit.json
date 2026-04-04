@@ -11,7 +11,7 @@
       "prompt": "Give me a comprehensive project health check"
     },
     {
-      "prompt": "Help me with audit patterns in my Ruby project"
+      "prompt": "How healthy is this codebase before we onboard new developers?"
     }
   ],
   "should_not_trigger": [
