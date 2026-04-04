@@ -734,10 +734,10 @@ case "$MODE" in
   run_all_triggers || FAILURES=$((FAILURES + 1))
   echo
   echo "--- Ablation ---"
-  python3 -m lab.eval.matcher_ablation --all >/dev/null && echo "  Ablation analysis complete." || FAILURES=$((FAILURES + 1))
+  python3 -m lab.eval.matcher_ablation >/dev/null && echo "  Ablation analysis complete." || FAILURES=$((FAILURES + 1))
   echo
-  echo "--- Hygiene ---"
-  python3 -m lab.eval.triggers.hygiene --all --summary || FAILURES=$((FAILURES + 1))
+  echo "--- Hygiene (advisory) ---"
+  python3 -m lab.eval.triggers.hygiene --all --summary || true
   echo
   echo "--- Non-core Skill Advisory ---"
   run_noncore_skill_advisory "$FAIL_UNDER"

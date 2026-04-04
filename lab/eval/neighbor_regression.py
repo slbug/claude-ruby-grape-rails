@@ -294,6 +294,8 @@ def main() -> None:
             if not passed:
                 all_passed = False
             tested.add(skill)
+            for neighbor, _ in neighbor_map.get(skill, []):
+                tested.add(neighbor)
             print()
 
     else:

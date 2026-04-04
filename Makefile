@@ -64,7 +64,7 @@ eval-hard-corpus:
 	python3 -m lab.eval.triggers.generate_hard_corpus
 
 eval-ablation:
-	python3 -m lab.eval.matcher_ablation --all --pretty
+	python3 -m lab.eval.matcher_ablation --pretty
 
 eval-neighbor:
 	python3 -m lab.eval.neighbor_regression --changed

@@ -204,10 +204,6 @@ def main() -> None:
         description="Leave-one-out matcher ablation for structural eval checks"
     )
     parser.add_argument(
-        "--all", action="store_true",
-        help="Run ablation across all skills (default)",
-    )
-    parser.add_argument(
         "--pretty", action="store_true",
         help="Pretty-print JSON output",
     )
