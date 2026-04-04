@@ -159,10 +159,8 @@ class TestScoreSkill(unittest.TestCase):
 
     @patch("lab.eval.behavioral_scorer.run_haiku")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    @patch("lab.eval.behavioral_scorer.load_all_descriptions")
-    def test_score_skill_with_mock_haiku(self, mock_descs, mock_triggers, mock_haiku):
+    def test_score_skill_with_mock_haiku(self, mock_triggers, mock_haiku):
         """Scores correctly with mocked haiku responses."""
-        mock_descs.return_value = SAMPLE_DESCRIPTIONS
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature", "design an implementation"],
             "should_not_trigger": ["review my code", "fix this bug"],
