@@ -29,7 +29,8 @@ RESULTS_DIR = TRIGGERS_DIR / "results"
 _ROUTING_SYSTEM_PROMPT = (
     "You are a skill router. Given a list of skills and a user message, "
     "reply with ONLY the skill name(s) that should be loaded, one per line. "
-    "If none, reply 'none'. List at most 3, ordered by relevance."
+    "If none, reply with the single word 'none'. List at most 3, ordered by relevance. "
+    "NEVER add explanations, code examples, or commentary. Output ONLY skill names or 'none'."
 )
 
 
