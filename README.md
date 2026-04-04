@@ -753,13 +753,13 @@ Common entrypoints:
 - `make eval-tests` or `npm run eval:test` for the default contributor test
   path (`unittest` by default for deterministic cross-environment runs)
 - `make eval-behavioral` or `npm run eval:behavioral` for LLM-based trigger
-  routing tests (uses cache; requires Claude CLI with Haiku access)
+  routing tests (cache-only, runs offline if cache exists)
 - `make eval-behavioral-verbose` / `npm run eval:behavioral:verbose` — same with
-  full prompt/response debug output
-- `make eval-behavioral-fresh` / `npm run eval:behavioral:fresh` — force
-  re-run ignoring cache
+  verbose cache/score output
+- `make eval-behavioral-fresh` / `npm run eval:behavioral:fresh` — ignore
+  cache, re-run via Claude CLI with Haiku access
 - `make eval-behavioral-fresh-verbose` / `npm run eval:behavioral:fresh:verbose`
-  — fresh run with debug output
+  — fresh run with full prompt/response debug output
 - contributor eval tooling requires `python3` 3.10+
 
 Notes:

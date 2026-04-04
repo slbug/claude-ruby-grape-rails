@@ -798,13 +798,13 @@ Minimum runtime: `python3` 3.10+ for `lab/eval/`.
 - `make eval-tests-pytest` / `npm run eval:test:pytest` for explicit `pytest`
   runs
 - `make eval-behavioral` / `npm run eval:behavioral` for LLM-based trigger
-  routing tests (uses cache; requires `claude` CLI with Haiku access)
+  routing tests (cache-only, runs offline if cache exists)
 - `make eval-behavioral-verbose` / `npm run eval:behavioral:verbose` — same,
-  with full prompt/response logged per API call
+  with verbose cache/score output
 - `make eval-behavioral-fresh` / `npm run eval:behavioral:fresh` — ignore
-  cache, force re-run all API calls
+  cache, re-run via `claude` CLI with Haiku access
 - `make eval-behavioral-fresh-verbose` / `npm run eval:behavioral:fresh:verbose`
-  — fresh run with full debug output
+  — fresh run with full prompt/response debug output
 - `make eval-baseline`
 - `make eval-compare`
 - `make eval-overlap`
