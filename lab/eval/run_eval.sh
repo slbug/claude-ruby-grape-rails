@@ -715,8 +715,8 @@ case "$MODE" in
   run_all_triggers || FAILURES=$((FAILURES + 1))
   ;;
 --ci)
-  echo "--- CI Scoring Gate: lint + injection + skills + agents + triggers + ablation + hygiene ---"
-  echo "NOTE: runtime tests run separately via npm run eval:test or npm run ci."
+  echo "--- CI Scoring Gate: lint + injection + skills + agents + triggers + ablation ---"
+  echo "NOTE: hygiene runs in advisory mode; runtime tests run separately via npm run eval:test or npm run ci."
   echo
   echo "--- Lint ---"
   run_lint || FAILURES=$((FAILURES + 1))
