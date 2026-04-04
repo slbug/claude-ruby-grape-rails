@@ -36,6 +36,7 @@ for arg in "$@"; do
     --all) FETCH_ALL=true ;;
     --set=*)
       version="${arg#--set=}"
+      version="${version#v}"
       mkdir -p "${STATE_DIR}"
       printf '%s\n' "$version" >"${STATE_FILE}"
       echo "STATE: reset last checked version to ${version}" >&2
