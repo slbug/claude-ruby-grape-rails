@@ -2,9 +2,8 @@
 # UserPromptSubmit hook: Auto-title sessions from /rb: commands.
 # Only fires on the first prompt via "once": true in hooks.json.
 # Uses hookSpecificOutput.sessionTitle (CC v2.1.94+).
-# Advisory: skips silently on missing deps or empty input.
+# Policy: advisory — skips silently on missing deps or empty input.
 
-set -o errexit
 set -o nounset
 set -o pipefail
 
@@ -33,7 +32,7 @@ if [[ "$PROMPT" =~ ^/(rb|ruby-grape-rails): ]]; then
   NORMALIZED=$(printf '%s' "$PROMPT" | sed -E 's|^/ruby-grape-rails:|/rb:|')
 
   # Extract command name: /rb:plan → rb:plan
-  CMD=$(printf '%s' "$NORMALIZED" | grep -oE '^/[a-z]+:[a-z0-9-]+' | sed 's|^/||')
+  CMD=$(printf '%s' "$NORMALIZED" | grep -oE '^/[a-z]+:[a-z0-9-]+' | sed 's|^/||' || true)
 
   # Extract args after command name, trim leading whitespace
   ARGS=$(printf '%s' "$PROMPT" | sed -E "s|^/[a-z-]+:[a-z0-9-]+||" | sed 's|^ *||')
