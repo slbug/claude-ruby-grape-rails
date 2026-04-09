@@ -40,7 +40,7 @@ writing.
 
 Run the canonical extractor first:
 
-Run `extract-permissions --days "${DAYS:-14}"` with optional flags `--include-global`, `--limit "${LIMIT}"`, and `--dry-run` as needed.
+Run `${CLAUDE_PLUGIN_ROOT}/bin/extract-permissions --days "${DAYS:-14}"` with optional flags `--include-global`, `--limit "${LIMIT}"`, and `--dry-run` as needed.
 
 See `${CLAUDE_SKILL_DIR}/references/extraction-script.md` for the output format.
 Keep repo-local settings as the default audit scope; only add

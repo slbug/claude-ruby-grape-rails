@@ -221,16 +221,24 @@ skills/{name}/
 - No `triggers:` field (use `description` for auto-loading)
 - Keep skill descriptions at `<= 250` characters. Longer descriptions are
   silently truncated by Claude's listing budget and hurt routing quality.
+- For plugin-wide executables in `bin/`, use explicit
+  `${CLAUDE_PLUGIN_ROOT}/bin/<cmd>` in skill text when the skill also
+  references `${CLAUDE_SKILL_DIR}`. Bare command names are PATH-resolved
+  but can be conflated with skill-local files by the model.
 
-**Colon in Skill Names (Compatibility Risk):**
+**Colon in Skill Names (Documented Behavior Divergence):**
 
 The plugin uses colons in skill names (e.g., `rb:plan`, `rb:work`) for namespacing.
-Per current Claude Code docs, skill names should use "lowercase letters, numbers, and hyphens only."
-The colon pattern works in practice but is a compatibility watch item.
+The skills docs still say names should use "lowercase letters, numbers, and hyphens only."
+However, the plugins-reference documents that when a plugin uses skill paths like
+`"skills": ["./"]`, the frontmatter `name` field determines the invocation name,
+giving a stable name across install methods. CC 2.1.94 stabilized this behavior.
 
-- **Current behavior**: Works correctly in plugin context
-- **Risk**: Future strict enforcement of character restrictions
-- **Mitigation**: If restrictions tighten, migrate to internal hyphen names with external aliases
+- **Current status**: Works in practice; frontmatter-name-based invocation is
+  stabilized in plugin path behavior
+- **Divergence**: Published naming-character guidance still says hyphen-only
+- **Mitigation**: If character restrictions are ever enforced strictly, migrate
+  to internal hyphen names with external aliases
 
 ### Workflow Skills
 
@@ -256,11 +264,12 @@ Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
 ```json
 {
   "hooks": {
-    "PreToolUse": [...],            // Block dangerous ops (rails/bin/rails/rake db:drop variants, force push, RAILS_ENV=production)
     "PostToolUse": [...],           // Generic safety + targeted Ruby/post-plan hooks
+    "PreToolUse": [...],            // Block dangerous ops (rails/bin/rails/rake db:drop variants, force push, RAILS_ENV=production)
     "PostToolUseFailure": [...],   // Ruby failure hints + error critic for Ruby-relevant Bash failures
     "SubagentStart": [...],        // Iron Laws injection into all subagents
     "SessionStart": [...],         // Setup dirs + runtime tool detection + resume detection
+    "UserPromptSubmit": [...],     // Auto session title from first prompt (once: true)
     "FileChanged": [...],          // Runtime refresh when Gemfile/Rakefile/gemspec/lefthook files change
     "CwdChanged": [...],           // Runtime refresh when working directory changes
     "PreCompact": [...],           // Warn before compaction about active workflow state
@@ -297,6 +306,10 @@ Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
   only for Ruby-relevant Bash failures (`bundle`, `rails`, `rake`, `ruby`,
   `rspec`, `standardrb`, `rubocop`, `brakeman`) via declarative `if` filters
 - `SubagentStart`: Inject all Iron Laws into every spawned subagent via `additionalContext` (addresses zero skill auto-loading gap)
+- `UserPromptSubmit`: Auto session title from first prompt — `/rb:plan auth`
+  → `"rb:plan — auth"`, free-form prompts use first ~60 chars. Uses
+  `hookSpecificOutput.sessionTitle` (CC v2.1.94+), `once: true`. Does not
+  support matchers.
 - `PreCompact`: Warn before compaction about the active plan/work/full state so
   the next turn re-reads the right artifacts after compaction
 - `PostCompact`: Advise Claude which active plan artifacts to re-read after
@@ -851,13 +864,19 @@ these are the main still-unadopted features worth tracking:
 ### Agents
 
 - `isolation: "worktree"` for agents that modify files, such as
-  `verification-runner` or parallel review tasks
+  `verification-runner` or parallel review tasks. CC 2.1.97 fixed a parent-cwd
+  leak bug, reducing evaluation risk.
 
 ### Hooks
 
 - `http` hook type for external telemetry/logging
-- `SubagentStop` for specialist completion metrics
+- `SubagentStop` for specialist completion metrics. CC 2.1.97 fixed
+  prompt-type Stop/SubagentStop hooks failing on long sessions.
 - `SessionEnd` for cleanup of temporary artifacts
+- Per-skill YAML frontmatter hooks are documented and available (CC 2.1.94
+  fixed plugin skill frontmatter hooks being silently ignored). Not adopted —
+  no skills currently need them. Note: plugin **agents** still do not support
+  `hooks`, `mcpServers`, or `permissionMode`.
 
 ### Skills
 
@@ -867,10 +886,17 @@ these are the main still-unadopted features worth tracking:
 ### Plugin
 
 - `${CLAUDE_PLUGIN_DATA}` for persistent plugin-managed state or caches
-- plugin-root `settings.json` expansion beyond the currently shipped
-  `effort` and `showTurnDuration` defaults
-- `.lsp.json` LSP configuration, with Ruby LSP preferred if this is ever added
+- plugin-root `settings.json` currently only supports the `agent` key;
+  `effortLevel` and `showTurnDuration` are NOT supported in plugin settings
+  (unknown keys are silently ignored). Track for future key expansion.
+- `.lsp.json` LSP configuration, with Ruby LSP preferred if this is ever added.
   Requires users to install LSP binary separately.
+
+### Output Styles
+
+- `keep-coding-instructions` frontmatter field: documented for custom output
+  styles (preserves coding instructions in system prompt when `true`). Not
+  relevant unless the plugin ships an `output-styles/` directory.
 
 ### Adoption Criteria
 

@@ -7,6 +7,38 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.11.3] - 2026-04-09
+
+### Added
+
+- **Auto session titles via `UserPromptSubmit` hook** — Sessions are
+  automatically named from the first prompt. `/rb:plan build auth` becomes
+  `"rb:plan — build auth"`, `/rb:work .claude/plans/auth-system/plan.md`
+  becomes `"rb:work — auth-system"`, and free-form prompts use the first
+  ~60 characters. Uses `hookSpecificOutput.sessionTitle` (CC v2.1.94+).
+  Fires once per session via `"once": true`. Improves session history
+  navigation and `--resume` discoverability.
+
+### Changed
+
+- **Hardened `bin/` executable paths in skills** — `detect-stack` and
+  `extract-permissions` invocations now use explicit
+  `${CLAUDE_PLUGIN_ROOT}/bin/` paths instead of bare command names. Prevents
+  model path-conflation when skills also reference `${CLAUDE_SKILL_DIR}`.
+- **Downgraded colon-naming compatibility risk** — Rewritten from "risk" to
+  "documented behavior divergence" after CC 2.1.94 stabilized
+  frontmatter-name-based invocation for plugin skills.
+- **Rewrote Features Under Evaluation** — Marked `UserPromptSubmit` +
+  `sessionTitle` as adopted; moved `keep-coding-instructions` to Output Styles
+  (was misclassified under Skills); noted per-skill YAML frontmatter hooks
+  are now documented and available; corrected plugin `settings.json` guidance.
+
+### Removed
+
+- **Removed `plugins/ruby-grape-rails/settings.json`** — Both shipped keys
+  (`"effort": "medium"` and `"showTurnDuration": true`) were silently ignored
+  by Claude Code. Plugin-root `settings.json` only supports the `agent` key.
+
 ## [1.11.2] - 2026-04-04
 
 ### Fixed
@@ -1134,7 +1166,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.2...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.3...HEAD
+[1.11.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.2...v1.11.3
 [1.11.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.1...v1.11.2
 [1.11.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.0...v1.11.1
 [1.11.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.10.0...v1.11.0

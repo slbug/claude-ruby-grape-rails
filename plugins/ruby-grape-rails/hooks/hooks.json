@@ -456,6 +456,18 @@
         ]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session-title.sh",
+            "timeout": 5,
+            "once": true
+          }
+        ]
+      }
+    ],
     "PreCompact": [
       {
         "matcher": "auto|manual",
