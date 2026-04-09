@@ -33,6 +33,7 @@ if [[ "$PROMPT" =~ ^/(rb|ruby-grape-rails): ]]; then
 
   # Extract command name: /rb:plan → rb:plan
   CMD=$(printf '%s' "$NORMALIZED" | grep -oE '^/[a-z]+:[a-z0-9-]+' | sed 's|^/||' || true)
+  [[ -n "$CMD" ]] || exit 0
 
   # Extract args after command name, trim leading whitespace
   ARGS=$(printf '%s' "$PROMPT" | sed -E "s|^/[a-z-]+:[a-z0-9-]+||" | sed 's|^ *||')
