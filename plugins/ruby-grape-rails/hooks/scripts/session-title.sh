@@ -26,17 +26,20 @@ INPUT="$HOOK_INPUT_VALUE"
 PROMPT=$(printf '%s' "$INPUT" | jq -r '.prompt // empty' 2>/dev/null)
 [[ -n "$PROMPT" ]] || exit 0
 
+# Use first line only — prompts can be multi-line
+FIRST_LINE=$(printf '%s' "$PROMPT" | head -1)
+
 # Match plugin skills: /rb:plan, /ruby-grape-rails:review
-if [[ "$PROMPT" =~ ^/(rb|ruby-grape-rails): ]]; then
+if [[ "$FIRST_LINE" =~ ^/(rb|ruby-grape-rails): ]]; then
   # Normalize: /ruby-grape-rails:review → /rb:review (strip full plugin prefix)
-  NORMALIZED=$(printf '%s' "$PROMPT" | sed -E 's|^/ruby-grape-rails:|/rb:|')
+  NORMALIZED=$(printf '%s' "$FIRST_LINE" | sed -E 's|^/ruby-grape-rails:|/rb:|')
 
   # Extract command name: /rb:plan → rb:plan
   CMD=$(printf '%s' "$NORMALIZED" | grep -oE '^/[a-z]+:[a-z0-9-]+' | sed 's|^/||' || true)
   [[ -n "$CMD" ]] || exit 0
 
   # Extract args after command name, trim leading whitespace
-  ARGS=$(printf '%s' "$PROMPT" | sed -E "s|^/[a-z-]+:[a-z0-9-]+||" | sed 's|^ *||')
+  ARGS=$(printf '%s' "$FIRST_LINE" | sed -E "s|^/[a-z-]+:[a-z0-9-]+||" | sed 's|^ *||')
 
   # Clean up file paths: .claude/plans/auth-system/plan.md → auth-system
   if [[ "$ARGS" =~ \.claude/plans/([^/]+)/ ]]; then
@@ -61,8 +64,7 @@ if [[ "$PROMPT" =~ ^/(rb|ruby-grape-rails): ]]; then
     }
   }'
 else
-  # Non-plugin prompt — extract first line, trim to 60 chars
-  FIRST_LINE=$(printf '%s' "$PROMPT" | head -1)
+  # Non-plugin prompt — FIRST_LINE already extracted above
 
   # Skip if it's very short (likely a "yes", "no", continuation)
   [[ ${#FIRST_LINE} -gt 10 ]] || exit 0
