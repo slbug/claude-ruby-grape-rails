@@ -320,7 +320,7 @@ Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
   - `detect-runtime-async.sh`: quiet full refresh for helper versions and slower probes
 - `SessionStart` (startup|resume only): Scratchpad auto-init/check +
   resume workflow detection + workflow hints
-- `FileChanged` (Gemfile|Gemfile.lock|Rakefile|lefthook.yml|lefthook.yaml|justfile): Re-runs `detect-runtime-file-changed.sh` to refresh `.claude/.runtime_env` when core project files change mid-session
+- `FileChanged` (Gemfile|Gemfile.lock|Rakefile|lefthook|justfile and variants): Re-runs `detect-runtime-file-changed.sh` to refresh `.claude/.runtime_env` when core project files change mid-session
 - `CwdChanged`: Re-runs `detect-runtime-file-changed.sh` to keep runtime detection aligned when the session moves between repos or package roots
 - `Stop`: Warn if plans have unchecked tasks
 - `StopFailure`: Append normalized API-failure context to the active plan scratchpad for better resume continuity
