@@ -249,11 +249,12 @@ def _run_prompt_batch(
         return results, failures
 
     # Parallel path: submit all prompts, collect in submission order
-    _executor = ThreadPoolExecutor(max_workers=workers)
+    executor = ThreadPoolExecutor(max_workers=workers)
+    _executor = executor
     try:
         futures = []
         for i, item in enumerate(items, 1):
-            future = _executor.submit(
+            future = executor.submit(
                 _run_single_prompt,
                 skill_name, item, i, len(items), descriptions, expected, tier, verbose,
             )
@@ -272,7 +273,7 @@ def _run_prompt_batch(
             else:
                 results.append(result)
     finally:
-        _executor.shutdown(wait=True)
+        executor.shutdown(wait=True)
         _executor = None
 
     return results, failures
@@ -412,14 +413,15 @@ def main() -> None:
                         help="Parallel workers for haiku calls (default 1, recommended 4)")
     args = parser.parse_args()
 
-    # Signal handler: clean shutdown on Ctrl+C — cancel pending futures,
-    # don't leave orphaned claude processes
+    # Signal handler: cancel pending futures, wait for running workers
     def _shutdown_handler(signum, frame):
         global _executor
-        if _executor is not None:
-            _executor.shutdown(wait=False, cancel_futures=True)
-            _executor = None
-        print("\nInterrupted — shutting down workers.", file=sys.stderr)
+        executor = _executor
+        _executor = None
+        if executor is not None:
+            print("\nInterrupted — cancelling pending work, waiting for running workers.",
+                  file=sys.stderr)
+            executor.shutdown(wait=True, cancel_futures=True)
         raise SystemExit(130)
 
     signal.signal(signal.SIGINT, _shutdown_handler)
