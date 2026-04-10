@@ -11,18 +11,20 @@ Usage:
     python3 -m lab.eval.behavioral_scorer --all --workers 4   # Parallel (4 workers, ~3-4x speedup)
 
 Cost: Uses --bare mode to minimize per-call overhead.
-Observed: ~$10 for full 51-skill run without --bare, expected ~$1-2 with --bare.
+Full 51-skill run (621 prompts): ~$4 with --bare, ~60 min with --workers 6.
 """
 
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import hashlib
 import json
 import signal
 import subprocess
 import sys
 import threading
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from .trigger_scorer import load_all_descriptions, load_trigger_file, TRIGGERS_DIR
@@ -36,6 +38,15 @@ _ROUTING_SYSTEM_PROMPT = (
     "If none, reply with the single word 'none'. List at most 3, ordered by relevance. "
     "NEVER add explanations, code examples, or commentary. Output ONLY skill names or 'none'."
 )
+
+
+@dataclasses.dataclass(slots=True)
+class CallResult:
+    """Result from a single run_haiku() call."""
+    skills: list[str] | None
+    cost: float = 0.0
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 def content_hash(skill_name: str, descriptions: dict[str, str]) -> str:
@@ -61,24 +72,18 @@ def build_routing_prompt(descriptions: dict[str, str], user_prompt: str) -> str:
         f'The user says: "{user_prompt}"'
     )
 
-# Cost tracking accumulators (reset per main() run, thread-safe)
-_total_cost: float = 0.0
-_max_call_cost: float = 0.0
-_total_calls: int = 0
-_cost_lock = threading.Lock()
 
 # Global executor reference for signal handler cleanup
 _executor: ThreadPoolExecutor | None = None
+_executor_lock = threading.Lock()
+
+# Lock for serializing verbose output blocks across threads
+_verbose_lock = threading.Lock()
 
 
 def run_haiku(prompt: str, verbose: bool = False,
-              log_buf: list[str] | None = None) -> list[str] | None:
-    """Ask haiku which skill(s) to route to. Returns skill names, or None on failure.
-
-    When log_buf is provided, verbose output is appended there instead of
-    printing to stderr. This allows callers to buffer and print atomically.
-    """
-    global _total_cost, _max_call_cost, _total_calls
+              log_buf: list[str] | None = None) -> CallResult:
+    """Ask haiku which skill(s) to route to. Returns CallResult."""
 
     def _log(msg: str) -> None:
         if log_buf is not None:
@@ -111,7 +116,7 @@ def run_haiku(prompt: str, verbose: bool = False,
                 if result.stderr.strip():
                     _log(f"STDERR: {result.stderr.strip()[:200]}")
                 _log("--- END RESPONSE ---")
-            return None
+            return CallResult(skills=None)
 
         # Parse JSON response
         try:
@@ -119,19 +124,17 @@ def run_haiku(prompt: str, verbose: bool = False,
         except json.JSONDecodeError:
             if verbose:
                 _log("ERROR: could not parse JSON response")
-            return None
+            return CallResult(skills=None)
 
         text = data.get("result", "")
         cost = data.get("total_cost_usd", 0)
-        with _cost_lock:
-            _total_calls += 1
-            _total_cost += cost
-            if cost > _max_call_cost:
-                _max_call_cost = cost
+        usage = data.get("usage", {})
+        in_tok = (usage.get("input_tokens", 0)
+                  + usage.get("cache_creation_input_tokens", 0)
+                  + usage.get("cache_read_input_tokens", 0))
+        out_tok = usage.get("output_tokens", 0)
+
         if verbose:
-            usage = data.get("usage", {})
-            in_tok = usage.get("input_tokens", 0) + usage.get("cache_creation_input_tokens", 0) + usage.get("cache_read_input_tokens", 0)
-            out_tok = usage.get("output_tokens", 0)
             _log(f"--- RESPONSE (${cost:.4f}, {in_tok}in/{out_tok}out) ---")
             _log(text.strip() or "(empty)")
             _log("--- END RESPONSE ---")
@@ -148,16 +151,16 @@ def run_haiku(prompt: str, verbose: bool = False,
             line = line.strip("`").strip()
             if line and line.lower() != "none" and not line.startswith("No "):
                 skills.append(line)
-        return skills
+        return CallResult(skills=skills, cost=cost, input_tokens=in_tok, output_tokens=out_tok)
 
     except subprocess.TimeoutExpired:
         if verbose:
             _log("TIMEOUT after 60s")
-        return None
+        return CallResult(skills=None)
     except Exception as exc:
         if verbose:
             _log(f"ERROR: {exc}")
-        return None
+        return CallResult(skills=None)
 
 
 def extract_prompt(item) -> str:
@@ -191,10 +194,6 @@ def _check_correct(skill_name: str, chosen: list[str], expected: bool,
     return skill_name in chosen
 
 
-# Lock for serializing verbose output blocks across threads
-_verbose_lock = threading.Lock()
-
-
 def _run_single_prompt(
     skill_name: str,
     item,
@@ -204,6 +203,7 @@ def _run_single_prompt(
     expected: bool,
     tier: str,
     verbose: bool = False,
+    parallel: bool = False,
 ) -> dict | None:
     """Run one prompt item. Returns result dict, {"_failure": True} on haiku failure, or None on skip."""
     meta = _extract_prompt_meta(item)
@@ -211,28 +211,50 @@ def _run_single_prompt(
     if not prompt:
         return None
     label = "should_trigger" if expected else "should_not"
+    routing = meta["routing"]
+    routing_tag = f" [{routing}]" if routing and routing != "lock" else ""
+    header = f"  [{skill_name} {label}({tier}){routing_tag} {index}/{total}] {prompt}"
+
+    if verbose and not parallel:
+        # Sequential: print header immediately so user sees progress
+        print(header, file=sys.stderr)
+
+    # Parallel: buffer everything for atomic print. Sequential: run_haiku prints directly.
     log_lines: list[str] = []
-    if verbose:
-        routing = meta["routing"]
-        routing_tag = f" [{routing}]" if routing and routing != "lock" else ""
-        log_lines.append(f"  [{skill_name} {label}({tier}){routing_tag} {index}/{total}] {prompt}")
+    if verbose and parallel:
+        log_lines.append(header)
+
     full_prompt = build_routing_prompt(descriptions, prompt)
-    # Buffer run_haiku verbose output into log_lines to print atomically
-    chosen = run_haiku(full_prompt, verbose=verbose, log_buf=log_lines)
+    call_result = run_haiku(full_prompt, verbose=verbose,
+                            log_buf=log_lines if parallel else None)
+    chosen = call_result.skills
+
     if chosen is None:
         if verbose:
             log_lines.append("  -> SKIPPED (haiku call failed)")
-            with _verbose_lock:
-                print("\n".join(log_lines), file=sys.stderr)
-        return {"_failure": True}
+            if parallel:
+                with _verbose_lock:
+                    print("\n".join(log_lines), file=sys.stderr)
+            else:
+                print(log_lines[-1], file=sys.stderr)
+        return {"_failure": True, "_call_result": call_result}
+
     correct = _check_correct(
         skill_name, chosen, expected, meta["routing"], meta["valid_skills"]
     )
+    status = "OK" if correct else ("MISS" if expected else "FALSE_POS")
+    result_line = f"  -> chosen={chosen} [{status}]"
+
     if verbose:
-        status = "OK" if correct else ("MISS" if expected else "FALSE_POS")
-        log_lines.append(f"  -> chosen={chosen} [{status}]")
-        with _verbose_lock:
-            print("\n".join(log_lines), file=sys.stderr)
+        log_lines.append(result_line)
+        if parallel:
+            with _verbose_lock:
+                print("\n".join(log_lines), file=sys.stderr)
+        else:
+            # Sequential: run_haiku already printed to stderr via log_buf=None path,
+            # just print the result line
+            print(result_line, file=sys.stderr)
+
     return {
         "prompt": prompt,
         "expected": expected,
@@ -240,6 +262,7 @@ def _run_single_prompt(
         "correct": correct,
         "tier": tier,
         "routing": meta["routing"],
+        "_call_result": call_result,
     }
 
 
@@ -251,55 +274,74 @@ def _run_prompt_batch(
     tier: str,
     verbose: bool = False,
     workers: int = 1,
-) -> tuple[list[dict], int]:
-    """Run a batch of prompt items and return (results, failure_count)."""
+) -> tuple[list[dict], int, list[CallResult]]:
+    """Run a batch of prompt items. Returns (results, failure_count, call_results)."""
     global _executor
     results = []
     failures = 0
+    call_results: list[CallResult] = []
+    parallel = workers > 1
 
-    if workers <= 1:
-        # Sequential path
+    if not parallel:
+        # Sequential path — run_haiku prints verbose directly to stderr
         for i, item in enumerate(items, 1):
             result = _run_single_prompt(
-                skill_name, item, i, len(items), descriptions, expected, tier, verbose
+                skill_name, item, i, len(items), descriptions, expected, tier,
+                verbose, parallel=False,
             )
             if result is None:
                 continue
+            cr = result.pop("_call_result", None)
+            if cr:
+                call_results.append(cr)
             if result.get("_failure"):
                 failures += 1
             else:
                 results.append(result)
-        return results, failures
+        return results, failures, call_results
 
     # Parallel path: submit all prompts, collect in submission order
-    executor = ThreadPoolExecutor(max_workers=workers)
-    _executor = executor
-    try:
-        futures = []
-        for i, item in enumerate(items, 1):
-            future = executor.submit(
-                _run_single_prompt,
-                skill_name, item, i, len(items), descriptions, expected, tier, verbose,
-            )
-            futures.append(future)
+    errors: list[str] = []
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        with _executor_lock:
+            _executor = executor
+        try:
+            futures = []
+            for i, item in enumerate(items, 1):
+                future = executor.submit(
+                    _run_single_prompt,
+                    skill_name, item, i, len(items), descriptions, expected, tier,
+                    verbose, True,
+                )
+                futures.append(future)
 
-        for future in futures:
-            try:
-                result = future.result()
-            except Exception:
-                failures += 1
-                continue
-            if result is None:
-                continue
-            if result.get("_failure"):
-                failures += 1
-            else:
-                results.append(result)
-    finally:
-        executor.shutdown(wait=True)
-        _executor = None
+            for future in futures:
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    failures += 1
+                    errors.append(f"{type(exc).__name__}: {exc}")
+                    if verbose:
+                        with _verbose_lock:
+                            traceback.print_exc(file=sys.stderr)
+                    continue
+                if result is None:
+                    continue
+                cr = result.pop("_call_result", None)
+                if cr:
+                    call_results.append(cr)
+                if result.get("_failure"):
+                    failures += 1
+                else:
+                    results.append(result)
+        finally:
+            with _executor_lock:
+                _executor = None
 
-    return results, failures
+    if errors and not verbose:
+        print(f"  {len(errors)} worker failures: {', '.join(set(errors))}", file=sys.stderr)
+
+    return results, failures, call_results
 
 
 def _compute_metrics(results: list[dict]) -> dict:
@@ -331,8 +373,8 @@ def score_skill(
     verbose: bool = False,
     limit: int = 0,
     workers: int = 1,
-) -> dict:
-    """Score trigger accuracy for one skill. Returns precision/recall/accuracy with tier split."""
+) -> tuple[dict, list[CallResult]]:
+    """Score trigger accuracy for one skill. Returns (score_dict, call_results)."""
     cache_path = RESULTS_DIR / f"{skill_name}.json"
 
     if use_cache:
@@ -340,16 +382,16 @@ def score_skill(
             try:
                 cached = json.loads(cache_path.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
-                return {"skill": skill_name, "error": "corrupted cache file"}
+                return {"skill": skill_name, "error": "corrupted cache file"}, []
             expected_hash = content_hash(skill_name, descriptions)
             if cached.get("content_hash") == expected_hash:
-                return cached
+                return cached, []
         # --cache is cache-only: skip skills without valid cache
-        return {"skill": skill_name, "error": "no valid cache (stale or missing)"}
+        return {"skill": skill_name, "error": "no valid cache (stale or missing)"}, []
 
     triggers = load_trigger_file(skill_name)
     if not triggers:
-        return {"skill": skill_name, "error": "no trigger file"}
+        return {"skill": skill_name, "error": "no trigger file"}, []
 
     # Easy tier: should_trigger + should_not_trigger (raw items, may be str or dict)
     easy_trigger = triggers.get("should_trigger", [])
@@ -365,6 +407,7 @@ def score_skill(
         hard_not = hard_not[:limit]
 
     all_results = []
+    all_call_results: list[CallResult] = []
     total_failures = 0
 
     for items, expected, tier in [
@@ -373,14 +416,15 @@ def score_skill(
         (hard_trigger, True, "hard"),
         (hard_not, False, "hard"),
     ]:
-        results, failures = _run_prompt_batch(
+        results, failures, call_results = _run_prompt_batch(
             skill_name, items, descriptions, expected, tier, verbose, workers
         )
         all_results.extend(results)
+        all_call_results.extend(call_results)
         total_failures += failures
 
     if not all_results and total_failures > 0:
-        return {"skill": skill_name, "error": f"all {total_failures} haiku calls failed"}
+        return {"skill": skill_name, "error": f"all {total_failures} haiku calls failed"}, all_call_results
 
     # Overall metrics
     overall = _compute_metrics(all_results)
@@ -419,7 +463,7 @@ def score_skill(
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     cache_path.write_text(json.dumps(score_data, indent=2) + "\n", encoding="utf-8")
 
-    return score_data
+    return score_data, all_call_results
 
 
 def main() -> None:
@@ -439,8 +483,9 @@ def main() -> None:
     # Signal handler: cancel pending futures, wait for running workers
     def _shutdown_handler(signum, frame):
         global _executor
-        executor = _executor
-        _executor = None
+        with _executor_lock:
+            executor = _executor
+            _executor = None
         if executor is not None:
             print("\nInterrupted — cancelling pending work, waiting for running workers.",
                   file=sys.stderr)
@@ -452,15 +497,15 @@ def main() -> None:
 
     descriptions = load_all_descriptions()
 
-    global _total_cost, _max_call_cost, _total_calls
-    _total_cost = 0.0
-    _max_call_cost = 0.0
-    _total_calls = 0
+    # Collect all CallResults for cost aggregation (single-threaded, no lock needed)
+    all_call_results: list[CallResult] = []
 
     if args.skill:
-        result = score_skill(args.skill, descriptions, args.cache,
-                             verbose=args.verbose, limit=args.limit,
-                             workers=args.workers)
+        result, crs = score_skill(args.skill, descriptions, args.cache,
+                                  verbose=args.verbose, limit=args.limit,
+                                  workers=args.workers)
+        all_call_results.extend(crs)
+
         if args.summary:
             tier_str = ""
             tc = result.get("tier_counts", {})
@@ -483,9 +528,11 @@ def main() -> None:
             if not triggers:
                 continue
             print(f"  Testing {name}...", end="\n" if args.verbose else " ", flush=True, file=sys.stderr)
-            result = score_skill(name, descriptions, args.cache,
-                                 verbose=args.verbose, limit=args.limit,
-                                 workers=args.workers)
+            result, crs = score_skill(name, descriptions, args.cache,
+                                      verbose=args.verbose, limit=args.limit,
+                                      workers=args.workers)
+            all_call_results.extend(crs)
+
             if "error" in result:
                 print(f"SKIPPED ({result['error']})", file=sys.stderr)
                 continue
@@ -537,13 +584,15 @@ def main() -> None:
         parser.print_help()
         return
 
-    # Cost summary (always printed to stderr when API calls were made)
-    if _total_calls > 0:
-        avg_cost = _total_cost / _total_calls
+    # Cost summary — aggregated from CallResult objects (single-threaded, no lock)
+    if all_call_results:
+        total_cost = sum(cr.cost for cr in all_call_results)
+        max_cost = max(cr.cost for cr in all_call_results)
+        avg_cost = total_cost / len(all_call_results)
         print(f"\n--- Cost Summary ---", file=sys.stderr)
-        print(f"  Total API calls: {_total_calls}", file=sys.stderr)
-        print(f"  Total cost:      ${_total_cost:.4f}", file=sys.stderr)
-        print(f"  Max single call: ${_max_call_cost:.4f}", file=sys.stderr)
+        print(f"  Total API calls: {len(all_call_results)}", file=sys.stderr)
+        print(f"  Total cost:      ${total_cost:.4f}", file=sys.stderr)
+        print(f"  Max single call: ${max_cost:.4f}", file=sys.stderr)
         print(f"  Avg per call:    ${avg_cost:.4f}", file=sys.stderr)
         print(f"--------------------", file=sys.stderr)
 

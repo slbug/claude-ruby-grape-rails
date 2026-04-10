@@ -270,7 +270,7 @@ Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
     "SubagentStart": [...],        // Iron Laws injection into all subagents
     "SessionStart": [...],         // Setup dirs + runtime tool detection + resume detection
     "UserPromptSubmit": [...],     // Auto session title from first prompt (once: true)
-    "FileChanged": [...],          // Runtime refresh when Gemfile/Rakefile/gemspec/lefthook files change
+    "FileChanged": [...],          // Runtime refresh when Gemfile/Rakefile/lefthook/justfile files change
     "CwdChanged": [...],           // Runtime refresh when working directory changes
     "PreCompact": [...],           // Warn before compaction about active workflow state
     "PostCompact": [...],          // Advise re-reading active plan artifacts after compaction
@@ -320,7 +320,7 @@ Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
   - `detect-runtime-async.sh`: quiet full refresh for helper versions and slower probes
 - `SessionStart` (startup|resume only): Scratchpad auto-init/check +
   resume workflow detection + workflow hints
-- `FileChanged` (Gemfile|Gemfile.lock|Rakefile|lefthook|justfile|*.gemspec): Re-runs `detect-runtime-file-changed.sh` to refresh `.claude/.runtime_env` when core project files change mid-session
+- `FileChanged` (Gemfile|Gemfile.lock|Rakefile|lefthook.yml|lefthook.yaml|justfile): Re-runs `detect-runtime-file-changed.sh` to refresh `.claude/.runtime_env` when core project files change mid-session
 - `CwdChanged`: Re-runs `detect-runtime-file-changed.sh` to keep runtime detection aligned when the session moves between repos or package roots
 - `Stop`: Warn if plans have unchecked tasks
 - `StopFailure`: Append normalized API-failure context to the active plan scratchpad for better resume continuity
