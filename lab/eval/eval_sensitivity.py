@@ -107,6 +107,9 @@ def main() -> None:
         if result is None:
             print(f"No cached results for {args.skill}", file=sys.stderr)
             raise SystemExit(1)
+        if "error" in result:
+            print(f"{args.skill}: {result['error']}", file=sys.stderr)
+            raise SystemExit(1)
         if args.summary:
             _print_summary(args.skill, result)
         else:
