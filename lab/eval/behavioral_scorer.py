@@ -18,8 +18,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import signal
 import subprocess
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from .trigger_scorer import load_all_descriptions, load_trigger_file, TRIGGERS_DIR
 
@@ -57,10 +60,14 @@ def build_routing_prompt(descriptions: dict[str, str], user_prompt: str) -> str:
         f'The user says: "{user_prompt}"'
     )
 
-# Cost tracking accumulators (reset per main() run)
+# Cost tracking accumulators (reset per main() run, thread-safe)
 _total_cost: float = 0.0
 _max_call_cost: float = 0.0
 _total_calls: int = 0
+_cost_lock = threading.Lock()
+
+# Global executor reference for signal handler cleanup
+_executor: ThreadPoolExecutor | None = None
 
 
 def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
@@ -103,10 +110,11 @@ def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
 
         text = data.get("result", "")
         cost = data.get("total_cost_usd", 0)
-        _total_calls += 1
-        _total_cost += cost
-        if cost > _max_call_cost:
-            _max_call_cost = cost
+        with _cost_lock:
+            _total_calls += 1
+            _total_cost += cost
+            if cost > _max_call_cost:
+                _max_call_cost = cost
         if verbose:
             usage = data.get("usage", {})
             in_tok = usage.get("input_tokens", 0) + usage.get("cache_creation_input_tokens", 0) + usage.get("cache_read_input_tokens", 0)
@@ -170,6 +178,48 @@ def _check_correct(skill_name: str, chosen: list[str], expected: bool,
     return skill_name in chosen
 
 
+def _run_single_prompt(
+    skill_name: str,
+    item,
+    index: int,
+    total: int,
+    descriptions: dict[str, str],
+    expected: bool,
+    tier: str,
+    verbose: bool = False,
+) -> dict | None:
+    """Run one prompt item. Returns result dict or None on failure/skip."""
+    meta = _extract_prompt_meta(item)
+    prompt = meta["prompt"]
+    if not prompt:
+        return None
+    label = "should_trigger" if expected else "should_not"
+    if verbose:
+        routing = meta["routing"]
+        routing_tag = f" [{routing}]" if routing and routing != "lock" else ""
+        print(f"  [{skill_name} {label}({tier}){routing_tag} {index}/{total}] {prompt}", file=sys.stderr)
+    full_prompt = build_routing_prompt(descriptions, prompt)
+    chosen = run_haiku(full_prompt, verbose=verbose)
+    if chosen is None:
+        if verbose:
+            print("  -> SKIPPED (haiku call failed)", file=sys.stderr)
+        return {"_failure": True}
+    correct = _check_correct(
+        skill_name, chosen, expected, meta["routing"], meta["valid_skills"]
+    )
+    if verbose:
+        status = "OK" if correct else ("MISS" if expected else "FALSE_POS")
+        print(f"  -> chosen={chosen} [{status}]", file=sys.stderr)
+    return {
+        "prompt": prompt,
+        "expected": expected,
+        "chosen": chosen,
+        "correct": correct,
+        "tier": tier,
+        "routing": meta["routing"],
+    }
+
+
 def _run_prompt_batch(
     skill_name: str,
     items: list,
@@ -177,41 +227,54 @@ def _run_prompt_batch(
     expected: bool,
     tier: str,
     verbose: bool = False,
+    workers: int = 1,
 ) -> tuple[list[dict], int]:
     """Run a batch of prompt items and return (results, failure_count)."""
+    global _executor
     results = []
     failures = 0
-    label = "should_trigger" if expected else "should_not"
-    for i, item in enumerate(items, 1):
-        meta = _extract_prompt_meta(item)
-        prompt = meta["prompt"]
-        if not prompt:
-            continue
-        if verbose:
-            routing = meta["routing"]
-            routing_tag = f" [{routing}]" if routing and routing != "lock" else ""
-            print(f"  [{skill_name} {label}({tier}){routing_tag} {i}/{len(items)}] {prompt}", file=sys.stderr)
-        full_prompt = build_routing_prompt(descriptions, prompt)
-        chosen = run_haiku(full_prompt, verbose=verbose)
-        if chosen is None:
-            failures += 1
-            if verbose:
-                print("  -> SKIPPED (haiku call failed)", file=sys.stderr)
-            continue
-        correct = _check_correct(
-            skill_name, chosen, expected, meta["routing"], meta["valid_skills"]
-        )
-        if verbose:
-            status = "OK" if correct else ("MISS" if expected else "FALSE_POS")
-            print(f"  -> chosen={chosen} [{status}]", file=sys.stderr)
-        results.append({
-            "prompt": prompt,
-            "expected": expected,
-            "chosen": chosen,
-            "correct": correct,
-            "tier": tier,
-            "routing": meta["routing"],
-        })
+
+    if workers <= 1:
+        # Sequential path
+        for i, item in enumerate(items, 1):
+            result = _run_single_prompt(
+                skill_name, item, i, len(items), descriptions, expected, tier, verbose
+            )
+            if result is None:
+                continue
+            if result.get("_failure"):
+                failures += 1
+            else:
+                results.append(result)
+        return results, failures
+
+    # Parallel path: submit all prompts, collect in submission order
+    _executor = ThreadPoolExecutor(max_workers=workers)
+    try:
+        futures = []
+        for i, item in enumerate(items, 1):
+            future = _executor.submit(
+                _run_single_prompt,
+                skill_name, item, i, len(items), descriptions, expected, tier, verbose,
+            )
+            futures.append(future)
+
+        for future in futures:
+            try:
+                result = future.result()
+            except Exception:
+                failures += 1
+                continue
+            if result is None:
+                continue
+            if result.get("_failure"):
+                failures += 1
+            else:
+                results.append(result)
+    finally:
+        _executor.shutdown(wait=True)
+        _executor = None
+
     return results, failures
 
 
@@ -243,6 +306,7 @@ def score_skill(
     use_cache: bool = False,
     verbose: bool = False,
     limit: int = 0,
+    workers: int = 1,
 ) -> dict:
     """Score trigger accuracy for one skill. Returns precision/recall/accuracy with tier split."""
     cache_path = RESULTS_DIR / f"{skill_name}.json"
@@ -286,7 +350,7 @@ def score_skill(
         (hard_not, False, "hard"),
     ]:
         results, failures = _run_prompt_batch(
-            skill_name, items, descriptions, expected, tier, verbose
+            skill_name, items, descriptions, expected, tier, verbose, workers
         )
         all_results.extend(results)
         total_failures += failures
@@ -344,7 +408,22 @@ def main() -> None:
     parser.add_argument("--verbose", action="store_true", help="Show prompt/response for each API call")
     parser.add_argument("--limit", type=int, default=0, metavar="N",
                         help="Test only first N should_trigger + N should_not_trigger prompts per skill")
+    parser.add_argument("--workers", type=int, default=1, metavar="N",
+                        help="Parallel workers for haiku calls (default 1, recommended 4)")
     args = parser.parse_args()
+
+    # Signal handler: clean shutdown on Ctrl+C — cancel pending futures,
+    # don't leave orphaned claude processes
+    def _shutdown_handler(signum, frame):
+        global _executor
+        if _executor is not None:
+            _executor.shutdown(wait=False, cancel_futures=True)
+            _executor = None
+        print("\nInterrupted — shutting down workers.", file=sys.stderr)
+        raise SystemExit(130)
+
+    signal.signal(signal.SIGINT, _shutdown_handler)
+    signal.signal(signal.SIGTERM, _shutdown_handler)
 
     descriptions = load_all_descriptions()
 
@@ -355,7 +434,8 @@ def main() -> None:
 
     if args.skill:
         result = score_skill(args.skill, descriptions, args.cache,
-                             verbose=args.verbose, limit=args.limit)
+                             verbose=args.verbose, limit=args.limit,
+                             workers=args.workers)
         if args.summary:
             tier_str = ""
             tc = result.get("tier_counts", {})
@@ -379,7 +459,8 @@ def main() -> None:
                 continue
             print(f"  Testing {name}...", end="\n" if args.verbose else " ", flush=True, file=sys.stderr)
             result = score_skill(name, descriptions, args.cache,
-                                 verbose=args.verbose, limit=args.limit)
+                                 verbose=args.verbose, limit=args.limit,
+                                 workers=args.workers)
             if "error" in result:
                 print(f"SKIPPED ({result['error']})", file=sys.stderr)
                 continue
