@@ -480,12 +480,18 @@ def main() -> None:
                         help="Parallel workers for haiku calls (default 1, recommended 4)")
     args = parser.parse_args()
 
-    # Signal handler: cancel pending futures, wait for running workers
+    # Signal handler: cancel pending futures, wait for running workers.
+    # Use non-blocking acquire — signal runs on main thread which may
+    # already hold _executor_lock, so blocking would deadlock.
     def _shutdown_handler(signum, frame):
         global _executor
-        with _executor_lock:
+        acquired = _executor_lock.acquire(blocking=False)
+        try:
             executor = _executor
             _executor = None
+        finally:
+            if acquired:
+                _executor_lock.release()
         if executor is not None:
             print("\nInterrupted — cancelling pending work, waiting for running workers.",
                   file=sys.stderr)
