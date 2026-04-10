@@ -268,49 +268,55 @@ def _run_single_prompt(
 
 def _run_prompt_batch(
     skill_name: str,
-    items: list,
+    flat_items: list[tuple],
     descriptions: dict[str, str],
-    expected: bool,
-    tier: str,
     verbose: bool = False,
     workers: int = 1,
 ) -> tuple[list[dict], int, list[CallResult]]:
-    """Run a batch of prompt items. Returns (results, failure_count, call_results)."""
+    """Run a flat list of (item, expected, tier) tuples. Returns (results, failure_count, call_results).
+
+    One executor pool for all items — keeps workers saturated across tiers.
+    """
     global _executor
     results = []
     failures = 0
     call_results: list[CallResult] = []
     parallel = workers > 1
+    total = len(flat_items)
+
+    def _collect(result: dict | None) -> None:
+        nonlocal failures
+        if result is None:
+            return
+        cr = result.pop("_call_result", None)
+        if cr:
+            call_results.append(cr)
+        if result.get("_failure"):
+            failures += 1
+        else:
+            results.append(result)
 
     if not parallel:
         # Sequential path — run_haiku prints verbose directly to stderr
-        for i, item in enumerate(items, 1):
+        for i, (item, expected, tier) in enumerate(flat_items, 1):
             result = _run_single_prompt(
-                skill_name, item, i, len(items), descriptions, expected, tier,
+                skill_name, item, i, total, descriptions, expected, tier,
                 verbose, parallel=False,
             )
-            if result is None:
-                continue
-            cr = result.pop("_call_result", None)
-            if cr:
-                call_results.append(cr)
-            if result.get("_failure"):
-                failures += 1
-            else:
-                results.append(result)
+            _collect(result)
         return results, failures, call_results
 
-    # Parallel path: submit all prompts, collect in submission order
+    # Parallel path: one executor for all prompts, collect in submission order
     errors: list[str] = []
     with ThreadPoolExecutor(max_workers=workers) as executor:
         with _executor_lock:
             _executor = executor
         try:
             futures = []
-            for i, item in enumerate(items, 1):
+            for i, (item, expected, tier) in enumerate(flat_items, 1):
                 future = executor.submit(
                     _run_single_prompt,
-                    skill_name, item, i, len(items), descriptions, expected, tier,
+                    skill_name, item, i, total, descriptions, expected, tier,
                     verbose, True,
                 )
                 futures.append(future)
@@ -325,15 +331,7 @@ def _run_prompt_batch(
                         with _verbose_lock:
                             traceback.print_exc(file=sys.stderr)
                     continue
-                if result is None:
-                    continue
-                cr = result.pop("_call_result", None)
-                if cr:
-                    call_results.append(cr)
-                if result.get("_failure"):
-                    failures += 1
-                else:
-                    results.append(result)
+                _collect(result)
         finally:
             with _executor_lock:
                 _executor = None
@@ -406,22 +404,22 @@ def score_skill(
         hard_trigger = hard_trigger[:limit]
         hard_not = hard_not[:limit]
 
-    all_results = []
-    all_call_results: list[CallResult] = []
-    total_failures = 0
-
+    # Flatten all prompt items into one work list for a single executor pool.
+    # This keeps workers saturated across all batches instead of creating
+    # separate executor per batch (which wastes workers on small batches).
+    flat_items = []
     for items, expected, tier in [
         (easy_trigger, True, "easy"),
         (easy_not, False, "easy"),
         (hard_trigger, True, "hard"),
         (hard_not, False, "hard"),
     ]:
-        results, failures, call_results = _run_prompt_batch(
-            skill_name, items, descriptions, expected, tier, verbose, workers
-        )
-        all_results.extend(results)
-        all_call_results.extend(call_results)
-        total_failures += failures
+        for item in items:
+            flat_items.append((item, expected, tier))
+
+    all_results, total_failures, all_call_results = _run_prompt_batch(
+        skill_name, flat_items, descriptions, verbose=verbose, workers=workers,
+    )
 
     if not all_results and total_failures > 0:
         return {"skill": skill_name, "error": f"all {total_failures} haiku calls failed"}, all_call_results
