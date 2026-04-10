@@ -14,6 +14,9 @@ command -v ruby >/dev/null 2>&1 || { echo "ERROR: ruby required for iron-law dri
 [[ -f "$SKILL_FILE" && ! -L "$SKILL_FILE" ]] || { echo "ERROR: $SKILL_FILE missing or is a symlink" >&2; exit 1; }
 
 # Extract rules from YAML (source of truth)
+SKILL_ERR=""
+YAML_ERR=$(mktemp) || { echo "ERROR: mktemp failed" >&2; exit 1; }
+trap 'rm -f -- "${YAML_ERR:?}"; [[ -n "$SKILL_ERR" ]] && rm -f -- "${SKILL_ERR:?}"' EXIT
 YAML_RULES=$(ruby -ryaml -e '
 yaml = YAML.safe_load(File.read(ARGV[0]))
 yaml["laws"].each do |law|
@@ -21,9 +24,10 @@ yaml["laws"].each do |law|
   rule = law["rule"].gsub(/\s+/, " ").strip.sub(/\.\z/, "")
   puts "#{law["id"]}|#{law["title"]}|#{rule}"
 end
-' "$YAML_FILE" 2>/dev/null) || { echo "ERROR: failed to parse $YAML_FILE" >&2; exit 1; }
+' "$YAML_FILE" 2>"$YAML_ERR") || { echo "ERROR: failed to parse $YAML_FILE" >&2; cat "$YAML_ERR" >&2; exit 1; }
 
 # Extract rules from SKILL.md (may drift)
+SKILL_ERR=$(mktemp) || { echo "ERROR: mktemp failed" >&2; exit 1; }
 # shellcheck disable=SC2016 # $1/$2/$3 are Ruby regex captures, not shell vars
 SKILL_RULES=$(ruby -e '
 File.readlines(ARGV[0]).each do |line|
@@ -36,7 +40,7 @@ File.readlines(ARGV[0]).each do |line|
     puts "#{id}|#{title}|#{rule}"
   end
 end
-' "$SKILL_FILE" 2>/dev/null) || { echo "ERROR: failed to parse $SKILL_FILE" >&2; exit 1; }
+' "$SKILL_FILE" 2>"$SKILL_ERR") || { echo "ERROR: failed to parse $SKILL_FILE" >&2; cat "$SKILL_ERR" >&2; exit 1; }
 
 DRIFT=0
 
