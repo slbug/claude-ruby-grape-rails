@@ -176,9 +176,10 @@ If code would violate ANY of these, you MUST:
 1. Pre-compute all data before Turbo Stream broadcast
 2. Use turbo_frame_tag for partial page updates
 
-**Verification:**
+**Verification & Discipline:**
 
 1. Always run tests and show results before claiming done
+2. Only change what the user asked for — no drive-by improvements
 
 <!-- IRON_LAWS_END -->
 

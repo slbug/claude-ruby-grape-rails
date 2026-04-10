@@ -34,25 +34,39 @@ When user describes work WITHOUT specifying a `/rb:` command, analyze their inte
 
 1. Read user's first message
 2. Match against routing table (use keyword + context signals, not exact match)
-3. If match found with multi-step workflow: "This looks like [intent]. I'd suggest `[command]` — want me to run it, or should I just dive in?"
-4. If trivial task (typo, single-line fix, config change): skip suggestion, just do it
-5. If user already specified a `/rb:` command: follow it, don't re-suggest
-6. **NEVER block the user** — suggestion only, not mandatory
+3. If **lock** (single valid route): suggest the command directly — "This looks like [intent]. I'd suggest `[command]` — want me to run it, or should I just dive in?"
+4. If **fork** (multiple valid routes): present top 2-3 options with one-sentence rationale each
+5. If trivial task (typo, single-line fix, config change): skip suggestion, just do it
+6. If user already specified a `/rb:` command: follow it, don't re-suggest
+7. **NEVER block the user** — suggestion only, not mandatory
 
-## Confidence Signals
+## Routing Modes
 
-High confidence (suggest immediately):
+### Lock (single valid route — act immediately)
+
+High confidence, one right answer. Don't deliberate — suggest directly:
 
 - Stack trace or error message pasted → `/rb:investigate`
+- "Fix CI" / "fix rubocop" → auto-fix pattern
+- "Run checks" → `/rb:verify`
+- "Permission prompts annoying" → `/rb:permissions`
+- "That fixed it" → `/rb:compound`
 - "Add [feature] with [multiple components]" → `/rb:plan`
 - "Review my changes" or "check this PR" → `/rb:review`
 
-Medium confidence (suggest with caveat):
+### Fork (multiple valid routes — don't pick silently)
 
+Genuinely ambiguous. Present top 2-3 options with one-sentence rationale each:
+
+- "Work on billing feature" → `/rb:plan` or `/rb:work` depending on whether plan exists
+- "Improve the auth flow" → `/rb:plan` (scope unclear) or `/rb:investigate` (if bugs mentioned)
+- "Clean up this module" → `/rb:quick` (small) or `/rb:plan` (large) — ask about scope
 - "Fix [thing]" — could be quick or complex, suggest based on scope description
 - "Update [thing]" — could be small edit or refactor
 
-Low confidence (just do it):
+### Trivial (just do it)
+
+Low confidence or obvious scope. Don't suggest a workflow:
 
 - Single file mentioned, clear change
 - "Change X to Y"

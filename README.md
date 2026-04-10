@@ -546,7 +546,7 @@ This updates the plugin's knowledge base so the same mistake is prevented in fut
 
 <!-- GENERATED FROM iron-laws.yml — DO NOT EDIT -->
 
-The plugin enforces **21 Iron Laws** that prevent common, costly mistakes:
+The plugin enforces **22 Iron Laws** that prevent common, costly mistakes:
 
 | Category | Count | Laws |
 |----------|-------|------|
@@ -555,12 +555,12 @@ The plugin enforces **21 Iron Laws** that prevent common, costly mistakes:
 | Security | 4 | Never use eval with user input; Authorize explicitly in every action; Never use html_safe/raw on untrusted content; Never concatenate SQL strings |
 | Ruby | 3 | Always pair method_missing with respond_to_missing?; Always supervise background processes; Only rescue StandardError, never Exception |
 | Hotwire/Turbo | 2 | Pre-compute all data before Turbo Stream broadcast; Use turbo_frame_tag for partial page updates |
-| Verification | 1 | Always run tests and show results before claiming done |
+| Verification & Discipline | 2 | Always run tests and show results before claiming done; Only change what the user asked for — no drive-by improvements |
 
 ### Enforcement
 
 - **Programmatic**: 6 programmatic detectors checked automatically on targeted Ruby-ish edits
-- **Behavioral**: All 21 laws injected into subagent context
+- **Behavioral**: All 22 laws injected into subagent context
 - **Review-time**: Full audit during `/rb:review`
 
 See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonical-registry.md) for details.

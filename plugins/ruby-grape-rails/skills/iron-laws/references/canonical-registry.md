@@ -2,14 +2,14 @@
 
 **Version**: 1.0.0
 **Last Updated**: 2026-03-22
-**Total Laws**: 21
+**Total Laws**: 22
 
 <!-- This file is a generated projection of iron-laws.yml — DO NOT EDIT DIRECTLY -->
 
 This file is the human-readable registry of all Iron Laws across the plugin.
 For programmatic use, see [iron-laws.yml](../../../references/iron-laws.yml).
 
-## The 21 Iron Laws
+## The 22 Iron Laws
 
 ### Active Record (7 laws)
 
@@ -81,10 +81,13 @@ For programmatic use, see [iron-laws.yml](../../../references/iron-laws.yml).
 20. **Use turbo_frame_tag** — ALWAYS use turbo_frame_tag for partial updates — prevents full page reloads
    *Without frames, Turbo Drive reloads the entire page*
 
-### Verification (1 law)
+### Verification & Discipline (2 laws)
 
 21. **Verify Before Claiming Done** — VERIFY BEFORE CLAIMING DONE — never say 'should work' or 'this fixes it.' Run bundle exec rspec or bin/rails test and show the result
    *Claims without verification are assumptions; test output proves the fix*
+
+22. **Surgical Changes Only** — Every changed line should trace directly to the user's request. Don't "improve" adjacent code, comments, or formatting you weren't asked to touch.
+   *If you write 200 lines and it could be 50, rewrite it*
 
 ## Enforcement Tiers
 
@@ -102,7 +105,7 @@ Enforced automatically by iron-law-verifier.sh on every .rb file edit:
 
 ### Tier 2: Behavioral (Agent/Context)
 
-Enforced by loading skills and agent instructions (all 21 laws).
+Enforced by loading skills and agent instructions (all 22 laws).
 
 ### Tier 3: Review-Time (On-Demand)
 

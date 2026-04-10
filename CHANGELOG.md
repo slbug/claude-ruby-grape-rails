@@ -7,6 +7,47 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.11.4] - 2026-04-10
+
+### Added
+
+- **Iron Law #22: Surgical Changes Only** — "Every changed line should trace
+  directly to the user's request." Adds concrete line-count test ("if you
+  write 200 lines and it could be 50, rewrite it") to the canonical registry.
+- **Difficulty-stratified behavioral reporting** — Behavioral scorer now
+  reads `hard_should_trigger` / `hard_should_not_trigger` buckets and reports
+  `easy_accuracy`, `hard_accuracy`, tier counts. Summary shows tiered breakdown.
+  Behavioral dimension adds easy-tier (>=90%, blocking) and hard-tier (>=50%,
+  advisory) assertions.
+- **Fork/lock trigger classification** — Trigger corpora accept optional
+  `routing` ("fork"/"lock") and `valid_skills` fields. Fork prompts score
+  correct if any returned skill is in `valid_skills`. Core 6 skills annotated
+  (plan/brainstorm confusables marked fork). Trigger scorer validates fork
+  prompts have `valid_skills`. Behavioral scorer reports `fork_accuracy` and
+  `lock_accuracy`.
+- **Failure triage annotation schema** — Separate
+  `triggers/annotations/{skill}_annotations.json` for manual failure
+  attribution (`router_defect`, `corpus_defect`, `ambiguity_mislabel`,
+  `judge_artifact`, `unknown`). Keyed by `(prompt, expected)` pairs.
+- **Fork/lock routing modes in intent-detection** — Routing modes section
+  with Lock (act immediately), Fork (don't pick silently — present options),
+  and Trivial (just do it). Behavior steps updated.
+- **Error critic fork/lock awareness** — `LOCK_PATTERNS` for high-confidence
+  single-fix errors (SyntaxError, LoadError, Zeitwerk, NoDatabaseError).
+  `SOFT_LOCK_PATTERNS` for errors that are lock-like on repeat (NameError,
+  NoMethodError). Fork errors escalate to `/rb:investigate`.
+- **Eval-set sensitivity analysis** — New `lab/eval/eval_sensitivity.py`
+  with leave-one-out metric fragility, 4-tier prompt classification
+  (high-leverage, drag, redundant, contributing). $0 cost, pure recomputation.
+  New `make eval-sensitivity` / `npm run eval:sensitivity` targets.
+
+### Changed
+
+- **Skill/agent wording hardening** — Ruby reviewer and challenge agents add
+  simplicity self-check ("would a senior engineer say this is overcomplicated?").
+  Plan skill mandates `→ verify:` criteria per checkbox. Intent-detection fork
+  guidance: "don't pick silently."
+
 ## [1.11.3] - 2026-04-09
 
 ### Added
@@ -1166,7 +1207,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.3...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.4...HEAD
+[1.11.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.3...v1.11.4
 [1.11.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.2...v1.11.3
 [1.11.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.1...v1.11.2
 [1.11.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.0...v1.11.1

@@ -23,6 +23,8 @@ Review for:
 - Active Record misuse, preload gaps, and brittle transactions
 - unnecessary gem or abstraction usage
 
+Simplicity test: if you write 200 lines and it could be 50, flag it. Ask: "Would a senior engineer say this is overcomplicated?" If yes, it's a finding.
+
 Only report issues with real maintenance or behavior impact.
 
 ## Review Artifact Contract

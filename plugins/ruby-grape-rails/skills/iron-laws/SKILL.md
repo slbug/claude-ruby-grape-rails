@@ -1,13 +1,13 @@
 ---
 name: iron-laws
-description: The 21 Iron Laws of Ruby/Rails/Grape development. Non-negotiable rules that prevent common, costly mistakes. Auto-loaded for Iron Law Judge.
+description: The 22 Iron Laws of Ruby/Rails/Grape development. Non-negotiable rules that prevent common, costly mistakes. Auto-loaded for Iron Law Judge.
 effort: medium
 ---
 # Iron Laws
 
 ## Overview
 
-These 21 rules are NEVER violated. If code would violate them, STOP and explain before proceeding.
+These 22 rules are NEVER violated. If code would violate them, STOP and explain before proceeding.
 
 ### Active Record (7 laws)
 
@@ -47,6 +47,7 @@ These 21 rules are NEVER violated. If code would violate them, STOP and explain 
 ### Verification (1 law)
 
 21. **Verify Before Claiming Done** — VERIFY BEFORE CLAIMING DONE — never say 'should work' or 'this fixes it.' Run bundle exec rspec or bin/rails test and show the result
+22. **Surgical Changes Only** — Every changed line should trace directly to the user's request. Don't "improve" adjacent code, comments, or formatting you weren't asked to touch.
 
 ## Response Format
 

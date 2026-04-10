@@ -1,4 +1,4 @@
-.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate doctor eval eval-all eval-ci eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-ablation eval-neighbor eval-hygiene eval-behavioral eval-behavioral-verbose eval-behavioral-fresh eval-behavioral-fresh-verbose eval-behavioral-compare eval-stress eval-tests eval-tests-pytest eval-tests-unittest ci
+.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate doctor eval eval-all eval-ci eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-ablation eval-neighbor eval-hygiene eval-behavioral eval-behavioral-verbose eval-behavioral-fresh eval-behavioral-fresh-verbose eval-behavioral-compare eval-sensitivity eval-stress eval-tests eval-tests-pytest eval-tests-unittest ci
 
 lint:
 	npm run lint
@@ -90,6 +90,9 @@ eval-behavioral-fresh-verbose:
 
 eval-behavioral-compare:
 	python3 -m lab.eval.scorer --compare
+
+eval-sensitivity:
+	python3 -m lab.eval.eval_sensitivity --all --summary
 
 eval-stress:
 	python3 -m lab.eval.evaluator_stress_test

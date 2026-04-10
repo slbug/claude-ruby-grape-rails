@@ -27,7 +27,7 @@ Enforce the Iron Laws of Ruby/Rails/Grape development. These are non-negotiable 
 
 <!-- GENERATED FROM iron-laws.yml — DO NOT EDIT -->
 
-These are the 21 non-negotiable Iron Laws. Any violation must be flagged.
+These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 
 ### Active Record (7 laws)
 
@@ -64,9 +64,10 @@ These are the 21 non-negotiable Iron Laws. Any violation must be flagged.
 19. **No DB Queries in Turbo Streams** — NEVER query DB in Turbo Stream responses — pre-compute everything before broadcast
 20. **Use turbo_frame_tag** — ALWAYS use turbo_frame_tag for partial updates — prevents full page reloads
 
-### Verification (1 law)
+### Verification & Discipline (2 laws)
 
 21. **Verify Before Claiming Done** — VERIFY BEFORE CLAIMING DONE — never say 'should work' or 'this fixes it.' Run bundle exec rspec or bin/rails test and show the result
+22. **Surgical Changes Only** — Every changed line should trace directly to the user's request. Don't "improve" adjacent code, comments, or formatting you weren't asked to touch.
 
 <!-- IRON_LAWS_JUDGE_END -->
 

@@ -137,7 +137,7 @@ guidance, not a hook-backed auto-loader.
 
 <!-- GENERATED FROM iron-laws.yml — DO NOT EDIT -->
 
-### Iron Laws (21 Rules, Always Enforced)
+### Iron Laws (22 Rules, Always Enforced)
 
 Iron Laws are non-negotiable rules that every agent enforces. If your code violates one, the plugin stops and explains before proceeding.
 

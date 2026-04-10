@@ -147,6 +147,95 @@ def extract_prompt(item) -> str:
     return ""
 
 
+def _extract_prompt_meta(item) -> dict:
+    """Extract prompt text and optional routing metadata from a trigger item."""
+    if isinstance(item, str):
+        return {"prompt": item.strip(), "routing": "lock", "valid_skills": []}
+    if isinstance(item, dict):
+        return {
+            "prompt": str(item.get("prompt", "")).strip(),
+            "routing": item.get("routing", "lock"),
+            "valid_skills": item.get("valid_skills", []),
+        }
+    return {"prompt": "", "routing": "lock", "valid_skills": []}
+
+
+def _check_correct(skill_name: str, chosen: list[str], expected: bool,
+                   routing: str, valid_skills: list[str]) -> bool:
+    """Single source of truth for per-prompt correctness."""
+    if not expected:
+        return skill_name not in chosen
+    if routing == "fork" and valid_skills:
+        return any(s in chosen for s in valid_skills)
+    return skill_name in chosen
+
+
+def _run_prompt_batch(
+    skill_name: str,
+    items: list,
+    descriptions: dict[str, str],
+    expected: bool,
+    tier: str,
+    verbose: bool = False,
+) -> tuple[list[dict], int]:
+    """Run a batch of prompt items and return (results, failure_count)."""
+    results = []
+    failures = 0
+    label = "should_trigger" if expected else "should_not"
+    for i, item in enumerate(items, 1):
+        meta = _extract_prompt_meta(item)
+        prompt = meta["prompt"]
+        if not prompt:
+            continue
+        if verbose:
+            routing_tag = f" [{meta['routing']}]" if meta["routing"] != "lock" else ""
+            print(f"  [{skill_name} {label}({tier}){routing_tag} {i}/{len(items)}] {prompt}", file=sys.stderr)
+        full_prompt = build_routing_prompt(descriptions, prompt)
+        chosen = run_haiku(full_prompt, verbose=verbose)
+        if chosen is None:
+            failures += 1
+            if verbose:
+                print("  -> SKIPPED (haiku call failed)", file=sys.stderr)
+            continue
+        correct = _check_correct(
+            skill_name, chosen, expected, meta["routing"], meta["valid_skills"]
+        )
+        if verbose:
+            status = "OK" if correct else ("MISS" if expected else "FALSE_POS")
+            print(f"  -> chosen={chosen} [{status}]", file=sys.stderr)
+        results.append({
+            "prompt": prompt,
+            "expected": expected,
+            "chosen": chosen,
+            "correct": correct,
+            "tier": tier,
+            "routing": meta["routing"],
+        })
+    return results, failures
+
+
+def _compute_metrics(results: list[dict]) -> dict:
+    """Compute accuracy/precision/recall from a list of result dicts."""
+    total = len(results)
+    if total == 0:
+        return {"accuracy": 0.0, "precision": 1.0, "recall": 1.0, "total": 0, "correct": 0}
+    correct_count = sum(1 for r in results if r["correct"])
+    tp = sum(1 for r in results if r["expected"] and r["correct"])
+    fp = sum(1 for r in results if not r["expected"] and not r["correct"])
+    fn = sum(1 for r in results if r["expected"] and not r["correct"])
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 1.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 1.0
+    accuracy = correct_count / total if total > 0 else 0.0
+    return {
+        "accuracy": round(accuracy, 4),
+        "precision": round(precision, 4),
+        "recall": round(recall, 4),
+        "total": total,
+        "correct": correct_count,
+        "tp": tp, "fp": fp, "fn": fn,
+    }
+
+
 def score_skill(
     skill_name: str,
     descriptions: dict[str, str],
@@ -154,7 +243,7 @@ def score_skill(
     verbose: bool = False,
     limit: int = 0,
 ) -> dict:
-    """Score trigger accuracy for one skill. Returns precision/recall/accuracy."""
+    """Score trigger accuracy for one skill. Returns precision/recall/accuracy with tier split."""
     cache_path = RESULTS_DIR / f"{skill_name}.json"
 
     if use_cache:
@@ -173,89 +262,69 @@ def score_skill(
     if not triggers:
         return {"skill": skill_name, "error": "no trigger file"}
 
-    should_trigger = [extract_prompt(p) for p in triggers.get("should_trigger", [])]
-    should_not = [extract_prompt(p) for p in triggers.get("should_not_trigger", [])]
+    # Easy tier: should_trigger + should_not_trigger (raw items, may be str or dict)
+    easy_trigger = triggers.get("should_trigger", [])
+    easy_not = triggers.get("should_not_trigger", [])
+    # Hard tier: hard_should_trigger + hard_should_not_trigger (may have routing/valid_skills)
+    hard_trigger = triggers.get("hard_should_trigger", [])
+    hard_not = triggers.get("hard_should_not_trigger", [])
 
     if limit > 0:
-        should_trigger = should_trigger[:limit]
-        should_not = should_not[:limit]
+        easy_trigger = easy_trigger[:limit]
+        easy_not = easy_not[:limit]
+        hard_trigger = hard_trigger[:limit]
+        hard_not = hard_not[:limit]
 
-    results = []
+    all_results = []
+    total_failures = 0
 
-    failures = 0
+    for items, expected, tier in [
+        (easy_trigger, True, "easy"),
+        (easy_not, False, "easy"),
+        (hard_trigger, True, "hard"),
+        (hard_not, False, "hard"),
+    ]:
+        results, failures = _run_prompt_batch(
+            skill_name, items, descriptions, expected, tier, verbose
+        )
+        all_results.extend(results)
+        total_failures += failures
 
-    for i, prompt in enumerate(should_trigger, 1):
-        if not prompt:
-            continue
-        if verbose:
-            print(f"  [{skill_name} should_trigger {i}/{len(should_trigger)}] {prompt}", file=sys.stderr)
-        full_prompt = build_routing_prompt(descriptions, prompt)
-        chosen = run_haiku(full_prompt, verbose=verbose)
-        if chosen is None:
-            failures += 1
-            if verbose:
-                print("  -> SKIPPED (haiku call failed)", file=sys.stderr)
-            continue
-        correct = skill_name in chosen
-        if verbose:
-            status = "OK" if correct else "MISS"
-            print(f"  -> chosen={chosen} [{status}]", file=sys.stderr)
-        results.append({
-            "prompt": prompt,
-            "expected": True,
-            "chosen": chosen,
-            "correct": correct,
-        })
+    if not all_results and total_failures > 0:
+        return {"skill": skill_name, "error": f"all {total_failures} haiku calls failed"}
 
-    for i, prompt in enumerate(should_not, 1):
-        if not prompt:
-            continue
-        if verbose:
-            print(f"  [{skill_name} should_not {i}/{len(should_not)}] {prompt}", file=sys.stderr)
-        full_prompt = build_routing_prompt(descriptions, prompt)
-        chosen = run_haiku(full_prompt, verbose=verbose)
-        if chosen is None:
-            failures += 1
-            if verbose:
-                print("  -> SKIPPED (haiku call failed)", file=sys.stderr)
-            continue
-        correct = skill_name not in chosen
-        if verbose:
-            status = "OK" if correct else "FALSE_POS"
-            print(f"  -> chosen={chosen} [{status}]", file=sys.stderr)
-        results.append({
-            "prompt": prompt,
-            "expected": False,
-            "chosen": chosen,
-            "correct": correct,
-        })
+    # Overall metrics
+    overall = _compute_metrics(all_results)
 
-    if not results and failures > 0:
-        return {"skill": skill_name, "error": f"all {failures} haiku calls failed"}
+    # Tier-split metrics
+    easy_results = [r for r in all_results if r.get("tier") == "easy"]
+    hard_results = [r for r in all_results if r.get("tier") == "hard"]
+    easy_metrics = _compute_metrics(easy_results)
+    hard_metrics = _compute_metrics(hard_results)
 
-    total = len(results)
-    correct_count = sum(1 for r in results if r["correct"])
-
-    tp = sum(1 for r in results if r["expected"] and r["correct"])
-    fp = sum(1 for r in results if not r["expected"] and not r["correct"])
-    fn = sum(1 for r in results if r["expected"] and not r["correct"])
-
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 1.0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 1.0
-    accuracy = correct_count / total if total > 0 else 0.0
+    # Fork/lock metrics (from hard-tier results that have routing annotations)
+    fork_results = [r for r in all_results if r.get("routing") == "fork"]
+    lock_results = [r for r in all_results if r.get("routing") == "lock"]
+    fork_metrics = _compute_metrics(fork_results)
+    lock_metrics = _compute_metrics(lock_results)
 
     score_data = {
         "skill": skill_name,
-        "accuracy": round(accuracy, 4),
-        "precision": round(precision, 4),
-        "recall": round(recall, 4),
-        "total": total,
-        "correct": correct_count,
-        "tp": tp, "fp": fp, "fn": fn,
-        "failures": failures,
+        **overall,
+        "failures": total_failures,
+        "easy_accuracy": easy_metrics["accuracy"],
+        "easy_precision": easy_metrics["precision"],
+        "easy_recall": easy_metrics["recall"],
+        "hard_accuracy": hard_metrics["accuracy"],
+        "hard_precision": hard_metrics["precision"],
+        "hard_recall": hard_metrics["recall"],
+        "fork_accuracy": fork_metrics["accuracy"],
+        "lock_accuracy": lock_metrics["accuracy"],
+        "tier_counts": {"easy": easy_metrics["total"], "hard": hard_metrics["total"]},
+        "routing_counts": {"fork": fork_metrics["total"], "lock": lock_metrics["total"]},
         "content_hash": content_hash(skill_name, descriptions),
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "results": results,
+        "results": all_results,
     }
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -287,7 +356,12 @@ def main() -> None:
         result = score_skill(args.skill, descriptions, args.cache,
                              verbose=args.verbose, limit=args.limit)
         if args.summary:
-            print(f"{args.skill}: accuracy={result.get('accuracy', 0):.0%} "
+            tier_str = ""
+            tc = result.get("tier_counts", {})
+            if tc.get("hard", 0) > 0:
+                tier_str = (f" (easy: {result.get('easy_accuracy', 0):.0%}, "
+                            f"hard: {result.get('hard_accuracy', 0):.0%})")
+            print(f"{args.skill}: accuracy={result.get('accuracy', 0):.0%}{tier_str} "
                   f"precision={result.get('precision', 0):.0%} "
                   f"recall={result.get('recall', 0):.0%}")
         else:
@@ -323,7 +397,12 @@ def main() -> None:
 
         if args.summary:
             for name, result in sorted(all_results.items()):
-                print(f"  {name}: accuracy={result.get('accuracy', 0):.0%} "
+                tier_str = ""
+                tc = result.get("tier_counts", {})
+                if tc.get("hard", 0) > 0:
+                    tier_str = (f" (easy: {result.get('easy_accuracy', 0):.0%}, "
+                                f"hard: {result.get('hard_accuracy', 0):.0%})")
+                print(f"  {name}: accuracy={result.get('accuracy', 0):.0%}{tier_str} "
                       f"P={result.get('precision', 0):.0%} "
                       f"R={result.get('recall', 0):.0%}")
         else:

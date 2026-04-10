@@ -1,23 +1,59 @@
 {
   "skill": "plan",
   "should_trigger": [
-    { "prompt": "Plan a new Sidekiq retry workflow before we start coding" },
-    { "prompt": "I need a multi-file plan for adding a new endpoint and migration" },
-    { "prompt": "Design the boundary changes for a risky package refactor" },
-    { "prompt": "Turn this review file into an implementation plan" }
+    {
+      "prompt": "Plan a new Sidekiq retry workflow before we start coding"
+    },
+    {
+      "prompt": "I need a multi-file plan for adding a new endpoint and migration"
+    },
+    {
+      "prompt": "Design the boundary changes for a risky package refactor"
+    },
+    {
+      "prompt": "Turn this review file into an implementation plan"
+    }
   ],
   "should_not_trigger": [
-    { "prompt": "Run the project verification stack before I open a PR" },
-    { "prompt": "Review this branch for bugs and regressions" },
-    { "prompt": "Execute the unchecked tasks from the existing plan" },
-    { "prompt": "Analyze my Bash permission prompts and suggest settings.json entries" }
+    {
+      "prompt": "Run the project verification stack before I open a PR"
+    },
+    {
+      "prompt": "Review this branch for bugs and regressions"
+    },
+    {
+      "prompt": "Execute the unchecked tasks from the existing plan"
+    },
+    {
+      "prompt": "Analyze my Bash permission prompts and suggest settings.json entries"
+    }
   ],
   "hard_should_trigger": [
-    { "prompt": "Before coding, map out the safest way to split this billing flow", "axis": "confusable" },
-    { "prompt": "I have findings from review; now sequence the actual implementation work", "axis": "multi_step" }
+    {
+      "prompt": "Before coding, map out the safest way to split this billing flow",
+      "axis": "confusable",
+      "routing": "fork",
+      "valid_skills": [
+        "plan",
+        "brainstorm"
+      ]
+    },
+    {
+      "prompt": "I have findings from review; now sequence the actual implementation work",
+      "axis": "multi_step",
+      "routing": "lock"
+    }
   ],
   "hard_should_not_trigger": [
-    { "prompt": "Keep working through the current checklist and update the plan as needed", "axis": "confusable" },
-    { "prompt": "I already wrote the patch; just verify and review it now", "axis": "multi_step" }
+    {
+      "prompt": "Keep working through the current checklist and update the plan as needed",
+      "axis": "confusable",
+      "routing": "lock"
+    },
+    {
+      "prompt": "I already wrote the patch; just verify and review it now",
+      "axis": "multi_step",
+      "routing": "lock"
+    }
   ]
 }

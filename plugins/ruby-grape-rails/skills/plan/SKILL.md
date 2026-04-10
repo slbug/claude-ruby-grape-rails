@@ -264,13 +264,17 @@ Track progress:
 
 ## Tasks
 
+Strong success criteria let you loop independently. Weak criteria
+("make it work") require constant clarification. Every checkbox must
+include a verification criterion:
+
 ### Phase 1: Setup & Migration
-- [ ] {task with [rails] hint}
-- [ ] {task with [ar] hint}
+- [ ] {task with [rails] hint} → verify: {how to confirm it worked}
+- [ ] {task with [ar] hint} → verify: {migration applies cleanly}
 
 ### Phase 2: Implementation
-- [ ] {task with [ruby] hint}
-- [ ] {task with [sidekiq] hint}
+- [ ] {task with [ruby] hint} → verify: {specific test passes}
+- [ ] {task with [sidekiq] hint} → verify: {job runs idempotently}
 
 ### Phase 3: Verification
 - [ ] Run zeitwerk:check if full Rails app
