@@ -8,6 +8,7 @@ Usage:
     python3 -m lab.eval.behavioral_scorer --all               # Test all skills with triggers
     python3 -m lab.eval.behavioral_scorer --all --cache       # Cache-only, skip stale/missing (no API calls)
     python3 -m lab.eval.behavioral_scorer --all --summary     # Summary only
+    python3 -m lab.eval.behavioral_scorer --all --workers 4   # Parallel (4 workers, ~3-4x speedup)
 
 Cost: Uses --bare mode to minimize per-call overhead.
 Observed: ~$10 for full 51-skill run without --bare, expected ~$1-2 with --bare.
@@ -431,7 +432,7 @@ def main() -> None:
     parser.add_argument("--verbose", action="store_true", help="Show prompt/response for each API call")
     parser.add_argument("--limit", type=int, default=0, metavar="N",
                         help="Test only first N should_trigger + N should_not_trigger prompts per skill")
-    parser.add_argument("--workers", type=int, default=1, metavar="N",
+    parser.add_argument("--workers", type=int, default=1, metavar="N", choices=range(1, 33),
                         help="Parallel workers for haiku calls (default 1, recommended 4)")
     args = parser.parse_args()
 
