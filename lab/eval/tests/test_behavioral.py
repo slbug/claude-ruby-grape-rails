@@ -365,17 +365,14 @@ class TestParallelWorkers(unittest.TestCase):
             "hard_should_trigger": [],
             "hard_should_not_trigger": [],
         }
-        mock_haiku.side_effect = [
-            ["plan"], ["plan"], ["review"], ["work"],  # sequential
-        ]
+        # Use a function so thread execution order doesn't matter
+        mock_haiku.side_effect = lambda *a, **kw: ["plan"]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
                 seq_result = score_skill("plan", SAMPLE_DESCRIPTIONS, workers=1)
 
-        mock_haiku.side_effect = [
-            ["plan"], ["plan"], ["review"], ["work"],  # parallel
-        ]
+        mock_haiku.side_effect = lambda *a, **kw: ["plan"]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):

@@ -70,9 +70,21 @@ _cost_lock = threading.Lock()
 _executor: ThreadPoolExecutor | None = None
 
 
-def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
-    """Ask haiku which skill(s) to route to. Returns skill names, or None on failure."""
+def run_haiku(prompt: str, verbose: bool = False,
+              log_buf: list[str] | None = None) -> list[str] | None:
+    """Ask haiku which skill(s) to route to. Returns skill names, or None on failure.
+
+    When log_buf is provided, verbose output is appended there instead of
+    printing to stderr. This allows callers to buffer and print atomically.
+    """
     global _total_cost, _max_call_cost, _total_calls
+
+    def _log(msg: str) -> None:
+        if log_buf is not None:
+            log_buf.append(msg)
+        else:
+            print(msg, file=sys.stderr)
+
     settings_path = str(TRIGGERS_DIR.parent / "bare_settings.json")
     try:
         result = subprocess.run(
@@ -93,11 +105,11 @@ def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
         )
         if result.returncode != 0:
             if verbose:
-                print(f"--- RESPONSE (rc={result.returncode}) ---", file=sys.stderr)
-                print(result.stdout.strip()[:200] or "(empty)", file=sys.stderr)
+                _log(f"--- RESPONSE (rc={result.returncode}) ---")
+                _log(result.stdout.strip()[:200] or "(empty)")
                 if result.stderr.strip():
-                    print(f"STDERR: {result.stderr.strip()[:200]}", file=sys.stderr)
-                print("--- END RESPONSE ---", file=sys.stderr)
+                    _log(f"STDERR: {result.stderr.strip()[:200]}")
+                _log("--- END RESPONSE ---")
             return None
 
         # Parse JSON response
@@ -105,7 +117,7 @@ def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
             data = json.loads(result.stdout)
         except json.JSONDecodeError:
             if verbose:
-                print("ERROR: could not parse JSON response", file=sys.stderr)
+                _log("ERROR: could not parse JSON response")
             return None
 
         text = data.get("result", "")
@@ -119,9 +131,9 @@ def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
             usage = data.get("usage", {})
             in_tok = usage.get("input_tokens", 0) + usage.get("cache_creation_input_tokens", 0) + usage.get("cache_read_input_tokens", 0)
             out_tok = usage.get("output_tokens", 0)
-            print(f"--- RESPONSE (${cost:.4f}, {in_tok}in/{out_tok}out) ---", file=sys.stderr)
-            print(text.strip() or "(empty)", file=sys.stderr)
-            print("--- END RESPONSE ---", file=sys.stderr)
+            _log(f"--- RESPONSE (${cost:.4f}, {in_tok}in/{out_tok}out) ---")
+            _log(text.strip() or "(empty)")
+            _log("--- END RESPONSE ---")
 
         skills = []
         for line in text.strip().split("\n"):
@@ -139,11 +151,11 @@ def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
 
     except subprocess.TimeoutExpired:
         if verbose:
-            print("TIMEOUT after 60s", file=sys.stderr)
+            _log("TIMEOUT after 60s")
         return None
     except Exception as exc:
         if verbose:
-            print(f"ERROR: {exc}", file=sys.stderr)
+            _log(f"ERROR: {exc}")
         return None
 
 
@@ -178,6 +190,10 @@ def _check_correct(skill_name: str, chosen: list[str], expected: bool,
     return skill_name in chosen
 
 
+# Lock for serializing verbose output blocks across threads
+_verbose_lock = threading.Lock()
+
+
 def _run_single_prompt(
     skill_name: str,
     item,
@@ -194,22 +210,28 @@ def _run_single_prompt(
     if not prompt:
         return None
     label = "should_trigger" if expected else "should_not"
+    log_lines: list[str] = []
     if verbose:
         routing = meta["routing"]
         routing_tag = f" [{routing}]" if routing and routing != "lock" else ""
-        print(f"  [{skill_name} {label}({tier}){routing_tag} {index}/{total}] {prompt}", file=sys.stderr)
+        log_lines.append(f"  [{skill_name} {label}({tier}){routing_tag} {index}/{total}] {prompt}")
     full_prompt = build_routing_prompt(descriptions, prompt)
-    chosen = run_haiku(full_prompt, verbose=verbose)
+    # Buffer run_haiku verbose output into log_lines to print atomically
+    chosen = run_haiku(full_prompt, verbose=verbose, log_buf=log_lines)
     if chosen is None:
         if verbose:
-            print("  -> SKIPPED (haiku call failed)", file=sys.stderr)
+            log_lines.append("  -> SKIPPED (haiku call failed)")
+            with _verbose_lock:
+                print("\n".join(log_lines), file=sys.stderr)
         return {"_failure": True}
     correct = _check_correct(
         skill_name, chosen, expected, meta["routing"], meta["valid_skills"]
     )
     if verbose:
         status = "OK" if correct else ("MISS" if expected else "FALSE_POS")
-        print(f"  -> chosen={chosen} [{status}]", file=sys.stderr)
+        log_lines.append(f"  -> chosen={chosen} [{status}]")
+        with _verbose_lock:
+            print("\n".join(log_lines), file=sys.stderr)
     return {
         "prompt": prompt,
         "expected": expected,
