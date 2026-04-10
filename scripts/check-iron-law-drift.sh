@@ -46,9 +46,16 @@ while IFS='|' read -r id title rule; do
     DRIFT=1
     continue
   fi
+  skill_title=$(echo "$skill_line" | cut -d'|' -f2)
   skill_rule=$(echo "$skill_line" | cut -d'|' -f3-)
+  if [[ "$title" != "$skill_title" ]]; then
+    echo "DRIFT: Law $id title mismatch"
+    echo "  YAML:     $title"
+    echo "  SKILL.md: $skill_title"
+    DRIFT=1
+  fi
   if [[ "$rule" != "$skill_rule" ]]; then
-    echo "DRIFT: Law $id ($title)"
+    echo "DRIFT: Law $id ($title) rule mismatch"
     echo "  YAML:     $rule"
     echo "  SKILL.md: $skill_rule"
     DRIFT=1
