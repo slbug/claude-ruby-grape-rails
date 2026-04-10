@@ -17,9 +17,11 @@ Full 51-skill run (621 prompts): ~$4 with --bare, ~60 min with --workers 6.
 from __future__ import annotations
 
 import argparse
+import atexit
 import dataclasses
 import hashlib
 import json
+import os
 import signal
 import subprocess
 import sys
@@ -32,12 +34,73 @@ from .trigger_scorer import load_all_descriptions, load_trigger_file, TRIGGERS_D
 
 RESULTS_DIR = TRIGGERS_DIR / "results"
 
+# Resolved settings path — set by _resolve_settings() at startup
+_resolved_settings_path: str = ""
+
 _ROUTING_SYSTEM_PROMPT = (
     "You are a skill router. Given a list of skills and a user message, "
     "reply with ONLY the skill name(s) that should be loaded, one per line. "
     "If none, reply with the single word 'none'. List at most 3, ordered by relevance. "
     "NEVER add explanations, code examples, or commentary. Output ONLY skill names or 'none'."
 )
+
+
+_RESOLVED_TOKEN_ENV = "_RUBY_PLUGIN_RESOLVED_TOKEN"
+
+
+def _resolve_settings() -> str:
+    """Resolve auth settings for bare mode.
+
+    If bare_settings.json uses apiKeyHelper, extract the token once and write
+    a temp settings file whose apiKeyHelper reads from an env var instead of
+    hitting the keychain. This avoids concurrent keychain access with --workers > 1.
+
+    Sets the token as an env var so all worker subprocesses inherit it.
+    Returns the path to use with --settings.
+    """
+    import tempfile
+
+    base_path = TRIGGERS_DIR.parent / "bare_settings.json"
+    if not base_path.is_file():
+        return str(base_path)
+
+    try:
+        settings = json.loads(base_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return str(base_path)
+
+    helper = settings.get("apiKeyHelper")
+    if not helper:
+        return str(base_path)
+
+    # Run the original helper once to get the token
+    try:
+        result = subprocess.run(
+            ["/bin/sh", "-c", helper],
+            capture_output=True, text=True, timeout=10,
+        )
+        token = result.stdout.strip()
+        if not token or result.returncode != 0:
+            print("WARNING: apiKeyHelper failed, falling back to per-call helper",
+                  file=sys.stderr)
+            return str(base_path)
+    except Exception as exc:
+        print(f"WARNING: apiKeyHelper failed ({exc}), falling back to per-call helper",
+              file=sys.stderr)
+        return str(base_path)
+
+    # Set token in env — inherited by all subprocess workers
+    os.environ[_RESOLVED_TOKEN_ENV] = token
+
+    # Write temp settings with helper that reads from env (not keychain)
+    tmp = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", prefix="bare_resolved_",
+        dir=str(TRIGGERS_DIR.parent), delete=False,
+    )
+    settings["apiKeyHelper"] = f"echo ${_RESOLVED_TOKEN_ENV}"
+    json.dump(settings, tmp)
+    tmp.close()
+    return tmp.name
 
 
 @dataclasses.dataclass(slots=True)
@@ -91,7 +154,7 @@ def run_haiku(prompt: str, verbose: bool = False,
         else:
             print(msg, file=sys.stderr)
 
-    settings_path = str(TRIGGERS_DIR.parent / "bare_settings.json")
+    settings_path = _resolved_settings_path
     try:
         result = subprocess.run(
             [
@@ -501,6 +564,22 @@ def main() -> None:
     signal.signal(signal.SIGINT, _shutdown_handler)
     signal.signal(signal.SIGTERM, _shutdown_handler)
 
+    # Resolve auth once — avoids concurrent keychain access with --workers > 1
+    global _resolved_settings_path
+    _resolved_settings_path = _resolve_settings()
+    base_settings = str(TRIGGERS_DIR.parent / "bare_settings.json")
+    is_temp_settings = _resolved_settings_path != base_settings
+
+    def _cleanup_settings():
+        if is_temp_settings:
+            try:
+                os.unlink(_resolved_settings_path)
+            except OSError:
+                pass
+            os.environ.pop(_RESOLVED_TOKEN_ENV, None)
+
+    atexit.register(_cleanup_settings)
+
     descriptions = load_all_descriptions()
 
     # Collect all CallResults for cost aggregation (single-threaded, no lock needed)
@@ -605,6 +684,8 @@ def main() -> None:
         print(f"  Max single call: ${max_cost:.4f}", file=sys.stderr)
         print(f"  Avg per call:    ${avg_cost:.4f}", file=sys.stderr)
         print(f"--------------------", file=sys.stderr)
+
+    # Temp settings cleanup handled by atexit (also fires on SIGINT/SystemExit)
 
 
 if __name__ == "__main__":
