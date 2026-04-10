@@ -41,8 +41,10 @@ def analyze_skill(skill_name: str) -> dict | None:
 
     try:
         data = json.loads(cache_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return None
+    except json.JSONDecodeError as exc:
+        return {"skill": skill_name, "error": f"invalid cached results JSON: {exc}"}
+    except OSError as exc:
+        return {"skill": skill_name, "error": f"failed to read cached results: {exc}"}
 
     results = data.get("results", [])
     if len(results) < 3:
