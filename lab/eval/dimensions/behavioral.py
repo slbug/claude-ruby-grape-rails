@@ -90,8 +90,37 @@ def score(
         evidence=f"Recall: {recall:.0%} (TP={data.get('tp', 0)}, FN={data.get('fn', 0)})",
     ))
 
+    # Tiered assertions (when hard-tier data is present)
+    tier_counts = data.get("tier_counts", {})
+    easy_count = tier_counts.get("easy", 0)
+    hard_count = tier_counts.get("hard", 0)
+
+    if easy_count > 0:
+        easy_acc = data.get("easy_accuracy", 0)
+        assertions.append(AssertionResult(
+            check_type="easy_tier_accuracy",
+            description="Easy tier accuracy >= 90%",
+            passed=easy_acc >= 0.90,
+            evidence=f"Easy tier accuracy: {easy_acc:.0%} ({easy_count} prompts)",
+        ))
+
+    # Advisory: hard-tier accuracy reported but excluded from dim_score.
+    # Small corpus sizes make this too brittle to block.
+    # Promote to blocking when hard corpus sizes reach 8-10 per skill.
+    advisory_assertions = []
+    if hard_count > 0:
+        hard_acc = data.get("hard_accuracy", 0)
+        advisory_assertions.append(AssertionResult(
+            check_type="hard_tier_accuracy",
+            description="Hard tier accuracy >= 50% (advisory, not scored)",
+            passed=hard_acc >= 0.50,
+            evidence=f"Hard tier accuracy: {hard_acc:.0%} ({hard_count} prompts, advisory threshold)",
+        ))
+
     passed = sum(1 for a in assertions if a.passed)
     dim_score = passed / len(assertions) if assertions else 0.0
+    # Include advisory in output for visibility, but they don't affect dim_score
+    assertions.extend(advisory_assertions)
 
     return DimensionResult(
         name="behavioral",

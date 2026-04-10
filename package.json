@@ -1,6 +1,6 @@
 {
   "name": "ruby-grape-rails-plugin",
-  "version": "1.11.3",
+  "version": "1.11.4",
   "private": true,
   "description": "Claude Code plugin for Ruby, Rails, Grape, PostgreSQL, Redis, and Sidekiq development",
   "scripts": {
@@ -33,6 +33,8 @@
     "eval:behavioral:fresh": "python3 -m lab.eval.behavioral_scorer --all --summary && python3 -m lab.eval.scorer --all --behavioral --pretty",
     "eval:behavioral:fresh:verbose": "python3 -m lab.eval.behavioral_scorer --all --summary --verbose && python3 -m lab.eval.scorer --all --behavioral --pretty",
     "eval:behavioral:compare": "python3 -m lab.eval.scorer --compare",
+    "eval:sensitivity": "python3 -m lab.eval.eval_sensitivity --all --summary",
+    "eval:sensitivity:skill": "python3 -m lab.eval.eval_sensitivity",
     "eval:stress": "python3 -m lab.eval.evaluator_stress_test",
     "eval:test": "bash scripts/run-eval-tests.sh",
     "eval:test:pytest": "python3 -m pytest lab/eval/tests -v",
@@ -41,6 +43,7 @@
     "eval-tests-pytest": "npm run eval:test:pytest",
     "eval-tests-unittest": "npm run eval:test:unittest",
     "security:injection": "bash scripts/check-dynamic-injection.sh",
+    "check:iron-law-drift": "bash scripts/check-iron-law-drift.sh",
     "ci": "npm run doctor && npm run lint && npm run release:check && npm run validate && npm run eval:test && npm run eval:ci",
     "prepare": "husky"
   },

@@ -3,7 +3,7 @@
 # This file is the single source of truth; all other representations are generated from it
 #
 # Structure:
-#   id: unique number (1-21)
+#   id: unique number (1-22)
 #   category: active_record, sidekiq, security, ruby, hotwire, verification
 #   title: short human-readable name
 #   rule: the actual rule text
@@ -17,8 +17,8 @@
 #   reference_files: markdown files with detailed examples
 
 version: "1.0.0"
-last_updated: "2026-03-22"
-total_laws: 21
+last_updated: "2026-04-10"
+total_laws: 22
 
 categories:
   - id: active_record
@@ -42,9 +42,9 @@ categories:
     description: "Hotwire and Turbo Stream rules"
     law_count: 2
   - id: verification
-    name: "Verification"
-    description: "Testing and verification rules"
-    law_count: 1
+    name: "Verification & Discipline"
+    description: "Testing, verification, and change discipline rules"
+    law_count: 2
 
 laws:
   # Active Record (7 laws)
@@ -314,7 +314,7 @@ laws:
     detector_id: null
     reference_files: ["hotwire/turbo-frames.md"]
 
-  # Verification (1 law)
+  # Verification & Discipline (2 laws)
   - id: 21
     category: verification
     title: "Verify Before Claiming Done"
@@ -329,6 +329,21 @@ laws:
     subagent_text: "Iron Law 21: VERIFY BEFORE CLAIMING DONE — never say 'should work' — run tests and show results"
     detector_id: null
     reference_files: ["verification/testing.md"]
+
+  - id: 22
+    category: verification
+    title: "Surgical Changes Only"
+    rule: >-
+      Every changed line should trace directly to the user's request.
+      Don't "improve" adjacent code, comments, or formatting you weren't asked to touch.
+    rationale: "If you write 200 lines and it could be 50, rewrite it"
+    severity: high
+    applies_to: ["*.rb"]
+    summary_text: "Only change what the user asked for — no drive-by improvements"
+    init_text: "SURGICAL CHANGES ONLY — every changed line traces to the user's request"
+    subagent_text: "Iron Law 22: SURGICAL CHANGES ONLY — every changed line must trace to the user's request. Don't improve adjacent code."
+    detector_id: null
+    reference_files: []
 
 # Enforcement configuration
 enforcement:

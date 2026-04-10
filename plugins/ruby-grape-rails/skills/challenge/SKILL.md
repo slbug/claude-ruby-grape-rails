@@ -17,11 +17,12 @@ Rigorous, critical review patterns. Push beyond first solutions to ensure qualit
 
 ## Adversarial Lenses (Apply to ALL Modes)
 
-Before diving into mode-specific checks, apply these three lenses:
+Before diving into mode-specific checks, apply these four lenses:
 
 1. **"What Would Break This?"** — Describe realistic scenarios where this code fails catastrophically. Not edge cases — production failure modes under load, during deploys, with unexpected data.
 2. **"Assumption Stress Test"** — List every assumption this code relies on. Which are most fragile? (e.g., "assumes user always has an email", "assumes this query returns < 1000 rows")
 3. **"Contradictions Finder"** — Find contradictions between tests and implementation, docs and behavior, or between different parts of the code changes.
+4. **"Overcomplicated?"** — For every block of code, ask: would a senior engineer say this is overcomplicated? If you write 200 lines and it could be 50, that's a finding.
 
 ## Challenge Modes
 

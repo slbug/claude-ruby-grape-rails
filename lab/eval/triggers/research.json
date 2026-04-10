@@ -1,23 +1,53 @@
 {
   "skill": "research",
   "should_trigger": [
-    { "prompt": "Research current Ruby gem options for distributed locking" },
-    { "prompt": "Find up-to-date docs and tradeoffs for Rails caching backends" },
-    { "prompt": "Compare current background job libraries and cite sources" },
-    { "prompt": "Do focused research on this gem choice before we decide" }
+    {
+      "prompt": "Research current Ruby gem options for distributed locking"
+    },
+    {
+      "prompt": "Find up-to-date docs and tradeoffs for Rails caching backends"
+    },
+    {
+      "prompt": "Compare current background job libraries and cite sources"
+    },
+    {
+      "prompt": "Do focused research on this gem choice before we decide"
+    }
   ],
   "should_not_trigger": [
-    { "prompt": "Review this branch for bugs and missing tests" },
-    { "prompt": "Run the project's verification stack right now" },
-    { "prompt": "Execute the existing plan tasks" },
-    { "prompt": "Analyze which permission prompts I should auto-allow" }
+    {
+      "prompt": "Review this branch for bugs and missing tests"
+    },
+    {
+      "prompt": "Run the project's verification stack right now"
+    },
+    {
+      "prompt": "Execute the existing plan tasks"
+    },
+    {
+      "prompt": "Analyze which permission prompts I should auto-allow"
+    }
   ],
   "hard_should_trigger": [
-    { "prompt": "Before we decide, gather current evidence and source quality for this Ruby tool choice", "axis": "confusable" },
-    { "prompt": "I need sourced tradeoffs, not just an implementation plan", "axis": "boundary" }
+    {
+      "prompt": "Before we decide, gather current evidence and source quality for this Ruby tool choice",
+      "axis": "confusable",
+      "routing": "lock"
+    },
+    {
+      "prompt": "I need sourced tradeoffs, not just an implementation plan",
+      "axis": "boundary",
+      "routing": "lock"
+    }
   ],
   "hard_should_not_trigger": [
-    { "prompt": "I already have the research; now turn it into an implementation plan", "axis": "confusable" },
-    { "prompt": "The research is done; validate the current code and test stack", "axis": "boundary" }
+    {
+      "prompt": "I already have the research; now turn it into an implementation plan",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "The research is done; validate the current code and test stack",
+      "axis": "boundary"
+    }
   ]
 }

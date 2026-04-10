@@ -8,7 +8,7 @@
       "prompt": "Do a structured root-cause analysis on this bug"
     },
     {
-      "prompt": "This error keeps happening — investigate the cause"
+      "prompt": "This error keeps happening \u2014 investigate the cause"
     },
     {
       "prompt": "Something is wrong with checkout but I can't tell where it breaks"
@@ -30,12 +30,14 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "We're in a debugging loop — 3 consecutive bundle exec failures, need structured analysis",
-      "axis": "confusable"
+      "prompt": "We're in a debugging loop \u2014 3 consecutive bundle exec failures, need structured analysis",
+      "axis": "confusable",
+      "routing": "lock"
     },
     {
       "prompt": "After fixing the bug, also check if investigate needs updating",
-      "axis": "multi_step"
+      "axis": "multi_step",
+      "routing": "lock"
     }
   ],
   "hard_should_not_trigger": [

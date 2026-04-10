@@ -69,18 +69,45 @@ def score_trigger_file(skill_name: str, data: dict[str, Any]) -> dict[str, Any]:
     duplicate_count = len(all_prompts) - len({normalize_prompt(prompt) for _, prompt in all_prompts})
     hard_axes = sorted({item.get("axis", "") for item in hard_positive if isinstance(item, dict) and item.get("axis")})
 
+    # Fork/lock routing validation — only for hard positives (routing is
+    # meaningful only for prompts expected to trigger a skill)
+    hard_positive_dicts = [item for item in hard_positive if isinstance(item, dict)]
+    fork_count = sum(1 for item in hard_positive_dicts if item.get("routing") == "fork")
+    lock_count = sum(1 for item in hard_positive_dicts if item.get("routing") == "lock")
+    has_routing = fork_count > 0 or lock_count > 0
+
+    # Validate fork prompts have valid_skills (hard positives only)
+    fork_missing_valid = [
+        extract_prompt(item) for item in hard_positive_dicts
+        if item.get("routing") == "fork" and not item.get("valid_skills")
+    ]
+
     checks = [
         ("has_positive_prompts", len(positive) >= 4, f"{len(positive)} standard positives"),
         ("has_negative_prompts", len(negative) >= 4, f"{len(negative)} standard negatives"),
         ("has_hard_prompts", len(hard_positive) >= 2 and len(hard_negative) >= 2, f"{len(hard_positive)} hard positives / {len(hard_negative)} hard negatives"),
         ("no_duplicates", duplicate_count == 0, f"{duplicate_count} duplicate normalized prompts"),
         ("axis_diversity", len(hard_axes) >= 2, f"hard axes={hard_axes}"),
+        ("fork_valid_skills", len(fork_missing_valid) == 0,
+         f"fork prompts without valid_skills: {len(fork_missing_valid)}" if fork_missing_valid
+         else "all fork prompts have valid_skills (or no fork prompts)"),
     ]
+
+    # has_fork_lock_mix is advisory — reported but not scored
+    advisory_checks = []
+    if has_routing:
+        advisory_checks.append(
+            ("has_fork_lock_mix", fork_count > 0 and lock_count > 0,
+             f"fork={fork_count}, lock={lock_count} (advisory, not scored)")
+        )
 
     for check_type, passed, evidence in checks:
         assertions.append({"type": check_type, "passed": passed, "evidence": evidence})
+    for check_type, passed, evidence in advisory_checks:
+        assertions.append({"type": check_type, "passed": passed, "evidence": evidence, "advisory": True})
 
-    score = sum(1 for item in assertions if item["passed"]) / len(assertions) if assertions else 0.0
+    scored = [item for item in assertions if not item.get("advisory")]
+    score = sum(1 for item in scored if item["passed"]) / len(scored) if scored else 0.0
     return {
         "skill": skill_name,
         "score": round(score, 4),

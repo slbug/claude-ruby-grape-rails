@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Policy: advisory — blocks with a clear message when required deps are missing;
+#         skips on empty/degraded input and escalates with structured hints on repeated failures.
 set -o nounset
 set -o pipefail
 
@@ -120,18 +122,53 @@ tail -100 "$FAILURE_LOG" > "$TRIMMED_LOG" || emit_error_critic_write_warning
 mv -f -- "$TRIMMED_LOG" "$FAILURE_LOG" || emit_error_critic_write_warning
 TRIMMED_LOG=""
 
+# Fork/lock error classification: lock errors have one fix, fork errors need exploration
+# Lock patterns: high-confidence single-fix errors
+LOCK_PATTERNS="SyntaxError|LoadError|cannot load such file|uninitialized constant|Bundler::GemNotFound|Gem::LoadError|Gem::MissingSpecError|Zeitwerk::NameError|ActiveRecord::NoDatabaseError"
+# Soft lock patterns: often single-fix but can signal deeper issues
+SOFT_LOCK_PATTERNS="NameError|NoMethodError|undefined method|ArgumentError.*wrong number of arguments|TypeError.*can.t convert"
+
+classify_error() {
+  local error_text="$1" count="$2"
+  if printf '%s' "$error_text" | grep -qE "$LOCK_PATTERNS" 2>/dev/null; then
+    echo "lock"
+  elif printf '%s' "$error_text" | grep -qE "$SOFT_LOCK_PATTERNS" 2>/dev/null; then
+    # Soft lock: treat as lock only on 2nd+ failure (one chance to be deeper)
+    if [[ "$count" -ge 2 ]]; then echo "lock"; else echo "fork"; fi
+  else
+    echo "fork"
+  fi
+}
+
 if [[ "$COUNT" -lt 2 ]]; then
   exit 0
 fi
 
+ERROR_TYPE=$(classify_error "$ERROR" "$COUNT")
+
 if [[ "$COUNT" -eq 2 ]]; then
-  HINT="REPEATED FAILURE (attempt #${COUNT}): this command already failed once. Stop retrying blindly. Re-read the first error and narrow the command before trying again. Consider /rb:investigate if the root cause is unclear."
+  if [[ "$ERROR_TYPE" == "lock" ]]; then
+    HINT="REPEATED FAILURE (attempt #${COUNT}, lock error — one specific fix needed): re-read the error message carefully. The fix is in the error itself. Do not retry blindly — apply the exact correction."
+  else
+    HINT="REPEATED FAILURE (attempt #${COUNT}): this command already failed once. Stop retrying blindly. Re-read the first error and narrow the command before trying again. Consider /rb:investigate if the root cause is unclear."
+  fi
   printf '%s' "$HINT" | jq -Rs '{hookSpecificOutput: {hookEventName: "PostToolUseFailure", additionalContext: .}}'
   exit 0
 fi
 
 ERROR_SUMMARY=$(grep -A2 'Failure #' "$FAILURE_LOG" 2>/dev/null | grep -v '^--$' | tail -30)
-CRITIC_ANALYSIS="DEBUGGING LOOP DETECTED (attempt #${COUNT}).
+
+if [[ "$ERROR_TYPE" == "lock" ]]; then
+  CRITIC_ANALYSIS="DEBUGGING LOOP on a lock error (attempt #${COUNT}). The error type has one specific fix.
+
+${ERROR_SUMMARY}
+
+Recovery:
+1. Stop. Read the FIRST error message, not the latest.
+2. The fix is literal: missing file → add it, missing constant → check spelling/autoloading, missing gem → add to Gemfile.
+3. Apply the one fix. Do not add defensive code around it."
+else
+  CRITIC_ANALYSIS="DEBUGGING LOOP DETECTED (attempt #${COUNT}). Fork error — root cause is unclear.
 
 ${ERROR_SUMMARY}
 
@@ -140,5 +177,6 @@ Recovery:
 2. Re-read the first failing command output.
 3. Narrow the reproduction.
 4. Fix the first real error, not the cascade.
-5. Consider /rb:investigate if the failure pattern is still unclear."
+5. Run /rb:investigate for structured root-cause analysis."
+fi
 printf '%s' "$CRITIC_ANALYSIS" | jq -Rs '{hookSpecificOutput: {hookEventName: "PostToolUseFailure", additionalContext: .}}'
