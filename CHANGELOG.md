@@ -13,10 +13,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **Parallel workers for behavioral eval** — `--workers N` flag for
   `behavioral_scorer.py`. Uses `ThreadPoolExecutor` to parallelize
-  independent `run_haiku()` calls. Thread-safe cost accumulators via
-  `threading.Lock`. Signal handler for clean Ctrl+C shutdown (cancels
-  pending futures, no orphaned processes). Default 1 for backward compat,
-  recommended 4 for ~3-4x speedup on full runs.
+  independent `run_haiku()` calls. Workers return `CallResult` objects,
+  cost aggregated in main thread after collection. Signal handler for
+  clean Ctrl+C shutdown (cancels pending futures, waits for running
+  workers). Default 1 for backward compat, recommended 4 for ~3-4x
+  speedup on full runs.
 
 ## [1.11.4] - 2026-04-10
 

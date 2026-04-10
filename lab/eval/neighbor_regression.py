@@ -185,7 +185,7 @@ def run_regression_check(
         baseline_path = RESULTS_DIR / f"{name}.json"
         baseline_backup = baseline_path.read_bytes() if baseline_path.is_file() else None
 
-        current = score_skill(name, descriptions, verbose=verbose)
+        current, _ = score_skill(name, descriptions, verbose=verbose)
 
         # Restore baseline so subsequent runs compare against stable reference
         if baseline_backup is not None:
