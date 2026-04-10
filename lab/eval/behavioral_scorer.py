@@ -150,18 +150,18 @@ def extract_prompt(item) -> str:
 def _extract_prompt_meta(item) -> dict:
     """Extract prompt text and optional routing metadata from a trigger item."""
     if isinstance(item, str):
-        return {"prompt": item.strip(), "routing": "lock", "valid_skills": []}
+        return {"prompt": item.strip(), "routing": None, "valid_skills": []}
     if isinstance(item, dict):
         return {
             "prompt": str(item.get("prompt", "")).strip(),
-            "routing": item.get("routing", "lock"),
+            "routing": item.get("routing"),
             "valid_skills": item.get("valid_skills", []),
         }
-    return {"prompt": "", "routing": "lock", "valid_skills": []}
+    return {"prompt": "", "routing": None, "valid_skills": []}
 
 
 def _check_correct(skill_name: str, chosen: list[str], expected: bool,
-                   routing: str, valid_skills: list[str]) -> bool:
+                   routing: str | None, valid_skills: list[str]) -> bool:
     """Single source of truth for per-prompt correctness."""
     if not expected:
         return skill_name not in chosen
@@ -302,7 +302,7 @@ def score_skill(
     easy_metrics = _compute_metrics(easy_results)
     hard_metrics = _compute_metrics(hard_results)
 
-    # Fork/lock metrics (from hard-tier results that have routing annotations)
+    # Fork/lock metrics — only from explicitly annotated prompts (routing != None)
     fork_results = [r for r in all_results if r.get("routing") == "fork"]
     lock_results = [r for r in all_results if r.get("routing") == "lock"]
     fork_metrics = _compute_metrics(fork_results)

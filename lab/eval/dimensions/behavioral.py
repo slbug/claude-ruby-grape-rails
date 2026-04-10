@@ -104,19 +104,23 @@ def score(
             evidence=f"Easy tier accuracy: {easy_acc:.0%} ({easy_count} prompts)",
         ))
 
+    # Advisory: hard-tier accuracy reported but excluded from dim_score.
+    # Small corpus sizes make this too brittle to block.
+    # Promote to blocking when hard corpus sizes reach 8-10 per skill.
+    advisory_assertions = []
     if hard_count > 0:
         hard_acc = data.get("hard_accuracy", 0)
-        # Advisory only — small corpus sizes make this too brittle to block.
-        # Promote to blocking when hard corpus sizes reach 8-10 per skill.
-        assertions.append(AssertionResult(
+        advisory_assertions.append(AssertionResult(
             check_type="hard_tier_accuracy",
-            description="Hard tier accuracy >= 50% (advisory)",
+            description="Hard tier accuracy >= 50% (advisory, not scored)",
             passed=hard_acc >= 0.50,
             evidence=f"Hard tier accuracy: {hard_acc:.0%} ({hard_count} prompts, advisory threshold)",
         ))
 
     passed = sum(1 for a in assertions if a.passed)
     dim_score = passed / len(assertions) if assertions else 0.0
+    # Include advisory in output for visibility, but they don't affect dim_score
+    assertions.extend(advisory_assertions)
 
     return DimensionResult(
         name="behavioral",

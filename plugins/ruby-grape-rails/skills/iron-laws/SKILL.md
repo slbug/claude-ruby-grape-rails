@@ -14,7 +14,7 @@ These 22 rules are NEVER violated. If code would violate them, STOP and explain 
 1. **Decimal for Money** — NEVER use float for money — use decimal or integer (cents)
 2. **Parameterized Queries** — ALWAYS use parameterized queries — never interpolate user input into SQL strings
 3. **Eager Loading** — USE includes/preload for associations — avoids N+1 queries
-4. **Commit-Safe Enqueueing in Active Record** — IN Active Record code, use after_commit not after_save when enqueueing jobs
+4. **Commit-Safe Enqueueing in Active Record** — IN Active Record code, use after_commit not after_save when enqueueing jobs that depend on committed data
 5. **Transaction Boundaries** — WRAP multi-step operations in transactions — use ActiveRecord::Base.transaction
 6. **No Validation Bypass** — NO update_columns, update_column, or save(validate: false) in normal flows
 7. **No default_scope** — NO default_scope — use explicit named scopes only
@@ -24,7 +24,7 @@ These 22 rules are NEVER violated. If code would violate them, STOP and explain 
 8. **Idempotent Jobs** — Jobs MUST be idempotent — safe to retry
 9. **JSON-Safe Arguments** — Args use JSON-safe types only — no symbols, no Ruby objects, no procs
 10. **No ORM Objects in Args** — NEVER store ORM objects in args — store IDs, not records
-11. **Commit-Safe Enqueueing** — ALWAYS enqueue jobs after commit using the active ORM or transaction hook
+11. **Commit-Safe Enqueueing** — ALWAYS enqueue jobs after commit using the active ORM or transaction hook — not after_save or inline before commit
 
 ### Security (4 laws)
 
@@ -44,7 +44,7 @@ These 22 rules are NEVER violated. If code would violate them, STOP and explain 
 19. **No DB Queries in Turbo Streams** — NEVER query DB in Turbo Stream responses — pre-compute everything before broadcast
 20. **Use turbo_frame_tag** — ALWAYS use turbo_frame_tag for partial updates — prevents full page reloads
 
-### Verification (1 law)
+### Verification & Discipline (2 laws)
 
 21. **Verify Before Claiming Done** — VERIFY BEFORE CLAIMING DONE — never say 'should work' or 'this fixes it.' Run bundle exec rspec or bin/rails test and show the result
 22. **Surgical Changes Only** — Every changed line should trace directly to the user's request. Don't "improve" adjacent code, comments, or formatting you weren't asked to touch.

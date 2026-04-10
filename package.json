@@ -43,6 +43,7 @@
     "eval-tests-pytest": "npm run eval:test:pytest",
     "eval-tests-unittest": "npm run eval:test:unittest",
     "security:injection": "bash scripts/check-dynamic-injection.sh",
+    "check:iron-law-drift": "bash scripts/check-iron-law-drift.sh",
     "ci": "npm run doctor && npm run lint && npm run release:check && npm run validate && npm run eval:test && npm run eval:ci",
     "prepare": "husky"
   },
