@@ -3,19 +3,19 @@
 Run the canonical Ruby extractor:
 
 ```bash
-extract-permissions --days 14
+${CLAUDE_PLUGIN_ROOT}/bin/extract-permissions --days 14
 ```
 
 Optional machine-readable output:
 
 ```bash
-extract-permissions --days 14 --json
+${CLAUDE_PLUGIN_ROOT}/bin/extract-permissions --days 14 --json
 ```
 
 Other useful flags:
 
 ```bash
-extract-permissions --days 30 --limit 50 --include-global
+${CLAUDE_PLUGIN_ROOT}/bin/extract-permissions --days 30 --limit 50 --include-global
 ```
 
 Validation rules:

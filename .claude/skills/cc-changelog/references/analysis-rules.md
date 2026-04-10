@@ -48,7 +48,7 @@ When analyzing CC changelog entries, map them to specific plugin components:
 | `marketplace.json` schema | `.claude-plugin/marketplace.json` |
 | `${CLAUDE_PLUGIN_DATA}` | `hooks/scripts/setup-dirs.sh`, `log-progress.sh` |
 | `${CLAUDE_PLUGIN_ROOT}` | All hooks.json paths |
-| `settings.json` keys | `plugins/ruby-grape-rails/settings.json` |
+| `settings.json` keys | Plugin does not ship `settings.json` (only `agent` key is supported) |
 | Plugin validation changes | CI workflow |
 
 ### Tool System

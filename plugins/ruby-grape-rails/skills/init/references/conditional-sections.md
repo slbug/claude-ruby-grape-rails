@@ -122,7 +122,7 @@ Use the Ruby detection script (avoids fragile shell pipelines):
 
 ```bash
 # Detect stack dependencies
-detect-stack
+${CLAUDE_PLUGIN_ROOT}/bin/detect-stack
 
 # Prefer exact *_VERSION outputs from the script when composing the header.
 # Only fall back to "detected" when the direct gem is present but no resolved
