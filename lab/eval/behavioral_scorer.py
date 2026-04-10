@@ -483,10 +483,12 @@ def main() -> None:
     # already hold _executor_lock, so blocking would deadlock.
     def _shutdown_handler(signum, frame):
         global _executor
+        executor = None
         acquired = _executor_lock.acquire(blocking=False)
         try:
-            executor = _executor
-            _executor = None
+            if acquired:
+                executor = _executor
+                _executor = None
         finally:
             if acquired:
                 _executor_lock.release()
@@ -590,11 +592,15 @@ def main() -> None:
 
     # Cost summary — aggregated from CallResult objects (single-threaded, no lock)
     if all_call_results:
-        total_cost = sum(cr.cost for cr in all_call_results)
-        max_cost = max(cr.cost for cr in all_call_results)
-        avg_cost = total_cost / len(all_call_results)
+        successful = [cr for cr in all_call_results if cr.skills is not None]
+        failed = len(all_call_results) - len(successful)
+        total_cost = sum(cr.cost for cr in successful)
+        max_cost = max((cr.cost for cr in successful), default=0)
+        avg_cost = total_cost / len(successful) if successful else 0
         print(f"\n--- Cost Summary ---", file=sys.stderr)
-        print(f"  Total API calls: {len(all_call_results)}", file=sys.stderr)
+        print(f"  Total API calls: {len(successful)}", file=sys.stderr)
+        if failed:
+            print(f"  Failed calls:    {failed}", file=sys.stderr)
         print(f"  Total cost:      ${total_cost:.4f}", file=sys.stderr)
         print(f"  Max single call: ${max_cost:.4f}", file=sys.stderr)
         print(f"  Avg per call:    ${avg_cost:.4f}", file=sys.stderr)
