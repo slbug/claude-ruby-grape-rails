@@ -47,13 +47,11 @@
   "hard_should_not_trigger": [
     {
       "prompt": "Keep working through the current checklist and update the plan as needed",
-      "axis": "confusable",
-      "routing": "lock"
+      "axis": "confusable"
     },
     {
       "prompt": "I already wrote the patch; just verify and review it now",
-      "axis": "multi_step",
-      "routing": "lock"
+      "axis": "multi_step"
     }
   ]
 }

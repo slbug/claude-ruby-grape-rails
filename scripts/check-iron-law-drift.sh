@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Policy: fail-closed — exits non-zero on drift, missing files, or parse errors.
 # Check that iron-laws SKILL.md rule text matches the canonical YAML source.
 # Exits 0 if aligned, 1 if drift detected.
 set -o nounset

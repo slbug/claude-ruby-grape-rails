@@ -62,18 +62,15 @@
   "hard_should_not_trigger": [
     {
       "prompt": "I already know what I want, just create the implementation plan",
-      "axis": "confusable",
-      "routing": "lock"
+      "axis": "confusable"
     },
     {
       "prompt": "The requirements are clear, plan the feature with specialist agents",
-      "axis": "boundary",
-      "routing": "lock"
+      "axis": "boundary"
     },
     {
       "prompt": "Research this specific Ruby gem and give me sourced trade-offs",
-      "axis": "confusable",
-      "routing": "lock"
+      "axis": "confusable"
     }
   ]
 }

@@ -303,9 +303,9 @@ def score_skill(
     easy_metrics = _compute_metrics(easy_results)
     hard_metrics = _compute_metrics(hard_results)
 
-    # Fork/lock metrics — only from explicitly annotated prompts (routing != None)
-    fork_results = [r for r in all_results if r.get("routing") == "fork"]
-    lock_results = [r for r in all_results if r.get("routing") == "lock"]
+    # Fork/lock metrics — only from explicitly annotated expected-to-trigger prompts
+    fork_results = [r for r in all_results if r.get("routing") == "fork" and r.get("expected") is True]
+    lock_results = [r for r in all_results if r.get("routing") == "lock" and r.get("expected") is True]
     fork_metrics = _compute_metrics(fork_results)
     lock_metrics = _compute_metrics(lock_results)
 

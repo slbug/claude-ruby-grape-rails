@@ -43,13 +43,11 @@
   "hard_should_not_trigger": [
     {
       "prompt": "I only need the implementation plan tightened up before any edits",
-      "axis": "confusable",
-      "routing": "lock"
+      "axis": "confusable"
     },
     {
       "prompt": "I think the patch is complete; just do the final project checks",
-      "axis": "multi_step",
-      "routing": "lock"
+      "axis": "multi_step"
     }
   ]
 }

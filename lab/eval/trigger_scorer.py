@@ -69,15 +69,16 @@ def score_trigger_file(skill_name: str, data: dict[str, Any]) -> dict[str, Any]:
     duplicate_count = len(all_prompts) - len({normalize_prompt(prompt) for _, prompt in all_prompts})
     hard_axes = sorted({item.get("axis", "") for item in hard_positive if isinstance(item, dict) and item.get("axis")})
 
-    # Fork/lock routing validation
-    all_hard = [item for item in hard_positive + hard_negative if isinstance(item, dict)]
-    fork_count = sum(1 for item in all_hard if item.get("routing") == "fork")
-    lock_count = sum(1 for item in all_hard if item.get("routing") == "lock")
+    # Fork/lock routing validation — only for hard positives (routing is
+    # meaningful only for prompts expected to trigger a skill)
+    hard_positive_dicts = [item for item in hard_positive if isinstance(item, dict)]
+    fork_count = sum(1 for item in hard_positive_dicts if item.get("routing") == "fork")
+    lock_count = sum(1 for item in hard_positive_dicts if item.get("routing") == "lock")
     has_routing = fork_count > 0 or lock_count > 0
 
-    # Validate fork prompts have valid_skills
+    # Validate fork prompts have valid_skills (hard positives only)
     fork_missing_valid = [
-        extract_prompt(item) for item in all_hard
+        extract_prompt(item) for item in hard_positive_dicts
         if item.get("routing") == "fork" and not item.get("valid_skills")
     ]
 
