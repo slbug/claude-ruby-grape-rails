@@ -34,8 +34,9 @@ from .trigger_scorer import load_all_descriptions, load_trigger_file, TRIGGERS_D
 
 RESULTS_DIR = TRIGGERS_DIR / "results"
 
-# Resolved settings path — set by _resolve_settings() at startup
-_resolved_settings_path: str = ""
+# Resolved settings path — defaults to bare_settings.json, replaced by
+# _resolve_settings() at startup when a temp auth settings file is needed.
+_resolved_settings_path: str = str(TRIGGERS_DIR.parent / "bare_settings.json")
 
 _ROUTING_SYSTEM_PROMPT = (
     "You are a skill router. Given a list of skills and a user message, "
@@ -92,12 +93,12 @@ def _resolve_settings() -> str:
     # Set token in env — inherited by all subprocess workers
     os.environ[_RESOLVED_TOKEN_ENV] = token
 
-    # Write temp settings with helper that reads from env (not keychain)
+    # Write temp settings to OS temp dir (avoids repo pollution on SIGKILL)
+    # Use printf to avoid echo mangling tokens starting with -n etc.
     tmp = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".json", prefix="bare_resolved_",
-        dir=str(TRIGGERS_DIR.parent), delete=False,
+        mode="w", suffix=".json", prefix="bare_resolved_", delete=False,
     )
-    settings["apiKeyHelper"] = f"echo ${_RESOLVED_TOKEN_ENV}"
+    settings["apiKeyHelper"] = f'printf %s "${_RESOLVED_TOKEN_ENV}"'
     json.dump(settings, tmp)
     tmp.close()
     return tmp.name

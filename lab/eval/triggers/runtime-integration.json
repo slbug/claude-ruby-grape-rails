@@ -5,13 +5,13 @@
       "prompt": "Check what runtime tools are available in this project"
     },
     {
-      "prompt": "Detect which Ruby version and gems are installed"
-    },
-    {
       "prompt": "Connect to the running Rails app and inspect the runtime environment"
     },
     {
-      "prompt": "Which Ruby version and bundler does this repo actually use?"
+      "prompt": "Execute this Ruby code against the live Rails app"
+    },
+    {
+      "prompt": "Query the database with SQL through the runtime connection"
     }
   ],
   "should_not_trigger": [
@@ -30,12 +30,14 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "Which test runner and linter does this project actually use?",
-      "axis": "confusable"
+      "prompt": "Show me the Tidewave logs from the last error",
+      "axis": "confusable",
+      "routing": "lock"
     },
     {
       "prompt": "After fixing the bug, also check if runtime integration needs updating",
-      "axis": "multi_step"
+      "axis": "multi_step",
+      "routing": "lock"
     }
   ],
   "hard_should_not_trigger": [
