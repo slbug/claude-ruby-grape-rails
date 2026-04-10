@@ -383,7 +383,7 @@ generate_all "$TARGET"
 
 # Post-generation drift check: SKILL.md is not generated, so verify it matches
 DRIFT_CHECK="${SCRIPT_DIR}/check-iron-law-drift.sh"
-if [[ -r "$DRIFT_CHECK" ]]; then
+if [[ -f "$DRIFT_CHECK" && ! -L "$DRIFT_CHECK" && -r "$DRIFT_CHECK" ]]; then
   if ! bash "$DRIFT_CHECK"; then
     log_error "SKILL.md drift detected — update plugins/ruby-grape-rails/skills/iron-laws/SKILL.md to match iron-laws.yml"
     exit 1

@@ -1136,7 +1136,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 **SubagentStart:**
 
-- `inject-iron-laws.sh` — Injects all 21 Iron Laws into spawned subagents
+- `inject-iron-laws.sh` — Injects all Iron Laws into spawned subagents
 
 **SessionStart:**
 

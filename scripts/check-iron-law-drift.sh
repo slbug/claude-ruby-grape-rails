@@ -10,6 +10,8 @@ YAML_FILE="${REPO_ROOT}/plugins/ruby-grape-rails/references/iron-laws.yml"
 SKILL_FILE="${REPO_ROOT}/plugins/ruby-grape-rails/skills/iron-laws/SKILL.md"
 
 command -v ruby >/dev/null 2>&1 || { echo "ERROR: ruby required for iron-law drift check" >&2; exit 1; }
+[[ -f "$YAML_FILE" && ! -L "$YAML_FILE" ]] || { echo "ERROR: $YAML_FILE missing or is a symlink" >&2; exit 1; }
+[[ -f "$SKILL_FILE" && ! -L "$SKILL_FILE" ]] || { echo "ERROR: $SKILL_FILE missing or is a symlink" >&2; exit 1; }
 
 # Extract rules from YAML (source of truth)
 YAML_RULES=$(ruby -ryaml -e '

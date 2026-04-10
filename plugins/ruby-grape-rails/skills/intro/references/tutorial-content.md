@@ -45,7 +45,7 @@ Each phase reads from the previous phase's output. Plans become checkboxes. Chec
 |---------|-------------|
 | 23 specialist agents | ActiveRecord, Hotwire, security, Sidekiq, deployment, provenance experts |
 | 51 skills | Commands for every phase of development |
-| 21 Iron Laws | Non-negotiable rules enforced automatically |
+| 22 Iron Laws | Non-negotiable rules enforced automatically |
 | Auto-loaded references | Context-aware docs loaded when you edit relevant files |
 | Runtime tooling integration | Runtime debugging when runtime tooling is connected |
 
@@ -204,7 +204,7 @@ The plugin uses **layered enforcement** — some things run automatically, some 
 | Progress logging | Every file edit | Appends to `.claude/plans/{slug}/progress.md` (async) |
 | Failure hints | Bash command fails | Injects debugging hints via `additionalContext` |
 | Error critic | Repeated test failures | Escalates to structured critic analysis after 3+ failures |
-| Iron Laws injection | Any subagent spawns | Injects all 21 Iron Laws into subagents via `additionalContext` |
+| Iron Laws injection | Any subagent spawns | Injects all 22 Iron Laws into subagents via `additionalContext` |
 | PreCompact rules | Before context compaction | Warns about the active workflow phase and what to re-read after compaction |
 
 Format check **auto-fixes** — runs `standardrb --fix` when StandardRB is configured, otherwise `rubocop -a`.
