@@ -24,7 +24,6 @@ end
 # Extract rules from SKILL.md (may drift)
 # shellcheck disable=SC2016 # $1/$2/$3 are Ruby regex captures, not shell vars
 SKILL_RULES=$(ruby -e '
-in_laws = false
 File.readlines(ARGV[0]).each do |line|
   line = line.strip
   # Match numbered law lines: "1. **Title** — rule text"

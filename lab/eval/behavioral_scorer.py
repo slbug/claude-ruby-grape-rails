@@ -188,7 +188,8 @@ def _run_prompt_batch(
         if not prompt:
             continue
         if verbose:
-            routing_tag = f" [{meta['routing']}]" if meta["routing"] != "lock" else ""
+            routing = meta["routing"]
+            routing_tag = f" [{routing}]" if routing and routing != "lock" else ""
             print(f"  [{skill_name} {label}({tier}){routing_tag} {i}/{len(items)}] {prompt}", file=sys.stderr)
         full_prompt = build_routing_prompt(descriptions, prompt)
         chosen = run_haiku(full_prompt, verbose=verbose)

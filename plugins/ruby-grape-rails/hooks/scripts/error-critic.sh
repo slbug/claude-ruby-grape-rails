@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Policy: advisory — skips silently on missing deps or empty input;
+#         escalates with structured hints on repeated failures.
 set -o nounset
 set -o pipefail
 
