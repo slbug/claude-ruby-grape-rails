@@ -435,7 +435,7 @@
     ],
     "FileChanged": [
       {
-        "matcher": "Gemfile|Gemfile\\.lock|Rakefile|lefthook\\.ya?ml|\\.lefthook\\.ya?ml|lefthook-local\\.ya?ml|\\.lefthook-local\\.ya?ml|justfile|\\.justfile|Justfile|.*\\.gemspec",
+        "matcher": "Gemfile|Gemfile.lock|Rakefile|lefthook.yml|lefthook.yaml|.lefthook.yml|.lefthook.yaml|lefthook-local.yml|lefthook-local.yaml|.lefthook-local.yml|.lefthook-local.yaml|justfile|.justfile|Justfile",
         "hooks": [
           {
             "type": "command",

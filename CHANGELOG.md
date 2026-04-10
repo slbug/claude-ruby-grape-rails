@@ -7,6 +7,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.11.5] - 2026-04-10
+
+### Added
+
+- **Parallel workers for behavioral eval** — `--workers N` flag for
+  `behavioral_scorer.py`. Uses `ThreadPoolExecutor` to parallelize
+  independent `run_haiku()` calls. Workers return `CallResult` objects,
+  cost aggregated in main thread after collection. Signal handler for
+  clean Ctrl+C shutdown (cancels pending futures, waits for running
+  workers). Default 1 for backward compat, recommended 4 for ~3-4x
+  speedup on full runs.
+
 ## [1.11.4] - 2026-04-10
 
 ### Added
@@ -1207,7 +1219,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.4...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.5...HEAD
+[1.11.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.4...v1.11.5
 [1.11.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.3...v1.11.4
 [1.11.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.2...v1.11.3
 [1.11.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.1...v1.11.2

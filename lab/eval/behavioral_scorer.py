@@ -8,23 +8,35 @@ Usage:
     python3 -m lab.eval.behavioral_scorer --all               # Test all skills with triggers
     python3 -m lab.eval.behavioral_scorer --all --cache       # Cache-only, skip stale/missing (no API calls)
     python3 -m lab.eval.behavioral_scorer --all --summary     # Summary only
+    python3 -m lab.eval.behavioral_scorer --all --workers 4   # Parallel (4 workers, ~3-4x speedup)
 
 Cost: Uses --bare mode to minimize per-call overhead.
-Observed: ~$10 for full 51-skill run without --bare, expected ~$1-2 with --bare.
+Full 51-skill run (621 prompts): ~$4 with --bare, ~60 min with --workers 6.
 """
 
 from __future__ import annotations
 
 import argparse
+import atexit
+import dataclasses
 import hashlib
 import json
+import os
+import signal
 import subprocess
 import sys
+import threading
+import traceback
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from .trigger_scorer import load_all_descriptions, load_trigger_file, TRIGGERS_DIR
 
 
 RESULTS_DIR = TRIGGERS_DIR / "results"
+
+# Resolved settings path — defaults to bare_settings.json, replaced by
+# _resolve_settings() at startup when a temp auth settings file is needed.
+_resolved_settings_path: str = str(TRIGGERS_DIR.parent / "bare_settings.json")
 
 _ROUTING_SYSTEM_PROMPT = (
     "You are a skill router. Given a list of skills and a user message, "
@@ -32,6 +44,73 @@ _ROUTING_SYSTEM_PROMPT = (
     "If none, reply with the single word 'none'. List at most 3, ordered by relevance. "
     "NEVER add explanations, code examples, or commentary. Output ONLY skill names or 'none'."
 )
+
+
+_RESOLVED_TOKEN_ENV = "_RUBY_PLUGIN_RESOLVED_TOKEN"
+
+
+def _resolve_settings() -> str:
+    """Resolve auth settings for bare mode.
+
+    If bare_settings.json uses apiKeyHelper, extract the token once and write
+    a temp settings file whose apiKeyHelper reads from an env var instead of
+    hitting the keychain. This avoids concurrent keychain access with --workers > 1.
+
+    Sets the token as an env var so all worker subprocesses inherit it.
+    Returns the path to use with --settings.
+    """
+    import tempfile
+
+    base_path = TRIGGERS_DIR.parent / "bare_settings.json"
+    if not base_path.is_file():
+        return str(base_path)
+
+    try:
+        settings = json.loads(base_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return str(base_path)
+
+    helper = settings.get("apiKeyHelper")
+    if not helper:
+        return str(base_path)
+
+    # Run the original helper once to get the token
+    try:
+        result = subprocess.run(
+            ["/bin/sh", "-c", helper],
+            capture_output=True, text=True, timeout=10,
+        )
+        token = result.stdout.strip()
+        if not token or result.returncode != 0:
+            print("WARNING: apiKeyHelper failed, falling back to per-call helper",
+                  file=sys.stderr)
+            return str(base_path)
+    except Exception as exc:
+        print(f"WARNING: apiKeyHelper failed ({exc}), falling back to per-call helper",
+              file=sys.stderr)
+        return str(base_path)
+
+    # Set token in env — inherited by all subprocess workers
+    os.environ[_RESOLVED_TOKEN_ENV] = token
+
+    # Write temp settings to OS temp dir (avoids repo pollution on SIGKILL)
+    # Use printf to avoid echo mangling tokens starting with -n etc.
+    tmp = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", prefix="bare_resolved_", delete=False,
+    )
+    settings["apiKeyHelper"] = f'printf %s "${_RESOLVED_TOKEN_ENV}"'
+    json.dump(settings, tmp)
+    tmp.close()
+    return tmp.name
+
+
+@dataclasses.dataclass(slots=True)
+class CallResult:
+    """Result from a single run_haiku() call."""
+    skills: list[str] | None
+    cost: float = 0.0
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 def content_hash(skill_name: str, descriptions: dict[str, str]) -> str:
@@ -57,16 +136,26 @@ def build_routing_prompt(descriptions: dict[str, str], user_prompt: str) -> str:
         f'The user says: "{user_prompt}"'
     )
 
-# Cost tracking accumulators (reset per main() run)
-_total_cost: float = 0.0
-_max_call_cost: float = 0.0
-_total_calls: int = 0
+
+# Global executor reference for signal handler cleanup
+_executor: ThreadPoolExecutor | None = None
+_executor_lock = threading.Lock()
+
+# Lock for serializing verbose output blocks across threads
+_verbose_lock = threading.Lock()
 
 
-def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
-    """Ask haiku which skill(s) to route to. Returns skill names, or None on failure."""
-    global _total_cost, _max_call_cost, _total_calls
-    settings_path = str(TRIGGERS_DIR.parent / "bare_settings.json")
+def run_haiku(prompt: str, verbose: bool = False,
+              log_buf: list[str] | None = None) -> CallResult:
+    """Ask haiku which skill(s) to route to. Returns CallResult."""
+
+    def _log(msg: str) -> None:
+        if log_buf is not None:
+            log_buf.append(msg)
+        else:
+            print(msg, file=sys.stderr)
+
+    settings_path = _resolved_settings_path
     try:
         result = subprocess.run(
             [
@@ -86,34 +175,33 @@ def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
         )
         if result.returncode != 0:
             if verbose:
-                print(f"--- RESPONSE (rc={result.returncode}) ---", file=sys.stderr)
-                print(result.stdout.strip()[:200] or "(empty)", file=sys.stderr)
+                _log(f"--- RESPONSE (rc={result.returncode}) ---")
+                _log(result.stdout.strip()[:200] or "(empty)")
                 if result.stderr.strip():
-                    print(f"STDERR: {result.stderr.strip()[:200]}", file=sys.stderr)
-                print("--- END RESPONSE ---", file=sys.stderr)
-            return None
+                    _log(f"STDERR: {result.stderr.strip()[:200]}")
+                _log("--- END RESPONSE ---")
+            return CallResult(skills=None)
 
         # Parse JSON response
         try:
             data = json.loads(result.stdout)
         except json.JSONDecodeError:
             if verbose:
-                print("ERROR: could not parse JSON response", file=sys.stderr)
-            return None
+                _log("ERROR: could not parse JSON response")
+            return CallResult(skills=None)
 
         text = data.get("result", "")
         cost = data.get("total_cost_usd", 0)
-        _total_calls += 1
-        _total_cost += cost
-        if cost > _max_call_cost:
-            _max_call_cost = cost
+        usage = data.get("usage", {})
+        in_tok = (usage.get("input_tokens", 0)
+                  + usage.get("cache_creation_input_tokens", 0)
+                  + usage.get("cache_read_input_tokens", 0))
+        out_tok = usage.get("output_tokens", 0)
+
         if verbose:
-            usage = data.get("usage", {})
-            in_tok = usage.get("input_tokens", 0) + usage.get("cache_creation_input_tokens", 0) + usage.get("cache_read_input_tokens", 0)
-            out_tok = usage.get("output_tokens", 0)
-            print(f"--- RESPONSE (${cost:.4f}, {in_tok}in/{out_tok}out) ---", file=sys.stderr)
-            print(text.strip() or "(empty)", file=sys.stderr)
-            print("--- END RESPONSE ---", file=sys.stderr)
+            _log(f"--- RESPONSE (${cost:.4f}, {in_tok}in/{out_tok}out) ---")
+            _log(text.strip() or "(empty)")
+            _log("--- END RESPONSE ---")
 
         skills = []
         for line in text.strip().split("\n"):
@@ -127,16 +215,16 @@ def run_haiku(prompt: str, verbose: bool = False) -> list[str] | None:
             line = line.strip("`").strip()
             if line and line.lower() != "none" and not line.startswith("No "):
                 skills.append(line)
-        return skills
+        return CallResult(skills=skills, cost=cost, input_tokens=in_tok, output_tokens=out_tok)
 
     except subprocess.TimeoutExpired:
         if verbose:
-            print("TIMEOUT after 60s", file=sys.stderr)
-        return None
+            _log("TIMEOUT after 60s")
+        return CallResult(skills=None)
     except Exception as exc:
         if verbose:
-            print(f"ERROR: {exc}", file=sys.stderr)
-        return None
+            _log(f"ERROR: {exc}")
+        return CallResult(skills=None)
 
 
 def extract_prompt(item) -> str:
@@ -170,49 +258,152 @@ def _check_correct(skill_name: str, chosen: list[str], expected: bool,
     return skill_name in chosen
 
 
-def _run_prompt_batch(
+def _run_single_prompt(
     skill_name: str,
-    items: list,
+    item,
+    index: int,
+    total: int,
     descriptions: dict[str, str],
     expected: bool,
     tier: str,
     verbose: bool = False,
-) -> tuple[list[dict], int]:
-    """Run a batch of prompt items and return (results, failure_count)."""
+    parallel: bool = False,
+) -> dict | None:
+    """Run one prompt item. Returns result dict, {"_failure": True} on haiku failure, or None on skip."""
+    meta = _extract_prompt_meta(item)
+    prompt = meta["prompt"]
+    if not prompt:
+        return None
+    label = "should_trigger" if expected else "should_not"
+    routing = meta["routing"]
+    routing_tag = f" [{routing}]" if routing and routing != "lock" else ""
+    header = f"  [{skill_name} {label}({tier}){routing_tag} {index}/{total}] {prompt}"
+
+    if verbose and not parallel:
+        # Sequential: print header immediately so user sees progress
+        print(header, file=sys.stderr)
+
+    # Parallel: buffer everything for atomic print. Sequential: run_haiku prints directly.
+    log_lines: list[str] = []
+    if verbose and parallel:
+        log_lines.append(header)
+
+    full_prompt = build_routing_prompt(descriptions, prompt)
+    call_result = run_haiku(full_prompt, verbose=verbose,
+                            log_buf=log_lines if parallel else None)
+    chosen = call_result.skills
+
+    if chosen is None:
+        if verbose:
+            log_lines.append("  -> SKIPPED (haiku call failed)")
+            if parallel:
+                with _verbose_lock:
+                    print("\n".join(log_lines), file=sys.stderr)
+            else:
+                print(log_lines[-1], file=sys.stderr)
+        return {"_failure": True, "_call_result": call_result}
+
+    correct = _check_correct(
+        skill_name, chosen, expected, meta["routing"], meta["valid_skills"]
+    )
+    status = "OK" if correct else ("MISS" if expected else "FALSE_POS")
+    result_line = f"  -> chosen={chosen} [{status}]"
+
+    if verbose:
+        log_lines.append(result_line)
+        if parallel:
+            with _verbose_lock:
+                print("\n".join(log_lines), file=sys.stderr)
+        else:
+            # Sequential: run_haiku already printed to stderr via log_buf=None path,
+            # just print the result line
+            print(result_line, file=sys.stderr)
+
+    return {
+        "prompt": prompt,
+        "expected": expected,
+        "chosen": chosen,
+        "correct": correct,
+        "tier": tier,
+        "routing": meta["routing"],
+        "_call_result": call_result,
+    }
+
+
+def _run_prompt_batch(
+    skill_name: str,
+    flat_items: list[tuple],
+    descriptions: dict[str, str],
+    verbose: bool = False,
+    workers: int = 1,
+) -> tuple[list[dict], int, list[CallResult]]:
+    """Run a flat list of (item, expected, tier) tuples. Returns (results, failure_count, call_results).
+
+    One executor pool for all items — keeps workers saturated across tiers.
+    """
+    global _executor
     results = []
     failures = 0
-    label = "should_trigger" if expected else "should_not"
-    for i, item in enumerate(items, 1):
-        meta = _extract_prompt_meta(item)
-        prompt = meta["prompt"]
-        if not prompt:
-            continue
-        if verbose:
-            routing = meta["routing"]
-            routing_tag = f" [{routing}]" if routing and routing != "lock" else ""
-            print(f"  [{skill_name} {label}({tier}){routing_tag} {i}/{len(items)}] {prompt}", file=sys.stderr)
-        full_prompt = build_routing_prompt(descriptions, prompt)
-        chosen = run_haiku(full_prompt, verbose=verbose)
-        if chosen is None:
+    call_results: list[CallResult] = []
+    parallel = workers > 1
+    total = len(flat_items)
+
+    def _collect(result: dict | None) -> None:
+        nonlocal failures
+        if result is None:
+            return
+        cr = result.pop("_call_result", None)
+        if cr:
+            call_results.append(cr)
+        if result.get("_failure"):
             failures += 1
-            if verbose:
-                print("  -> SKIPPED (haiku call failed)", file=sys.stderr)
-            continue
-        correct = _check_correct(
-            skill_name, chosen, expected, meta["routing"], meta["valid_skills"]
-        )
-        if verbose:
-            status = "OK" if correct else ("MISS" if expected else "FALSE_POS")
-            print(f"  -> chosen={chosen} [{status}]", file=sys.stderr)
-        results.append({
-            "prompt": prompt,
-            "expected": expected,
-            "chosen": chosen,
-            "correct": correct,
-            "tier": tier,
-            "routing": meta["routing"],
-        })
-    return results, failures
+        else:
+            results.append(result)
+
+    if not parallel:
+        # Sequential path — run_haiku prints verbose directly to stderr
+        for i, (item, expected, tier) in enumerate(flat_items, 1):
+            result = _run_single_prompt(
+                skill_name, item, i, total, descriptions, expected, tier,
+                verbose, parallel=False,
+            )
+            _collect(result)
+        return results, failures, call_results
+
+    # Parallel path: one executor for all prompts, collect in submission order
+    errors: list[str] = []
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        with _executor_lock:
+            _executor = executor
+        try:
+            futures = []
+            for i, (item, expected, tier) in enumerate(flat_items, 1):
+                future = executor.submit(
+                    _run_single_prompt,
+                    skill_name, item, i, total, descriptions, expected, tier,
+                    verbose, True,
+                )
+                futures.append(future)
+
+            for future in futures:
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    failures += 1
+                    errors.append(f"{type(exc).__name__}: {exc}")
+                    if verbose:
+                        with _verbose_lock:
+                            traceback.print_exc(file=sys.stderr)
+                    continue
+                _collect(result)
+        finally:
+            with _executor_lock:
+                _executor = None
+
+    if errors and not verbose:
+        print(f"  {len(errors)} worker failures: {', '.join(set(errors))}", file=sys.stderr)
+
+    return results, failures, call_results
 
 
 def _compute_metrics(results: list[dict]) -> dict:
@@ -243,8 +434,9 @@ def score_skill(
     use_cache: bool = False,
     verbose: bool = False,
     limit: int = 0,
-) -> dict:
-    """Score trigger accuracy for one skill. Returns precision/recall/accuracy with tier split."""
+    workers: int = 1,
+) -> tuple[dict, list[CallResult]]:
+    """Score trigger accuracy for one skill. Returns (score_dict, call_results)."""
     cache_path = RESULTS_DIR / f"{skill_name}.json"
 
     if use_cache:
@@ -252,16 +444,16 @@ def score_skill(
             try:
                 cached = json.loads(cache_path.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
-                return {"skill": skill_name, "error": "corrupted cache file"}
+                return {"skill": skill_name, "error": "corrupted cache file"}, []
             expected_hash = content_hash(skill_name, descriptions)
             if cached.get("content_hash") == expected_hash:
-                return cached
+                return cached, []
         # --cache is cache-only: skip skills without valid cache
-        return {"skill": skill_name, "error": "no valid cache (stale or missing)"}
+        return {"skill": skill_name, "error": "no valid cache (stale or missing)"}, []
 
     triggers = load_trigger_file(skill_name)
     if not triggers:
-        return {"skill": skill_name, "error": "no trigger file"}
+        return {"skill": skill_name, "error": "no trigger file"}, []
 
     # Easy tier: should_trigger + should_not_trigger (raw items, may be str or dict)
     easy_trigger = triggers.get("should_trigger", [])
@@ -276,23 +468,25 @@ def score_skill(
         hard_trigger = hard_trigger[:limit]
         hard_not = hard_not[:limit]
 
-    all_results = []
-    total_failures = 0
-
+    # Flatten all prompt items into one work list for a single executor pool.
+    # This keeps workers saturated across all batches instead of creating
+    # separate executor per batch (which wastes workers on small batches).
+    flat_items = []
     for items, expected, tier in [
         (easy_trigger, True, "easy"),
         (easy_not, False, "easy"),
         (hard_trigger, True, "hard"),
         (hard_not, False, "hard"),
     ]:
-        results, failures = _run_prompt_batch(
-            skill_name, items, descriptions, expected, tier, verbose
-        )
-        all_results.extend(results)
-        total_failures += failures
+        for item in items:
+            flat_items.append((item, expected, tier))
+
+    all_results, total_failures, all_call_results = _run_prompt_batch(
+        skill_name, flat_items, descriptions, verbose=verbose, workers=workers,
+    )
 
     if not all_results and total_failures > 0:
-        return {"skill": skill_name, "error": f"all {total_failures} haiku calls failed"}
+        return {"skill": skill_name, "error": f"all {total_failures} haiku calls failed"}, all_call_results
 
     # Overall metrics
     overall = _compute_metrics(all_results)
@@ -331,7 +525,7 @@ def score_skill(
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     cache_path.write_text(json.dumps(score_data, indent=2) + "\n", encoding="utf-8")
 
-    return score_data
+    return score_data, all_call_results
 
 
 def main() -> None:
@@ -344,18 +538,60 @@ def main() -> None:
     parser.add_argument("--verbose", action="store_true", help="Show prompt/response for each API call")
     parser.add_argument("--limit", type=int, default=0, metavar="N",
                         help="Test only first N should_trigger + N should_not_trigger prompts per skill")
+    parser.add_argument("--workers", type=int, default=1, metavar="N", choices=range(1, 33),
+                        help="Parallel workers for haiku calls (default 1, recommended 4)")
     args = parser.parse_args()
+
+    # Signal handler: cancel pending futures, wait for running workers.
+    # Use non-blocking acquire — signal runs on main thread which may
+    # already hold _executor_lock, so blocking would deadlock.
+    def _shutdown_handler(signum, frame):
+        global _executor
+        executor = None
+        acquired = _executor_lock.acquire(blocking=False)
+        try:
+            if acquired:
+                executor = _executor
+                _executor = None
+        finally:
+            if acquired:
+                _executor_lock.release()
+        if executor is not None:
+            print("\nInterrupted — cancelling pending work, waiting for running workers.",
+                  file=sys.stderr)
+            executor.shutdown(wait=True, cancel_futures=True)
+        raise SystemExit(130)
+
+    signal.signal(signal.SIGINT, _shutdown_handler)
+    signal.signal(signal.SIGTERM, _shutdown_handler)
+
+    # Resolve auth once — avoids concurrent keychain access with --workers > 1
+    global _resolved_settings_path
+    _resolved_settings_path = _resolve_settings()
+    base_settings = str(TRIGGERS_DIR.parent / "bare_settings.json")
+    is_temp_settings = _resolved_settings_path != base_settings
+
+    def _cleanup_settings():
+        if is_temp_settings:
+            try:
+                os.unlink(_resolved_settings_path)
+            except OSError:
+                pass
+            os.environ.pop(_RESOLVED_TOKEN_ENV, None)
+
+    atexit.register(_cleanup_settings)
 
     descriptions = load_all_descriptions()
 
-    global _total_cost, _max_call_cost, _total_calls
-    _total_cost = 0.0
-    _max_call_cost = 0.0
-    _total_calls = 0
+    # Collect all CallResults for cost aggregation (single-threaded, no lock needed)
+    all_call_results: list[CallResult] = []
 
     if args.skill:
-        result = score_skill(args.skill, descriptions, args.cache,
-                             verbose=args.verbose, limit=args.limit)
+        result, crs = score_skill(args.skill, descriptions, args.cache,
+                                  verbose=args.verbose, limit=args.limit,
+                                  workers=args.workers)
+        all_call_results.extend(crs)
+
         if args.summary:
             tier_str = ""
             tc = result.get("tier_counts", {})
@@ -378,8 +614,11 @@ def main() -> None:
             if not triggers:
                 continue
             print(f"  Testing {name}...", end="\n" if args.verbose else " ", flush=True, file=sys.stderr)
-            result = score_skill(name, descriptions, args.cache,
-                                 verbose=args.verbose, limit=args.limit)
+            result, crs = score_skill(name, descriptions, args.cache,
+                                      verbose=args.verbose, limit=args.limit,
+                                      workers=args.workers)
+            all_call_results.extend(crs)
+
             if "error" in result:
                 print(f"SKIPPED ({result['error']})", file=sys.stderr)
                 continue
@@ -431,15 +670,23 @@ def main() -> None:
         parser.print_help()
         return
 
-    # Cost summary (always printed to stderr when API calls were made)
-    if _total_calls > 0:
-        avg_cost = _total_cost / _total_calls
+    # Cost summary — aggregated from CallResult objects (single-threaded, no lock)
+    if all_call_results:
+        successful = [cr for cr in all_call_results if cr.skills is not None]
+        failed = len(all_call_results) - len(successful)
+        total_cost = sum(cr.cost for cr in successful)
+        max_cost = max((cr.cost for cr in successful), default=0)
+        avg_cost = total_cost / len(successful) if successful else 0
         print(f"\n--- Cost Summary ---", file=sys.stderr)
-        print(f"  Total API calls: {_total_calls}", file=sys.stderr)
-        print(f"  Total cost:      ${_total_cost:.4f}", file=sys.stderr)
-        print(f"  Max single call: ${_max_call_cost:.4f}", file=sys.stderr)
+        print(f"  Total API calls: {len(successful)}", file=sys.stderr)
+        if failed:
+            print(f"  Failed calls:    {failed}", file=sys.stderr)
+        print(f"  Total cost:      ${total_cost:.4f}", file=sys.stderr)
+        print(f"  Max single call: ${max_cost:.4f}", file=sys.stderr)
         print(f"  Avg per call:    ${avg_cost:.4f}", file=sys.stderr)
         print(f"--------------------", file=sys.stderr)
+
+    # Temp settings cleanup handled by atexit (also fires on SIGINT/SystemExit)
 
 
 if __name__ == "__main__":

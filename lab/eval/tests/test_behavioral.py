@@ -13,6 +13,7 @@ from lab.eval.behavioral_scorer import (
     _check_correct,
     _extract_prompt_meta,
     build_routing_prompt,
+    CallResult,
     content_hash,
     score_skill,
 )
@@ -24,6 +25,16 @@ SAMPLE_DESCRIPTIONS = {
     "work": "Execute plan tasks with structured progress tracking",
     "review": "Review code changes with parallel specialist agents",
 }
+
+
+def _cr(skills: list[str] | None) -> CallResult:
+    """Shorthand to build a CallResult for mocking run_haiku."""
+    return CallResult(skills=skills)
+
+
+def _unpack(score_result) -> dict:
+    """Unpack score_skill (dict, call_results) tuple, return just the dict."""
+    return score_result[0]
 
 
 class TestContentHash(unittest.TestCase):
@@ -168,15 +179,15 @@ class TestScoreSkill(unittest.TestCase):
             "should_not_trigger": ["review my code", "fix this bug"],
         }
         mock_haiku.side_effect = [
-            ["plan"],         # should_trigger: correct
-            ["plan"],         # should_trigger: correct
-            ["review"],       # should_not_trigger: correct (plan not in list)
-            ["work"],         # should_not_trigger: correct (plan not in list)
+            _cr(["plan"]),    # should_trigger: correct
+            _cr(["plan"]),    # should_trigger: correct
+            _cr(["review"]),  # should_not_trigger: correct (plan not in list)
+            _cr(["work"]),    # should_not_trigger: correct (plan not in list)
         ]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
-                result = score_skill("plan", SAMPLE_DESCRIPTIONS)
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS))
 
         self.assertEqual(result["accuracy"], 1.0)
         self.assertEqual(result["precision"], 1.0)
@@ -199,15 +210,15 @@ class TestDifficultyTiers(unittest.TestCase):
             "hard_should_not_trigger": [{"prompt": "keep working on checklist", "axis": "confusable"}],
         }
         mock_haiku.side_effect = [
-            ["plan"],    # easy should_trigger: correct
-            ["work"],    # easy should_not: correct
-            ["plan"],    # hard should_trigger: correct
-            ["work"],    # hard should_not: correct
+            _cr(["plan"]),  # easy should_trigger: correct
+            _cr(["work"]),  # easy should_not: correct
+            _cr(["plan"]),  # hard should_trigger: correct
+            _cr(["work"]),  # hard should_not: correct
         ]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
-                result = score_skill("plan", SAMPLE_DESCRIPTIONS)
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS))
 
         self.assertEqual(result["tier_counts"]["easy"], 2)
         self.assertEqual(result["tier_counts"]["hard"], 2)
@@ -226,15 +237,15 @@ class TestDifficultyTiers(unittest.TestCase):
             "hard_should_not_trigger": [{"prompt": "keep working", "axis": "confusable"}],
         }
         mock_haiku.side_effect = [
-            ["plan"],       # easy should_trigger: correct
-            ["work"],       # easy should_not: correct
-            ["brainstorm"], # hard should_trigger: MISS
-            ["plan"],       # hard should_not: MISS (plan in list)
+            _cr(["plan"]),       # easy should_trigger: correct
+            _cr(["work"]),       # easy should_not: correct
+            _cr(["brainstorm"]), # hard should_trigger: MISS
+            _cr(["plan"]),       # hard should_not: MISS (plan in list)
         ]
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
-                result = score_skill("plan", SAMPLE_DESCRIPTIONS)
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS))
 
         self.assertEqual(result["easy_accuracy"], 1.0)
         self.assertEqual(result["hard_accuracy"], 0.0)
@@ -341,15 +352,64 @@ class TestForkLockRouting(unittest.TestCase):
             }],
             "hard_should_not_trigger": [],
         }
-        mock_haiku.return_value = ["brainstorm"]  # not "plan" but in valid_skills
+        mock_haiku.return_value = _cr(["brainstorm"])  # not "plan" but in valid_skills
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
-                result = score_skill("plan", SAMPLE_DESCRIPTIONS)
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS))
 
         self.assertEqual(result["total"], 1)
         self.assertEqual(result["correct"], 1)
         self.assertEqual(result["fork_accuracy"], 1.0)
+
+
+class TestParallelWorkers(unittest.TestCase):
+    """Tests for P5b parallel workers."""
+
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_workers_preserves_results(self, mock_triggers, mock_haiku):
+        """--workers > 1 produces same results as sequential."""
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature", "design an approach"],
+            "should_not_trigger": ["fix this bug", "review code"],
+            "hard_should_trigger": [],
+            "hard_should_not_trigger": [],
+        }
+        # Use a function so thread execution order doesn't matter
+        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                seq_result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, workers=1))
+
+        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                par_result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, workers=2))
+
+        self.assertEqual(seq_result["accuracy"], par_result["accuracy"])
+        self.assertEqual(seq_result["total"], par_result["total"])
+        self.assertEqual(seq_result["correct"], par_result["correct"])
+
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_workers_all_prompts_processed(self, mock_triggers, mock_haiku):
+        """All prompts are processed with parallel workers."""
+        mock_triggers.return_value = {
+            "should_trigger": ["p1", "p2", "p3", "p4"],
+            "should_not_trigger": ["n1", "n2", "n3", "n4"],
+            "hard_should_trigger": [],
+            "hard_should_not_trigger": [],
+        }
+        mock_haiku.return_value = _cr(["plan"])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, workers=4))
+
+        self.assertEqual(result["total"], 8)
 
 
 if __name__ == "__main__":
