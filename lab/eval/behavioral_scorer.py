@@ -204,7 +204,7 @@ def _run_single_prompt(
     tier: str,
     verbose: bool = False,
 ) -> dict | None:
-    """Run one prompt item. Returns result dict or None on failure/skip."""
+    """Run one prompt item. Returns result dict, {"_failure": True} on haiku failure, or None on skip."""
     meta = _extract_prompt_meta(item)
     prompt = meta["prompt"]
     if not prompt:

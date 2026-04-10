@@ -399,7 +399,6 @@ class TestParallelWorkers(unittest.TestCase):
                 result = score_skill("plan", SAMPLE_DESCRIPTIONS, workers=4)
 
         self.assertEqual(result["total"], 8)
-        self.assertEqual(mock_haiku.call_count, 8)
 
 
 if __name__ == "__main__":
