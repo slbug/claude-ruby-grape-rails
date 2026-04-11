@@ -220,7 +220,7 @@ def main() -> None:
                         help="Expand only skills with high fragility (from eval sensitivity)")
     parser.add_argument("--all", action="store_true", help="Expand all skills")
     parser.add_argument("--fragility-threshold", type=float, default=0.10,
-                        help="Fragility max threshold for --fragile (default 0.10)")
+                        help="Minimum fragility_max to include a skill in --fragile (default 0.10)")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON")
     args = parser.parse_args()
 

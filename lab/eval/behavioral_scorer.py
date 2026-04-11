@@ -457,7 +457,8 @@ def _aggregate_rotations(results: list[dict], num_rotations: int) -> list[dict]:
     Output: N results with majority-voted correct, per_rotation_correct, per_rotation_choices.
 
     Missing rotations (failed calls) are treated as incorrect for majority vote.
-    Rotation 0's chosen value is used only when rotation 0 is present.
+    Uses rotation 0's chosen value when present; falls back to first successful
+    rotation otherwise (chosen may not reflect the default ordering in that case).
     """
     from collections import defaultdict
     by_prompt: dict[int, list[dict]] = defaultdict(list)
