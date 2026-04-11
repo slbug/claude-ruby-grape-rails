@@ -30,9 +30,10 @@ excludeAgent: "coding-agent"
 
 ## Skill Conventions (plugins/**/skills/*/SKILL.md)
 
-- Skills use YAML frontmatter. Required: name, description. Optional:
+- Skills use YAML frontmatter. Required: name, description. Common:
   argument-hint (command skills), effort, user-invocable,
-  disable-model-invocation, paths (framework-specific skills)
+  disable-model-invocation, paths (framework-specific skills). Also valid
+  per CC docs: allowed-tools, model, context, agent, hooks, shell
 - No `triggers:` field — skills docs do not support it
 - No executable bash blocks (``` bash) — use inline prose instructions
   instead ("Run `bundle exec rspec`")
