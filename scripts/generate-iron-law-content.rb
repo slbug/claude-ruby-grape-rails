@@ -167,7 +167,8 @@ def warn_missing_recommended(yaml)
   yaml['laws'].each_with_index do |law, index|
     next unless law.is_a?(Hash)
 
-    missing = recommended.reject { |key| law.key?(key) && !law[key].nil? }
+    present = ->(v) { !v.nil? && !(v.is_a?(String) && v.strip.empty?) && !(v.is_a?(Array) && v.empty?) }
+    missing = recommended.reject { |key| law.key?(key) && present.call(law[key]) }
     missing.each do |key|
       warn "  WARNING: law[#{index}] (#{law['id']}) missing recommended field: #{key}"
     end
@@ -194,7 +195,9 @@ def generate_injectable_section(yaml)
     puts "**#{cat['name']}:**"
     puts ''
     yaml['laws'].select { |l| l['category'] == cat['id'] }.each_with_index do |law, idx|
-      puts "#{idx + 1}. #{law['init_text'] || law['summary_text']}"
+      init = law['init_text']
+      text = (init.is_a?(String) && !init.strip.empty?) ? init : law['summary_text']
+      puts "#{idx + 1}. #{text}"
     end
     puts ''
   end

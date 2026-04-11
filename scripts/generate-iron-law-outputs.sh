@@ -382,6 +382,10 @@ fi
 # Run validation once (recommended-field warnings emitted here, not per-mode)
 ruby "$RUBY_SCRIPT" validate
 
+if [[ "$TARGET" == "validate" ]]; then
+  exit 0
+fi
+
 generate_all "$TARGET"
 
 # Post-generation drift check: SKILL.md is not generated, so verify it matches
