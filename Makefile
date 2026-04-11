@@ -91,6 +91,25 @@ eval-behavioral-fresh-verbose:
 eval-behavioral-compare:
 	python3 -m lab.eval.scorer --compare
 
+eval-behavioral-passk:
+	python3 -m lab.eval.behavioral_scorer --all --samples 3 --summary
+
+eval-behavioral-rotations:
+	python3 -m lab.eval.behavioral_scorer --all --rotations 5 --summary
+
+eval-trigger-expand:
+	@if [ -z "$(SKILL)" ]; then \
+		echo "Error: SKILL is required. Usage: make eval-trigger-expand SKILL=<skill-name>"; \
+		exit 1; \
+	fi
+	@case "$(SKILL)" in \
+		*[!A-Za-z0-9:_-]*) \
+			echo "Error: SKILL contains invalid characters. Allowed: letters, digits, :, _, -"; \
+			exit 1; \
+			;; \
+	esac
+	python3 -m lab.eval.trigger_expand --skill "$(SKILL)"
+
 eval-sensitivity:
 	python3 -m lab.eval.eval_sensitivity --all --summary
 

@@ -4,14 +4,15 @@ Tests whether Claude routes user prompts to the correct skill
 by sending all skill descriptions + one test prompt to haiku.
 
 Usage:
-    python3 -m lab.eval.behavioral_scorer --skill plan       # Test one skill
-    python3 -m lab.eval.behavioral_scorer --all               # Test all skills with triggers
-    python3 -m lab.eval.behavioral_scorer --all --cache       # Cache-only, skip stale/missing (no API calls)
-    python3 -m lab.eval.behavioral_scorer --all --summary     # Summary only
-    python3 -m lab.eval.behavioral_scorer --all --workers 4   # Parallel (4 workers, ~3-4x speedup)
+    python3 -m lab.eval.behavioral_scorer --skill plan          # Test one skill
+    python3 -m lab.eval.behavioral_scorer --all                  # Test all skills with triggers
+    python3 -m lab.eval.behavioral_scorer --all --cache          # Cache-only (no API calls)
+    python3 -m lab.eval.behavioral_scorer --all --summary        # Summary only
+    python3 -m lab.eval.behavioral_scorer --all --workers 4      # Parallel (~3-4x speedup)
+    python3 -m lab.eval.behavioral_scorer --skill plan --rotations 5  # Order-bias control
+    python3 -m lab.eval.behavioral_scorer --skill plan --samples 3    # pass@k robustness
 
-Cost: Uses --bare mode to minimize per-call overhead.
-Full 51-skill run (621 prompts): ~$4 with --bare, ~60 min with --workers 6.
+Cost: Uses --bare mode. Full 51-skill run: ~$2 single-shot, ~$10 with rotations 5.
 """
 
 from __future__ import annotations
@@ -122,14 +123,24 @@ def content_hash(skill_name: str, descriptions: dict[str, str]) -> str:
     return hashlib.sha256(combined.encode()).hexdigest()[:16]
 
 
-def build_routing_prompt(descriptions: dict[str, str], user_prompt: str) -> str:
+def build_routing_prompt(
+    descriptions: dict[str, str],
+    user_prompt: str,
+    rotation: int = 0,
+) -> str:
     """Build the routing prompt for haiku.
 
     System-level instructions are in _ROUTING_SYSTEM_PROMPT (passed via --system-prompt).
     This function builds only the user-turn content: skill list + user message.
+
+    rotation: cyclic shift offset for the sorted skill list (0 = default order).
     """
+    items = sorted(descriptions.items())
+    if rotation and items:
+        rotation = rotation % len(items)
+        items = items[rotation:] + items[:rotation]
     desc_list = "\n".join(
-        f"- {name}: {desc[:150]}" for name, desc in sorted(descriptions.items())
+        f"- {name}: {desc[:150]}" for name, desc in items
     )
     return (
         f"Available skills:\n{desc_list}\n\n"
@@ -268,8 +279,12 @@ def _run_single_prompt(
     tier: str,
     verbose: bool = False,
     parallel: bool = False,
+    rotation: int = 0,
 ) -> dict | None:
-    """Run one prompt item. Returns result dict, {"_failure": True} on haiku failure, or None on skip."""
+    """Run one prompt item. Returns result dict, {"_failure": True} on haiku failure, or None on skip.
+
+    rotation: cyclic shift offset for the skill list (0 = default sorted order).
+    """
     meta = _extract_prompt_meta(item)
     prompt = meta["prompt"]
     if not prompt:
@@ -277,18 +292,17 @@ def _run_single_prompt(
     label = "should_trigger" if expected else "should_not"
     routing = meta["routing"]
     routing_tag = f" [{routing}]" if routing and routing != "lock" else ""
-    header = f"  [{skill_name} {label}({tier}){routing_tag} {index}/{total}] {prompt}"
+    rot_tag = f" r{rotation}" if rotation else ""
+    header = f"  [{skill_name} {label}({tier}){routing_tag}{rot_tag} {index}/{total}] {prompt}"
 
     if verbose and not parallel:
-        # Sequential: print header immediately so user sees progress
         print(header, file=sys.stderr)
 
-    # Parallel: buffer everything for atomic print. Sequential: run_haiku prints directly.
     log_lines: list[str] = []
     if verbose and parallel:
         log_lines.append(header)
 
-    full_prompt = build_routing_prompt(descriptions, prompt)
+    full_prompt = build_routing_prompt(descriptions, prompt, rotation=rotation)
     call_result = run_haiku(full_prompt, verbose=verbose,
                             log_buf=log_lines if parallel else None)
     chosen = call_result.skills
@@ -315,8 +329,6 @@ def _run_single_prompt(
             with _verbose_lock:
                 print("\n".join(log_lines), file=sys.stderr)
         else:
-            # Sequential: run_haiku already printed to stderr via log_buf=None path,
-            # just print the result line
             print(result_line, file=sys.stderr)
 
     return {
@@ -337,8 +349,9 @@ def _run_prompt_batch(
     verbose: bool = False,
     workers: int = 1,
 ) -> tuple[list[dict], int, list[CallResult]]:
-    """Run a flat list of (item, expected, tier) tuples. Returns (results, failure_count, call_results).
+    """Run a flat list of (item, expected, tier, rotation, run_index, prompt_id) tuples.
 
+    Returns (results, failure_count, call_results).
     One executor pool for all items — keeps workers saturated across tiers.
     """
     global _executor
@@ -348,7 +361,7 @@ def _run_prompt_batch(
     parallel = workers > 1
     total = len(flat_items)
 
-    def _collect(result: dict | None) -> None:
+    def _collect(result: dict | None, run_index: int = 0, prompt_id: int = 0) -> None:
         nonlocal failures
         if result is None:
             return
@@ -358,34 +371,37 @@ def _run_prompt_batch(
         if result.get("_failure"):
             failures += 1
         else:
+            result["run_index"] = run_index
+            result["prompt_id"] = prompt_id
             results.append(result)
 
     if not parallel:
-        # Sequential path — run_haiku prints verbose directly to stderr
-        for i, (item, expected, tier) in enumerate(flat_items, 1):
+        for i, (item, expected, tier, rotation, run_index, pid) in enumerate(flat_items, 1):
             result = _run_single_prompt(
                 skill_name, item, i, total, descriptions, expected, tier,
-                verbose, parallel=False,
+                verbose, parallel=False, rotation=rotation,
             )
-            _collect(result)
+            _collect(result, run_index, pid)
         return results, failures, call_results
 
     # Parallel path: one executor for all prompts, collect in submission order
     errors: list[str] = []
+    meta_per_future: list[tuple[int, int]] = []  # (run_index, prompt_id)
     with ThreadPoolExecutor(max_workers=workers) as executor:
         with _executor_lock:
             _executor = executor
         try:
             futures = []
-            for i, (item, expected, tier) in enumerate(flat_items, 1):
+            for i, (item, expected, tier, rotation, run_index, pid) in enumerate(flat_items, 1):
                 future = executor.submit(
                     _run_single_prompt,
                     skill_name, item, i, total, descriptions, expected, tier,
-                    verbose, True,
+                    verbose, True, rotation,
                 )
                 futures.append(future)
+                meta_per_future.append((run_index, pid))
 
-            for future in futures:
+            for idx, future in enumerate(futures):
                 try:
                     result = future.result()
                 except Exception as exc:
@@ -395,7 +411,8 @@ def _run_prompt_batch(
                         with _verbose_lock:
                             traceback.print_exc(file=sys.stderr)
                     continue
-                _collect(result)
+                ri, pid = meta_per_future[idx]
+                _collect(result, ri, pid)
         finally:
             with _executor_lock:
                 _executor = None
@@ -428,6 +445,114 @@ def _compute_metrics(results: list[dict]) -> dict:
     }
 
 
+def _majority_vote(booleans: list[bool]) -> bool:
+    """Majority vote on booleans. Strict majority — fail on tie (conservative)."""
+    return sum(1 for b in booleans if b) > len(booleans) / 2
+
+
+def _aggregate_rotations(results: list[dict], num_rotations: int) -> list[dict]:
+    """Collapse rotation-expanded results into majority-voted per-prompt results.
+
+    Input: N*R results where each prompt appears R times (one per rotation).
+    Output: N results with majority-voted correct, per_rotation_correct, per_rotation_choices.
+
+    Missing rotations (failed calls) are treated as incorrect for majority vote.
+    Uses rotation 0's chosen value when present; falls back to first successful
+    rotation otherwise (chosen may not reflect the default ordering in that case).
+    """
+    from collections import defaultdict
+    by_prompt: dict[int, list[dict]] = defaultdict(list)
+    for r in results:
+        by_prompt[r.get("prompt_id", 0)].append(r)
+
+    aggregated = []
+    for _pid, group in sorted(by_prompt.items()):
+        group.sort(key=lambda x: x.get("run_index", 0))
+        # Build per-rotation arrays, padding missing rotations as incorrect
+        per_rotation_correct = [False] * num_rotations
+        per_rotation_choices: list[list[str] | None] = [None] * num_rotations
+        for r in group:
+            idx = r.get("run_index", 0)
+            if 0 <= idx < num_rotations:
+                per_rotation_correct[idx] = r["correct"]
+                per_rotation_choices[idx] = r["chosen"]
+
+        voted_correct = _majority_vote(per_rotation_correct)
+        rot0 = next((r for r in group if r.get("run_index", 0) == 0), group[0])
+        base = dict(rot0)
+        base["correct"] = voted_correct
+        base["chosen"] = rot0["chosen"]
+        base["per_rotation_correct"] = per_rotation_correct
+        base["per_rotation_choices"] = per_rotation_choices
+        base.pop("run_index", None)
+        base.pop("prompt_id", None)
+        aggregated.append(base)
+    return aggregated
+
+
+def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
+    """Collapse sample-expanded results into per-prompt results with pass@k.
+
+    Output: N results with accuracy from sample 0, pass_at_k, sample_consistency.
+
+    Uses run_index to identify each sample. If sample 0 failed and was dropped,
+    correct defaults to False. Missing samples padded as incorrect.
+    """
+    from collections import defaultdict
+    by_prompt: dict[int, list[dict]] = defaultdict(list)
+    for r in results:
+        by_prompt[r.get("prompt_id", 0)].append(r)
+
+    aggregated = []
+    for _pid, group in sorted(by_prompt.items()):
+        # Index results by run_index for reliable sample identification
+        by_index: dict[int, dict] = {}
+        for r in group:
+            idx = r.get("run_index", 0)
+            by_index[idx] = r
+
+        # Build per-sample array, padding missing samples as incorrect
+        per_sample_correct = [
+            by_index[i]["correct"] if i in by_index else False
+            for i in range(num_samples)
+        ]
+
+        # Use sample 0 as canonical; fall back to first available if missing
+        sample0 = by_index.get(0)
+        if sample0 is not None:
+            base = dict(sample0)
+        elif group:
+            base = dict(group[0])
+            base["correct"] = False  # conservative: sample 0 is missing
+            base["sample0_missing"] = True
+        else:
+            continue
+
+        base["pass_at_k"] = any(per_sample_correct)
+        base["per_sample_correct"] = per_sample_correct
+        base["sample_consistency"] = all(
+            c == per_sample_correct[0] for c in per_sample_correct
+        )
+        base.pop("run_index", None)
+        base.pop("prompt_id", None)
+        aggregated.append(base)
+    return aggregated
+
+
+def _result_filename(skill_name: str, rotations: int = 1, samples: int = 1) -> str:
+    """Compute mode-specific result filename.
+
+    Baseline (rotations=1, samples=1) uses {skill}.json for backward compat.
+    Rotations mode uses {skill}_r{N}.json, samples mode uses {skill}_s{N}.json.
+    This prevents modes from overwriting each other's cached results.
+    """
+    if rotations > 1:
+        return f"{skill_name}_r{rotations}.json"
+    if samples > 1:
+        return f"{skill_name}_s{samples}.json"
+    return f"{skill_name}.json"
+
+
 def score_skill(
     skill_name: str,
     descriptions: dict[str, str],
@@ -435,9 +560,13 @@ def score_skill(
     verbose: bool = False,
     limit: int = 0,
     workers: int = 1,
+    rotations: int = 1,
+    samples: int = 1,
 ) -> tuple[dict, list[CallResult]]:
     """Score trigger accuracy for one skill. Returns (score_dict, call_results)."""
-    cache_path = RESULTS_DIR / f"{skill_name}.json"
+    if rotations > 1 and samples > 1:
+        raise ValueError("rotations and samples are mutually exclusive; only one may be > 1")
+    cache_path = RESULTS_DIR / _result_filename(skill_name, rotations, samples)
 
     if use_cache:
         if cache_path.is_file():
@@ -448,17 +577,14 @@ def score_skill(
             expected_hash = content_hash(skill_name, descriptions)
             if cached.get("content_hash") == expected_hash:
                 return cached, []
-        # --cache is cache-only: skip skills without valid cache
         return {"skill": skill_name, "error": "no valid cache (stale or missing)"}, []
 
     triggers = load_trigger_file(skill_name)
     if not triggers:
         return {"skill": skill_name, "error": "no trigger file"}, []
 
-    # Easy tier: should_trigger + should_not_trigger (raw items, may be str or dict)
     easy_trigger = triggers.get("should_trigger", [])
     easy_not = triggers.get("should_not_trigger", [])
-    # Hard tier: hard_should_trigger + hard_should_not_trigger (may have routing/valid_skills)
     hard_trigger = triggers.get("hard_should_trigger", [])
     hard_not = triggers.get("hard_should_not_trigger", [])
 
@@ -468,10 +594,11 @@ def score_skill(
         hard_trigger = hard_trigger[:limit]
         hard_not = hard_not[:limit]
 
-    # Flatten all prompt items into one work list for a single executor pool.
-    # This keeps workers saturated across all batches instead of creating
-    # separate executor per batch (which wastes workers on small batches).
-    flat_items = []
+    # Build base prompt list with stable prompt_id for aggregation.
+    # prompt_id is a sequential index across all buckets — survives even if
+    # identical prompt text appears in different buckets (theoretically possible).
+    base_items: list[tuple] = []
+    prompt_id = 0
     for items, expected, tier in [
         (easy_trigger, True, "easy"),
         (easy_not, False, "easy"),
@@ -479,7 +606,23 @@ def score_skill(
         (hard_not, False, "hard"),
     ]:
         for item in items:
-            flat_items.append((item, expected, tier))
+            base_items.append((item, expected, tier, prompt_id))
+            prompt_id += 1
+
+    # Expand for rotations or samples — each produces independent work items.
+    # Tuple: (item, expected, tier, rotation, run_index, prompt_id)
+    # For rotations: use strided offsets (BiasBusters method) for maximum positional spread.
+    # With N rotations over L skills, stride = L // N. E.g., 5 rotations over 51 skills
+    # gives offsets [0, 10, 20, 30, 40] — each skill shifts ~10 positions per rotation.
+    multiplier = max(rotations, samples)
+    num_skills = len(descriptions)
+    rotation_stride = max(num_skills // rotations, 1) if rotations > 1 else 0
+    flat_items: list[tuple] = []
+    for rep in range(multiplier):
+        run_index = rep if (rotations > 1 or samples > 1) else 0
+        rotation = rep * rotation_stride if rotations > 1 else 0
+        for item, expected, tier, pid in base_items:
+            flat_items.append((item, expected, tier, rotation, run_index, pid))
 
     all_results, total_failures, all_call_results = _run_prompt_batch(
         skill_name, flat_items, descriptions, verbose=verbose, workers=workers,
@@ -487,6 +630,12 @@ def score_skill(
 
     if not all_results and total_failures > 0:
         return {"skill": skill_name, "error": f"all {total_failures} haiku calls failed"}, all_call_results
+
+    # Aggregate multi-run results
+    if rotations > 1:
+        all_results = _aggregate_rotations(all_results, rotations)
+    elif samples > 1:
+        all_results = _aggregate_samples(all_results, samples)
 
     # Overall metrics
     overall = _compute_metrics(all_results)
@@ -497,7 +646,7 @@ def score_skill(
     easy_metrics = _compute_metrics(easy_results)
     hard_metrics = _compute_metrics(hard_results)
 
-    # Fork/lock metrics — only from explicitly annotated expected-to-trigger prompts
+    # Fork/lock metrics
     fork_results = [r for r in all_results if r.get("routing") == "fork" and r.get("expected") is True]
     lock_results = [r for r in all_results if r.get("routing") == "lock" and r.get("expected") is True]
     fork_metrics = _compute_metrics(fork_results)
@@ -522,6 +671,71 @@ def score_skill(
         "results": all_results,
     }
 
+    # Rotation-specific metrics (P1b)
+    if rotations > 1:
+        per_rotation_acc = []
+        for rot in range(rotations):
+            rot_correct = []
+            for r in all_results:
+                prc = r.get("per_rotation_correct", [])
+                if rot < len(prc):
+                    rot_correct.append(prc[rot])
+            if rot_correct:
+                per_rotation_acc.append(round(sum(rot_correct) / len(rot_correct), 4))
+        order_range = round(max(per_rotation_acc) - min(per_rotation_acc), 4) if per_rotation_acc else 0.0
+        # correctness_consistency: all rotations agree on correct/incorrect verdict
+        correctness_agree = sum(
+            1 for r in all_results
+            if r.get("per_rotation_correct") and all(
+                c == r["per_rotation_correct"][0] for c in r["per_rotation_correct"]
+            )
+        )
+        # choice_consistency: all rotations return the same skill list
+        choice_agree = sum(
+            1 for r in all_results
+            if r.get("per_rotation_choices") and all(
+                c == r["per_rotation_choices"][0] for c in r["per_rotation_choices"]
+                if c is not None
+            ) and all(c is not None for c in r["per_rotation_choices"])
+        )
+        total_prompts = len(all_results)
+        score_data["rotations"] = rotations
+        score_data["per_rotation_accuracy"] = per_rotation_acc
+        score_data["order_range"] = order_range
+        score_data["order_stddev"] = round(
+            (sum((a - sum(per_rotation_acc) / len(per_rotation_acc)) ** 2
+                 for a in per_rotation_acc) / len(per_rotation_acc)) ** 0.5, 4
+        ) if per_rotation_acc else 0.0
+        score_data["order_sensitive"] = order_range > 0.15
+        score_data["routing_consistency"] = round(
+            choice_agree / total_prompts, 4
+        ) if total_prompts else 0.0
+        score_data["correctness_consistency"] = round(
+            correctness_agree / total_prompts, 4
+        ) if total_prompts else 0.0
+
+    # Sample-specific metrics (P3)
+    if samples > 1:
+        pass_at_k_count = sum(1 for r in all_results if r.get("pass_at_k"))
+        consistency_count = sum(1 for r in all_results if r.get("sample_consistency"))
+        total_prompts = len(all_results)
+        score_data["samples"] = samples
+        score_data["pass_at_k"] = round(
+            pass_at_k_count / total_prompts, 4
+        ) if total_prompts else 0.0
+        score_data["sample_consistency"] = round(
+            consistency_count / total_prompts, 4
+        ) if total_prompts else 0.0
+        score_data["inconsistent_routing"] = (
+            score_data["pass_at_k"] - score_data["accuracy"] > 0.15
+        )
+
+    # Write mode metadata for auditability
+    score_data["mode"] = {
+        "rotations": rotations,
+        "samples": samples,
+    }
+
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     cache_path.write_text(json.dumps(score_data, indent=2) + "\n", encoding="utf-8")
 
@@ -540,7 +754,14 @@ def main() -> None:
                         help="Test only first N should_trigger + N should_not_trigger prompts per skill")
     parser.add_argument("--workers", type=int, default=1, metavar="N", choices=range(1, 33),
                         help="Parallel workers for haiku calls (default 1, recommended 4)")
+    parser.add_argument("--rotations", type=int, default=1, metavar="N", choices=range(1, 16),
+                        help="Cyclic rotations for order-bias control (default 1, recommended 5)")
+    parser.add_argument("--samples", type=int, default=1, metavar="N", choices=range(1, 8),
+                        help="Independent samples for pass@k robustness (default 1, recommended 3)")
     args = parser.parse_args()
+
+    if args.rotations > 1 and args.samples > 1:
+        parser.error("--rotations and --samples are mutually exclusive (both > 1)")
 
     # Signal handler: cancel pending futures, wait for running workers.
     # Use non-blocking acquire — signal runs on main thread which may
@@ -589,7 +810,8 @@ def main() -> None:
     if args.skill:
         result, crs = score_skill(args.skill, descriptions, args.cache,
                                   verbose=args.verbose, limit=args.limit,
-                                  workers=args.workers)
+                                  workers=args.workers,
+                                  rotations=args.rotations, samples=args.samples)
         all_call_results.extend(crs)
 
         if args.summary:
@@ -598,9 +820,21 @@ def main() -> None:
             if tc.get("hard", 0) > 0:
                 tier_str = (f" (easy: {result.get('easy_accuracy', 0):.0%}, "
                             f"hard: {result.get('hard_accuracy', 0):.0%})")
+            extra = ""
+            if result.get("rotations", 1) > 1:
+                extra = (f" choice={result.get('routing_consistency', 0):.0%}"
+                         f" correct={result.get('correctness_consistency', 0):.0%}"
+                         f" range={result.get('order_range', 0):.2f}")
+                if result.get("order_sensitive"):
+                    extra += " ORDER-SENSITIVE"
+            if result.get("samples", 1) > 1:
+                extra = (f" pass@{result['samples']}={result.get('pass_at_k', 0):.0%}"
+                         f" cons={result.get('sample_consistency', 0):.0%}")
+                if result.get("inconsistent_routing"):
+                    extra += " INCONSISTENT"
             print(f"{args.skill}: accuracy={result.get('accuracy', 0):.0%}{tier_str} "
                   f"precision={result.get('precision', 0):.0%} "
-                  f"recall={result.get('recall', 0):.0%}")
+                  f"recall={result.get('recall', 0):.0%}{extra}")
         else:
             print(json.dumps(result, indent=2 if args.pretty else None))
 
@@ -616,7 +850,8 @@ def main() -> None:
             print(f"  Testing {name}...", end="\n" if args.verbose else " ", flush=True, file=sys.stderr)
             result, crs = score_skill(name, descriptions, args.cache,
                                       verbose=args.verbose, limit=args.limit,
-                                      workers=args.workers)
+                                      workers=args.workers,
+                                      rotations=args.rotations, samples=args.samples)
             all_call_results.extend(crs)
 
             if "error" in result:
@@ -642,12 +877,25 @@ def main() -> None:
                 if tc.get("hard", 0) > 0:
                     tier_str = (f" (easy: {result.get('easy_accuracy', 0):.0%}, "
                                 f"hard: {result.get('hard_accuracy', 0):.0%})")
+                extra = ""
+                if result.get("rotations", 1) > 1:
+                    extra = (f" choice={result.get('routing_consistency', 0):.0%}"
+                             f" correct={result.get('correctness_consistency', 0):.0%}"
+                             f" range={result.get('order_range', 0):.2f}")
+                    if result.get("order_sensitive"):
+                        extra += " ORDER-SENSITIVE"
+                if result.get("samples", 1) > 1:
+                    extra = (f" pass@{result['samples']}={result.get('pass_at_k', 0):.0%}"
+                             f" cons={result.get('sample_consistency', 0):.0%}")
+                    if result.get("inconsistent_routing"):
+                        extra += " INCONSISTENT"
                 print(f"  {name}: accuracy={result.get('accuracy', 0):.0%}{tier_str} "
                       f"P={result.get('precision', 0):.0%} "
-                      f"R={result.get('recall', 0):.0%}")
+                      f"R={result.get('recall', 0):.0%}{extra}")
         else:
             aggregate = {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
+                "mode": {"rotations": args.rotations, "samples": args.samples},
                 "skills_tested": skills_tested,
                 "average_accuracy": round(avg, 4),
                 "per_skill": {
@@ -659,7 +907,8 @@ def main() -> None:
                     for k, v in all_results.items()
                 },
             }
-            aggregate_path = RESULTS_DIR / "_aggregate.json"
+            aggregate_suffix = _result_filename("_aggregate", args.rotations, args.samples)
+            aggregate_path = RESULTS_DIR / aggregate_suffix
             RESULTS_DIR.mkdir(parents=True, exist_ok=True)
             aggregate_path.write_text(
                 json.dumps(aggregate, indent=2) + "\n", encoding="utf-8"
