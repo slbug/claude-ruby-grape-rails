@@ -3,6 +3,12 @@ name: sequel-patterns
 description: Sequel ORM patterns for high-performance Ruby/Rails applications. Covers datasets, migrations, associations, and when to choose Sequel over ActiveRecord.
 user-invocable: false
 effort: medium
+paths:
+  - app/models/**
+  - db/migrations/**
+  - db/**
+  - "**/app/models/**"
+  - "**/db/migrations/**"
 ---
 # Sequel Patterns
 

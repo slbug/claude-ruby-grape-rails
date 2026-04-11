@@ -637,6 +637,10 @@ print(f"  WARNING: non-core skills below {threshold:.2f}: {summary}")
 PY
 }
 
+run_context_budget() {
+  python3 -m lab.eval.context_budget || true
+}
+
 run_all_triggers() {
   echo "  Scoring trigger corpora and overlap analysis"
   python3 -m lab.eval.trigger_scorer --all | summarize_triggers "$TRIGGER_FAIL_UNDER"
@@ -680,6 +684,9 @@ case "$MODE" in
     run_all_triggers || FAILURES=$((FAILURES + 1))
   fi
   echo
+  echo "--- Context Budget (advisory) ---"
+  run_context_budget
+  echo
   echo "NOTE: changed mode is partial coverage. It only lints changed markdown, scans changed markdown/JSON/YAML for dynamic injection, and scores changed tracked skills/agents."
   echo "NOTE: use --all or --ci for full tracked contributor checks."
   ;;
@@ -701,6 +708,9 @@ case "$MODE" in
   echo
   echo "--- Non-core Skill Advisory ---"
   run_noncore_skill_advisory "$FAIL_UNDER"
+  echo
+  echo "--- Context Budget (advisory) ---"
+  run_context_budget
   ;;
 --skills)
   echo "--- Skills (core) ---"
@@ -741,6 +751,9 @@ case "$MODE" in
   echo
   echo "--- Non-core Skill Advisory ---"
   run_noncore_skill_advisory "$FAIL_UNDER"
+  echo
+  echo "--- Context Budget (advisory) ---"
+  run_context_budget
   ;;
 *)
   echo "Usage: $0 [--changed|--all|--skills|--agents|--triggers|--ci] [--include-untracked] [--against REF]"

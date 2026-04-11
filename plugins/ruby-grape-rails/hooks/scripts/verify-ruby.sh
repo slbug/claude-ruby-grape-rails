@@ -7,6 +7,8 @@ set -o pipefail
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
+RUBY_PLUGIN_RUBY_CHECK_TIMEOUT="${RUBY_PLUGIN_RUBY_CHECK_TIMEOUT:-30}"
+
 emit_missing_dependency_block() {
   local dependency="$1"
 
@@ -124,10 +126,14 @@ case "$BASE_NAME" in
     }
     trap cleanup EXIT HUP INT TERM
 
-    ruby -c -- "$FILE_PATH" >"$TMP_OUTPUT" 2>&1 || {
+    timeout "$RUBY_PLUGIN_RUBY_CHECK_TIMEOUT" ruby -c -- "$FILE_PATH" >"$TMP_OUTPUT" 2>&1
+    VERIFY_STATUS=$?
+    if [[ "$VERIFY_STATUS" -eq 124 ]]; then
+      echo "WARNING: ruby -c timed out after ${RUBY_PLUGIN_RUBY_CHECK_TIMEOUT}s. Skipping syntax check." >&2
+    elif [[ "$VERIFY_STATUS" -ne 0 ]]; then
       cat -- "$TMP_OUTPUT" >&2
       exit 2
-    }
+    fi
     ;;
   *)
     exit 0

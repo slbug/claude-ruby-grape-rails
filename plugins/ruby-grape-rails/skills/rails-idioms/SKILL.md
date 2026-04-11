@@ -3,6 +3,16 @@ name: rails-idioms
 description: Idiomatic Rails patterns for controllers, params, callbacks, jobs, and application structure. Load when working in `app/`, `config/routes.rb`, or service/controller boundaries across Rails 7.x and 8.x.
 user-invocable: false
 effort: medium
+paths:
+  - app/controllers/**
+  - app/models/**
+  - app/jobs/**
+  - app/helpers/**
+  - config/routes.rb
+  - config/routes/**
+  - "**/app/controllers/**"
+  - "**/app/models/**"
+  - "**/app/jobs/**"
 ---
 # Rails Idioms
 

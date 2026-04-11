@@ -48,6 +48,18 @@ Each script must document its failure policy near the top:
 - **Security-sensitive hooks** (secret-scan, block-dangerous-ops): fail
   closed in strict/high-confidence cases
 
+## Configurable Timeouts
+
+Hook scripts wrap slow sub-commands with `timeout` and env var overrides:
+
+- `RUBY_PLUGIN_STANDARDRB_TIMEOUT` (default 120s) — format-ruby.sh
+- `RUBY_PLUGIN_RUBY_CHECK_TIMEOUT` (default 30s) — verify-ruby.sh
+- `RUBY_PLUGIN_BETTERLEAKS_TIMEOUT` (default 60s) — secret-scan.sh
+- `RUBY_PLUGIN_DETECT_STACK_TIMEOUT` (default 15s) — detect-runtime.sh
+
+Exit code 124 from `timeout` is handled explicitly: advisory hooks skip
+(exit 0), security hooks fail closed (exit 2).
+
 ## Do NOT Flag
 
 - `exit 2` is intentional (feeds stderr to Claude, not an error)
@@ -55,3 +67,5 @@ Each script must document its failure policy near the top:
 - `HOOK_INPUT_VALUE` and `HOOK_NAME` variables from sourced libraries
 - `workspace-root-lib.sh` sourcing pattern
 - Long case statements in block-dangerous-ops.sh (necessary coverage)
+- `timeout "$VAR"` wrapping external commands (configurable timeout pattern)
+- `RUBY_PLUGIN_*` env var defaults via `${VAR:-default}` syntax

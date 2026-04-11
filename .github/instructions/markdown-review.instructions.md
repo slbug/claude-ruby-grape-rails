@@ -17,7 +17,7 @@ context, agent, hooks, paths, shell
 
 Valid frontmatter fields for agents: name, description, model, effort,
 maxTurns, tools, disallowedTools, skills, memory, background, isolation,
-omitClaudeMd
+omitClaudeMd, color, initialPrompt
 
 ## Runtime Variables
 
@@ -49,3 +49,4 @@ These are NOT errors — they are resolved at runtime by Claude Code:
 - Long numbered lists in Iron Laws sections
 - `<!-- -->` HTML comments (used for markdownlint control)
 - Files under `.claude/` (contributor tooling, not shipped)
+- `paths:` YAML frontmatter in `.claude/rules/*.md` (path-scoped rules)

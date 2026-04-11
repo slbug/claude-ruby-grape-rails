@@ -3,6 +3,14 @@ name: sidekiq
 description: Sidekiq job design for Ruby apps using Rails, Active Record, or Sequel. Covers JSON-safe args, idempotency, retries, testing, and commit-safe enqueue patterns. Sidekiq 6.x through 8.x and Solid Queue.
 user-invocable: false
 effort: medium
+paths:
+  - app/jobs/**
+  - app/workers/**
+  - app/sidekiq/**
+  - config/sidekiq.yml
+  - "**/app/jobs/**"
+  - "**/app/workers/**"
+  - "**/app/sidekiq/**"
 ---
 # Sidekiq
 

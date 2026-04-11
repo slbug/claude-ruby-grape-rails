@@ -1,0 +1,46 @@
+---
+paths:
+  - plugins/ruby-grape-rails/hooks/**
+---
+
+# Hook Development
+
+## Hook Failure Policy
+
+- **Advisory hooks** (detect-runtime, check-resume, log-progress): warn or skip on degraded state, say so clearly
+- **Delegated Ruby guardrails** (rubyish-post-edit, format-ruby, verify-ruby, debug-statement-warning): fail closed once selected for a Ruby-ish path
+- **Security hooks** (secret-scan, block-dangerous-ops): fail closed in strict/high-confidence cases; document any narrower advisory fallback explicitly
+
+Add or update a short policy comment near the top of the hook when behavior changes.
+
+## Hook Output Patterns
+
+- `PostToolUse` stdout is verbose-mode only — use `exit 2` + stderr to feed messages to Claude
+- `PreCompact` has no context injection path — use user-facing stderr reminder only, rely on `PostCompact` to re-read artifacts
+- `SessionStart` stdout IS added to Claude's context (exception along with `UserPromptSubmit`)
+- `SubagentStart` uses `hookSpecificOutput.additionalContext` to inject context into subagents
+- `PostToolUseFailure` uses `hookSpecificOutput.additionalContext` for debugging hints
+
+## Deletion Safety Rule
+
+- `rm -f` only for `mktemp` outputs or exact fixed plugin-owned paths
+- `rm -rf` only for validated `mktemp -d` outputs
+- `rmdir` for expected-empty lock directories
+- For variable-based cleanup, validate the path/prefix first and use `${var:?}` in the final delete
+
+## Hook Modes
+
+- **default** (implicit): quieter startup, scan normal files, skip binary/media, avoid recent-change fallback
+- **strict**: scan every written file, broaden secret scanning to recent changes
+- Configure via `${REPO_ROOT}/.claude/ruby-plugin-hook-mode` or `RUBY_PLUGIN_HOOK_MODE=strict`
+
+## Active Plan Infrastructure
+
+`active-plan-lib.sh` / `active-plan-marker.sh` manage `.claude/ACTIVE_PLAN` marker file:
+
+- **Set by:** `/rb:plan` (after creating plan)
+- **Cleared by:** `/rb:work` (when all tasks complete)
+- **Read by:** `precompact-rules.sh`, `check-scratchpad.sh`, `log-progress.sh`
+- `/rb:full` orchestrates the lifecycle via plan/work phases
+
+Marker lifecycle is enforced at the skill level, not via hooks.

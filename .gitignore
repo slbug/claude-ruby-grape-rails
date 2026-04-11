@@ -29,6 +29,7 @@ lab/eval/triggers/_semantic_pairs.json
 !.claude/
 .claude/*
 !.claude/agents/
+!.claude/rules/
 !.claude/skills/
 !.claude/conventions.md
 .claude/docs-check/  # Runtime artifacts (docs-cache, reports, summaries)

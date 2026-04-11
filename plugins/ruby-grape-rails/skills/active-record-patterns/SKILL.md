@@ -3,6 +3,13 @@ name: active-record-patterns
 description: Active Record patterns for querying, associations, migrations, transactions, locking, search, and data integrity. Load for any model, migration, query, or database-heavy work.
 user-invocable: false
 effort: medium
+paths:
+  - app/models/**
+  - db/migrate/**
+  - db/schema.rb
+  - db/structure.sql
+  - "**/app/models/**"
+  - "**/db/migrate/**"
 ---
 # Active Record Patterns
 
