@@ -3,6 +3,11 @@ name: ruby-idioms
 description: Core Ruby 3.4+/4.0-ready idioms for application code. Value objects, service objects, error handling, adapters. Load for plain Ruby objects and service boundaries.
 user-invocable: false
 effort: medium
+paths:
+  - "app/{errors,types,contracts,events,clients,chewy}/**"
+  - "**/app/{errors,types,contracts,events,clients,chewy}/**"
+  - "{packs,engines,components}/*/{errors,types,contracts,events,clients,chewy}/**"
+  - "app/{packages,packs}/*/{errors,types,contracts,events,clients,chewy}/**"
 ---
 # Ruby Idioms
 

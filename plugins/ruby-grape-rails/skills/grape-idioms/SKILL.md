@@ -4,12 +4,10 @@ description: Grape API patterns for versioning, param coercion, declared params,
 user-invocable: false
 effort: medium
 paths:
-  - app/api/**
-  - app/apis/**
-  - app/resources/**
-  - "**/app/api/**"
-  - "**/app/apis/**"
-  - "**/app/resources/**"
+  - "app/{api,apis,resources,representers,serializers,blueprints,endpoints,deserializers}/**"
+  - "**/app/{api,apis,resources,representers,serializers,blueprints,endpoints,deserializers}/**"
+  - "{packs,engines,components}/*/{api,apis,resources,representers,serializers,blueprints,endpoints,deserializers}/**"
+  - "app/{packages,packs}/*/{api,apis,resources,representers,serializers,blueprints,endpoints,deserializers}/**"
 ---
 # Grape Idioms
 

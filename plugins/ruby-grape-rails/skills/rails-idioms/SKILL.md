@@ -4,18 +4,24 @@ description: Idiomatic Rails patterns for controllers, params, callbacks, jobs, 
 user-invocable: false
 effort: medium
 paths:
-  - app/controllers/**
-  - app/models/**
-  - app/jobs/**
-  - app/helpers/**
-  - config/routes.rb
-  - config/routes/**
-  - "**/config/routes.rb"
-  - "**/config/routes/**"
-  - "**/app/controllers/**"
-  - "**/app/models/**"
-  - "**/app/helpers/**"
-  - "**/app/jobs/**"
+  - "app/{controllers,models,jobs,helpers,services,mailers,concerns}/**"
+  - "config/{routes.rb,routes/**}"
+  - "**/app/{controllers,models,jobs,helpers,services,mailers,concerns}/**"
+  - "**/config/{routes.rb,routes/**}"
+  - "app/{policies,queries,decorators,presenters,validators}/**"
+  - "app/{interactors,operations,commands,structs,value_objects}/**"
+  - "app/{mappers,builders,forms,view_objects,conductors}/**"
+  - "**/app/{policies,queries,decorators,presenters,validators}/**"
+  - "**/app/{interactors,operations,commands,structs,value_objects}/**"
+  - "**/app/{mappers,builders,forms,view_objects,conductors}/**"
+  - "{packs,engines,components}/*/{controllers,models,jobs,helpers,services,mailers,concerns}/**"
+  - "{packs,engines,components}/*/{policies,queries,decorators,presenters,validators}/**"
+  - "{packs,engines,components}/*/{interactors,operations,commands,structs,value_objects}/**"
+  - "{packs,engines,components}/*/{mappers,builders,forms,view_objects,conductors}/**"
+  - "app/{packages,packs}/*/{controllers,models,jobs,helpers,services,mailers,concerns}/**"
+  - "app/{packages,packs}/*/{policies,queries,decorators,presenters,validators}/**"
+  - "app/{packages,packs}/*/{interactors,operations,commands,structs,value_objects}/**"
+  - "app/{packages,packs}/*/{mappers,builders,forms,view_objects,conductors}/**"
 ---
 # Rails Idioms
 

@@ -3,6 +3,11 @@ name: security
 description: "Rails and Grape security patterns: authorization, parameter shaping, SQL safety, XSS prevention, secret handling, SSRF/open redirects, and secure background job workflows."
 user-invocable: false
 effort: medium
+paths:
+  - "app/{policies,middleware,middlewares}/**"
+  - "**/app/{policies,middleware,middlewares}/**"
+  - "{packs,engines,components}/*/{policies,middleware,middlewares}/**"
+  - "app/{packages,packs}/*/{policies,middleware,middlewares}/**"
 ---
 # Security
 

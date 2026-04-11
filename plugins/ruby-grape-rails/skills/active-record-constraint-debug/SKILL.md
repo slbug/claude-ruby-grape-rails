@@ -4,10 +4,12 @@ description: Diagnose Active Record constraint failures, unique index violations
 argument-hint: "[error|path]"
 effort: medium
 paths:
-  - app/models/**
-  - db/**
+  - "app/models/**"
+  - "db/**"
   - "**/app/models/**"
   - "**/db/**"
+  - "{packs,engines,components}/*/models/**"
+  - "app/{packages,packs}/*/models/**"
 ---
 # Constraint Debug
 

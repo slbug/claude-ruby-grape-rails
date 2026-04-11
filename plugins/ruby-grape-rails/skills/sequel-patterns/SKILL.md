@@ -4,10 +4,12 @@ description: Sequel ORM patterns for high-performance Ruby/Rails applications. C
 user-invocable: false
 effort: medium
 paths:
-  - app/models/**
-  - db/**
-  - "**/app/models/**"
+  - "app/{models,repositories}/**"
+  - "db/**"
+  - "**/app/{models,repositories}/**"
   - "**/db/**"
+  - "{packs,engines,components}/*/{models,repositories}/**"
+  - "app/{packages,packs}/*/{models,repositories}/**"
 ---
 # Sequel Patterns
 
