@@ -13,8 +13,9 @@ from pathlib import Path
 
 from .frontmatter import parse_frontmatter
 
-PLUGIN_ROOT = Path("plugins/ruby-grape-rails")
-CLAUDE_MD = Path("CLAUDE.md")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PLUGIN_ROOT = PROJECT_ROOT / "plugins" / "ruby-grape-rails"
+CLAUDE_MD = PROJECT_ROOT / "CLAUDE.md"
 MAX_CLAUDE_MD_LINES = 200
 
 EXPECTED_PATHS_SKILLS = [
