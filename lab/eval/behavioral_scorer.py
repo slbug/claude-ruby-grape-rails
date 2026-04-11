@@ -563,6 +563,8 @@ def score_skill(
     samples: int = 1,
 ) -> tuple[dict, list[CallResult]]:
     """Score trigger accuracy for one skill. Returns (score_dict, call_results)."""
+    if rotations > 1 and samples > 1:
+        raise ValueError("rotations and samples are mutually exclusive; only one may be > 1")
     cache_path = RESULTS_DIR / _result_filename(skill_name, rotations, samples)
 
     if use_cache:
@@ -675,11 +677,20 @@ def score_skill(
             if rot_correct:
                 per_rotation_acc.append(round(sum(rot_correct) / len(rot_correct), 4))
         order_range = round(max(per_rotation_acc) - min(per_rotation_acc), 4) if per_rotation_acc else 0.0
-        consistency_count = sum(
+        # correctness_consistency: all rotations agree on correct/incorrect verdict
+        correctness_agree = sum(
             1 for r in all_results
             if r.get("per_rotation_correct") and all(
                 c == r["per_rotation_correct"][0] for c in r["per_rotation_correct"]
             )
+        )
+        # choice_consistency: all rotations return the same skill list
+        choice_agree = sum(
+            1 for r in all_results
+            if r.get("per_rotation_choices") and all(
+                c == r["per_rotation_choices"][0] for c in r["per_rotation_choices"]
+                if c is not None
+            ) and all(c is not None for c in r["per_rotation_choices"])
         )
         total_prompts = len(all_results)
         score_data["rotations"] = rotations
@@ -691,7 +702,10 @@ def score_skill(
         ) if per_rotation_acc else 0.0
         score_data["order_sensitive"] = order_range > 0.15
         score_data["routing_consistency"] = round(
-            consistency_count / total_prompts, 4
+            choice_agree / total_prompts, 4
+        ) if total_prompts else 0.0
+        score_data["correctness_consistency"] = round(
+            correctness_agree / total_prompts, 4
         ) if total_prompts else 0.0
 
     # Sample-specific metrics (P3)
@@ -802,7 +816,8 @@ def main() -> None:
                             f"hard: {result.get('hard_accuracy', 0):.0%})")
             extra = ""
             if result.get("rotations", 1) > 1:
-                extra = (f" rot={result.get('routing_consistency', 0):.0%}cons"
+                extra = (f" choice={result.get('routing_consistency', 0):.0%}"
+                         f" correct={result.get('correctness_consistency', 0):.0%}"
                          f" range={result.get('order_range', 0):.2f}")
                 if result.get("order_sensitive"):
                     extra += " ORDER-SENSITIVE"
@@ -858,7 +873,7 @@ def main() -> None:
                                 f"hard: {result.get('hard_accuracy', 0):.0%})")
                 extra = ""
                 if result.get("rotations", 1) > 1:
-                    extra = f" cons={result.get('routing_consistency', 0):.0%}"
+                    extra = f" choice={result.get('routing_consistency', 0):.0%}"
                     if result.get("order_sensitive"):
                         extra += " ORDER-SENSITIVE"
                 if result.get("samples", 1) > 1:

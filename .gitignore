@@ -18,6 +18,8 @@ __pycache__/
 
 # Behavioral eval cached results (LLM-generated, not deterministic)
 lab/eval/triggers/results/
+lab/eval/triggers/candidates/
+lab/eval/triggers/_semantic_pairs.json
 
 # Git worktrees
 .worktrees/

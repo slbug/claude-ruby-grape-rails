@@ -88,6 +88,10 @@ def _quality_gate(
     return None
 
 
+import re as _re
+_VALID_SKILL_NAME = _re.compile(r"^[A-Za-z0-9:_-]+$")
+
+
 def expand_skill(
     skill_name: str,
     descriptions: dict[str, str],
@@ -96,6 +100,8 @@ def expand_skill(
 
     Returns dict with candidates and quality gate stats.
     """
+    if not _VALID_SKILL_NAME.match(skill_name):
+        return {"skill": skill_name, "error": "invalid skill name characters"}
     description = descriptions.get(skill_name, "")
     if not description:
         return {"skill": skill_name, "error": "no description found"}
