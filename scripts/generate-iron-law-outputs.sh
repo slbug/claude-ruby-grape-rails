@@ -56,6 +56,7 @@ Targets:
   tutorial   Update bounded Iron Laws section in intro tutorial content
   injector   Regenerate inject-iron-laws.sh
   judge      Update bounded Iron Laws section in iron-law-judge.md
+  validate   Run schema validation only (no generation)
   all        Regenerate all supported targets
 
 Options:
@@ -65,7 +66,7 @@ EOF
 
 valid_target() {
   case "$1" in
-    readme|canonical|init|tutorial|injector|judge|all) return 0 ;;
+    readme|canonical|init|tutorial|injector|judge|validate|all) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -377,6 +378,13 @@ fi
 if [[ ! -r "$RUBY_SCRIPT" ]]; then
   log_error "Ruby script is not readable: $RUBY_SCRIPT"
   exit 1
+fi
+
+# Run validation once (recommended-field warnings emitted here, not per-mode)
+ruby "$RUBY_SCRIPT" validate
+
+if [[ "$TARGET" == "validate" ]]; then
+  exit 0
 fi
 
 generate_all "$TARGET"

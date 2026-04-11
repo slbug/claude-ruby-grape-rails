@@ -162,6 +162,21 @@ end
 
 validate_entries!(yaml)
 
+def warn_missing_recommended(yaml)
+  recommended = %w[severity applies_to init_text reference_files]
+  nullable = %w[detector_id]
+  yaml['laws'].each_with_index do |law, index|
+    next unless law.is_a?(Hash)
+
+    present = ->(v) { !v.nil? && !(v.is_a?(String) && v.strip.empty?) && !(v.is_a?(Array) && v.empty?) }
+    missing = recommended.reject { |key| law.key?(key) && present.call(law[key]) }
+    missing += nullable.reject { |key| law.key?(key) }
+    missing.each do |key|
+      warn "  WARNING: law[#{index}] (#{law['id']}) missing recommended field: #{key}"
+    end
+  end
+end
+
 def law_count_label(count)
   "#{count} #{count == 1 ? 'law' : 'laws'}"
 end
@@ -182,7 +197,9 @@ def generate_injectable_section(yaml)
     puts "**#{cat['name']}:**"
     puts ''
     yaml['laws'].select { |l| l['category'] == cat['id'] }.each_with_index do |law, idx|
-      puts "#{idx + 1}. #{law['summary_text']}"
+      init = law['init_text']
+      text = (init.is_a?(String) && !init.strip.empty?) ? init : law['summary_text']
+      puts "#{idx + 1}. #{text}"
     end
     puts ''
   end
@@ -352,7 +369,10 @@ when 'readme'
   generate_readme(yaml)
 when 'judge'
   generate_judge_section(yaml)
+when 'validate'
+  warn_missing_recommended(yaml)
+  warn "Validation complete."
 else
-  puts "Usage: #{$PROGRAM_NAME} [injectable|tutorial|injector|canonical|readme|judge]"
+  puts "Usage: #{$PROGRAM_NAME} [injectable|tutorial|injector|canonical|readme|judge|validate]"
   exit 1
 end

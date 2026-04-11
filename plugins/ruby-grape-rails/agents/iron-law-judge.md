@@ -124,10 +124,10 @@ grep -r "after_save" app/models/ | grep -v "after_commit"
 grep -r "eval(" app/
 
 # Law 16
-grep -r "def method_missing" app/ | xargs grep -L "respond_to_missing"
+grep -rlZ "def method_missing" app/ | while IFS= read -r -d '' f; do grep -L "respond_to_missing" "$f"; done
 
 # Law 18
-grep -r "rescue\s*$\|rescue\s*=>" app/ | grep -v "StandardError"
+grep -rE "rescue[[:space:]]*$|rescue[[:space:]]*=>" app/ | grep -v "StandardError"
 ```
 
 ## Confidence Levels

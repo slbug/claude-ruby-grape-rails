@@ -143,43 +143,43 @@ If code would violate ANY of these, you MUST:
 
 **Active Record:**
 
-1. Use decimal for money, never float
-2. Use parameterized queries, never SQL interpolation
-3. Use includes/preload to prevent N+1 queries
-4. In Active Record code, use after_commit when enqueueing jobs
-5. Wrap multi-step operations in transactions
-6. Never bypass validations in normal code
-7. Never use default_scope
+1. NEVER use float for money — use decimal or integer cents
+2. ALWAYS use parameterized queries — never interpolate user input
+3. USE includes/preload for associations — avoids N+1 queries
+4. IN Active Record code, use after_commit not after_save when enqueueing jobs
+5. WRAP multi-step operations in transactions
+6. NO update_columns or save(validate: false) in normal flows
+7. NO default_scope — use explicit scopes only
 
 **Sidekiq:**
 
-1. Jobs must be idempotent (safe to retry)
-2. Job args must be JSON-safe only
-3. Never pass ORM objects to jobs — pass IDs
-4. Always enqueue jobs after commit using the active ORM
+1. Jobs MUST be idempotent — safe to retry
+2. Args use JSON-safe types only — no symbols, no Ruby objects
+3. NEVER store ORM objects in args — store IDs
+4. ALWAYS enqueue jobs after commit using the active ORM or transaction hook
 
 **Security:**
 
-1. Never use eval with user input
-2. Authorize explicitly in every action
-3. Never use html_safe/raw on untrusted content
-4. Never concatenate SQL strings
+1. NO eval with user input — code injection vulnerability
+2. AUTHORIZE in EVERY controller action
+3. NEVER use html_safe or raw with untrusted content
+4. NO SQL string concatenation — always use parameterized queries
 
 **Ruby:**
 
-1. Always pair method_missing with respond_to_missing?
-2. Always supervise background processes
-3. Only rescue StandardError, never Exception
+1. NO method_missing without respond_to_missing?
+2. SUPERVISE ALL BACKGROUND PROCESSES
+3. DON'T RESCUE Exception — only rescue StandardError
 
 **Hotwire/Turbo:**
 
-1. Pre-compute all data before Turbo Stream broadcast
-2. Use turbo_frame_tag for partial page updates
+1. NEVER query DB in Turbo Stream responses
+2. ALWAYS use turbo_frame_tag for partial updates
 
 **Verification & Discipline:**
 
-1. Always run tests and show results before claiming done
-2. Only change what the user asked for — no drive-by improvements
+1. VERIFY BEFORE CLAIMING DONE — run tests and show results
+2. SURGICAL CHANGES ONLY — every changed line traces to the user's request
 
 <!-- IRON_LAWS_END -->
 

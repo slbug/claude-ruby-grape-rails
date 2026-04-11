@@ -68,7 +68,7 @@ START ──▶ READ PLAN ──▶ ANALYZE CONTEXT ──▶ PICK TASK
 When starting work:
 
 1. **Locate the plan**
-   - Check explicit marker: `active-plan-marker.sh get`
+   - Check explicit marker: `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/active-plan-marker.sh get`
    - If no marker or invalid, find newest plan with unchecked tasks
    - Use argument if provided (overrides marker)
 

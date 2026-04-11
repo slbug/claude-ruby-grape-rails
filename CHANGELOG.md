@@ -7,6 +7,32 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.12.1] - 2026-04-11
+
+### Fixed
+
+- **README dashboard counts** — Iron Laws 21→22, Events 11→12 to match
+  canonical sources (iron-laws.yml, hooks.json).
+- **CLAUDE.md iron-laws.yml path** — bare `iron-laws.yml` →
+  `plugins/ruby-grape-rails/references/iron-laws.yml`.
+- **work SKILL.md active-plan-marker path** — bare command → full
+  `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/` path.
+- **iron-law-judge grep recipes** — Law-18 `\s` in BRE → `[[:space:]]` with
+  `-E`; method_missing unsafe xargs splitting → NUL-safe `while read` loop.
+- **validate-yaml.sh Python fallback** — added PyYAML import check before
+  selecting Python path; explicit UTF-8 encoding on open.
+- **fetch-cc-changelog.sh GITHUB_TOKEN** — implemented optional Bearer auth
+  header (was hinted in error message but not used).
+- **Makefile .PHONY** — added `eval-behavioral-passk`,
+  `eval-behavioral-rotations`, `eval-trigger-expand`.
+- **iron-laws.yml comment** — removed hardcoded `(1-22)` ID range.
+- **iron-law generator schema alignment** — added warnings for missing
+  recommended fields (severity, applies_to, init_text, detector_id,
+  reference_files). Injectable section now uses `init_text` with
+  `summary_text` fallback.
+- **check-contributor-prereqs.sh** — added grep, sed, awk, mktemp, readlink
+  to required checks, aligning with README-documented hook dependencies.
+
 ## [1.12.0] - 2026-04-11
 
 ### Added
@@ -1347,7 +1373,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.0...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.1...HEAD
+[1.12.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.0...v1.12.1
 [1.12.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.8...v1.12.0
 [1.11.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.7...v1.11.8
 [1.11.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.6...v1.11.7

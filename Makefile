@@ -1,4 +1,4 @@
-.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate doctor eval eval-all eval-ci eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-ablation eval-neighbor eval-hygiene eval-behavioral eval-behavioral-verbose eval-behavioral-fresh eval-behavioral-fresh-verbose eval-behavioral-compare eval-sensitivity eval-stress eval-tests eval-tests-pytest eval-tests-unittest ci
+.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate doctor eval eval-all eval-ci eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-ablation eval-neighbor eval-hygiene eval-behavioral eval-behavioral-verbose eval-behavioral-fresh eval-behavioral-fresh-verbose eval-behavioral-compare eval-behavioral-passk eval-behavioral-rotations eval-sensitivity eval-stress eval-tests eval-tests-pytest eval-tests-unittest eval-trigger-expand ci
 
 lint:
 	npm run lint
