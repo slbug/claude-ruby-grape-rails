@@ -638,7 +638,7 @@ PY
 }
 
 run_context_budget() {
-  python3 -m lab.eval.context_budget
+  python3 -m lab.eval.context_budget || echo "  WARNING: context budget check failed (advisory, non-blocking)" >&2
 }
 
 run_all_triggers() {

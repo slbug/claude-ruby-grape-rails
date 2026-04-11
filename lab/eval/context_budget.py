@@ -11,6 +11,8 @@ import re
 import sys
 from pathlib import Path
 
+from .frontmatter import parse_frontmatter
+
 PLUGIN_ROOT = Path("plugins/ruby-grape-rails")
 CLAUDE_MD = Path("CLAUDE.md")
 MAX_CLAUDE_MD_LINES = 200
@@ -53,17 +55,8 @@ def _has_paths_field(path: Path) -> bool:
     """Check if a SKILL.md file has paths: in its YAML frontmatter."""
     if not path.exists():
         return False
-    text = path.read_text()
-    if not text.startswith("---"):
-        return False
-    end_idx = text.find("---", 3)
-    if end_idx == -1:
-        return False
-    frontmatter = text[3:end_idx]
-    for line in frontmatter.splitlines():
-        if line.startswith("paths:") or line.startswith("paths :"):
-            return True
-    return False
+    fm = parse_frontmatter(path.read_text())
+    return "paths" in fm
 
 
 def check_claude_md_size() -> tuple[bool, list[str]]:
