@@ -19,7 +19,6 @@ import argparse
 import json
 import subprocess
 import sys
-from pathlib import Path
 
 from .trigger_scorer import (
     TRIGGERS_DIR,
@@ -207,10 +206,24 @@ def main() -> None:
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON")
     args = parser.parse_args()
 
-    # Resolve auth once
+    # Resolve auth once — mirrors behavioral_scorer's cleanup pattern
+    import atexit
     from .behavioral_scorer import _resolve_settings
     import lab.eval.behavioral_scorer as bs
     bs._resolved_settings_path = _resolve_settings()
+    base_settings = str(TRIGGERS_DIR.parent / "bare_settings.json")
+    is_temp = bs._resolved_settings_path != base_settings
+
+    def _cleanup():
+        if is_temp:
+            import os
+            try:
+                os.unlink(bs._resolved_settings_path)
+            except OSError:
+                pass
+            os.environ.pop(bs._RESOLVED_TOKEN_ENV, None)
+
+    atexit.register(_cleanup)
 
     descriptions = load_all_descriptions()
 

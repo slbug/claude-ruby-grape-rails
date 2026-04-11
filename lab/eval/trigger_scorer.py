@@ -153,8 +153,9 @@ _SEMANTIC_CACHE_PATH = TRIGGERS_DIR / "_semantic_pairs.json"
 
 _SEMANTIC_SYSTEM_PROMPT = (
     "You identify semantically confusable skill pairs. Reply with ONLY "
-    "pipe-separated pairs, one per line. NEVER add headers, numbering, "
-    "or explanations."
+    "pipe-separated lines in this exact format: skill-a | skill-b | 7 | "
+    "brief reason. Include a numeric confusability score (1-10) and a short "
+    "reason on every line. NEVER add headers, numbering, or explanations."
 )
 
 
@@ -178,21 +179,38 @@ def build_semantic_confusable_pairs(
     Returns cached results if descriptions haven't changed.
     Requires 'claude' CLI — returns empty list if unavailable.
     """
-    import subprocess, sys
-
     desc_hash = _descriptions_hash(descriptions)
 
-    # Check cache
+    if token_pairs is None:
+        token_pairs = build_confusable_pairs(descriptions, limit=10)
+
+    # Check cache — stores only semantic additions, not merged token pairs.
+    # Token pairs are always recomputed fresh (they depend on trigger corpora).
+    cached_semantic: list[dict[str, Any]] = []
+    cache_hit = False
     if _SEMANTIC_CACHE_PATH.is_file():
         try:
             cached = json.loads(_SEMANTIC_CACHE_PATH.read_text(encoding="utf-8"))
             if cached.get("descriptions_hash") == desc_hash:
-                return cached.get("pairs", [])
+                cached_semantic = cached.get("semantic_pairs", [])
+                cache_hit = True
         except (json.JSONDecodeError, OSError):
             pass
 
-    if token_pairs is None:
-        token_pairs = build_confusable_pairs(descriptions, limit=10)
+    if cache_hit:
+        semantic_pairs = cached_semantic
+    else:
+        semantic_pairs = _fetch_semantic_pairs(descriptions, token_pairs)
+
+    return _merge_pairs(token_pairs, semantic_pairs, desc_hash)
+
+
+def _fetch_semantic_pairs(
+    descriptions: dict[str, str],
+    token_pairs: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Call Haiku once to identify semantic confusable pairs."""
+    import subprocess, sys
 
     # Build the prompt
     desc_lines = "\n".join(
@@ -212,7 +230,7 @@ def build_semantic_confusable_pairs(
         "skill-a | skill-b | 7 | both handle database queries"
     )
 
-    # Resolve settings for bare-mode call
+    import subprocess, sys
     from .behavioral_scorer import _resolved_settings_path
     settings_path = _resolved_settings_path
 
@@ -235,13 +253,12 @@ def build_semantic_confusable_pairs(
         )
     except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
         print(f"WARNING: semantic pairs call failed ({exc})", file=sys.stderr)
-        return token_pairs[:15] if token_pairs else []
+        return []
 
     if result.returncode != 0:
         print(f"WARNING: semantic pairs call returned rc={result.returncode}", file=sys.stderr)
-        return token_pairs[:15] if token_pairs else []
+        return []
 
-    # Parse response
     try:
         data = json.loads(result.stdout)
         text = data.get("result", "")
@@ -249,10 +266,10 @@ def build_semantic_confusable_pairs(
         text = result.stdout
 
     valid_skills = set(descriptions.keys())
-    semantic_pairs: list[dict[str, Any]] = []
+    pairs: list[dict[str, Any]] = []
     for line in text.strip().split("\n"):
         parts = [p.strip() for p in line.split("|")]
-        if len(parts) < 3:
+        if len(parts) < 2:
             continue
         left, right = parts[0], parts[1]
         if left not in valid_skills or right not in valid_skills:
@@ -260,22 +277,28 @@ def build_semantic_confusable_pairs(
         if left == right:
             continue
         try:
-            score = int(parts[2]) / 10.0
+            score = int(parts[2]) / 10.0 if len(parts) >= 3 else 0.5
         except ValueError:
             score = 0.5
         reason = parts[3] if len(parts) > 3 else ""
-        # Normalize order
         if left > right:
             left, right = right, left
-        semantic_pairs.append({
+        pairs.append({
             "left": left,
             "right": right,
             "overlap": round(score, 4),
             "source": "semantic",
             "reason": reason,
         })
+    return pairs
 
-    # Merge: token pairs + semantic pairs, deduplicate by (left, right)
+
+def _merge_pairs(
+    token_pairs: list[dict[str, Any]],
+    semantic_pairs: list[dict[str, Any]],
+    desc_hash: str,
+) -> list[dict[str, Any]]:
+    """Merge token-overlap and semantic pairs, deduplicate, cache semantic additions."""
     seen: set[tuple[str, str]] = set()
     merged: list[dict[str, Any]] = []
     for p in (token_pairs or []):
@@ -284,7 +307,7 @@ def build_semantic_confusable_pairs(
             seen.add(key)
             merged.append(p)
     for p in semantic_pairs:
-        key = (p["left"], p["right"])
+        key = (min(p["left"], p["right"]), max(p["left"], p["right"]))
         if key not in seen:
             seen.add(key)
             merged.append(p)
@@ -292,11 +315,11 @@ def build_semantic_confusable_pairs(
     merged.sort(key=lambda x: (-x["overlap"], x["left"], x["right"]))
     merged = merged[:15]
 
-    # Cache
+    # Cache only semantic additions (token pairs change with triggers)
     _SEMANTIC_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
     _SEMANTIC_CACHE_PATH.write_text(json.dumps({
         "descriptions_hash": desc_hash,
-        "pairs": merged,
+        "semantic_pairs": semantic_pairs,
     }, indent=2) + "\n", encoding="utf-8")
 
     return merged

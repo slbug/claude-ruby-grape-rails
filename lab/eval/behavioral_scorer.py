@@ -136,7 +136,8 @@ def build_routing_prompt(
     rotation: cyclic shift offset for the sorted skill list (0 = default order).
     """
     items = sorted(descriptions.items())
-    if rotation:
+    if rotation and items:
+        rotation = rotation % len(items)
         items = items[rotation:] + items[:rotation]
     desc_list = "\n".join(
         f"- {name}: {desc[:150]}" for name, desc in items
@@ -477,6 +478,10 @@ def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
 
     Input: N*K results where each prompt appears K times (one per sample).
     Output: N results with accuracy from sample 0, pass_at_k, sample_consistency.
+
+    Results maintain submission order, so group[0] is sample 0. If sample 0
+    failed and was dropped, the first surviving sample becomes canonical but
+    'correct' defaults to False (conservative — we can't know sample 0's verdict).
     """
     from collections import defaultdict
     by_prompt: dict[str, list[dict]] = defaultdict(list)
@@ -487,7 +492,11 @@ def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
     aggregated = []
     for _key, group in by_prompt.items():
         per_sample_correct = [r["correct"] for r in group]
-        base = dict(group[0])  # sample 0 = canonical
+        base = dict(group[0])
+        # If fewer results than expected samples, some failed — sample 0 may be missing.
+        # Use first surviving result but mark correct conservatively.
+        if len(group) < num_samples:
+            base["correct"] = False
         base["pass_at_k"] = any(per_sample_correct)
         base["per_sample_correct"] = per_sample_correct
         base["sample_consistency"] = all(
@@ -549,6 +558,7 @@ def score_skill(
 
     # Expand for rotations or samples — each produces independent work items.
     # Tuple: (item, expected, tier, rotation)
+    # run_index preserved so aggregation can identify sample 0 / rotation 0.
     multiplier = max(rotations, samples)
     flat_items: list[tuple] = []
     for item, expected, tier in base_items:
