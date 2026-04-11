@@ -879,11 +879,14 @@ def main() -> None:
                                 f"hard: {result.get('hard_accuracy', 0):.0%})")
                 extra = ""
                 if result.get("rotations", 1) > 1:
-                    extra = f" choice={result.get('routing_consistency', 0):.0%}"
+                    extra = (f" choice={result.get('routing_consistency', 0):.0%}"
+                             f" correct={result.get('correctness_consistency', 0):.0%}"
+                             f" range={result.get('order_range', 0):.2f}")
                     if result.get("order_sensitive"):
                         extra += " ORDER-SENSITIVE"
                 if result.get("samples", 1) > 1:
-                    extra = f" pass@{result['samples']}={result.get('pass_at_k', 0):.0%}"
+                    extra = (f" pass@{result['samples']}={result.get('pass_at_k', 0):.0%}"
+                             f" cons={result.get('sample_consistency', 0):.0%}")
                     if result.get("inconsistent_routing"):
                         extra += " INCONSISTENT"
                 print(f"  {name}: accuracy={result.get('accuracy', 0):.0%}{tier_str} "

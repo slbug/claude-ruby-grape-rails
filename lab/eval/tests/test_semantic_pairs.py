@@ -6,7 +6,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from lab.eval.trigger_scorer import (
     _descriptions_hash,
@@ -165,6 +165,106 @@ class TestSemanticPairParsing(unittest.TestCase):
         )
         self.assertEqual(len(pairs), 1)
         self.assertEqual(pairs[0]["overlap"], 0.5)
+
+
+class TestFetchSemanticPairs(unittest.TestCase):
+    """Integration tests for _fetch_semantic_pairs with mocked subprocess."""
+
+    def test_valid_response_parsed(self):
+        """Mocked Haiku response produces valid semantic pairs."""
+        from lab.eval.trigger_scorer import _fetch_semantic_pairs
+        mock_response = json.dumps({
+            "result": "plan | brainstorm | 8 | both explore ideas\nreview | work | 6 | sequential phases",
+        })
+        mock_run = MagicMock()
+        mock_run.returncode = 0
+        mock_run.stdout = mock_response
+        with patch("subprocess.run", return_value=mock_run):
+            with patch("lab.eval.behavioral_scorer._resolved_settings_path", "fake.json"):
+                pairs = _fetch_semantic_pairs(SAMPLE_DESCRIPTIONS, [])
+        self.assertEqual(len(pairs), 2)
+        names = {(p["left"], p["right"]) for p in pairs}
+        self.assertIn(("brainstorm", "plan"), names)
+
+    def test_malformed_lines_skipped(self):
+        """Malformed lines in Haiku response are skipped, valid ones kept."""
+        from lab.eval.trigger_scorer import _fetch_semantic_pairs
+        mock_response = json.dumps({
+            "result": "garbage line\n\nplan | brainstorm | 7 | valid\ninvalid | fakeskill | 5 | bad",
+        })
+        mock_run = MagicMock()
+        mock_run.returncode = 0
+        mock_run.stdout = mock_response
+        with patch("subprocess.run", return_value=mock_run):
+            with patch("lab.eval.behavioral_scorer._resolved_settings_path", "fake.json"):
+                pairs = _fetch_semantic_pairs(SAMPLE_DESCRIPTIONS, [])
+        self.assertEqual(len(pairs), 1)
+        self.assertEqual(pairs[0]["left"], "brainstorm")
+
+    def test_subprocess_failure_returns_empty(self):
+        """Failed subprocess returns empty list, not crash."""
+        from lab.eval.trigger_scorer import _fetch_semantic_pairs
+        mock_run = MagicMock()
+        mock_run.returncode = 1
+        mock_run.stdout = ""
+        with patch("subprocess.run", return_value=mock_run):
+            with patch("lab.eval.behavioral_scorer._resolved_settings_path", "fake.json"):
+                pairs = _fetch_semantic_pairs(SAMPLE_DESCRIPTIONS, [])
+        self.assertEqual(pairs, [])
+
+    def test_timeout_returns_empty(self):
+        """Subprocess timeout returns empty list."""
+        import subprocess as sp
+        from lab.eval.trigger_scorer import _fetch_semantic_pairs
+        with patch("subprocess.run", side_effect=sp.TimeoutExpired("claude", 60)):
+            with patch("lab.eval.behavioral_scorer._resolved_settings_path", "fake.json"):
+                pairs = _fetch_semantic_pairs(SAMPLE_DESCRIPTIONS, [])
+        self.assertEqual(pairs, [])
+
+
+class TestBuildSemanticConfusablePairs(unittest.TestCase):
+    """Integration test for the full build_semantic_confusable_pairs path."""
+
+    def test_cache_hit_skips_fetch(self):
+        """When cache is valid, no subprocess call is made."""
+        from lab.eval.trigger_scorer import build_semantic_confusable_pairs
+        desc_hash = _descriptions_hash(SAMPLE_DESCRIPTIONS)
+        cached = {
+            "descriptions_hash": desc_hash,
+            "semantic_pairs": [{"left": "plan", "right": "brainstorm", "overlap": 0.8, "source": "semantic", "reason": ""}],
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "_semantic_pairs.json"
+            cache_path.write_text(json.dumps(cached))
+            with patch("lab.eval.trigger_scorer._SEMANTIC_CACHE_PATH", cache_path):
+                with patch("subprocess.run") as mock_run:
+                    pairs = build_semantic_confusable_pairs(SAMPLE_DESCRIPTIONS, [])
+                    mock_run.assert_not_called()
+        # Should have the cached semantic pair merged with token pairs
+        self.assertTrue(any(p.get("source") == "semantic" for p in pairs))
+
+    def test_cache_miss_triggers_fetch(self):
+        """When cache hash doesn't match, subprocess is called."""
+        from lab.eval.trigger_scorer import build_semantic_confusable_pairs
+        stale_cache = {
+            "descriptions_hash": "stale_hash",
+            "semantic_pairs": [],
+        }
+        mock_response = json.dumps({
+            "result": "plan | brainstorm | 9 | both pre-implementation",
+        })
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = mock_response
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "_semantic_pairs.json"
+            cache_path.write_text(json.dumps(stale_cache))
+            with patch("lab.eval.trigger_scorer._SEMANTIC_CACHE_PATH", cache_path):
+                with patch("subprocess.run", return_value=mock_result) as mock_run:
+                    with patch("lab.eval.behavioral_scorer._resolved_settings_path", "fake.json"):
+                        pairs = build_semantic_confusable_pairs(SAMPLE_DESCRIPTIONS, [])
+                        self.assertTrue(mock_run.called)
+        self.assertTrue(any(p.get("source") == "semantic" for p in pairs))
 
 
 class TestSemanticPairCache(unittest.TestCase):
