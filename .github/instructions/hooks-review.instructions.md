@@ -52,7 +52,7 @@ Each script must document its failure policy near the top:
 
 Hook scripts wrap slow sub-commands with `timeout` and env var overrides:
 
-- `RUBY_PLUGIN_STANDARDRB_TIMEOUT` (default 120s) — format-ruby.sh
+- `RUBY_PLUGIN_FORMATTER_TIMEOUT` (default 120s) — format-ruby.sh
 - `RUBY_PLUGIN_RUBY_CHECK_TIMEOUT` (default 30s) — verify-ruby.sh
 - `RUBY_PLUGIN_BETTERLEAKS_TIMEOUT` (default 60s) — secret-scan.sh
 - `RUBY_PLUGIN_DETECT_STACK_TIMEOUT` (default 15s) — detect-runtime.sh

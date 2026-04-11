@@ -23,7 +23,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   CLAUDE.md line count and framework skill paths: coverage checks. Zero API
   cost, wired into `make eval`, `make eval-all`, `make eval-ci`.
 - **Configurable hook timeouts** — env var overrides for slow sub-commands:
-  `RUBY_PLUGIN_STANDARDRB_TIMEOUT` (120s), `RUBY_PLUGIN_RUBY_CHECK_TIMEOUT`
+  `RUBY_PLUGIN_FORMATTER_TIMEOUT` (120s), `RUBY_PLUGIN_RUBY_CHECK_TIMEOUT`
   (30s), `RUBY_PLUGIN_BETTERLEAKS_TIMEOUT` (60s),
   `RUBY_PLUGIN_DETECT_STACK_TIMEOUT` (15s). Advisory hooks skip on timeout,
   security hooks fail closed.
@@ -34,9 +34,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   end-user behavioral instructions block (already shipped via skills/agents/
   hooks). Moved contributor conventions to `.claude/rules/` files. Moved
   features tracking to local-only `features-under-evaluation.md`.
-- **Raised hook timeout ceilings** — rubyish-post-edit 45s→300s,
+- **Raised hook timeout ceilings** — rubyish-post-edit 45s→600s,
   secret-scan 30s→180s, post-tool-use-failure 15s→30s. Prevents premature
   kills on large codebases.
+- **macOS `timeout` compatibility** — hooks resolve `timeout` → `gtimeout` →
+  no-timeout fallback via `run_with_timeout()` for stock macOS without
+  coreutils.
 - **Updated Copilot review instructions** — added context budget module,
   configurable timeouts, path-scoped rules, missing frontmatter fields.
 
