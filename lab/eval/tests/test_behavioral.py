@@ -567,6 +567,34 @@ class TestPassAtK(unittest.TestCase):
         self.assertFalse(result["inconsistent_routing"])
 
 
+class TestPromptIdAggregation(unittest.TestCase):
+    """Regression test: duplicate prompt text with different prompt_ids must not merge."""
+
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_same_text_different_buckets_not_merged(self, mock_triggers, mock_haiku):
+        """Identical prompt in should_trigger AND hard_should_trigger stays separate."""
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature"],       # prompt_id=0, tier=easy
+            "should_not_trigger": [],
+            "hard_should_trigger": [{"prompt": "plan a feature", "axis": "confusable"}],  # prompt_id=1, tier=hard
+            "hard_should_not_trigger": [],
+        }
+        # Rotation 0: both correct, Rotation 1: both correct
+        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=3))
+
+        # Should have 2 aggregated results (one per prompt_id), not 1 merged
+        self.assertEqual(result["total"], 2)
+        # Both tiers represented
+        tiers = [r["tier"] for r in result["results"]]
+        self.assertIn("easy", tiers)
+        self.assertIn("hard", tiers)
+
+
 class TestModeSpecificCache(unittest.TestCase):
     """Tests for mode-specific result file separation (3a approach)."""
 
@@ -579,6 +607,18 @@ class TestModeSpecificCache(unittest.TestCase):
         """Rotations mode uses {skill}_r{N}.json."""
         self.assertEqual(_result_filename("plan", rotations=5), "plan_r5.json")
         self.assertEqual(_result_filename("plan", rotations=3), "plan_r3.json")
+
+    def test_result_filename_aggregate_baseline(self):
+        """Aggregate baseline uses _aggregate.json."""
+        self.assertEqual(_result_filename("_aggregate"), "_aggregate.json")
+
+    def test_result_filename_aggregate_rotations(self):
+        """Aggregate rotations uses _aggregate_r{N}.json."""
+        self.assertEqual(_result_filename("_aggregate", rotations=5), "_aggregate_r5.json")
+
+    def test_result_filename_aggregate_samples(self):
+        """Aggregate samples uses _aggregate_s{N}.json."""
+        self.assertEqual(_result_filename("_aggregate", samples=3), "_aggregate_s3.json")
 
     def test_result_filename_samples(self):
         """Samples mode uses {skill}_s{N}.json."""
