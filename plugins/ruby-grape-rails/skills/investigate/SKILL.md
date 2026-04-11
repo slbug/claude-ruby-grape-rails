@@ -1,6 +1,6 @@
 ---
 name: rb:investigate
-description: Structured bug investigation for Rails, Grape, Active Record, Redis, and Sidekiq issues. Use for flaky tests, background job bugs, timeouts, missing records, stale cache, or race conditions.
+description: "Root-cause analysis for bugs, errors, and failures. Use when something is broken and the cause is unknown. NOT for performance tuning (use perf) or code flow tracing (use rb:trace)."
 argument-hint: <bug description>
 effort: high
 ---

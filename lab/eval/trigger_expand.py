@@ -10,7 +10,7 @@ Usage:
     python3 -m lab.eval.trigger_expand --fragile            # Expand fragile skills (from eval sensitivity)
     python3 -m lab.eval.trigger_expand --all                # Expand all skills
 
-Cost: ~$0.005/skill (one bare-mode Haiku call per skill).
+Cost: ~$0.01/skill (one bare-mode Haiku call per skill, ~$0.51 for all 51).
 """
 
 from __future__ import annotations

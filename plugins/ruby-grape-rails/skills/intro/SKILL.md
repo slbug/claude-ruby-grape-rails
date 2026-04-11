@@ -1,6 +1,6 @@
 ---
 name: rb:intro
-description: Quick introduction to the Ruby/Rails/Grape plugin workflow and command set.
+description: "Tutorial walkthrough of plugin commands and capabilities. Use when users want to learn what the plugin offers. NOT for routing a specific task to a command (use intent-detection)."
 argument-hint: "[--section N]"
 effort: low
 ---

@@ -248,7 +248,7 @@ def _fetch_semantic_pairs(
                 "--no-session-persistence",
             ],
             input=user_prompt,
-            capture_output=True, text=True, timeout=60,
+            capture_output=True, text=True, timeout=120,
         )
     except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
         print(f"WARNING: semantic pairs call failed ({exc})", file=sys.stderr)
