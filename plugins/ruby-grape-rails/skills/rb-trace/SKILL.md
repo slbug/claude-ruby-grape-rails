@@ -18,6 +18,6 @@ Write the trace as a short step-by-step chain with file paths.
 
 ## Agent Dispatch
 
-This is a **skill**, not an agent. Do NOT spawn `rb-trace` via the Agent tool.
-For agent-based deep tracing, use `call-tracer` agent
+This is a **skill** (`/rb:trace`), not an agent. Do NOT spawn `rb-trace` or
+`rb:trace` via the Agent tool. For agent-based deep tracing, use `call-tracer`
 (`subagent_type: "ruby-grape-rails:call-tracer"`).
