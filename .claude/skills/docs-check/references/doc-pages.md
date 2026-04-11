@@ -11,9 +11,9 @@ crosses those boundaries.
 The fetch script maintains:
 
 - `llms.txt` as the discovery index
-- 9 detailed cached pages under `.claude/docs-check/docs-cache/`
+- 18 detailed cached pages under `.claude/docs-check/docs-cache/`
 
-Primary cached pages:
+Primary cached pages (plugin-critical):
 
 | Page | Primary use |
 |------|-------------|
@@ -26,6 +26,20 @@ Primary cached pages:
 | `plugins.md` | Plugin structure, plugin creation guidance, high-level conventions |
 | `settings.md` | Settings semantics when a finding depends on permission or config behavior |
 | `mcp.md` | MCP config semantics when plugin findings touch bundled MCP servers |
+| `tools-reference.md` | Tool schema and examples |
+
+Additional cached pages (context/reference):
+
+| Page | Primary use |
+|------|-------------|
+| `agent-teams.md` | Agent teams and collaboration features |
+| `how-claude-code-works.md` | Claude Code architecture and concepts |
+| `third-party-integrations.md` | Supported third-party integrations |
+| `features-overview.md` | Key features and capabilities overview |
+| `memory.md` | Memory types and CLAUDE.md usage guidelines |
+| `overview.md` | High-level Claude Code overview |
+| `permission-modes.md` | Permission modes and implications for plugins |
+| `permissions.md` | Comprehensive permissions guide |
 
 ## Which Pages To Read
 

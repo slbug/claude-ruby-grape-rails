@@ -26,8 +26,20 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- **Brace expansion across all skill paths** — consolidated 122 patterns
-  to 61 (~50% reduction) using picomatch `{a,b}` syntax.
+- **Brace expansion across all skill paths** — consolidated patterns
+  using picomatch `{a,b}` syntax.
+
+### Fixed
+
+- **security-reminder hook `config/*` → `config/**`** — now matches nested
+  config paths (environments, initializers, credentials).
+- **docs-check page inventory** — updated from 9 to 18 pages, matching
+  current fetch-claude-docs.sh PAGES list.
+- **cc-changelog analysis-rules stale paths** — fixed plugin-qualified
+  paths for hook script references.
+- **Contributor prereqs** — added cksum, cat, cp, find, mkdir, head, tr,
+  wc to match hook runtime hard dependencies.
+- **README pre-commit description** — added shellcheck lint mention.
 
 ## [1.12.1] - 2026-04-11
 
