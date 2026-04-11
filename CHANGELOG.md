@@ -21,8 +21,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   app/representers and app/serializers.
 - **GitLab CI paths for `deploy`** — `.gitlab-ci.yml` and `.gitlab/**`.
 - **Explicit packwerk/engine/component patterns** — all framework skills
-  now include `{packs,engines,components}/*/app/...` and
-  `app/{packages,packs}/*/...` for nested-without-inner-app layouts.
+  now include `{packs,engines,components}/*/{...}` and
+  `app/{packages,packs}/*/{...}` for modular monolith layouts.
 
 ### Changed
 
