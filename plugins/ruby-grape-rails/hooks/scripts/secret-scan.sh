@@ -12,6 +12,8 @@ set -o pipefail
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
+RUBY_PLUGIN_BETTERLEAKS_TIMEOUT="${RUBY_PLUGIN_BETTERLEAKS_TIMEOUT:-60}"
+
 emit_missing_dependency_block() {
   local dependency="$1"
 
@@ -34,6 +36,14 @@ command -v mkdir >/dev/null 2>&1 || emit_missing_dependency_block "mkdir"
 command -v mktemp >/dev/null 2>&1 || emit_missing_dependency_block "mktemp"
 command -v sed >/dev/null 2>&1 || emit_missing_dependency_block "sed"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TIMEOUT_LIB="${SCRIPT_DIR}/timeout-lib.sh"
+if [[ -r "$TIMEOUT_LIB" && ! -L "$TIMEOUT_LIB" ]]; then
+  # shellcheck disable=SC1090,SC1091
+  source "$TIMEOUT_LIB"
+else
+  TIMEOUT_CMD=""
+  run_with_timeout() { shift; "$@"; }
+fi
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
@@ -183,8 +193,14 @@ run_betterleaks_dir() {
   BETTERLEAKS_RESULT=""
   BETTERLEAKS_ERROR=""
 
-  "$BETTERLEAKS_PATH" dir "$target_dir" --no-banner --redact=100 >"$result_file" 2>"$err_file"
+  run_with_timeout "$RUBY_PLUGIN_BETTERLEAKS_TIMEOUT" "$BETTERLEAKS_PATH" dir "$target_dir" --no-banner --redact=100 >"$result_file" 2>"$err_file"
   status=$?
+  if [[ -n "$TIMEOUT_CMD" && "$status" -eq 124 ]]; then
+    echo "WARNING: betterleaks timed out after ${RUBY_PLUGIN_BETTERLEAKS_TIMEOUT}s. Failing closed." >&2
+    safe_remove_temp_file "${result_file:-}" "${TMPDIR:-/tmp}/rb-secret-scan.result.*" || true
+    safe_remove_temp_file "${err_file:-}" "${TMPDIR:-/tmp}/rb-secret-scan.err.*" || true
+    return 2
+  fi
   BETTERLEAKS_RESULT=$(cat "$result_file" 2>/dev/null || true)
   BETTERLEAKS_ERROR=$(sed -n '1,5p' "$err_file" 2>/dev/null || true)
 

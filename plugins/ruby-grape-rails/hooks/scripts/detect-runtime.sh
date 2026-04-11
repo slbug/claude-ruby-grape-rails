@@ -10,6 +10,8 @@ set -o pipefail
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
+RUBY_PLUGIN_DETECT_STACK_TIMEOUT="${RUBY_PLUGIN_DETECT_STACK_TIMEOUT:-15}"
+
 emit_runtime_dependency_warning() {
   local dependency="$1"
 
@@ -33,6 +35,14 @@ emit_runtime_setup_warning() {
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TIMEOUT_LIB="${SCRIPT_DIR}/timeout-lib.sh"
+if [[ -r "$TIMEOUT_LIB" && ! -L "$TIMEOUT_LIB" ]]; then
+  # shellcheck disable=SC1090,SC1091
+  source "$TIMEOUT_LIB"
+else
+  TIMEOUT_CMD=""
+  run_with_timeout() { shift; "$@"; }
+fi
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 DEP_LIB="${SCRIPT_DIR}/ruby-dependency-lib.sh"
 command -v grep >/dev/null 2>&1 || emit_runtime_dependency_warning "grep"
@@ -298,8 +308,12 @@ STACK_DETECTOR="${SCRIPT_DIR}/../../bin/detect-stack"
 DETECTED_STACK_RAW=""
 STACK_DETECTOR_OK=false
 if command -v ruby >/dev/null 2>&1 && [[ -f "$STACK_DETECTOR" && ! -L "$STACK_DETECTOR" ]]; then
-  if STACK_DETECTOR_OUTPUT=$(cd "$REPO_ROOT" && ruby "$STACK_DETECTOR" 2>/dev/null); then
+  STACK_DETECTOR_OUTPUT=$(cd "$REPO_ROOT" && run_with_timeout "$RUBY_PLUGIN_DETECT_STACK_TIMEOUT" ruby "$STACK_DETECTOR" 2>/dev/null)
+  STACK_DETECTOR_STATUS=$?
+  if [[ "$STACK_DETECTOR_STATUS" -eq 0 ]]; then
     STACK_DETECTOR_OK=true
+  elif [[ -n "$TIMEOUT_CMD" && "$STACK_DETECTOR_STATUS" -eq 124 ]]; then
+    echo "WARNING: detect-stack timed out after ${RUBY_PLUGIN_DETECT_STACK_TIMEOUT}s. Continuing with partial detection." >&2
   fi
 fi
 

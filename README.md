@@ -743,8 +743,9 @@ npm install -g @anthropic-ai/claude-code
 ### Eval workflow
 
 The canonical contributor eval workflow now lives in
-[CLAUDE.md](CLAUDE.md#contributor-eval-workflow). Use that section for the full
-command matrix and caveats.
+[`.claude/rules/eval-workflow.md`](.claude/rules/eval-workflow.md)
+(auto-loaded for contributors). Use that file for the full command matrix
+and caveats.
 
 Common entrypoints:
 

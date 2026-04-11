@@ -3,6 +3,11 @@ name: rb:constraint-debug
 description: Diagnose Active Record constraint failures, unique index violations, foreign-key errors, and migration/data mismatches.
 argument-hint: "[error|path]"
 effort: medium
+paths:
+  - app/models/**
+  - db/**
+  - "**/app/models/**"
+  - "**/db/**"
 ---
 # Constraint Debug
 

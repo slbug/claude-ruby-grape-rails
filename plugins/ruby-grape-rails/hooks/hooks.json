@@ -13,7 +13,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/secret-scan.sh",
-            "timeout": 30
+            "timeout": 180
           }
         ]
       },
@@ -50,31 +50,31 @@
             "type": "command",
             "if": "Edit(*.rb)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
-            "timeout": 45
+            "timeout": 600
           },
           {
             "type": "command",
             "if": "Edit(*.rake)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
-            "timeout": 45
+            "timeout": 600
           },
           {
             "type": "command",
             "if": "Edit(*Gemfile)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
-            "timeout": 45
+            "timeout": 600
           },
           {
             "type": "command",
             "if": "Edit(*Rakefile)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
-            "timeout": 45
+            "timeout": 600
           },
           {
             "type": "command",
             "if": "Edit(*config.ru)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
-            "timeout": 45
+            "timeout": 600
           }
         ]
       },
@@ -85,31 +85,31 @@
             "type": "command",
             "if": "Write(*.rb)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
-            "timeout": 45
+            "timeout": 600
           },
           {
             "type": "command",
             "if": "Write(*.rake)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
-            "timeout": 45
+            "timeout": 600
           },
           {
             "type": "command",
             "if": "Write(*Gemfile)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
-            "timeout": 45
+            "timeout": 600
           },
           {
             "type": "command",
             "if": "Write(*Rakefile)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
-            "timeout": 45
+            "timeout": 600
           },
           {
             "type": "command",
             "if": "Write(*config.ru)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
-            "timeout": 45
+            "timeout": 600
           },
           {
             "type": "command",
@@ -140,241 +140,241 @@
             "type": "command",
             "if": "Bash(bundle *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* bundle *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(rails *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* rails *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(bin/rails *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* bin/rails *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(./bin/rails *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* ./bin/rails *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(rake *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* rake *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(bin/rake *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* bin/rake *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(./bin/rake *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* ./bin/rake *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(ruby *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* ruby *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(rspec *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* rspec *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(bin/rspec *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* bin/rspec *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(./bin/rspec *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* ./bin/rspec *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(standardrb *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* standardrb *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(bin/standardrb *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* bin/standardrb *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(./bin/standardrb *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* ./bin/standardrb *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(rubocop *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* rubocop *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(bin/rubocop *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* bin/rubocop *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(./bin/rubocop *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* ./bin/rubocop *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(brakeman *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* brakeman *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(bin/brakeman *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* bin/brakeman *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(./bin/brakeman *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(*=* ./bin/brakeman *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
-            "timeout": 15
+            "timeout": 30
           }
         ]
       }

@@ -7,6 +7,8 @@ set -o pipefail
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
+RUBY_PLUGIN_RUBY_CHECK_TIMEOUT="${RUBY_PLUGIN_RUBY_CHECK_TIMEOUT:-30}"
+
 emit_missing_dependency_block() {
   local dependency="$1"
 
@@ -25,6 +27,14 @@ emit_verify_block() {
 
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TIMEOUT_LIB="${SCRIPT_DIR}/timeout-lib.sh"
+if [[ -r "$TIMEOUT_LIB" && ! -L "$TIMEOUT_LIB" ]]; then
+  # shellcheck disable=SC1090,SC1091
+  source "$TIMEOUT_LIB"
+else
+  TIMEOUT_CMD=""
+  run_with_timeout() { shift; "$@"; }
+fi
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
@@ -124,10 +134,16 @@ case "$BASE_NAME" in
     }
     trap cleanup EXIT HUP INT TERM
 
-    ruby -c -- "$FILE_PATH" >"$TMP_OUTPUT" 2>&1 || {
+    run_with_timeout "$RUBY_PLUGIN_RUBY_CHECK_TIMEOUT" ruby -c -- "$FILE_PATH" >"$TMP_OUTPUT" 2>&1
+    VERIFY_STATUS=$?
+    if [[ -n "$TIMEOUT_CMD" && "$VERIFY_STATUS" -eq 124 ]]; then
+      echo "BLOCKED: ruby -c timed out after ${RUBY_PLUGIN_RUBY_CHECK_TIMEOUT}s." >&2
+      echo "Raise timeout: export RUBY_PLUGIN_RUBY_CHECK_TIMEOUT=60" >&2
+      exit 2
+    elif [[ "$VERIFY_STATUS" -ne 0 ]]; then
       cat -- "$TMP_OUTPUT" >&2
       exit 2
-    }
+    fi
     ;;
   *)
     exit 0

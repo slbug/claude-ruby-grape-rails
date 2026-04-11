@@ -16,6 +16,8 @@ The plugin ships specialist agents, skills, hooks, and eval tooling:
   Shell scripts triggered by Claude Code events (PostToolUse, SessionStart, etc).
 - **Eval** (`lab/eval/`): Deterministic Python eval framework for plugin quality.
 - **Contributor tooling** (`.claude/`): Not shipped with the plugin.
+  Includes `.claude/rules/` (auto-loaded context rules, some path-scoped)
+  and `.claude/skills/` (contributor-only skills).
 
 ## What CI Already Checks
 

@@ -26,13 +26,28 @@ excludeAgent: "coding-agent"
 - Prompts must not contain skill names (routing contamination)
 - No duplicate prompts within a file (normalized comparison)
 
+## Context Budget (lab/eval/context_budget.py)
+
+- Advisory checks for CLAUDE.md size and framework skill paths: coverage
+- Zero API cost — file reads and frontmatter scanning only
+- Wired into `--changed`, `--all`, and `--ci` modes in run_eval.sh
+- `EXPECTED_PATHS_SKILLS` list must be updated when adding framework skills
+
+## Additional Modules
+
+- `matcher_ablation.py` — leave-one-out matcher signal/noise classification
+- `neighbor_regression.py` — confusable-pair regression detection
+- `eval_sensitivity.py` — threshold sensitivity analysis
+- `behavioral_scorer.py` — LLM-based trigger routing (cached haiku results,
+  opt-in via `--behavioral` flag)
+
 ## Matchers (lab/eval/matchers.py)
 
 - All matchers are deterministic — zero API cost
 - Matchers return `tuple[bool, str]` (passed, evidence)
 - Register new matchers in the MATCHERS dict
-- Do not suggest adding LLM-based checks to matchers (deferred to
-  behavioral dimension in future release)
+- Behavioral dimension exists but uses cached results from separate
+  `make eval-behavioral` runs — not part of default eval
 
 ## Scorer (lab/eval/scorer.py)
 

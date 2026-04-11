@@ -3,6 +3,11 @@ name: karafka
 description: Apache Kafka processing with Karafka for Ruby. Multi-threaded consumers, batch processing, error handling, Rails integration.
 user-invocable: false
 effort: medium
+paths:
+  - app/consumers/**
+  - karafka.rb
+  - "**/app/consumers/**"
+  - "**/karafka.rb"
 ---
 # Karafka
 

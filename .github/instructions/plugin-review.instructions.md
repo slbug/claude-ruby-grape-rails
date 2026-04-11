@@ -7,8 +7,9 @@ excludeAgent: "coding-agent"
 
 ## Agent Conventions (plugins/**/agents/*.md)
 
-- Agents use YAML frontmatter: name, description, model, disallowedTools,
-  omitClaudeMd, skills, memory
+- Agents use YAML frontmatter. Common: name, description, model,
+  disallowedTools, omitClaudeMd, skills, memory. Also valid per CC docs:
+  tools, effort, maxTurns, background, isolation, color, initialPrompt
 - Prefer denylist-only (`disallowedTools:`) over allowlist (`tools:`).
   A missing `tools:` field is intentional — agents inherit all tools minus
   those in disallowedTools
@@ -29,8 +30,10 @@ excludeAgent: "coding-agent"
 
 ## Skill Conventions (plugins/**/skills/*/SKILL.md)
 
-- Skills use YAML frontmatter: name, description, argument-hint, effort,
-  disable-model-invocation, paths
+- Skills use YAML frontmatter. Required: name, description. Common:
+  argument-hint (command skills), effort, user-invocable,
+  disable-model-invocation, paths (framework-specific skills). Also valid
+  per CC docs: allowed-tools, model, context, agent, hooks, shell
 - No `triggers:` field — skills docs do not support it
 - No executable bash blocks (``` bash) — use inline prose instructions
   instead ("Run `bundle exec rspec`")

@@ -7,6 +7,42 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-04-11
+
+### Added
+
+- **`paths:` frontmatter on 12 framework-specific skills** — rails-idioms,
+  active-record-patterns, active-record-constraint-debug, ar-n1-check,
+  grape-idioms, sidekiq, karafka, hotwire-patterns, hotwire-native,
+  sequel-patterns, async-patterns, deploy. Uses `**/` packwerk-aware globs
+  for modular monolith support (packs, packages, components, engines).
+- **`.claude/rules/` path-scoped contributor rules** — agent-development,
+  skill-development, hook-development load only when editing matching files.
+  Always-loaded rules for development and eval workflow.
+- **Context budget eval checks** (`lab/eval/context_budget.py`) — advisory
+  CLAUDE.md line count and framework skill paths: coverage checks. Zero API
+  cost, wired into `make eval`, `make eval-all`, `make eval-ci`.
+- **Configurable hook timeouts** — env var overrides for slow sub-commands:
+  `RUBY_PLUGIN_FORMATTER_TIMEOUT` (120s), `RUBY_PLUGIN_RUBY_CHECK_TIMEOUT`
+  (30s), `RUBY_PLUGIN_BETTERLEAKS_TIMEOUT` (60s),
+  `RUBY_PLUGIN_DETECT_STACK_TIMEOUT` (15s). Advisory hooks skip on timeout,
+  security hooks fail closed.
+
+### Changed
+
+- **CLAUDE.md restructured from 873 to 185 lines** (79% reduction). Dropped
+  end-user behavioral instructions block (already shipped via skills/agents/
+  hooks). Moved contributor conventions to `.claude/rules/` files. Moved
+  features tracking to local-only `features-under-evaluation.md`.
+- **Raised hook timeout ceilings** — rubyish-post-edit 45s→600s,
+  secret-scan 30s→180s, post-tool-use-failure 15s→30s. Prevents premature
+  kills on large codebases.
+- **macOS `timeout` compatibility** — hooks resolve `timeout` → `gtimeout` →
+  no-timeout fallback via `run_with_timeout()` for stock macOS without
+  coreutils.
+- **Updated Copilot review instructions** — added context budget module,
+  configurable timeouts, path-scoped rules, missing frontmatter fields.
+
 ## [1.11.8] - 2026-04-11
 
 ### Fixed
@@ -1311,7 +1347,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.8...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.0...HEAD
+[1.12.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.8...v1.12.0
 [1.11.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.7...v1.11.8
 [1.11.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.6...v1.11.7
 [1.11.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.5...v1.11.6
