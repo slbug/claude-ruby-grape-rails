@@ -16,7 +16,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   per-prompt pass/fail across N rotations. Reports `per_rotation_accuracy`,
   `order_range`, `order_stddev`, `routing_consistency`. Flags order-sensitive
   skills when `order_range > 0.15`. Default 1 (backward compat), recommended 5.
-  `gcd(5, 51) = 1` ensures maximum positional spread.
+  Strided offsets (BiasBusters method): 5 rotations over 51 skills uses
+  offsets [0, 10, 20, 30, 40] for maximum positional spread.
 - **pass@k routing robustness** (`--samples N`) — Independent routing
   samples measuring recoverability. Reports `pass_at_k` (at least 1 of N
   correct) and `sample_consistency` (all N agree, τ-bench pass^k analog).

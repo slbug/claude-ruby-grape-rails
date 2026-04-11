@@ -43,11 +43,17 @@ class TestDescriptionsHash(unittest.TestCase):
 class TestMergePairs(unittest.TestCase):
     """Tests for token + semantic pair merging."""
 
+    def _merge(self, token, semantic, desc_hash="hash123"):
+        """Merge with _SEMANTIC_CACHE_PATH patched to a temp dir."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_cache = Path(tmpdir) / "_semantic_pairs.json"
+            with patch("lab.eval.trigger_scorer._SEMANTIC_CACHE_PATH", tmp_cache):
+                return _merge_pairs(token, semantic, desc_hash)
+
     def test_deduplicates(self):
         token = [{"left": "plan", "right": "work", "overlap": 0.3}]
         semantic = [{"left": "plan", "right": "work", "overlap": 0.7, "source": "semantic", "reason": "both modify code"}]
-        merged = _merge_pairs(token, semantic, "hash123")
-        # Same pair — should appear once, not twice
+        merged = self._merge(token, semantic)
         plan_work = [p for p in merged if p["left"] == "plan" and p["right"] == "work"]
         self.assertEqual(len(plan_work), 1)
 
@@ -55,7 +61,7 @@ class TestMergePairs(unittest.TestCase):
         """Pairs with reversed left/right should still deduplicate."""
         token = [{"left": "plan", "right": "work", "overlap": 0.3}]
         semantic = [{"left": "work", "right": "plan", "overlap": 0.7, "source": "semantic", "reason": ""}]
-        merged = _merge_pairs(token, semantic, "hash123")
+        merged = self._merge(token, semantic)
         plan_work = [p for p in merged if set([p["left"], p["right"]]) == {"plan", "work"}]
         self.assertEqual(len(plan_work), 1)
 
@@ -64,7 +70,7 @@ class TestMergePairs(unittest.TestCase):
             {"left": f"skill{i}", "right": f"skill{i+1}", "overlap": 0.5 - i * 0.01}
             for i in range(20)
         ]
-        merged = _merge_pairs(token, [], "hash123")
+        merged = self._merge(token, [])
         self.assertLessEqual(len(merged), 15)
 
     def test_sorted_by_overlap_desc(self):
@@ -72,17 +78,17 @@ class TestMergePairs(unittest.TestCase):
             {"left": "a", "right": "b", "overlap": 0.2},
             {"left": "c", "right": "d", "overlap": 0.8},
         ]
-        merged = _merge_pairs(token, [], "hash123")
+        merged = self._merge(token, [])
         self.assertGreaterEqual(merged[0]["overlap"], merged[-1]["overlap"])
 
     def test_empty_semantic_no_crash(self):
         token = [{"left": "plan", "right": "work", "overlap": 0.3}]
-        merged = _merge_pairs(token, [], "hash123")
+        merged = self._merge(token, [])
         self.assertEqual(len(merged), 1)
 
     def test_empty_token_no_crash(self):
         semantic = [{"left": "plan", "right": "brainstorm", "overlap": 0.8, "source": "semantic", "reason": ""}]
-        merged = _merge_pairs([], semantic, "hash123")
+        merged = self._merge([], semantic)
         self.assertEqual(len(merged), 1)
 
 

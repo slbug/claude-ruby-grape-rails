@@ -70,12 +70,13 @@ def _quality_gate(
     # - Multi-word (hyphenated) skill names as whole-word matches are leaks
     # - Single common words (plan, review, work) appear naturally and are NOT leaks
     prompt_lower = candidate.lower()
+    skill_lower = skill_name.lower()
     if "/rb:" in prompt_lower:
         return "skill_name_leak"
-    if f"rb:{skill_name}" in prompt_lower:
+    if f"rb:{skill_lower}" in prompt_lower:
         return "skill_name_leak"
-    if "-" in skill_name:
-        pattern = r"\b" + re.escape(skill_name.lower()) + r"\b"
+    if "-" in skill_lower:
+        pattern = r"\b" + re.escape(skill_lower) + r"\b"
         if re.search(pattern, prompt_lower):
             return "skill_name_leak"
     # Description echo: >50% token overlap with description
