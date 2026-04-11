@@ -7,6 +7,34 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.11.7] - 2026-04-11
+
+### Added
+
+- **Order-bias control for behavioral eval** (`--rotations N`) — Cyclic
+  rotation of the skill description list (BiasBusters method). Majority-vote
+  per-prompt pass/fail across N rotations. Reports `per_rotation_accuracy`,
+  `order_range`, `order_stddev`, `routing_consistency`. Flags order-sensitive
+  skills when `order_range > 0.15`. Default 1 (backward compat), recommended 5.
+  `gcd(5, 51) = 1` ensures maximum positional spread.
+- **pass@k routing robustness** (`--samples N`) — Independent routing
+  samples measuring recoverability. Reports `pass_at_k` (at least 1 of N
+  correct) and `sample_consistency` (all N agree, τ-bench pass^k analog).
+  Flags inconsistent routing when `pass_at_k - accuracy > 0.15`.
+  Mutually exclusive with `--rotations` (error if both > 1).
+- **Semantic confusable pairs** (`--semantic` flag on trigger_scorer) —
+  Single bare-mode Haiku call identifies semantically close skill pairs
+  missed by token overlap. Merges with existing Jaccard pairs, deduplicates,
+  caches by description content hash. Top 15 pairs returned.
+- **Self-sampled trigger expansion** (`trigger_expand.py`) — Generates
+  candidate trigger prompts via Haiku with style diversity constraints
+  (frustrated dev, terse, typo, non-native, precise). Quality gates reject
+  near-duplicates (>80% token overlap), description echoes (>50%), skill
+  name leaks, and length violations. Output to `candidates/` for mandatory
+  manual review — never auto-merged.
+- **New eval targets**: `make eval-behavioral-passk`, `make eval-behavioral-rotations`,
+  `make eval-trigger-expand SKILL=x`, and npm equivalents.
+
 ## [1.11.6] - 2026-04-11
 
 ### Added
@@ -1251,7 +1279,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.6...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.7...HEAD
+[1.11.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.6...v1.11.7
 [1.11.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.5...v1.11.6
 [1.11.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.4...v1.11.5
 [1.11.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.3...v1.11.4

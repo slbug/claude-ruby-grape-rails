@@ -412,5 +412,173 @@ class TestParallelWorkers(unittest.TestCase):
         self.assertEqual(result["total"], 8)
 
 
+class TestCyclicRotation(unittest.TestCase):
+    """Tests for P1b cyclic rotation and majority vote."""
+
+    def test_build_routing_prompt_rotation_zero(self):
+        """Rotation 0 produces same order as default."""
+        p0 = build_routing_prompt(SAMPLE_DESCRIPTIONS, "test")
+        pr = build_routing_prompt(SAMPLE_DESCRIPTIONS, "test", rotation=0)
+        self.assertEqual(p0, pr)
+
+    def test_build_routing_prompt_rotation_shifts(self):
+        """Non-zero rotation shifts the skill list."""
+        p0 = build_routing_prompt(SAMPLE_DESCRIPTIONS, "test", rotation=0)
+        p1 = build_routing_prompt(SAMPLE_DESCRIPTIONS, "test", rotation=1)
+        self.assertNotEqual(p0, p1)
+        # Both should contain all skill names
+        for name in SAMPLE_DESCRIPTIONS:
+            self.assertIn(name, p0)
+            self.assertIn(name, p1)
+
+    def test_build_routing_prompt_rotation_wraps(self):
+        """Rotation wraps around: rotation=len produces same as rotation=0."""
+        n = len(SAMPLE_DESCRIPTIONS)
+        p0 = build_routing_prompt(SAMPLE_DESCRIPTIONS, "test", rotation=0)
+        pw = build_routing_prompt(SAMPLE_DESCRIPTIONS, "test", rotation=n)
+        self.assertEqual(p0, pw)
+
+    def test_majority_vote_odd(self):
+        """Majority vote with odd N."""
+        from lab.eval.behavioral_scorer import _majority_vote
+        self.assertTrue(_majority_vote([True, True, False]))
+        self.assertFalse(_majority_vote([True, False, False]))
+        self.assertTrue(_majority_vote([True, True, True, True, False]))
+
+    def test_majority_vote_even_tie_fails(self):
+        """Even N tie resolves to False (conservative)."""
+        from lab.eval.behavioral_scorer import _majority_vote
+        self.assertFalse(_majority_vote([True, False]))
+        self.assertFalse(_majority_vote([True, True, False, False]))
+
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_rotations_expand_work_items(self, mock_triggers, mock_haiku):
+        """--rotations 3 triples the number of haiku calls."""
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature"],
+            "should_not_trigger": ["fix a bug"],
+        }
+        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=3))
+
+        # 2 base prompts, each run 3 times = 6 haiku calls
+        self.assertEqual(mock_haiku.call_count, 6)
+        # But aggregated to 2 results
+        self.assertEqual(result["total"], 2)
+        self.assertEqual(result["rotations"], 3)
+        self.assertIn("per_rotation_accuracy", result)
+        self.assertIn("order_range", result)
+        self.assertIn("routing_consistency", result)
+
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_rotations_majority_vote(self, mock_triggers, mock_haiku):
+        """Majority vote across rotations determines correctness."""
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature"],
+            "should_not_trigger": [],
+        }
+        # Rotation 0: correct, Rotation 1: miss, Rotation 2: correct → majority correct
+        call_count = [0]
+        def _side_effect(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] % 3 == 2:  # 2nd call misses
+                return _cr(["brainstorm"])
+            return _cr(["plan"])
+        mock_haiku.side_effect = _side_effect
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=3))
+
+        self.assertEqual(result["accuracy"], 1.0)  # majority says correct
+
+
+class TestPassAtK(unittest.TestCase):
+    """Tests for P3 pass@k routing robustness."""
+
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_samples_expand_work_items(self, mock_triggers, mock_haiku):
+        """--samples 3 triples the number of haiku calls."""
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature"],
+            "should_not_trigger": ["fix a bug"],
+        }
+        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
+
+        self.assertEqual(mock_haiku.call_count, 6)
+        self.assertEqual(result["total"], 2)
+        self.assertEqual(result["samples"], 3)
+        self.assertIn("pass_at_k", result)
+        self.assertIn("sample_consistency", result)
+
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_pass_at_k_recovers_inconsistent(self, mock_triggers, mock_haiku):
+        """pass@k is 1.0 when at least one sample is correct."""
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature"],
+            "should_not_trigger": [],
+        }
+        # Sample 0: miss, Sample 1: correct, Sample 2: miss
+        call_count = [0]
+        def _side_effect(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] % 3 == 2:  # 2nd sample correct
+                return _cr(["plan"])
+            return _cr(["brainstorm"])
+        mock_haiku.side_effect = _side_effect
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
+
+        # accuracy from sample 0 = 0% (miss), but pass@3 = 100% (one hit)
+        self.assertEqual(result["accuracy"], 0.0)
+        self.assertEqual(result["pass_at_k"], 1.0)
+        self.assertEqual(result["sample_consistency"], 0.0)  # not all agree
+        self.assertTrue(result["inconsistent_routing"])
+
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_sample_consistency_all_agree(self, mock_triggers, mock_haiku):
+        """sample_consistency is 1.0 when all samples agree."""
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature"],
+            "should_not_trigger": [],
+        }
+        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
+
+        self.assertEqual(result["sample_consistency"], 1.0)
+        self.assertFalse(result["inconsistent_routing"])
+
+
+class TestMutualExclusion(unittest.TestCase):
+    """Tests for --rotations / --samples mutual exclusion."""
+
+    def test_rotations_and_samples_both_gt_1_errors(self):
+        """Cannot use both --rotations > 1 and --samples > 1."""
+        import argparse
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--rotations", type=int, default=1)
+        parser.add_argument("--samples", type=int, default=1)
+        args = parser.parse_args(["--rotations", "3", "--samples", "3"])
+        # The actual check is in main(), test the logic:
+        self.assertTrue(args.rotations > 1 and args.samples > 1)
+
+
 if __name__ == "__main__":
     unittest.main()

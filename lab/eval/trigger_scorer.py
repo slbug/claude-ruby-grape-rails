@@ -149,16 +149,174 @@ def build_confusable_pairs(descriptions: dict[str, str], limit: int = 10) -> lis
     return pairs[:limit]
 
 
-def score_all() -> dict[str, Any]:
+_SEMANTIC_CACHE_PATH = TRIGGERS_DIR / "_semantic_pairs.json"
+
+_SEMANTIC_SYSTEM_PROMPT = (
+    "You identify semantically confusable skill pairs. Reply with ONLY "
+    "pipe-separated pairs, one per line. NEVER add headers, numbering, "
+    "or explanations."
+)
+
+
+def _descriptions_hash(descriptions: dict[str, str]) -> str:
+    """Content hash of all descriptions for semantic pair cache invalidation."""
+    import hashlib
+    combined = json.dumps(descriptions, sort_keys=True)
+    return hashlib.sha256(combined.encode()).hexdigest()[:16]
+
+
+def build_semantic_confusable_pairs(
+    descriptions: dict[str, str],
+    token_pairs: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Build semantic confusable pairs via a single Haiku call.
+
+    Asks Haiku to identify pairs that are semantically confusable but
+    not caught by token overlap. Merges with token_pairs, deduplicates,
+    returns top 15.
+
+    Returns cached results if descriptions haven't changed.
+    Requires 'claude' CLI — returns empty list if unavailable.
+    """
+    import subprocess, sys
+
+    desc_hash = _descriptions_hash(descriptions)
+
+    # Check cache
+    if _SEMANTIC_CACHE_PATH.is_file():
+        try:
+            cached = json.loads(_SEMANTIC_CACHE_PATH.read_text(encoding="utf-8"))
+            if cached.get("descriptions_hash") == desc_hash:
+                return cached.get("pairs", [])
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    if token_pairs is None:
+        token_pairs = build_confusable_pairs(descriptions, limit=10)
+
+    # Build the prompt
+    desc_lines = "\n".join(
+        f"- {name}: {desc[:150]}" for name, desc in sorted(descriptions.items())
+    )
+    known_lines = "\n".join(
+        f"{p['left']} | {p['right']} | {p['overlap']:.2f}"
+        for p in token_pairs[:10]
+    )
+    user_prompt = (
+        f"Here are {len(descriptions)} skill descriptions:\n{desc_lines}\n\n"
+        f"These pairs were already found by token overlap:\n{known_lines}\n\n"
+        "Name 10-15 additional skill pairs that are SEMANTICALLY confusable "
+        "(a user prompt could reasonably route to either skill) but were NOT "
+        "in the list above. Rate each pair 1-10 for confusability.\n\n"
+        "Reply ONLY in this format, one per line:\n"
+        "skill-a | skill-b | 7 | both handle database queries"
+    )
+
+    # Resolve settings for bare-mode call
+    from .behavioral_scorer import _resolved_settings_path
+    settings_path = _resolved_settings_path
+
+    try:
+        result = subprocess.run(
+            [
+                "claude", "--bare",
+                "--settings", settings_path,
+                "-p", "-",
+                "--model", "haiku",
+                "--system-prompt", _SEMANTIC_SYSTEM_PROMPT,
+                "--tools", "",
+                "--max-turns", "1",
+                "--output-format", "json",
+                "--max-budget-usd", "0.10",
+                "--no-session-persistence",
+            ],
+            input=user_prompt,
+            capture_output=True, text=True, timeout=60,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        print(f"WARNING: semantic pairs call failed ({exc})", file=sys.stderr)
+        return token_pairs[:15] if token_pairs else []
+
+    if result.returncode != 0:
+        print(f"WARNING: semantic pairs call returned rc={result.returncode}", file=sys.stderr)
+        return token_pairs[:15] if token_pairs else []
+
+    # Parse response
+    try:
+        data = json.loads(result.stdout)
+        text = data.get("result", "")
+    except json.JSONDecodeError:
+        text = result.stdout
+
+    valid_skills = set(descriptions.keys())
+    semantic_pairs: list[dict[str, Any]] = []
+    for line in text.strip().split("\n"):
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) < 3:
+            continue
+        left, right = parts[0], parts[1]
+        if left not in valid_skills or right not in valid_skills:
+            continue
+        if left == right:
+            continue
+        try:
+            score = int(parts[2]) / 10.0
+        except ValueError:
+            score = 0.5
+        reason = parts[3] if len(parts) > 3 else ""
+        # Normalize order
+        if left > right:
+            left, right = right, left
+        semantic_pairs.append({
+            "left": left,
+            "right": right,
+            "overlap": round(score, 4),
+            "source": "semantic",
+            "reason": reason,
+        })
+
+    # Merge: token pairs + semantic pairs, deduplicate by (left, right)
+    seen: set[tuple[str, str]] = set()
+    merged: list[dict[str, Any]] = []
+    for p in (token_pairs or []):
+        key = (min(p["left"], p["right"]), max(p["left"], p["right"]))
+        if key not in seen:
+            seen.add(key)
+            merged.append(p)
+    for p in semantic_pairs:
+        key = (p["left"], p["right"])
+        if key not in seen:
+            seen.add(key)
+            merged.append(p)
+
+    merged.sort(key=lambda x: (-x["overlap"], x["left"], x["right"]))
+    merged = merged[:15]
+
+    # Cache
+    _SEMANTIC_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _SEMANTIC_CACHE_PATH.write_text(json.dumps({
+        "descriptions_hash": desc_hash,
+        "pairs": merged,
+    }, indent=2) + "\n", encoding="utf-8")
+
+    return merged
+
+
+def score_all(semantic: bool = False) -> dict[str, Any]:
     descriptions = load_all_descriptions()
     scores = {}
     for path in sorted(TRIGGERS_DIR.glob("*.json")):
         if path.name.startswith("_"):
             continue
         scores[path.stem] = score_trigger_file(path.stem, json.loads(path.read_text(encoding="utf-8")))
+    token_pairs = build_confusable_pairs(descriptions)
+    pairs = (
+        build_semantic_confusable_pairs(descriptions, token_pairs)
+        if semantic else token_pairs
+    )
     return {
         "skills": scores,
-        "confusable_pairs": build_confusable_pairs(descriptions),
+        "confusable_pairs": pairs,
     }
 
 
@@ -167,11 +325,17 @@ def main() -> None:
     parser.add_argument("--all", action="store_true", help="Score all trigger files")
     parser.add_argument("--skill", help="Score a single skill trigger file")
     parser.add_argument("--overlap", action="store_true", help="Print confusable pairs only")
+    parser.add_argument("--semantic", action="store_true", help="Include Haiku-rated semantic pairs (one API call)")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
     args = parser.parse_args()
 
     if args.overlap:
-        print(json.dumps(build_confusable_pairs(load_all_descriptions()), indent=2 if args.pretty else None))
+        descriptions = load_all_descriptions()
+        if args.semantic:
+            pairs = build_semantic_confusable_pairs(descriptions)
+        else:
+            pairs = build_confusable_pairs(descriptions)
+        print(json.dumps(pairs, indent=2 if args.pretty else None))
         return
 
     if args.skill:
@@ -182,7 +346,7 @@ def main() -> None:
         return
 
     if args.all:
-        print(json.dumps(score_all(), indent=2 if args.pretty else None))
+        print(json.dumps(score_all(semantic=args.semantic), indent=2 if args.pretty else None))
         return
 
     parser.print_help()

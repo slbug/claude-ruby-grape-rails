@@ -1,6 +1,6 @@
 {
   "name": "ruby-grape-rails-plugin",
-  "version": "1.11.6",
+  "version": "1.11.7",
   "private": true,
   "description": "Claude Code plugin for Ruby, Rails, Grape, PostgreSQL, Redis, and Sidekiq development",
   "scripts": {
@@ -33,6 +33,9 @@
     "eval:behavioral:fresh": "python3 -m lab.eval.behavioral_scorer --all --summary && python3 -m lab.eval.scorer --all --behavioral --pretty",
     "eval:behavioral:fresh:verbose": "python3 -m lab.eval.behavioral_scorer --all --summary --verbose && python3 -m lab.eval.scorer --all --behavioral --pretty",
     "eval:behavioral:compare": "python3 -m lab.eval.scorer --compare",
+    "eval:behavioral:passk": "python3 -m lab.eval.behavioral_scorer --all --samples 3 --summary",
+    "eval:behavioral:rotations": "python3 -m lab.eval.behavioral_scorer --all --rotations 5 --summary",
+    "eval:trigger-expand": "python3 -m lab.eval.trigger_expand",
     "eval:sensitivity": "python3 -m lab.eval.eval_sensitivity --all --summary",
     "eval:sensitivity:skill": "python3 -m lab.eval.eval_sensitivity",
     "eval:stress": "python3 -m lab.eval.evaluator_stress_test",

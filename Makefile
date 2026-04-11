@@ -91,6 +91,15 @@ eval-behavioral-fresh-verbose:
 eval-behavioral-compare:
 	python3 -m lab.eval.scorer --compare
 
+eval-behavioral-passk:
+	python3 -m lab.eval.behavioral_scorer --all --samples 3 --summary
+
+eval-behavioral-rotations:
+	python3 -m lab.eval.behavioral_scorer --all --rotations 5 --summary
+
+eval-trigger-expand:
+	python3 -m lab.eval.trigger_expand --skill $(SKILL)
+
 eval-sensitivity:
 	python3 -m lab.eval.eval_sensitivity --all --summary
 
