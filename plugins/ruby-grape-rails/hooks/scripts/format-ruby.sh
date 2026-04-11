@@ -204,7 +204,7 @@ if has_gem standard; then
   }
   (cd "$REPO_ROOT" && run_with_timeout "$RUBY_PLUGIN_FORMATTER_TIMEOUT" bundle exec standardrb --fix -- "$FILE_PATH") 2>"$ERR_FILE"
   FMT_STATUS=$?
-  if [[ "$FMT_STATUS" -eq 124 ]]; then
+  if [[ -n "$TIMEOUT_CMD" && "$FMT_STATUS" -eq 124 ]]; then
     echo "BLOCKED: standardrb timed out after ${RUBY_PLUGIN_FORMATTER_TIMEOUT}s." >&2
     echo "Raise timeout: export RUBY_PLUGIN_FORMATTER_TIMEOUT=300" >&2
     safe_remove_temp_file "${ERR_FILE:-}" "${TMPDIR:-/tmp}/ruby-format.*" || true
@@ -229,7 +229,7 @@ elif has_gem rubocop; then
   }
   (cd "$REPO_ROOT" && run_with_timeout "$RUBY_PLUGIN_FORMATTER_TIMEOUT" bundle exec rubocop --force-exclusion -a -- "$FILE_PATH") 2>"$ERR_FILE"
   FMT_STATUS=$?
-  if [[ "$FMT_STATUS" -eq 124 ]]; then
+  if [[ -n "$TIMEOUT_CMD" && "$FMT_STATUS" -eq 124 ]]; then
     echo "BLOCKED: rubocop timed out after ${RUBY_PLUGIN_FORMATTER_TIMEOUT}s." >&2
     echo "Raise timeout: export RUBY_PLUGIN_FORMATTER_TIMEOUT=300" >&2
     safe_remove_temp_file "${ERR_FILE:-}" "${TMPDIR:-/tmp}/ruby-format.*" || true

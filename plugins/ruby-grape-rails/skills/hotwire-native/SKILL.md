@@ -9,7 +9,9 @@ paths:
   - app/components/**
   - app/channels/**
   - "**/app/views/**/*.erb"
+  - "**/app/javascript/**"
   - "**/app/components/**"
+  - "**/app/channels/**"
   - ios/**
   - android/**
   - native/**

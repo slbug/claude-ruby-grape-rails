@@ -5,6 +5,7 @@ user-invocable: false
 effort: medium
 paths:
   - app/consumers/**
+  - karafka.rb
   - "**/app/consumers/**"
   - "**/karafka.rb"
 ---

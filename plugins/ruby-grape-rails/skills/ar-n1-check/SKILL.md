@@ -11,6 +11,7 @@ paths:
   - "**/app/models/**"
   - "**/app/controllers/**"
   - "**/app/serializers/**"
+  - "**/app/graphql/**"
 ---
 # N+1 Check
 

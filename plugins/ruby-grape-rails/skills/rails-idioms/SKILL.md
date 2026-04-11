@@ -12,6 +12,7 @@ paths:
   - config/routes/**
   - "**/app/controllers/**"
   - "**/app/models/**"
+  - "**/app/helpers/**"
   - "**/app/jobs/**"
 ---
 # Rails Idioms

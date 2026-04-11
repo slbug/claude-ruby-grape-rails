@@ -76,16 +76,21 @@ def check_claude_md_size() -> tuple[bool, list[str]]:
     if imports:
         for name, lines in imports:
             messages.append(f"    @{name}: {lines} lines")
-        messages.append(f"  Total always-loaded: {line_count + import_total} lines")
+        messages.append(
+            f"  Total always-loaded (informational): "
+            f"{line_count + import_total} lines"
+        )
 
     passed = line_count <= MAX_CLAUDE_MD_LINES
     if not passed:
         messages.append(
-            f"  WARNING: CLAUDE.md exceeds {MAX_CLAUDE_MD_LINES} line target "
-            f"({line_count} lines). Official CC docs recommend < 200."
+            f"  WARNING: root CLAUDE.md exceeds {MAX_CLAUDE_MD_LINES} line "
+            f"target ({line_count} lines). Official CC docs recommend < 200."
         )
     else:
-        messages.append(f"  OK: under {MAX_CLAUDE_MD_LINES} line target")
+        messages.append(
+            f"  OK: root CLAUDE.md under {MAX_CLAUDE_MD_LINES} line target"
+        )
 
     return passed, messages
 

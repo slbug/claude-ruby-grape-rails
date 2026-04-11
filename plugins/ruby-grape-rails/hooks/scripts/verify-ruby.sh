@@ -147,7 +147,7 @@ case "$BASE_NAME" in
 
     run_with_timeout "$RUBY_PLUGIN_RUBY_CHECK_TIMEOUT" ruby -c -- "$FILE_PATH" >"$TMP_OUTPUT" 2>&1
     VERIFY_STATUS=$?
-    if [[ "$VERIFY_STATUS" -eq 124 ]]; then
+    if [[ -n "$TIMEOUT_CMD" && "$VERIFY_STATUS" -eq 124 ]]; then
       echo "BLOCKED: ruby -c timed out after ${RUBY_PLUGIN_RUBY_CHECK_TIMEOUT}s." >&2
       echo "Raise timeout: export RUBY_PLUGIN_RUBY_CHECK_TIMEOUT=60" >&2
       exit 2

@@ -206,7 +206,7 @@ run_betterleaks_dir() {
 
   run_with_timeout "$RUBY_PLUGIN_BETTERLEAKS_TIMEOUT" "$BETTERLEAKS_PATH" dir "$target_dir" --no-banner --redact=100 >"$result_file" 2>"$err_file"
   status=$?
-  if [[ "$status" -eq 124 ]]; then
+  if [[ -n "$TIMEOUT_CMD" && "$status" -eq 124 ]]; then
     echo "WARNING: betterleaks timed out after ${RUBY_PLUGIN_BETTERLEAKS_TIMEOUT}s. Failing closed." >&2
     safe_remove_temp_file "${result_file:-}" "${TMPDIR:-/tmp}/rb-secret-scan.result.*" || true
     safe_remove_temp_file "${err_file:-}" "${TMPDIR:-/tmp}/rb-secret-scan.err.*" || true
