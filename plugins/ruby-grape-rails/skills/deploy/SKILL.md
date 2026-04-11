@@ -9,6 +9,10 @@ paths:
   - config/deploy.rb
   - ".github/workflows/**"
   - "config/environments/**"
+  - "**/Dockerfile"
+  - "**/docker-compose.yml"
+  - "**/config/deploy.rb"
+  - "**/config/environments/**"
 ---
 # Deploy
 

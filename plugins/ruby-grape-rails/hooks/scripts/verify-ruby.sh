@@ -9,25 +9,6 @@ HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
 RUBY_PLUGIN_RUBY_CHECK_TIMEOUT="${RUBY_PLUGIN_RUBY_CHECK_TIMEOUT:-30}"
 
-# Resolve timeout command (macOS ships without `timeout`; coreutils provides `gtimeout`).
-if command -v timeout >/dev/null 2>&1; then
-  TIMEOUT_CMD="timeout"
-elif command -v gtimeout >/dev/null 2>&1; then
-  TIMEOUT_CMD="gtimeout"
-else
-  TIMEOUT_CMD=""
-fi
-
-# Run command with timeout if available, otherwise run directly.
-run_with_timeout() {
-  local secs="$1"; shift
-  if [[ -n "$TIMEOUT_CMD" ]]; then
-    "$TIMEOUT_CMD" "$secs" "$@"
-  else
-    "$@"
-  fi
-}
-
 emit_missing_dependency_block() {
   local dependency="$1"
 
@@ -46,6 +27,8 @@ emit_verify_block() {
 
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/timeout-lib.sh"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091

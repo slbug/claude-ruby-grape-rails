@@ -5,10 +5,9 @@ argument-hint: "[error|path]"
 effort: medium
 paths:
   - app/models/**
-  - db/migrate/**
-  - db/schema.rb
+  - db/**
   - "**/app/models/**"
-  - "**/db/migrate/**"
+  - "**/db/**"
 ---
 # Constraint Debug
 

@@ -8,6 +8,7 @@ paths:
   - app/workers/**
   - app/sidekiq/**
   - config/sidekiq.yml
+  - "**/config/sidekiq.yml"
   - "**/app/jobs/**"
   - "**/app/workers/**"
   - "**/app/sidekiq/**"

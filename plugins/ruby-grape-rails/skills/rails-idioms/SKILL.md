@@ -10,6 +10,8 @@ paths:
   - app/helpers/**
   - config/routes.rb
   - config/routes/**
+  - "**/config/routes.rb"
+  - "**/config/routes/**"
   - "**/app/controllers/**"
   - "**/app/models/**"
   - "**/app/helpers/**"

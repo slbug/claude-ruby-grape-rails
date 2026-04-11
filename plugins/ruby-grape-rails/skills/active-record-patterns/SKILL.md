@@ -5,11 +5,9 @@ user-invocable: false
 effort: medium
 paths:
   - app/models/**
-  - db/migrate/**
-  - db/schema.rb
-  - db/structure.sql
+  - db/**
   - "**/app/models/**"
-  - "**/db/migrate/**"
+  - "**/db/**"
 ---
 # Active Record Patterns
 
