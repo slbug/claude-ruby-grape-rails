@@ -296,7 +296,7 @@ class RuntimeScriptTests(unittest.TestCase):
         # separate Edit and Write groups with per-pattern if filters
         security_expected = {
             "*.rb", "*.rake", "*Gemfile", "*Rakefile",
-            "config/*", "*.yml", "*.env*", "*.json",
+            "config/**", "*.yml", "*.env*", "*.json",
         }
         for matcher in ("Edit", "Write"):
             security_group = next(
