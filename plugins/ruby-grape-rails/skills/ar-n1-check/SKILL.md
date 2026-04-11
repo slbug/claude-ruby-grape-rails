@@ -4,14 +4,10 @@ description: Diagnose and explain N+1 query patterns in Rails and Grape codepath
 argument-hint: "[path|feature]"
 effort: medium
 paths:
-  - app/models/**
-  - app/controllers/**
-  - app/serializers/**
-  - app/graphql/**
-  - "**/app/models/**"
-  - "**/app/controllers/**"
-  - "**/app/serializers/**"
-  - "**/app/graphql/**"
+  - "app/{models,controllers,serializers,blueprints,graphql}/**"
+  - "**/app/{models,controllers,serializers,blueprints,graphql}/**"
+  - "{packs,engines,components}/*/{models,controllers,serializers,blueprints,graphql}/**"
+  - "app/{packages,packs}/*/{models,controllers,serializers,blueprints,graphql}/**"
 ---
 # N+1 Check
 

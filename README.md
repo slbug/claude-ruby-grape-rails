@@ -775,7 +775,8 @@ Notes:
   part of `eval-ci`
 - `scripts/check-dynamic-injection.sh` expects git metadata for comparable
   tracked-file scans and now refuses broad non-git fallback scans
-- local pre-commit checks staged Markdown, JSON, and shell syntax; CI is broader
+- local pre-commit checks staged Markdown (markdownlint), JSON validation,
+  and shell syntax + shellcheck lint; CI is broader
 
 ### Docs-check and session analytics
 

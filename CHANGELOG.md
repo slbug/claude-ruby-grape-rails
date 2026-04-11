@@ -7,6 +7,40 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.12.2] - 2026-04-11
+
+### Added
+
+- **Service-layer `paths:` for `rails-idioms`** — policies, queries,
+  decorators, presenters, validators, interactors, operations, commands,
+  structs, value_objects with packwerk-aware variants.
+- **`security` skill `paths:`** — app/policies for authorization auto-load.
+- **Haml/Slim view support** — hotwire-patterns and hotwire-native now
+  trigger on `.haml` and `.slim` templates.
+- **Grape representers/serializers paths** — grape-idioms auto-loads for
+  app/representers and app/serializers.
+- **GitLab CI paths for `deploy`** — `.gitlab-ci.yml` and `.gitlab/**`.
+- **Explicit packwerk/engine/component patterns** — all framework skills
+  now include `{packs,engines,components}/*/{...}` and
+  `app/{packages,packs}/*/{...}` for modular monolith layouts.
+
+### Changed
+
+- **Brace expansion across all skill paths** — consolidated patterns
+  using picomatch `{a,b}` syntax.
+
+### Fixed
+
+- **security-reminder hook `config/*` → `config/**`** — now matches nested
+  config paths (environments, initializers, credentials).
+- **docs-check page inventory** — updated from 9 to 18 pages, matching
+  current fetch-claude-docs.sh PAGES list.
+- **cc-changelog analysis-rules stale paths** — fixed plugin-qualified
+  paths for hook script references.
+- **Contributor prereqs** — added cksum, cat, cp, find, mkdir, head, tr,
+  wc to match hook runtime hard dependencies.
+- **README pre-commit description** — added shellcheck lint mention.
+
 ## [1.12.1] - 2026-04-11
 
 ### Fixed
@@ -1373,7 +1407,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.1...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.2...HEAD
+[1.12.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.1...v1.12.2
 [1.12.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.0...v1.12.1
 [1.12.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.8...v1.12.0
 [1.11.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.7...v1.11.8

@@ -4,17 +4,11 @@ description: Hotwire Native patterns for building native iOS/Android mobile apps
 user-invocable: false
 effort: medium
 paths:
-  - "app/views/**/*.erb"
-  - app/javascript/**
-  - app/components/**
-  - app/channels/**
-  - "**/app/views/**/*.erb"
-  - "**/app/javascript/**"
-  - "**/app/components/**"
-  - "**/app/channels/**"
-  - ios/**
-  - android/**
-  - native/**
+  - "app/views/**/*.{erb,haml,slim}"
+  - "app/{javascript,components,channels}/**"
+  - "**/app/views/**/*.{erb,haml,slim}"
+  - "**/app/{javascript,components,channels}/**"
+  - "{ios,android,native}/**"
 ---
 # Hotwire Native
 

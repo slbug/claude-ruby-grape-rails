@@ -4,14 +4,10 @@ description: Hotwire, Turbo, Stimulus, broadcasts, and server-rendered interacti
 user-invocable: false
 effort: medium
 paths:
-  - "app/views/**/*.erb"
-  - app/javascript/**
-  - app/components/**
-  - app/channels/**
-  - "**/app/views/**/*.erb"
-  - "**/app/javascript/**"
-  - "**/app/components/**"
-  - "**/app/channels/**"
+  - "app/views/**/*.{erb,haml,slim}"
+  - "app/{javascript,components,channels}/**"
+  - "**/app/views/**/*.{erb,haml,slim}"
+  - "**/app/{javascript,components,channels}/**"
 ---
 # Hotwire Patterns
 

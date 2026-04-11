@@ -4,15 +4,13 @@ description: Ruby/Rails/Grape deployment guidance for Rails 8+ with Solid Trifec
 user-invocable: false
 effort: medium
 paths:
-  - Dockerfile
-  - docker-compose.yml
-  - config/deploy.rb
-  - ".github/workflows/**"
-  - "config/environments/**"
-  - "**/Dockerfile"
-  - "**/docker-compose.yml"
-  - "**/config/deploy.rb"
-  - "**/config/environments/**"
+  - "{Dockerfile,docker-compose.yml,.travis.yml,.travis.yaml,.gitlab-ci.yml,.gitlab-ci.yaml}"
+  - "cloudbuild*.{yaml,yml}"
+  - "config/{deploy.rb,environments/**}"
+  - ".{github/workflows,gitlab}/**"
+  - "**/{Dockerfile,docker-compose.yml,.travis.yml,.travis.yaml,.gitlab-ci.yml,.gitlab-ci.yaml}"
+  - "**/cloudbuild*.{yaml,yml}"
+  - "**/config/{deploy.rb,environments/**}"
 ---
 # Deploy
 

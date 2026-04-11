@@ -4,10 +4,12 @@ description: Active Record patterns for querying, associations, migrations, tran
 user-invocable: false
 effort: medium
 paths:
-  - app/models/**
-  - db/**
-  - "**/app/models/**"
+  - "app/{models,repositories}/**"
+  - "db/**"
+  - "**/app/{models,repositories}/**"
   - "**/db/**"
+  - "{packs,engines,components}/*/{models,repositories}/**"
+  - "app/{packages,packs}/*/{models,repositories}/**"
 ---
 # Active Record Patterns
 

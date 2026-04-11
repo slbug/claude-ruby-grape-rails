@@ -4,10 +4,14 @@ description: Apache Kafka processing with Karafka for Ruby. Multi-threaded consu
 user-invocable: false
 effort: medium
 paths:
-  - app/consumers/**
+  - "app/{consumers,producers,message_handlers}/**"
   - karafka.rb
-  - "**/app/consumers/**"
+  - "lib/message_handlers/**"
+  - "**/app/{consumers,producers,message_handlers}/**"
   - "**/karafka.rb"
+  - "**/lib/message_handlers/**"
+  - "{packs,engines,components}/*/{consumers,producers,message_handlers}/**"
+  - "app/{packages,packs}/*/{consumers,producers,message_handlers}/**"
 ---
 # Karafka
 

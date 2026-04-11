@@ -4,14 +4,12 @@ description: Sidekiq job design for Ruby apps using Rails, Active Record, or Seq
 user-invocable: false
 effort: medium
 paths:
-  - app/jobs/**
-  - app/workers/**
-  - app/sidekiq/**
+  - "app/{jobs,workers,sidekiq}/**"
   - config/sidekiq.yml
+  - "**/app/{jobs,workers,sidekiq}/**"
   - "**/config/sidekiq.yml"
-  - "**/app/jobs/**"
-  - "**/app/workers/**"
-  - "**/app/sidekiq/**"
+  - "{packs,engines,components}/*/{jobs,workers,sidekiq}/**"
+  - "app/{packages,packs}/*/{jobs,workers,sidekiq}/**"
 ---
 # Sidekiq
 
