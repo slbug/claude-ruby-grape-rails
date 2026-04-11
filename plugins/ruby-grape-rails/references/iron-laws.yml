@@ -3,7 +3,7 @@
 # This file is the single source of truth; all other representations are generated from it
 #
 # Structure:
-#   id: unique number (1-22)
+#   id: unique number
 #   category: active_record, sidekiq, security, ruby, hotwire, verification
 #   title: short human-readable name
 #   rule: the actual rule text

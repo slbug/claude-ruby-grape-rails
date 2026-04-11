@@ -91,7 +91,8 @@ See `.claude/rules/skill-development.md` (auto-loads when editing skill files).
 
 See `.claude/rules/hook-development.md` (auto-loads when editing hook files).
 
-Iron Laws are maintained in `iron-laws.yml`. When `iron-laws.yml` changes:
+Iron Laws are maintained in `plugins/ruby-grape-rails/references/iron-laws.yml`.
+When `iron-laws.yml` changes:
 
 ```bash
 bash scripts/generate-iron-law-outputs.sh

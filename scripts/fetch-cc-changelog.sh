@@ -70,10 +70,16 @@ tmp_file="$(mktemp "${TMPDIR:-/tmp}/cc-releases.XXXXXX")" || {
 }
 trap 'rm -f -- "${tmp_file:?}"' EXIT
 
+CURL_AUTH_ARGS=()
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  CURL_AUTH_ARGS=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+fi
+
 http_code="$(curl -s -w '%{http_code}' \
   --connect-timeout "$CURL_TIMEOUT" \
   --max-time 30 \
   -H "Accept: application/vnd.github+json" \
+  "${CURL_AUTH_ARGS[@]+"${CURL_AUTH_ARGS[@]}"}" \
   "${RELEASES_URL}?per_page=${PER_PAGE}" \
   -o "$tmp_file" 2>/dev/null)" || {
   echo "ERROR: failed to fetch releases from GitHub API" >&2
