@@ -31,3 +31,9 @@ Write a short investigation report with:
 - likely root cause
 - confirming evidence
 - safest next step (`/rb:plan` or `/rb:quick`)
+
+## Agent Dispatch
+
+This is a **skill**, not an agent. Do NOT spawn `investigate` via the Agent tool.
+For agent-based deep investigation, use `deep-bug-investigator` agent
+(`subagent_type: "ruby-grape-rails:deep-bug-investigator"`).

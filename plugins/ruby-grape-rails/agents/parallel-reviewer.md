@@ -68,3 +68,19 @@ When parsing JSON, YAML, text, or command output during review:
   `.claude/reviews/{review-slug}.provenance.md`.
 - That provenance sidecar should follow:
   `../references/output-verification/provenance-template.md`
+
+## Artifact Recovery
+
+Background subagents may silently fail to write files (known CC platform
+limitation with Write permissions in background agents).
+
+After all spawned reviewers complete, verify each expected artifact path exists:
+
+1. Check that `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
+   exists for every spawned reviewer.
+2. If an artifact is missing, extract findings from that agent's conversation
+   result (the `<result>` text returned by the Agent tool) and write the
+   artifact yourself.
+3. Do NOT re-spawn the agent — the work is done, only the file write failed.
+4. If the agent's result text is empty or unusable, note the gap in the
+   consolidated review and move on.

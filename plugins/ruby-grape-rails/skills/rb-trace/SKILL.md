@@ -15,3 +15,9 @@ Follow the path from the entry point through:
 - jobs, broadcasts, and cache writes
 
 Write the trace as a short step-by-step chain with file paths.
+
+## Agent Dispatch
+
+This is a **skill**, not an agent. Do NOT spawn `rb-trace` via the Agent tool.
+For agent-based deep tracing, use `call-tracer` agent
+(`subagent_type: "ruby-grape-rails:call-tracer"`).

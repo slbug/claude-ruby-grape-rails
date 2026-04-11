@@ -226,19 +226,9 @@ skills/{name}/
   references `${CLAUDE_SKILL_DIR}`. Bare command names are PATH-resolved
   but can be conflated with skill-local files by the model.
 
-**Colon in Skill Names (Documented Behavior Divergence):**
-
-The plugin uses colons in skill names (e.g., `rb:plan`, `rb:work`) for namespacing.
-The skills docs still say names should use "lowercase letters, numbers, and hyphens only."
-However, the plugins-reference documents that when a plugin uses skill paths like
-`"skills": ["./"]`, the frontmatter `name` field determines the invocation name,
-giving a stable name across install methods. CC 2.1.94 stabilized this behavior.
-
-- **Current status**: Works in practice; frontmatter-name-based invocation is
-  stabilized in plugin path behavior
-- **Divergence**: Published naming-character guidance still says hyphen-only
-- **Mitigation**: If character restrictions are ever enforced strictly, migrate
-  to internal hyphen names with external aliases
+**Colon in Skill Names:** Colons in skill names (e.g., `rb:plan`) work via
+frontmatter `name` field (stabilized CC 2.1.94). If character restrictions are
+ever enforced, migrate to hyphen names with aliases.
 
 ### Workflow Skills
 
@@ -261,35 +251,12 @@ Solution docs use YAML frontmatter (see `plugins/ruby-grape-rails/skills/compoun
 
 Defined in `plugins/ruby-grape-rails/hooks/hooks.json`:
 
-```json
-{
-  "hooks": {
-    "PostToolUse": [...],           // Generic safety + targeted Ruby/post-plan hooks
-    "PreToolUse": [...],            // Block dangerous ops (rails/bin/rails/rake db:drop variants, force push, RAILS_ENV=production)
-    "PostToolUseFailure": [...],   // Ruby failure hints + error critic for Ruby-relevant Bash failures
-    "SubagentStart": [...],        // Iron Laws injection into all subagents
-    "SessionStart": [...],         // Setup dirs + runtime tool detection + resume detection
-    "UserPromptSubmit": [...],     // Auto session title from first prompt (once: true)
-    "FileChanged": [...],          // Runtime refresh when Gemfile/Rakefile/lefthook/justfile files change
-    "CwdChanged": [...],           // Runtime refresh when working directory changes
-    "PreCompact": [...],           // Warn before compaction about active workflow state
-    "PostCompact": [...],          // Advise re-reading active plan artifacts after compaction
-    "Stop": [...],                 // Warn if uncompleted tasks
-    "StopFailure": [...]           // Persist API failure context for resume flows
-  }
-}
-```
-
 **Current hooks:**
 
-- `PreToolUse` (Bash): Block destructive operations before execution, including
-  `rails db:drop/reset/purge`, `bin/rails db:drop/reset/purge`,
-  `./bin/rails db:drop/reset/purge`, `bundle exec rails db:drop/reset/purge`,
-  `rake db:drop/reset/purge`, `bin/rake db:drop/reset/purge`,
-  `./bin/rake db:drop/reset/purge`, `bundle exec rake db:drop/reset/purge`,
-  equivalent `bundle exec bin/...` and env-prefixed forms, Redis flushes
-  (`redis-cli flushall` / `flushdb`), `git push --force`, and
-  `RAILS_ENV=production`
+- `PreToolUse` (Bash): Block destructive operations — all invocation forms of
+  `rails`/`rake` `db:drop/reset/purge` (direct, `bin/`, `./bin/`, `bundle exec`,
+  env-prefixed), Redis flushes (`redis-cli flushall`/`flushdb`),
+  `git push --force`, `RAILS_ENV=production`
 - `PostToolUse` (Edit|Write, broad safety layer):
   - `security-reminder.sh`: Security Iron Laws for auth/sensitive files
   - `log-progress.sh`: Async progress logging
@@ -671,22 +638,6 @@ If project has <20 `.rb` files (new project):
 1. **Use simpler planning** (no parallel agents needed)
 2. **Suggest initial setup**: StandardRB, RSpec, test factories
 
-## Reference Auto-Loading
-
-When working on code, automatically consult relevant reference documentation before implementing.
-
-### Auto-Load Rules
-
-See the [Automatic Skill Loading](#automatic-skill-loading) section above for
-the canonical auto-load routing table by file pattern.
-
-### Consultation Behavior
-
-1. **Before implementing**, read relevant reference for correct pattern
-2. **Silently apply** patterns (don't narrate unless complex)
-3. **Check Iron Laws** from skill before and after implementation
-4. **Security code ALWAYS gets reference consultation** (authentication.md, authorization.md)
-
 ## Command Suggestions
 
 | User Intent | Command |
@@ -864,8 +815,9 @@ these are the main still-unadopted features worth tracking:
 ### Agents
 
 - `isolation: "worktree"` for agents that modify files, such as
-  `verification-runner` or parallel review tasks. CC 2.1.97 fixed a parent-cwd
-  leak bug, reducing evaluation risk.
+  `verification-runner` or parallel review tasks. CC 2.1.97 fixed parent-cwd
+  leak, CC 2.1.101 fixed Read/Edit access inside worktrees. Now viable to
+  evaluate.
 
 ### Hooks
 
@@ -882,6 +834,10 @@ these are the main still-unadopted features worth tracking:
 
 - broader `paths:` adoption, especially whether `hotwire-patterns` should be
   path-scoped or left semantic-only
+- `context: fork` + `agent:` frontmatter (fixed in CC 2.1.101 for plugin
+  skills). Runs skill in a subagent with isolated context. Not suitable for
+  skills needing conversation history (trace, investigate). Evaluate for
+  self-contained skills like `rb:audit` or `rb:verify`.
 
 ### Plugin
 
