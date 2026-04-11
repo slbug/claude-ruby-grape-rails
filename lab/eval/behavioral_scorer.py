@@ -338,7 +338,6 @@ def _run_single_prompt(
         "correct": correct,
         "tier": tier,
         "routing": meta["routing"],
-        "run_index": rotation,  # rotation offset for rotations mode, 0 for samples
         "_call_result": call_result,
     }
 
@@ -350,8 +349,9 @@ def _run_prompt_batch(
     verbose: bool = False,
     workers: int = 1,
 ) -> tuple[list[dict], int, list[CallResult]]:
-    """Run a flat list of (item, expected, tier, rotation) tuples. Returns (results, failure_count, call_results).
+    """Run a flat list of (item, expected, tier, rotation, run_index) tuples.
 
+    Returns (results, failure_count, call_results).
     One executor pool for all items — keeps workers saturated across tiers.
     """
     global _executor
@@ -361,7 +361,7 @@ def _run_prompt_batch(
     parallel = workers > 1
     total = len(flat_items)
 
-    def _collect(result: dict | None) -> None:
+    def _collect(result: dict | None, run_index: int = 0) -> None:
         nonlocal failures
         if result is None:
             return
@@ -371,33 +371,36 @@ def _run_prompt_batch(
         if result.get("_failure"):
             failures += 1
         else:
+            result["run_index"] = run_index
             results.append(result)
 
     if not parallel:
-        for i, (item, expected, tier, rotation) in enumerate(flat_items, 1):
+        for i, (item, expected, tier, rotation, run_index) in enumerate(flat_items, 1):
             result = _run_single_prompt(
                 skill_name, item, i, total, descriptions, expected, tier,
                 verbose, parallel=False, rotation=rotation,
             )
-            _collect(result)
+            _collect(result, run_index)
         return results, failures, call_results
 
     # Parallel path: one executor for all prompts, collect in submission order
     errors: list[str] = []
+    run_indices: list[int] = []
     with ThreadPoolExecutor(max_workers=workers) as executor:
         with _executor_lock:
             _executor = executor
         try:
             futures = []
-            for i, (item, expected, tier, rotation) in enumerate(flat_items, 1):
+            for i, (item, expected, tier, rotation, run_index) in enumerate(flat_items, 1):
                 future = executor.submit(
                     _run_single_prompt,
                     skill_name, item, i, total, descriptions, expected, tier,
                     verbose, True, rotation,
                 )
                 futures.append(future)
+                run_indices.append(run_index)
 
-            for future in futures:
+            for idx, future in enumerate(futures):
                 try:
                     result = future.result()
                 except Exception as exc:
@@ -407,7 +410,7 @@ def _run_prompt_batch(
                         with _verbose_lock:
                             traceback.print_exc(file=sys.stderr)
                     continue
-                _collect(result)
+                _collect(result, run_indices[idx])
         finally:
             with _executor_lock:
                 _executor = None
@@ -490,9 +493,8 @@ def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
 
     Output: N results with accuracy from sample 0, pass_at_k, sample_consistency.
 
-    Uses run_index=0 as canonical sample. If sample 0 failed and was dropped,
-    correct defaults to False. If only later samples failed, sample 0 is preserved.
-    Missing samples are treated as incorrect for pass@k and consistency.
+    Uses run_index to identify each sample. If sample 0 failed and was dropped,
+    correct defaults to False. Missing samples padded as incorrect.
     """
     from collections import defaultdict
     by_prompt: dict[str, list[dict]] = defaultdict(list)
@@ -502,31 +504,34 @@ def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
 
     aggregated = []
     for _key, group in by_prompt.items():
-        # Build per-sample arrays, padding missing samples as incorrect
-        per_sample_correct = [False] * num_samples
-        sample0_result = None
+        # Index results by run_index for reliable sample identification
+        by_index: dict[int, dict] = {}
         for r in group:
-            # In samples mode, run_index is always 0 (rotation stays 0).
-            # Use insertion order within group as sample index.
-            pass
-        # Since run_index=0 for all samples, use group order (submission order).
-        for i, r in enumerate(group):
-            if i < num_samples:
-                per_sample_correct[i] = r["correct"]
-            if i == 0:
-                sample0_result = r
+            idx = r.get("run_index", 0)
+            by_index[idx] = r
 
-        if sample0_result is None:
-            # No results at all for this prompt — skip
+        # Build per-sample array, padding missing samples as incorrect
+        per_sample_correct = [
+            by_index[i]["correct"] if i in by_index else False
+            for i in range(num_samples)
+        ]
+
+        # Use sample 0 as canonical; fall back to first available if missing
+        sample0 = by_index.get(0)
+        if sample0 is not None:
+            base = dict(sample0)
+        elif group:
+            base = dict(group[0])
+            base["correct"] = False  # conservative: sample 0 is missing
+        else:
             continue
 
-        base = dict(sample0_result)
-        # sample 0's correct value preserved; missing later samples padded as False
         base["pass_at_k"] = any(per_sample_correct)
         base["per_sample_correct"] = per_sample_correct
         base["sample_consistency"] = all(
             c == per_sample_correct[0] for c in per_sample_correct
         )
+        base.pop("run_index", None)
         aggregated.append(base)
     return aggregated
 
@@ -588,9 +593,11 @@ def score_skill(
     multiplier = max(rotations, samples)
     flat_items: list[tuple] = []
     for rep in range(multiplier):
+        # run_index: rotation offset for rotations mode, sample index for samples mode
+        run_index = rep if (rotations > 1 or samples > 1) else 0
         rotation = rep if rotations > 1 else 0
         for item, expected, tier in base_items:
-            flat_items.append((item, expected, tier, rotation))
+            flat_items.append((item, expected, tier, rotation, run_index))
 
     all_results, total_failures, all_call_results = _run_prompt_batch(
         skill_name, flat_items, descriptions, verbose=verbose, workers=workers,
