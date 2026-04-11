@@ -96,7 +96,10 @@ class TestSemanticPairParsing(unittest.TestCase):
     """Tests for Haiku response parsing via _fetch_semantic_pairs mock."""
 
     def _parse_response_lines(self, lines: list[str], descriptions: dict[str, str]) -> list[dict]:
-        """Simulate the parsing logic from _fetch_semantic_pairs."""
+        """Simulate the parsing logic from _fetch_semantic_pairs.
+
+        Must stay in sync with production code in trigger_scorer.py.
+        """
         valid_skills = set(descriptions.keys())
         pairs = []
         for line in lines:
@@ -108,11 +111,16 @@ class TestSemanticPairParsing(unittest.TestCase):
                 continue
             if left == right:
                 continue
-            try:
-                score = int(parts[2]) / 10.0 if len(parts) >= 3 else 0.5
-            except ValueError:
-                score = 0.5
-            reason = parts[3] if len(parts) > 3 else ""
+            score = 0.5
+            if len(parts) >= 3:
+                raw = parts[2].strip()
+                if "/" in raw:
+                    raw = raw.split("/", 1)[0].strip()
+                try:
+                    score = max(1.0, min(10.0, float(raw))) / 10.0
+                except ValueError:
+                    score = 0.5
+            reason = " | ".join(parts[3:]) if len(parts) > 3 else ""
             if left > right:
                 left, right = right, left
             pairs.append({"left": left, "right": right, "overlap": round(score, 4),
@@ -165,6 +173,30 @@ class TestSemanticPairParsing(unittest.TestCase):
         )
         self.assertEqual(len(pairs), 1)
         self.assertEqual(pairs[0]["overlap"], 0.5)
+
+    def test_float_score_parsed(self):
+        pairs = self._parse_response_lines(
+            ["plan | brainstorm | 7.5 | reason"],
+            SAMPLE_DESCRIPTIONS,
+        )
+        self.assertEqual(len(pairs), 1)
+        self.assertEqual(pairs[0]["overlap"], 0.75)
+
+    def test_fraction_score_parsed(self):
+        pairs = self._parse_response_lines(
+            ["plan | brainstorm | 8/10 | reason"],
+            SAMPLE_DESCRIPTIONS,
+        )
+        self.assertEqual(len(pairs), 1)
+        self.assertEqual(pairs[0]["overlap"], 0.8)
+
+    def test_reason_with_pipe_preserved(self):
+        pairs = self._parse_response_lines(
+            ["plan | brainstorm | 7 | both handle | pre-implementation work"],
+            SAMPLE_DESCRIPTIONS,
+        )
+        self.assertEqual(len(pairs), 1)
+        self.assertEqual(pairs[0]["reason"], "both handle | pre-implementation work")
 
 
 class TestFetchSemanticPairs(unittest.TestCase):

@@ -275,11 +275,16 @@ def _fetch_semantic_pairs(
             continue
         if left == right:
             continue
-        try:
-            score = int(parts[2]) / 10.0 if len(parts) >= 3 else 0.5
-        except ValueError:
-            score = 0.5
-        reason = parts[3] if len(parts) > 3 else ""
+        score = 0.5
+        if len(parts) >= 3:
+            raw = parts[2].strip()
+            if "/" in raw:
+                raw = raw.split("/", 1)[0].strip()
+            try:
+                score = max(1.0, min(10.0, float(raw))) / 10.0
+            except ValueError:
+                score = 0.5
+        reason = " | ".join(parts[3:]) if len(parts) > 3 else ""
         if left > right:
             left, right = right, left
         pairs.append({
