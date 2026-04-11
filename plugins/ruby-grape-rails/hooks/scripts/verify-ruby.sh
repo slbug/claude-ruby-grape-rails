@@ -27,8 +27,14 @@ emit_verify_block() {
 
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck disable=SC1091
-source "${SCRIPT_DIR}/timeout-lib.sh"
+TIMEOUT_LIB="${SCRIPT_DIR}/timeout-lib.sh"
+if [[ -r "$TIMEOUT_LIB" && ! -L "$TIMEOUT_LIB" ]]; then
+  # shellcheck disable=SC1090,SC1091
+  source "$TIMEOUT_LIB"
+else
+  TIMEOUT_CMD=""
+  run_with_timeout() { shift; "$@"; }
+fi
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
 # shellcheck disable=SC1090,SC1091
