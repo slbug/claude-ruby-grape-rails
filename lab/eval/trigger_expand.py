@@ -255,7 +255,9 @@ def main() -> None:
                 analysis = sensitivity_analyze(name)
                 if analysis and analysis.get("fragility_max", 0) > args.fragility_threshold:
                     fragile_skills.append(name)
-            except Exception:
+            except Exception as exc:
+                print(f"WARNING: sensitivity analysis failed for '{name}': {exc}",
+                      file=sys.stderr)
                 continue
         if not fragile_skills:
             print("No fragile skills found above threshold.", file=sys.stderr)

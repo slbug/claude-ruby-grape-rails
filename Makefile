@@ -102,7 +102,13 @@ eval-trigger-expand:
 		echo "Error: SKILL is required. Usage: make eval-trigger-expand SKILL=<skill-name>"; \
 		exit 1; \
 	fi
-	python3 -m lab.eval.trigger_expand --skill $(SKILL)
+	@case "$(SKILL)" in \
+		*[!A-Za-z0-9:_-]*) \
+			echo "Error: SKILL contains invalid characters. Allowed: letters, digits, :, _, -"; \
+			exit 1; \
+			;; \
+	esac
+	python3 -m lab.eval.trigger_expand --skill "$(SKILL)"
 
 eval-sensitivity:
 	python3 -m lab.eval.eval_sensitivity --all --summary

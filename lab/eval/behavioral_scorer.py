@@ -523,6 +523,7 @@ def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
         elif group:
             base = dict(group[0])
             base["correct"] = False  # conservative: sample 0 is missing
+            base["sample0_missing"] = True
         else:
             continue
 
