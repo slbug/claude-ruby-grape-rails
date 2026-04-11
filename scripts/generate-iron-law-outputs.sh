@@ -65,7 +65,7 @@ EOF
 
 valid_target() {
   case "$1" in
-    readme|canonical|init|tutorial|injector|judge|all) return 0 ;;
+    readme|canonical|init|tutorial|injector|judge|validate|all) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -378,6 +378,9 @@ if [[ ! -r "$RUBY_SCRIPT" ]]; then
   log_error "Ruby script is not readable: $RUBY_SCRIPT"
   exit 1
 fi
+
+# Run validation once (recommended-field warnings emitted here, not per-mode)
+ruby "$RUBY_SCRIPT" validate
 
 generate_all "$TARGET"
 

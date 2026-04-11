@@ -35,7 +35,6 @@ end
 def validate_entries!(yaml)
   category_required = %w[id name law_count]
   law_required = %w[id category title rule summary_text rationale subagent_text]
-  law_recommended = %w[severity applies_to init_text detector_id reference_files]
   category_ids = yaml['categories'].filter_map { |category| category['id'] if category.is_a?(Hash) }
   law_ids = yaml['laws'].filter_map { |law| law['id'] if law.is_a?(Hash) }
   category_totals = Hash.new(0)
@@ -124,15 +123,6 @@ def validate_entries!(yaml)
     errors << "law[#{index}] references unknown category: #{law['category'].inspect}"
   end
 
-  yaml['laws'].each_with_index do |law, index|
-    next unless law.is_a?(Hash)
-
-    missing_recommended = law_recommended.reject { |key| law.key?(key) && !law[key].nil? }
-    missing_recommended.each do |key|
-      warn "  WARNING: law[#{index}] (#{law['id']}) missing recommended field: #{key}"
-    end
-  end
-
   duplicate_category_ids = category_ids.group_by(&:itself).select { |_id, entries| entries.length > 1 }.keys.sort
   duplicate_law_ids = law_ids.group_by(&:itself).select { |_id, entries| entries.length > 1 }.keys.sort
   errors << "duplicate category ids: #{duplicate_category_ids.join(', ')}" unless duplicate_category_ids.empty?
@@ -171,6 +161,18 @@ def validate_entries!(yaml)
 end
 
 validate_entries!(yaml)
+
+def warn_missing_recommended(yaml)
+  recommended = %w[severity applies_to init_text detector_id reference_files]
+  yaml['laws'].each_with_index do |law, index|
+    next unless law.is_a?(Hash)
+
+    missing = recommended.reject { |key| law.key?(key) && !law[key].nil? }
+    missing.each do |key|
+      warn "  WARNING: law[#{index}] (#{law['id']}) missing recommended field: #{key}"
+    end
+  end
+end
 
 def law_count_label(count)
   "#{count} #{count == 1 ? 'law' : 'laws'}"
@@ -362,7 +364,10 @@ when 'readme'
   generate_readme(yaml)
 when 'judge'
   generate_judge_section(yaml)
+when 'validate'
+  warn_missing_recommended(yaml)
+  warn "Validation complete."
 else
-  puts "Usage: #{$PROGRAM_NAME} [injectable|tutorial|injector|canonical|readme|judge]"
+  puts "Usage: #{$PROGRAM_NAME} [injectable|tutorial|injector|canonical|readme|judge|validate]"
   exit 1
 end
