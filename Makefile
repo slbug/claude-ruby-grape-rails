@@ -98,6 +98,10 @@ eval-behavioral-rotations:
 	python3 -m lab.eval.behavioral_scorer --all --rotations 5 --summary
 
 eval-trigger-expand:
+	@if [ -z "$(SKILL)" ]; then \
+		echo "Error: SKILL is required. Usage: make eval-trigger-expand SKILL=<skill-name>"; \
+		exit 1; \
+	fi
 	python3 -m lab.eval.trigger_expand --skill $(SKILL)
 
 eval-sensitivity:

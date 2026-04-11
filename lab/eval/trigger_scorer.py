@@ -230,7 +230,6 @@ def _fetch_semantic_pairs(
         "skill-a | skill-b | 7 | both handle database queries"
     )
 
-    import subprocess, sys
     from .behavioral_scorer import _resolved_settings_path
     settings_path = _resolved_settings_path
 
@@ -315,12 +314,14 @@ def _merge_pairs(
     merged.sort(key=lambda x: (-x["overlap"], x["left"], x["right"]))
     merged = merged[:15]
 
-    # Cache only semantic additions (token pairs change with triggers)
-    _SEMANTIC_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _SEMANTIC_CACHE_PATH.write_text(json.dumps({
-        "descriptions_hash": desc_hash,
-        "semantic_pairs": semantic_pairs,
-    }, indent=2) + "\n", encoding="utf-8")
+    # Cache only semantic additions (token pairs change with triggers).
+    # Don't clobber existing cache with empty result from a failed fetch.
+    if semantic_pairs:
+        _SEMANTIC_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _SEMANTIC_CACHE_PATH.write_text(json.dumps({
+            "descriptions_hash": desc_hash,
+            "semantic_pairs": semantic_pairs,
+        }, indent=2) + "\n", encoding="utf-8")
 
     return merged
 

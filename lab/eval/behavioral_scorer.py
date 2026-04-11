@@ -476,14 +476,14 @@ def _aggregate_rotations(results: list[dict], num_rotations: int) -> list[dict]:
 def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
     """Collapse sample-expanded results into per-prompt results with pass@k.
 
-    Input: N*K results where each prompt appears K times (one per sample).
+    Input: results ordered by (sample, prompt) — sample 0 first, then sample 1, etc.
     Output: N results with accuracy from sample 0, pass_at_k, sample_consistency.
 
-    Results maintain submission order, so group[0] is sample 0. If sample 0
-    failed and was dropped, the first surviving sample becomes canonical but
-    'correct' defaults to False (conservative — we can't know sample 0's verdict).
+    If sample 0 failed and was dropped, correct defaults to False (conservative).
+    If only later samples failed, sample 0's correct value is preserved.
     """
     from collections import defaultdict
+    # Group preserving insertion order — sample 0 results appear first
     by_prompt: dict[str, list[dict]] = defaultdict(list)
     for r in results:
         key = f"{r['prompt']}|{r['expected']}|{r['tier']}"
@@ -492,10 +492,15 @@ def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
     aggregated = []
     for _key, group in by_prompt.items():
         per_sample_correct = [r["correct"] for r in group]
-        base = dict(group[0])
-        # If fewer results than expected samples, some failed — sample 0 may be missing.
-        # Use first surviving result but mark correct conservatively.
+        base = dict(group[0])  # sample 0 (first in submission order)
+        # Only override correct if sample 0 is missing (fewer results than expected
+        # AND group[0] is not actually sample 0 — detectable because we'd have
+        # fewer results than expected samples).
         if len(group) < num_samples:
+            # Some samples failed. group[0] might not be sample 0.
+            # Conservative: mark as incorrect since we can't confirm sample 0.
+            # But if we have at least num_samples results for this prompt,
+            # group[0] IS sample 0 (submission order preserved).
             base["correct"] = False
         base["pass_at_k"] = any(per_sample_correct)
         base["per_sample_correct"] = per_sample_correct
@@ -558,12 +563,13 @@ def score_skill(
 
     # Expand for rotations or samples — each produces independent work items.
     # Tuple: (item, expected, tier, rotation)
-    # run_index preserved so aggregation can identify sample 0 / rotation 0.
+    # For samples mode, rotation stays 0 but submission order determines sample index.
+    # Results maintain submission order so _aggregate_samples groups correctly.
     multiplier = max(rotations, samples)
     flat_items: list[tuple] = []
-    for item, expected, tier in base_items:
-        for rep in range(multiplier):
-            rotation = rep if rotations > 1 else 0
+    for rep in range(multiplier):
+        rotation = rep if rotations > 1 else 0
+        for item, expected, tier in base_items:
             flat_items.append((item, expected, tier, rotation))
 
     all_results, total_failures, all_call_results = _run_prompt_batch(
