@@ -163,12 +163,14 @@ end
 validate_entries!(yaml)
 
 def warn_missing_recommended(yaml)
-  recommended = %w[severity applies_to init_text detector_id reference_files]
+  recommended = %w[severity applies_to init_text reference_files]
+  nullable = %w[detector_id]
   yaml['laws'].each_with_index do |law, index|
     next unless law.is_a?(Hash)
 
     present = ->(v) { !v.nil? && !(v.is_a?(String) && v.strip.empty?) && !(v.is_a?(Array) && v.empty?) }
     missing = recommended.reject { |key| law.key?(key) && present.call(law[key]) }
+    missing += nullable.reject { |key| law.key?(key) }
     missing.each do |key|
       warn "  WARNING: law[#{index}] (#{law['id']}) missing recommended field: #{key}"
     end

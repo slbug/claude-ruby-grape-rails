@@ -56,6 +56,7 @@ Targets:
   tutorial   Update bounded Iron Laws section in intro tutorial content
   injector   Regenerate inject-iron-laws.sh
   judge      Update bounded Iron Laws section in iron-law-judge.md
+  validate   Run schema validation only (no generation)
   all        Regenerate all supported targets
 
 Options:
