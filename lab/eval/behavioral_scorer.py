@@ -349,7 +349,7 @@ def _run_prompt_batch(
     verbose: bool = False,
     workers: int = 1,
 ) -> tuple[list[dict], int, list[CallResult]]:
-    """Run a flat list of (item, expected, tier, rotation, run_index) tuples.
+    """Run a flat list of (item, expected, tier, rotation, run_index, prompt_id) tuples.
 
     Returns (results, failure_count, call_results).
     One executor pool for all items — keeps workers saturated across tiers.
@@ -361,7 +361,7 @@ def _run_prompt_batch(
     parallel = workers > 1
     total = len(flat_items)
 
-    def _collect(result: dict | None, run_index: int = 0) -> None:
+    def _collect(result: dict | None, run_index: int = 0, prompt_id: int = 0) -> None:
         nonlocal failures
         if result is None:
             return
@@ -372,33 +372,34 @@ def _run_prompt_batch(
             failures += 1
         else:
             result["run_index"] = run_index
+            result["prompt_id"] = prompt_id
             results.append(result)
 
     if not parallel:
-        for i, (item, expected, tier, rotation, run_index) in enumerate(flat_items, 1):
+        for i, (item, expected, tier, rotation, run_index, pid) in enumerate(flat_items, 1):
             result = _run_single_prompt(
                 skill_name, item, i, total, descriptions, expected, tier,
                 verbose, parallel=False, rotation=rotation,
             )
-            _collect(result, run_index)
+            _collect(result, run_index, pid)
         return results, failures, call_results
 
     # Parallel path: one executor for all prompts, collect in submission order
     errors: list[str] = []
-    run_indices: list[int] = []
+    meta_per_future: list[tuple[int, int]] = []  # (run_index, prompt_id)
     with ThreadPoolExecutor(max_workers=workers) as executor:
         with _executor_lock:
             _executor = executor
         try:
             futures = []
-            for i, (item, expected, tier, rotation, run_index) in enumerate(flat_items, 1):
+            for i, (item, expected, tier, rotation, run_index, pid) in enumerate(flat_items, 1):
                 future = executor.submit(
                     _run_single_prompt,
                     skill_name, item, i, total, descriptions, expected, tier,
                     verbose, True, rotation,
                 )
                 futures.append(future)
-                run_indices.append(run_index)
+                meta_per_future.append((run_index, pid))
 
             for idx, future in enumerate(futures):
                 try:
@@ -410,7 +411,8 @@ def _run_prompt_batch(
                         with _verbose_lock:
                             traceback.print_exc(file=sys.stderr)
                     continue
-                _collect(result, run_indices[idx])
+                ri, pid = meta_per_future[idx]
+                _collect(result, ri, pid)
         finally:
             with _executor_lock:
                 _executor = None
@@ -458,13 +460,12 @@ def _aggregate_rotations(results: list[dict], num_rotations: int) -> list[dict]:
     Rotation 0's chosen value is used only when rotation 0 is present.
     """
     from collections import defaultdict
-    by_prompt: dict[str, list[dict]] = defaultdict(list)
+    by_prompt: dict[int, list[dict]] = defaultdict(list)
     for r in results:
-        key = f"{r['prompt']}|{r['expected']}|{r['tier']}"
-        by_prompt[key].append(r)
+        by_prompt[r.get("prompt_id", 0)].append(r)
 
     aggregated = []
-    for _key, group in by_prompt.items():
+    for _pid, group in sorted(by_prompt.items()):
         group.sort(key=lambda x: x.get("run_index", 0))
         # Build per-rotation arrays, padding missing rotations as incorrect
         per_rotation_correct = [False] * num_rotations
@@ -476,7 +477,6 @@ def _aggregate_rotations(results: list[dict], num_rotations: int) -> list[dict]:
                 per_rotation_choices[idx] = r["chosen"]
 
         voted_correct = _majority_vote(per_rotation_correct)
-        # Use rotation 0 if present, otherwise first successful rotation
         rot0 = next((r for r in group if r.get("run_index", 0) == 0), group[0])
         base = dict(rot0)
         base["correct"] = voted_correct
@@ -484,6 +484,7 @@ def _aggregate_rotations(results: list[dict], num_rotations: int) -> list[dict]:
         base["per_rotation_correct"] = per_rotation_correct
         base["per_rotation_choices"] = per_rotation_choices
         base.pop("run_index", None)
+        base.pop("prompt_id", None)
         aggregated.append(base)
     return aggregated
 
@@ -497,13 +498,12 @@ def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
     correct defaults to False. Missing samples padded as incorrect.
     """
     from collections import defaultdict
-    by_prompt: dict[str, list[dict]] = defaultdict(list)
+    by_prompt: dict[int, list[dict]] = defaultdict(list)
     for r in results:
-        key = f"{r['prompt']}|{r['expected']}|{r['tier']}"
-        by_prompt[key].append(r)
+        by_prompt[r.get("prompt_id", 0)].append(r)
 
     aggregated = []
-    for _key, group in by_prompt.items():
+    for _pid, group in sorted(by_prompt.items()):
         # Index results by run_index for reliable sample identification
         by_index: dict[int, dict] = {}
         for r in group:
@@ -533,6 +533,7 @@ def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
             c == per_sample_correct[0] for c in per_sample_correct
         )
         base.pop("run_index", None)
+        base.pop("prompt_id", None)
         aggregated.append(base)
     return aggregated
 
@@ -590,8 +591,11 @@ def score_skill(
         hard_trigger = hard_trigger[:limit]
         hard_not = hard_not[:limit]
 
-    # Build base prompt list: (item, expected, tier)
-    base_items = []
+    # Build base prompt list with stable prompt_id for aggregation.
+    # prompt_id is a sequential index across all buckets — survives even if
+    # identical prompt text appears in different buckets (theoretically possible).
+    base_items: list[tuple] = []
+    prompt_id = 0
     for items, expected, tier in [
         (easy_trigger, True, "easy"),
         (easy_not, False, "easy"),
@@ -599,20 +603,18 @@ def score_skill(
         (hard_not, False, "hard"),
     ]:
         for item in items:
-            base_items.append((item, expected, tier))
+            base_items.append((item, expected, tier, prompt_id))
+            prompt_id += 1
 
     # Expand for rotations or samples — each produces independent work items.
-    # Tuple: (item, expected, tier, run_index)
-    # run_index = rotation offset for rotations mode, sample index for samples mode.
-    # Outer loop is rep so same-prompt items are grouped by run_index in submission order.
+    # Tuple: (item, expected, tier, rotation, run_index, prompt_id)
     multiplier = max(rotations, samples)
     flat_items: list[tuple] = []
     for rep in range(multiplier):
-        # run_index: rotation offset for rotations mode, sample index for samples mode
         run_index = rep if (rotations > 1 or samples > 1) else 0
         rotation = rep if rotations > 1 else 0
-        for item, expected, tier in base_items:
-            flat_items.append((item, expected, tier, rotation, run_index))
+        for item, expected, tier, pid in base_items:
+            flat_items.append((item, expected, tier, rotation, run_index, pid))
 
     all_results, total_failures, all_call_results = _run_prompt_batch(
         skill_name, flat_items, descriptions, verbose=verbose, workers=workers,
@@ -869,6 +871,7 @@ def main() -> None:
         else:
             aggregate = {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
+                "mode": {"rotations": args.rotations, "samples": args.samples},
                 "skills_tested": skills_tested,
                 "average_accuracy": round(avg, 4),
                 "per_skill": {
@@ -880,7 +883,8 @@ def main() -> None:
                     for k, v in all_results.items()
                 },
             }
-            aggregate_path = RESULTS_DIR / "_aggregate.json"
+            aggregate_suffix = _result_filename("_aggregate", args.rotations, args.samples)
+            aggregate_path = RESULTS_DIR / aggregate_suffix
             RESULTS_DIR.mkdir(parents=True, exist_ok=True)
             aggregate_path.write_text(
                 json.dumps(aggregate, indent=2) + "\n", encoding="utf-8"
