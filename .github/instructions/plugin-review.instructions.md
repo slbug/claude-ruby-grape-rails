@@ -7,8 +7,9 @@ excludeAgent: "coding-agent"
 
 ## Agent Conventions (plugins/**/agents/*.md)
 
-- Agents use YAML frontmatter: name, description, model, disallowedTools,
-  omitClaudeMd, skills, memory
+- Agents use YAML frontmatter. Common: name, description, model,
+  disallowedTools, omitClaudeMd, skills, memory. Also valid per CC docs:
+  tools, effort, maxTurns, background, isolation, color, initialPrompt
 - Prefer denylist-only (`disallowedTools:`) over allowlist (`tools:`).
   A missing `tools:` field is intentional — agents inherit all tools minus
   those in disallowedTools

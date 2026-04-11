@@ -4,7 +4,7 @@ Two deterministic, zero-API-cost checks:
 1. Root CLAUDE.md line count (warn if > 200)
 2. Framework-specific skills missing paths: frontmatter
 
-Run as part of make eval and make eval-all. Advisory only.
+Run as part of make eval (--changed), make eval-all, and make eval-ci. Advisory only.
 """
 
 import re
@@ -36,14 +36,14 @@ EXPECTED_PATHS_SKILLS = [
 def _count_lines(path: Path) -> int:
     if not path.exists():
         return 0
-    return len(path.read_text().splitlines())
+    return len(path.read_text(encoding="utf-8").splitlines())
 
 
 def _count_imports(path: Path) -> list[tuple[str, int]]:
     if not path.exists():
         return []
     imports = []
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         match = re.match(r"^@(.+)$", line.strip())
         if match:
             import_path = path.parent / match.group(1)
@@ -55,7 +55,7 @@ def _has_paths_field(path: Path) -> bool:
     """Check if a SKILL.md file has paths: in its YAML frontmatter."""
     if not path.exists():
         return False
-    fm = parse_frontmatter(path.read_text())
+    fm = parse_frontmatter(path.read_text(encoding="utf-8"))
     return "paths" in fm
 
 
