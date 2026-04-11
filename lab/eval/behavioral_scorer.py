@@ -537,6 +537,20 @@ def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
     return aggregated
 
 
+def _result_filename(skill_name: str, rotations: int = 1, samples: int = 1) -> str:
+    """Compute mode-specific result filename.
+
+    Baseline (rotations=1, samples=1) uses {skill}.json for backward compat.
+    Rotations mode uses {skill}_r{N}.json, samples mode uses {skill}_s{N}.json.
+    This prevents modes from overwriting each other's cached results.
+    """
+    if rotations > 1:
+        return f"{skill_name}_r{rotations}.json"
+    if samples > 1:
+        return f"{skill_name}_s{samples}.json"
+    return f"{skill_name}.json"
+
+
 def score_skill(
     skill_name: str,
     descriptions: dict[str, str],
@@ -548,7 +562,7 @@ def score_skill(
     samples: int = 1,
 ) -> tuple[dict, list[CallResult]]:
     """Score trigger accuracy for one skill. Returns (score_dict, call_results)."""
-    cache_path = RESULTS_DIR / f"{skill_name}.json"
+    cache_path = RESULTS_DIR / _result_filename(skill_name, rotations, samples)
 
     if use_cache:
         if cache_path.is_file():
@@ -693,6 +707,12 @@ def score_skill(
         score_data["inconsistent_routing"] = (
             score_data["pass_at_k"] - score_data["accuracy"] > 0.15
         )
+
+    # Write mode metadata for auditability
+    score_data["mode"] = {
+        "rotations": rotations,
+        "samples": samples,
+    }
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     cache_path.write_text(json.dumps(score_data, indent=2) + "\n", encoding="utf-8")

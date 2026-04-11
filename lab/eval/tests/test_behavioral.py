@@ -12,6 +12,7 @@ from lab.eval.behavioral_scorer import (
     _ROUTING_SYSTEM_PROMPT,
     _check_correct,
     _extract_prompt_meta,
+    _result_filename,
     build_routing_prompt,
     CallResult,
     content_hash,
@@ -564,6 +565,158 @@ class TestPassAtK(unittest.TestCase):
 
         self.assertEqual(result["sample_consistency"], 1.0)
         self.assertFalse(result["inconsistent_routing"])
+
+
+class TestModeSpecificCache(unittest.TestCase):
+    """Tests for mode-specific result file separation (3a approach)."""
+
+    def test_result_filename_baseline(self):
+        """Baseline mode uses {skill}.json."""
+        self.assertEqual(_result_filename("plan"), "plan.json")
+        self.assertEqual(_result_filename("plan", rotations=1, samples=1), "plan.json")
+
+    def test_result_filename_rotations(self):
+        """Rotations mode uses {skill}_r{N}.json."""
+        self.assertEqual(_result_filename("plan", rotations=5), "plan_r5.json")
+        self.assertEqual(_result_filename("plan", rotations=3), "plan_r3.json")
+
+    def test_result_filename_samples(self):
+        """Samples mode uses {skill}_s{N}.json."""
+        self.assertEqual(_result_filename("plan", samples=3), "plan_s3.json")
+
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_modes_write_separate_files(self, mock_triggers, mock_haiku):
+        """Different modes write to different result files, not overwriting each other."""
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature"],
+            "should_not_trigger": ["fix a bug"],
+        }
+        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                # Run baseline
+                score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=1, samples=1)
+                # Run rotations
+                mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+                score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=3)
+                # Run samples
+                mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+                score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3)
+
+                # All three files should exist
+                self.assertTrue((Path(tmpdir) / "plan.json").is_file())
+                self.assertTrue((Path(tmpdir) / "plan_r3.json").is_file())
+                self.assertTrue((Path(tmpdir) / "plan_s3.json").is_file())
+
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_cache_reads_correct_mode(self, mock_triggers, mock_haiku):
+        """--cache returns mode-specific results, not cross-mode artifacts."""
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature"],
+            "should_not_trigger": ["fix a bug"],
+        }
+        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                # Write rotations result
+                score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=3)
+
+                # Cache read for baseline should miss (different file)
+                baseline_cached = _unpack(score_skill(
+                    "plan", SAMPLE_DESCRIPTIONS, use_cache=True, rotations=1,
+                ))
+                self.assertIn("error", baseline_cached)
+                self.assertIn("no valid cache", baseline_cached["error"])
+
+                # Cache read for rotations=3 should hit
+                rot_cached = _unpack(score_skill(
+                    "plan", SAMPLE_DESCRIPTIONS, use_cache=True, rotations=3,
+                ))
+                self.assertNotIn("error", rot_cached)
+                self.assertEqual(rot_cached.get("rotations"), 3)
+
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_mode_metadata_in_artifact(self, mock_triggers, mock_haiku):
+        """Result artifact includes mode metadata."""
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature"],
+            "should_not_trigger": [],
+        }
+        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
+                self.assertEqual(result["mode"], {"rotations": 1, "samples": 3})
+
+
+class TestMissingSample0(unittest.TestCase):
+    """Regression test: sample 0 fails, later samples survive."""
+
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_sample0_fails_later_survive(self, mock_triggers, mock_haiku):
+        """When sample 0 fails (None), accuracy uses conservative False, pass@k uses survivors."""
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature"],
+            "should_not_trigger": [],
+        }
+        # Sample 0: failure (None), Sample 1: correct, Sample 2: correct
+        call_count = [0]
+        def _side_effect(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] % 3 == 1:  # 1st call (sample 0) fails
+                return CallResult(skills=None)
+            return _cr(["plan"])
+        mock_haiku.side_effect = _side_effect
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
+
+        # Sample 0 missing → conservative correct=False for accuracy
+        self.assertEqual(result["accuracy"], 0.0)
+        # But survivors are correct → pass@3 should still be 1.0
+        self.assertEqual(result["pass_at_k"], 1.0)
+        # Flag that sample 0 was missing
+        results_list = result.get("results", [])
+        if results_list:
+            self.assertTrue(results_list[0].get("sample0_missing", False))
+
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_sample0_succeeds_later_fail(self, mock_triggers, mock_haiku):
+        """When sample 0 succeeds but later samples fail, accuracy preserves sample 0."""
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature"],
+            "should_not_trigger": [],
+        }
+        # Sample 0: correct, Sample 1: failure (None), Sample 2: correct
+        call_count = [0]
+        def _side_effect(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] % 3 == 2:  # 2nd call (sample 1) fails
+                return CallResult(skills=None)
+            return _cr(["plan"])
+        mock_haiku.side_effect = _side_effect
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
+
+        # Sample 0 present and correct → accuracy=1.0
+        self.assertEqual(result["accuracy"], 1.0)
+        # pass@3 = 1.0 (at least one correct)
+        self.assertEqual(result["pass_at_k"], 1.0)
+        # No sample0_missing flag
+        results_list = result.get("results", [])
+        if results_list:
+            self.assertFalse(results_list[0].get("sample0_missing", False))
 
 
 class TestMutualExclusion(unittest.TestCase):
