@@ -18,7 +18,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **work SKILL.md active-plan-marker path** — bare command → full
   `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/` path.
 - **iron-law-judge grep recipes** — Law-18 `\s` in BRE → `[[:space:]]` with
-  `-E`; method_missing xargs unsafe splitting → `-I{}` safe pattern.
+  `-E`; method_missing xargs unsafe splitting → `grep -rlZ | xargs -0`.
 - **validate-yaml.sh Python fallback** — added PyYAML import check before
   selecting Python path; explicit UTF-8 encoding on open.
 - **fetch-cc-changelog.sh GITHUB_TOKEN** — implemented optional Bearer auth
