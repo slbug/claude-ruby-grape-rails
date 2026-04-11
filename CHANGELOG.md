@@ -7,6 +7,38 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.11.6] - 2026-04-11
+
+### Added
+
+- **Artifact recovery for parallel-reviewer** — Explicit fallback when
+  background subagents fail to write review artifacts (known CC platform
+  limitation). Orchestrator checks each expected artifact path after agent
+  completion, extracts findings from agent conversation result, and writes
+  the file itself instead of relying on CC's unpredictable recovery cascade.
+- **Context-supervisor write fallback in planning-orchestrator** — Same
+  pattern: if context-supervisor fails to write `consolidated.md`, the
+  orchestrator reads the agent result and writes the summary itself.
+- **Agent Dispatch notes on confusable skills** — `rb:trace` and
+  `rb:investigate` skills now include explicit "this is a skill, not an
+  agent" guidance with correct `subagent_type` references (`call-tracer`,
+  `deep-bug-investigator`). Prevents CC from trying to spawn skill names
+  via the Agent tool.
+
+### Changed
+
+- **CLAUDE.md trimmed below 40k char threshold** — Removed duplicate
+  Reference Auto-Loading section, compressed Colon in Skill Names
+  divergence notes, removed redundant hooks.json JSON skeleton, and
+  compressed PreToolUse variant enumeration. No information loss.
+
+### Fixed
+
+- **Skill/agent confusion causing "Agent type not found" errors** —
+  Claude sometimes tried to spawn `rb-trace` as an agent instead of using
+  the `call-tracer` agent or invoking the `/rb:trace` skill. Agent Dispatch
+  sections disambiguate the two highest-risk skill/agent pairs.
+
 ## [1.11.5] - 2026-04-10
 
 ### Added
@@ -1219,7 +1251,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.5...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.6...HEAD
+[1.11.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.5...v1.11.6
 [1.11.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.4...v1.11.5
 [1.11.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.3...v1.11.4
 [1.11.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.2...v1.11.3

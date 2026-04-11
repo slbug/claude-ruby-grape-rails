@@ -170,6 +170,11 @@ research before plan synthesis:
    - a short `Reused context` section listing which cached files were
      incorporated
 
+If `context-supervisor` fails to write `consolidated.md` (known CC platform
+limitation with background Write permissions), read the agent's conversation
+result and write the summary yourself. Do NOT re-spawn — the compression
+work is done, only the file write failed.
+
 Use `summaries/consolidated.md` as the primary synthesis input. Read
 raw research files only when the summary points to unresolved detail.
 
