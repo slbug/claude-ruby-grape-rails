@@ -814,10 +814,8 @@ these are the main still-unadopted features worth tracking:
 
 ### Agents
 
-- `isolation: "worktree"` for agents that modify files, such as
-  `verification-runner` or parallel review tasks. CC 2.1.97 fixed parent-cwd
-  leak, CC 2.1.101 fixed Read/Edit access inside worktrees. Now viable to
-  evaluate.
+- `isolation: "worktree"` for file-modifying agents. CC 2.1.97 fixed cwd
+  leak, 2.1.101 fixed Read/Edit in worktrees. Now viable to evaluate.
 
 ### Hooks
 
@@ -838,6 +836,18 @@ these are the main still-unadopted features worth tracking:
   skills). Runs skill in a subagent with isolated context. Not suitable for
   skills needing conversation history (trace, investigate). Evaluate for
   self-contained skills like `rb:audit` or `rb:verify`.
+- **intent-detection as UserPromptSubmit hook** instead of competing skill.
+  Eval shows intent-detection is ORDER-SENSITIVE (range=0.15-0.23) due to
+  meta-routing competition with intro/plan/brainstorm. CLAUDE.md routing
+  instructions don't ship with the plugin — only skills and hooks do. A
+  `UserPromptSubmit` hook with `once: true` could inject a condensed routing
+  table on the first user message, eliminating skill competition. Multiple
+  `once: true` entries on the same event should work (session-title already
+  uses one). `disable-model-invocation: true` is broken for plugin skills
+  ([#22345](https://github.com/anthropics/claude-code/issues/22345)), so
+  the hook approach is the only viable path. Needs testing: does
+  UserPromptSubmit stdout injection provide enough context for accurate
+  routing without the full SKILL.md?
 
 ### Plugin
 
@@ -850,9 +860,8 @@ these are the main still-unadopted features worth tracking:
 
 ### Output Styles
 
-- `keep-coding-instructions` frontmatter field: documented for custom output
-  styles (preserves coding instructions in system prompt when `true`). Not
-  relevant unless the plugin ships an `output-styles/` directory.
+- `keep-coding-instructions` for custom output styles. Not relevant unless
+  the plugin ships an `output-styles/` directory.
 
 ### Adoption Criteria
 

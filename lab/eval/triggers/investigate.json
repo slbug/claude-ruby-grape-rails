@@ -35,7 +35,7 @@
       "routing": "lock"
     },
     {
-      "prompt": "After fixing the bug, also check if investigate needs updating",
+      "prompt": "Users report intermittent 500s on checkout — diagnose whether it's a race condition or a stale cache",
       "axis": "multi_step",
       "routing": "lock"
     }

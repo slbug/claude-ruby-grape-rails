@@ -12,7 +12,8 @@ Usage:
     python3 -m lab.eval.behavioral_scorer --skill plan --rotations 5  # Order-bias control
     python3 -m lab.eval.behavioral_scorer --skill plan --samples 3    # pass@k robustness
 
-Cost: Uses --bare mode. Full 51-skill run: ~$2 single-shot, ~$10 with rotations 5.
+Cost: Uses --bare mode (~$0.006/call avg, varies by skill complexity).
+Full 51-skill run (621 prompts): ~$3.70 single-shot, ~$19 with rotations 5, ~$11 with samples 3.
 """
 
 from __future__ import annotations

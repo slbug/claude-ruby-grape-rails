@@ -1,6 +1,6 @@
 ---
 name: intent-detection
-description: "First-message command router. Use when the user's opening message describes work without specifying an /rb: command and needs help picking the right workflow."
+description: "Detect user intent from their first message and suggest the best /rb: command. Use when the user describes a task (bug, feature, refactor) without specifying a command."
 user-invocable: false
 effort: low
 ---

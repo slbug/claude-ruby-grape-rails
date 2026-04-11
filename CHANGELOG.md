@@ -7,6 +7,37 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.11.8] - 2026-04-11
+
+### Fixed
+
+- **Corrected cost estimates from real verification runs.** Measured:
+  avg ~$0.006/call (was $0.005, varies $0.005-0.007 by skill complexity),
+  621 prompts across 51 skills (was 410). Updated docstrings in
+  `behavioral_scorer.py` and `trigger_expand.py`. Real costs: baseline
+  ~$3.70 (was ~$2), rotations N=5 ~$19 (was ~$4-6), samples N=3 ~$11
+  (was ~$6), trigger expand ~$0.01/skill (was ~$0.005).
+- **Semantic pairs timeout** — increased subprocess timeout from 60s to 120s.
+  51 descriptions in one prompt needs more processing time than single-prompt
+  routing calls.
+- **Sharpened skill descriptions for routing accuracy** — Applied contrastive
+  "When/When NOT" pattern (DiaFORGE method) to confusable skills:
+  `intent-detection` now explicitly excludes intro territory,
+  `intro` excludes intent-detection territory,
+  `investigate` excludes perf and rb:trace territory.
+  Improved investigate accuracy under rotations (83% → 92%).
+- **Fixed investigate corpus defect** — Replaced self-referential prompt
+  ("check if investigate needs updating") that all 5 rotations misrouted.
+  Replaced with genuine investigation prompt. Investigate accuracy under
+  rotations: 83% → 92%, hard tier: 50% → 75%.
+- **Fixed intent-detection terse prompt** — "which command?" too ambiguous
+  without task context, replaced with task-bearing variant.
+- **Intent-detection remains ORDER-SENSITIVE** (range=0.15-0.23) — a
+  structural limitation of meta-skills competing alongside the skills they
+  route to. Contrastive "NOT for X" description worsened accuracy (69%);
+  reverted to softer discriminator holding at 92%. Architectural fix
+  (pre-filter stage or system prompt directive) deferred to future version.
+
 ## [1.11.7] - 2026-04-11
 
 ### Added
@@ -1280,7 +1311,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.7...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.8...HEAD
+[1.11.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.7...v1.11.8
 [1.11.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.6...v1.11.7
 [1.11.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.5...v1.11.6
 [1.11.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.4...v1.11.5
