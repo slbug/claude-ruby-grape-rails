@@ -319,9 +319,11 @@ STACK_DETECTOR="${SCRIPT_DIR}/../../bin/detect-stack"
 DETECTED_STACK_RAW=""
 STACK_DETECTOR_OK=false
 if command -v ruby >/dev/null 2>&1 && [[ -f "$STACK_DETECTOR" && ! -L "$STACK_DETECTOR" ]]; then
-  if STACK_DETECTOR_OUTPUT=$(cd "$REPO_ROOT" && run_with_timeout "$RUBY_PLUGIN_DETECT_STACK_TIMEOUT" ruby "$STACK_DETECTOR" 2>/dev/null); then
+  STACK_DETECTOR_OUTPUT=$(cd "$REPO_ROOT" && run_with_timeout "$RUBY_PLUGIN_DETECT_STACK_TIMEOUT" ruby "$STACK_DETECTOR" 2>/dev/null)
+  STACK_DETECTOR_STATUS=$?
+  if [[ "$STACK_DETECTOR_STATUS" -eq 0 ]]; then
     STACK_DETECTOR_OK=true
-  elif [[ -n "$TIMEOUT_CMD" && $? -eq 124 ]]; then
+  elif [[ -n "$TIMEOUT_CMD" && "$STACK_DETECTOR_STATUS" -eq 124 ]]; then
     echo "WARNING: detect-stack timed out after ${RUBY_PLUGIN_DETECT_STACK_TIMEOUT}s. Continuing with partial detection." >&2
   fi
 fi

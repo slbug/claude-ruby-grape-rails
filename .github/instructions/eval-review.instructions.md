@@ -29,7 +29,7 @@ excludeAgent: "coding-agent"
 ## Context Budget (lab/eval/context_budget.py)
 
 - Advisory checks for CLAUDE.md size and framework skill paths: coverage
-- Zero API cost — file reads and YAML parsing only
+- Zero API cost — file reads and frontmatter scanning only
 - Wired into `--changed`, `--all`, and `--ci` modes in run_eval.sh
 - `EXPECTED_PATHS_SKILLS` list must be updated when adding framework skills
 
