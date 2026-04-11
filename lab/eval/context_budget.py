@@ -62,6 +62,9 @@ def _has_paths_field(path: Path) -> bool:
 
 def check_claude_md_size() -> tuple[bool, list[str]]:
     messages: list[str] = []
+    if not CLAUDE_MD.exists():
+        messages.append("  WARNING: CLAUDE.md not found")
+        return False, messages
     line_count = _count_lines(CLAUDE_MD)
     imports = _count_imports(CLAUDE_MD)
     import_total = sum(lines for _, lines in imports)
