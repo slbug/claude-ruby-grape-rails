@@ -1,6 +1,6 @@
 ---
 name: rb:investigate
-description: "Root-cause analysis for bugs, errors, and failures. Use when something is broken and the cause is unknown. NOT for performance tuning (use perf) or code flow tracing (use rb:trace)."
+description: "Root-cause analysis for bugs, errors, and failures. Use when something is broken and the cause is unknown. NOT for performance tuning (use /rb:perf) or code flow tracing (use /rb:trace)."
 argument-hint: <bug description>
 effort: high
 ---

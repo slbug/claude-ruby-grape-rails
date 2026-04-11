@@ -1,6 +1,6 @@
 ---
 name: rb:intro
-description: "Tutorial walkthrough of plugin commands and capabilities. Use when users want to learn what the plugin offers. NOT for routing a specific task to a command (use intent-detection)."
+description: "Tutorial walkthrough of plugin commands and capabilities. Use when users want to learn what the plugin offers, not when they already have a specific task to work on."
 argument-hint: "[--section N]"
 effort: low
 ---

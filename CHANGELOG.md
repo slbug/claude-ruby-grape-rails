@@ -25,7 +25,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `intent-detection` now explicitly excludes intro territory,
   `intro` excludes intent-detection territory,
   `investigate` excludes perf and rb:trace territory.
-  Fixes ORDER-SENSITIVE flag on intent-detection (was range=0.15).
+  Improved investigate accuracy under rotations (83% → 92%).
 - **Fixed investigate corpus defect** — Replaced self-referential prompt
   ("check if investigate needs updating") that all 5 rotations misrouted.
   Replaced with genuine investigation prompt. Investigate accuracy under
