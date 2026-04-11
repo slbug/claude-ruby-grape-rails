@@ -19,18 +19,20 @@ CLAUDE_MD = PROJECT_ROOT / "CLAUDE.md"
 MAX_CLAUDE_MD_LINES = 200
 
 EXPECTED_PATHS_SKILLS = [
-    "rails-idioms",
-    "active-record-patterns",
     "active-record-constraint-debug",
+    "active-record-patterns",
     "ar-n1-check",
-    "grape-idioms",
-    "sidekiq",
-    "karafka",
-    "hotwire-patterns",
-    "hotwire-native",
-    "sequel-patterns",
     "async-patterns",
     "deploy",
+    "grape-idioms",
+    "hotwire-native",
+    "hotwire-patterns",
+    "karafka",
+    "rails-idioms",
+    "safe-migrations",
+    "sequel-patterns",
+    "sidekiq",
+    "testing",
 ]
 
 

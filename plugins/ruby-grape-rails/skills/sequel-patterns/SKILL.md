@@ -5,10 +5,9 @@ user-invocable: false
 effort: medium
 paths:
   - app/models/**
-  - db/migrations/**
   - db/**
   - "**/app/models/**"
-  - "**/db/migrations/**"
+  - "**/db/**"
 ---
 # Sequel Patterns
 
