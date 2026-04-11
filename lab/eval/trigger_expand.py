@@ -59,13 +59,25 @@ def _quality_gate(
     skill_description: str,
 ) -> str | None:
     """Returns rejection reason, or None if candidate passes all gates."""
+    import re
     if len(candidate) < 10:
         return "too_short"
     if len(candidate) > 500:
         return "too_long"
-    # Skill name leak detection
-    if skill_name.lower() in candidate.lower():
+    # Skill name leak detection — aligned with hygiene.py rules:
+    # - /rb: prefixes are always leaks
+    # - rb:skillname command references are leaks
+    # - Multi-word (hyphenated) skill names as whole-word matches are leaks
+    # - Single common words (plan, review, work) appear naturally and are NOT leaks
+    prompt_lower = candidate.lower()
+    if "/rb:" in prompt_lower:
         return "skill_name_leak"
+    if f"rb:{skill_name}" in prompt_lower:
+        return "skill_name_leak"
+    if "-" in skill_name:
+        pattern = r"\b" + re.escape(skill_name.lower()) + r"\b"
+        if re.search(pattern, prompt_lower):
+            return "skill_name_leak"
     # Description echo: >50% token overlap with description
     if _token_overlap(candidate, skill_description) > 0.50:
         return "description_echo"

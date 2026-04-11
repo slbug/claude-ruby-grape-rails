@@ -42,10 +42,37 @@ class TestQualityGate(unittest.TestCase):
             "too_long",
         )
 
-    def test_skill_name_leak(self):
+    def test_skill_name_leak_rb_prefix(self):
+        """Detects /rb: prefix as leak."""
         self.assertEqual(
-            _quality_gate("I need the plan skill to help me", "plan", [], "Plan implementation"),
+            _quality_gate("Can you run /rb:plan for me?", "plan", [], "Plan implementation"),
             "skill_name_leak",
+        )
+
+    def test_skill_name_leak_command_ref(self):
+        """Detects rb:skillname command reference as leak."""
+        self.assertEqual(
+            _quality_gate("Use rb:plan to create a plan", "plan", [], "Plan implementation"),
+            "skill_name_leak",
+        )
+
+    def test_skill_name_leak_hyphenated(self):
+        """Detects multi-word skill names as whole-word leak."""
+        self.assertEqual(
+            _quality_gate(
+                "Use active-record-patterns for this",
+                "active-record-patterns", [], "AR patterns",
+            ),
+            "skill_name_leak",
+        )
+
+    def test_single_word_skill_not_leak(self):
+        """Single common words (plan, review) appearing naturally are NOT leaks."""
+        self.assertIsNone(
+            _quality_gate(
+                "I need to plan a new authentication feature",
+                "plan", [], "Plan implementation approach",
+            ),
         )
 
     def test_description_echo(self):
@@ -79,9 +106,10 @@ class TestQualityGate(unittest.TestCase):
             )
         )
 
-    def test_case_insensitive_skill_leak(self):
+    def test_case_insensitive_rb_prefix_leak(self):
+        """Case-insensitive /rb: detection."""
         self.assertEqual(
-            _quality_gate("Use the PLAN command", "plan", [], "desc"),
+            _quality_gate("Try /RB:plan for this task", "plan", [], "desc"),
             "skill_name_leak",
         )
 

@@ -571,13 +571,11 @@ class TestMutualExclusion(unittest.TestCase):
 
     def test_rotations_and_samples_both_gt_1_errors(self):
         """Cannot use both --rotations > 1 and --samples > 1."""
-        import argparse
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--rotations", type=int, default=1)
-        parser.add_argument("--samples", type=int, default=1)
-        args = parser.parse_args(["--rotations", "3", "--samples", "3"])
-        # The actual check is in main(), test the logic:
-        self.assertTrue(args.rotations > 1 and args.samples > 1)
+        from lab.eval.behavioral_scorer import main
+        with patch("sys.argv", ["scorer", "--skill", "plan", "--rotations", "3", "--samples", "3"]):
+            with self.assertRaises(SystemExit) as ctx:
+                main()
+            self.assertEqual(ctx.exception.code, 2)  # argparse error exit code
 
 
 if __name__ == "__main__":

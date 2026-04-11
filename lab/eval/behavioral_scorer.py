@@ -338,7 +338,7 @@ def _run_single_prompt(
         "correct": correct,
         "tier": tier,
         "routing": meta["routing"],
-        "rotation": rotation,
+        "run_index": rotation,  # rotation offset for rotations mode, 0 for samples
         "_call_result": call_result,
     }
 
@@ -450,6 +450,9 @@ def _aggregate_rotations(results: list[dict], num_rotations: int) -> list[dict]:
 
     Input: N*R results where each prompt appears R times (one per rotation).
     Output: N results with majority-voted correct, per_rotation_correct, per_rotation_choices.
+
+    Missing rotations (failed calls) are treated as incorrect for majority vote.
+    Rotation 0's chosen value is used only when rotation 0 is present.
     """
     from collections import defaultdict
     by_prompt: dict[str, list[dict]] = defaultdict(list)
@@ -459,16 +462,25 @@ def _aggregate_rotations(results: list[dict], num_rotations: int) -> list[dict]:
 
     aggregated = []
     for _key, group in by_prompt.items():
-        group.sort(key=lambda x: x.get("rotation", 0))
-        per_rotation_correct = [r["correct"] for r in group]
-        per_rotation_choices = [r["chosen"] for r in group]
+        group.sort(key=lambda x: x.get("run_index", 0))
+        # Build per-rotation arrays, padding missing rotations as incorrect
+        per_rotation_correct = [False] * num_rotations
+        per_rotation_choices: list[list[str] | None] = [None] * num_rotations
+        for r in group:
+            idx = r.get("run_index", 0)
+            if 0 <= idx < num_rotations:
+                per_rotation_correct[idx] = r["correct"]
+                per_rotation_choices[idx] = r["chosen"]
+
         voted_correct = _majority_vote(per_rotation_correct)
-        base = dict(group[0])
+        # Use rotation 0 if present, otherwise first successful rotation
+        rot0 = next((r for r in group if r.get("run_index", 0) == 0), group[0])
+        base = dict(rot0)
         base["correct"] = voted_correct
-        base["chosen"] = group[0]["chosen"]  # rotation 0
+        base["chosen"] = rot0["chosen"]
         base["per_rotation_correct"] = per_rotation_correct
         base["per_rotation_choices"] = per_rotation_choices
-        base.pop("rotation", None)
+        base.pop("run_index", None)
         aggregated.append(base)
     return aggregated
 
@@ -476,14 +488,13 @@ def _aggregate_rotations(results: list[dict], num_rotations: int) -> list[dict]:
 def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
     """Collapse sample-expanded results into per-prompt results with pass@k.
 
-    Input: results ordered by (sample, prompt) — sample 0 first, then sample 1, etc.
     Output: N results with accuracy from sample 0, pass_at_k, sample_consistency.
 
-    If sample 0 failed and was dropped, correct defaults to False (conservative).
-    If only later samples failed, sample 0's correct value is preserved.
+    Uses run_index=0 as canonical sample. If sample 0 failed and was dropped,
+    correct defaults to False. If only later samples failed, sample 0 is preserved.
+    Missing samples are treated as incorrect for pass@k and consistency.
     """
     from collections import defaultdict
-    # Group preserving insertion order — sample 0 results appear first
     by_prompt: dict[str, list[dict]] = defaultdict(list)
     for r in results:
         key = f"{r['prompt']}|{r['expected']}|{r['tier']}"
@@ -491,17 +502,26 @@ def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
 
     aggregated = []
     for _key, group in by_prompt.items():
-        per_sample_correct = [r["correct"] for r in group]
-        base = dict(group[0])  # sample 0 (first in submission order)
-        # Only override correct if sample 0 is missing (fewer results than expected
-        # AND group[0] is not actually sample 0 — detectable because we'd have
-        # fewer results than expected samples).
-        if len(group) < num_samples:
-            # Some samples failed. group[0] might not be sample 0.
-            # Conservative: mark as incorrect since we can't confirm sample 0.
-            # But if we have at least num_samples results for this prompt,
-            # group[0] IS sample 0 (submission order preserved).
-            base["correct"] = False
+        # Build per-sample arrays, padding missing samples as incorrect
+        per_sample_correct = [False] * num_samples
+        sample0_result = None
+        for r in group:
+            # In samples mode, run_index is always 0 (rotation stays 0).
+            # Use insertion order within group as sample index.
+            pass
+        # Since run_index=0 for all samples, use group order (submission order).
+        for i, r in enumerate(group):
+            if i < num_samples:
+                per_sample_correct[i] = r["correct"]
+            if i == 0:
+                sample0_result = r
+
+        if sample0_result is None:
+            # No results at all for this prompt — skip
+            continue
+
+        base = dict(sample0_result)
+        # sample 0's correct value preserved; missing later samples padded as False
         base["pass_at_k"] = any(per_sample_correct)
         base["per_sample_correct"] = per_sample_correct
         base["sample_consistency"] = all(
@@ -562,9 +582,9 @@ def score_skill(
             base_items.append((item, expected, tier))
 
     # Expand for rotations or samples — each produces independent work items.
-    # Tuple: (item, expected, tier, rotation)
-    # For samples mode, rotation stays 0 but submission order determines sample index.
-    # Results maintain submission order so _aggregate_samples groups correctly.
+    # Tuple: (item, expected, tier, run_index)
+    # run_index = rotation offset for rotations mode, sample index for samples mode.
+    # Outer loop is rep so same-prompt items are grouped by run_index in submission order.
     multiplier = max(rotations, samples)
     flat_items: list[tuple] = []
     for rep in range(multiplier):
