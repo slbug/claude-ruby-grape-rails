@@ -15,6 +15,25 @@ HOOK_NAME="${BASH_SOURCE[0]##*/}"
 # Configurable timeout for formatter commands (seconds).
 RUBY_PLUGIN_STANDARDRB_TIMEOUT="${RUBY_PLUGIN_STANDARDRB_TIMEOUT:-120}"
 
+# Resolve timeout command (macOS ships without `timeout`; coreutils provides `gtimeout`).
+if command -v timeout >/dev/null 2>&1; then
+  TIMEOUT_CMD="timeout"
+elif command -v gtimeout >/dev/null 2>&1; then
+  TIMEOUT_CMD="gtimeout"
+else
+  TIMEOUT_CMD=""
+fi
+
+# Run command with timeout if available, otherwise run directly.
+run_with_timeout() {
+  local secs="$1"; shift
+  if [[ -n "$TIMEOUT_CMD" ]]; then
+    "$TIMEOUT_CMD" "$secs" "$@"
+  else
+    "$@"
+  fi
+}
+
 emit_missing_dependency_block() {
   local dependency="$1"
 
@@ -183,12 +202,13 @@ if has_gem standard; then
     emit_tempfile_failure_warning
     exit 2
   }
-  (cd "$REPO_ROOT" && timeout "$RUBY_PLUGIN_STANDARDRB_TIMEOUT" bundle exec standardrb --fix -- "$FILE_PATH") 2>"$ERR_FILE"
+  (cd "$REPO_ROOT" && run_with_timeout "$RUBY_PLUGIN_STANDARDRB_TIMEOUT" bundle exec standardrb --fix -- "$FILE_PATH") 2>"$ERR_FILE"
   FMT_STATUS=$?
   if [[ "$FMT_STATUS" -eq 124 ]]; then
-    echo "WARNING: standardrb timed out after ${RUBY_PLUGIN_STANDARDRB_TIMEOUT}s. Skipping." >&2
+    echo "BLOCKED: standardrb timed out after ${RUBY_PLUGIN_STANDARDRB_TIMEOUT}s." >&2
+    echo "Raise timeout: export RUBY_PLUGIN_STANDARDRB_TIMEOUT=300" >&2
     safe_remove_temp_file "${ERR_FILE:-}" "${TMPDIR:-/tmp}/ruby-format.*" || true
-    exit 0
+    exit 2
   elif [[ "$FMT_STATUS" -ne 0 ]]; then
     # If auto-fix failed, report for manual fixing
     report_formatter_failure "NEEDS FORMAT" "bundle exec standardrb --fix $QUOTED_PATH" "$ERR_FILE"
@@ -207,12 +227,13 @@ elif has_gem rubocop; then
     emit_tempfile_failure_warning
     exit 2
   }
-  (cd "$REPO_ROOT" && timeout "$RUBY_PLUGIN_STANDARDRB_TIMEOUT" bundle exec rubocop --force-exclusion -a -- "$FILE_PATH") 2>"$ERR_FILE"
+  (cd "$REPO_ROOT" && run_with_timeout "$RUBY_PLUGIN_STANDARDRB_TIMEOUT" bundle exec rubocop --force-exclusion -a -- "$FILE_PATH") 2>"$ERR_FILE"
   FMT_STATUS=$?
   if [[ "$FMT_STATUS" -eq 124 ]]; then
-    echo "WARNING: rubocop timed out after ${RUBY_PLUGIN_STANDARDRB_TIMEOUT}s. Skipping." >&2
+    echo "BLOCKED: rubocop timed out after ${RUBY_PLUGIN_STANDARDRB_TIMEOUT}s." >&2
+    echo "Raise timeout: export RUBY_PLUGIN_STANDARDRB_TIMEOUT=300" >&2
     safe_remove_temp_file "${ERR_FILE:-}" "${TMPDIR:-/tmp}/ruby-format.*" || true
-    exit 0
+    exit 2
   elif [[ "$FMT_STATUS" -ne 0 ]]; then
     # If auto-fix failed, report for manual fixing
     report_formatter_failure "NEEDS FORMAT OR LINT FIX" "bundle exec rubocop --force-exclusion -a $QUOTED_PATH" "$ERR_FILE"

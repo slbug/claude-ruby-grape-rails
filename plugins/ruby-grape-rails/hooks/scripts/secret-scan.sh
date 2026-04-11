@@ -14,6 +14,25 @@ HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
 RUBY_PLUGIN_BETTERLEAKS_TIMEOUT="${RUBY_PLUGIN_BETTERLEAKS_TIMEOUT:-60}"
 
+# Resolve timeout command (macOS ships without `timeout`; coreutils provides `gtimeout`).
+if command -v timeout >/dev/null 2>&1; then
+  TIMEOUT_CMD="timeout"
+elif command -v gtimeout >/dev/null 2>&1; then
+  TIMEOUT_CMD="gtimeout"
+else
+  TIMEOUT_CMD=""
+fi
+
+# Run command with timeout if available, otherwise run directly.
+run_with_timeout() {
+  local secs="$1"; shift
+  if [[ -n "$TIMEOUT_CMD" ]]; then
+    "$TIMEOUT_CMD" "$secs" "$@"
+  else
+    "$@"
+  fi
+}
+
 emit_missing_dependency_block() {
   local dependency="$1"
 
@@ -185,7 +204,7 @@ run_betterleaks_dir() {
   BETTERLEAKS_RESULT=""
   BETTERLEAKS_ERROR=""
 
-  timeout "$RUBY_PLUGIN_BETTERLEAKS_TIMEOUT" "$BETTERLEAKS_PATH" dir "$target_dir" --no-banner --redact=100 >"$result_file" 2>"$err_file"
+  run_with_timeout "$RUBY_PLUGIN_BETTERLEAKS_TIMEOUT" "$BETTERLEAKS_PATH" dir "$target_dir" --no-banner --redact=100 >"$result_file" 2>"$err_file"
   status=$?
   if [[ "$status" -eq 124 ]]; then
     echo "WARNING: betterleaks timed out after ${RUBY_PLUGIN_BETTERLEAKS_TIMEOUT}s. Failing closed." >&2

@@ -12,6 +12,25 @@ HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
 RUBY_PLUGIN_DETECT_STACK_TIMEOUT="${RUBY_PLUGIN_DETECT_STACK_TIMEOUT:-15}"
 
+# Resolve timeout command (macOS ships without `timeout`; coreutils provides `gtimeout`).
+if command -v timeout >/dev/null 2>&1; then
+  TIMEOUT_CMD="timeout"
+elif command -v gtimeout >/dev/null 2>&1; then
+  TIMEOUT_CMD="gtimeout"
+else
+  TIMEOUT_CMD=""
+fi
+
+# Run command with timeout if available, otherwise run directly.
+run_with_timeout() {
+  local secs="$1"; shift
+  if [[ -n "$TIMEOUT_CMD" ]]; then
+    "$TIMEOUT_CMD" "$secs" "$@"
+  else
+    "$@"
+  fi
+}
+
 emit_runtime_dependency_warning() {
   local dependency="$1"
 
@@ -300,7 +319,7 @@ STACK_DETECTOR="${SCRIPT_DIR}/../../bin/detect-stack"
 DETECTED_STACK_RAW=""
 STACK_DETECTOR_OK=false
 if command -v ruby >/dev/null 2>&1 && [[ -f "$STACK_DETECTOR" && ! -L "$STACK_DETECTOR" ]]; then
-  if STACK_DETECTOR_OUTPUT=$(cd "$REPO_ROOT" && timeout "$RUBY_PLUGIN_DETECT_STACK_TIMEOUT" ruby "$STACK_DETECTOR" 2>/dev/null); then
+  if STACK_DETECTOR_OUTPUT=$(cd "$REPO_ROOT" && run_with_timeout "$RUBY_PLUGIN_DETECT_STACK_TIMEOUT" ruby "$STACK_DETECTOR" 2>/dev/null); then
     STACK_DETECTOR_OK=true
   elif [[ $? -eq 124 ]]; then
     echo "WARNING: detect-stack timed out after ${RUBY_PLUGIN_DETECT_STACK_TIMEOUT}s. Continuing with partial detection." >&2

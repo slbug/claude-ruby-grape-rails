@@ -57,8 +57,15 @@ Hook scripts wrap slow sub-commands with `timeout` and env var overrides:
 - `RUBY_PLUGIN_BETTERLEAKS_TIMEOUT` (default 60s) — secret-scan.sh
 - `RUBY_PLUGIN_DETECT_STACK_TIMEOUT` (default 15s) — detect-runtime.sh
 
-Exit code 124 from `timeout` is handled explicitly: advisory hooks skip
-(exit 0), security hooks fail closed (exit 2).
+Exit code 124 from `timeout`/`gtimeout` is handled explicitly:
+
+- **Delegated guardrails** (format-ruby, verify-ruby): fail closed (exit 2)
+  with remediation hint to raise the env var
+- **Security hooks** (secret-scan): fail closed (exit 2)
+- **Advisory hooks** (detect-runtime): skip and continue
+
+Scripts resolve `timeout` → `gtimeout` → no-timeout fallback via
+`run_with_timeout()` for macOS compatibility.
 
 ## Do NOT Flag
 
@@ -67,5 +74,6 @@ Exit code 124 from `timeout` is handled explicitly: advisory hooks skip
 - `HOOK_INPUT_VALUE` and `HOOK_NAME` variables from sourced libraries
 - `workspace-root-lib.sh` sourcing pattern
 - Long case statements in block-dangerous-ops.sh (necessary coverage)
-- `timeout "$VAR"` wrapping external commands (configurable timeout pattern)
+- `run_with_timeout` / `timeout` / `gtimeout` wrapping external commands
+- `TIMEOUT_CMD` resolution pattern (timeout → gtimeout → empty fallback)
 - `RUBY_PLUGIN_*` env var defaults via `${VAR:-default}` syntax
