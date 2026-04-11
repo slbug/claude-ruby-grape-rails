@@ -638,7 +638,7 @@ PY
 }
 
 run_context_budget() {
-  python3 -m lab.eval.context_budget || true
+  python3 -m lab.eval.context_budget
 }
 
 run_all_triggers() {
