@@ -184,6 +184,21 @@ _executor_lock = threading.Lock()
 _verbose_lock = threading.Lock()
 
 
+def _emit_info(msg: str) -> None:
+    """Emit an informational message that must be visible to the user.
+
+    CLI entry (main()) configures logging.basicConfig so log.info shows; but
+    programmatic callers (neighbor_regression, tests) skip main() and leave
+    the root logger at WARNING — log.info would drop silently. Falling back
+    to stderr when INFO is disabled keeps verbose output reliable regardless
+    of entry point.
+    """
+    if log.isEnabledFor(logging.INFO):
+        log.info(msg)
+    else:
+        print(msg, file=sys.stderr, flush=True)
+
+
 def run_haiku(prompt: str, verbose: bool = False,
               log_buf: list[str] | None = None) -> CallResult:
     """Ask haiku which skill(s) to route to. Returns CallResult."""
@@ -192,7 +207,7 @@ def run_haiku(prompt: str, verbose: bool = False,
         if log_buf is not None:
             log_buf.append(msg)
         else:
-            log.info(msg)
+            _emit_info(msg)
 
     settings_path = _resolved_settings_path
     try:
@@ -305,8 +320,34 @@ def _get_apfel_port() -> int:
 
 _APFEL_HOST = os.environ.get("APFEL_HOST", "127.0.0.1")
 _APFEL_PORT = _get_apfel_port()
-_APFEL_BASE_URL = os.environ.get(
-    "APFEL_BASE_URL", f"http://{_APFEL_HOST}:{_APFEL_PORT}/v1"
+
+
+def _normalize_apfel_base_url(url: str) -> str:
+    """Normalize APFEL_BASE_URL for urlsplit parsing.
+
+    Users commonly set values like ``127.0.0.1:11434/v1`` or
+    ``localhost:11434/v1`` (no scheme). urlsplit mis-parses both — the first
+    yields empty netloc, the second treats ``localhost`` as the scheme.
+    Prepend ``http://`` when no scheme is present so the rest of the module
+    (health-URL derivation, loopback detection) sees a well-formed URL.
+
+    Raises RuntimeError if the result still has no host — clearer than
+    producing a mangled ``http:///health`` later.
+    """
+    import urllib.parse
+
+    candidate = url if "://" in url else f"http://{url}"
+    parsed = urllib.parse.urlsplit(candidate)
+    if not parsed.hostname:
+        raise RuntimeError(
+            f"Invalid APFEL_BASE_URL {url!r}: could not parse host. "
+            f"Expected form: http://host:port/v1"
+        )
+    return candidate
+
+
+_APFEL_BASE_URL = _normalize_apfel_base_url(
+    os.environ.get("APFEL_BASE_URL", f"http://{_APFEL_HOST}:{_APFEL_PORT}/v1")
 )
 
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
@@ -390,7 +431,7 @@ def _ensure_apfel_server():
         # Start server — fixed --max-concurrent 16 covers typical worker counts
         # (--workers is capped at 32 but typical runs use 1-10); --permissive
         # reduces guardrail false positives on technical prompts.
-        log.info("Starting apfel --serve --permissive ...")
+        _emit_info("Starting apfel --serve --permissive ...")
         try:
             _apfel_server_proc = subprocess.Popen(
                 ["apfel", "--serve", "--max-concurrent", "16", "--permissive"],
@@ -408,7 +449,7 @@ def _ensure_apfel_server():
         for _ in range(20):
             try:
                 with urllib.request.urlopen(health_url, timeout=1):
-                    log.info("apfel server ready.")
+                    _emit_info("apfel server ready.")
                     return
             except (urllib.error.URLError, OSError):
                 import time
@@ -476,7 +517,7 @@ def run_apfel(prompt: str, verbose: bool = False,
         if log_buf is not None:
             log_buf.append(msg)
         else:
-            log.info(msg)
+            _emit_info(msg)
 
     try:
         client = _get_apfel_client()
