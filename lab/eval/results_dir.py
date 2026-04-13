@@ -43,12 +43,6 @@ PROVIDER_ENV_VAR: str = "RUBY_PLUGIN_EVAL_PROVIDER"
 _warned_invalid_env: set[str] = set()
 
 
-# Active provider — the single source of truth for which results directory
-# all behavioral eval tools read from and write to. Initialized from the env
-# var at import; CLI entry points flip it via set_active_provider().
-_active_provider: str = ""  # populated below after resolve_provider is defined
-
-
 def resolve_provider(name: str | None = None) -> str:
     """Return a supported provider name, falling back to DEFAULT_PROVIDER.
 
@@ -86,7 +80,10 @@ def results_dir(provider: str | None = None) -> Path:
     return RESULTS_BASE / resolve_provider(provider)
 
 
-_active_provider = resolve_provider(None)  # noqa: F811 — initialized properly now
+# Active provider — the single source of truth for which results directory
+# all behavioral eval tools read from and write to. Initialized from the env
+# var at import; CLI entry points flip it via set_active_provider().
+_active_provider: str = resolve_provider(None)
 
 
 def get_active_provider() -> str:

@@ -35,7 +35,7 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from . import results_dir as rd
-from .results_dir import SUPPORTED_PROVIDERS, resolve_provider
+from .results_dir import SUPPORTED_PROVIDERS
 from .trigger_scorer import load_all_descriptions, load_trigger_file, TRIGGERS_DIR
 
 log = logging.getLogger("behavioral_scorer")
