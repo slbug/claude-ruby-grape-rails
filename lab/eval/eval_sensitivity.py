@@ -15,8 +15,12 @@ import json
 import sys
 from pathlib import Path
 
+from .results_dir import results_dir
 
-RESULTS_DIR = Path(__file__).resolve().parent / "triggers" / "results"
+
+# Same provider-scoped cache directory the behavioral scorer writes to.
+# Tests patch this attribute directly.
+RESULTS_DIR = results_dir()
 
 LEVERAGE_THRESHOLD = 0.05  # 5% accuracy swing
 

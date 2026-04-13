@@ -8,33 +8,15 @@ Run behavioral_scorer.py first to populate cache.
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
+from ..results_dir import results_dir
 from ..schemas import AssertionResult, DimensionResult
 
 
-_RESULTS_BASE = Path(__file__).resolve().parent.parent / "triggers" / "results"
-
-_DEFAULT_PROVIDER = "apfel"
-_SUPPORTED_PROVIDERS = {"apfel", "haiku"}
-
-
-def _get_results_provider() -> str:
-    """Return a supported behavioral results provider name.
-
-    Validates RUBY_PLUGIN_EVAL_PROVIDER against the allowlist so it can't be
-    used to point RESULTS_DIR outside the triggers/results/ base (path
-    traversal via env var would otherwise be possible).
-    """
-    provider = os.environ.get("RUBY_PLUGIN_EVAL_PROVIDER", _DEFAULT_PROVIDER)
-    if provider in _SUPPORTED_PROVIDERS:
-        return provider
-    return _DEFAULT_PROVIDER
-
-
-# Provider for behavioral dimension — defaults to apfel, overridable via env.
-RESULTS_DIR = _RESULTS_BASE / _get_results_provider()
+# Provider for behavioral dimension — defaults to apfel, overridable via the
+# RUBY_PLUGIN_EVAL_PROVIDER env var. Tests patch this attribute directly.
+RESULTS_DIR = results_dir()
 
 
 def score(

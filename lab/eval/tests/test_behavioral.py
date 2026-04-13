@@ -41,7 +41,7 @@ def setUpModule() -> None:
     _ORIGINAL_PROVIDER = _bs._provider
     _ORIGINAL_RESULTS_DIR = _bs.RESULTS_DIR
     _bs._provider = "haiku"
-    _bs.RESULTS_DIR = _bs._RESULTS_BASE / "haiku"
+    _bs.RESULTS_DIR = _bs.results_dir("haiku")
 
 
 def tearDownModule() -> None:

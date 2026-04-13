@@ -1,7 +1,8 @@
-"""Behavioral trigger evaluation using haiku.
+"""Behavioral trigger evaluation.
 
-Tests whether Claude routes user prompts to the correct skill
-by sending all skill descriptions + one test prompt to haiku.
+Tests whether Claude routes user prompts to the correct skill by sending all
+skill descriptions + one test prompt to the active provider (apfel on-device
+by default, haiku via the Claude API as an alternative).
 
 Usage:
     python3 -m lab.eval.behavioral_scorer --skill plan          # Test one skill
@@ -32,15 +33,19 @@ import threading
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from .results_dir import (
+    DEFAULT_PROVIDER,
+    SUPPORTED_PROVIDERS,
+    resolve_provider,
+    results_dir,
+)
 from .trigger_scorer import load_all_descriptions, load_trigger_file, TRIGGERS_DIR
 
 log = logging.getLogger("behavioral_scorer")
 
 
-_RESULTS_BASE = TRIGGERS_DIR / "results"
-
 # Active provider — set by CLI --provider flag, default apfel.
-_provider: str = "apfel"
+_provider: str = DEFAULT_PROVIDER
 
 
 # Canonical results directory used for all cache I/O.
@@ -48,7 +53,7 @@ _provider: str = "apfel"
 # Provider-scoped so callers importing/patching RESULTS_DIR (neighbor_regression,
 # tests) read and write to the same location that score_skill writes to. Kept
 # in sync with _provider by main() when the CLI --provider flag changes it.
-RESULTS_DIR = _RESULTS_BASE / _provider
+RESULTS_DIR = results_dir(_provider)
 
 
 def _results_dir() -> Path:
@@ -318,7 +323,11 @@ def _ensure_apfel_server():
 
     with _apfel_server_lock:
         if _apfel_server_proc is not None:
-            return
+            if _apfel_server_proc.poll() is None:
+                return
+            # Cached handle but process has exited — clear and respawn.
+            log.warning("Cached apfel server process exited; restarting.")
+            _apfel_server_proc = None
 
         # Check if already up
         try:
@@ -353,18 +362,25 @@ def _ensure_apfel_server():
             except (urllib.error.URLError, OSError):
                 import time
                 time.sleep(0.5)
+        # Readiness timed out — tear down the half-started process so we don't
+        # leak it and so the next _ensure_apfel_server() call can retry.
+        _stop_apfel_server()
         raise RuntimeError("apfel --serve failed to start within 10s")
 
 
 def _stop_apfel_server():
-    """Kill apfel server if we started it."""
+    """Kill apfel server if we started it. Always clears the cached handle."""
     global _apfel_server_proc
-    if _apfel_server_proc and _apfel_server_proc.poll() is None:
-        _apfel_server_proc.terminate()
-        try:
-            _apfel_server_proc.wait(timeout=3)
-        except subprocess.TimeoutExpired:
-            _apfel_server_proc.kill()
+    proc = _apfel_server_proc
+    try:
+        if proc and proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=3)
+    finally:
         _apfel_server_proc = None
 
 
@@ -385,8 +401,8 @@ def _get_apfel_client():
                 import httpx as _httpx
             except ImportError:
                 raise RuntimeError(
-                    "openai package required for apfel provider. "
-                    "Install: .venv/bin/pip install openai"
+                    "openai and httpx packages required for apfel provider. "
+                    "Install: .venv/bin/pip install openai httpx"
                 )
             _apfel_client = OpenAI(
                 base_url=_APFEL_BASE_URL,
@@ -548,7 +564,7 @@ def _run_single_prompt(
     parallel: bool = False,
     rotation: int = 0,
 ) -> dict | None:
-    """Run one prompt item. Returns result dict, {"_failure": True} on haiku failure, or None on skip.
+    """Run one prompt item. Returns result dict, {"_failure": True} on provider failure, or None on skip.
 
     rotation: cyclic shift offset for the skill list (0 = default sorted order).
     """
@@ -1044,7 +1060,8 @@ def main() -> None:
                         help="Cyclic rotations for order-bias control (default 1, recommended 5)")
     parser.add_argument("--samples", type=int, default=1, metavar="N", choices=range(1, 8),
                         help="Independent samples for pass@k robustness (default 1, recommended 3)")
-    parser.add_argument("--provider", default="apfel", choices=["apfel", "haiku"],
+    parser.add_argument("--provider", default=DEFAULT_PROVIDER,
+                        choices=sorted(SUPPORTED_PROVIDERS),
                         help="Routing provider: apfel (on-device, free) or haiku (API, paid). Default: apfel")
     args = parser.parse_args()
 
@@ -1059,8 +1076,8 @@ def main() -> None:
         parser.error("--rotations and --samples are mutually exclusive (both > 1)")
 
     global _provider, RESULTS_DIR
-    _provider = args.provider
-    RESULTS_DIR = _RESULTS_BASE / _provider
+    _provider = resolve_provider(args.provider)
+    RESULTS_DIR = results_dir(_provider)
 
     # Start apfel server before workers (avoids race condition in threads)
     if _provider == "apfel":
