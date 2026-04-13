@@ -7,7 +7,7 @@ by default, haiku via the Claude API as an alternative).
 Usage:
     python3 -m lab.eval.behavioral_scorer --skill plan          # Test one skill
     python3 -m lab.eval.behavioral_scorer --all                  # Test all skills with triggers
-    python3 -m lab.eval.behavioral_scorer --all --cache          # Cache-only (no API calls)
+    python3 -m lab.eval.behavioral_scorer --all --cache          # Cache-only (no provider calls)
     python3 -m lab.eval.behavioral_scorer --all --summary        # Summary only
     python3 -m lab.eval.behavioral_scorer --all --workers 4      # Parallel (~3-4x speedup)
     python3 -m lab.eval.behavioral_scorer --skill plan --rotations 5  # Order-bias control
@@ -671,7 +671,7 @@ def _run_single_prompt(
     header = f"  [{skill_name} {label}({tier}){routing_tag}{rot_tag} {index}/{total}] {prompt}"
 
     if verbose and not parallel:
-        log.info(header)
+        _emit_info(header)
 
     log_lines: list[str] = []
     if verbose and parallel:
@@ -705,9 +705,9 @@ def _run_single_prompt(
         if parallel:
             with _verbose_lock:
                 for line in log_lines:
-                    log.info(line)
+                    _emit_info(line)
         else:
-            log.info(result_line)
+            _emit_info(result_line)
 
     result_entry = {
         "prompt": prompt,
@@ -1140,10 +1140,10 @@ def main() -> None:
     )
     parser.add_argument("--skill", help="Test one skill")
     parser.add_argument("--all", action="store_true", help="Test all skills with trigger files")
-    parser.add_argument("--cache", action="store_true", help="Cache-only: use cached results, skip stale/missing (no API calls)")
+    parser.add_argument("--cache", action="store_true", help="Cache-only: use cached results, skip stale/missing (no provider calls)")
     parser.add_argument("--summary", action="store_true", help="Print summary only")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON")
-    parser.add_argument("--verbose", action="store_true", help="Show prompt/response for each API call")
+    parser.add_argument("--verbose", action="store_true", help="Show prompt/response for each provider call")
     parser.add_argument("--limit", type=int, default=0, metavar="N",
                         help="Test only first N should_trigger + N should_not_trigger prompts per skill")
     parser.add_argument("--workers", type=int, default=1, metavar="N", choices=range(1, 33),
@@ -1175,7 +1175,7 @@ def main() -> None:
     RESULTS_DIR = results_dir(_provider)
 
     # Start apfel server before workers (avoids race condition in threads).
-    # Skip for --cache (documented as "no API calls" — pure filesystem reads).
+    # Skip for --cache (documented as "no provider calls" — pure filesystem reads).
     if _provider == "apfel" and not args.cache:
         _ensure_apfel_server()
 
@@ -1273,7 +1273,13 @@ def main() -> None:
             all_call_results.extend(crs)
 
             if "error" in result:
-                log.warning("SKIPPED (%s)", result['error'])
+                if args.verbose:
+                    log.warning("SKIPPED (%s)", result['error'])
+                else:
+                    # Non-verbose: "  Testing {name}... " was printed with end=" ",
+                    # so finish the line cleanly instead of interleaving a
+                    # timestamped log record mid-line.
+                    print(f"SKIPPED ({result['error']})", file=sys.stderr, flush=True)
                 continue
             all_results[name] = result
             total_accuracy += result.get("accuracy", 0)
@@ -1350,7 +1356,10 @@ def main() -> None:
         total_cost = sum(cr.cost for cr in successful)
         max_cost = max((cr.cost for cr in successful), default=0)
         avg_cost = total_cost / len(successful) if successful else 0
-        cost_lines = ["--- Cost Summary ---", f"  Total API calls: {len(successful)}"]
+        cost_lines = [
+            f"--- Cost Summary ({_provider}) ---",
+            f"  Total successful calls: {len(successful)}",
+        ]
         if failed:
             cost_lines.append(f"  Failed calls:    {failed}")
         cost_lines.extend([

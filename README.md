@@ -758,13 +758,15 @@ Common entrypoints:
 - `make eval-behavioral-verbose` / `npm run eval:behavioral:verbose` — same with
   verbose cache/score output
 - `make eval-behavioral-fresh` / `npm run eval:behavioral:fresh` — ignore
-  cache, re-run via Claude CLI with Haiku access
+  cache, re-run via the default provider (apfel on-device, or `--provider
+  haiku` for Claude API)
 - `make eval-behavioral-fresh-verbose` / `npm run eval:behavioral:fresh:verbose`
   — fresh run with full prompt/response debug output
 - `make eval-ablation` or `npm run eval:ablation` for matcher signal/noise
   classification (deterministic, no API calls)
 - `make eval-neighbor` or `npm run eval:neighbor` for confusable-pair
-  regression detection on changed skills (requires Claude CLI with Haiku access)
+  regression detection on changed skills (requires the active provider —
+  apfel on-device by default, or Claude CLI with Haiku via `--provider haiku`)
 - `make eval-hygiene` or `npm run eval:hygiene` for trigger corpus
   contamination scanning
 - contributor eval tooling requires `python3` 3.10+
