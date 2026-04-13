@@ -4,7 +4,7 @@ description: Reviews Ruby/Rails/Grape test code for spec quality, fixture/factor
 disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
-maxTurns: 15
+maxTurns: 25
 omitClaudeMd: true
 skills:
   - testing
@@ -23,6 +23,25 @@ Review for:
 - missing regression tests for bugs fixed in this diff
 
 Escalate severe gaps when public behavior changed without tests.
+
+## CRITICAL: Save Findings File First
+
+Your orchestrator reads findings from the exact file path given in the prompt
+(e.g., `.claude/reviews/testing-reviewer/{review-slug}.md`). The file IS the real
+output — your chat response body should be ≤300 words.
+
+**Turn budget rules:**
+
+1. First ~10 turns: Read/Grep analysis
+2. By turn ~15: call `Write` with whatever findings you have — do NOT wait
+   until the end. A partial file is better than no file when turns run out.
+3. Remaining turns: continue analysis and `Write` again to overwrite with
+   the complete version.
+4. If the prompt does NOT include an output path, default to
+   `.claude/reviews/testing-reviewer/{review-slug}.md`.
+
+You have `Write` for your own report ONLY. `Edit` and `NotebookEdit` are
+disallowed — you cannot modify source code.
 
 ## Review Artifact Contract
 

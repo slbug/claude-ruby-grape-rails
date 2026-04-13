@@ -9,6 +9,10 @@
 # Node.js (for linting tools)
 node_modules/
 
+# Python virtual environment
+.venv/
+.envrc
+
 # Python cache
 __pycache__/
 *.pyc

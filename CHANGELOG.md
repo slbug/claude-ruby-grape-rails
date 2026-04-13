@@ -7,6 +7,66 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.12.3] - 2026-04-12
+
+### Added
+
+- **Apfel provider for behavioral eval** — on-device Apple Foundation Model
+  via `apfel --serve`. Zero API cost, ~1-2s per call. Enable with
+  `--provider apfel` (default). Auto-starts server, connects via OpenAI
+  Python SDK, reuses connection pool. Results saved to
+  `lab/eval/triggers/results/apfel/`; haiku results separate under
+  `lab/eval/triggers/results/haiku/`.
+- **Provider-aware behavioral dimension** — `RUBY_PLUGIN_EVAL_PROVIDER` env
+  var selects which cached results (apfel/haiku) feed the behavioral eval.
+- **Error classification in behavioral scorer** — `context_overflow`,
+  `timeout`, `guardrail_blocked`, `server_unavailable`, `runtime_error`,
+  `usage_error`, `model_unavailable`, `rate_limited`, `parse_error`,
+  `not_found`. Surfaced per-skill in `failure_types` dict.
+- **Python venv** — `.venv/` with `openai` + `httpx` for apfel provider.
+  Direnv `.envrc` auto-activates (gitignored).
+- **Review agent "Save Findings File First" guidance** — all 9 review
+  agents (ruby-reviewer, testing-reviewer, iron-law-judge, security-analyzer,
+  sidekiq-specialist, deployment-validator, verification-runner,
+  data-integrity-reviewer, migration-safety-reviewer) now instruct Claude
+  to write findings file by turn ~15 with partial content if needed, then
+  overwrite with final version. Pattern borrowed from claude-elixir-phoenix
+  v2.8.1 fix for agents not writing artifacts.
+
+### Changed
+
+- **Review agent `maxTurns: 15 → 25`** (verification-runner: 10 → 20) —
+  more runway before hitting turn limit without writing findings.
+- **`logging` module for behavioral scorer** — replaced scattered
+  `print(..., file=sys.stderr)` + custom `_ts()` timestamp helper with
+  standard Python `logging` (`%(asctime)s %(message)s` format). Per-thread
+  log buffering preserved for parallel workers.
+- **Behavioral scorer argparse** — new `--provider {apfel,haiku}` flag.
+- **Stripped markdown code fences from apfel responses** — apfel sometimes
+  wraps routing output in ` ``` ` fences; parser now strips them.
+- **Deduplicated apfel skill parser output** — apfel occasionally repeats
+  skill names; parser now preserves order and drops duplicates.
+- **Apfel server config** — launched with `--max-concurrent 16` to match
+  worker count; `x_context_output_reserve: 64` to maximize input budget;
+  `max_retries=0` on client to avoid SDK-level retry loops masking issues.
+- **Timeout retry for apfel** — up to 3 attempts on timeout (Apple FM can
+  enter transient slow states). Other error types do not retry.
+
+### Fixed
+
+- **Apfel context overflow handling** — full skill descriptions now sent
+  (no truncation); overflow prompts surface as `context_overflow` failures
+  instead of silent truncation with wrong routing.
+- **Apfel guardrail false positives** — classified as `guardrail_blocked`
+  error type (was previously `unknown`). Server-side guardrail is hardcoded
+  `false` in upstream apfel; `--permissive` passed but currently no-op on
+  server mode.
+- **Apfel server auto-start race** — `_ensure_apfel_server()` called once
+  from `main()` before worker threads spawn (was lazy-init from each
+  thread, causing 6x startup log spam with workers=6).
+- **"haiku call failed" log message** → `"{provider} call failed
+  [{error_type}]"` — surfaces which provider and why.
+
 ## [1.12.2] - 2026-04-11
 
 ### Added
@@ -1407,7 +1467,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.2...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.3...HEAD
+[1.12.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.2...v1.12.3
 [1.12.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.1...v1.12.2
 [1.12.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.0...v1.12.1
 [1.12.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.11.8...v1.12.0

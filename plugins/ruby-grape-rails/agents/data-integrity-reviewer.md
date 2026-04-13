@@ -4,7 +4,7 @@ description: Reviews Active Record or Sequel models, migrations, and transaction
 disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
-maxTurns: 15
+maxTurns: 25
 omitClaudeMd: true
 skills:
   - active-record-patterns
@@ -19,6 +19,25 @@ Check for:
 3. **Partial index safety** - concurrent operations
 4. **Data validation gaps** - model validates but DB doesn't enforce
 5. **Rollback safety** - data changes that can't be undone
+
+## CRITICAL: Save Findings File First
+
+Your orchestrator reads findings from the exact file path given in the prompt
+(e.g., `.claude/reviews/data-integrity-reviewer/{review-slug}.md`). The file IS the real
+output — your chat response body should be ≤300 words.
+
+**Turn budget rules:**
+
+1. First ~10 turns: Read/Grep analysis
+2. By turn ~15: call `Write` with whatever findings you have — do NOT wait
+   until the end. A partial file is better than no file when turns run out.
+3. Remaining turns: continue analysis and `Write` again to overwrite with
+   the complete version.
+4. If the prompt does NOT include an output path, default to
+   `.claude/reviews/data-integrity-reviewer/{review-slug}.md`.
+
+You have `Write` for your own report ONLY. `Edit` and `NotebookEdit` are
+disallowed — you cannot modify source code.
 
 ## Review Checklist
 

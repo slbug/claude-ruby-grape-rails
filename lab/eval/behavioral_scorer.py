@@ -23,6 +23,7 @@ import atexit
 import dataclasses
 import hashlib
 import json
+import logging
 import os
 import signal
 import subprocess
@@ -33,8 +34,22 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from .trigger_scorer import load_all_descriptions, load_trigger_file, TRIGGERS_DIR
 
+log = logging.getLogger("behavioral_scorer")
 
-RESULTS_DIR = TRIGGERS_DIR / "results"
+
+_RESULTS_BASE = TRIGGERS_DIR / "results"
+
+# Active provider — set by CLI --provider flag, default apfel.
+_provider: str = "apfel"
+
+
+def _results_dir() -> Path:
+    """Return provider-scoped results directory."""
+    return _RESULTS_BASE / _provider
+
+
+# Legacy alias for imports (dimensions/behavioral.py)
+RESULTS_DIR = _RESULTS_BASE
 
 # Resolved settings path — defaults to bare_settings.json, replaced by
 # _resolve_settings() at startup when a temp auth settings file is needed.
@@ -84,12 +99,10 @@ def _resolve_settings() -> str:
         )
         token = result.stdout.strip()
         if not token or result.returncode != 0:
-            print("WARNING: apiKeyHelper failed, falling back to per-call helper",
-                  file=sys.stderr)
+            log.warning("apiKeyHelper failed, falling back to per-call helper")
             return str(base_path)
     except Exception as exc:
-        print(f"WARNING: apiKeyHelper failed ({exc}), falling back to per-call helper",
-              file=sys.stderr)
+        log.warning("apiKeyHelper failed (%s), falling back to per-call helper", exc)
         return str(base_path)
 
     # Set token in env — inherited by all subprocess workers
@@ -108,11 +121,12 @@ def _resolve_settings() -> str:
 
 @dataclasses.dataclass(slots=True)
 class CallResult:
-    """Result from a single run_haiku() call."""
+    """Result from a single provider call."""
     skills: list[str] | None
     cost: float = 0.0
     input_tokens: int = 0
     output_tokens: int = 0
+    error_type: str | None = None  # "context_overflow", "timeout", "auth", "budget", "unknown"
 
 
 def content_hash(skill_name: str, descriptions: dict[str, str]) -> str:
@@ -129,7 +143,7 @@ def build_routing_prompt(
     user_prompt: str,
     rotation: int = 0,
 ) -> str:
-    """Build the routing prompt for haiku.
+    """Build the routing prompt for the active provider.
 
     System-level instructions are in _ROUTING_SYSTEM_PROMPT (passed via --system-prompt).
     This function builds only the user-turn content: skill list + user message.
@@ -141,7 +155,7 @@ def build_routing_prompt(
         rotation = rotation % len(items)
         items = items[rotation:] + items[:rotation]
     desc_list = "\n".join(
-        f"- {name}: {desc[:150]}" for name, desc in items
+        f"- {name}: {desc}" for name, desc in items
     )
     return (
         f"Available skills:\n{desc_list}\n\n"
@@ -165,7 +179,7 @@ def run_haiku(prompt: str, verbose: bool = False,
         if log_buf is not None:
             log_buf.append(msg)
         else:
-            print(msg, file=sys.stderr)
+            log.info(msg)
 
     settings_path = _resolved_settings_path
     try:
@@ -185,22 +199,36 @@ def run_haiku(prompt: str, verbose: bool = False,
             input=prompt,
             capture_output=True, text=True, timeout=60,
         )
-        if result.returncode != 0:
+        # Try parsing JSON even on non-zero exit (claude returns JSON with error info)
+        error_type = None
+        try:
+            data = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            data = None
+
+        if result.returncode != 0 or (data and data.get("is_error")):
+            if data:
+                subtype = data.get("subtype", "")
+                if "budget" in subtype:
+                    error_type = "budget"
+                elif "max_turns" in subtype:
+                    error_type = "max_turns"
+                else:
+                    error_type = "unknown"
+            else:
+                error_type = "unknown"
             if verbose:
-                _log(f"--- RESPONSE (rc={result.returncode}) ---")
+                _log(f"--- RESPONSE (rc={result.returncode}, error={error_type}) ---")
                 _log(result.stdout.strip()[:200] or "(empty)")
                 if result.stderr.strip():
                     _log(f"STDERR: {result.stderr.strip()[:200]}")
                 _log("--- END RESPONSE ---")
-            return CallResult(skills=None)
+            return CallResult(skills=None, error_type=error_type)
 
-        # Parse JSON response
-        try:
-            data = json.loads(result.stdout)
-        except json.JSONDecodeError:
+        if data is None:
             if verbose:
                 _log("ERROR: could not parse JSON response")
-            return CallResult(skills=None)
+            return CallResult(skills=None, error_type="parse_error")
 
         text = data.get("result", "")
         cost = data.get("total_cost_usd", 0)
@@ -232,11 +260,204 @@ def run_haiku(prompt: str, verbose: bool = False,
     except subprocess.TimeoutExpired:
         if verbose:
             _log("TIMEOUT after 60s")
-        return CallResult(skills=None)
+        return CallResult(skills=None, error_type="timeout")
     except Exception as exc:
         if verbose:
             _log(f"ERROR: {exc}")
-        return CallResult(skills=None)
+        return CallResult(skills=None, error_type="unknown")
+
+
+_apfel_client = None
+_apfel_server_proc = None
+_APFEL_HOST = os.environ.get("APFEL_HOST", "127.0.0.1")
+_APFEL_PORT = int(os.environ.get("APFEL_PORT", "11434"))
+_APFEL_BASE_URL = os.environ.get(
+    "APFEL_BASE_URL", f"http://{_APFEL_HOST}:{_APFEL_PORT}/v1"
+)
+
+
+def _ensure_apfel_server():
+    """Start apfel --serve if not already running, wait for readiness.
+
+    Call once from main() before spawning workers — not from threads.
+    """
+    global _apfel_server_proc
+    import urllib.request
+    import urllib.error
+
+    if _apfel_server_proc is not None:
+        return
+
+    health_url = f"http://{_APFEL_HOST}:{_APFEL_PORT}/health"
+
+    # Check if already up
+    try:
+        urllib.request.urlopen(health_url, timeout=2)
+        return  # server already running
+    except (urllib.error.URLError, OSError):
+        pass
+
+    # Start server — raise max-concurrent to match worker count, permissive to
+    # reduce guardrail false positives on technical prompts
+    log.info("Starting apfel --serve --permissive ...")
+    _apfel_server_proc = subprocess.Popen(
+        ["apfel", "--serve", "--max-concurrent", "16", "--permissive"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    atexit.register(_stop_apfel_server)
+
+    # Wait for readiness (up to 10s)
+    for _ in range(20):
+        try:
+            urllib.request.urlopen(health_url, timeout=1)
+            log.info("apfel server ready.")
+            return
+        except (urllib.error.URLError, OSError):
+            import time
+            time.sleep(0.5)
+    raise RuntimeError("apfel --serve failed to start within 10s")
+
+
+def _stop_apfel_server():
+    """Kill apfel server if we started it."""
+    global _apfel_server_proc
+    if _apfel_server_proc and _apfel_server_proc.poll() is None:
+        _apfel_server_proc.terminate()
+        try:
+            _apfel_server_proc.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            _apfel_server_proc.kill()
+        _apfel_server_proc = None
+
+
+def _get_apfel_client():
+    """Lazy-init OpenAI client for apfel server. Auto-starts server if needed."""
+    global _apfel_client
+    if _apfel_client is None:
+        try:
+            from openai import OpenAI
+            import httpx as _httpx
+        except ImportError:
+            raise RuntimeError(
+                "openai package required for apfel provider. "
+                "Install: .venv/bin/pip install openai"
+            )
+        _apfel_client = OpenAI(
+            base_url=_APFEL_BASE_URL,
+            api_key="unused",
+            timeout=_httpx.Timeout(60.0, connect=5.0),
+            max_retries=0,
+        )
+    return _apfel_client
+
+
+def run_apfel(prompt: str, verbose: bool = False,
+              log_buf: list[str] | None = None) -> CallResult:
+    """Ask Apple Foundation Model which skill(s) to route to via apfel server.
+
+    Auto-starts `apfel --serve` if not running. On-device, zero cost, ~4096 token context.
+    """
+    global _apfel_server_proc
+
+    def _log(msg: str) -> None:
+        if log_buf is not None:
+            log_buf.append(msg)
+        else:
+            log.info(msg)
+
+    try:
+        client = _get_apfel_client()
+        # Retry on timeout up to 2 times (Apple FM can get into transient slow states)
+        last_exc = None
+        resp = None
+        for attempt in range(3):
+            try:
+                resp = client.chat.completions.create(
+                    model="apple-foundationmodel",
+                    messages=[
+                        {"role": "system", "content": _ROUTING_SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
+                    extra_body={"x_context_output_reserve": 64},
+                )
+                break
+            except Exception as e:
+                msg = str(e).lower()
+                if "timed out" in msg or "timeout" in msg:
+                    last_exc = e
+                    if verbose and attempt < 2:
+                        _log(f"--- APFEL TIMEOUT (attempt {attempt+1}/3, retrying) ---")
+                    continue
+                raise
+        if resp is None:
+            raise last_exc if last_exc else RuntimeError("apfel call failed without exception")
+
+        text = resp.choices[0].message.content or ""
+        usage = resp.usage
+        in_tok = usage.prompt_tokens if usage else 0
+        out_tok = usage.completion_tokens if usage else 0
+
+        if verbose:
+            _log(f"--- APFEL RESPONSE (on-device, $0, {in_tok}in/{out_tok}out) ---")
+            _log(text.strip() or "(empty)")
+            _log("--- END RESPONSE ---")
+
+        # Strip markdown code fences apfel sometimes wraps output in
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = "\n".join(
+                l for l in cleaned.split("\n")
+                if not l.strip().startswith("```")
+            )
+
+        skills = []
+        seen: set[str] = set()
+        for line in cleaned.strip().split("\n"):
+            line = line.strip().lstrip("-*0123456789.) ").strip()
+            if " — " in line:
+                line = line.split(" — ")[0].strip()
+            if " (" in line:
+                line = line.split(" (")[0].strip()
+            if " -" in line:
+                line = line.split(" -")[0].strip()
+            line = line.strip("`").strip()
+            if line and line.lower() != "none" and not line.startswith("No ") and line not in seen:
+                skills.append(line)
+                seen.add(line)
+        return CallResult(skills=skills, cost=0.0, input_tokens=in_tok, output_tokens=out_tok)
+
+    except Exception as exc:
+        exc_str = str(exc)
+        error_type = "unknown"
+        if "context" in exc_str.lower() or "overflow" in exc_str.lower() or "4096" in exc_str:
+            error_type = "context_overflow"
+        elif "guardrail" in exc_str.lower() or "safety" in exc_str.lower():
+            error_type = "guardrail_blocked"
+        elif "timed out" in exc_str.lower() or "timeout" in exc_str.lower():
+            error_type = "timeout"
+        elif "connection" in exc_str.lower() or "refused" in exc_str.lower():
+            error_type = "server_unavailable"
+            # Server may have crashed — try to restart for subsequent calls
+            if _apfel_server_proc and _apfel_server_proc.poll() is not None:
+                _apfel_server_proc = None
+                try:
+                    _ensure_apfel_server()
+                except RuntimeError:
+                    pass  # restart failed, will error again on next call
+        if verbose:
+            _log(f"--- APFEL ERROR ({error_type}) ---")
+            _log(exc_str[:300])
+            _log("--- END ---")
+        return CallResult(skills=None, error_type=error_type)
+
+
+def _run_provider(prompt: str, verbose: bool = False,
+                  log_buf: list[str] | None = None) -> CallResult:
+    """Dispatch to active provider."""
+    if _provider == "apfel":
+        return run_apfel(prompt, verbose=verbose, log_buf=log_buf)
+    return run_haiku(prompt, verbose=verbose, log_buf=log_buf)
 
 
 def extract_prompt(item) -> str:
@@ -297,25 +518,27 @@ def _run_single_prompt(
     header = f"  [{skill_name} {label}({tier}){routing_tag}{rot_tag} {index}/{total}] {prompt}"
 
     if verbose and not parallel:
-        print(header, file=sys.stderr)
+        log.info(header)
 
     log_lines: list[str] = []
     if verbose and parallel:
         log_lines.append(header)
 
     full_prompt = build_routing_prompt(descriptions, prompt, rotation=rotation)
-    call_result = run_haiku(full_prompt, verbose=verbose,
-                            log_buf=log_lines if parallel else None)
+    call_result = _run_provider(full_prompt, verbose=verbose,
+                                log_buf=log_lines if parallel else None)
     chosen = call_result.skills
 
     if chosen is None:
         if verbose:
-            log_lines.append("  -> SKIPPED (haiku call failed)")
+            error_hint = f" [{call_result.error_type}]" if call_result.error_type else ""
+            log_lines.append(f"  -> SKIPPED ({_provider} call failed{error_hint})")
             if parallel:
                 with _verbose_lock:
-                    print("\n".join(log_lines), file=sys.stderr)
+                    for line in log_lines:
+                        log.warning(line)
             else:
-                print(log_lines[-1], file=sys.stderr)
+                log.warning(log_lines[-1])
         return {"_failure": True, "_call_result": call_result}
 
     correct = _check_correct(
@@ -328,11 +551,12 @@ def _run_single_prompt(
         log_lines.append(result_line)
         if parallel:
             with _verbose_lock:
-                print("\n".join(log_lines), file=sys.stderr)
+                for line in log_lines:
+                    log.info(line)
         else:
-            print(result_line, file=sys.stderr)
+            log.info(result_line)
 
-    return {
+    result_entry = {
         "prompt": prompt,
         "expected": expected,
         "chosen": chosen,
@@ -341,6 +565,9 @@ def _run_single_prompt(
         "routing": meta["routing"],
         "_call_result": call_result,
     }
+    if call_result.error_type:
+        result_entry["error_type"] = call_result.error_type
+    return result_entry
 
 
 def _run_prompt_batch(
@@ -410,7 +637,7 @@ def _run_prompt_batch(
                     errors.append(f"{type(exc).__name__}: {exc}")
                     if verbose:
                         with _verbose_lock:
-                            traceback.print_exc(file=sys.stderr)
+                            log.warning(traceback.format_exc())
                     continue
                 ri, pid = meta_per_future[idx]
                 _collect(result, ri, pid)
@@ -419,9 +646,18 @@ def _run_prompt_batch(
                 _executor = None
 
     if errors and not verbose:
-        print(f"  {len(errors)} worker failures: {', '.join(set(errors))}", file=sys.stderr)
+        log.warning("  %d worker failures: %s", len(errors), ", ".join(set(errors)))
 
     return results, failures, call_results
+
+
+def _count_failure_types(call_results: list[CallResult]) -> dict[str, int]:
+    """Count failures by error_type from call results."""
+    counts: dict[str, int] = {}
+    for cr in call_results:
+        if cr.skills is None and cr.error_type:
+            counts[cr.error_type] = counts.get(cr.error_type, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def _compute_metrics(results: list[dict]) -> dict:
@@ -567,7 +803,7 @@ def score_skill(
     """Score trigger accuracy for one skill. Returns (score_dict, call_results)."""
     if rotations > 1 and samples > 1:
         raise ValueError("rotations and samples are mutually exclusive; only one may be > 1")
-    cache_path = RESULTS_DIR / _result_filename(skill_name, rotations, samples)
+    cache_path = _results_dir() / _result_filename(skill_name, rotations, samples)
 
     if use_cache:
         if cache_path.is_file():
@@ -630,7 +866,7 @@ def score_skill(
     )
 
     if not all_results and total_failures > 0:
-        return {"skill": skill_name, "error": f"all {total_failures} haiku calls failed"}, all_call_results
+        return {"skill": skill_name, "error": f"all {total_failures} {_provider} calls failed"}, all_call_results
 
     # Aggregate multi-run results
     if rotations > 1:
@@ -657,6 +893,8 @@ def score_skill(
         "skill": skill_name,
         **overall,
         "failures": total_failures,
+        "failure_types": _count_failure_types(all_call_results),
+        "provider": _provider,
         "easy_accuracy": easy_metrics["accuracy"],
         "easy_precision": easy_metrics["precision"],
         "easy_recall": easy_metrics["recall"],
@@ -737,7 +975,7 @@ def score_skill(
         "samples": samples,
     }
 
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    _results_dir().mkdir(parents=True, exist_ok=True)
     cache_path.write_text(json.dumps(score_data, indent=2) + "\n", encoding="utf-8")
 
     return score_data, all_call_results
@@ -759,10 +997,26 @@ def main() -> None:
                         help="Cyclic rotations for order-bias control (default 1, recommended 5)")
     parser.add_argument("--samples", type=int, default=1, metavar="N", choices=range(1, 8),
                         help="Independent samples for pass@k robustness (default 1, recommended 3)")
+    parser.add_argument("--provider", default="apfel", choices=["apfel", "haiku"],
+                        help="Routing provider: apfel (on-device, free) or haiku (API, paid). Default: apfel")
     args = parser.parse_args()
+
+    logging.basicConfig(
+        format="%(asctime)s %(message)s",
+        datefmt="%H:%M:%S",
+        level=logging.INFO if args.verbose else logging.WARNING,
+        stream=sys.stderr,
+    )
 
     if args.rotations > 1 and args.samples > 1:
         parser.error("--rotations and --samples are mutually exclusive (both > 1)")
+
+    global _provider
+    _provider = args.provider
+
+    # Start apfel server before workers (avoids race condition in threads)
+    if _provider == "apfel":
+        _ensure_apfel_server()
 
     # Signal handler: cancel pending futures, wait for running workers.
     # Use non-blocking acquire — signal runs on main thread which may
@@ -779,8 +1033,7 @@ def main() -> None:
             if acquired:
                 _executor_lock.release()
         if executor is not None:
-            print("\nInterrupted — cancelling pending work, waiting for running workers.",
-                  file=sys.stderr)
+            log.warning("Interrupted — cancelling pending work, waiting for running workers.")
             executor.shutdown(wait=True, cancel_futures=True)
         raise SystemExit(130)
 
@@ -848,7 +1101,10 @@ def main() -> None:
             triggers = load_trigger_file(name)
             if not triggers:
                 continue
-            print(f"  Testing {name}...", end="\n" if args.verbose else " ", flush=True, file=sys.stderr)
+            if args.verbose:
+                log.info("  Testing %s...", name)
+            else:
+                print(f"  Testing {name}...", end=" ", flush=True, file=sys.stderr)
             result, crs = score_skill(name, descriptions, args.cache,
                                       verbose=args.verbose, limit=args.limit,
                                       workers=args.workers,
@@ -856,7 +1112,7 @@ def main() -> None:
             all_call_results.extend(crs)
 
             if "error" in result:
-                print(f"SKIPPED ({result['error']})", file=sys.stderr)
+                log.warning("SKIPPED (%s)", result['error'])
                 continue
             all_results[name] = result
             total_accuracy += result.get("accuracy", 0)
@@ -865,11 +1121,11 @@ def main() -> None:
                 f"accuracy={result.get('accuracy', 0):.0%} "
                 f"(P={result.get('precision', 0):.0%} "
                 f"R={result.get('recall', 0):.0%})",
-                file=sys.stderr,
+                file=sys.stderr, flush=True,
             )
 
         avg = total_accuracy / skills_tested if skills_tested else 0
-        print(f"\n{skills_tested} skills tested, average accuracy: {avg:.0%}", file=sys.stderr)
+        log.info("%d skills tested, average accuracy: %s", skills_tested, f"{avg:.0%}")
 
         if args.summary:
             for name, result in sorted(all_results.items()):
@@ -909,8 +1165,8 @@ def main() -> None:
                 },
             }
             aggregate_suffix = _result_filename("_aggregate", args.rotations, args.samples)
-            aggregate_path = RESULTS_DIR / aggregate_suffix
-            RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+            aggregate_path = _results_dir() / aggregate_suffix
+            _results_dir().mkdir(parents=True, exist_ok=True)
             aggregate_path.write_text(
                 json.dumps(aggregate, indent=2) + "\n", encoding="utf-8"
             )
@@ -927,14 +1183,14 @@ def main() -> None:
         total_cost = sum(cr.cost for cr in successful)
         max_cost = max((cr.cost for cr in successful), default=0)
         avg_cost = total_cost / len(successful) if successful else 0
-        print(f"\n--- Cost Summary ---", file=sys.stderr)
-        print(f"  Total API calls: {len(successful)}", file=sys.stderr)
+        log.info("--- Cost Summary ---")
+        log.info("  Total API calls: %d", len(successful))
         if failed:
-            print(f"  Failed calls:    {failed}", file=sys.stderr)
-        print(f"  Total cost:      ${total_cost:.4f}", file=sys.stderr)
-        print(f"  Max single call: ${max_cost:.4f}", file=sys.stderr)
-        print(f"  Avg per call:    ${avg_cost:.4f}", file=sys.stderr)
-        print(f"--------------------", file=sys.stderr)
+            log.info("  Failed calls:    %d", failed)
+        log.info("  Total cost:      $%.4f", total_cost)
+        log.info("  Max single call: $%.4f", max_cost)
+        log.info("  Avg per call:    $%.4f", avg_cost)
+        log.info("--------------------")
 
     # Temp settings cleanup handled by atexit (also fires on SIGINT/SystemExit)
 

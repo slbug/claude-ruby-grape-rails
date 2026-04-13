@@ -1,6 +1,6 @@
 """Behavioral dimension: Does the skill trigger correctly for real user prompts?
 
-Uses cached trigger test results from lab/eval/triggers/results/.
+Uses cached trigger test results from lab/eval/triggers/results/{provider}/.
 If no cached results exist, returns a neutral score (dimension skipped).
 Run behavioral_scorer.py first to populate cache.
 """
@@ -8,12 +8,16 @@ Run behavioral_scorer.py first to populate cache.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from ..schemas import AssertionResult, DimensionResult
 
 
-RESULTS_DIR = Path(__file__).resolve().parent.parent / "triggers" / "results"
+_RESULTS_BASE = Path(__file__).resolve().parent.parent / "triggers" / "results"
+
+# Provider for behavioral dimension — defaults to apfel, overridable via env.
+RESULTS_DIR = _RESULTS_BASE / os.environ.get("RUBY_PLUGIN_EVAL_PROVIDER", "apfel")
 
 
 def score(
