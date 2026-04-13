@@ -298,8 +298,8 @@ def _ensure_apfel_server():
 
     # Check if already up
     try:
-        urllib.request.urlopen(health_url, timeout=2)
-        return  # server already running
+        with urllib.request.urlopen(health_url, timeout=2):
+            return  # server already running
     except (urllib.error.URLError, OSError):
         pass
 
@@ -316,9 +316,9 @@ def _ensure_apfel_server():
     # Wait for readiness (up to 10s)
     for _ in range(20):
         try:
-            urllib.request.urlopen(health_url, timeout=1)
-            log.info("apfel server ready.")
-            return
+            with urllib.request.urlopen(health_url, timeout=1):
+                log.info("apfel server ready.")
+                return
         except (urllib.error.URLError, OSError):
             import time
             time.sleep(0.5)
@@ -338,8 +338,14 @@ def _stop_apfel_server():
 
 
 def _get_apfel_client():
-    """Lazy-init OpenAI client for apfel server. Auto-starts server if needed."""
+    """Lazy-init OpenAI client for apfel server. Auto-starts server if needed.
+
+    Safe for programmatic callers (score_skill, neighbor_regression) that do
+    not go through main(): _ensure_apfel_server() short-circuits when the
+    server is already running.
+    """
     global _apfel_client
+    _ensure_apfel_server()
     if _apfel_client is None:
         try:
             from openai import OpenAI
@@ -1187,21 +1193,30 @@ def main() -> None:
         parser.print_help()
         return
 
-    # Cost summary — aggregated from CallResult objects (single-threaded, no lock)
+    # Cost summary — aggregated from CallResult objects (single-threaded, no lock).
+    # Always surface to stderr so non-verbose runs still show it (logger is
+    # configured at WARNING by default).
     if all_call_results:
         successful = [cr for cr in all_call_results if cr.skills is not None]
         failed = len(all_call_results) - len(successful)
         total_cost = sum(cr.cost for cr in successful)
         max_cost = max((cr.cost for cr in successful), default=0)
         avg_cost = total_cost / len(successful) if successful else 0
-        log.info("--- Cost Summary ---")
-        log.info("  Total API calls: %d", len(successful))
+        cost_lines = ["--- Cost Summary ---", f"  Total API calls: {len(successful)}"]
         if failed:
-            log.info("  Failed calls:    %d", failed)
-        log.info("  Total cost:      $%.4f", total_cost)
-        log.info("  Max single call: $%.4f", max_cost)
-        log.info("  Avg per call:    $%.4f", avg_cost)
-        log.info("--------------------")
+            cost_lines.append(f"  Failed calls:    {failed}")
+        cost_lines.extend([
+            f"  Total cost:      ${total_cost:.4f}",
+            f"  Max single call: ${max_cost:.4f}",
+            f"  Avg per call:    ${avg_cost:.4f}",
+            "--------------------",
+        ])
+        if args.verbose:
+            for line in cost_lines:
+                log.info(line)
+        else:
+            for line in cost_lines:
+                print(line, file=sys.stderr, flush=True)
 
     # Temp settings cleanup handled by atexit (also fires on SIGINT/SystemExit)
 
