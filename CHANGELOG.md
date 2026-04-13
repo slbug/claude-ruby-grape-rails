@@ -16,19 +16,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `--provider apfel` (default). Auto-starts server on non-`--cache` runs;
   skipped for cache-only. Connects via OpenAI Python SDK with connection-pool
   reuse. Supports remote endpoints via `APFEL_BASE_URL` (probe-only, no local
-  spawn when non-loopback). Invalid `APFEL_PORT`/`APFEL_BASE_URL` warn and
-  fall back. Full skill descriptions sent (no truncation); context overflow
-  and guardrail rejections surface as typed failures. Results under
+  spawn when non-loopback). Invalid `APFEL_PORT` values warn and fall back;
+  invalid, empty, or malformed `APFEL_BASE_URL` values raise a
+  `RuntimeError`. Full skill descriptions sent (no truncation); context
+  overflow and guardrail rejections surface as typed failures. Results under
   `lab/eval/triggers/results/apfel/`; haiku results separate under
   `lab/eval/triggers/results/haiku/`.
 - **Provider-aware behavioral dimension** — `RUBY_PLUGIN_EVAL_PROVIDER` env
   var selects which cached results (apfel/haiku) feed the behavioral eval.
   Invalid values warn and fall back.
-- **Error classification in behavioral scorer** — `budget`, `max_turns`,
-  `parse_error`, `context_overflow`, `timeout`, `guardrail_blocked`,
-  `server_unavailable`, `dependency_missing`, `rate_limited`, `unknown`.
-  Both providers emit the same canonical set. Surfaced per-skill in
-  `failure_types` dict.
+- **Error classification in behavioral scorer** — canonical set:
+  `budget`, `max_turns`, `parse_error`, `context_overflow`, `timeout`,
+  `guardrail_blocked`, `server_unavailable`, `dependency_missing`,
+  `rate_limited`, `unknown`. Both providers share `context_overflow`,
+  `guardrail_blocked`, `timeout`, `dependency_missing`,
+  `server_unavailable`, `unknown`. Haiku also emits `budget`, `max_turns`,
+  `parse_error`, `rate_limited` (Claude-API/CLI-specific conditions that
+  don't apply to on-device apfel). Surfaced per-skill in `failure_types`
+  dict.
 - **`--provider` flag on `neighbor_regression`** — switch routing provider
   for confusable-pair regression without setting env vars; parity with
   `behavioral_scorer`.
