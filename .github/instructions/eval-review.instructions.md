@@ -38,8 +38,9 @@ excludeAgent: "coding-agent"
 - `matcher_ablation.py` — leave-one-out matcher signal/noise classification
 - `neighbor_regression.py` — confusable-pair regression detection
 - `eval_sensitivity.py` — threshold sensitivity analysis
-- `behavioral_scorer.py` — LLM-based trigger routing (cached haiku results,
-  opt-in via `--behavioral` flag)
+- `behavioral_scorer.py` — LLM-based trigger routing (cached apfel/haiku
+  results per `--provider` flag or `RUBY_PLUGIN_EVAL_PROVIDER` env var;
+  apfel is the default)
 
 ## Matchers (lab/eval/matchers.py)
 

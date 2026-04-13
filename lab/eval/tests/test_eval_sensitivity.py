@@ -53,7 +53,7 @@ class TestAnalyzeSkill(unittest.TestCase):
     def test_missing_cache_returns_none(self):
         """No cache file returns None."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.eval_sensitivity.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 self.assertIsNone(analyze_skill("nonexistent"))
 
     def test_corrupted_cache_returns_error(self):
@@ -61,7 +61,7 @@ class TestAnalyzeSkill(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "plan.json"
             path.write_text("not json{{{")
-            with patch("lab.eval.eval_sensitivity.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = analyze_skill("plan")
                 self.assertIn("error", result)
                 self.assertIn("invalid cached results JSON", result["error"])
@@ -73,7 +73,7 @@ class TestAnalyzeSkill(unittest.TestCase):
                 {"prompt": "a", "correct": True},
                 {"prompt": "b", "correct": True},
             ])
-            with patch("lab.eval.eval_sensitivity.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = analyze_skill("plan")
                 self.assertIn("error", result)
                 self.assertIn("too few", result["error"])
@@ -84,7 +84,7 @@ class TestAnalyzeSkill(unittest.TestCase):
             self._write_cache(tmpdir, "plan", [
                 {"prompt": f"p{i}", "correct": True} for i in range(6)
             ])
-            with patch("lab.eval.eval_sensitivity.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = analyze_skill("plan")
                 self.assertEqual(result["baseline_accuracy"], 1.0)
                 self.assertEqual(result["fragility_max"], 0.0)
@@ -97,7 +97,7 @@ class TestAnalyzeSkill(unittest.TestCase):
             results = [{"prompt": f"p{i}", "correct": True} for i in range(4)]
             results.append({"prompt": "bad", "correct": False})
             self._write_cache(tmpdir, "plan", results)
-            with patch("lab.eval.eval_sensitivity.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = analyze_skill("plan")
                 # Removing the failing prompt improves accuracy
                 self.assertGreater(result["drag_count"], 0)
@@ -108,7 +108,7 @@ class TestAnalyzeSkill(unittest.TestCase):
             results = [{"prompt": f"p{i}", "correct": False} for i in range(4)]
             results.append({"prompt": "good", "correct": True})
             self._write_cache(tmpdir, "plan", results)
-            with patch("lab.eval.eval_sensitivity.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = analyze_skill("plan")
                 # Removing the passing prompt drops accuracy
                 self.assertGreater(result["high_leverage_count"], 0)
@@ -119,7 +119,7 @@ class TestAnalyzeSkill(unittest.TestCase):
             self._write_cache(tmpdir, "plan", [
                 {"prompt": f"p{i}", "correct": i % 2 == 0} for i in range(6)
             ])
-            with patch("lab.eval.eval_sensitivity.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = analyze_skill("plan")
                 self.assertEqual(len(result["prompt_impacts"]), 6)
                 self.assertEqual(result["total_prompts"], 6)

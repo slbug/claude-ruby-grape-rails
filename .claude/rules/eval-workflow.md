@@ -15,7 +15,7 @@ Minimum runtime: python3 3.10+ for `lab/eval/`.
 | `make eval-tests-pytest` / `npm run eval:test:pytest` | Explicit pytest runs |
 | `make eval-behavioral` / `npm run eval:behavioral` | LLM trigger routing (cache-only) |
 | `make eval-behavioral-verbose` | Same with verbose cache/score output |
-| `make eval-behavioral-fresh` | Ignore cache, re-run via claude CLI with Haiku |
+| `make eval-behavioral-fresh` | Ignore cache, re-run via default provider (apfel, on-device) |
 | `make eval-behavioral-fresh-verbose` | Fresh run with full prompt/response debug |
 | `make eval-ablation` / `npm run eval:ablation` | Leave-one-out matcher signal/noise (deterministic) |
 | `make eval-neighbor` / `npm run eval:neighbor` | Confusable-pair regression on changed skills |
@@ -36,7 +36,7 @@ Minimum runtime: python3 3.10+ for `lab/eval/`.
 - 51/51 skill eval coverage and trigger corpora
 - Structural scoring for all shipped agents
 - Deterministic trigger corpora and confusable-pair analysis
-- Optional behavioral routing dimension (cached haiku results)
+- Optional behavioral routing dimension (cached apfel/haiku results per `RUBY_PLUGIN_EVAL_PROVIDER`)
 
 ## Contributor Workflow Order
 

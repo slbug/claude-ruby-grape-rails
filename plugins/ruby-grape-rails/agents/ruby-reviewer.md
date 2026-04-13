@@ -4,7 +4,7 @@ description: Reviews Ruby/Rails/Grape changes for correctness, maintainability, 
 disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
-maxTurns: 15
+maxTurns: 25
 omitClaudeMd: true
 skills:
   - ruby-idioms
@@ -26,6 +26,25 @@ Review for:
 Simplicity test: if you write 200 lines and it could be 50, flag it. Ask: "Would a senior engineer say this is overcomplicated?" If yes, it's a finding.
 
 Only report issues with real maintenance or behavior impact.
+
+## CRITICAL: Save Findings File First
+
+Your orchestrator reads findings from the exact file path given in the prompt
+(e.g., `.claude/reviews/ruby-reviewer/{review-slug}-{datesuffix}.md`). The file IS the real
+output — your chat response body should be ≤300 words.
+
+**Turn budget rules:**
+
+1. First ~10 turns: Read/Grep analysis
+2. By turn ~15: call `Write` with whatever findings you have — do NOT wait
+   until the end. A partial file is better than no file when turns run out.
+3. Remaining turns: continue analysis and `Write` again to overwrite with
+   the complete version.
+4. If the prompt does NOT include an output path, default to
+   `.claude/reviews/ruby-reviewer/{review-slug}-{datesuffix}.md`.
+
+You have `Write` for your own report ONLY. `Edit` and `NotebookEdit` are
+disallowed — you cannot modify source code.
 
 ## Review Artifact Contract
 

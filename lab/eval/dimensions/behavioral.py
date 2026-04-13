@@ -1,6 +1,6 @@
 """Behavioral dimension: Does the skill trigger correctly for real user prompts?
 
-Uses cached trigger test results from lab/eval/triggers/results/.
+Uses cached trigger test results from lab/eval/triggers/results/{provider}/.
 If no cached results exist, returns a neutral score (dimension skipped).
 Run behavioral_scorer.py first to populate cache.
 """
@@ -10,10 +10,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from .. import results_dir as rd
 from ..schemas import AssertionResult, DimensionResult
-
-
-RESULTS_DIR = Path(__file__).resolve().parent.parent / "triggers" / "results"
 
 
 def score(
@@ -24,7 +22,7 @@ def score(
 ) -> DimensionResult:
     """Score behavioral dimension using cached trigger results."""
     skill_name = Path(skill_path).resolve().parent.name if skill_path else ""
-    cache_path = RESULTS_DIR / f"{skill_name}.json"
+    cache_path = rd.active_results_dir() / f"{skill_name}.json"
 
     if not cache_path.is_file():
         return DimensionResult(

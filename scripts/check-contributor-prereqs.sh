@@ -40,9 +40,15 @@ check_required mkdir "required by secret-scan.sh for temp directory creation"
 check_required head "required by block-dangerous-ops.sh for input parsing"
 check_required tr "required by block-dangerous-ops.sh for text normalization"
 check_required wc "required by block-dangerous-ops.sh for size checks"
+check_required mv "required by hook scripts for atomic file moves"
+check_required rm "required by hook scripts for temp file cleanup"
+check_required curl "required by fetch-cc-changelog.sh and fetch-claude-docs.sh"
+check_required npm "required for lint, pre-commit hooks, and package scripts"
+check_required npx "required by pre-commit hook for markdownlint"
 check_required shellcheck "required for local shell linting and pre-commit shell validation"
 check_required claude "required for 'npm run validate' and 'make validate' (install with: npm install -g @anthropic-ai/claude-code)"
 check_optional betterleaks "optional for local secret-scan coverage outside CI"
+check_optional apfel "optional only if you run behavioral eval with --provider haiku, set RUBY_PLUGIN_EVAL_PROVIDER=haiku, or stick to cache-only runs; default behavioral eval uses --provider apfel"
 
 if [[ "$MISSING" -eq 1 ]]; then
   echo "ERROR: contributor prerequisites are incomplete." >&2

@@ -1,0 +1,271 @@
+"""Tests for apfel URL/port helpers in behavioral_scorer."""
+
+from __future__ import annotations
+
+import logging
+import unittest
+from unittest.mock import patch
+
+from lab.eval.behavioral_scorer import (
+    _derive_health_url,
+    _get_apfel_host,
+    _get_apfel_port,
+    _is_loopback_base_url,
+    _normalize_apfel_base_url,
+)
+
+
+class TestDeriveHealthUrl(unittest.TestCase):
+    """_derive_health_url strips the /v1 path and appends /health."""
+
+    def test_openai_style_v1(self) -> None:
+        self.assertEqual(
+            _derive_health_url("http://127.0.0.1:11434/v1"),
+            "http://127.0.0.1:11434/health",
+        )
+
+    def test_trailing_slash_after_v1(self) -> None:
+        self.assertEqual(
+            _derive_health_url("http://127.0.0.1:11434/v1/"),
+            "http://127.0.0.1:11434/health",
+        )
+
+    def test_multiple_trailing_slashes(self) -> None:
+        self.assertEqual(
+            _derive_health_url("http://127.0.0.1:11434/v1//"),
+            "http://127.0.0.1:11434/health",
+        )
+
+    def test_bare_host(self) -> None:
+        self.assertEqual(
+            _derive_health_url("http://127.0.0.1:11434"),
+            "http://127.0.0.1:11434/health",
+        )
+
+    def test_root_slash(self) -> None:
+        self.assertEqual(
+            _derive_health_url("http://127.0.0.1:11434/"),
+            "http://127.0.0.1:11434/health",
+        )
+
+    def test_https_preserved(self) -> None:
+        self.assertEqual(
+            _derive_health_url("https://apfel.example.com:9443/v1"),
+            "https://apfel.example.com:9443/health",
+        )
+
+    def test_custom_path_prefix(self) -> None:
+        """Non-/v1 prefix is preserved (user's custom mount point)."""
+        self.assertEqual(
+            _derive_health_url("https://proxy.example.com/apfel/v1"),
+            "https://proxy.example.com/apfel/health",
+        )
+
+
+class TestIsLoopbackBaseUrl(unittest.TestCase):
+    """_is_loopback_base_url flags local hosts only."""
+
+    def test_ipv4_loopback(self) -> None:
+        self.assertTrue(_is_loopback_base_url("http://127.0.0.1:11434/v1"))
+
+    def test_ipv6_loopback(self) -> None:
+        self.assertTrue(_is_loopback_base_url("http://[::1]:11434/v1"))
+
+    def test_localhost_name(self) -> None:
+        self.assertTrue(_is_loopback_base_url("http://localhost:11434/v1"))
+
+    def test_public_host(self) -> None:
+        self.assertFalse(_is_loopback_base_url("https://apfel.example.com:9443/v1"))
+
+    def test_private_network(self) -> None:
+        """Private-range IP is not loopback — user expects remote semantics."""
+        self.assertFalse(_is_loopback_base_url("http://192.168.1.5:8080/v1"))
+
+    def test_all_interfaces_is_not_loopback(self) -> None:
+        """0.0.0.0 binds all interfaces but is not the loopback address for probes."""
+        self.assertFalse(_is_loopback_base_url("http://0.0.0.0:11434/v1"))
+
+
+class TestNormalizeApfelBaseUrl(unittest.TestCase):
+    """_normalize_apfel_base_url prepends http:// when scheme missing, errors on garbage."""
+
+    def test_passthrough_http(self) -> None:
+        self.assertEqual(
+            _normalize_apfel_base_url("http://127.0.0.1:11434/v1"),
+            "http://127.0.0.1:11434/v1",
+        )
+
+    def test_passthrough_https(self) -> None:
+        self.assertEqual(
+            _normalize_apfel_base_url("https://apfel.example.com/v1"),
+            "https://apfel.example.com/v1",
+        )
+
+    def test_schemeless_ipv4(self) -> None:
+        self.assertEqual(
+            _normalize_apfel_base_url("127.0.0.1:11434/v1"),
+            "http://127.0.0.1:11434/v1",
+        )
+
+    def test_schemeless_localhost(self) -> None:
+        """Without normalization, urlsplit treats 'localhost' as scheme — bug fix case."""
+        self.assertEqual(
+            _normalize_apfel_base_url("localhost:11434/v1"),
+            "http://localhost:11434/v1",
+        )
+
+    def test_schemeless_bare_host(self) -> None:
+        self.assertEqual(
+            _normalize_apfel_base_url("127.0.0.1:11434"),
+            "http://127.0.0.1:11434",
+        )
+
+    def test_empty_rejected(self) -> None:
+        with self.assertRaises(RuntimeError) as ctx:
+            _normalize_apfel_base_url("")
+        self.assertIn("Invalid APFEL_BASE_URL", str(ctx.exception))
+
+
+class TestApfelBaseUrlLazy(unittest.TestCase):
+    """_get_apfel_base_url defers normalization so import doesn't throw.
+
+    The "import doesn't throw" contract is verified implicitly by the whole
+    test suite running: if import raised, these tests wouldn't load. What we
+    actually test here is the runtime behavior of the lazy getter.
+    """
+
+    def setUp(self) -> None:
+        # Reset the cached URL between tests so env changes take effect.
+        from lab.eval import behavioral_scorer as bs
+        bs._apfel_base_url_cache = None
+
+    def test_invalid_env_raises_only_on_access(self) -> None:
+        """Bad APFEL_BASE_URL must not fail at module load, only when used."""
+        from lab.eval.behavioral_scorer import _get_apfel_base_url
+        with patch.dict("os.environ", {"APFEL_BASE_URL": ""}, clear=False):
+            with self.assertRaises(RuntimeError):
+                _get_apfel_base_url()
+
+    def test_valid_env_returns_normalized(self) -> None:
+        from lab.eval.behavioral_scorer import _get_apfel_base_url
+        with patch.dict("os.environ",
+                        {"APFEL_BASE_URL": "127.0.0.1:11434/v1"}, clear=False):
+            self.assertEqual(_get_apfel_base_url(), "http://127.0.0.1:11434/v1")
+
+    def test_cached_after_first_call(self) -> None:
+        """Repeat calls return the same cached value (no re-normalize)."""
+        from lab.eval.behavioral_scorer import _get_apfel_base_url
+        with patch.dict("os.environ",
+                        {"APFEL_BASE_URL": "127.0.0.1:11434/v1"}, clear=False):
+            first = _get_apfel_base_url()
+        # Remove env var — cached value still returned on second call.
+        with patch.dict("os.environ", {}, clear=True):
+            second = _get_apfel_base_url()
+        self.assertEqual(first, second)
+
+
+class TestGetApfelHost(unittest.TestCase):
+    """_get_apfel_host reads env lazily — no import-time side effects."""
+
+    def test_unset_returns_loopback(self) -> None:
+        import os
+        env_copy = dict(os.environ)
+        env_copy.pop("APFEL_HOST", None)
+        with patch.dict("os.environ", env_copy, clear=True):
+            self.assertEqual(_get_apfel_host(), "127.0.0.1")
+
+    def test_custom_host(self) -> None:
+        with patch.dict("os.environ", {"APFEL_HOST": "apfel.lan"}, clear=False):
+            self.assertEqual(_get_apfel_host(), "apfel.lan")
+
+
+class TestGetApfelPort(unittest.TestCase):
+    """_get_apfel_port parses env var, falls back on garbage."""
+
+    def test_unset_returns_default(self) -> None:
+        import os
+        env_copy = dict(os.environ)
+        env_copy.pop("APFEL_PORT", None)
+        with patch.dict("os.environ", env_copy, clear=True):
+            self.assertEqual(_get_apfel_port(), 11434)
+
+    def test_valid_int(self) -> None:
+        with patch.dict("os.environ", {"APFEL_PORT": "9999"}, clear=False):
+            self.assertEqual(_get_apfel_port(), 9999)
+
+    def test_invalid_falls_back_with_warning(self) -> None:
+        from lab.eval.behavioral_scorer import log as behavioral_log
+
+        with patch.dict("os.environ", {"APFEL_PORT": "not-a-port"}, clear=False):
+            with self.assertLogs(behavioral_log, level=logging.WARNING) as captured:
+                port = _get_apfel_port()
+            self.assertEqual(port, 11434)
+            self.assertTrue(any("APFEL_PORT" in r.getMessage() for r in captured.records))
+
+    def test_negative_port_rejected(self) -> None:
+        from lab.eval.behavioral_scorer import log as behavioral_log
+
+        with patch.dict("os.environ", {"APFEL_PORT": "-1"}, clear=False):
+            with self.assertLogs(behavioral_log, level=logging.WARNING) as captured:
+                port = _get_apfel_port()
+            self.assertEqual(port, 11434)
+            self.assertTrue(any("range" in r.getMessage() for r in captured.records))
+
+    def test_too_large_port_rejected(self) -> None:
+        from lab.eval.behavioral_scorer import log as behavioral_log
+
+        with patch.dict("os.environ", {"APFEL_PORT": "99999"}, clear=False):
+            with self.assertLogs(behavioral_log, level=logging.WARNING) as captured:
+                port = _get_apfel_port()
+            self.assertEqual(port, 11434)
+            self.assertTrue(any("range" in r.getMessage() for r in captured.records))
+
+    def test_zero_port_rejected(self) -> None:
+        """Port 0 is reserved; reject it."""
+        from lab.eval.behavioral_scorer import log as behavioral_log
+
+        with patch.dict("os.environ", {"APFEL_PORT": "0"}, clear=False):
+            with self.assertLogs(behavioral_log, level=logging.WARNING):
+                self.assertEqual(_get_apfel_port(), 11434)
+
+
+class TestEnsureApfelServerSpawnFailure(unittest.TestCase):
+    """Regression: FileNotFoundError on Popen must not get masked by a
+    double-close OSError in the cleanup path."""
+
+    def setUp(self) -> None:
+        """Reset module state so each test starts clean."""
+        from lab.eval import behavioral_scorer as bs
+        bs._apfel_server_proc = None
+        bs._apfel_stderr_path = None
+        bs._apfel_base_url_cache = None
+
+    def test_missing_binary_raises_runtime_error_cleanly(self) -> None:
+        """apfel not on PATH must raise RuntimeError, not OSError from fd cleanup."""
+        import errno
+        from lab.eval import behavioral_scorer as bs
+
+        with patch.dict("os.environ",
+                        {"APFEL_BASE_URL": "http://127.0.0.1:11434/v1"}, clear=False):
+            with patch("subprocess.Popen", side_effect=FileNotFoundError("apfel")):
+                with self.assertRaises(RuntimeError) as ctx:
+                    bs._ensure_apfel_server()
+
+        msg = str(ctx.exception)
+        self.assertIn("apfel", msg)
+        self.assertIn("not found on PATH", msg)
+        # No leftover state after the failure.
+        self.assertIsNone(bs._apfel_server_proc)
+        self.assertIsNone(bs._apfel_stderr_path)
+        # The RuntimeError's __context__ should NOT be a Bad-file-descriptor
+        # OSError — that would mean the double-close bug regressed.
+        ctx_exc = ctx.exception.__context__
+        if isinstance(ctx_exc, OSError):
+            self.assertNotEqual(
+                ctx_exc.errno, errno.EBADF,
+                "double-close of stderr_fd regressed",
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()
