@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from lab.eval import behavioral_scorer as _bs
 from lab.eval.behavioral_scorer import (
     _ROUTING_SYSTEM_PROMPT,
     _check_correct,
@@ -26,6 +27,21 @@ SAMPLE_DESCRIPTIONS = {
     "work": "Execute plan tasks with structured progress tracking",
     "review": "Review code changes with parallel specialist agents",
 }
+
+
+# Tests mock run_haiku; force haiku provider so _run_provider dispatches there.
+_ORIGINAL_PROVIDER: str | None = None
+
+
+def setUpModule() -> None:
+    global _ORIGINAL_PROVIDER
+    _ORIGINAL_PROVIDER = _bs._provider
+    _bs._provider = "haiku"
+
+
+def tearDownModule() -> None:
+    if _ORIGINAL_PROVIDER is not None:
+        _bs._provider = _ORIGINAL_PROVIDER
 
 
 def _cr(skills: list[str] | None) -> CallResult:

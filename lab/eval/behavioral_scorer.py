@@ -43,13 +43,17 @@ _RESULTS_BASE = TRIGGERS_DIR / "results"
 _provider: str = "apfel"
 
 
+# Canonical results directory used for all cache I/O.
+#
+# Provider-scoped so callers importing/patching RESULTS_DIR (neighbor_regression,
+# tests) read and write to the same location that score_skill writes to. Kept
+# in sync with _provider by main() when the CLI --provider flag changes it.
+RESULTS_DIR = _RESULTS_BASE / _provider
+
+
 def _results_dir() -> Path:
-    """Return provider-scoped results directory."""
-    return _RESULTS_BASE / _provider
-
-
-# Legacy alias for imports (dimensions/behavioral.py)
-RESULTS_DIR = _RESULTS_BASE
+    """Return the active results directory used for cache I/O."""
+    return RESULTS_DIR
 
 # Resolved settings path — defaults to bare_settings.json, replaced by
 # _resolve_settings() at startup when a temp auth settings file is needed.
@@ -126,7 +130,9 @@ class CallResult:
     cost: float = 0.0
     input_tokens: int = 0
     output_tokens: int = 0
-    error_type: str | None = None  # "context_overflow", "timeout", "auth", "budget", "unknown"
+    # One of: "budget", "max_turns", "parse_error", "timeout", "context_overflow",
+    # "guardrail_blocked", "server_unavailable", "unknown", or None on success.
+    error_type: str | None = None
 
 
 def content_hash(skill_name: str, descriptions: dict[str, str]) -> str:
@@ -1011,8 +1017,9 @@ def main() -> None:
     if args.rotations > 1 and args.samples > 1:
         parser.error("--rotations and --samples are mutually exclusive (both > 1)")
 
-    global _provider
+    global _provider, RESULTS_DIR
     _provider = args.provider
+    RESULTS_DIR = _RESULTS_BASE / _provider
 
     # Start apfel server before workers (avoids race condition in threads)
     if _provider == "apfel":
@@ -1125,7 +1132,11 @@ def main() -> None:
             )
 
         avg = total_accuracy / skills_tested if skills_tested else 0
-        log.info("%d skills tested, average accuracy: %s", skills_tested, f"{avg:.0%}")
+        summary = f"{skills_tested} skills tested, average accuracy: {avg:.0%}"
+        if args.verbose:
+            log.info(summary)
+        else:
+            print(summary, file=sys.stderr, flush=True)
 
         if args.summary:
             for name, result in sorted(all_results.items()):

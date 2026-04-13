@@ -19,10 +19,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `lab/eval/triggers/results/haiku/`.
 - **Provider-aware behavioral dimension** — `RUBY_PLUGIN_EVAL_PROVIDER` env
   var selects which cached results (apfel/haiku) feed the behavioral eval.
-- **Error classification in behavioral scorer** — `context_overflow`,
-  `timeout`, `guardrail_blocked`, `server_unavailable`, `runtime_error`,
-  `usage_error`, `model_unavailable`, `rate_limited`, `parse_error`,
-  `not_found`. Surfaced per-skill in `failure_types` dict.
+- **Error classification in behavioral scorer** — `budget`, `max_turns`,
+  `parse_error`, `context_overflow`, `timeout`, `guardrail_blocked`,
+  `server_unavailable`, `unknown`. Surfaced per-skill in `failure_types` dict.
 - **Python venv** — `.venv/` with `openai` + `httpx` for apfel provider.
   Direnv `.envrc` auto-activates (gitignored).
 - **Review agent "Save Findings File First" guidance** — all 9 review
@@ -46,9 +45,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   wraps routing output in ` ``` ` fences; parser now strips them.
 - **Deduplicated apfel skill parser output** — apfel occasionally repeats
   skill names; parser now preserves order and drops duplicates.
-- **Apfel server config** — launched with `--max-concurrent 16` to match
-  worker count; `x_context_output_reserve: 64` to maximize input budget;
-  `max_retries=0` on client to avoid SDK-level retry loops masking issues.
+- **Apfel server config** — launched with fixed `--max-concurrent 16`;
+  `x_context_output_reserve: 64` to maximize input budget; `max_retries=0`
+  on client to avoid SDK-level retry loops masking issues.
 - **Timeout retry for apfel** — up to 3 attempts on timeout (Apple FM can
   enter transient slow states). Other error types do not retry.
 
