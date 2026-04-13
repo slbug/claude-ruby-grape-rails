@@ -229,5 +229,43 @@ class TestGetApfelPort(unittest.TestCase):
                 self.assertEqual(_get_apfel_port(), 11434)
 
 
+class TestEnsureApfelServerSpawnFailure(unittest.TestCase):
+    """Regression: FileNotFoundError on Popen must not get masked by a
+    double-close OSError in the cleanup path."""
+
+    def setUp(self) -> None:
+        """Reset module state so each test starts clean."""
+        from lab.eval import behavioral_scorer as bs
+        bs._apfel_server_proc = None
+        bs._apfel_stderr_path = None
+        bs._apfel_base_url_cache = None
+
+    def test_missing_binary_raises_runtime_error_cleanly(self) -> None:
+        """apfel not on PATH must raise RuntimeError, not OSError from fd cleanup."""
+        import errno
+        from lab.eval import behavioral_scorer as bs
+
+        with patch.dict("os.environ",
+                        {"APFEL_BASE_URL": "http://127.0.0.1:11434/v1"}, clear=False):
+            with patch("subprocess.Popen", side_effect=FileNotFoundError("apfel")):
+                with self.assertRaises(RuntimeError) as ctx:
+                    bs._ensure_apfel_server()
+
+        msg = str(ctx.exception)
+        self.assertIn("apfel", msg)
+        self.assertIn("not found on PATH", msg)
+        # No leftover state after the failure.
+        self.assertIsNone(bs._apfel_server_proc)
+        self.assertIsNone(bs._apfel_stderr_path)
+        # The RuntimeError's __context__ should NOT be a Bad-file-descriptor
+        # OSError — that would mean the double-close bug regressed.
+        ctx_exc = ctx.exception.__context__
+        if isinstance(ctx_exc, OSError):
+            self.assertNotEqual(
+                ctx_exc.errno, errno.EBADF,
+                "double-close of stderr_fd regressed",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
