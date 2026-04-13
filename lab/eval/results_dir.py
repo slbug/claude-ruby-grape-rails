@@ -1,14 +1,22 @@
-"""Shared helpers for locating provider-scoped behavioral trigger results.
+"""Single source of truth for provider-scoped behavioral trigger results.
 
 Behavioral routing results live under ``lab/eval/triggers/results/{provider}/``.
-Multiple tools read or write that path (behavioral_scorer, dimensions/behavioral,
-eval_sensitivity, neighbor_regression) and each one needs the same provider
-allowlist to avoid path traversal via env vars and to stay consistent with
-the writer. Keep that logic in one place.
+This module owns the active provider state so all tools
+(behavioral_scorer, dimensions/behavioral, eval_sensitivity,
+neighbor_regression) read and write the same directory without coordinating
+their own module-level bindings.
 
-Each consumer still exposes its own module-level ``RESULTS_DIR`` binding so
-tests can patch it directly — the helpers here just produce the canonical
-Path from a validated provider name.
+Public API:
+
+- ``active_results_dir()`` / ``get_active_provider()`` — getters used by
+  every reader and writer.
+- ``set_active_provider(name)`` — CLI entry points call this to honor their
+  ``--provider`` flag (or env var via ``resolve_provider(None)``).
+- ``resolve_provider(name)`` — pure allowlist validation (used indirectly
+  via the getter/setter; exposed for the argparse default).
+
+``results_dir(provider)`` is retained as a pure helper that composes a path
+from an explicit provider name without touching the active state.
 """
 
 from __future__ import annotations
@@ -33,6 +41,12 @@ PROVIDER_ENV_VAR: str = "RUBY_PLUGIN_EVAL_PROVIDER"
 # Track invalid env-var values so we warn only once per unique bad value,
 # not on every resolve_provider() call.
 _warned_invalid_env: set[str] = set()
+
+
+# Active provider — the single source of truth for which results directory
+# all behavioral eval tools read from and write to. Initialized from the env
+# var at import; CLI entry points flip it via set_active_provider().
+_active_provider: str = ""  # populated below after resolve_provider is defined
 
 
 def resolve_provider(name: str | None = None) -> str:
@@ -70,3 +84,33 @@ def resolve_provider(name: str | None = None) -> str:
 def results_dir(provider: str | None = None) -> Path:
     """Return the provider-scoped results directory (``RESULTS_BASE/{provider}``)."""
     return RESULTS_BASE / resolve_provider(provider)
+
+
+_active_provider = resolve_provider(None)  # noqa: F811 — initialized properly now
+
+
+def get_active_provider() -> str:
+    """Return the currently active provider name."""
+    return _active_provider
+
+
+def active_results_dir() -> Path:
+    """Return the active provider-scoped results directory.
+
+    All behavioral eval tools read/write through this getter so CLI flag
+    and env var stay in lockstep across the module graph.
+    """
+    return RESULTS_BASE / _active_provider
+
+
+def set_active_provider(name: str | None) -> str:
+    """Switch the active provider for subsequent reads/writes.
+
+    Validates through ``resolve_provider`` (invalid values fall back to the
+    default with a one-time warning). Returns the resolved name. Thread
+    safety: expected to be called from a single CLI main() before worker
+    threads spawn; not safe to flip under concurrency.
+    """
+    global _active_provider
+    _active_provider = resolve_provider(name)
+    return _active_provider

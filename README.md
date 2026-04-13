@@ -766,7 +766,8 @@ Common entrypoints:
   classification (deterministic, no API calls)
 - `make eval-neighbor` or `npm run eval:neighbor` for confusable-pair
   regression detection on changed skills (requires the active provider —
-  apfel on-device by default, or Claude CLI with Haiku via `--provider haiku`)
+  apfel on-device by default, or pass `--provider haiku` / set
+  `RUBY_PLUGIN_EVAL_PROVIDER=haiku` to use the Claude API)
 - `make eval-hygiene` or `npm run eval:hygiene` for trigger corpus
   contamination scanning
 - contributor eval tooling requires `python3` 3.10+

@@ -15,12 +15,7 @@ import json
 import sys
 from pathlib import Path
 
-from .results_dir import results_dir
-
-
-# Same provider-scoped cache directory the behavioral scorer writes to.
-# Tests patch this attribute directly.
-RESULTS_DIR = results_dir()
+from . import results_dir as rd
 
 LEVERAGE_THRESHOLD = 0.05  # 5% accuracy swing
 
@@ -39,7 +34,7 @@ def classify_prompt_impact(delta: float) -> str:
 
 def analyze_skill(skill_name: str) -> dict | None:
     """Leave-one-out sensitivity analysis for one skill's cached results."""
-    cache_path = RESULTS_DIR / f"{skill_name}.json"
+    cache_path = rd.active_results_dir() / f"{skill_name}.json"
     if not cache_path.is_file():
         return None
 
@@ -121,7 +116,7 @@ def main() -> None:
 
     elif args.all:
         all_results = {}
-        for path in sorted(RESULTS_DIR.glob("*.json")):
+        for path in sorted(rd.active_results_dir().glob("*.json")):
             if path.name.startswith("_"):
                 continue
             result = analyze_skill(path.stem)

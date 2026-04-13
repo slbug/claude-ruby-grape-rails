@@ -33,34 +33,17 @@ import threading
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from .results_dir import (
-    SUPPORTED_PROVIDERS,
-    resolve_provider,
-    results_dir,
-)
+from . import results_dir as rd
+from .results_dir import SUPPORTED_PROVIDERS, resolve_provider
 from .trigger_scorer import load_all_descriptions, load_trigger_file, TRIGGERS_DIR
 
 log = logging.getLogger("behavioral_scorer")
 
 
-# Active provider — CLI --provider flag wins, RUBY_PLUGIN_EVAL_PROVIDER env var
-# is the fallback, DEFAULT_PROVIDER is last resort. Resolving through
-# resolve_provider() keeps the writer in lockstep with readers
-# (dimensions/behavioral.py, eval_sensitivity.py) that also honor the env var.
-_provider: str = resolve_provider(None)
-
-
-# Canonical results directory used for all cache I/O.
-#
-# Provider-scoped so callers importing/patching RESULTS_DIR (neighbor_regression,
-# tests) read and write to the same location that score_skill writes to. Kept
-# in sync with _provider by main() when the CLI --provider flag changes it.
-RESULTS_DIR = results_dir(_provider)
-
-
-def _results_dir() -> Path:
-    """Return the active results directory used for cache I/O."""
-    return RESULTS_DIR
+# Provider and results directory live in lab.eval.results_dir as the single
+# source of truth. Readers/writers here call rd.get_active_provider() and
+# rd.active_results_dir() at use-sites so CLI --provider flips and env-var
+# overrides propagate without per-module synchronization.
 
 # Resolved settings path — defaults to bare_settings.json, replaced by
 # _resolve_settings() at startup when a temp auth settings file is needed.
@@ -137,8 +120,11 @@ class CallResult:
     cost: float = 0.0
     input_tokens: int = 0
     output_tokens: int = 0
-    # One of: "budget", "max_turns", "parse_error", "timeout", "context_overflow",
-    # "guardrail_blocked", "server_unavailable", "unknown", or None on success.
+    # Machine-readable error category. Intentionally extensible — current
+    # values include "budget", "max_turns", "parse_error", "timeout",
+    # "context_overflow", "guardrail_blocked", "server_unavailable",
+    # "dependency_missing", "rate_limited", "unknown", or None on success.
+    # Callers should not assume this list is exhaustive.
     error_type: str | None = None
 
 
@@ -636,7 +622,7 @@ def run_apfel(prompt: str, verbose: bool = False,
 def _run_provider(prompt: str, verbose: bool = False,
                   log_buf: list[str] | None = None) -> CallResult:
     """Dispatch to active provider."""
-    if _provider == "apfel":
+    if rd.get_active_provider() == "apfel":
         return run_apfel(prompt, verbose=verbose, log_buf=log_buf)
     return run_haiku(prompt, verbose=verbose, log_buf=log_buf)
 
@@ -713,7 +699,7 @@ def _run_single_prompt(
     if chosen is None:
         if verbose:
             error_hint = f" [{call_result.error_type}]" if call_result.error_type else ""
-            log_lines.append(f"  -> SKIPPED ({_provider} call failed{error_hint})")
+            log_lines.append(f"  -> SKIPPED ({rd.get_active_provider()} call failed{error_hint})")
             if parallel:
                 with _verbose_lock:
                     for line in log_lines:
@@ -992,7 +978,7 @@ def score_skill(
     """Score trigger accuracy for one skill. Returns (score_dict, call_results)."""
     if rotations > 1 and samples > 1:
         raise ValueError("rotations and samples are mutually exclusive; only one may be > 1")
-    cache_path = _results_dir() / _result_filename(skill_name, rotations, samples)
+    cache_path = rd.active_results_dir() / _result_filename(skill_name, rotations, samples)
 
     if use_cache:
         if cache_path.is_file():
@@ -1055,7 +1041,7 @@ def score_skill(
     )
 
     if not all_results and total_failures > 0:
-        return {"skill": skill_name, "error": f"all {total_failures} {_provider} calls failed"}, all_call_results
+        return {"skill": skill_name, "error": f"all {total_failures} {rd.get_active_provider()} calls failed"}, all_call_results
 
     # Aggregate multi-run results
     if rotations > 1:
@@ -1083,7 +1069,7 @@ def score_skill(
         **overall,
         "failures": total_failures,
         "failure_types": _count_failure_types(all_call_results),
-        "provider": _provider,
+        "provider": rd.get_active_provider(),
         "easy_accuracy": easy_metrics["accuracy"],
         "easy_precision": easy_metrics["precision"],
         "easy_recall": easy_metrics["recall"],
@@ -1164,7 +1150,7 @@ def score_skill(
         "samples": samples,
     }
 
-    _results_dir().mkdir(parents=True, exist_ok=True)
+    rd.active_results_dir().mkdir(parents=True, exist_ok=True)
     cache_path.write_text(json.dumps(score_data, indent=2) + "\n", encoding="utf-8")
 
     return score_data, all_call_results
@@ -1206,13 +1192,11 @@ def main() -> None:
     if args.rotations > 1 and args.samples > 1:
         parser.error("--rotations and --samples are mutually exclusive (both > 1)")
 
-    global _provider, RESULTS_DIR
-    _provider = resolve_provider(args.provider)
-    RESULTS_DIR = results_dir(_provider)
+    rd.set_active_provider(args.provider)
 
     # Start apfel server before workers (avoids race condition in threads).
     # Skip for --cache (documented as "no provider calls" — pure filesystem reads).
-    if _provider == "apfel" and not args.cache:
+    if rd.get_active_provider() == "apfel" and not args.cache:
         _ensure_apfel_server()
 
     # Signal handler: cancel pending futures, wait for running workers.
@@ -1372,8 +1356,8 @@ def main() -> None:
                 },
             }
             aggregate_suffix = _result_filename("_aggregate", args.rotations, args.samples)
-            aggregate_path = _results_dir() / aggregate_suffix
-            _results_dir().mkdir(parents=True, exist_ok=True)
+            aggregate_path = rd.active_results_dir() / aggregate_suffix
+            rd.active_results_dir().mkdir(parents=True, exist_ok=True)
             aggregate_path.write_text(
                 json.dumps(aggregate, indent=2) + "\n", encoding="utf-8"
             )
@@ -1393,7 +1377,7 @@ def main() -> None:
         max_cost = max((cr.cost for cr in successful), default=0)
         avg_cost = total_cost / len(successful) if successful else 0
         cost_lines = [
-            f"--- Cost Summary ({_provider}) ---",
+            f"--- Cost Summary ({rd.get_active_provider()}) ---",
             f"  Total successful calls: {len(successful)}",
         ]
         if failed:

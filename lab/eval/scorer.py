@@ -178,9 +178,9 @@ def _inject_behavioral(eval_def: EvalDefinition) -> EvalDefinition:
 
 def _get_behavioral_data(skill_path: str = "") -> dict:
     """Load cached behavioral data for a skill. Returns dict with metrics or empty."""
-    from .dimensions.behavioral import RESULTS_DIR
+    from . import results_dir as rd
     skill_name = Path(skill_path).resolve().parent.name if skill_path else ""
-    cache_path = RESULTS_DIR / f"{skill_name}.json"
+    cache_path = rd.active_results_dir() / f"{skill_name}.json"
     if not cache_path.is_file():
         return {}
     try:

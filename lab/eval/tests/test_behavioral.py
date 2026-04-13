@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from lab.eval import behavioral_scorer as _bs
+from lab.eval import results_dir as _rd
 from lab.eval.behavioral_scorer import (
     _ROUTING_SYSTEM_PROMPT,
     _check_correct,
@@ -29,26 +29,20 @@ SAMPLE_DESCRIPTIONS = {
 }
 
 
-# Tests mock run_haiku; force haiku provider so _run_provider dispatches there.
-# RESULTS_DIR must move in lockstep with _provider (they're the canonical I/O
-# path together); individual tests still patch RESULTS_DIR to a tmpdir.
+# Tests mock run_haiku; force haiku provider at the shared state so
+# _run_provider dispatches there.
 _ORIGINAL_PROVIDER: str | None = None
-_ORIGINAL_RESULTS_DIR: Path | None = None
 
 
 def setUpModule() -> None:
-    global _ORIGINAL_PROVIDER, _ORIGINAL_RESULTS_DIR
-    _ORIGINAL_PROVIDER = _bs._provider
-    _ORIGINAL_RESULTS_DIR = _bs.RESULTS_DIR
-    _bs._provider = "haiku"
-    _bs.RESULTS_DIR = _bs.results_dir("haiku")
+    global _ORIGINAL_PROVIDER
+    _ORIGINAL_PROVIDER = _rd.get_active_provider()
+    _rd.set_active_provider("haiku")
 
 
 def tearDownModule() -> None:
     if _ORIGINAL_PROVIDER is not None:
-        _bs._provider = _ORIGINAL_PROVIDER
-    if _ORIGINAL_RESULTS_DIR is not None:
-        _bs.RESULTS_DIR = _ORIGINAL_RESULTS_DIR
+        _rd.set_active_provider(_ORIGINAL_PROVIDER)
 
 
 def _cr(skills: list[str] | None) -> CallResult:
@@ -120,7 +114,7 @@ class TestBehavioralDimension(unittest.TestCase):
     def test_neutral_without_cache(self):
         """Returns 1.0 when no cache exists."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.dimensions.behavioral.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = behavioral_score(
                     content="",
                     skill_path=f"{tmpdir}/nonexistent/SKILL.md",
@@ -144,7 +138,7 @@ class TestBehavioralDimension(unittest.TestCase):
             cache_path = Path(tmpdir) / "plan.json"
             cache_path.write_text(json.dumps(cache_data))
 
-            with patch("lab.eval.dimensions.behavioral.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = behavioral_score(
                     content="",
                     skill_path="/fake/skills/plan/SKILL.md",
@@ -168,7 +162,7 @@ class TestBehavioralDimension(unittest.TestCase):
             cache_path = Path(tmpdir) / "plan.json"
             cache_path.write_text(json.dumps(cache_data))
 
-            with patch("lab.eval.dimensions.behavioral.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = behavioral_score(
                     content="",
                     skill_path="/fake/skills/plan/SKILL.md",
@@ -183,7 +177,7 @@ class TestBehavioralDimension(unittest.TestCase):
             cache_path = Path(tmpdir) / "plan.json"
             cache_path.write_text(json.dumps(cache_data))
 
-            with patch("lab.eval.dimensions.behavioral.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = behavioral_score(
                     content="",
                     skill_path="/fake/skills/plan/SKILL.md",
@@ -210,7 +204,7 @@ class TestScoreSkill(unittest.TestCase):
         ]
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS))
 
         self.assertEqual(result["accuracy"], 1.0)
@@ -241,7 +235,7 @@ class TestDifficultyTiers(unittest.TestCase):
         ]
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS))
 
         self.assertEqual(result["tier_counts"]["easy"], 2)
@@ -268,7 +262,7 @@ class TestDifficultyTiers(unittest.TestCase):
         ]
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS))
 
         self.assertEqual(result["easy_accuracy"], 1.0)
@@ -296,7 +290,7 @@ class TestDifficultyTiers(unittest.TestCase):
             cache_path = Path(tmpdir) / "plan.json"
             cache_path.write_text(json.dumps(cache_data))
 
-            with patch("lab.eval.dimensions.behavioral.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = behavioral_score(
                     content="",
                     skill_path="/fake/skills/plan/SKILL.md",
@@ -379,7 +373,7 @@ class TestForkLockRouting(unittest.TestCase):
         mock_haiku.return_value = _cr(["brainstorm"])  # not "plan" but in valid_skills
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS))
 
         self.assertEqual(result["total"], 1)
@@ -404,13 +398,13 @@ class TestParallelWorkers(unittest.TestCase):
         mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 seq_result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, workers=1))
 
         mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 par_result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, workers=2))
 
         self.assertEqual(seq_result["accuracy"], par_result["accuracy"])
@@ -430,7 +424,7 @@ class TestParallelWorkers(unittest.TestCase):
         mock_haiku.return_value = _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, workers=4))
 
         self.assertEqual(result["total"], 8)
@@ -486,7 +480,7 @@ class TestCyclicRotation(unittest.TestCase):
         mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=3))
 
         # 2 base prompts, each run 3 times = 6 haiku calls
@@ -516,7 +510,7 @@ class TestCyclicRotation(unittest.TestCase):
         mock_haiku.side_effect = _side_effect
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=3))
 
         self.assertEqual(result["accuracy"], 1.0)  # majority says correct
@@ -536,7 +530,7 @@ class TestPassAtK(unittest.TestCase):
         mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
 
         self.assertEqual(mock_haiku.call_count, 6)
@@ -563,7 +557,7 @@ class TestPassAtK(unittest.TestCase):
         mock_haiku.side_effect = _side_effect
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
 
         # accuracy from sample 0 = 0% (miss), but pass@3 = 100% (one hit)
@@ -583,7 +577,7 @@ class TestPassAtK(unittest.TestCase):
         mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
 
         self.assertEqual(result["sample_consistency"], 1.0)
@@ -607,7 +601,7 @@ class TestPromptIdAggregation(unittest.TestCase):
         mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=3))
 
         # Should have 2 aggregated results (one per prompt_id), not 1 merged
@@ -658,7 +652,7 @@ class TestModeSpecificCache(unittest.TestCase):
         mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 # Run baseline
                 score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=1, samples=1)
                 # Run rotations
@@ -684,7 +678,7 @@ class TestModeSpecificCache(unittest.TestCase):
         mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 # Write rotations result
                 score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=3)
 
@@ -713,7 +707,7 @@ class TestModeSpecificCache(unittest.TestCase):
         mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
                 self.assertEqual(result["mode"], {"rotations": 1, "samples": 3})
 
@@ -739,7 +733,7 @@ class TestMissingSample0(unittest.TestCase):
         mock_haiku.side_effect = _side_effect
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
 
         # Sample 0 missing → conservative correct=False for accuracy
@@ -769,7 +763,7 @@ class TestMissingSample0(unittest.TestCase):
         mock_haiku.side_effect = _side_effect
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            with patch("lab.eval.behavioral_scorer.RESULTS_DIR", Path(tmpdir)):
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
 
         # Sample 0 present and correct → accuracy=1.0

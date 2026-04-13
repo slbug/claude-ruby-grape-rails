@@ -16,7 +16,9 @@ import argparse
 import json
 import subprocess
 import sys
-from .behavioral_scorer import RESULTS_DIR, score_skill
+from . import results_dir as rd
+from .behavioral_scorer import score_skill
+from .results_dir import SUPPORTED_PROVIDERS
 from .trigger_scorer import TRIGGERS_DIR, load_all_descriptions, load_trigger_file
 
 
@@ -102,7 +104,7 @@ def get_test_set(
 
 def load_baseline(skill_name: str) -> dict | None:
     """Read cached result from results/{skill}.json."""
-    cache_path = RESULTS_DIR / f"{skill_name}.json"
+    cache_path = rd.active_results_dir() / f"{skill_name}.json"
     if not cache_path.is_file():
         return None
     try:
@@ -182,7 +184,7 @@ def run_regression_check(
             print(f"  Scoring {name}...", file=sys.stderr)
 
         # Save baseline file before scoring (score_skill overwrites cache)
-        baseline_path = RESULTS_DIR / f"{name}.json"
+        baseline_path = rd.active_results_dir() / f"{name}.json"
         baseline_backup = baseline_path.read_bytes() if baseline_path.is_file() else None
 
         current, _ = score_skill(name, descriptions, verbose=verbose)
@@ -233,7 +235,15 @@ def main() -> None:
                         help="Show what would be tested without making API calls")
     parser.add_argument("--verbose", action="store_true",
                         help="Show detailed output")
+    parser.add_argument("--provider", default=None,
+                        choices=sorted(SUPPORTED_PROVIDERS),
+                        help=(
+                            "Routing provider for fresh scoring calls. "
+                            "Default: RUBY_PLUGIN_EVAL_PROVIDER env var or apfel."
+                        ))
     args = parser.parse_args()
+
+    rd.set_active_provider(args.provider)
 
     neighbor_map = build_neighbor_map()
     descriptions = load_all_descriptions()

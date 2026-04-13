@@ -10,13 +10,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ..results_dir import results_dir
+from .. import results_dir as rd
 from ..schemas import AssertionResult, DimensionResult
-
-
-# Provider for behavioral dimension — defaults to apfel, overridable via the
-# RUBY_PLUGIN_EVAL_PROVIDER env var. Tests patch this attribute directly.
-RESULTS_DIR = results_dir()
 
 
 def score(
@@ -27,7 +22,7 @@ def score(
 ) -> DimensionResult:
     """Score behavioral dimension using cached trigger results."""
     skill_name = Path(skill_path).resolve().parent.name if skill_path else ""
-    cache_path = RESULTS_DIR / f"{skill_name}.json"
+    cache_path = rd.active_results_dir() / f"{skill_name}.json"
 
     if not cache_path.is_file():
         return DimensionResult(
