@@ -458,6 +458,20 @@ def _ensure_apfel_server():
     health_url = _derive_health_url(base_url)
     is_localhost = _is_loopback_base_url(base_url)
 
+    # Reject unsupported localhost path prefixes that would cause auto-spawn
+    # to listen at root while probes go to a prefixed path (guaranteed timeout).
+    if is_localhost:
+        normalized_path = (url_parts.path or "").rstrip("/") or "/"
+        if normalized_path not in {"/", "/v1"}:
+            raise RuntimeError(
+                f"Unsupported localhost APFEL_BASE_URL path prefix "
+                f"{url_parts.path!r}. Local apfel auto-spawn only works with a root "
+                "base URL such as 'http://localhost:11434' or "
+                "'http://localhost:11434/v1'. If you are using a proxied/prefixed "
+                "endpoint, manage that server separately and point APFEL_BASE_URL at "
+                "the remote/proxied service, or pass --provider haiku."
+            )
+
     with _apfel_server_lock:
         if _apfel_server_proc is not None:
             if _apfel_server_proc.poll() is None:
