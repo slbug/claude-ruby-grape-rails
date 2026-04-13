@@ -449,11 +449,14 @@ def _ensure_apfel_server():
     a remote apfel — health-probe it but do not auto-spawn anything locally.
     """
     global _apfel_server_proc
+    import urllib.parse
     import urllib.request
     import urllib.error
 
-    health_url = _derive_health_url(_get_apfel_base_url())
-    local = _is_loopback_base_url(_get_apfel_base_url())
+    base_url = _get_apfel_base_url()
+    url_parts = urllib.parse.urlsplit(base_url)
+    health_url = _derive_health_url(base_url)
+    is_localhost = _is_loopback_base_url(base_url)
 
     with _apfel_server_lock:
         if _apfel_server_proc is not None:
@@ -473,7 +476,7 @@ def _ensure_apfel_server():
         # Remote APFEL_BASE_URL: the user manages the server elsewhere. Don't
         # try to spawn locally — surface a clear error so they fix config or
         # start their remote apfel.
-        if not local:
+        if not is_localhost:
             raise RuntimeError(
                 f"Remote apfel at {health_url} is unreachable. "
                 f"Start the remote server, unset APFEL_BASE_URL to auto-spawn "
@@ -483,10 +486,34 @@ def _ensure_apfel_server():
         # Start server — fixed --max-concurrent 16 covers typical worker counts
         # (--workers is capped at 32 but typical runs use 1-10); --permissive
         # reduces guardrail false positives on technical prompts.
-        _emit_info("Starting apfel --serve --permissive ...")
+        # Use already-parsed host/port so the spawned server listens on
+        # the same address the probe will check (respects APFEL_BASE_URL config).
+        apfel_host = url_parts.hostname
+        apfel_port = str(url_parts.port) if url_parts.port is not None else None
+        if apfel_host is None or apfel_port is None:
+            raise RuntimeError(
+                f"Cannot auto-start local apfel for malformed APFEL_BASE_URL: "
+                f"{base_url!r}. Set a valid local host:port or unset "
+                f"APFEL_BASE_URL/APFEL_HOST/APFEL_PORT."
+            )
+
+        serve_cmd = [
+            "apfel",
+            "--serve",
+            "--host",
+            apfel_host,
+            "--port",
+            apfel_port,
+            "--max-concurrent",
+            "16",
+            "--permissive",
+        ]
+        _emit_info(
+            f"Starting apfel --serve --host {apfel_host} --port {apfel_port} ..."
+        )
         try:
             _apfel_server_proc = subprocess.Popen(
-                ["apfel", "--serve", "--max-concurrent", "16", "--permissive"],
+                serve_cmd,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
