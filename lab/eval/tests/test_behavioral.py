@@ -213,6 +213,37 @@ class TestScoreSkill(unittest.TestCase):
         self.assertEqual(result["total"], 4)
         self.assertEqual(result["correct"], 4)
 
+    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_all_failed_error_includes_failure_types(self, mock_triggers, mock_haiku):
+        """When every call fails, error message surfaces the failure_types breakdown.
+
+        Regression: previously the all-failed path returned a generic
+        "all N calls failed" and dropped diagnostic info. Users running
+        --all would see "SKIPPED" with no clue what went wrong.
+        """
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature", "design something"],
+            "should_not_trigger": ["fix a bug"],
+        }
+        mock_haiku.side_effect = [
+            CallResult(skills=None, error_type="timeout"),
+            CallResult(skills=None, error_type="server_unavailable"),
+            CallResult(skills=None, error_type="timeout"),
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
+                result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS))
+
+        self.assertIn("error", result)
+        # Error string mentions the breakdown so SKIPPED lines are diagnostic.
+        self.assertIn("failure_types", result["error"])
+        self.assertIn("timeout=2", result["error"])
+        self.assertIn("server_unavailable=1", result["error"])
+        # Structured breakdown also attached for programmatic consumers.
+        self.assertEqual(result["failure_types"], {"server_unavailable": 1, "timeout": 2})
+
 
 class TestDifficultyTiers(unittest.TestCase):
     """Tests for P1a difficulty-stratified reporting."""

@@ -365,8 +365,13 @@ def _get_apfel_port() -> int:
     return port
 
 
-_APFEL_HOST = os.environ.get("APFEL_HOST", "127.0.0.1")
-_APFEL_PORT = _get_apfel_port()
+def _get_apfel_host() -> str:
+    """Return APFEL_HOST env var, defaulting to loopback.
+
+    Deferred like _get_apfel_port() so haiku-only / cache-only runs never
+    touch apfel config at import time.
+    """
+    return os.environ.get("APFEL_HOST", "127.0.0.1")
 
 
 def _normalize_apfel_base_url(url: str) -> str:
@@ -410,7 +415,10 @@ def _get_apfel_base_url() -> str:
     """
     global _apfel_base_url_cache
     if _apfel_base_url_cache is None:
-        raw = os.environ.get("APFEL_BASE_URL", f"http://{_APFEL_HOST}:{_APFEL_PORT}/v1")
+        raw = os.environ.get(
+            "APFEL_BASE_URL",
+            f"http://{_get_apfel_host()}:{_get_apfel_port()}/v1",
+        )
         _apfel_base_url_cache = _normalize_apfel_base_url(raw)
     return _apfel_base_url_cache
 
@@ -1210,9 +1218,25 @@ def score_skill(
     )
 
     if not all_results and total_failures > 0:
+        # Surface the failure_types breakdown so the caller (main()'s SKIPPED
+        # line, or programmatic consumers) can see at a glance why the run
+        # failed without digging into per-call results. Matches the shape
+        # attached to successful score_data at line ~1251.
+        breakdown = _count_failure_types(all_call_results)
+        base_msg = f"all {total_failures} {rd.get_active_provider()} calls failed"
+        if breakdown:
+            summary = ", ".join(
+                f"{et}={n}" for et, n in sorted(
+                    breakdown.items(), key=lambda it: (-it[1], it[0])
+                )
+            )
+            error_msg = f"{base_msg} (failure_types: {summary})"
+        else:
+            error_msg = base_msg
         return {
             "skill": skill_name,
-            "error": f"all {total_failures} {rd.get_active_provider()} calls failed",
+            "error": error_msg,
+            "failure_types": breakdown,
         }, all_call_results
 
     # Aggregate multi-run results

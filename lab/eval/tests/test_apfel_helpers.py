@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from lab.eval.behavioral_scorer import (
     _derive_health_url,
+    _get_apfel_host,
     _get_apfel_port,
     _is_loopback_base_url,
     _normalize_apfel_base_url,
@@ -161,6 +162,21 @@ class TestApfelBaseUrlLazy(unittest.TestCase):
         with patch.dict("os.environ", {}, clear=True):
             second = _get_apfel_base_url()
         self.assertEqual(first, second)
+
+
+class TestGetApfelHost(unittest.TestCase):
+    """_get_apfel_host reads env lazily — no import-time side effects."""
+
+    def test_unset_returns_loopback(self) -> None:
+        import os
+        env_copy = dict(os.environ)
+        env_copy.pop("APFEL_HOST", None)
+        with patch.dict("os.environ", env_copy, clear=True):
+            self.assertEqual(_get_apfel_host(), "127.0.0.1")
+
+    def test_custom_host(self) -> None:
+        with patch.dict("os.environ", {"APFEL_HOST": "apfel.lan"}, clear=False):
+            self.assertEqual(_get_apfel_host(), "apfel.lan")
 
 
 class TestGetApfelPort(unittest.TestCase):
