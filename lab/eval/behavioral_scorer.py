@@ -89,7 +89,9 @@ def _resolve_settings() -> str:
     try:
         result = subprocess.run(
             ["/bin/sh", "-c", helper],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         token = result.stdout.strip()
         if not token or result.returncode != 0:
@@ -105,7 +107,10 @@ def _resolve_settings() -> str:
     # Write temp settings to OS temp dir (avoids repo pollution on SIGKILL)
     # Use printf to avoid echo mangling tokens starting with -n etc.
     tmp = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".json", prefix="bare_resolved_", delete=False,
+        mode="w",
+        suffix=".json",
+        prefix="bare_resolved_",
+        delete=False,
     )
     settings["apiKeyHelper"] = f'printf %s "${_RESOLVED_TOKEN_ENV}"'
     json.dump(settings, tmp)
@@ -116,6 +121,7 @@ def _resolve_settings() -> str:
 @dataclasses.dataclass(slots=True)
 class CallResult:
     """Result from a single provider call."""
+
     skills: list[str] | None
     cost: float = 0.0
     input_tokens: int = 0
@@ -154,13 +160,8 @@ def build_routing_prompt(
     if rotation and items:
         rotation = rotation % len(items)
         items = items[rotation:] + items[:rotation]
-    desc_list = "\n".join(
-        f"- {name}: {desc}" for name, desc in items
-    )
-    return (
-        f"Available skills:\n{desc_list}\n\n"
-        f'The user says: "{user_prompt}"'
-    )
+    desc_list = "\n".join(f"- {name}: {desc}" for name, desc in items)
+    return f'Available skills:\n{desc_list}\n\nThe user says: "{user_prompt}"'
 
 
 # Global executor reference for signal handler cleanup
@@ -186,8 +187,9 @@ def _emit_info(msg: str) -> None:
         print(msg, file=sys.stderr, flush=True)
 
 
-def run_haiku(prompt: str, verbose: bool = False,
-              log_buf: list[str] | None = None) -> CallResult:
+def run_haiku(
+    prompt: str, verbose: bool = False, log_buf: list[str] | None = None
+) -> CallResult:
     """Ask haiku which skill(s) to route to. Returns CallResult."""
 
     def _log(msg: str) -> None:
@@ -200,19 +202,30 @@ def run_haiku(prompt: str, verbose: bool = False,
     try:
         result = subprocess.run(
             [
-                "claude", "--bare",
-                "--settings", settings_path,
-                "-p", "-",
-                "--model", "haiku",
-                "--system-prompt", _ROUTING_SYSTEM_PROMPT,
-                "--tools", "",
-                "--max-turns", "1",
-                "--output-format", "json",
-                "--max-budget-usd", "0.10",
+                "claude",
+                "--bare",
+                "--settings",
+                settings_path,
+                "-p",
+                "-",
+                "--model",
+                "haiku",
+                "--system-prompt",
+                _ROUTING_SYSTEM_PROMPT,
+                "--tools",
+                "",
+                "--max-turns",
+                "1",
+                "--output-format",
+                "json",
+                "--max-budget-usd",
+                "0.10",
                 "--no-session-persistence",
             ],
             input=prompt,
-            capture_output=True, text=True, timeout=60,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
         # Try parsing JSON even on non-zero exit (claude returns JSON with error info)
         error_type = None
@@ -230,7 +243,11 @@ def run_haiku(prompt: str, verbose: bool = False,
                     error_type = "budget"
                 elif "max_turns" in blob:
                     error_type = "max_turns"
-                elif "context_length" in blob or "context_overflow" in blob or "too_large" in blob:
+                elif (
+                    "context_length" in blob
+                    or "context_overflow" in blob
+                    or "too_large" in blob
+                ):
                     error_type = "context_overflow"
                 elif "safety" in blob or "policy" in blob or "guardrail" in blob:
                     error_type = "guardrail_blocked"
@@ -256,9 +273,11 @@ def run_haiku(prompt: str, verbose: bool = False,
         text = data.get("result", "")
         cost = data.get("total_cost_usd", 0)
         usage = data.get("usage", {})
-        in_tok = (usage.get("input_tokens", 0)
-                  + usage.get("cache_creation_input_tokens", 0)
-                  + usage.get("cache_read_input_tokens", 0))
+        in_tok = (
+            usage.get("input_tokens", 0)
+            + usage.get("cache_creation_input_tokens", 0)
+            + usage.get("cache_read_input_tokens", 0)
+        )
         out_tok = usage.get("output_tokens", 0)
 
         if verbose:
@@ -278,7 +297,9 @@ def run_haiku(prompt: str, verbose: bool = False,
             line = line.strip("`").strip()
             if line and line.lower() != "none" and not line.startswith("No "):
                 skills.append(line)
-        return CallResult(skills=skills, cost=cost, input_tokens=in_tok, output_tokens=out_tok)
+        return CallResult(
+            skills=skills, cost=cost, input_tokens=in_tok, output_tokens=out_tok
+        )
 
     except subprocess.TimeoutExpired:
         if verbose:
@@ -374,9 +395,7 @@ def _get_apfel_base_url() -> str:
     """
     global _apfel_base_url_cache
     if _apfel_base_url_cache is None:
-        raw = os.environ.get(
-            "APFEL_BASE_URL", f"http://{_APFEL_HOST}:{_APFEL_PORT}/v1"
-        )
+        raw = os.environ.get("APFEL_BASE_URL", f"http://{_APFEL_HOST}:{_APFEL_PORT}/v1")
         _apfel_base_url_cache = _normalize_apfel_base_url(raw)
     return _apfel_base_url_cache
 
@@ -399,13 +418,15 @@ def _derive_health_url(base_url: str) -> str:
         health_path = path + "/health"
     else:
         health_path = "/health"
-    return urllib.parse.urlunsplit((
-        parsed.scheme or "http",
-        parsed.netloc,
-        health_path,
-        "",
-        "",
-    ))
+    return urllib.parse.urlunsplit(
+        (
+            parsed.scheme or "http",
+            parsed.netloc,
+            health_path,
+            "",
+            "",
+        )
+    )
 
 
 def _is_loopback_base_url(base_url: str) -> bool:
@@ -483,6 +504,7 @@ def _ensure_apfel_server():
                     return
             except (urllib.error.URLError, OSError):
                 import time
+
                 time.sleep(0.5)
         # Readiness timed out — tear down the half-started process so we don't
         # leak it and so the next _ensure_apfel_server() call can retry.
@@ -535,8 +557,9 @@ def _get_apfel_client():
     return _apfel_client
 
 
-def run_apfel(prompt: str, verbose: bool = False,
-              log_buf: list[str] | None = None) -> CallResult:
+def run_apfel(
+    prompt: str, verbose: bool = False, log_buf: list[str] | None = None
+) -> CallResult:
     """Ask Apple Foundation Model which skill(s) to route to via apfel server.
 
     Auto-starts `apfel --serve` if not running. On-device, zero cost, ~4096 token context.
@@ -570,11 +593,17 @@ def run_apfel(prompt: str, verbose: bool = False,
                 if "timed out" in msg or "timeout" in msg:
                     last_exc = e
                     if verbose and attempt < 2:
-                        _log(f"--- APFEL TIMEOUT (attempt {attempt+1}/3, retrying) ---")
+                        _log(
+                            f"--- APFEL TIMEOUT (attempt {attempt + 1}/3, retrying) ---"
+                        )
                     continue
                 raise
         if resp is None:
-            raise last_exc if last_exc else RuntimeError("apfel call failed without exception")
+            raise (
+                last_exc
+                if last_exc
+                else RuntimeError("apfel call failed without exception")
+            )
 
         text = resp.choices[0].message.content or ""
         usage = resp.usage
@@ -590,8 +619,7 @@ def run_apfel(prompt: str, verbose: bool = False,
         cleaned = text.strip()
         if cleaned.startswith("```"):
             cleaned = "\n".join(
-                l for l in cleaned.split("\n")
-                if not l.strip().startswith("```")
+                l for l in cleaned.split("\n") if not l.strip().startswith("```")
             )
 
         skills = []
@@ -605,10 +633,17 @@ def run_apfel(prompt: str, verbose: bool = False,
             if " -" in line:
                 line = line.split(" -")[0].strip()
             line = line.strip("`").strip()
-            if line and line.lower() != "none" and not line.startswith("No ") and line not in seen:
+            if (
+                line
+                and line.lower() != "none"
+                and not line.startswith("No ")
+                and line not in seen
+            ):
                 skills.append(line)
                 seen.add(line)
-        return CallResult(skills=skills, cost=0.0, input_tokens=in_tok, output_tokens=out_tok)
+        return CallResult(
+            skills=skills, cost=0.0, input_tokens=in_tok, output_tokens=out_tok
+        )
 
     except Exception as exc:
         exc_str = str(exc)
@@ -616,7 +651,10 @@ def run_apfel(prompt: str, verbose: bool = False,
         error_type = "unknown"
         # Missing openai/httpx deps surface as ImportError (or our own
         # RuntimeError wrapping it from _get_apfel_client).
-        if isinstance(exc, (ModuleNotFoundError, ImportError)) or "openai and httpx" in exc_lower:
+        if (
+            isinstance(exc, (ModuleNotFoundError, ImportError))
+            or "openai and httpx" in exc_lower
+        ):
             error_type = "dependency_missing"
         elif "apfel" in exc_lower and "not found on path" in exc_lower:
             error_type = "dependency_missing"
@@ -645,8 +683,9 @@ def run_apfel(prompt: str, verbose: bool = False,
         return CallResult(skills=None, error_type=error_type)
 
 
-def _run_provider(prompt: str, verbose: bool = False,
-                  log_buf: list[str] | None = None) -> CallResult:
+def _run_provider(
+    prompt: str, verbose: bool = False, log_buf: list[str] | None = None
+) -> CallResult:
     """Dispatch to active provider."""
     if rd.get_active_provider() == "apfel":
         return run_apfel(prompt, verbose=verbose, log_buf=log_buf)
@@ -674,8 +713,13 @@ def _extract_prompt_meta(item) -> dict:
     return {"prompt": "", "routing": None, "valid_skills": []}
 
 
-def _check_correct(skill_name: str, chosen: list[str], expected: bool,
-                   routing: str | None, valid_skills: list[str]) -> bool:
+def _check_correct(
+    skill_name: str,
+    chosen: list[str],
+    expected: bool,
+    routing: str | None,
+    valid_skills: list[str],
+) -> bool:
     """Single source of truth for per-prompt correctness."""
     if not expected:
         return skill_name not in chosen
@@ -718,14 +762,19 @@ def _run_single_prompt(
         log_lines.append(header)
 
     full_prompt = build_routing_prompt(descriptions, prompt, rotation=rotation)
-    call_result = _run_provider(full_prompt, verbose=verbose,
-                                log_buf=log_lines if parallel else None)
+    call_result = _run_provider(
+        full_prompt, verbose=verbose, log_buf=log_lines if parallel else None
+    )
     chosen = call_result.skills
 
     if chosen is None:
         if verbose:
-            error_hint = f" [{call_result.error_type}]" if call_result.error_type else ""
-            log_lines.append(f"  -> SKIPPED ({rd.get_active_provider()} call failed{error_hint})")
+            error_hint = (
+                f" [{call_result.error_type}]" if call_result.error_type else ""
+            )
+            log_lines.append(
+                f"  -> SKIPPED ({rd.get_active_provider()} call failed{error_hint})"
+            )
             if parallel:
                 with _verbose_lock:
                     for line in log_lines:
@@ -797,10 +846,20 @@ def _run_prompt_batch(
             results.append(result)
 
     if not parallel:
-        for i, (item, expected, tier, rotation, run_index, pid) in enumerate(flat_items, 1):
+        for i, (item, expected, tier, rotation, run_index, pid) in enumerate(
+            flat_items, 1
+        ):
             result = _run_single_prompt(
-                skill_name, item, i, total, descriptions, expected, tier,
-                verbose, parallel=False, rotation=rotation,
+                skill_name,
+                item,
+                i,
+                total,
+                descriptions,
+                expected,
+                tier,
+                verbose,
+                parallel=False,
+                rotation=rotation,
             )
             _collect(result, run_index, pid)
         return results, failures, call_results
@@ -813,11 +872,21 @@ def _run_prompt_batch(
             _executor = executor
         try:
             futures = []
-            for i, (item, expected, tier, rotation, run_index, pid) in enumerate(flat_items, 1):
+            for i, (item, expected, tier, rotation, run_index, pid) in enumerate(
+                flat_items, 1
+            ):
                 future = executor.submit(
                     _run_single_prompt,
-                    skill_name, item, i, total, descriptions, expected, tier,
-                    verbose, True, rotation,
+                    skill_name,
+                    item,
+                    i,
+                    total,
+                    descriptions,
+                    expected,
+                    tier,
+                    verbose,
+                    True,
+                    rotation,
                 )
                 futures.append(future)
                 meta_per_future.append((run_index, pid))
@@ -865,7 +934,13 @@ def _compute_metrics(results: list[dict]) -> dict:
     """Compute accuracy/precision/recall from a list of result dicts."""
     total = len(results)
     if total == 0:
-        return {"accuracy": 0.0, "precision": 1.0, "recall": 1.0, "total": 0, "correct": 0}
+        return {
+            "accuracy": 0.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "total": 0,
+            "correct": 0,
+        }
     correct_count = sum(1 for r in results if r["correct"])
     tp = sum(1 for r in results if r["expected"] and r["correct"])
     fp = sum(1 for r in results if not r["expected"] and not r["correct"])
@@ -879,7 +954,9 @@ def _compute_metrics(results: list[dict]) -> dict:
         "recall": round(recall, 4),
         "total": total,
         "correct": correct_count,
-        "tp": tp, "fp": fp, "fn": fn,
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
     }
 
 
@@ -899,6 +976,7 @@ def _aggregate_rotations(results: list[dict], num_rotations: int) -> list[dict]:
     rotation otherwise (chosen may not reflect the default ordering in that case).
     """
     from collections import defaultdict
+
     by_prompt: dict[int, list[dict]] = defaultdict(list)
     for r in results:
         by_prompt[r.get("prompt_id", 0)].append(r)
@@ -937,6 +1015,7 @@ def _aggregate_samples(results: list[dict], num_samples: int) -> list[dict]:
     correct defaults to False. Missing samples padded as incorrect.
     """
     from collections import defaultdict
+
     by_prompt: dict[int, list[dict]] = defaultdict(list)
     for r in results:
         by_prompt[r.get("prompt_id", 0)].append(r)
@@ -1003,8 +1082,12 @@ def score_skill(
 ) -> tuple[dict, list[CallResult]]:
     """Score trigger accuracy for one skill. Returns (score_dict, call_results)."""
     if rotations > 1 and samples > 1:
-        raise ValueError("rotations and samples are mutually exclusive; only one may be > 1")
-    cache_path = rd.active_results_dir() / _result_filename(skill_name, rotations, samples)
+        raise ValueError(
+            "rotations and samples are mutually exclusive; only one may be > 1"
+        )
+    cache_path = rd.active_results_dir() / _result_filename(
+        skill_name, rotations, samples
+    )
 
     if use_cache:
         if cache_path.is_file():
@@ -1063,11 +1146,18 @@ def score_skill(
             flat_items.append((item, expected, tier, rotation, run_index, pid))
 
     all_results, total_failures, all_call_results = _run_prompt_batch(
-        skill_name, flat_items, descriptions, verbose=verbose, workers=workers,
+        skill_name,
+        flat_items,
+        descriptions,
+        verbose=verbose,
+        workers=workers,
     )
 
     if not all_results and total_failures > 0:
-        return {"skill": skill_name, "error": f"all {total_failures} {rd.get_active_provider()} calls failed"}, all_call_results
+        return {
+            "skill": skill_name,
+            "error": f"all {total_failures} {rd.get_active_provider()} calls failed",
+        }, all_call_results
 
     # Aggregate multi-run results
     if rotations > 1:
@@ -1085,8 +1175,16 @@ def score_skill(
     hard_metrics = _compute_metrics(hard_results)
 
     # Fork/lock metrics
-    fork_results = [r for r in all_results if r.get("routing") == "fork" and r.get("expected") is True]
-    lock_results = [r for r in all_results if r.get("routing") == "lock" and r.get("expected") is True]
+    fork_results = [
+        r
+        for r in all_results
+        if r.get("routing") == "fork" and r.get("expected") is True
+    ]
+    lock_results = [
+        r
+        for r in all_results
+        if r.get("routing") == "lock" and r.get("expected") is True
+    ]
     fork_metrics = _compute_metrics(fork_results)
     lock_metrics = _compute_metrics(lock_results)
 
@@ -1105,7 +1203,10 @@ def score_skill(
         "fork_accuracy": fork_metrics["accuracy"],
         "lock_accuracy": lock_metrics["accuracy"],
         "tier_counts": {"easy": easy_metrics["total"], "hard": hard_metrics["total"]},
-        "routing_counts": {"fork": fork_metrics["total"], "lock": lock_metrics["total"]},
+        "routing_counts": {
+            "fork": fork_metrics["total"],
+            "lock": lock_metrics["total"],
+        },
         "content_hash": content_hash(skill_name, descriptions),
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "results": all_results,
@@ -1122,37 +1223,58 @@ def score_skill(
                     rot_correct.append(prc[rot])
             if rot_correct:
                 per_rotation_acc.append(round(sum(rot_correct) / len(rot_correct), 4))
-        order_range = round(max(per_rotation_acc) - min(per_rotation_acc), 4) if per_rotation_acc else 0.0
+        order_range = (
+            round(max(per_rotation_acc) - min(per_rotation_acc), 4)
+            if per_rotation_acc
+            else 0.0
+        )
         # correctness_consistency: all rotations agree on correct/incorrect verdict
         correctness_agree = sum(
-            1 for r in all_results
-            if r.get("per_rotation_correct") and all(
+            1
+            for r in all_results
+            if r.get("per_rotation_correct")
+            and all(
                 c == r["per_rotation_correct"][0] for c in r["per_rotation_correct"]
             )
         )
         # choice_consistency: all rotations return the same skill list
         choice_agree = sum(
-            1 for r in all_results
-            if r.get("per_rotation_choices") and all(
-                c == r["per_rotation_choices"][0] for c in r["per_rotation_choices"]
+            1
+            for r in all_results
+            if r.get("per_rotation_choices")
+            and all(
+                c == r["per_rotation_choices"][0]
+                for c in r["per_rotation_choices"]
                 if c is not None
-            ) and all(c is not None for c in r["per_rotation_choices"])
+            )
+            and all(c is not None for c in r["per_rotation_choices"])
         )
         total_prompts = len(all_results)
         score_data["rotations"] = rotations
         score_data["per_rotation_accuracy"] = per_rotation_acc
         score_data["order_range"] = order_range
-        score_data["order_stddev"] = round(
-            (sum((a - sum(per_rotation_acc) / len(per_rotation_acc)) ** 2
-                 for a in per_rotation_acc) / len(per_rotation_acc)) ** 0.5, 4
-        ) if per_rotation_acc else 0.0
+        score_data["order_stddev"] = (
+            round(
+                (
+                    sum(
+                        (a - sum(per_rotation_acc) / len(per_rotation_acc)) ** 2
+                        for a in per_rotation_acc
+                    )
+                    / len(per_rotation_acc)
+                )
+                ** 0.5,
+                4,
+            )
+            if per_rotation_acc
+            else 0.0
+        )
         score_data["order_sensitive"] = order_range > 0.15
-        score_data["routing_consistency"] = round(
-            choice_agree / total_prompts, 4
-        ) if total_prompts else 0.0
-        score_data["correctness_consistency"] = round(
-            correctness_agree / total_prompts, 4
-        ) if total_prompts else 0.0
+        score_data["routing_consistency"] = (
+            round(choice_agree / total_prompts, 4) if total_prompts else 0.0
+        )
+        score_data["correctness_consistency"] = (
+            round(correctness_agree / total_prompts, 4) if total_prompts else 0.0
+        )
 
     # Sample-specific metrics (P3)
     if samples > 1:
@@ -1160,12 +1282,12 @@ def score_skill(
         consistency_count = sum(1 for r in all_results if r.get("sample_consistency"))
         total_prompts = len(all_results)
         score_data["samples"] = samples
-        score_data["pass_at_k"] = round(
-            pass_at_k_count / total_prompts, 4
-        ) if total_prompts else 0.0
-        score_data["sample_consistency"] = round(
-            consistency_count / total_prompts, 4
-        ) if total_prompts else 0.0
+        score_data["pass_at_k"] = (
+            round(pass_at_k_count / total_prompts, 4) if total_prompts else 0.0
+        )
+        score_data["sample_consistency"] = (
+            round(consistency_count / total_prompts, 4) if total_prompts else 0.0
+        )
         score_data["inconsistent_routing"] = (
             score_data["pass_at_k"] - score_data["accuracy"] > 0.15
         )
@@ -1187,25 +1309,61 @@ def main() -> None:
         description="Test skill trigger accuracy with apfel (default) or haiku"
     )
     parser.add_argument("--skill", help="Test one skill")
-    parser.add_argument("--all", action="store_true", help="Test all skills with trigger files")
-    parser.add_argument("--cache", action="store_true", help="Cache-only: use cached results, skip stale/missing (no provider calls)")
+    parser.add_argument(
+        "--all", action="store_true", help="Test all skills with trigger files"
+    )
+    parser.add_argument(
+        "--cache",
+        action="store_true",
+        help="Cache-only: use cached results, skip stale/missing (no provider calls)",
+    )
     parser.add_argument("--summary", action="store_true", help="Print summary only")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON")
-    parser.add_argument("--verbose", action="store_true", help="Show prompt/response for each provider call")
-    parser.add_argument("--limit", type=int, default=0, metavar="N",
-                        help="Test only first N should_trigger + N should_not_trigger prompts per skill")
-    parser.add_argument("--workers", type=int, default=1, metavar="N", choices=range(1, 33),
-                        help="Parallel workers for provider calls (default 1, recommended 4)")
-    parser.add_argument("--rotations", type=int, default=1, metavar="N", choices=range(1, 16),
-                        help="Cyclic rotations for order-bias control (default 1, recommended 5)")
-    parser.add_argument("--samples", type=int, default=1, metavar="N", choices=range(1, 8),
-                        help="Independent samples for pass@k robustness (default 1, recommended 3)")
-    parser.add_argument("--provider", default=resolve_provider(None),
-                        choices=sorted(SUPPORTED_PROVIDERS),
-                        help=(
-                            "Routing provider: apfel (on-device, free) or haiku (API, paid). "
-                            "Default: RUBY_PLUGIN_EVAL_PROVIDER env var or apfel."
-                        ))
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show prompt/response for each provider call",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Test only first N should_trigger + N should_not_trigger prompts per skill",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        metavar="N",
+        choices=range(1, 33),
+        help="Parallel workers for provider calls (default 1, recommended 4)",
+    )
+    parser.add_argument(
+        "--rotations",
+        type=int,
+        default=1,
+        metavar="N",
+        choices=range(1, 16),
+        help="Cyclic rotations for order-bias control (default 1, recommended 5)",
+    )
+    parser.add_argument(
+        "--samples",
+        type=int,
+        default=1,
+        metavar="N",
+        choices=range(1, 8),
+        help="Independent samples for pass@k robustness (default 1, recommended 3)",
+    )
+    parser.add_argument(
+        "--provider",
+        default=None,
+        choices=sorted(SUPPORTED_PROVIDERS),
+        help=(
+            "Routing provider: apfel (on-device, free) or haiku (API, paid). "
+            "Default: RUBY_PLUGIN_EVAL_PROVIDER env var or apfel."
+        ),
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -1218,6 +1376,7 @@ def main() -> None:
     if args.rotations > 1 and args.samples > 1:
         parser.error("--rotations and --samples are mutually exclusive (both > 1)")
 
+    # Resolve provider after parsing so warnings only occur when actually needed
     rd.set_active_provider(args.provider)
 
     # Start apfel server before workers (avoids race condition in threads).
@@ -1240,7 +1399,9 @@ def main() -> None:
             if acquired:
                 _executor_lock.release()
         if executor is not None:
-            log.warning("Interrupted — cancelling pending work, waiting for running workers.")
+            log.warning(
+                "Interrupted — cancelling pending work, waiting for running workers."
+            )
             executor.shutdown(wait=True, cancel_futures=True)
         raise SystemExit(130)
 
@@ -1248,20 +1409,23 @@ def main() -> None:
     signal.signal(signal.SIGTERM, _shutdown_handler)
 
     # Resolve auth once — avoids concurrent keychain access with --workers > 1
+    # Skip for --cache (documented as "no provider calls" — no keychain touches)
     global _resolved_settings_path
-    _resolved_settings_path = _resolve_settings()
-    base_settings = str(TRIGGERS_DIR.parent / "bare_settings.json")
-    is_temp_settings = _resolved_settings_path != base_settings
+    is_temp_settings = False
+    if not args.cache:
+        _resolved_settings_path = _resolve_settings()
+        base_settings = str(TRIGGERS_DIR.parent / "bare_settings.json")
+        is_temp_settings = _resolved_settings_path != base_settings
 
-    def _cleanup_settings():
-        if is_temp_settings:
-            try:
-                os.unlink(_resolved_settings_path)
-            except OSError:
-                pass
-            os.environ.pop(_RESOLVED_TOKEN_ENV, None)
+        def _cleanup_settings():
+            if is_temp_settings:
+                try:
+                    os.unlink(_resolved_settings_path)
+                except OSError:
+                    pass
+                os.environ.pop(_RESOLVED_TOKEN_ENV, None)
 
-    atexit.register(_cleanup_settings)
+        atexit.register(_cleanup_settings)
 
     descriptions = load_all_descriptions()
 
@@ -1269,33 +1433,47 @@ def main() -> None:
     all_call_results: list[CallResult] = []
 
     if args.skill:
-        result, crs = score_skill(args.skill, descriptions, args.cache,
-                                  verbose=args.verbose, limit=args.limit,
-                                  workers=args.workers,
-                                  rotations=args.rotations, samples=args.samples)
+        result, crs = score_skill(
+            args.skill,
+            descriptions,
+            args.cache,
+            verbose=args.verbose,
+            limit=args.limit,
+            workers=args.workers,
+            rotations=args.rotations,
+            samples=args.samples,
+        )
         all_call_results.extend(crs)
 
         if args.summary:
             tier_str = ""
             tc = result.get("tier_counts", {})
             if tc.get("hard", 0) > 0:
-                tier_str = (f" (easy: {result.get('easy_accuracy', 0):.0%}, "
-                            f"hard: {result.get('hard_accuracy', 0):.0%})")
+                tier_str = (
+                    f" (easy: {result.get('easy_accuracy', 0):.0%}, "
+                    f"hard: {result.get('hard_accuracy', 0):.0%})"
+                )
             extra = ""
             if result.get("rotations", 1) > 1:
-                extra = (f" choice={result.get('routing_consistency', 0):.0%}"
-                         f" correct={result.get('correctness_consistency', 0):.0%}"
-                         f" range={result.get('order_range', 0):.2f}")
+                extra = (
+                    f" choice={result.get('routing_consistency', 0):.0%}"
+                    f" correct={result.get('correctness_consistency', 0):.0%}"
+                    f" range={result.get('order_range', 0):.2f}"
+                )
                 if result.get("order_sensitive"):
                     extra += " ORDER-SENSITIVE"
             if result.get("samples", 1) > 1:
-                extra = (f" pass@{result['samples']}={result.get('pass_at_k', 0):.0%}"
-                         f" cons={result.get('sample_consistency', 0):.0%}")
+                extra = (
+                    f" pass@{result['samples']}={result.get('pass_at_k', 0):.0%}"
+                    f" cons={result.get('sample_consistency', 0):.0%}"
+                )
                 if result.get("inconsistent_routing"):
                     extra += " INCONSISTENT"
-            print(f"{args.skill}: accuracy={result.get('accuracy', 0):.0%}{tier_str} "
-                  f"precision={result.get('precision', 0):.0%} "
-                  f"recall={result.get('recall', 0):.0%}{extra}")
+            print(
+                f"{args.skill}: accuracy={result.get('accuracy', 0):.0%}{tier_str} "
+                f"precision={result.get('precision', 0):.0%} "
+                f"recall={result.get('recall', 0):.0%}{extra}"
+            )
         else:
             print(json.dumps(result, indent=2 if args.pretty else None))
 
@@ -1312,15 +1490,21 @@ def main() -> None:
                 log.info("  Testing %s...", name)
             else:
                 print(f"  Testing {name}...", end=" ", flush=True, file=sys.stderr)
-            result, crs = score_skill(name, descriptions, args.cache,
-                                      verbose=args.verbose, limit=args.limit,
-                                      workers=args.workers,
-                                      rotations=args.rotations, samples=args.samples)
+            result, crs = score_skill(
+                name,
+                descriptions,
+                args.cache,
+                verbose=args.verbose,
+                limit=args.limit,
+                workers=args.workers,
+                rotations=args.rotations,
+                samples=args.samples,
+            )
             all_call_results.extend(crs)
 
             if "error" in result:
                 if args.verbose:
-                    log.warning("SKIPPED (%s)", result['error'])
+                    log.warning("SKIPPED (%s)", result["error"])
                 else:
                     # Non-verbose: "  Testing {name}... " was printed with end=" ",
                     # so finish the line cleanly instead of interleaving a
@@ -1334,7 +1518,8 @@ def main() -> None:
                 f"accuracy={result.get('accuracy', 0):.0%} "
                 f"(P={result.get('precision', 0):.0%} "
                 f"R={result.get('recall', 0):.0%})",
-                file=sys.stderr, flush=True,
+                file=sys.stderr,
+                flush=True,
             )
 
         avg = total_accuracy / skills_tested if skills_tested else 0
@@ -1349,23 +1534,31 @@ def main() -> None:
                 tier_str = ""
                 tc = result.get("tier_counts", {})
                 if tc.get("hard", 0) > 0:
-                    tier_str = (f" (easy: {result.get('easy_accuracy', 0):.0%}, "
-                                f"hard: {result.get('hard_accuracy', 0):.0%})")
+                    tier_str = (
+                        f" (easy: {result.get('easy_accuracy', 0):.0%}, "
+                        f"hard: {result.get('hard_accuracy', 0):.0%})"
+                    )
                 extra = ""
                 if result.get("rotations", 1) > 1:
-                    extra = (f" choice={result.get('routing_consistency', 0):.0%}"
-                             f" correct={result.get('correctness_consistency', 0):.0%}"
-                             f" range={result.get('order_range', 0):.2f}")
+                    extra = (
+                        f" choice={result.get('routing_consistency', 0):.0%}"
+                        f" correct={result.get('correctness_consistency', 0):.0%}"
+                        f" range={result.get('order_range', 0):.2f}"
+                    )
                     if result.get("order_sensitive"):
                         extra += " ORDER-SENSITIVE"
                 if result.get("samples", 1) > 1:
-                    extra = (f" pass@{result['samples']}={result.get('pass_at_k', 0):.0%}"
-                             f" cons={result.get('sample_consistency', 0):.0%}")
+                    extra = (
+                        f" pass@{result['samples']}={result.get('pass_at_k', 0):.0%}"
+                        f" cons={result.get('sample_consistency', 0):.0%}"
+                    )
                     if result.get("inconsistent_routing"):
                         extra += " INCONSISTENT"
-                print(f"  {name}: accuracy={result.get('accuracy', 0):.0%}{tier_str} "
-                      f"P={result.get('precision', 0):.0%} "
-                      f"R={result.get('recall', 0):.0%}{extra}")
+                print(
+                    f"  {name}: accuracy={result.get('accuracy', 0):.0%}{tier_str} "
+                    f"P={result.get('precision', 0):.0%} "
+                    f"R={result.get('recall', 0):.0%}{extra}"
+                )
         else:
             aggregate = {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -1381,7 +1574,9 @@ def main() -> None:
                     for k, v in all_results.items()
                 },
             }
-            aggregate_suffix = _result_filename("_aggregate", args.rotations, args.samples)
+            aggregate_suffix = _result_filename(
+                "_aggregate", args.rotations, args.samples
+            )
             aggregate_path = rd.active_results_dir() / aggregate_suffix
             rd.active_results_dir().mkdir(parents=True, exist_ok=True)
             aggregate_path.write_text(
@@ -1408,12 +1603,14 @@ def main() -> None:
         ]
         if failed:
             cost_lines.append(f"  Failed calls:    {failed}")
-        cost_lines.extend([
-            f"  Total cost:      ${total_cost:.4f}",
-            f"  Max single call: ${max_cost:.4f}",
-            f"  Avg per call:    ${avg_cost:.4f}",
-            "--------------------",
-        ])
+        cost_lines.extend(
+            [
+                f"  Total cost:      ${total_cost:.4f}",
+                f"  Max single call: ${max_cost:.4f}",
+                f"  Avg per call:    ${avg_cost:.4f}",
+                "--------------------",
+            ]
+        )
         if args.verbose:
             for line in cost_lines:
                 log.info(line)
