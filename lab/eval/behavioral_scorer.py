@@ -619,7 +619,7 @@ def run_apfel(prompt: str, verbose: bool = False,
         if isinstance(exc, (ModuleNotFoundError, ImportError)) or "openai and httpx" in exc_lower:
             error_type = "dependency_missing"
         elif "apfel" in exc_lower and "not found on path" in exc_lower:
-            error_type = "server_unavailable"
+            error_type = "dependency_missing"
         elif "remote apfel" in exc_lower and "unreachable" in exc_lower:
             error_type = "server_unavailable"
         elif "context" in exc_lower or "overflow" in exc_lower or "4096" in exc_str:
