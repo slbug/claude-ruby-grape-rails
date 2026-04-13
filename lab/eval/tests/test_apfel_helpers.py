@@ -125,6 +125,39 @@ class TestNormalizeApfelBaseUrl(unittest.TestCase):
         self.assertIn("Invalid APFEL_BASE_URL", str(ctx.exception))
 
 
+class TestApfelBaseUrlLazy(unittest.TestCase):
+    """_get_apfel_base_url defers normalization so import doesn't throw."""
+
+    def setUp(self) -> None:
+        # Reset the cached URL between tests so env changes take effect.
+        from lab.eval import behavioral_scorer as bs
+        bs._apfel_base_url_cache = None
+
+    def test_invalid_env_does_not_break_import(self) -> None:
+        """Importing behavioral_scorer with a bad APFEL_BASE_URL must succeed.
+
+        Haiku-only and cache-only flows must not depend on apfel config.
+        """
+        with patch.dict("os.environ", {"APFEL_BASE_URL": ""}, clear=False):
+            # Re-import the module to trigger any import-time validation paths.
+            import importlib
+            from lab.eval import behavioral_scorer as bs
+            importlib.reload(bs)  # must not raise
+
+    def test_lazy_normalization_raises_only_when_accessed(self) -> None:
+        from lab.eval.behavioral_scorer import _get_apfel_base_url
+        with patch.dict("os.environ", {"APFEL_BASE_URL": ""}, clear=False):
+            # Access is what triggers validation, and only then.
+            with self.assertRaises(RuntimeError):
+                _get_apfel_base_url()
+
+    def test_valid_env_returns_normalized(self) -> None:
+        from lab.eval.behavioral_scorer import _get_apfel_base_url
+        with patch.dict("os.environ",
+                        {"APFEL_BASE_URL": "127.0.0.1:11434/v1"}, clear=False):
+            self.assertEqual(_get_apfel_base_url(), "http://127.0.0.1:11434/v1")
+
+
 class TestGetApfelPort(unittest.TestCase):
     """_get_apfel_port parses env var, falls back on garbage."""
 

@@ -120,11 +120,12 @@ class CallResult:
     cost: float = 0.0
     input_tokens: int = 0
     output_tokens: int = 0
-    # Machine-readable error category. Intentionally extensible — current
-    # values include "budget", "max_turns", "parse_error", "timeout",
-    # "context_overflow", "guardrail_blocked", "server_unavailable",
-    # "dependency_missing", "rate_limited", "unknown", or None on success.
-    # Callers should not assume this list is exhaustive.
+    # Machine-readable error category. Both providers emit the same canonical
+    # set: "budget", "max_turns", "parse_error", "timeout", "context_overflow",
+    # "guardrail_blocked", "server_unavailable", "dependency_missing",
+    # "rate_limited", "unknown", or None on success. Intentionally extensible —
+    # new categories may appear; callers should not assume this list is
+    # exhaustive and should fall through to a generic bucket.
     error_type: str | None = None
 
 
@@ -223,10 +224,18 @@ def run_haiku(prompt: str, verbose: bool = False,
         if result.returncode != 0 or (data and data.get("is_error")):
             if data:
                 subtype = data.get("subtype", "")
-                if "budget" in subtype:
+                message = str(data.get("message", "")).lower()
+                blob = f"{subtype} {message}".lower()
+                if "budget" in blob:
                     error_type = "budget"
-                elif "max_turns" in subtype:
+                elif "max_turns" in blob:
                     error_type = "max_turns"
+                elif "context_length" in blob or "context_overflow" in blob or "too_large" in blob:
+                    error_type = "context_overflow"
+                elif "safety" in blob or "policy" in blob or "guardrail" in blob:
+                    error_type = "guardrail_blocked"
+                elif "rate_limit" in blob or "rate-limit" in blob:
+                    error_type = "rate_limited"
                 else:
                     error_type = "unknown"
             else:
@@ -348,11 +357,28 @@ def _normalize_apfel_base_url(url: str) -> str:
     return candidate
 
 
-_APFEL_BASE_URL = _normalize_apfel_base_url(
-    os.environ.get("APFEL_BASE_URL", f"http://{_APFEL_HOST}:{_APFEL_PORT}/v1")
-)
-
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
+
+
+# APFEL_BASE_URL is resolved lazily: haiku-only and cache-only runs must not
+# fail at import just because a user has an invalid APFEL_BASE_URL set.
+_apfel_base_url_cache: str | None = None
+
+
+def _get_apfel_base_url() -> str:
+    """Return the normalized APFEL_BASE_URL, validating once.
+
+    Lazy so importing this module never throws on bad apfel config — only
+    paths that actually use apfel (_ensure_apfel_server, _get_apfel_client)
+    hit the validation. Cached after first successful call.
+    """
+    global _apfel_base_url_cache
+    if _apfel_base_url_cache is None:
+        raw = os.environ.get(
+            "APFEL_BASE_URL", f"http://{_APFEL_HOST}:{_APFEL_PORT}/v1"
+        )
+        _apfel_base_url_cache = _normalize_apfel_base_url(raw)
+    return _apfel_base_url_cache
 
 
 def _derive_health_url(base_url: str) -> str:
@@ -404,8 +430,8 @@ def _ensure_apfel_server():
     import urllib.request
     import urllib.error
 
-    health_url = _derive_health_url(_APFEL_BASE_URL)
-    local = _is_loopback_base_url(_APFEL_BASE_URL)
+    health_url = _derive_health_url(_get_apfel_base_url())
+    local = _is_loopback_base_url(_get_apfel_base_url())
 
     with _apfel_server_lock:
         if _apfel_server_proc is not None:
@@ -501,7 +527,7 @@ def _get_apfel_client():
                     "Install: .venv/bin/pip install openai httpx"
                 )
             _apfel_client = OpenAI(
-                base_url=_APFEL_BASE_URL,
+                base_url=_get_apfel_base_url(),
                 api_key="unused",
                 timeout=_httpx.Timeout(60.0, connect=5.0),
                 max_retries=0,
@@ -703,9 +729,9 @@ def _run_single_prompt(
             if parallel:
                 with _verbose_lock:
                     for line in log_lines:
-                        log.warning(line)
+                        _emit_info(line)
             else:
-                log.warning(log_lines[-1])
+                _emit_info(log_lines[-1])
         return {"_failure": True, "_call_result": call_result}
 
     correct = _check_correct(
@@ -804,7 +830,7 @@ def _run_prompt_batch(
                     errors.append(f"{type(exc).__name__}: {exc}")
                     if verbose:
                         with _verbose_lock:
-                            log.warning(traceback.format_exc())
+                            _emit_info(traceback.format_exc())
                     continue
                 ri, pid = meta_per_future[idx]
                 _collect(result, ri, pid)
