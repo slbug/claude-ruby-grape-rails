@@ -568,7 +568,9 @@ def _ensure_apfel_server():
                 stderr=stderr_fd,
             )
         except FileNotFoundError as exc:
-            os.close(stderr_fd)
+            # fd and tempfile are cleaned up below in `finally`; here we just
+            # remove the temp file that's now useless and re-raise with an
+            # actionable message.
             try:
                 os.unlink(stderr_path)
             except OSError:
@@ -579,7 +581,8 @@ def _ensure_apfel_server():
                 "Install apfel or pass --provider haiku."
             ) from exc
         finally:
-            # Subprocess has its own dup'd fd now; we don't need ours.
+            # Subprocess has its own dup'd fd on success; on failure our fd
+            # is still open. Single close covers both paths.
             os.close(stderr_fd)
         atexit.register(_stop_apfel_server)
 
