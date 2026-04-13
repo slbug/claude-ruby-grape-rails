@@ -7,21 +7,31 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [1.12.3] - 2026-04-12
+## [1.12.3] - 2026-04-13
 
 ### Added
 
 - **Apfel provider for behavioral eval** — on-device Apple Foundation Model
   via `apfel --serve`. Zero API cost, ~1-2s per call. Enable with
-  `--provider apfel` (default). Auto-starts server, connects via OpenAI
-  Python SDK, reuses connection pool. Results saved to
+  `--provider apfel` (default). Auto-starts server on non-`--cache` runs;
+  skipped for cache-only. Connects via OpenAI Python SDK with connection-pool
+  reuse. Supports remote endpoints via `APFEL_BASE_URL` (probe-only, no local
+  spawn when non-loopback). Invalid `APFEL_PORT`/`APFEL_BASE_URL` warn and
+  fall back. Full skill descriptions sent (no truncation); context overflow
+  and guardrail rejections surface as typed failures. Results under
   `lab/eval/triggers/results/apfel/`; haiku results separate under
   `lab/eval/triggers/results/haiku/`.
 - **Provider-aware behavioral dimension** — `RUBY_PLUGIN_EVAL_PROVIDER` env
   var selects which cached results (apfel/haiku) feed the behavioral eval.
+  Invalid values warn and fall back.
 - **Error classification in behavioral scorer** — `budget`, `max_turns`,
   `parse_error`, `context_overflow`, `timeout`, `guardrail_blocked`,
-  `server_unavailable`, `unknown`. Surfaced per-skill in `failure_types` dict.
+  `server_unavailable`, `dependency_missing`, `rate_limited`, `unknown`.
+  Both providers emit the same canonical set. Surfaced per-skill in
+  `failure_types` dict.
+- **`--provider` flag on `neighbor_regression`** — switch routing provider
+  for confusable-pair regression without setting env vars; parity with
+  `behavioral_scorer`.
 - **Local Python dev setup support for apfel provider** — `.venv/` and
   `.envrc` added to `.gitignore` (not shipped); documented install path
   `.venv/bin/pip install openai httpx` and optional direnv `.envrc`
@@ -31,8 +41,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   sidekiq-specialist, deployment-validator, verification-runner,
   data-integrity-reviewer, migration-safety-reviewer) now instruct Claude
   to write findings file by turn ~15 with partial content if needed, then
-  overwrite with final version. Pattern borrowed from claude-elixir-phoenix
-  v2.8.1 fix for agents not writing artifacts.
+  overwrite with final version. Fallback path matches orchestrator contract
+  (`{review-slug}-{datesuffix}.md`). Pattern borrowed from
+  claude-elixir-phoenix v2.8.1.
 
 ### Changed
 
@@ -41,30 +52,25 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`logging` module for behavioral scorer** — replaced scattered
   `print(..., file=sys.stderr)` + custom `_ts()` timestamp helper with
   standard Python `logging` (`%(asctime)s %(message)s` format). Per-thread
-  log buffering preserved for parallel workers.
+  log buffering preserved for parallel workers. Progress lines (`Testing X...
+  SKIPPED (...)` and worker-failure summaries) stay on plain stderr in
+  non-verbose mode to avoid timestamp interleaving.
 - **Behavioral scorer argparse** — new `--provider {apfel,haiku}` flag.
-- **Stripped markdown code fences from apfel responses** — apfel sometimes
-  wraps routing output in ` ``` ` fences; parser now strips them.
-- **Deduplicated apfel skill parser output** — apfel occasionally repeats
-  skill names; parser now preserves order and drops duplicates.
+- **Apfel response parser** — strips markdown code fences and deduplicates
+  repeated skill names (both behaviors apfel occasionally produces).
 - **Apfel server config** — launched with fixed `--max-concurrent 16`;
   `x_context_output_reserve: 64` to maximize input budget; `max_retries=0`
-  on client to avoid SDK-level retry loops masking issues.
+  on client to avoid SDK-level retry loops masking issues;
+  `_ensure_apfel_server()` called once from `main()` before worker threads
+  spawn.
 - **Timeout retry for apfel** — up to 3 attempts on timeout (Apple FM can
   enter transient slow states). Other error types do not retry.
+- **Cost summary shows active provider** — header
+  `--- Cost Summary ({provider}) ---`; call-count labeled "Total successful
+  calls" (apfel is on-device, not API).
 
 ### Fixed
 
-- **Apfel context overflow handling** — full skill descriptions now sent
-  (no truncation); overflow prompts surface as `context_overflow` failures
-  instead of silent truncation with wrong routing.
-- **Apfel guardrail false positives** — classified as `guardrail_blocked`
-  error type (was previously `unknown`). Server-side guardrail is hardcoded
-  `false` in upstream apfel; `--permissive` passed but currently no-op on
-  server mode.
-- **Apfel server auto-start race** — `_ensure_apfel_server()` called once
-  from `main()` before worker threads spawn (was lazy-init from each
-  thread, causing 6x startup log spam with workers=6).
 - **"haiku call failed" log message** → `"{provider} call failed [{error_type}]"`
   — surfaces which provider and why.
 
