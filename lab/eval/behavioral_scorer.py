@@ -276,6 +276,7 @@ def run_haiku(prompt: str, verbose: bool = False,
 _apfel_client = None
 _apfel_server_proc = None
 _apfel_server_lock = threading.Lock()
+_apfel_client_lock = threading.Lock()
 
 
 def _get_apfel_port() -> int:
@@ -326,8 +327,9 @@ def _ensure_apfel_server():
         except (urllib.error.URLError, OSError):
             pass
 
-        # Start server — raise max-concurrent to match worker count, permissive
-        # to reduce guardrail false positives on technical prompts
+        # Start server — fixed --max-concurrent 16 covers typical worker counts
+        # (--workers is capped at 32 but typical runs use 1-10); --permissive
+        # reduces guardrail false positives on technical prompts.
         log.info("Starting apfel --serve --permissive ...")
         try:
             _apfel_server_proc = subprocess.Popen(
@@ -371,25 +373,27 @@ def _get_apfel_client():
 
     Safe for programmatic callers (score_skill, neighbor_regression) that do
     not go through main(): _ensure_apfel_server() short-circuits when the
-    server is already running.
+    server is already running. Client construction is guarded by a dedicated
+    lock so workers>1 don't race and leak parallel httpx pools.
     """
     global _apfel_client
     _ensure_apfel_server()
-    if _apfel_client is None:
-        try:
-            from openai import OpenAI
-            import httpx as _httpx
-        except ImportError:
-            raise RuntimeError(
-                "openai package required for apfel provider. "
-                "Install: .venv/bin/pip install openai"
+    with _apfel_client_lock:
+        if _apfel_client is None:
+            try:
+                from openai import OpenAI
+                import httpx as _httpx
+            except ImportError:
+                raise RuntimeError(
+                    "openai package required for apfel provider. "
+                    "Install: .venv/bin/pip install openai"
+                )
+            _apfel_client = OpenAI(
+                base_url=_APFEL_BASE_URL,
+                api_key="unused",
+                timeout=_httpx.Timeout(60.0, connect=5.0),
+                max_retries=0,
             )
-        _apfel_client = OpenAI(
-            base_url=_APFEL_BASE_URL,
-            api_key="unused",
-            timeout=_httpx.Timeout(60.0, connect=5.0),
-            max_retries=0,
-        )
     return _apfel_client
 
 
