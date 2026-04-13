@@ -758,8 +758,8 @@ Common entrypoints:
 - `make eval-behavioral-verbose` / `npm run eval:behavioral:verbose` — same with
   verbose cache/score output
 - `make eval-behavioral-fresh` / `npm run eval:behavioral:fresh` — ignore
-  cache, re-run via the default provider (apfel on-device, or `--provider
-  haiku` for Claude API)
+  cache, re-run via the default provider (apfel on-device, or `--provider haiku`
+  for Claude API)
 - `make eval-behavioral-fresh-verbose` / `npm run eval:behavioral:fresh:verbose`
   — fresh run with full prompt/response debug output
 - `make eval-ablation` or `npm run eval:ablation` for matcher signal/noise

@@ -65,8 +65,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Apfel server auto-start race** — `_ensure_apfel_server()` called once
   from `main()` before worker threads spawn (was lazy-init from each
   thread, causing 6x startup log spam with workers=6).
-- **"haiku call failed" log message** → `"{provider} call failed
-  [{error_type}]"` — surfaces which provider and why.
+- **"haiku call failed" log message** → `"{provider} call failed [{error_type}]"`
+  — surfaces which provider and why.
 
 ## [1.12.2] - 2026-04-11
 
@@ -448,11 +448,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   explicit `tools:` allowlists from 17 specialist agents and switched to
   `disallowedTools:` only (denylist). This follows Claude Code's built-in agent
   pattern (Explore, Plan, Verification) where agents inherit all tools
-  implicitly. All specialists also block `Agent, EnterWorktree, ExitWorktree,
-  Skill` — tools not covered by hooks or shellfirm. Bash stays available
-  because `block-dangerous-ops.sh` and shellfirm guard shell commands.
-  Artifact-writing agents use `disallowedTools: Edit, NotebookEdit, Agent,
-  EnterWorktree, ExitWorktree, Skill`. Conversation-only agents add `Write`.
+  implicitly. All specialists also block
+  `Agent, EnterWorktree, ExitWorktree, Skill` — tools not covered by hooks or
+  shellfirm. Bash stays available because `block-dangerous-ops.sh` and
+  shellfirm guard shell commands. Artifact-writing agents use
+  `disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill`.
+  Conversation-only agents add `Write`.
   `parallel-reviewer` keeps `Agent` for spawning sub-reviewers. Agents with
   intentionally narrow tool sets (web-researcher, output-verifier,
   ruby-gem-researcher) keep `tools:` allowlists.
