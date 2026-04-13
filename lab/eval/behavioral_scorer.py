@@ -34,7 +34,6 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from .results_dir import (
-    DEFAULT_PROVIDER,
     SUPPORTED_PROVIDERS,
     resolve_provider,
     results_dir,
@@ -44,8 +43,11 @@ from .trigger_scorer import load_all_descriptions, load_trigger_file, TRIGGERS_D
 log = logging.getLogger("behavioral_scorer")
 
 
-# Active provider — set by CLI --provider flag, default apfel.
-_provider: str = DEFAULT_PROVIDER
+# Active provider — CLI --provider flag wins, RUBY_PLUGIN_EVAL_PROVIDER env var
+# is the fallback, DEFAULT_PROVIDER is last resort. Resolving through
+# resolve_provider() keeps the writer in lockstep with readers
+# (dimensions/behavioral.py, eval_sensitivity.py) that also honor the env var.
+_provider: str = resolve_provider(None)
 
 
 # Canonical results directory used for all cache I/O.
@@ -307,6 +309,41 @@ _APFEL_BASE_URL = os.environ.get(
     "APFEL_BASE_URL", f"http://{_APFEL_HOST}:{_APFEL_PORT}/v1"
 )
 
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
+
+
+def _derive_health_url(base_url: str) -> str:
+    """Derive an apfel /health URL from an OpenAI-style base URL.
+
+    Strips a trailing /v1 (the OpenAI chat endpoint path) and replaces it with
+    /health so the probe hits the same host:port the client will talk to.
+    """
+    import urllib.parse
+
+    parsed = urllib.parse.urlsplit(base_url)
+    path = parsed.path or ""
+    if path.endswith("/v1"):
+        health_path = path[:-3] + "/health"
+    elif path:
+        health_path = path.rstrip("/") + "/health"
+    else:
+        health_path = "/health"
+    return urllib.parse.urlunsplit((
+        parsed.scheme or "http",
+        parsed.netloc,
+        health_path,
+        "",
+        "",
+    ))
+
+
+def _is_loopback_base_url(base_url: str) -> bool:
+    """Return True when base_url points at a local apfel we may auto-spawn."""
+    import urllib.parse
+
+    host = urllib.parse.urlsplit(base_url).hostname
+    return host in _LOOPBACK_HOSTS
+
 
 def _ensure_apfel_server():
     """Start apfel --serve if not already running, wait for readiness.
@@ -314,12 +351,16 @@ def _ensure_apfel_server():
     Safe to call from worker threads via _get_apfel_client(): the module-level
     lock keeps the check+spawn atomic so concurrent callers don't race to
     spawn multiple apfel processes on the same port.
+
+    When APFEL_BASE_URL points at a non-loopback host, the user is pointing at
+    a remote apfel — health-probe it but do not auto-spawn anything locally.
     """
     global _apfel_server_proc
     import urllib.request
     import urllib.error
 
-    health_url = f"http://{_APFEL_HOST}:{_APFEL_PORT}/health"
+    health_url = _derive_health_url(_APFEL_BASE_URL)
+    local = _is_loopback_base_url(_APFEL_BASE_URL)
 
     with _apfel_server_lock:
         if _apfel_server_proc is not None:
@@ -335,6 +376,16 @@ def _ensure_apfel_server():
                 return  # server already running
         except (urllib.error.URLError, OSError):
             pass
+
+        # Remote APFEL_BASE_URL: the user manages the server elsewhere. Don't
+        # try to spawn locally — surface a clear error so they fix config or
+        # start their remote apfel.
+        if not local:
+            raise RuntimeError(
+                f"Remote apfel at {health_url} is unreachable. "
+                f"Start the remote server, unset APFEL_BASE_URL to auto-spawn "
+                f"locally, or pass --provider haiku."
+            )
 
         # Start server — fixed --max-concurrent 16 covers typical worker counts
         # (--workers is capped at 32 but typical runs use 1-10); --permissive
@@ -1060,9 +1111,12 @@ def main() -> None:
                         help="Cyclic rotations for order-bias control (default 1, recommended 5)")
     parser.add_argument("--samples", type=int, default=1, metavar="N", choices=range(1, 8),
                         help="Independent samples for pass@k robustness (default 1, recommended 3)")
-    parser.add_argument("--provider", default=DEFAULT_PROVIDER,
+    parser.add_argument("--provider", default=resolve_provider(None),
                         choices=sorted(SUPPORTED_PROVIDERS),
-                        help="Routing provider: apfel (on-device, free) or haiku (API, paid). Default: apfel")
+                        help=(
+                            "Routing provider: apfel (on-device, free) or haiku (API, paid). "
+                            "Default: RUBY_PLUGIN_EVAL_PROVIDER env var or apfel."
+                        ))
     args = parser.parse_args()
 
     logging.basicConfig(
