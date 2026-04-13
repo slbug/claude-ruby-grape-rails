@@ -103,10 +103,13 @@ def active_results_dir() -> Path:
 def set_active_provider(name: str | None) -> str:
     """Switch the active provider for subsequent reads/writes.
 
-    Validates through ``resolve_provider`` (invalid values fall back to the
-    default with a one-time warning). Returns the resolved name. Thread
-    safety: expected to be called from a single CLI main() before worker
-    threads spawn; not safe to flip under concurrency.
+    Validates through ``resolve_provider``. Invalid values fall back to the
+    default provider; one-time warnings are only emitted for invalid values
+    read from ``RUBY_PLUGIN_EVAL_PROVIDER`` (explicit bad names passed by a
+    programmatic caller are silently defaulted — that's a caller bug, not a
+    user config bug). Returns the resolved name. Thread safety: expected to
+    be called from a single CLI main() before worker threads spawn; not safe
+    to flip under concurrency.
     """
     global _active_provider
     _active_provider = resolve_provider(name)

@@ -335,13 +335,18 @@ _apfel_client_lock = threading.Lock()
 
 
 def _get_apfel_port() -> int:
-    """Parse APFEL_PORT env var, falling back to default on invalid values."""
+    """Parse APFEL_PORT env var, falling back to default on invalid values.
+
+    Validates the parsed value is within the TCP port range (1-65535); a
+    negative or out-of-range number would later cause confusing urlopen
+    failures rather than a clear config error.
+    """
     default_port = 11434
     raw_port = os.environ.get("APFEL_PORT")
     if raw_port is None:
         return default_port
     try:
-        return int(raw_port)
+        port = int(raw_port)
     except ValueError:
         log.warning(
             "Invalid APFEL_PORT %r; falling back to default port %d",
@@ -349,6 +354,15 @@ def _get_apfel_port() -> int:
             default_port,
         )
         return default_port
+    if not 1 <= port <= 65535:
+        log.warning(
+            "APFEL_PORT %r is out of TCP port range (1-65535); "
+            "falling back to default port %d",
+            raw_port,
+            default_port,
+        )
+        return default_port
+    return port
 
 
 _APFEL_HOST = os.environ.get("APFEL_HOST", "127.0.0.1")

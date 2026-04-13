@@ -186,6 +186,32 @@ class TestGetApfelPort(unittest.TestCase):
             self.assertEqual(port, 11434)
             self.assertTrue(any("APFEL_PORT" in r.getMessage() for r in captured.records))
 
+    def test_negative_port_rejected(self) -> None:
+        from lab.eval.behavioral_scorer import log as behavioral_log
+
+        with patch.dict("os.environ", {"APFEL_PORT": "-1"}, clear=False):
+            with self.assertLogs(behavioral_log, level=logging.WARNING) as captured:
+                port = _get_apfel_port()
+            self.assertEqual(port, 11434)
+            self.assertTrue(any("range" in r.getMessage() for r in captured.records))
+
+    def test_too_large_port_rejected(self) -> None:
+        from lab.eval.behavioral_scorer import log as behavioral_log
+
+        with patch.dict("os.environ", {"APFEL_PORT": "99999"}, clear=False):
+            with self.assertLogs(behavioral_log, level=logging.WARNING) as captured:
+                port = _get_apfel_port()
+            self.assertEqual(port, 11434)
+            self.assertTrue(any("range" in r.getMessage() for r in captured.records))
+
+    def test_zero_port_rejected(self) -> None:
+        """Port 0 is reserved; reject it."""
+        from lab.eval.behavioral_scorer import log as behavioral_log
+
+        with patch.dict("os.environ", {"APFEL_PORT": "0"}, clear=False):
+            with self.assertLogs(behavioral_log, level=logging.WARNING):
+                self.assertEqual(_get_apfel_port(), 11434)
+
 
 if __name__ == "__main__":
     unittest.main()
