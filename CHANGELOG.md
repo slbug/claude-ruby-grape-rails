@@ -22,8 +22,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Error classification in behavioral scorer** — `budget`, `max_turns`,
   `parse_error`, `context_overflow`, `timeout`, `guardrail_blocked`,
   `server_unavailable`, `unknown`. Surfaced per-skill in `failure_types` dict.
-- **Python venv** — `.venv/` with `openai` + `httpx` for apfel provider.
-  Direnv `.envrc` auto-activates (gitignored).
+- **Local Python dev setup support for apfel provider** — `.venv/` and
+  `.envrc` added to `.gitignore` (not shipped); documented install path
+  `.venv/bin/pip install openai httpx` and optional direnv `.envrc`
+  auto-activation for local dev environments.
 - **Review agent "Save Findings File First" guidance** — all 9 review
   agents (ruby-reviewer, testing-reviewer, iron-law-judge, security-analyzer,
   sidekiq-specialist, deployment-validator, verification-runner,

@@ -275,8 +275,28 @@ def run_haiku(prompt: str, verbose: bool = False,
 
 _apfel_client = None
 _apfel_server_proc = None
+_apfel_server_lock = threading.Lock()
+
+
+def _get_apfel_port() -> int:
+    """Parse APFEL_PORT env var, falling back to default on invalid values."""
+    default_port = 11434
+    raw_port = os.environ.get("APFEL_PORT")
+    if raw_port is None:
+        return default_port
+    try:
+        return int(raw_port)
+    except ValueError:
+        log.warning(
+            "Invalid APFEL_PORT %r; falling back to default port %d",
+            raw_port,
+            default_port,
+        )
+        return default_port
+
+
 _APFEL_HOST = os.environ.get("APFEL_HOST", "127.0.0.1")
-_APFEL_PORT = int(os.environ.get("APFEL_PORT", "11434"))
+_APFEL_PORT = _get_apfel_port()
 _APFEL_BASE_URL = os.environ.get(
     "APFEL_BASE_URL", f"http://{_APFEL_HOST}:{_APFEL_PORT}/v1"
 )
@@ -285,44 +305,53 @@ _APFEL_BASE_URL = os.environ.get(
 def _ensure_apfel_server():
     """Start apfel --serve if not already running, wait for readiness.
 
-    Call once from main() before spawning workers — not from threads.
+    Safe to call from worker threads via _get_apfel_client(): the module-level
+    lock keeps the check+spawn atomic so concurrent callers don't race to
+    spawn multiple apfel processes on the same port.
     """
     global _apfel_server_proc
     import urllib.request
     import urllib.error
 
-    if _apfel_server_proc is not None:
-        return
-
     health_url = f"http://{_APFEL_HOST}:{_APFEL_PORT}/health"
 
-    # Check if already up
-    try:
-        with urllib.request.urlopen(health_url, timeout=2):
-            return  # server already running
-    except (urllib.error.URLError, OSError):
-        pass
+    with _apfel_server_lock:
+        if _apfel_server_proc is not None:
+            return
 
-    # Start server — raise max-concurrent to match worker count, permissive to
-    # reduce guardrail false positives on technical prompts
-    log.info("Starting apfel --serve --permissive ...")
-    _apfel_server_proc = subprocess.Popen(
-        ["apfel", "--serve", "--max-concurrent", "16", "--permissive"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    atexit.register(_stop_apfel_server)
-
-    # Wait for readiness (up to 10s)
-    for _ in range(20):
+        # Check if already up
         try:
-            with urllib.request.urlopen(health_url, timeout=1):
-                log.info("apfel server ready.")
-                return
+            with urllib.request.urlopen(health_url, timeout=2):
+                return  # server already running
         except (urllib.error.URLError, OSError):
-            import time
-            time.sleep(0.5)
-    raise RuntimeError("apfel --serve failed to start within 10s")
+            pass
+
+        # Start server — raise max-concurrent to match worker count, permissive
+        # to reduce guardrail false positives on technical prompts
+        log.info("Starting apfel --serve --permissive ...")
+        try:
+            _apfel_server_proc = subprocess.Popen(
+                ["apfel", "--serve", "--max-concurrent", "16", "--permissive"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except FileNotFoundError as exc:
+            raise RuntimeError(
+                "Failed to start apfel server: 'apfel' was not found on PATH. "
+                "Install apfel or pass --provider haiku."
+            ) from exc
+        atexit.register(_stop_apfel_server)
+
+        # Wait for readiness (up to 10s)
+        for _ in range(20):
+            try:
+                with urllib.request.urlopen(health_url, timeout=1):
+                    log.info("apfel server ready.")
+                    return
+            except (urllib.error.URLError, OSError):
+                import time
+                time.sleep(0.5)
+        raise RuntimeError("apfel --serve failed to start within 10s")
 
 
 def _stop_apfel_server():
@@ -994,7 +1023,9 @@ def score_skill(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Test skill trigger accuracy with haiku")
+    parser = argparse.ArgumentParser(
+        description="Test skill trigger accuracy with apfel (default) or haiku"
+    )
     parser.add_argument("--skill", help="Test one skill")
     parser.add_argument("--all", action="store_true", help="Test all skills with trigger files")
     parser.add_argument("--cache", action="store_true", help="Cache-only: use cached results, skip stale/missing (no API calls)")
@@ -1004,7 +1035,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=0, metavar="N",
                         help="Test only first N should_trigger + N should_not_trigger prompts per skill")
     parser.add_argument("--workers", type=int, default=1, metavar="N", choices=range(1, 33),
-                        help="Parallel workers for haiku calls (default 1, recommended 4)")
+                        help="Parallel workers for provider calls (default 1, recommended 4)")
     parser.add_argument("--rotations", type=int, default=1, metavar="N", choices=range(1, 16),
                         help="Cyclic rotations for order-bias control (default 1, recommended 5)")
     parser.add_argument("--samples", type=int, default=1, metavar="N", choices=range(1, 8),

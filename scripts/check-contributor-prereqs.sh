@@ -48,6 +48,7 @@ check_required npx "required by pre-commit hook for markdownlint"
 check_required shellcheck "required for local shell linting and pre-commit shell validation"
 check_required claude "required for 'npm run validate' and 'make validate' (install with: npm install -g @anthropic-ai/claude-code)"
 check_optional betterleaks "optional for local secret-scan coverage outside CI"
+check_optional apfel "optional for behavioral eval with default --provider apfel (or pass --provider haiku)"
 
 if [[ "$MISSING" -eq 1 ]]; then
   echo "ERROR: contributor prerequisites are incomplete." >&2

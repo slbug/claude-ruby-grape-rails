@@ -30,18 +30,25 @@ SAMPLE_DESCRIPTIONS = {
 
 
 # Tests mock run_haiku; force haiku provider so _run_provider dispatches there.
+# RESULTS_DIR must move in lockstep with _provider (they're the canonical I/O
+# path together); individual tests still patch RESULTS_DIR to a tmpdir.
 _ORIGINAL_PROVIDER: str | None = None
+_ORIGINAL_RESULTS_DIR: Path | None = None
 
 
 def setUpModule() -> None:
-    global _ORIGINAL_PROVIDER
+    global _ORIGINAL_PROVIDER, _ORIGINAL_RESULTS_DIR
     _ORIGINAL_PROVIDER = _bs._provider
+    _ORIGINAL_RESULTS_DIR = _bs.RESULTS_DIR
     _bs._provider = "haiku"
+    _bs.RESULTS_DIR = _bs._RESULTS_BASE / "haiku"
 
 
 def tearDownModule() -> None:
     if _ORIGINAL_PROVIDER is not None:
         _bs._provider = _ORIGINAL_PROVIDER
+    if _ORIGINAL_RESULTS_DIR is not None:
+        _bs.RESULTS_DIR = _ORIGINAL_RESULTS_DIR
 
 
 def _cr(skills: list[str] | None) -> CallResult:
