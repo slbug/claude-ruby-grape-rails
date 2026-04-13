@@ -1079,8 +1079,9 @@ def main() -> None:
     _provider = resolve_provider(args.provider)
     RESULTS_DIR = results_dir(_provider)
 
-    # Start apfel server before workers (avoids race condition in threads)
-    if _provider == "apfel":
+    # Start apfel server before workers (avoids race condition in threads).
+    # Skip for --cache (documented as "no API calls" — pure filesystem reads).
+    if _provider == "apfel" and not args.cache:
         _ensure_apfel_server()
 
     # Signal handler: cancel pending futures, wait for running workers.
