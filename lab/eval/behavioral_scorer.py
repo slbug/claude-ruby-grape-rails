@@ -289,10 +289,26 @@ def run_haiku(prompt: str, verbose: bool = False,
         if verbose:
             _log("TIMEOUT after 60s")
         return CallResult(skills=None, error_type="timeout")
-    except Exception as exc:
+    except FileNotFoundError as exc:
+        # `claude` CLI not on PATH.
         if verbose:
             _log(f"ERROR: {exc}")
-        return CallResult(skills=None, error_type="unknown")
+        return CallResult(skills=None, error_type="dependency_missing")
+    except Exception as exc:
+        exc_lower = str(exc).lower()
+        # Coarse classification mirrors run_apfel so failure_types stays
+        # actionable across providers.
+        if "rate" in exc_lower and "limit" in exc_lower:
+            et = "rate_limited"
+        elif "connection" in exc_lower or "refused" in exc_lower:
+            et = "server_unavailable"
+        elif "timed out" in exc_lower or "timeout" in exc_lower:
+            et = "timeout"
+        else:
+            et = "unknown"
+        if verbose:
+            _log(f"ERROR ({et}): {exc}")
+        return CallResult(skills=None, error_type=et)
 
 
 _apfel_client = None
@@ -358,15 +374,17 @@ def _derive_health_url(base_url: str) -> str:
 
     Strips a trailing /v1 (the OpenAI chat endpoint path) and replaces it with
     /health so the probe hits the same host:port the client will talk to.
+    Accepts ``/v1``, ``/v1/``, trailing-slash variants, and bare hosts.
     """
     import urllib.parse
 
     parsed = urllib.parse.urlsplit(base_url)
-    path = parsed.path or ""
+    # Strip trailing slashes once so /v1/ and /v1 are handled symmetrically.
+    path = (parsed.path or "").rstrip("/")
     if path.endswith("/v1"):
         health_path = path[:-3] + "/health"
     elif path:
-        health_path = path.rstrip("/") + "/health"
+        health_path = path + "/health"
     else:
         health_path = "/health"
     return urllib.parse.urlunsplit((
@@ -582,15 +600,25 @@ def run_apfel(prompt: str, verbose: bool = False,
 
     except Exception as exc:
         exc_str = str(exc)
+        exc_lower = exc_str.lower()
         error_type = "unknown"
-        if "context" in exc_str.lower() or "overflow" in exc_str.lower() or "4096" in exc_str:
-            error_type = "context_overflow"
-        elif "guardrail" in exc_str.lower() or "safety" in exc_str.lower():
-            error_type = "guardrail_blocked"
-        elif "timed out" in exc_str.lower() or "timeout" in exc_str.lower():
-            error_type = "timeout"
-        elif "connection" in exc_str.lower() or "refused" in exc_str.lower():
+        # Missing openai/httpx deps surface as ImportError (or our own
+        # RuntimeError wrapping it from _get_apfel_client).
+        if isinstance(exc, (ModuleNotFoundError, ImportError)) or "openai and httpx" in exc_lower:
+            error_type = "dependency_missing"
+        elif "apfel" in exc_lower and "not found on path" in exc_lower:
             error_type = "server_unavailable"
+        elif "remote apfel" in exc_lower and "unreachable" in exc_lower:
+            error_type = "server_unavailable"
+        elif "context" in exc_lower or "overflow" in exc_lower or "4096" in exc_str:
+            error_type = "context_overflow"
+        elif "guardrail" in exc_lower or "safety" in exc_lower:
+            error_type = "guardrail_blocked"
+        elif "timed out" in exc_lower or "timeout" in exc_lower:
+            error_type = "timeout"
+        elif "connection" in exc_lower or "refused" in exc_lower:
+            error_type = "server_unavailable"
+        if error_type == "server_unavailable":
             # Server may have crashed — try to restart for subsequent calls
             if _apfel_server_proc and _apfel_server_proc.poll() is not None:
                 _apfel_server_proc = None
@@ -799,7 +827,15 @@ def _run_prompt_batch(
                 _executor = None
 
     if errors and not verbose:
-        log.warning("  %d worker failures: %s", len(errors), ", ".join(set(errors)))
+        # Non-verbose path: the caller printed "  Testing {name}... " with
+        # end=" ", so a timestamped log.warning would interleave mid-line.
+        # Start on a fresh line and use plain stderr (matches the SKIPPED
+        # branch in main()).
+        print(
+            f"\n  {len(errors)} worker failures: {', '.join(set(errors))}",
+            file=sys.stderr,
+            flush=True,
+        )
 
     return results, failures, call_results
 

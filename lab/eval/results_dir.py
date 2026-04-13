@@ -13,10 +13,14 @@ Path from a validated provider name.
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 
 from .trigger_scorer import TRIGGERS_DIR
+
+
+_log = logging.getLogger("results_dir")
 
 
 RESULTS_BASE: Path = TRIGGERS_DIR / "results"
@@ -26,6 +30,11 @@ SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"apfel", "haiku"})
 PROVIDER_ENV_VAR: str = "RUBY_PLUGIN_EVAL_PROVIDER"
 
 
+# Track invalid env-var values so we warn only once per unique bad value,
+# not on every resolve_provider() call.
+_warned_invalid_env: set[str] = set()
+
+
 def resolve_provider(name: str | None = None) -> str:
     """Return a supported provider name, falling back to DEFAULT_PROVIDER.
 
@@ -33,11 +42,28 @@ def resolve_provider(name: str | None = None) -> str:
     var. Any value outside SUPPORTED_PROVIDERS (typo, path-traversal attempt,
     empty string, etc.) falls through to the default so unsanitized input
     can't point results I/O outside RESULTS_BASE.
+
+    An invalid non-empty env-var value emits a one-time warning (per value)
+    so typos like ``RUBY_PLUGIN_EVAL_PROVIDER=haik`` don't silently route to
+    the default and desync reader/writer caches.
     """
+    env_value: str | None = None
     if name is None:
-        name = os.environ.get(PROVIDER_ENV_VAR, DEFAULT_PROVIDER)
+        env_value = os.environ.get(PROVIDER_ENV_VAR)
+        name = env_value if env_value is not None else DEFAULT_PROVIDER
     if name in SUPPORTED_PROVIDERS:
         return name
+    # Invalid: warn once if it came from the env var (not from a programmatic
+    # caller passing a bad string — those are the caller's responsibility).
+    if env_value is not None and env_value and env_value not in _warned_invalid_env:
+        _warned_invalid_env.add(env_value)
+        _log.warning(
+            "%s=%r is not a supported provider (%s); falling back to %r.",
+            PROVIDER_ENV_VAR,
+            env_value,
+            ", ".join(sorted(SUPPORTED_PROVIDERS)),
+            DEFAULT_PROVIDER,
+        )
     return DEFAULT_PROVIDER
 
 
