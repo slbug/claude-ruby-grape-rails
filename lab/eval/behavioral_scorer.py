@@ -330,6 +330,10 @@ def run_haiku(
 
 _apfel_client = None
 _apfel_server_proc = None
+# Path to the temp file receiving spawned apfel's stderr. Kept so we can
+# surface its tail in the RuntimeError on startup/readiness failure, and
+# unlink it in _stop_apfel_server. Written only under _apfel_server_lock.
+_apfel_stderr_path: str | None = None
 _apfel_server_lock = threading.Lock()
 _apfel_client_lock = threading.Lock()
 
@@ -547,38 +551,85 @@ def _ensure_apfel_server():
         _emit_info(
             f"Starting apfel --serve --host {apfel_host} --port {apfel_port} ..."
         )
+        # Route apfel's stderr to a temp file so we can surface its tail when
+        # spawn fails, readiness times out, or the process exits early. Using
+        # a file (not PIPE) avoids blocking on a full pipe buffer while apfel
+        # runs successfully and writes normal stderr chatter.
+        import tempfile
+        global _apfel_stderr_path
+        stderr_fd, stderr_path = tempfile.mkstemp(
+            prefix="apfel-stderr-", suffix=".log"
+        )
+        _apfel_stderr_path = stderr_path
         try:
             _apfel_server_proc = subprocess.Popen(
                 serve_cmd,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stderr=stderr_fd,
             )
         except FileNotFoundError as exc:
+            os.close(stderr_fd)
+            try:
+                os.unlink(stderr_path)
+            except OSError:
+                pass
+            _apfel_stderr_path = None
             raise RuntimeError(
                 "Failed to start apfel server: 'apfel' was not found on PATH. "
                 "Install apfel or pass --provider haiku."
             ) from exc
+        finally:
+            # Subprocess has its own dup'd fd now; we don't need ours.
+            os.close(stderr_fd)
         atexit.register(_stop_apfel_server)
 
-        # Wait for readiness (up to 10s)
+        def _read_apfel_stderr_tail(limit: int = 1000) -> str:
+            try:
+                with open(stderr_path, encoding="utf-8", errors="replace") as fh:
+                    data = fh.read()
+            except OSError:
+                return ""
+            tail = data[-limit:]
+            if len(data) > limit:
+                tail = f"...\n{tail}"
+            return tail.strip()
+
+        # Wait for readiness (up to 10s). Poll process liveness each tick so
+        # an early exit (e.g., port-in-use) surfaces immediately instead of
+        # waiting out the full readiness window.
+        import time
         for _ in range(20):
+            exit_code = _apfel_server_proc.poll()
+            if exit_code is not None:
+                stderr_tail = _read_apfel_stderr_tail()
+                _stop_apfel_server()
+                msg = (
+                    f"apfel --serve exited with code {exit_code} before "
+                    f"becoming ready."
+                )
+                if stderr_tail:
+                    msg += f" stderr tail:\n{stderr_tail}"
+                raise RuntimeError(msg)
             try:
                 with urllib.request.urlopen(health_url, timeout=1):
                     _emit_info("apfel server ready.")
                     return
             except (urllib.error.URLError, OSError):
-                import time
-
                 time.sleep(0.5)
         # Readiness timed out — tear down the half-started process so we don't
         # leak it and so the next _ensure_apfel_server() call can retry.
+        stderr_tail = _read_apfel_stderr_tail()
         _stop_apfel_server()
-        raise RuntimeError("apfel --serve failed to start within 10s")
+        msg = "apfel --serve failed to start within 10s"
+        if stderr_tail:
+            msg += f". stderr tail:\n{stderr_tail}"
+        raise RuntimeError(msg)
 
 
 def _stop_apfel_server():
-    """Kill apfel server if we started it. Always clears the cached handle."""
-    global _apfel_server_proc
+    """Kill apfel server if we started it. Always clears the cached handle
+    and removes the stderr temp file."""
+    global _apfel_server_proc, _apfel_stderr_path
     proc = _apfel_server_proc
     try:
         if proc and proc.poll() is None:
@@ -590,6 +641,12 @@ def _stop_apfel_server():
                 proc.wait(timeout=3)
     finally:
         _apfel_server_proc = None
+        if _apfel_stderr_path is not None:
+            try:
+                os.unlink(_apfel_stderr_path)
+            except OSError:
+                pass
+            _apfel_stderr_path = None
 
 
 def _get_apfel_client():
