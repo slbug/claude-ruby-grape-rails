@@ -13,8 +13,9 @@ Usage:
     python3 -m lab.eval.behavioral_scorer --skill plan --rotations 5  # Order-bias control
     python3 -m lab.eval.behavioral_scorer --skill plan --samples 3    # pass@k robustness
 
-Cost: Uses --bare mode (~$0.006/call avg, varies by skill complexity).
-Full 51-skill run (621 prompts): ~$3.70 single-shot, ~$19 with rotations 5, ~$11 with samples 3.
+Cost: Provider-dependent. Apfel runs on-device at $0. Haiku uses --bare mode (~$0.006/call
+avg, varies by skill complexity). Full 51-skill run with haiku (621 prompts): ~$3.70 single-shot,
+~$19 with rotations 5, ~$11 with samples 3.
 """
 
 from __future__ import annotations
@@ -1410,9 +1411,10 @@ def main() -> None:
 
     # Resolve auth once — avoids concurrent keychain access with --workers > 1
     # Skip for --cache (documented as "no provider calls" — no keychain touches)
+    # Also skip for apfel provider (on-device, no Claude CLI credentials needed)
     global _resolved_settings_path
     is_temp_settings = False
-    if not args.cache:
+    if not args.cache and rd.get_active_provider() == "haiku":
         _resolved_settings_path = _resolve_settings()
         base_settings = str(TRIGGERS_DIR.parent / "bare_settings.json")
         is_temp_settings = _resolved_settings_path != base_settings
