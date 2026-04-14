@@ -243,6 +243,7 @@ fi
 
 echo "=== Diff Review (optional) ==="
 if [[ "$PRONTO_AVAILABLE" == "true" ]]; then
+  unset BASE_REF REMOTE DEFAULT_BRANCH
   eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref 2>/dev/null)" || true
   if [[ -n "$BASE_REF" ]]; then
     MERGE_BASE=$(git merge-base HEAD "$BASE_REF" 2>/dev/null || echo "$BASE_REF")
@@ -512,6 +513,7 @@ fi
 
 echo "7/7 Diff Review (optional)..."
 if [[ "$PRONTO_AVAILABLE" == "true" ]]; then
+  unset BASE_REF REMOTE DEFAULT_BRANCH
   eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref 2>/dev/null)" || true
   if [[ -n "$BASE_REF" ]]; then
     MERGE_BASE=$(git merge-base HEAD "$BASE_REF" 2>/dev/null || echo "$BASE_REF")
