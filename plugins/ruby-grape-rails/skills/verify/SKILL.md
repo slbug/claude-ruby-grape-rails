@@ -221,9 +221,10 @@ Run `bundle exec rbs validate` to validate type signatures.
 
 Run this only after direct lint/security checks pass:
 
-Detect the base ref by trying `git rev-parse --verify` against `origin/main`,
-`main`, `origin/master`, `master` in order. Set `BASE_REF` to the first that
-exists, then run `bundle exec pronto run -c "$BASE_REF"`.
+Resolve the base ref: run `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"`
+to get `$BASE_REF` (handles custom remotes, non-standard default branches,
+fetches before resolving). Then run
+`bundle exec pronto run -c "$(git merge-base HEAD "$BASE_REF")"`.
 
 Use the first base ref that exists. Pronto is a last-step changed-files pass,
 not a replacement for StandardRB/RuboCop or Brakeman.

@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Resolve the base branch remote ref for diff comparisons.
+#
+# Handles: custom remote names, non-standard default branches,
+# stale local refs (fetches before resolving).
+#
+# Usage:
+#   eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"
+#   git diff "$BASE_REF"...HEAD
+#
+# Output (eval-safe):
+#   REMOTE=origin
+#   DEFAULT_BRANCH=main
+#   BASE_REF=origin/main
+#
+# Exit codes:
+#   0 — resolved successfully
+#   1 — not a git repo or no remote found
+
+set -o nounset
+set -o pipefail
+
+git rev-parse --is-inside-work-tree &>/dev/null || exit 1
+
+# 1. Resolve remote name
+#    - Prefer upstream tracking remote of current branch
+#    - Fallback to first remote
+#    - Last resort: "origin"
+REMOTE=""
+REMOTE=$(git rev-parse --abbrev-ref '@{upstream}' 2>/dev/null | cut -d/ -f1) || true
+if [[ -z "$REMOTE" ]]; then
+  REMOTE=$(git remote | head -1) || true
+fi
+if [[ -z "$REMOTE" ]]; then
+  REMOTE="origin"
+fi
+
+# 2. Resolve default branch from remote HEAD symref
+DEFAULT_BRANCH=""
+DEFAULT_BRANCH=$(git symbolic-ref "refs/remotes/${REMOTE}/HEAD" 2>/dev/null \
+  | sed "s@^refs/remotes/${REMOTE}/@@") || true
+
+# Fallback: try common names
+if [[ -z "$DEFAULT_BRANCH" ]]; then
+  for candidate in main master; do
+    if git rev-parse --verify "${REMOTE}/${candidate}" &>/dev/null; then
+      DEFAULT_BRANCH="$candidate"
+      break
+    fi
+  done
+fi
+
+# Still nothing — try local refs
+if [[ -z "$DEFAULT_BRANCH" ]]; then
+  for candidate in main master; do
+    if git rev-parse --verify "$candidate" &>/dev/null; then
+      DEFAULT_BRANCH="$candidate"
+      break
+    fi
+  done
+fi
+
+[[ -z "$DEFAULT_BRANCH" ]] && exit 1
+
+# 3. Fetch the default branch (quiet, tolerate offline)
+git fetch --quiet "$REMOTE" "$DEFAULT_BRANCH" 2>/dev/null || true
+
+# 4. Resolve final BASE_REF (prefer remote, fallback to local)
+BASE_REF=""
+if git rev-parse --verify "${REMOTE}/${DEFAULT_BRANCH}" &>/dev/null; then
+  BASE_REF="${REMOTE}/${DEFAULT_BRANCH}"
+elif git rev-parse --verify "$DEFAULT_BRANCH" &>/dev/null; then
+  BASE_REF="$DEFAULT_BRANCH"
+else
+  exit 1
+fi
+
+# Output eval-safe assignments
+echo "REMOTE=${REMOTE}"
+echo "DEFAULT_BRANCH=${DEFAULT_BRANCH}"
+echo "BASE_REF=${BASE_REF}"
