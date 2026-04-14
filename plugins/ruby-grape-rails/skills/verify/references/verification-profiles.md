@@ -243,7 +243,7 @@ fi
 
 echo "=== Diff Review (optional) ==="
 if [[ "$PRONTO_AVAILABLE" == "true" ]]; then
-  eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)" 2>/dev/null || true
+  eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref 2>/dev/null)" || true
   if [[ -n "$BASE_REF" ]]; then
     MERGE_BASE=$(git merge-base HEAD "$BASE_REF" 2>/dev/null || echo "$BASE_REF")
     if ! bundle exec pronto run -c "$MERGE_BASE"; then
@@ -512,7 +512,7 @@ fi
 
 echo "7/7 Diff Review (optional)..."
 if [[ "$PRONTO_AVAILABLE" == "true" ]]; then
-  eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)" 2>/dev/null || true
+  eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref 2>/dev/null)" || true
   if [[ -n "$BASE_REF" ]]; then
     MERGE_BASE=$(git merge-base HEAD "$BASE_REF" 2>/dev/null || echo "$BASE_REF")
     if ! bundle exec pronto run -c "$MERGE_BASE"; then
