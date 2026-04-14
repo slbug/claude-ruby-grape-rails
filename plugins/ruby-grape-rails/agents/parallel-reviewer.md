@@ -34,7 +34,7 @@ skills:
 
 ## Review Rules
 
-- Scope all agents to changed files or the plan namespace.
+- Scope all agents to changed files passed by the invoking skill.
 - Ask agents to distinguish new issues from pre-existing ones.
 - Deduplicate overlaps before presenting the final verdict.
 - Keep review read-only.

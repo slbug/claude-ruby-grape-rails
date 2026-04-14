@@ -18,6 +18,19 @@ Reviews catch issues before they reach production. Each specialist focuses on th
 - **Performance**: Will it scale? Any N+1s?
 - **Style**: Does it follow conventions?
 
+## Collecting Changed Files
+
+Resolve the base ref before spawning reviewers:
+
+```bash
+eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"
+MERGE_BASE=$(git merge-base HEAD "$BASE_REF")
+git diff --name-only --diff-filter=ACMR "$MERGE_BASE"...HEAD
+```
+
+Pass the resulting file list when dispatching `parallel-reviewer` so all
+sub-reviewers scope to branch changes only.
+
 ## Review State Machine
 
 ```

@@ -201,7 +201,7 @@ Before finalizing the plan, verify:
 - formatter/linter if configured (`standardrb` or `rubocop`); use Lefthook only when its config covers lint + security/static-analysis checks
 - targeted specs or tests for changed behavior
 - `bundle exec brakeman` if present for security-sensitive work
-- optional final diff-scoped review: `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"` then `bundle exec pronto run -c "$BASE_REF"`
+- optional final diff-scoped review: `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"` then `bundle exec pronto run -c "$(git merge-base HEAD "$BASE_REF")"`
 - `bundle exec rspec` or `bin/rails test` - full test suite
 - Migration safety check (for production deployments)
 
