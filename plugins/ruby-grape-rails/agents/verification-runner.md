@@ -83,7 +83,7 @@ When parsing JSON, YAML, text, or command output during verification:
 3. Prefer direct linting: `bundle exec standardrb` if configured, else `bundle exec rubocop` if configured
 4. Prefer direct security scanning: `bundle exec brakeman` if configured
 5. `bundle exec rspec` if `spec/` exists, else `bin/rails test`
-6. Optional final `bundle exec pronto run -c origin/main` (fallback `main` / `origin/master` / `master`) if configured
+6. Optional final diff-scoped review: `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"` then `bundle exec pronto run -c "$BASE_REF"` if configured
 
 Use `lefthook run <hook>` only when cached runtime state shows:
 
@@ -102,7 +102,7 @@ Operational selection rules:
 - If `STANDARDRB_AVAILABLE=true`, lint with `bundle exec standardrb`
 - Else if `RUBOCOP_AVAILABLE=true`, lint with `bundle exec rubocop`
 - If `BRAKEMAN_AVAILABLE=true`, run `bundle exec brakeman`
-- If `PRONTO_AVAILABLE=true`, run `bundle exec pronto run -c <resolved-base>` only as the optional final diff-scoped step
+- If `PRONTO_AVAILABLE=true`, run `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"` then `bundle exec pronto run -c "$BASE_REF"` as the optional final diff-scoped step
 - Treat `LEFTHOOK_*` as an optional wrapper hint, not as a reason to skip direct tools by default
 
 Stop on the first failure, summarize the key error, and suggest the narrowest rerun command.

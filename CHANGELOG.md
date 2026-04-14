@@ -7,6 +7,26 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.12.4] - 2026-04-14
+
+### Added
+
+- **`bin/resolve-base-ref`** — shared script for resolving base branch remote
+  ref. Handles custom remote names (not just `origin`), non-standard default
+  branches, and fetches before resolving to prevent stale-ref diffs.
+
+### Changed
+
+- Skills and agents that compare branches now use `resolve-base-ref` instead
+  of ad-hoc `origin/main` / `origin/master` fallback chains: `document`,
+  `work`, `plan`, `verify`, `verification-runner`
+- `verify/references/verification-profiles.md` pronto base-ref blocks updated
+
+### Removed
+
+- **`check-branch-freshness.sh`** — unwired utility script since v1.0.3,
+  superseded by `bin/resolve-base-ref`
+
 ## [1.12.3] - 2026-04-13
 
 ### Added
@@ -1480,7 +1500,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.3...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.4...HEAD
+[1.12.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.3...v1.12.4
 [1.12.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.2...v1.12.3
 [1.12.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.1...v1.12.2
 [1.12.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.0...v1.12.1

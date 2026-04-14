@@ -243,10 +243,7 @@ fi
 
 echo "=== Diff Review (optional) ==="
 if [[ "$PRONTO_AVAILABLE" == "true" ]]; then
-  BASE_REF=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo origin/main || \
-    git rev-parse --verify main >/dev/null 2>&1 && echo main || \
-    git rev-parse --verify origin/master >/dev/null 2>&1 && echo origin/master || \
-    git rev-parse --verify master >/dev/null 2>&1 && echo master)
+  eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)" 2>/dev/null || true
   if [[ -n "$BASE_REF" ]]; then
     if ! bundle exec pronto run -c "$BASE_REF"; then
       echo "Pronto diff review reported issues (non-blocking); review the output above."
@@ -514,10 +511,7 @@ fi
 
 echo "7/7 Diff Review (optional)..."
 if [[ "$PRONTO_AVAILABLE" == "true" ]]; then
-  BASE_REF=$(git rev-parse --verify origin/main >/dev/null 2>&1 && echo origin/main || \
-    git rev-parse --verify main >/dev/null 2>&1 && echo main || \
-    git rev-parse --verify origin/master >/dev/null 2>&1 && echo origin/master || \
-    git rev-parse --verify master >/dev/null 2>&1 && echo master)
+  eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)" 2>/dev/null || true
   if [[ -n "$BASE_REF" ]]; then
     if ! bundle exec pronto run -c "$BASE_REF"; then
       echo "Pronto diff review reported issues (non-blocking); review the output above."

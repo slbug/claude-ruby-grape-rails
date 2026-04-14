@@ -158,7 +158,7 @@ For domain-specific implementation patterns and deeper checklists, see
 
 - Full test suite: `bundle exec rspec` or `bin/rails test`
 - Security scan: `bundle exec brakeman` (if available)
-- Optional final diff-scoped review: `bundle exec pronto run -c origin/main` (fallback `main` / `origin/master` / `master`)
+- Optional final diff-scoped review: `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"` then `bundle exec pronto run -c "$BASE_REF"`
 - Static analysis: `bundle exec rails_best_practices`
 
 ## Error Handling & Recovery
