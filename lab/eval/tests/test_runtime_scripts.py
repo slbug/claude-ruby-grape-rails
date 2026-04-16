@@ -2735,6 +2735,40 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("PRESERVE ACROSS COMPACTION", result.stderr)
 
+    def test_precompact_rules_blocks_during_work_phase(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plan_dir = tmp / ".claude" / "plans" / "demo"
+            plan_dir.mkdir(parents=True)
+            (tmp / ".claude" / "ACTIVE_PLAN").write_text(
+                str(plan_dir) + "\n", encoding="utf-8"
+            )
+            (plan_dir / "plan.md").write_text("- [ ] task\n", encoding="utf-8")
+
+            result = run_workspace_hook(PRECOMPACT_RULES, tmpdir, {})
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("PRESERVE ACROSS COMPACTION", result.stderr)
+
+    def test_precompact_rules_blocks_during_full_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            plan_dir = tmp / ".claude" / "plans" / "demo"
+            plan_dir.mkdir(parents=True)
+            (tmp / ".claude" / "ACTIVE_PLAN").write_text(
+                str(plan_dir) + "\n", encoding="utf-8"
+            )
+            (plan_dir / "plan.md").write_text("- [ ] task\n", encoding="utf-8")
+            (plan_dir / "progress.md").write_text(
+                "**State**: working\n", encoding="utf-8"
+            )
+
+            result = run_workspace_hook(PRECOMPACT_RULES, tmpdir, {})
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("PRESERVE ACROSS COMPACTION", result.stderr)
+        self.assertIn("/rb:full", result.stderr)
+
     def test_postcompact_verify_surfaces_active_plan_reminder(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)

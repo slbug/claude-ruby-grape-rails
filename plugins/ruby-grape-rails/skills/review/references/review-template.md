@@ -8,7 +8,7 @@ Each reviewer also writes a per-agent artifact to:
 
 - `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
 
-```markdown
+````markdown
 # Review: {Feature or Scope}
 
 **Date**: {date}
@@ -72,7 +72,7 @@ good_code
 **Confidence**: {HIGH|MEDIUM|LOW}
 **Suggestion**: {improvement idea}
 
-```
+````
 
 ## Verdict Decision Rules
 
