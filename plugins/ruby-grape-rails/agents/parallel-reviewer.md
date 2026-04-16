@@ -41,7 +41,10 @@ Before spawning reviewers, classify the change:
 - **Complex** (11+ files): All relevant reviewers, detailed output
 
 Auto-escalate to Complex when any changed file matches critical paths:
-`**/auth/**`, `**/payment/**`, `db/migrate/**`, `config/routes*`, `**/middleware/**`
+`**/auth/**`, `**/authentication/**`, `**/authorization/**`,
+`**/payment/**`, `**/billing/**`, `**/checkout/**`,
+`db/migrate/**`, `config/routes*`, `config/initializers/devise*`,
+`**/middleware/**`
 
 ## Confidence Labels
 

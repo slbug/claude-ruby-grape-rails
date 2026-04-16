@@ -213,7 +213,7 @@ Write the synthesized review to `.claude/reviews/{review-slug}.md`:
 
 ### 2. {Issue Title}
 
-**Confidence**: MEDIUM
+**Severity**: Warning | **Confidence**: MEDIUM
 
 ...
 

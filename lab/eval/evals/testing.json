@@ -54,7 +54,7 @@
           "type": "description_length",
           "min": 60,
           "max": 1536,
-          "desc": "Description length"
+          "desc": "Description + when_to_use length"
         },
         {
           "type": "description_keywords",
