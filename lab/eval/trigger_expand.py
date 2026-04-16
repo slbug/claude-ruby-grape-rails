@@ -23,8 +23,12 @@ import sys
 from .trigger_scorer import (
     TRIGGERS_DIR,
     extract_prompt,
-    load_all_descriptions,
+    load_all_routing_descriptions,
     load_trigger_file,
+    routing_text_sources,
+    RoutingDescription,
+    RoutingDescriptions,
+    routing_description_text,
     tokenize,
 )
 
@@ -56,7 +60,7 @@ def _quality_gate(
     candidate: str,
     skill_name: str,
     existing_prompts: list[str],
-    skill_description: str,
+    skill_routing_description: RoutingDescription,
 ) -> str | None:
     """Returns rejection reason, or None if candidate passes all gates."""
     import re
@@ -79,8 +83,13 @@ def _quality_gate(
         pattern = r"\b" + re.escape(skill_lower) + r"\b"
         if re.search(pattern, prompt_lower):
             return "skill_name_leak"
-    # Description echo: >50% token overlap with description
-    if _token_overlap(candidate, skill_description) > 0.50:
+    # Routing text echo: >50% token overlap with description or when_to_use.
+    for _, routing_text in routing_text_sources(skill_routing_description):
+        if _token_overlap(candidate, routing_text) > 0.50:
+            return "description_echo"
+    # Backstop for callers that pass already-combined plain text.
+    combined_routing_text = routing_description_text(skill_routing_description)
+    if _token_overlap(candidate, combined_routing_text) > 0.50:
         return "description_echo"
     # Near-duplicate: >80% token overlap with any existing prompt
     for existing in existing_prompts:
@@ -95,7 +104,7 @@ _VALID_SKILL_NAME = _re.compile(r"^[A-Za-z0-9:_-]+$")
 
 def expand_skill(
     skill_name: str,
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
 ) -> dict:
     """Generate candidate trigger prompts for one skill.
 
@@ -103,9 +112,10 @@ def expand_skill(
     """
     if not _VALID_SKILL_NAME.match(skill_name):
         return {"skill": skill_name, "error": "invalid skill name characters"}
-    description = descriptions.get(skill_name, "")
-    if not description:
-        return {"skill": skill_name, "error": "no description found"}
+    routing_description = descriptions.get(skill_name, "")
+    routing_text = routing_description_text(routing_description)
+    if not routing_text:
+        return {"skill": skill_name, "error": "no routing text found"}
 
     triggers = load_trigger_file(skill_name)
     existing_prompts = []
@@ -119,7 +129,7 @@ def expand_skill(
 
     user_prompt = (
         f"Skill name: {skill_name}\n"
-        f"Skill description: {description[:300]}\n\n"
+        f"Skill routing text: {routing_text[:600]}\n\n"
         f"Existing prompts (do NOT duplicate these):\n"
         + "\n".join(f"- {p}" for p in existing_prompts[:20])
         + f"\n\n{_STYLE_CONSTRAINTS}\n\n"
@@ -185,7 +195,12 @@ def expand_skill(
             if not isinstance(candidate, str):
                 continue
             candidate = candidate.strip()
-            reason = _quality_gate(candidate, skill_name, existing_prompts, description)
+            reason = _quality_gate(
+                candidate,
+                skill_name,
+                existing_prompts,
+                routing_description,
+            )
             if reason:
                 rejected[bucket].append({"prompt": candidate, "reason": reason})
             else:
@@ -244,7 +259,7 @@ def main() -> None:
 
     atexit.register(_cleanup)
 
-    descriptions = load_all_descriptions()
+    descriptions = load_all_routing_descriptions()
 
     if args.skill:
         result = expand_skill(args.skill, descriptions)

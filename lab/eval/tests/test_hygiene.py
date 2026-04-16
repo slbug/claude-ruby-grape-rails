@@ -88,6 +88,27 @@ class TestDescriptionEchoDetected(unittest.TestCase):
         self.assertEqual(flags[0]["type"], "description_echo")
         self.assertGreater(flags[0]["overlap_ratio"], 0.4)
 
+    def test_when_to_use_overlap_flagged(self):
+        routing_description = {
+            "description": "Plan implementation approach",
+            "when_to_use": "Triggers: architecture breakdown sequencing risky refactor",
+        }
+        triggers = {
+            "should_not_trigger": [
+                {"prompt": "I need architecture breakdown sequencing help"},
+            ],
+        }
+        flags = check_description_echo(
+            "plan",
+            routing_description,
+            triggers,
+            threshold=0.4,
+        )
+        self.assertEqual(len(flags), 1)
+        self.assertEqual(flags[0]["type"], "description_echo")
+        self.assertEqual(flags[0]["source"], "when_to_use")
+        self.assertIn("when_to_use", flags[0]["reason"])
+
     def test_low_overlap_not_flagged(self):
         description = "Quick small changes for Ruby Rails Grape config tweaks"
         triggers = {

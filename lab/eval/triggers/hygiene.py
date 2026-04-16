@@ -20,10 +20,13 @@ from typing import Any
 
 from ..trigger_scorer import (
     TRIGGERS_DIR,
-    load_all_descriptions,
+    load_all_routing_descriptions,
     load_trigger_file,
     extract_prompt,
     PROMPT_BUCKETS,
+    routing_text_sources,
+    RoutingDescription,
+    RoutingDescriptions,
 )
 
 
@@ -94,14 +97,18 @@ def check_skill_name_leaks(
 
 def check_description_echo(
     skill_name: str,  # noqa: ARG001 — kept for API symmetry
-    description: str,
+    routing_description: RoutingDescription,
     triggers: dict[str, Any],
     threshold: float = 0.5,
 ) -> list[dict[str, Any]]:
-    """Find should_not_trigger prompts that share too many keywords with the description."""
+    """Find should_not_trigger prompts that echo description or when_to_use text."""
     flags: list[dict[str, Any]] = []
-    desc_tokens = _tokenize_for_overlap(description)
-    if not desc_tokens:
+    routing_sources = [
+        (source, tokens)
+        for source, text in routing_text_sources(routing_description)
+        if (tokens := _tokenize_for_overlap(text))
+    ]
+    if not routing_sources:
         return flags
 
     for bucket in ("should_not_trigger", "hard_should_not_trigger"):
@@ -110,17 +117,25 @@ def check_description_echo(
             if not prompt:
                 continue
             prompt_tokens = _tokenize_for_overlap(prompt)
-            shared = desc_tokens & prompt_tokens
-            ratio = len(shared) / len(desc_tokens) if desc_tokens else 0.0
-            if ratio > threshold:
+            best_match: tuple[float, str, set[str]] | None = None
+            for source, source_tokens in routing_sources:
+                shared = source_tokens & prompt_tokens
+                ratio = len(shared) / len(source_tokens) if source_tokens else 0.0
+                if ratio > threshold and (
+                    best_match is None or ratio > best_match[0]
+                ):
+                    best_match = (ratio, source, shared)
+            if best_match is not None:
+                ratio, source, shared = best_match
                 flags.append({
                     "type": "description_echo",
                     "prompt": prompt,
                     "category": bucket,
                     "index": idx,
+                    "source": source,
                     "overlap_ratio": round(ratio, 3),
                     "shared_tokens": sorted(shared),
-                    "reason": f"{ratio:.1%} overlap with skill description",
+                    "reason": f"{ratio:.1%} overlap with skill {source}",
                 })
 
     return flags
@@ -159,7 +174,7 @@ def check_hard_corpus_quality(triggers: dict[str, Any]) -> list[dict[str, str]]:
 
 def score_skill(
     skill_name: str,
-    all_descriptions: dict[str, str],
+    all_descriptions: RoutingDescriptions,
 ) -> dict[str, Any]:
     """Score one skill for contamination. Returns dict with contamination_score and flags."""
     triggers = load_trigger_file(skill_name)
@@ -171,11 +186,11 @@ def score_skill(
             "error": "no trigger file",
         }
 
-    description = all_descriptions.get(skill_name, "")
+    routing_description = all_descriptions.get(skill_name, "")
 
     flags: list[dict[str, Any]] = []
     flags.extend(check_skill_name_leaks(skill_name, triggers))
-    flags.extend(check_description_echo(skill_name, description, triggers))
+    flags.extend(check_description_echo(skill_name, routing_description, triggers))
     flags.extend(check_hard_corpus_quality(triggers))
 
     # Compute contamination score: 0 = clean, 1 = fully contaminated
@@ -208,7 +223,7 @@ def main() -> None:
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
     args = parser.parse_args()
 
-    descriptions = load_all_descriptions()
+    descriptions = load_all_routing_descriptions()
 
     if args.skill:
         result = score_skill(args.skill, descriptions)

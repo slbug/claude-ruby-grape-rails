@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,9 @@ PROMPT_BUCKETS = (
     "hard_should_not_trigger",
 )
 
+RoutingDescription = str | Mapping[str, Any]
+RoutingDescriptions = Mapping[str, RoutingDescription]
+
 
 def extract_prompt(item: Any) -> str:
     if isinstance(item, str):
@@ -33,6 +37,7 @@ def normalize_prompt(prompt: str) -> str:
 
 
 def load_all_descriptions() -> dict[str, str]:
+    """Load top-level skill descriptions only."""
     descriptions: dict[str, str] = {}
     for skill_dir in sorted(SKILLS_DIR.iterdir()):
         if not skill_dir.is_dir():
@@ -43,6 +48,58 @@ def load_all_descriptions() -> dict[str, str]:
         fm = parse_frontmatter(skill_file.read_text(encoding="utf-8"))
         descriptions[skill_dir.name] = str(fm.get("description", ""))
     return descriptions
+
+
+def load_all_routing_descriptions() -> dict[str, dict[str, str]]:
+    """Load routing text fields used by LLM-based skill routing.
+
+    ``description`` explains broad intent; ``when_to_use`` carries trigger
+    phrases and negative routing notes. Behavioral and confusable-pair evals
+    need both to match the real routing surface.
+    """
+    descriptions: dict[str, dict[str, str]] = {}
+    for skill_dir in sorted(SKILLS_DIR.iterdir()):
+        if not skill_dir.is_dir():
+            continue
+        skill_file = skill_dir / "SKILL.md"
+        if not skill_file.is_file():
+            continue
+        fm = parse_frontmatter(skill_file.read_text(encoding="utf-8"))
+        descriptions[skill_dir.name] = {
+            "description": str(fm.get("description", "")).strip(),
+            "when_to_use": str(fm.get("when_to_use", "")).strip(),
+        }
+    return descriptions
+
+
+def routing_description_text(value: RoutingDescription) -> str:
+    """Return full routing text from a description string or routing-field dict."""
+    if isinstance(value, Mapping):
+        desc = str(value.get("description", "")).strip()
+        when = str(value.get("when_to_use", "")).strip()
+        if desc and when:
+            return f"{desc} When to use: {when}"
+        return desc or when
+    return str(value).strip()
+
+
+def routing_text_sources(value: RoutingDescription) -> list[tuple[str, str]]:
+    """Return individual routing text fields as (field_name, text) pairs.
+
+    Used by hygiene and trigger_expand quality gates to check each routing
+    field independently (e.g., description echo detection).
+    """
+    if isinstance(value, Mapping):
+        sources: list[tuple[str, str]] = []
+        desc = str(value.get("description", "")).strip()
+        when = str(value.get("when_to_use", "")).strip()
+        if desc:
+            sources.append(("description", desc))
+        if when:
+            sources.append(("when_to_use", when))
+        return sources
+    text = str(value).strip()
+    return [("description", text)] if text else []
 
 
 def load_trigger_file(skill_name: str) -> dict[str, Any] | None:
@@ -116,13 +173,16 @@ def score_trigger_file(skill_name: str, data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_confusable_pairs(descriptions: dict[str, str], limit: int = 10) -> list[dict[str, Any]]:
+def build_confusable_pairs(
+    descriptions: RoutingDescriptions,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
     bundle: dict[str, set[str]] = {}
     for skill, desc in descriptions.items():
         data = load_trigger_file(skill)
         if data is None:
             continue
-        tokens = set(tokenize(desc))
+        tokens = set(tokenize(routing_description_text(desc)))
         for bucket in ("should_trigger", "hard_should_trigger"):
             for item in data.get(bucket, []):
                 tokens.update(tokenize(extract_prompt(item)))
@@ -159,15 +219,25 @@ _SEMANTIC_SYSTEM_PROMPT = (
 )
 
 
-def _descriptions_hash(descriptions: dict[str, str]) -> str:
+def routing_descriptions_blob(descriptions: RoutingDescriptions) -> str:
+    """Serialize routing descriptions to a stable JSON string.
+
+    Used for cache-key hashing by behavioral_scorer and neighbor_regression.
+    """
+    return json.dumps(
+        {name: routing_description_text(desc) for name, desc in descriptions.items()},
+        sort_keys=True,
+    )
+
+
+def _descriptions_hash(descriptions: RoutingDescriptions) -> str:
     """Content hash of all descriptions for semantic pair cache invalidation."""
     import hashlib
-    combined = json.dumps(descriptions, sort_keys=True)
-    return hashlib.sha256(combined.encode()).hexdigest()[:16]
+    return hashlib.sha256(routing_descriptions_blob(descriptions).encode()).hexdigest()[:16]
 
 
 def build_semantic_confusable_pairs(
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
     token_pairs: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Build semantic confusable pairs via a single Haiku call.
@@ -206,7 +276,7 @@ def build_semantic_confusable_pairs(
 
 
 def _fetch_semantic_pairs(
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
     token_pairs: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """Call Haiku once to identify semantic confusable pairs."""
@@ -214,7 +284,8 @@ def _fetch_semantic_pairs(
 
     # Build the prompt
     desc_lines = "\n".join(
-        f"- {name}: {desc[:150]}" for name, desc in sorted(descriptions.items())
+        f"- {name}: {routing_description_text(desc)[:150]}"
+        for name, desc in sorted(descriptions.items())
     )
     known_lines = "\n".join(
         f"{p['left']} | {p['right']} | {p['overlap']:.2f}"
@@ -332,7 +403,7 @@ def _merge_pairs(
 
 
 def score_all(semantic: bool = False) -> dict[str, Any]:
-    descriptions = load_all_descriptions()
+    descriptions = load_all_routing_descriptions()
     scores = {}
     for path in sorted(TRIGGERS_DIR.glob("*.json")):
         if path.name.startswith("_"):
@@ -359,7 +430,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.overlap:
-        descriptions = load_all_descriptions()
+        descriptions = load_all_routing_descriptions()
         if args.semantic:
             pairs = build_semantic_confusable_pairs(descriptions)
         else:

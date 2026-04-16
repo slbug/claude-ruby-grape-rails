@@ -19,7 +19,13 @@ import sys
 from . import results_dir as rd
 from .behavioral_scorer import score_skill
 from .results_dir import SUPPORTED_PROVIDERS
-from .trigger_scorer import TRIGGERS_DIR, load_all_descriptions, load_trigger_file
+from .trigger_scorer import (
+    TRIGGERS_DIR,
+    load_all_routing_descriptions,
+    load_trigger_file,
+    routing_descriptions_blob,
+    RoutingDescriptions,
+)
 
 
 CONFUSABLE_PAIRS_PATH = TRIGGERS_DIR / "_confusable_pairs.json"
@@ -145,7 +151,8 @@ def _format_delta(value: float) -> str:
 def run_regression_check(
     skill_name: str,
     neighbor_map: dict[str, list[tuple[str, float]]],
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
+    descriptions_blob: str | None = None,
     dry_run: bool = False,
     verbose: bool = False,
 ) -> bool:
@@ -187,7 +194,12 @@ def run_regression_check(
         baseline_path = rd.active_results_dir() / f"{name}.json"
         baseline_backup = baseline_path.read_bytes() if baseline_path.is_file() else None
 
-        current, _ = score_skill(name, descriptions, verbose=verbose)
+        current, _ = score_skill(
+            name,
+            descriptions,
+            verbose=verbose,
+            descriptions_blob=descriptions_blob,
+        )
 
         # Restore baseline so subsequent runs compare against stable reference
         if baseline_backup is not None:
@@ -239,14 +251,15 @@ def main() -> None:
                         choices=sorted(SUPPORTED_PROVIDERS),
                         help=(
                             "Routing provider for fresh scoring calls. "
-                            "Default: RUBY_PLUGIN_EVAL_PROVIDER env var or apfel."
+                            "Default: RUBY_PLUGIN_EVAL_PROVIDER env var or ollama."
                         ))
     args = parser.parse_args()
 
     rd.set_active_provider(args.provider)
 
     neighbor_map = build_neighbor_map()
-    descriptions = load_all_descriptions()
+    descriptions = load_all_routing_descriptions()
+    descriptions_blob = routing_descriptions_blob(descriptions)
     all_passed = True
 
     if args.skill:
@@ -255,6 +268,7 @@ def main() -> None:
             raise SystemExit(1)
         passed = run_regression_check(
             args.skill, neighbor_map, descriptions,
+            descriptions_blob=descriptions_blob,
             dry_run=args.dry_run, verbose=args.verbose,
         )
         if not passed:
@@ -272,6 +286,7 @@ def main() -> None:
                 continue
             passed = run_regression_check(
                 skill, neighbor_map, descriptions,
+                descriptions_blob=descriptions_blob,
                 dry_run=args.dry_run, verbose=args.verbose,
             )
             if not passed:
@@ -287,6 +302,7 @@ def main() -> None:
                 continue
             passed = run_regression_check(
                 skill, neighbor_map, descriptions,
+                descriptions_blob=descriptions_blob,
                 dry_run=args.dry_run, verbose=args.verbose,
             )
             if not passed:

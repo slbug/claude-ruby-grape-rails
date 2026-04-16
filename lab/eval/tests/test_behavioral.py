@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,6 +18,8 @@ from lab.eval.behavioral_scorer import (
     build_routing_prompt,
     CallResult,
     content_hash,
+    ROUTING_FIELDS,
+    ROUTING_PROMPT_VERSION,
     score_skill,
 )
 from lab.eval.dimensions.behavioral import score as behavioral_score
@@ -26,6 +29,21 @@ SAMPLE_DESCRIPTIONS = {
     "plan": "Plan implementation approach for Ruby/Rails features",
     "work": "Execute plan tasks with structured progress tracking",
     "review": "Review code changes with parallel specialist agents",
+}
+
+SAMPLE_ROUTING_DESCRIPTIONS = {
+    "plan": {
+        "description": "Plan implementation approach for Ruby/Rails features",
+        "when_to_use": "Use for architecture, task breakdown, and sequencing.",
+    },
+    "work": {
+        "description": "Execute plan tasks with structured progress tracking",
+        "when_to_use": "Use when the task requires direct code changes.",
+    },
+    "review": {
+        "description": "Review code changes with parallel specialist agents",
+        "when_to_use": "Use when checking diffs for defects and regressions.",
+    },
 }
 
 
@@ -77,6 +95,19 @@ class TestContentHash(unittest.TestCase):
         self.assertNotEqual(h1, h2)
 
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_hash_changes_with_when_to_use(self, mock_trigger):
+        """Different when_to_use text invalidates behavioral caches."""
+        mock_trigger.return_value = {"should_trigger": ["plan a feature"]}
+        h1 = content_hash("plan", SAMPLE_ROUTING_DESCRIPTIONS)
+        modified = dict(SAMPLE_ROUTING_DESCRIPTIONS)
+        modified["plan"] = {
+            **SAMPLE_ROUTING_DESCRIPTIONS["plan"],
+            "when_to_use": "Use for unrelated routing text.",
+        }
+        h2 = content_hash("plan", modified)
+        self.assertNotEqual(h1, h2)
+
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
     def test_hash_changes_with_triggers(self, mock_trigger):
         """Different trigger corpora produce different hashes."""
         mock_trigger.return_value = {"should_trigger": ["plan a feature"]}
@@ -95,6 +126,32 @@ class TestRoutingPrompt(unittest.TestCase):
         for name, desc in SAMPLE_DESCRIPTIONS.items():
             self.assertIn(name, prompt)
             self.assertIn(desc[:50], prompt)
+
+    def test_includes_when_to_use(self):
+        """Prompt contains routing when_to_use text when present."""
+        prompt = build_routing_prompt(SAMPLE_ROUTING_DESCRIPTIONS, "plan a feature")
+        self.assertIn("When to use:", prompt)
+        self.assertIn("architecture, task breakdown", prompt)
+        self.assertIn("checking diffs for defects", prompt)
+
+    def test_apfel_strip_to_size_limits_each_routing_field(self):
+        """Apfel keeps bounded text from description and when_to_use."""
+        old_provider = _rd.get_active_provider()
+        _rd.set_active_provider("apfel")
+        try:
+            descriptions = {
+                "plan": {
+                    "description": "D" * 90,
+                    "when_to_use": "W" * 90,
+                }
+            }
+            prompt = build_routing_prompt(descriptions, "plan a feature")
+        finally:
+            _rd.set_active_provider(old_provider)
+        self.assertIn("D" * 67 + "...", prompt)
+        self.assertIn("When to use: " + "W" * 67 + "...", prompt)
+        self.assertNotIn("D" * 80, prompt)
+        self.assertNotIn("W" * 80, prompt)
 
     def test_includes_user_prompt(self):
         """Prompt contains the user's input."""
@@ -212,6 +269,33 @@ class TestScoreSkill(unittest.TestCase):
         self.assertEqual(result["recall"], 1.0)
         self.assertEqual(result["total"], 4)
         self.assertEqual(result["correct"], 4)
+
+    @patch("lab.eval.behavioral_scorer.run_ollama")
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_score_skill_dispatches_ollama_provider(self, mock_triggers, mock_ollama):
+        """Provider dispatch uses Ollama when the active provider is ollama."""
+        old_provider = _rd.get_active_provider()
+        _rd.set_active_provider("ollama")
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature"],
+            "should_not_trigger": ["review code"],
+        }
+        mock_ollama.side_effect = [_cr(["plan"]), _cr(["review"])]
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                env = dict(os.environ)
+                env.pop(_rd.OLLAMA_MODEL_ENV_VAR, None)
+                with patch.dict("os.environ", env, clear=True):
+                    with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
+                        result = _unpack(score_skill("plan", SAMPLE_ROUTING_DESCRIPTIONS))
+        finally:
+            _rd.set_active_provider(old_provider)
+
+        self.assertEqual(mock_ollama.call_count, 2)
+        self.assertEqual(result["provider"], "ollama")
+        self.assertEqual(result["model"], "gemma4:latest")
+        self.assertEqual(result["cache_namespace"], "gemma4")
+        self.assertEqual(result["accuracy"], 1.0)
 
     @patch("lab.eval.behavioral_scorer.run_haiku")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
@@ -727,10 +811,33 @@ class TestModeSpecificCache(unittest.TestCase):
                 self.assertNotIn("error", rot_cached)
                 self.assertEqual(rot_cached.get("rotations"), 3)
 
+    @patch("lab.eval.behavioral_scorer.load_trigger_file")
+    def test_cache_requires_provider_profile_metadata(self, mock_triggers):
+        """Old hash-only caches are stale under provider/model prompt profiles."""
+        mock_triggers.return_value = {
+            "should_trigger": ["plan a feature"],
+            "should_not_trigger": [],
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "plan.json"
+            cache_path.write_text(json.dumps({
+                "skill": "plan",
+                "accuracy": 1.0,
+                "content_hash": content_hash("plan", SAMPLE_DESCRIPTIONS),
+            }))
+
+            with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
+                cached = _unpack(score_skill(
+                    "plan", SAMPLE_DESCRIPTIONS, use_cache=True,
+                ))
+
+        self.assertIn("error", cached)
+        self.assertIn("no valid cache", cached["error"])
+
     @patch("lab.eval.behavioral_scorer.run_haiku")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
     def test_mode_metadata_in_artifact(self, mock_triggers, mock_haiku):
-        """Result artifact includes mode metadata."""
+        """Result artifact includes mode and provider/profile metadata."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],
             "should_not_trigger": [],
@@ -741,6 +848,16 @@ class TestModeSpecificCache(unittest.TestCase):
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
                 self.assertEqual(result["mode"], {"rotations": 1, "samples": 3})
+                self.assertEqual(result["provider"], "haiku")
+                self.assertEqual(result["model"], "haiku")
+                self.assertEqual(result["cache_namespace"], "haiku")
+                self.assertEqual(result["routing_fields"], list(ROUTING_FIELDS))
+                self.assertEqual(result["routing_prompt_version"], ROUTING_PROMPT_VERSION)
+                self.assertEqual(result["prompt_policy"], "full")
+                self.assertEqual(
+                    result["prompt_limits"],
+                    {"description": None, "when_to_use": None},
+                )
 
 
 class TestMissingSample0(unittest.TestCase):

@@ -1,8 +1,8 @@
 """Behavioral trigger evaluation.
 
-Tests whether Claude routes user prompts to the correct skill by sending all
-skill descriptions + one test prompt to the active provider (apfel on-device
-by default, haiku via the Claude API as an alternative).
+Tests whether an LLM routes user prompts to the correct skill by sending all
+skill routing descriptions + one test prompt to the active provider (Ollama
+Gemma4 by default, apfel/haiku as alternatives).
 
 Usage:
     python3 -m lab.eval.behavioral_scorer --skill plan          # Test one skill
@@ -13,9 +13,10 @@ Usage:
     python3 -m lab.eval.behavioral_scorer --skill plan --rotations 5  # Order-bias control
     python3 -m lab.eval.behavioral_scorer --skill plan --samples 3    # pass@k robustness
 
-Cost: Provider-dependent. Apfel runs on-device at $0. Haiku uses --bare mode (~$0.006/call
-avg, varies by skill complexity). Full 51-skill run with haiku (621 prompts): ~$3.70 single-shot,
-~$19 with rotations 5, ~$11 with samples 3.
+Cost: Provider-dependent. Ollama and apfel run locally at $0. Haiku uses
+--bare mode (~$0.006/call avg, varies by skill complexity). Full 51-skill run
+with haiku (621 prompts): ~$3.70 single-shot, ~$19 with rotations 5, ~$11
+with samples 3.
 """
 
 from __future__ import annotations
@@ -32,11 +33,20 @@ import subprocess
 import sys
 import threading
 import traceback
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from . import results_dir as rd
 from .results_dir import SUPPORTED_PROVIDERS
-from .trigger_scorer import load_all_descriptions, load_trigger_file, TRIGGERS_DIR
+from .trigger_scorer import (
+    load_all_routing_descriptions,
+    load_trigger_file,
+    routing_descriptions_blob,
+    RoutingDescription,
+    RoutingDescriptions,
+    routing_description_text,
+    TRIGGERS_DIR,
+)
 
 log = logging.getLogger("behavioral_scorer")
 
@@ -56,6 +66,44 @@ _ROUTING_SYSTEM_PROMPT = (
     "If none, reply with the single word 'none'. List at most 3, ordered by relevance. "
     "NEVER add explanations, code examples, or commentary. Output ONLY skill names or 'none'."
 )
+
+ROUTING_PROMPT_VERSION = "description_when_to_use_v1"
+ROUTING_FIELDS = ("description", "when_to_use")
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class ProviderSettings:
+    model: str
+    prompt_policy: str
+    description_limit: int | None = None
+    when_to_use_limit: int | None = None
+
+
+_PROVIDER_SETTINGS: dict[str, ProviderSettings] = {
+    "ollama": ProviderSettings(
+        model=rd.DEFAULT_OLLAMA_MODEL,
+        prompt_policy="full",
+    ),
+    "apfel": ProviderSettings(
+        model="apple-foundationmodel",
+        prompt_policy="strip_to_size",
+        description_limit=70,
+        when_to_use_limit=70,
+    ),
+    "haiku": ProviderSettings(
+        model="haiku",
+        prompt_policy="full",
+    ),
+}
+
+
+def _provider_settings(provider: str | None = None) -> ProviderSettings:
+    """Return active provider settings, resolving dynamic model defaults."""
+    provider_name = provider or rd.get_active_provider()
+    settings = _PROVIDER_SETTINGS[provider_name]
+    if provider_name == "ollama":
+        return dataclasses.replace(settings, model=rd.resolve_ollama_model())
+    return settings
 
 
 _RESOLVED_TOKEN_ENV = "_RUBY_PLUGIN_RESOLVED_TOKEN"
@@ -136,19 +184,74 @@ class CallResult:
     error_type: str | None = None
 
 
-def content_hash(skill_name: str, descriptions: dict[str, str]) -> str:
-    """Hash skill description + trigger corpus for cache invalidation."""
-    desc = descriptions.get(skill_name, "")
-    trigger_data = load_trigger_file(skill_name)
+# Alias kept for internal call-sites; canonical definition is in trigger_scorer.
+_routing_descriptions_blob = routing_descriptions_blob
+
+
+_TRIGGER_DATA_UNSET = object()
+
+
+def content_hash(
+    skill_name: str,
+    descriptions: RoutingDescriptions,
+    descriptions_blob: str | None = None,
+    trigger_data=_TRIGGER_DATA_UNSET,
+) -> str:
+    """Hash routing descriptions + one skill's trigger corpus for cache invalidation."""
+    desc_blob = (
+        descriptions_blob
+        if descriptions_blob is not None
+        else _routing_descriptions_blob(descriptions)
+    )
+    if trigger_data is _TRIGGER_DATA_UNSET:
+        trigger_data = load_trigger_file(skill_name)
     corpus = json.dumps(trigger_data, sort_keys=True) if trigger_data else ""
-    combined = f"{desc}\n---\n{corpus}"
+    combined = f"{ROUTING_PROMPT_VERSION}\n{desc_blob}\n---\n{corpus}"
     return hashlib.sha256(combined.encode()).hexdigest()[:16]
 
 
+def _truncate_for_prompt(text: str, limit: int | None) -> str:
+    """Truncate one prompt field to at most limit chars, preserving readability."""
+    text = text.strip()
+    if limit is None or len(text) <= limit:
+        return text
+    if limit <= 3:
+        return text[:limit]
+    return text[: limit - 3].rstrip() + "..."
+
+
+def _format_routing_description_for_prompt(
+    value: RoutingDescription,
+    settings: ProviderSettings,
+) -> str:
+    """Format one skill's routing text for the active provider prompt policy."""
+    if isinstance(value, Mapping):
+        desc = str(value.get("description", "")).strip()
+        when = str(value.get("when_to_use", "")).strip()
+        if settings.prompt_policy == "strip_to_size":
+            desc = _truncate_for_prompt(desc, settings.description_limit)
+            when = _truncate_for_prompt(when, settings.when_to_use_limit)
+        parts = []
+        if desc:
+            parts.append(desc)
+        if when:
+            parts.append(f"When to use: {when}")
+        return " ".join(parts)
+
+    text = routing_description_text(value)
+    if settings.prompt_policy == "strip_to_size":
+        limit = None
+        if settings.description_limit is not None and settings.when_to_use_limit is not None:
+            limit = settings.description_limit + settings.when_to_use_limit
+        return _truncate_for_prompt(text, limit)
+    return text
+
+
 def build_routing_prompt(
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
     user_prompt: str,
     rotation: int = 0,
+    prompt_policy: str | None = None,
 ) -> str:
     """Build the routing prompt for the active provider.
 
@@ -161,8 +264,48 @@ def build_routing_prompt(
     if rotation and items:
         rotation = rotation % len(items)
         items = items[rotation:] + items[:rotation]
-    desc_list = "\n".join(f"- {name}: {desc}" for name, desc in items)
+    settings = _provider_settings()
+    if prompt_policy is not None and prompt_policy != settings.prompt_policy:
+        settings = dataclasses.replace(settings, prompt_policy=prompt_policy)
+    desc_list = "\n".join(
+        f"- {name}: {_format_routing_description_for_prompt(desc, settings)}"
+        for name, desc in items
+    )
     return f'Available skills:\n{desc_list}\n\nThe user says: "{user_prompt}"'
+
+
+def _prompt_limits(settings: ProviderSettings) -> dict[str, int | None]:
+    """Return prompt-size limits that affect cache compatibility."""
+    return {
+        "description": settings.description_limit,
+        "when_to_use": settings.when_to_use_limit,
+    }
+
+
+def _cache_profile(settings: ProviderSettings | None = None) -> dict:
+    """Return provider/model/prompt metadata that defines cache compatibility."""
+    settings = settings or _provider_settings()
+    return {
+        "provider": rd.get_active_provider(),
+        "model": settings.model,
+        "cache_namespace": rd.get_active_cache_namespace(),
+        "routing_fields": list(ROUTING_FIELDS),
+        "routing_prompt_version": ROUTING_PROMPT_VERSION,
+        "prompt_policy": settings.prompt_policy,
+        "prompt_limits": _prompt_limits(settings),
+    }
+
+
+def _cache_profile_matches(
+    cached: dict,
+    expected_hash: str,
+    settings: ProviderSettings | None = None,
+) -> bool:
+    """Return True when a cached artifact matches current routing semantics."""
+    if cached.get("content_hash") != expected_hash:
+        return False
+    profile = _cache_profile(settings)
+    return all(cached.get(key) == value for key, value in profile.items())
 
 
 # Global executor reference for signal handler cleanup
@@ -427,6 +570,60 @@ def _get_apfel_base_url() -> str:
     return _apfel_base_url_cache
 
 
+_ollama_client = None
+_ollama_server_proc = None
+_ollama_stderr_path: str | None = None
+_ollama_server_lock = threading.Lock()
+_ollama_client_lock = threading.Lock()
+_ollama_models_lock = threading.Lock()
+_ollama_base_url_cache: str | None = None
+_ollama_models_checked: set[str] = set()
+
+
+def _normalize_ollama_base_url(url: str) -> str:
+    """Normalize Ollama's OpenAI-compatible base URL.
+
+    Accepts bare hosts (``127.0.0.1:11434``), root URLs, proxied prefixes,
+    and explicit ``/v1`` URLs. OpenAI client calls need the ``/v1`` suffix,
+    so any path that lacks it gets it appended.
+    """
+    import urllib.parse
+
+    try:
+        candidate = _normalize_apfel_base_url(url)
+    except RuntimeError as exc:
+        raise RuntimeError(
+            f"Invalid RUBY_PLUGIN_EVAL_OLLAMA_BASE_URL {url!r}: could not "
+            "parse host. Expected form: http://host:port/v1"
+        ) from exc
+    parsed = urllib.parse.urlsplit(candidate)
+    if parsed.scheme not in {"http", "https"}:
+        raise RuntimeError(
+            f"Invalid RUBY_PLUGIN_EVAL_OLLAMA_BASE_URL {url!r}: scheme must "
+            "be http or https."
+        )
+    path = (parsed.path or "").rstrip("/")
+    if path in {"", "/"}:
+        path = "/v1"
+    elif not path.endswith("/v1"):
+        path = f"{path}/v1"
+    return urllib.parse.urlunsplit(
+        (parsed.scheme or "http", parsed.netloc, path, "", "")
+    )
+
+
+def _get_ollama_base_url() -> str:
+    """Return the normalized OpenAI-compatible Ollama base URL."""
+    global _ollama_base_url_cache
+    if _ollama_base_url_cache is None:
+        raw = os.environ.get(
+            "RUBY_PLUGIN_EVAL_OLLAMA_BASE_URL",
+            "http://127.0.0.1:11434/v1",
+        )
+        _ollama_base_url_cache = _normalize_ollama_base_url(raw)
+    return _ollama_base_url_cache
+
+
 def _derive_health_url(base_url: str) -> str:
     """Derive an apfel /health URL from an OpenAI-style base URL.
 
@@ -457,11 +654,354 @@ def _derive_health_url(base_url: str) -> str:
 
 
 def _is_loopback_base_url(base_url: str) -> bool:
-    """Return True when base_url points at a local apfel we may auto-spawn."""
+    """Return True when base_url points at a local provider we may auto-spawn."""
     import urllib.parse
 
     host = urllib.parse.urlsplit(base_url).hostname
     return host in _LOOPBACK_HOSTS
+
+
+def _derive_ollama_api_url(base_url: str, api_path: str) -> str:
+    """Derive an Ollama native API URL from an OpenAI-style base URL."""
+    import urllib.parse
+
+    parsed = urllib.parse.urlsplit(base_url)
+    path = (parsed.path or "").rstrip("/")
+    if path.endswith("/v1"):
+        root = path[:-3]
+    else:
+        root = path if path not in {"", "/"} else ""
+    api_path = api_path if api_path.startswith("/") else f"/{api_path}"
+    return urllib.parse.urlunsplit(
+        (
+            parsed.scheme or "http",
+            parsed.netloc,
+            f"{root}{api_path}",
+            "",
+            "",
+        )
+    )
+
+
+def _stop_ollama_server():
+    """Kill Ollama server if this process started it."""
+    global _ollama_server_proc, _ollama_stderr_path
+    proc = _ollama_server_proc
+    try:
+        if proc and proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=3)
+    finally:
+        _ollama_server_proc = None
+        if _ollama_stderr_path is not None:
+            try:
+                os.unlink(_ollama_stderr_path)
+            except OSError:
+                pass
+            _ollama_stderr_path = None
+
+
+def _ensure_ollama_server():
+    """Start ``ollama serve`` if the configured local endpoint is not running."""
+    global _ollama_server_proc, _ollama_stderr_path
+    import tempfile
+    import time
+    import urllib.parse
+    import urllib.request
+    import urllib.error
+
+    base_url = _get_ollama_base_url()
+    url_parts = urllib.parse.urlsplit(base_url)
+    version_url = _derive_ollama_api_url(base_url, "/api/version")
+    is_localhost = _is_loopback_base_url(base_url)
+
+    if is_localhost:
+        if url_parts.scheme != "http":
+            raise RuntimeError(
+                f"Unsupported localhost RUBY_PLUGIN_EVAL_OLLAMA_BASE_URL "
+                f"scheme {url_parts.scheme!r}. Local Ollama auto-spawn "
+                "requires an http URL such as 'http://localhost:11434' or "
+                "'http://localhost:11434/v1'. Use a non-loopback HTTPS URL "
+                "only for a remote/proxied Ollama service you manage."
+            )
+        normalized_path = (url_parts.path or "").rstrip("/") or "/"
+        if normalized_path not in {"/", "/v1"}:
+            raise RuntimeError(
+                f"Unsupported localhost RUBY_PLUGIN_EVAL_OLLAMA_BASE_URL path "
+                f"prefix {url_parts.path!r}. Local Ollama auto-spawn only works "
+                "with a root base URL such as 'http://localhost:11434' or "
+                "'http://localhost:11434/v1'."
+            )
+
+    with _ollama_server_lock:
+        if _ollama_server_proc is not None:
+            if _ollama_server_proc.poll() is None:
+                return
+            log.warning("Cached Ollama server process exited; restarting.")
+            _ollama_server_proc = None
+
+        try:
+            with urllib.request.urlopen(version_url, timeout=2):
+                return
+        except (urllib.error.URLError, OSError):
+            pass
+
+        if not is_localhost:
+            raise RuntimeError(
+                f"Remote Ollama at {version_url} is unreachable. "
+                "Start the remote server, unset RUBY_PLUGIN_EVAL_OLLAMA_BASE_URL "
+                "to auto-spawn locally, or pass --provider haiku/apfel."
+            )
+
+        ollama_host = url_parts.hostname
+        ollama_port = str(url_parts.port) if url_parts.port is not None else "11434"
+        if ollama_host is None:
+            raise RuntimeError(
+                f"Cannot auto-start local Ollama for malformed base URL: "
+                f"{base_url!r}."
+            )
+
+        stderr_fd, stderr_path = tempfile.mkstemp(
+            prefix="ollama-stderr-", suffix=".log"
+        )
+        _ollama_stderr_path = stderr_path
+        env = dict(os.environ)
+        env["OLLAMA_HOST"] = f"{ollama_host}:{ollama_port}"
+        _emit_info(f"Starting ollama serve on {env['OLLAMA_HOST']} ...")
+        try:
+            _ollama_server_proc = subprocess.Popen(
+                ["ollama", "serve"],
+                stdout=subprocess.DEVNULL,
+                stderr=stderr_fd,
+                env=env,
+            )
+        except FileNotFoundError as exc:
+            try:
+                os.unlink(stderr_path)
+            except OSError:
+                pass
+            _ollama_stderr_path = None
+            raise RuntimeError(
+                "Failed to start Ollama server: 'ollama' was not found on PATH. "
+                "Install Ollama or pass --provider haiku/apfel."
+            ) from exc
+        except OSError as exc:
+            try:
+                os.unlink(stderr_path)
+            except OSError:
+                pass
+            _ollama_stderr_path = None
+            raise RuntimeError(
+                f"Failed to start Ollama server with 'ollama serve': {exc}. "
+                "Check that the ollama binary is executable or pass "
+                "--provider haiku/apfel."
+            ) from exc
+        finally:
+            os.close(stderr_fd)
+        atexit.register(_stop_ollama_server)
+
+        def _read_ollama_stderr_tail(limit: int = 1000) -> str:
+            try:
+                with open(stderr_path, encoding="utf-8", errors="replace") as fh:
+                    data = fh.read()
+            except OSError:
+                return ""
+            tail = data[-limit:]
+            if len(data) > limit:
+                tail = f"...\n{tail}"
+            return tail.strip()
+
+        for _ in range(30):
+            exit_code = _ollama_server_proc.poll()
+            if exit_code is not None:
+                stderr_tail = _read_ollama_stderr_tail()
+                _stop_ollama_server()
+                msg = (
+                    f"ollama serve exited with code {exit_code} before "
+                    f"becoming ready."
+                )
+                if stderr_tail:
+                    msg += f" stderr tail:\n{stderr_tail}"
+                raise RuntimeError(msg)
+            try:
+                with urllib.request.urlopen(version_url, timeout=1):
+                    _emit_info("Ollama server ready.")
+                    return
+            except (urllib.error.URLError, OSError):
+                time.sleep(0.5)
+
+        stderr_tail = _read_ollama_stderr_tail()
+        _stop_ollama_server()
+        msg = "ollama serve failed to start within 15s"
+        if stderr_tail:
+            msg += f". stderr tail:\n{stderr_tail}"
+        raise RuntimeError(msg)
+
+
+def _ollama_model_aliases(model: str) -> set[str]:
+    """Return equivalent Ollama model names for installed-model checks."""
+    raw = model.strip()
+    if not raw:
+        return set()
+
+    aliases = {raw, raw.rsplit("/", 1)[-1]}
+    for name in tuple(aliases):
+        if name.endswith(":latest"):
+            aliases.add(name[: -len(":latest")])
+        elif ":" not in name:
+            aliases.add(f"{name}:latest")
+    return {alias for alias in aliases if alias}
+
+
+def _ensure_ollama_model_available() -> None:
+    """Verify the configured Ollama model exists; never auto-pull models."""
+    import urllib.request
+    import urllib.error
+
+    model = rd.resolve_ollama_model()
+    with _ollama_models_lock:
+        if model in _ollama_models_checked:
+            return
+        tags_url = _derive_ollama_api_url(_get_ollama_base_url(), "/api/tags")
+        try:
+            with urllib.request.urlopen(tags_url, timeout=5) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+        except (urllib.error.URLError, OSError, json.JSONDecodeError) as exc:
+            raise RuntimeError(f"Could not list Ollama models at {tags_url}: {exc}") from exc
+        model_aliases = _ollama_model_aliases(model)
+        installed_aliases: set[str] = set()
+        for item in payload.get("models", []):
+            if not isinstance(item, dict):
+                continue
+            installed_model = str(item.get("name") or item.get("model") or "")
+            installed_aliases.update(_ollama_model_aliases(installed_model))
+        if not (model_aliases & installed_aliases):
+            raise RuntimeError(
+                f"Ollama model {model!r} is not installed. "
+                f"Run: ollama pull {model}"
+            )
+        _ollama_models_checked.add(model)
+
+
+def _get_ollama_client():
+    """Lazy-init OpenAI client for Ollama's OpenAI-compatible endpoint."""
+    global _ollama_client
+    _ensure_ollama_server()
+    _ensure_ollama_model_available()
+    with _ollama_client_lock:
+        if _ollama_client is None:
+            try:
+                from openai import OpenAI
+                import httpx as _httpx
+            except ImportError as exc:
+                raise RuntimeError(
+                    "openai and httpx packages required for Ollama provider. "
+                    "Install: .venv/bin/pip install openai httpx"
+                ) from exc
+            _ollama_client = OpenAI(
+                base_url=_get_ollama_base_url(),
+                api_key="ollama",
+                timeout=_httpx.Timeout(120.0, connect=5.0),
+                max_retries=0,
+            )
+    return _ollama_client
+
+
+def run_ollama(
+    prompt: str, verbose: bool = False, log_buf: list[str] | None = None
+) -> CallResult:
+    """Ask the configured local Ollama model which skill(s) to route to."""
+
+    def _log(msg: str) -> None:
+        if log_buf is not None:
+            log_buf.append(msg)
+        else:
+            _emit_info(msg)
+
+    model = rd.resolve_ollama_model()
+    try:
+        client = _get_ollama_client()
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": _ROUTING_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0,
+            max_tokens=64,
+        )
+        text = resp.choices[0].message.content or ""
+        usage = resp.usage
+        in_tok = usage.prompt_tokens if usage else 0
+        out_tok = usage.completion_tokens if usage else 0
+
+        if verbose:
+            _log(f"--- OLLAMA RESPONSE ({model}, local, $0, {in_tok}in/{out_tok}out) ---")
+            _log(text.strip() or "(empty)")
+            _log("--- END RESPONSE ---")
+
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = "\n".join(
+                line
+                for line in cleaned.split("\n")
+                if not line.strip().startswith("```")
+            )
+
+        skills = []
+        seen: set[str] = set()
+        for line in cleaned.strip().split("\n"):
+            line = line.strip().lstrip("-*0123456789.) ").strip()
+            if " — " in line:
+                line = line.split(" — ")[0].strip()
+            if " (" in line:
+                line = line.split(" (")[0].strip()
+            if " -" in line:
+                line = line.split(" -")[0].strip()
+            line = line.strip("`").strip()
+            if (
+                line
+                and line.lower() != "none"
+                and not line.startswith("No ")
+                and line not in seen
+            ):
+                skills.append(line)
+                seen.add(line)
+        return CallResult(
+            skills=skills, cost=0.0, input_tokens=in_tok, output_tokens=out_tok
+        )
+
+    except Exception as exc:
+        exc_str = str(exc)
+        exc_lower = exc_str.lower()
+        error_type = "unknown"
+        if (
+            isinstance(exc, (ModuleNotFoundError, ImportError))
+            or "openai and httpx" in exc_lower
+            or ("ollama" in exc_lower and "not found on path" in exc_lower)
+            or "not installed" in exc_lower
+            or "ollama pull" in exc_lower
+        ):
+            error_type = "dependency_missing"
+        elif "remote ollama" in exc_lower and "unreachable" in exc_lower:
+            error_type = "server_unavailable"
+        elif "context" in exc_lower or "overflow" in exc_lower:
+            error_type = "context_overflow"
+        elif "timed out" in exc_lower or "timeout" in exc_lower:
+            error_type = "timeout"
+        elif "rate" in exc_lower and "limit" in exc_lower:
+            error_type = "rate_limited"
+        elif "connection" in exc_lower or "refused" in exc_lower:
+            error_type = "server_unavailable"
+        if verbose:
+            _log(f"--- OLLAMA ERROR ({error_type}) ---")
+            _log(exc_str[:300])
+            _log("--- END ---")
+        return CallResult(skills=None, error_type=error_type)
 
 
 def _ensure_apfel_server():
@@ -811,9 +1351,14 @@ def _run_provider(
     prompt: str, verbose: bool = False, log_buf: list[str] | None = None
 ) -> CallResult:
     """Dispatch to active provider."""
-    if rd.get_active_provider() == "apfel":
+    provider = rd.get_active_provider()
+    if provider == "ollama":
+        return run_ollama(prompt, verbose=verbose, log_buf=log_buf)
+    if provider == "apfel":
         return run_apfel(prompt, verbose=verbose, log_buf=log_buf)
-    return run_haiku(prompt, verbose=verbose, log_buf=log_buf)
+    if provider == "haiku":
+        return run_haiku(prompt, verbose=verbose, log_buf=log_buf)
+    return CallResult(skills=None, error_type="unknown")
 
 
 def extract_prompt(item) -> str:
@@ -857,7 +1402,7 @@ def _run_single_prompt(
     item,
     index: int,
     total: int,
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
     expected: bool,
     tier: str,
     verbose: bool = False,
@@ -939,7 +1484,7 @@ def _run_single_prompt(
 def _run_prompt_batch(
     skill_name: str,
     flat_items: list[tuple],
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
     verbose: bool = False,
     workers: int = 1,
 ) -> tuple[list[dict], int, list[CallResult]]:
@@ -1196,13 +1741,14 @@ def _result_filename(skill_name: str, rotations: int = 1, samples: int = 1) -> s
 
 def score_skill(
     skill_name: str,
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
     use_cache: bool = False,
     verbose: bool = False,
     limit: int = 0,
     workers: int = 1,
     rotations: int = 1,
     samples: int = 1,
+    descriptions_blob: str | None = None,
 ) -> tuple[dict, list[CallResult]]:
     """Score trigger accuracy for one skill. Returns (score_dict, call_results)."""
     if rotations > 1 and samples > 1:
@@ -1212,6 +1758,8 @@ def score_skill(
     cache_path = rd.active_results_dir() / _result_filename(
         skill_name, rotations, samples
     )
+    settings = _provider_settings()
+    expected_hash: str | None = None
 
     if use_cache:
         if cache_path.is_file():
@@ -1219,14 +1767,21 @@ def score_skill(
                 cached = json.loads(cache_path.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
                 return {"skill": skill_name, "error": "corrupted cache file"}, []
-            expected_hash = content_hash(skill_name, descriptions)
-            if cached.get("content_hash") == expected_hash:
+            expected_hash = content_hash(skill_name, descriptions, descriptions_blob)
+            if _cache_profile_matches(cached, expected_hash, settings):
                 return cached, []
         return {"skill": skill_name, "error": "no valid cache (stale or missing)"}, []
 
     triggers = load_trigger_file(skill_name)
     if not triggers:
         return {"skill": skill_name, "error": "no trigger file"}, []
+    if expected_hash is None:
+        expected_hash = content_hash(
+            skill_name,
+            descriptions,
+            descriptions_blob,
+            trigger_data=triggers,
+        )
 
     easy_trigger = triggers.get("should_trigger", [])
     easy_not = triggers.get("should_not_trigger", [])
@@ -1297,6 +1852,7 @@ def score_skill(
             "skill": skill_name,
             "error": error_msg,
             "failure_types": breakdown,
+            **_cache_profile(settings),
         }, all_call_results
 
     # Aggregate multi-run results
@@ -1330,10 +1886,10 @@ def score_skill(
 
     score_data = {
         "skill": skill_name,
+        **_cache_profile(settings),
         **overall,
         "failures": total_failures,
         "failure_types": _count_failure_types(all_call_results),
-        "provider": rd.get_active_provider(),
         "easy_accuracy": easy_metrics["accuracy"],
         "easy_precision": easy_metrics["precision"],
         "easy_recall": easy_metrics["recall"],
@@ -1347,7 +1903,7 @@ def score_skill(
             "fork": fork_metrics["total"],
             "lock": lock_metrics["total"],
         },
-        "content_hash": content_hash(skill_name, descriptions),
+        "content_hash": expected_hash,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "results": all_results,
     }
@@ -1446,7 +2002,7 @@ def score_skill(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Test skill trigger accuracy with apfel (default) or haiku"
+        description="Test skill trigger accuracy with Ollama Gemma4 (default), apfel, or haiku"
     )
     parser.add_argument("--skill", help="Test one skill")
     parser.add_argument(
@@ -1500,8 +2056,9 @@ def main() -> None:
         default=None,
         choices=sorted(SUPPORTED_PROVIDERS),
         help=(
-            "Routing provider: apfel (on-device, free) or haiku (API, paid). "
-            "Default: RUBY_PLUGIN_EVAL_PROVIDER env var or apfel."
+            "Routing provider: ollama (local Gemma4 by default), apfel "
+            "(on-device), or haiku (API, paid). Default: "
+            "RUBY_PLUGIN_EVAL_PROVIDER env var or ollama."
         ),
     )
     args = parser.parse_args()
@@ -1519,10 +2076,14 @@ def main() -> None:
     # Resolve provider after parsing so warnings only occur when actually needed
     rd.set_active_provider(args.provider)
 
-    # Start apfel server before workers (avoids race condition in threads).
+    # Start local providers before workers (avoids race conditions in threads).
     # Skip for --cache (documented as "no provider calls" — pure filesystem reads).
-    if rd.get_active_provider() == "apfel" and not args.cache:
-        _ensure_apfel_server()
+    if not args.cache:
+        if rd.get_active_provider() == "ollama":
+            _ensure_ollama_server()
+            _ensure_ollama_model_available()
+        elif rd.get_active_provider() == "apfel":
+            _ensure_apfel_server()
 
     # Signal handler: cancel pending futures, wait for running workers.
     # Use non-blocking acquire — signal runs on main thread which may
@@ -1550,7 +2111,7 @@ def main() -> None:
 
     # Resolve auth once — avoids concurrent keychain access with --workers > 1
     # Skip for --cache (documented as "no provider calls" — no keychain touches)
-    # Also skip for apfel provider (on-device, no Claude CLI credentials needed)
+    # Also skip for local providers (no Claude CLI credentials needed)
     global _resolved_settings_path
     is_temp_settings = False
     if not args.cache and rd.get_active_provider() == "haiku":
@@ -1568,7 +2129,8 @@ def main() -> None:
 
         atexit.register(_cleanup_settings)
 
-    descriptions = load_all_descriptions()
+    descriptions = load_all_routing_descriptions()
+    descriptions_blob = _routing_descriptions_blob(descriptions)
 
     # Collect all CallResults for cost aggregation (single-threaded, no lock needed)
     all_call_results: list[CallResult] = []
@@ -1583,6 +2145,7 @@ def main() -> None:
             workers=args.workers,
             rotations=args.rotations,
             samples=args.samples,
+            descriptions_blob=descriptions_blob,
         )
         all_call_results.extend(crs)
 
@@ -1640,6 +2203,7 @@ def main() -> None:
                 workers=args.workers,
                 rotations=args.rotations,
                 samples=args.samples,
+                descriptions_blob=descriptions_blob,
             )
             all_call_results.extend(crs)
 
@@ -1701,8 +2265,10 @@ def main() -> None:
                     f"R={result.get('recall', 0):.0%}{extra}"
                 )
         else:
+            settings = _provider_settings()
             aggregate = {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
+                **_cache_profile(settings),
                 "mode": {"rotations": args.rotations, "samples": args.samples},
                 "skills_tested": skills_tested,
                 "average_accuracy": round(avg, 4),

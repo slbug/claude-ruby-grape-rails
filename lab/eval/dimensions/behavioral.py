@@ -1,6 +1,6 @@
 """Behavioral dimension: Does the skill trigger correctly for real user prompts?
 
-Uses cached trigger test results from lab/eval/triggers/results/{provider}/.
+Uses cached trigger test results from lab/eval/triggers/results/{namespace}/.
 If no cached results exist, returns a neutral score (dimension skipped).
 Run behavioral_scorer.py first to populate cache.
 """

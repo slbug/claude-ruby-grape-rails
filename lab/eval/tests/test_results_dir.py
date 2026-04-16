@@ -17,6 +17,7 @@ class TestResolveProvider(unittest.TestCase):
         rd._warned_invalid_env.clear()
 
     def test_explicit_supported(self) -> None:
+        self.assertEqual(rd.resolve_provider("ollama"), "ollama")
         self.assertEqual(rd.resolve_provider("apfel"), "apfel")
         self.assertEqual(rd.resolve_provider("haiku"), "haiku")
 
@@ -74,15 +75,48 @@ class TestResultsDir(unittest.TestCase):
     """results_dir() composes the provider-scoped Path."""
 
     def test_explicit_provider(self) -> None:
-        self.assertEqual(rd.results_dir("apfel"), rd.RESULTS_BASE / "apfel")
-        self.assertEqual(rd.results_dir("haiku"), rd.RESULTS_BASE / "haiku")
+        with patch.dict("os.environ", {rd.OLLAMA_MODEL_ENV_VAR: ""}, clear=False):
+            self.assertEqual(rd.results_dir("ollama"), rd.RESULTS_BASE / "gemma4")
+            self.assertEqual(rd.results_dir("apfel"), rd.RESULTS_BASE / "apfel")
+            self.assertEqual(rd.results_dir("haiku"), rd.RESULTS_BASE / "haiku")
 
     def test_invalid_provider_uses_default(self) -> None:
-        self.assertEqual(rd.results_dir("bogus"), rd.RESULTS_BASE / rd.DEFAULT_PROVIDER)
+        with patch.dict("os.environ", {rd.OLLAMA_MODEL_ENV_VAR: ""}, clear=False):
+            self.assertEqual(rd.results_dir("bogus"), rd.RESULTS_BASE / "gemma4")
 
     def test_none_uses_env(self) -> None:
         with patch.dict("os.environ", {rd.PROVIDER_ENV_VAR: "haiku"}, clear=False):
             self.assertEqual(rd.results_dir(None), rd.RESULTS_BASE / "haiku")
+
+    def test_explicit_ollama_model(self) -> None:
+        self.assertEqual(
+            rd.results_dir("ollama", model="qwen3:8b"),
+            rd.RESULTS_BASE / "qwen3-8b",
+        )
+
+
+class TestOllamaNamespace(unittest.TestCase):
+    """Ollama cache namespace is derived from the active model tag."""
+
+    def test_default_model(self) -> None:
+        with patch.dict("os.environ", {}, clear=True):
+            self.assertEqual(rd.resolve_ollama_model(), "gemma4:latest")
+            self.assertEqual(rd.model_cache_namespace(), "gemma4")
+
+    def test_non_latest_tags_are_preserved(self) -> None:
+        self.assertEqual(rd.model_cache_namespace("qwen3:8b"), "qwen3-8b")
+        self.assertEqual(rd.model_cache_namespace("qwen3:14b"), "qwen3-14b")
+
+    def test_latest_tag_and_library_prefix_removed(self) -> None:
+        self.assertEqual(rd.model_cache_namespace("library/gemma4:latest"), "gemma4")
+
+    def test_env_model_controls_ollama_result_dir(self) -> None:
+        env = {
+            rd.PROVIDER_ENV_VAR: "ollama",
+            rd.OLLAMA_MODEL_ENV_VAR: "qwen3:8b",
+        }
+        with patch.dict("os.environ", env, clear=False):
+            self.assertEqual(rd.results_dir(None), rd.RESULTS_BASE / "qwen3-8b")
 
 
 if __name__ == "__main__":

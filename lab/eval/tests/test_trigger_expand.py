@@ -86,6 +86,19 @@ class TestQualityGate(unittest.TestCase):
             "description_echo",
         )
 
+    def test_when_to_use_echo(self):
+        routing_text = {
+            "description": "Plan implementation approach",
+            "when_to_use": "architecture breakdown sequencing risky refactor",
+        }
+        self.assertEqual(
+            _quality_gate(
+                "Need architecture breakdown sequencing for risky refactor",
+                "some-skill", [], routing_text,
+            ),
+            "description_echo",
+        )
+
     def test_near_duplicate(self):
         existing = ["I want to plan a new authentication feature for my Rails app"]
         self.assertEqual(
