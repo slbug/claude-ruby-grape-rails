@@ -1,6 +1,7 @@
 ---
 name: active-record-patterns
-description: Active Record patterns for querying, associations, migrations, transactions, locking, search, and data integrity. Load for any model, migration, query, or database-heavy work.
+description: "Use when working with Active Record models, migrations, queries, associations, transactions, locking, search, or data integrity patterns."
+when_to_use: "Triggers: \"Active Record\", \"migration\", \"query\", \"association\", \"model\", \"database\", \"transaction\"."
 user-invocable: false
 effort: medium
 paths:

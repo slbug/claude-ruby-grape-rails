@@ -1,6 +1,7 @@
 ---
 name: rails-contexts
-description: "Rails boundary design: controllers, services, forms, queries, policies, serializers, and mounted Grape APIs. Use for deciding where business logic belongs and how Rails layers should interact."
+description: "Use when deciding where business logic belongs in Rails: controllers, services, forms, queries, policies, serializers, and mounted Grape APIs."
+when_to_use: "Triggers: \"where does this go\", \"service object\", \"form object\", \"query object\", \"policy\", \"serializer\"."
 user-invocable: false
 effort: medium
 ---

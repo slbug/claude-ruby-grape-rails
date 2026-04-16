@@ -1,6 +1,7 @@
 ---
 name: rb:verify
-description: Use to verify completed code with the project's strongest check stack. Prefer a repo-native CI wrapper when present, otherwise run Zeitwerk, lint, tests, Brakeman, security, and migration checks.
+description: "Use when you need to verify completed code with the project's strongest check stack. Prefer a repo-native CI wrapper when present, otherwise run Zeitwerk, lint, tests, Brakeman, security, and migration checks."
+when_to_use: "Triggers: \"verify my work\", \"run checks\", \"run tests and lint\", \"is my code passing\", \"CI check\". Does NOT handle: code review, planning, implementation."
 argument-hint: "[--quick|--full]"
 effort: low
 ---

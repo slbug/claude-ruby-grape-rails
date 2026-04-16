@@ -1,6 +1,7 @@
 ---
 name: rb:secrets
-description: Scan code for leaked secrets, API keys, and credentials using betterleaks. Use before committing to check for accidentally exposed passwords, tokens, or sensitive data.
+description: "Use when scanning code for leaked secrets, API keys, and credentials using betterleaks. Use before committing to check for accidentally exposed passwords, tokens, or sensitive data."
+when_to_use: "Triggers: \"secrets\", \"leaked\", \"API key\", \"credentials\", \"betterleaks\", \"before commit\"."
 argument-hint: "[path] [--baseline FILE] [--validate]"
 effort: medium
 ---

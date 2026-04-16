@@ -18,7 +18,7 @@ skills/{name}/
 
 - Include an "Iron Laws" section for critical rules
 - No `triggers:` field — use `description` for auto-loading
-- Description <= 250 characters (longer descriptions are silently truncated and hurt routing)
+- Description <= 1,536 characters (combined `description` + `when_to_use` truncates at 1,536; front-load key use case)
 - For plugin-wide executables in `bin/`, use explicit `${CLAUDE_PLUGIN_ROOT}/bin/<cmd>` when the skill also references `${CLAUDE_SKILL_DIR}` (bare names can be conflated with skill-local files)
 
 ## Colon Naming

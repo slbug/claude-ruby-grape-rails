@@ -53,11 +53,13 @@ def frontmatter_field(content: str, field: str, expected: Any | None = None, **_
     return True, f"Frontmatter '{field}' present"
 
 
-def description_length(content: str, min: int = 50, max: int = 250, **_: Any) -> tuple[bool, str]:
-    desc = str(parse_frontmatter(content).get("description", ""))
-    size = len(desc)
-    passed = min <= size <= max
-    return passed, f"description length={size} (expected {min}-{max})"
+def description_length(content: str, min: int = 50, max: int = 1536, **_: Any) -> tuple[bool, str]:
+    fm = parse_frontmatter(content)
+    desc = str(fm.get("description", ""))
+    when = str(fm.get("when_to_use", ""))
+    combined = len(desc) + len(when)
+    passed = min <= combined <= max
+    return passed, f"description+when_to_use length={combined} (desc={len(desc)}, when={len(when)}, expected {min}-{max})"
 
 
 def description_keywords(content: str, min: int = 4, keywords: list[str] | None = None, **_: Any) -> tuple[bool, str]:

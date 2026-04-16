@@ -1,6 +1,7 @@
 ---
 name: compound-docs
 description: Background reference for Ruby/Rails/Grape solution notes. Use when searching past fixes, validating solution-doc structure, or consulting the compound knowledge base during planning and investigation.
+when_to_use: "Triggers: \"solution notes\", \"past fixes\", \"compound knowledge\", \"solution-doc\"."
 user-invocable: false
 effort: low
 ---

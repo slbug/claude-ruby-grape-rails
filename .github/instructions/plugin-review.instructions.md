@@ -32,12 +32,14 @@ excludeAgent: "coding-agent"
 
 - Skills use YAML frontmatter. Required: name, description. Common:
   argument-hint (command skills), effort, user-invocable,
-  disable-model-invocation, paths (framework-specific skills). Also valid
-  per CC docs: allowed-tools, model, context, agent, hooks, shell
+  disable-model-invocation, paths (framework-specific skills),
+  when_to_use (trigger phrases and negative routing). Also valid per CC
+  docs: allowed-tools, model, context, agent, hooks, shell
 - No `triggers:` field — skills docs do not support it
 - No executable bash blocks (``` bash) — use inline prose instructions
   instead ("Run `bundle exec rspec`")
-- Descriptions must be <= 250 characters
+- Combined description + when_to_use must be <= 1,536 characters
+- Descriptions should start with "Use when" for consistent routing signal
 - `${CLAUDE_SKILL_DIR}` is a valid runtime variable, not an error
 - Iron Laws sections contain numbered non-negotiable rules — do not suggest
   making them optional or softer

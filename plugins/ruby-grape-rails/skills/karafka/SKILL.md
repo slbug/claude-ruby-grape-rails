@@ -1,6 +1,7 @@
 ---
 name: karafka
-description: Apache Kafka processing with Karafka for Ruby. Multi-threaded consumers, batch processing, error handling, Rails integration.
+description: "Use when building Kafka consumers or producers with Karafka in Ruby. Covers multi-threaded consumers, batch processing, error handling, and Rails integration."
+when_to_use: "Triggers: \"Kafka\", \"Karafka\", \"consumer\", \"message processing\", \"event streaming\"."
 user-invocable: false
 effort: medium
 paths:

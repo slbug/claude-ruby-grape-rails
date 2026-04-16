@@ -29,7 +29,8 @@ These are NOT errors — they are resolved at runtime by Claude Code:
 
 ## Consistency Checks
 
-- Description in frontmatter must be <= 250 characters
+- Skill description + when_to_use combined must be <= 1,536 characters
+- Agent description must be <= 250 characters
 - Skill names use `rb:` prefix for user-invocable commands
 - Agent names use plain kebab-case (no prefix)
 - References to other skills use `/rb:name` format

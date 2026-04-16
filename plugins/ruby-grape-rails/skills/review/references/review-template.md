@@ -8,10 +8,11 @@ Each reviewer also writes a per-agent artifact to:
 
 - `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
 
-```markdown
+````markdown
 # Review: {Feature or Scope}
 
 **Date**: {date}
+**Complexity**: {Simple|Medium|Complex} ({count} files{, escalated: reason})
 **Files Reviewed**: {count}
 **Reviewers**: ruby-reviewer, testing-reviewer, security-analyzer, data-integrity-reviewer, migration-safety-reviewer
 
@@ -30,7 +31,7 @@ Each reviewer also writes a per-agent artifact to:
 ### 1. {Issue Title}
 
 **File**: {path}:{line}
-**Reviewer**: {agent}
+**Reviewer**: {agent} | **Confidence**: {HIGH|MEDIUM|LOW}
 **Issue**: {description}
 **Why this matters**: {impact explanation}
 
@@ -57,7 +58,7 @@ good_code
 ### 1. {Issue Title}
 
 **File**: {path}:{line}
-**Reviewer**: {agent}
+**Reviewer**: {agent} | **Confidence**: {HIGH|MEDIUM|LOW}
 **Issue**: {description}
 **Recommendation**: {what to do}
 
@@ -68,9 +69,10 @@ good_code
 ### 1. {Suggestion Title}
 
 **File**: {path}
+**Confidence**: {HIGH|MEDIUM|LOW}
 **Suggestion**: {improvement idea}
 
-```
+````
 
 ## Verdict Decision Rules
 
@@ -97,9 +99,9 @@ These are not blockers (code works) but should not merge without tests.
 
 Every review MUST end with this at-a-glance table (even if only 1 finding):
 
-| # | Finding | Severity | Reviewer | File | New? |
-|---|---------|----------|----------|------|------|
-| 1 | {title} | BLOCKER/WARNING/SUGGESTION | {agent} | {path}:{line} | Yes/Pre-existing |
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | {title} | BLOCKER/WARNING/SUGGESTION | HIGH/MEDIUM/LOW | {agent} | {path}:{line} | Yes/Pre-existing |
 
 **New?** column: "Yes" = finding on changed lines (this diff). "Pre-existing" = on unchanged code. Pre-existing issues appear in the report but do NOT affect the verdict.
 

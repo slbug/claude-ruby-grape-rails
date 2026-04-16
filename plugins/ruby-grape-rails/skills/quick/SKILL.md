@@ -1,6 +1,7 @@
 ---
 name: rb:quick
-description: "Trivial one-line fixes, typos, and tiny config changes. Skips planning ceremony — just inspect, fix, verify. Use for obvious changes under ~20 lines."
+description: "Use when making trivial one-line fixes, typos, and tiny config changes. Skips planning ceremony — just inspect, fix, verify. Use for obvious changes under ~20 lines."
+when_to_use: "Triggers: \"quick fix\", \"typo\", \"one-liner\", \"tiny change\", \"simple fix\"."
 argument-hint: <task>
 effort: low
 ---

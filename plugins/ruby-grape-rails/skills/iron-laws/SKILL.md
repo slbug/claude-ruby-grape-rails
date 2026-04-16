@@ -1,6 +1,7 @@
 ---
 name: iron-laws
-description: The 22 Iron Laws of Ruby/Rails/Grape development. Non-negotiable rules that prevent common, costly mistakes. Auto-loaded for Iron Law Judge.
+description: "Use when checking or enforcing the 22 Iron Laws of Ruby/Rails/Grape development. Non-negotiable rules that prevent common, costly mistakes."
+when_to_use: "Triggers: \"iron law\", \"non-negotiable rule\", \"Ruby safety rules\", \"iron-law-judge\"."
 effort: medium
 ---
 # Iron Laws

@@ -1,6 +1,7 @@
 ---
 name: rb:brief
-description: Explain a plan, implementation, or review outcome quickly. Use after /rb:plan, /rb:work, or /rb:review when the user wants a high-signal walkthrough.
+description: "Use when a user wants a concise explanation of a plan, implementation, or review outcome. Use after /rb:plan, /rb:work, or /rb:review for a high-signal walkthrough."
+when_to_use: "Triggers: \"explain plan\", \"summarize review\", \"walk me through\", \"what did we do\"."
 argument-hint: "[plan|diff|review path]"
 effort: low
 ---

@@ -1,6 +1,7 @@
 ---
 name: grape-idioms
-description: Grape API patterns for versioning, param coercion, declared params, error handling, presentation, and Rails integration. Load for mounted APIs and request boundary design.
+description: "Use when building Grape APIs: endpoint design, param coercion, declared params, versioning, error handling, grape-entity presentation, and Rails integration."
+when_to_use: "Triggers: \"Grape\", \"API endpoint\", \"grape-entity\", \"API versioning\", \"param coercion\"."
 user-invocable: false
 effort: medium
 paths:

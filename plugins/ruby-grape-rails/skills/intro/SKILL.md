@@ -1,6 +1,7 @@
 ---
 name: rb:intro
-description: "Tutorial walkthrough of plugin commands and capabilities. Use when users want to learn what the plugin offers, not when they already have a specific task to work on."
+description: "Use when users want a tutorial walkthrough of plugin commands and capabilities. Use when users want to learn what the plugin offers, not when they already have a specific task to work on."
+when_to_use: "Triggers: \"tutorial\", \"what can you do\", \"show commands\", \"help with plugin\", \"getting started\"."
 argument-hint: "[--section N]"
 effort: low
 ---

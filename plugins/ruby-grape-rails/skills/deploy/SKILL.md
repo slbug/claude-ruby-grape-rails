@@ -1,6 +1,7 @@
 ---
 name: deploy
-description: Ruby/Rails/Grape deployment guidance for Rails 8+ with Solid Trifecta, Thruster, Kamal 2, Docker, and cloud platforms. Covers migrations, assets, workers, and environment configuration.
+description: "Use when deploying Ruby/Rails/Grape apps with Kamal, Docker, Thruster, Solid Queue, or cloud platforms. Covers Rails 8+ Solid Trifecta, migrations, assets, workers, and environment configuration."
+when_to_use: "Triggers: \"deploy\", \"Kamal\", \"Docker\", \"production\", \"Thruster\", \"Solid Queue\"."
 user-invocable: false
 effort: medium
 paths:
