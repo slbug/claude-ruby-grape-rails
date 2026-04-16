@@ -7,6 +7,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.12.7] - 2026-04-16
+
+### Fixed
+
+- **`session-title.sh` hook** now enforces first-prompt-only titling via an
+  in-script atomic per-session lock directory instead of the plugin-level
+  `"once": true` field on the `UserPromptSubmit` handler. Current Claude
+  Code docs restrict `once` to skill-scoped hooks; this switches to a
+  documented mechanism without behavior change. Lock lives under
+  `${CLAUDE_PLUGIN_DATA}/session-titles/` (or
+  `${REPO_ROOT}/.claude/.hook-state/session-titles/` when the plugin data
+  dir is unavailable).
+
 ## [1.12.6] - 2026-04-16
 
 ### Added
@@ -1552,7 +1565,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.6...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.7...HEAD
+[1.12.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.6...v1.12.7
 [1.12.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.5...v1.12.6
 [1.12.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.4...v1.12.5
 [1.12.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.3...v1.12.4

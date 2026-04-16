@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # UserPromptSubmit hook: Auto-title sessions from /rb: commands.
-# Only fires on the first prompt via "once": true in hooks.json.
+# Fires only on first prompt via in-script per-session lock directory.
 # Uses hookSpecificOutput.sessionTitle (CC v2.1.94+).
-# Policy: advisory — skips silently on missing deps or empty input.
+# Policy: advisory — skips silently on missing deps, empty input, or
+# when the per-session lock already exists.
 
 set -o nounset
 set -o pipefail
@@ -25,6 +26,28 @@ INPUT="$HOOK_INPUT_VALUE"
 
 PROMPT=$(printf '%s' "$INPUT" | jq -r '.prompt // empty' 2>/dev/null)
 [[ -n "$PROMPT" ]] || exit 0
+
+# Per-session lock: only title the first prompt of each session.
+SESSION_ID=$(printf '%s' "$INPUT" | jq -r '.session_id // .sessionId // empty' 2>/dev/null) || SESSION_ID=""
+[[ -n "$SESSION_ID" ]] || exit 0
+SESSION_KEY=$(printf '%s' "$SESSION_ID" | tr -c '[:alnum:]_-' '_')
+[[ -n "$SESSION_KEY" ]] || exit 0
+
+LOCK_BASE="${CLAUDE_PLUGIN_DATA:-}"
+if [[ -z "$LOCK_BASE" ]]; then
+  REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
+  [[ -n "$REPO_ROOT" ]] || exit 0
+  LOCK_BASE="${REPO_ROOT}/.claude/.hook-state"
+fi
+LOCK_DIR="${LOCK_BASE}/session-titles"
+[[ ! -L "$LOCK_BASE" ]] || exit 0
+mkdir -p -- "$LOCK_DIR" 2>/dev/null || exit 0
+[[ -d "$LOCK_DIR" && ! -L "$LOCK_DIR" ]] || exit 0
+
+SESSION_LOCK="${LOCK_DIR}/${SESSION_KEY}"
+[[ ! -L "$SESSION_LOCK" ]] || exit 0
+# mkdir is atomic: exits non-zero if the lock already exists.
+mkdir -- "$SESSION_LOCK" 2>/dev/null || exit 0
 
 # Use first line only — prompts can be multi-line
 FIRST_LINE=$(printf '%s' "$PROMPT" | head -1)
