@@ -88,6 +88,12 @@ class TestResultsDir(unittest.TestCase):
         with patch.dict("os.environ", {rd.PROVIDER_ENV_VAR: "haiku"}, clear=False):
             self.assertEqual(rd.results_dir(None), rd.RESULTS_BASE / "haiku")
 
+    def test_explicit_ollama_model(self) -> None:
+        self.assertEqual(
+            rd.results_dir("ollama", model="qwen3:8b"),
+            rd.RESULTS_BASE / "qwen3-8b",
+        )
+
 
 class TestOllamaNamespace(unittest.TestCase):
     """Ollama cache namespace is derived from the active model tag."""
@@ -97,8 +103,11 @@ class TestOllamaNamespace(unittest.TestCase):
             self.assertEqual(rd.resolve_ollama_model(), "gemma4:latest")
             self.assertEqual(rd.model_cache_namespace(), "gemma4")
 
-    def test_tag_and_library_prefix_removed(self) -> None:
-        self.assertEqual(rd.model_cache_namespace("qwen3:8b"), "qwen3")
+    def test_non_latest_tags_are_preserved(self) -> None:
+        self.assertEqual(rd.model_cache_namespace("qwen3:8b"), "qwen3-8b")
+        self.assertEqual(rd.model_cache_namespace("qwen3:14b"), "qwen3-14b")
+
+    def test_latest_tag_and_library_prefix_removed(self) -> None:
         self.assertEqual(rd.model_cache_namespace("library/gemma4:latest"), "gemma4")
 
     def test_env_model_controls_ollama_result_dir(self) -> None:
@@ -107,7 +116,7 @@ class TestOllamaNamespace(unittest.TestCase):
             rd.OLLAMA_MODEL_ENV_VAR: "qwen3:8b",
         }
         with patch.dict("os.environ", env, clear=False):
-            self.assertEqual(rd.results_dir(None), rd.RESULTS_BASE / "qwen3")
+            self.assertEqual(rd.results_dir(None), rd.RESULTS_BASE / "qwen3-8b")
 
 
 if __name__ == "__main__":

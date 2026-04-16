@@ -19,8 +19,8 @@ Public API:
 - ``resolve_provider(name)`` — pure allowlist validation (used indirectly
   via the getter/setter; exposed for the argparse default).
 
-``results_dir(provider)`` is retained as a pure helper that composes a path
-from an explicit provider name without touching the active state.
+``results_dir(provider, model)`` is retained as a pure helper that composes a
+path from an explicit provider/model pair without touching the active state.
 """
 
 from __future__ import annotations
@@ -95,12 +95,18 @@ def model_cache_namespace(model: str | None = None) -> str:
 
     Examples:
     - ``gemma4:latest`` -> ``gemma4``
-    - ``qwen3:8b`` -> ``qwen3``
+    - ``qwen3:8b`` -> ``qwen3-8b``
+    - ``qwen3:14b`` -> ``qwen3-14b``
     - ``library/gemma4:latest`` -> ``gemma4``
     """
     model_name = resolve_ollama_model(model)
-    base = model_name.rsplit("/", 1)[-1].split(":", 1)[0].strip()
-    namespace = re.sub(r"[^A-Za-z0-9._-]+", "-", base).strip(".-_")
+    leaf = model_name.rsplit("/", 1)[-1].strip()
+    if ":" in leaf:
+        base, tag = leaf.split(":", 1)
+        raw_namespace = base if tag == "latest" else f"{base}-{tag}"
+    else:
+        raw_namespace = leaf
+    namespace = re.sub(r"[^A-Za-z0-9._-]+", "-", raw_namespace).strip(".-_")
     return namespace or "ollama"
 
 
@@ -112,9 +118,9 @@ def cache_namespace(provider: str | None = None, model: str | None = None) -> st
     return resolved
 
 
-def results_dir(provider: str | None = None) -> Path:
-    """Return the result directory for an explicit provider."""
-    return RESULTS_BASE / cache_namespace(provider)
+def results_dir(provider: str | None = None, model: str | None = None) -> Path:
+    """Return the result directory for an explicit provider/model pair."""
+    return RESULTS_BASE / cache_namespace(provider, model)
 
 
 # Active provider — the single source of truth for which results directory
