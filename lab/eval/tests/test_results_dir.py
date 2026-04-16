@@ -75,12 +75,14 @@ class TestResultsDir(unittest.TestCase):
     """results_dir() composes the provider-scoped Path."""
 
     def test_explicit_provider(self) -> None:
-        self.assertEqual(rd.results_dir("ollama"), rd.RESULTS_BASE / "gemma4")
-        self.assertEqual(rd.results_dir("apfel"), rd.RESULTS_BASE / "apfel")
-        self.assertEqual(rd.results_dir("haiku"), rd.RESULTS_BASE / "haiku")
+        with patch.dict("os.environ", {rd.OLLAMA_MODEL_ENV_VAR: ""}, clear=False):
+            self.assertEqual(rd.results_dir("ollama"), rd.RESULTS_BASE / "gemma4")
+            self.assertEqual(rd.results_dir("apfel"), rd.RESULTS_BASE / "apfel")
+            self.assertEqual(rd.results_dir("haiku"), rd.RESULTS_BASE / "haiku")
 
     def test_invalid_provider_uses_default(self) -> None:
-        self.assertEqual(rd.results_dir("bogus"), rd.RESULTS_BASE / "gemma4")
+        with patch.dict("os.environ", {rd.OLLAMA_MODEL_ENV_VAR: ""}, clear=False):
+            self.assertEqual(rd.results_dir("bogus"), rd.RESULTS_BASE / "gemma4")
 
     def test_none_uses_env(self) -> None:
         with patch.dict("os.environ", {rd.PROVIDER_ENV_VAR: "haiku"}, clear=False):

@@ -39,6 +39,16 @@ class TestNormalizeOllamaBaseUrl(unittest.TestCase):
             "https://proxy.example.com/ollama/v1",
         )
 
+    def test_prefixed_path_adds_v1(self) -> None:
+        self.assertEqual(
+            _normalize_ollama_base_url("https://proxy.example.com/ollama"),
+            "https://proxy.example.com/ollama/v1",
+        )
+
+    def test_non_http_scheme_rejected(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "scheme must be http or https"):
+            _normalize_ollama_base_url("ftp://proxy.example.com/ollama")
+
 
 class TestDeriveOllamaApiUrl(unittest.TestCase):
     """Native Ollama API URL derivation from OpenAI-compatible base URLs."""

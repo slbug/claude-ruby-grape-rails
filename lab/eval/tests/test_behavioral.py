@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -282,8 +283,11 @@ class TestScoreSkill(unittest.TestCase):
         mock_ollama.side_effect = [_cr(["plan"]), _cr(["review"])]
         try:
             with tempfile.TemporaryDirectory() as tmpdir:
-                with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
-                    result = _unpack(score_skill("plan", SAMPLE_ROUTING_DESCRIPTIONS))
+                env = dict(os.environ)
+                env.pop(_rd.OLLAMA_MODEL_ENV_VAR, None)
+                with patch.dict("os.environ", env, clear=True):
+                    with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
+                        result = _unpack(score_skill("plan", SAMPLE_ROUTING_DESCRIPTIONS))
         finally:
             _rd.set_active_provider(old_provider)
 

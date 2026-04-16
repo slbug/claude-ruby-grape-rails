@@ -575,8 +575,9 @@ _ollama_models_checked: set[str] = set()
 def _normalize_ollama_base_url(url: str) -> str:
     """Normalize Ollama's OpenAI-compatible base URL.
 
-    Accepts bare hosts (``127.0.0.1:11434``), root URLs, and explicit ``/v1``
-    URLs. OpenAI client calls need the ``/v1`` suffix, so root paths get it.
+    Accepts bare hosts (``127.0.0.1:11434``), root URLs, proxied prefixes,
+    and explicit ``/v1`` URLs. OpenAI client calls need the ``/v1`` suffix,
+    so any path that lacks it gets it appended.
     """
     import urllib.parse
 
@@ -588,9 +589,16 @@ def _normalize_ollama_base_url(url: str) -> str:
             "parse host. Expected form: http://host:port/v1"
         ) from exc
     parsed = urllib.parse.urlsplit(candidate)
+    if parsed.scheme not in {"http", "https"}:
+        raise RuntimeError(
+            f"Invalid RUBY_PLUGIN_EVAL_OLLAMA_BASE_URL {url!r}: scheme must "
+            "be http or https."
+        )
     path = (parsed.path or "").rstrip("/")
     if path in {"", "/"}:
         path = "/v1"
+    elif not path.endswith("/v1"):
+        path = f"{path}/v1"
     return urllib.parse.urlunsplit(
         (parsed.scheme or "http", parsed.netloc, path, "", "")
     )
