@@ -19,13 +19,13 @@ import argparse
 import json
 import subprocess
 import sys
-from collections.abc import Mapping
 
 from .trigger_scorer import (
     TRIGGERS_DIR,
     extract_prompt,
     load_all_routing_descriptions,
     load_trigger_file,
+    routing_text_sources,
     RoutingDescription,
     RoutingDescriptions,
     routing_description_text,
@@ -56,21 +56,6 @@ def _token_overlap(a: str, b: str) -> float:
     return len(ta & tb) / len(ta | tb)
 
 
-def _routing_text_sources(value: RoutingDescription) -> list[str]:
-    """Return field-specific routing text sources for quality gates."""
-    if isinstance(value, Mapping):
-        sources = []
-        desc = str(value.get("description", "")).strip()
-        when = str(value.get("when_to_use", "")).strip()
-        if desc:
-            sources.append(desc)
-        if when:
-            sources.append(when)
-        return sources
-    text = str(value).strip()
-    return [text] if text else []
-
-
 def _quality_gate(
     candidate: str,
     skill_name: str,
@@ -99,7 +84,7 @@ def _quality_gate(
         if re.search(pattern, prompt_lower):
             return "skill_name_leak"
     # Routing text echo: >50% token overlap with description or when_to_use.
-    for routing_text in _routing_text_sources(skill_routing_description):
+    for _, routing_text in routing_text_sources(skill_routing_description):
         if _token_overlap(candidate, routing_text) > 0.50:
             return "description_echo"
     # Backstop for callers that pass already-combined plain text.

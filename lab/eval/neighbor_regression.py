@@ -17,12 +17,13 @@ import json
 import subprocess
 import sys
 from . import results_dir as rd
-from .behavioral_scorer import _routing_descriptions_blob, score_skill
+from .behavioral_scorer import score_skill
 from .results_dir import SUPPORTED_PROVIDERS
 from .trigger_scorer import (
     TRIGGERS_DIR,
     load_all_routing_descriptions,
     load_trigger_file,
+    routing_descriptions_blob,
     RoutingDescriptions,
 )
 
@@ -258,7 +259,7 @@ def main() -> None:
 
     neighbor_map = build_neighbor_map()
     descriptions = load_all_routing_descriptions()
-    descriptions_blob = _routing_descriptions_blob(descriptions)
+    descriptions_blob = routing_descriptions_blob(descriptions)
     all_passed = True
 
     if args.skill:

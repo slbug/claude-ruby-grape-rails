@@ -83,6 +83,25 @@ def routing_description_text(value: RoutingDescription) -> str:
     return str(value).strip()
 
 
+def routing_text_sources(value: RoutingDescription) -> list[tuple[str, str]]:
+    """Return individual routing text fields as (field_name, text) pairs.
+
+    Used by hygiene and trigger_expand quality gates to check each routing
+    field independently (e.g., description echo detection).
+    """
+    if isinstance(value, Mapping):
+        sources: list[tuple[str, str]] = []
+        desc = str(value.get("description", "")).strip()
+        when = str(value.get("when_to_use", "")).strip()
+        if desc:
+            sources.append(("description", desc))
+        if when:
+            sources.append(("when_to_use", when))
+        return sources
+    text = str(value).strip()
+    return [("description", text)] if text else []
+
+
 def load_trigger_file(skill_name: str) -> dict[str, Any] | None:
     path = TRIGGERS_DIR / f"{skill_name}.json"
     if not path.is_file():
@@ -200,14 +219,21 @@ _SEMANTIC_SYSTEM_PROMPT = (
 )
 
 
-def _descriptions_hash(descriptions: RoutingDescriptions) -> str:
-    """Content hash of all descriptions for semantic pair cache invalidation."""
-    import hashlib
-    combined = json.dumps(
+def routing_descriptions_blob(descriptions: RoutingDescriptions) -> str:
+    """Serialize routing descriptions to a stable JSON string.
+
+    Used for cache-key hashing by behavioral_scorer and neighbor_regression.
+    """
+    return json.dumps(
         {name: routing_description_text(desc) for name, desc in descriptions.items()},
         sort_keys=True,
     )
-    return hashlib.sha256(combined.encode()).hexdigest()[:16]
+
+
+def _descriptions_hash(descriptions: RoutingDescriptions) -> str:
+    """Content hash of all descriptions for semantic pair cache invalidation."""
+    import hashlib
+    return hashlib.sha256(routing_descriptions_blob(descriptions).encode()).hexdigest()[:16]
 
 
 def build_semantic_confusable_pairs(

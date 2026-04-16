@@ -41,6 +41,7 @@ from .results_dir import SUPPORTED_PROVIDERS
 from .trigger_scorer import (
     load_all_routing_descriptions,
     load_trigger_file,
+    routing_descriptions_blob,
     RoutingDescription,
     RoutingDescriptions,
     routing_description_text,
@@ -183,12 +184,8 @@ class CallResult:
     error_type: str | None = None
 
 
-def _routing_descriptions_blob(descriptions: RoutingDescriptions) -> str:
-    """Serialize routing descriptions once for per-skill cache hashes."""
-    return json.dumps(
-        {name: routing_description_text(desc) for name, desc in descriptions.items()},
-        sort_keys=True,
-    )
+# Alias kept for internal call-sites; canonical definition is in trigger_scorer.
+_routing_descriptions_blob = routing_descriptions_blob
 
 
 _TRIGGER_DATA_UNSET = object()

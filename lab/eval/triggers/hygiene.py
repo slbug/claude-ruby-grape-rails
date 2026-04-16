@@ -16,7 +16,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from collections.abc import Mapping
 from typing import Any
 
 from ..trigger_scorer import (
@@ -25,6 +24,7 @@ from ..trigger_scorer import (
     load_trigger_file,
     extract_prompt,
     PROMPT_BUCKETS,
+    routing_text_sources,
     RoutingDescription,
     RoutingDescriptions,
 )
@@ -42,21 +42,6 @@ def _tokenize_for_overlap(text: str) -> set[str]:
     """Lowercase, split on whitespace/punctuation, remove stopwords and short tokens."""
     tokens = set(re.split(r"[\s/:\-_.,;!?()\"'`]+", text.lower()))
     return {t for t in tokens if len(t) > 2 and t not in STOPWORDS}
-
-
-def _routing_text_sources(value: RoutingDescription) -> list[tuple[str, str]]:
-    """Return field-specific routing text sources for contamination checks."""
-    if isinstance(value, Mapping):
-        sources = []
-        desc = str(value.get("description", "")).strip()
-        when = str(value.get("when_to_use", "")).strip()
-        if desc:
-            sources.append(("description", desc))
-        if when:
-            sources.append(("when_to_use", when))
-        return sources
-    text = str(value).strip()
-    return [("description", text)] if text else []
 
 
 def check_skill_name_leaks(
@@ -120,7 +105,7 @@ def check_description_echo(
     flags: list[dict[str, Any]] = []
     routing_sources = [
         (source, tokens)
-        for source, text in _routing_text_sources(routing_description)
+        for source, text in routing_text_sources(routing_description)
         if (tokens := _tokenize_for_overlap(text))
     ]
     if not routing_sources:
