@@ -115,7 +115,7 @@ def expand_skill(
     routing_description = descriptions.get(skill_name, "")
     routing_text = routing_description_text(routing_description)
     if not routing_text:
-        return {"skill": skill_name, "error": "no description found"}
+        return {"skill": skill_name, "error": "no routing text found"}
 
     triggers = load_trigger_file(skill_name)
     existing_prompts = []
