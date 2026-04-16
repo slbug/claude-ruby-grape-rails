@@ -23,6 +23,7 @@ from .trigger_scorer import (
     TRIGGERS_DIR,
     load_all_routing_descriptions,
     load_trigger_file,
+    RoutingDescriptions,
 )
 
 
@@ -149,7 +150,7 @@ def _format_delta(value: float) -> str:
 def run_regression_check(
     skill_name: str,
     neighbor_map: dict[str, list[tuple[str, float]]],
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
     dry_run: bool = False,
     verbose: bool = False,
 ) -> bool:

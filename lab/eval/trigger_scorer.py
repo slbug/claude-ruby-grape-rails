@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,9 @@ PROMPT_BUCKETS = (
     "hard_should_trigger",
     "hard_should_not_trigger",
 )
+
+RoutingDescription = str | Mapping[str, Any]
+RoutingDescriptions = Mapping[str, RoutingDescription]
 
 
 def extract_prompt(item: Any) -> str:
@@ -68,9 +72,9 @@ def load_all_routing_descriptions() -> dict[str, dict[str, str]]:
     return descriptions
 
 
-def routing_description_text(value: Any) -> str:
+def routing_description_text(value: RoutingDescription) -> str:
     """Return full routing text from a description string or routing-field dict."""
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         desc = str(value.get("description", "")).strip()
         when = str(value.get("when_to_use", "")).strip()
         if desc and when:
@@ -150,7 +154,10 @@ def score_trigger_file(skill_name: str, data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_confusable_pairs(descriptions: dict[str, str], limit: int = 10) -> list[dict[str, Any]]:
+def build_confusable_pairs(
+    descriptions: RoutingDescriptions,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
     bundle: dict[str, set[str]] = {}
     for skill, desc in descriptions.items():
         data = load_trigger_file(skill)
@@ -193,7 +200,7 @@ _SEMANTIC_SYSTEM_PROMPT = (
 )
 
 
-def _descriptions_hash(descriptions: dict[str, str]) -> str:
+def _descriptions_hash(descriptions: RoutingDescriptions) -> str:
     """Content hash of all descriptions for semantic pair cache invalidation."""
     import hashlib
     combined = json.dumps(
@@ -204,7 +211,7 @@ def _descriptions_hash(descriptions: dict[str, str]) -> str:
 
 
 def build_semantic_confusable_pairs(
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
     token_pairs: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Build semantic confusable pairs via a single Haiku call.
@@ -243,7 +250,7 @@ def build_semantic_confusable_pairs(
 
 
 def _fetch_semantic_pairs(
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
     token_pairs: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """Call Haiku once to identify semantic confusable pairs."""

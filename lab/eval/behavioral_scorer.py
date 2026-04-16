@@ -33,6 +33,7 @@ import subprocess
 import sys
 import threading
 import traceback
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from . import results_dir as rd
@@ -40,6 +41,8 @@ from .results_dir import SUPPORTED_PROVIDERS
 from .trigger_scorer import (
     load_all_routing_descriptions,
     load_trigger_file,
+    RoutingDescription,
+    RoutingDescriptions,
     routing_description_text,
     TRIGGERS_DIR,
 )
@@ -188,7 +191,7 @@ class CallResult:
     error_type: str | None = None
 
 
-def content_hash(skill_name: str, descriptions: dict[str, str]) -> str:
+def content_hash(skill_name: str, descriptions: RoutingDescriptions) -> str:
     """Hash routing descriptions + one skill's trigger corpus for cache invalidation."""
     desc_blob = json.dumps(
         {name: routing_description_text(desc) for name, desc in descriptions.items()},
@@ -211,11 +214,11 @@ def _truncate_for_prompt(text: str, limit: int | None) -> str:
 
 
 def _format_routing_description_for_prompt(
-    value,
+    value: RoutingDescription,
     settings: ProviderSettings,
 ) -> str:
     """Format one skill's routing text for the active provider prompt policy."""
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         desc = str(value.get("description", "")).strip()
         when = str(value.get("when_to_use", "")).strip()
         if settings.prompt_policy == "strip_to_size":
@@ -238,7 +241,7 @@ def _format_routing_description_for_prompt(
 
 
 def build_routing_prompt(
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
     user_prompt: str,
     rotation: int = 0,
     prompt_policy: str | None = None,
@@ -701,6 +704,14 @@ def _ensure_ollama_server():
     is_localhost = _is_loopback_base_url(base_url)
 
     if is_localhost:
+        if url_parts.scheme != "http":
+            raise RuntimeError(
+                f"Unsupported localhost RUBY_PLUGIN_EVAL_OLLAMA_BASE_URL "
+                f"scheme {url_parts.scheme!r}. Local Ollama auto-spawn "
+                "requires an http URL such as 'http://localhost:11434' or "
+                "'http://localhost:11434/v1'. Use a non-loopback HTTPS URL "
+                "only for a remote/proxied Ollama service you manage."
+            )
         normalized_path = (url_parts.path or "").rstrip("/") or "/"
         if normalized_path not in {"/", "/v1"}:
             raise RuntimeError(
@@ -1346,7 +1357,7 @@ def _run_single_prompt(
     item,
     index: int,
     total: int,
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
     expected: bool,
     tier: str,
     verbose: bool = False,
@@ -1428,7 +1439,7 @@ def _run_single_prompt(
 def _run_prompt_batch(
     skill_name: str,
     flat_items: list[tuple],
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
     verbose: bool = False,
     workers: int = 1,
 ) -> tuple[list[dict], int, list[CallResult]]:
@@ -1685,7 +1696,7 @@ def _result_filename(skill_name: str, rotations: int = 1, samples: int = 1) -> s
 
 def score_skill(
     skill_name: str,
-    descriptions: dict[str, str],
+    descriptions: RoutingDescriptions,
     use_cache: bool = False,
     verbose: bool = False,
     limit: int = 0,
