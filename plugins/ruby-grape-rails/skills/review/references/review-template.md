@@ -58,7 +58,7 @@ good_code
 ### 1. {Issue Title}
 
 **File**: {path}:{line}
-**Reviewer**: {agent}
+**Reviewer**: {agent} | **Confidence**: {HIGH|MEDIUM|LOW}
 **Issue**: {description}
 **Recommendation**: {what to do}
 
@@ -69,6 +69,7 @@ good_code
 ### 1. {Suggestion Title}
 
 **File**: {path}
+**Confidence**: {HIGH|MEDIUM|LOW}
 **Suggestion**: {improvement idea}
 
 ```
