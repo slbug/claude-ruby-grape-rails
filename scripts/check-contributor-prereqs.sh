@@ -48,8 +48,8 @@ check_required npx "required by pre-commit hook for markdownlint"
 check_required shellcheck "required for local shell linting and pre-commit shell validation"
 check_required claude "required for 'npm run validate' and 'make validate' (install with: npm install -g @anthropic-ai/claude-code)"
 check_optional betterleaks "optional for local secret-scan coverage outside CI"
-check_optional ollama "optional unless you run fresh behavioral eval with the default Ollama provider; default model is gemma4:latest"
-check_optional apfel "optional only if you run behavioral eval with --provider apfel or RUBY_PLUGIN_EVAL_PROVIDER=apfel"
+check_optional ollama "optional unless you run fresh behavioral/neighbor evals with the default Ollama provider; default model is gemma4:latest"
+check_optional apfel "optional only if you run behavioral/neighbor evals with --provider apfel or RUBY_PLUGIN_EVAL_PROVIDER=apfel"
 
 if [[ "$MISSING" -eq 1 ]]; then
   echo "ERROR: contributor prerequisites are incomplete." >&2

@@ -72,34 +72,26 @@ ROUTING_FIELDS = ("description", "when_to_use")
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class ProviderSettings:
-    runner: str
     model: str
     prompt_policy: str
-    cost_label: str
     description_limit: int | None = None
     when_to_use_limit: int | None = None
 
 
 _PROVIDER_SETTINGS: dict[str, ProviderSettings] = {
     "ollama": ProviderSettings(
-        runner="ollama_openai",
         model=rd.DEFAULT_OLLAMA_MODEL,
         prompt_policy="full",
-        cost_label="local",
     ),
     "apfel": ProviderSettings(
-        runner="apfel_openai",
         model="apple-foundationmodel",
         prompt_policy="strip_to_size",
-        cost_label="on-device",
         description_limit=70,
         when_to_use_limit=70,
     ),
     "haiku": ProviderSettings(
-        runner="claude_cli",
         model="haiku",
         prompt_policy="full",
-        cost_label="api",
     ),
 }
 
@@ -191,13 +183,31 @@ class CallResult:
     error_type: str | None = None
 
 
-def content_hash(skill_name: str, descriptions: RoutingDescriptions) -> str:
-    """Hash routing descriptions + one skill's trigger corpus for cache invalidation."""
-    desc_blob = json.dumps(
+def _routing_descriptions_blob(descriptions: RoutingDescriptions) -> str:
+    """Serialize routing descriptions once for per-skill cache hashes."""
+    return json.dumps(
         {name: routing_description_text(desc) for name, desc in descriptions.items()},
         sort_keys=True,
     )
-    trigger_data = load_trigger_file(skill_name)
+
+
+_TRIGGER_DATA_UNSET = object()
+
+
+def content_hash(
+    skill_name: str,
+    descriptions: RoutingDescriptions,
+    descriptions_blob: str | None = None,
+    trigger_data=_TRIGGER_DATA_UNSET,
+) -> str:
+    """Hash routing descriptions + one skill's trigger corpus for cache invalidation."""
+    desc_blob = (
+        descriptions_blob
+        if descriptions_blob is not None
+        else _routing_descriptions_blob(descriptions)
+    )
+    if trigger_data is _TRIGGER_DATA_UNSET:
+        trigger_data = load_trigger_file(skill_name)
     corpus = json.dumps(trigger_data, sort_keys=True) if trigger_data else ""
     combined = f"{ROUTING_PROMPT_VERSION}\n{desc_blob}\n---\n{corpus}"
     return hashlib.sha256(combined.encode()).hexdigest()[:16]
@@ -647,7 +657,7 @@ def _derive_health_url(base_url: str) -> str:
 
 
 def _is_loopback_base_url(base_url: str) -> bool:
-    """Return True when base_url points at a local apfel we may auto-spawn."""
+    """Return True when base_url points at a local provider we may auto-spawn."""
     import urllib.parse
 
     host = urllib.parse.urlsplit(base_url).hostname
@@ -1713,6 +1723,7 @@ def score_skill(
     workers: int = 1,
     rotations: int = 1,
     samples: int = 1,
+    descriptions_blob: str | None = None,
 ) -> tuple[dict, list[CallResult]]:
     """Score trigger accuracy for one skill. Returns (score_dict, call_results)."""
     if rotations > 1 and samples > 1:
@@ -1723,6 +1734,7 @@ def score_skill(
         skill_name, rotations, samples
     )
     settings = _provider_settings()
+    expected_hash: str | None = None
 
     if use_cache:
         if cache_path.is_file():
@@ -1730,7 +1742,7 @@ def score_skill(
                 cached = json.loads(cache_path.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
                 return {"skill": skill_name, "error": "corrupted cache file"}, []
-            expected_hash = content_hash(skill_name, descriptions)
+            expected_hash = content_hash(skill_name, descriptions, descriptions_blob)
             if _cache_profile_matches(cached, expected_hash, settings):
                 return cached, []
         return {"skill": skill_name, "error": "no valid cache (stale or missing)"}, []
@@ -1738,6 +1750,13 @@ def score_skill(
     triggers = load_trigger_file(skill_name)
     if not triggers:
         return {"skill": skill_name, "error": "no trigger file"}, []
+    if expected_hash is None:
+        expected_hash = content_hash(
+            skill_name,
+            descriptions,
+            descriptions_blob,
+            trigger_data=triggers,
+        )
 
     easy_trigger = triggers.get("should_trigger", [])
     easy_not = triggers.get("should_not_trigger", [])
@@ -1859,7 +1878,7 @@ def score_skill(
             "fork": fork_metrics["total"],
             "lock": lock_metrics["total"],
         },
-        "content_hash": content_hash(skill_name, descriptions),
+        "content_hash": expected_hash,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "results": all_results,
     }
@@ -2086,6 +2105,7 @@ def main() -> None:
         atexit.register(_cleanup_settings)
 
     descriptions = load_all_routing_descriptions()
+    descriptions_blob = _routing_descriptions_blob(descriptions)
 
     # Collect all CallResults for cost aggregation (single-threaded, no lock needed)
     all_call_results: list[CallResult] = []
@@ -2100,6 +2120,7 @@ def main() -> None:
             workers=args.workers,
             rotations=args.rotations,
             samples=args.samples,
+            descriptions_blob=descriptions_blob,
         )
         all_call_results.extend(crs)
 
@@ -2157,6 +2178,7 @@ def main() -> None:
                 workers=args.workers,
                 rotations=args.rotations,
                 samples=args.samples,
+                descriptions_blob=descriptions_blob,
             )
             all_call_results.extend(crs)
 
