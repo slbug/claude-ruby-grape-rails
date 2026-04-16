@@ -9,6 +9,7 @@ from lab.eval import behavioral_scorer as bs
 from lab.eval.behavioral_scorer import (
     _derive_ollama_api_url,
     _normalize_ollama_base_url,
+    _ollama_model_aliases,
 )
 
 
@@ -67,6 +68,79 @@ class TestDeriveOllamaApiUrl(unittest.TestCase):
             ),
             "https://proxy.example.com/ollama/api/tags",
         )
+
+
+class TestOllamaModelAliases(unittest.TestCase):
+    """Ollama model alias normalization."""
+
+    def test_latest_tag_matches_bare_name(self) -> None:
+        self.assertIn("gemma4", _ollama_model_aliases("gemma4:latest"))
+        self.assertIn("gemma4:latest", _ollama_model_aliases("gemma4"))
+
+    def test_prefixed_latest_matches_leaf_aliases(self) -> None:
+        aliases = _ollama_model_aliases("library/gemma4:latest")
+
+        self.assertIn("gemma4", aliases)
+        self.assertIn("gemma4:latest", aliases)
+
+    def test_non_latest_tag_does_not_match_bare_name(self) -> None:
+        aliases = _ollama_model_aliases("qwen3:8b")
+
+        self.assertIn("qwen3:8b", aliases)
+        self.assertNotIn("qwen3", aliases)
+
+
+class TestEnsureOllamaModelAvailable(unittest.TestCase):
+    """Ollama installed-model validation."""
+
+    def setUp(self) -> None:
+        bs._ollama_base_url_cache = None
+        bs._ollama_models_checked.clear()
+
+    def tearDown(self) -> None:
+        bs._ollama_base_url_cache = None
+        bs._ollama_models_checked.clear()
+
+    @staticmethod
+    def _response(payload: str):
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self) -> bytes:
+                return payload.encode("utf-8")
+
+        return Response()
+
+    def test_default_latest_model_accepts_bare_installed_name(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {bs.rd.OLLAMA_MODEL_ENV_VAR: "gemma4:latest"},
+            clear=False,
+        ):
+            with patch(
+                "urllib.request.urlopen",
+                return_value=self._response('{"models": [{"name": "gemma4"}]}'),
+            ):
+                bs._ensure_ollama_model_available()
+
+        self.assertIn("gemma4:latest", bs._ollama_models_checked)
+
+    def test_non_latest_model_rejects_bare_installed_name(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {bs.rd.OLLAMA_MODEL_ENV_VAR: "qwen3:8b"},
+            clear=False,
+        ):
+            with patch(
+                "urllib.request.urlopen",
+                return_value=self._response('{"models": [{"name": "qwen3"}]}'),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "not installed"):
+                    bs._ensure_ollama_model_available()
 
 
 class TestEnsureOllamaServer(unittest.TestCase):

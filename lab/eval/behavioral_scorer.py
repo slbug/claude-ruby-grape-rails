@@ -845,6 +845,21 @@ def _ensure_ollama_server():
         raise RuntimeError(msg)
 
 
+def _ollama_model_aliases(model: str) -> set[str]:
+    """Return equivalent Ollama model names for installed-model checks."""
+    raw = model.strip()
+    if not raw:
+        return set()
+
+    aliases = {raw, raw.rsplit("/", 1)[-1]}
+    for name in tuple(aliases):
+        if name.endswith(":latest"):
+            aliases.add(name[: -len(":latest")])
+        elif ":" not in name:
+            aliases.add(f"{name}:latest")
+    return {alias for alias in aliases if alias}
+
+
 def _ensure_ollama_model_available() -> None:
     """Verify the configured Ollama model exists; never auto-pull models."""
     import urllib.request
@@ -860,12 +875,14 @@ def _ensure_ollama_model_available() -> None:
                 payload = json.loads(resp.read().decode("utf-8"))
         except (urllib.error.URLError, OSError, json.JSONDecodeError) as exc:
             raise RuntimeError(f"Could not list Ollama models at {tags_url}: {exc}") from exc
-        models = {
-            str(item.get("name") or item.get("model") or "")
-            for item in payload.get("models", [])
-            if isinstance(item, dict)
-        }
-        if model not in models:
+        model_aliases = _ollama_model_aliases(model)
+        installed_aliases: set[str] = set()
+        for item in payload.get("models", []):
+            if not isinstance(item, dict):
+                continue
+            installed_model = str(item.get("name") or item.get("model") or "")
+            installed_aliases.update(_ollama_model_aliases(installed_model))
+        if not (model_aliases & installed_aliases):
             raise RuntimeError(
                 f"Ollama model {model!r} is not installed. "
                 f"Run: ollama pull {model}"
