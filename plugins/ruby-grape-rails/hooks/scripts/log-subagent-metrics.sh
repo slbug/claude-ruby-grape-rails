@@ -28,7 +28,9 @@ fi
 # Write to plugin data dir if available, else workspace .claude/
 METRICS_DIR="${CLAUDE_PLUGIN_DATA:-}"
 if [[ -z "$METRICS_DIR" ]]; then
-  METRICS_DIR="$(resolve_workspace_root 2>/dev/null)/.claude" || exit 0
+  WORKSPACE_ROOT="$(resolve_workspace_root 2>/dev/null)" || exit 0
+  [[ -n "$WORKSPACE_ROOT" ]] || exit 0
+  METRICS_DIR="${WORKSPACE_ROOT}/.claude"
 fi
 [[ -d "$METRICS_DIR" && ! -L "$METRICS_DIR" ]] || exit 0
 
