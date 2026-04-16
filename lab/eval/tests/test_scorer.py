@@ -9,7 +9,11 @@ from lab.eval.agent_scorer import find_all_agents, score_agent
 from lab.eval.compare import compare_snapshots
 from lab.eval.scorer import default_eval, find_all_skills, score_skill
 from lab.eval.schemas import EvalDefinition
-from lab.eval.trigger_scorer import build_confusable_pairs, load_all_descriptions, score_all
+from lab.eval.trigger_scorer import (
+    build_confusable_pairs,
+    load_all_routing_descriptions,
+    score_all,
+)
 
 
 class ScorerTests(unittest.TestCase):
@@ -101,7 +105,7 @@ class ScorerTests(unittest.TestCase):
     def test_trigger_scoring_and_overlap(self) -> None:
         trigger_results = score_all()
         self.assertIn("plan", trigger_results["skills"])
-        pairs = build_confusable_pairs(load_all_descriptions(), limit=5)
+        pairs = build_confusable_pairs(load_all_routing_descriptions(), limit=5)
         self.assertLessEqual(len(pairs), 5)
 
     def test_build_confusable_pairs_reuses_loaded_trigger_data(self) -> None:

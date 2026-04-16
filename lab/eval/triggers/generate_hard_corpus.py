@@ -10,7 +10,12 @@ import sys
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from lab.eval.trigger_scorer import PROMPT_BUCKETS, build_confusable_pairs, load_all_descriptions, load_trigger_file
+from lab.eval.trigger_scorer import (
+    PROMPT_BUCKETS,
+    build_confusable_pairs,
+    load_all_routing_descriptions,
+    load_trigger_file,
+)
 
 
 TRIGGERS_DIR = Path(__file__).resolve().parent
@@ -24,7 +29,7 @@ def _extract_prompt(item):
 
 
 def main() -> None:
-    descriptions = load_all_descriptions()
+    descriptions = load_all_routing_descriptions()
     confusable = build_confusable_pairs(descriptions, limit=15)
     corpus = []
 

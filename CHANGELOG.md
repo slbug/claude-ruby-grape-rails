@@ -7,6 +7,25 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.12.6] - 2026-04-16
+
+### Added
+
+- **Ollama provider for behavioral eval** — local OpenAI-compatible routing
+  calls with default model `gemma4:latest`, auto-started `ollama serve` for
+  fresh runs, model-specific cache namespace (`gemma4` for
+  `gemma4:latest`), and no prompt truncation.
+
+### Changed
+
+- **Behavioral eval default provider** switched from apfel to Ollama Gemma4;
+  apfel and haiku remain available through `--provider` or
+  `RUBY_PLUGIN_EVAL_PROVIDER`.
+- **Behavioral routing prompts and deterministic confusable-pair analysis**
+  now include both `description` and `when_to_use`. Apfel receives capped
+  routing text (70 chars from each field) to fit its 4096-token context;
+  Ollama and haiku receive the full routing text.
+
 ## [1.12.5] - 2026-04-16
 
 ### Added
@@ -1533,7 +1552,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.5...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.6...HEAD
+[1.12.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.5...v1.12.6
 [1.12.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.4...v1.12.5
 [1.12.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.3...v1.12.4
 [1.12.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.2...v1.12.3

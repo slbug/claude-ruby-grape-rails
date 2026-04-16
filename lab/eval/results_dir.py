@@ -1,6 +1,10 @@
-"""Single source of truth for provider-scoped behavioral trigger results.
+"""Single source of truth for behavioral trigger result locations.
 
-Behavioral routing results live under ``lab/eval/triggers/results/{provider}/``.
+Behavioral routing results live under ``lab/eval/triggers/results/{namespace}/``.
+For Claude and apfel providers, the namespace is the provider name. For
+Ollama, the namespace is model-derived (``gemma4:latest`` -> ``gemma4``) so
+cache comparisons stay model-specific while the CLI provider remains
+``ollama``.
 This module owns the active provider state so all tools
 (behavioral_scorer, dimensions/behavioral, eval_sensitivity,
 neighbor_regression) read and write the same directory without coordinating
@@ -8,8 +12,8 @@ their own module-level bindings.
 
 Public API:
 
-- ``active_results_dir()`` / ``get_active_provider()`` — getters used by
-  every reader and writer.
+- ``active_results_dir()`` / ``get_active_provider()`` /
+  ``get_active_cache_namespace()`` — getters used by every reader and writer.
 - ``set_active_provider(name)`` — CLI entry points call this to honor their
   ``--provider`` flag (or env var via ``resolve_provider(None)``).
 - ``resolve_provider(name)`` — pure allowlist validation (used indirectly
@@ -24,6 +28,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+import re
 
 from .trigger_scorer import TRIGGERS_DIR
 
@@ -33,9 +38,11 @@ _log = logging.getLogger("results_dir")
 
 RESULTS_BASE: Path = TRIGGERS_DIR / "results"
 
-DEFAULT_PROVIDER: str = "apfel"
-SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"apfel", "haiku"})
+DEFAULT_PROVIDER: str = "ollama"
+SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"ollama", "apfel", "haiku"})
 PROVIDER_ENV_VAR: str = "RUBY_PLUGIN_EVAL_PROVIDER"
+OLLAMA_MODEL_ENV_VAR: str = "RUBY_PLUGIN_EVAL_OLLAMA_MODEL"
+DEFAULT_OLLAMA_MODEL: str = "gemma4:latest"
 
 
 # Track invalid env-var values so we warn only once per unique bad value,
@@ -75,9 +82,39 @@ def resolve_provider(name: str | None = None) -> str:
     return DEFAULT_PROVIDER
 
 
+def resolve_ollama_model(model: str | None = None) -> str:
+    """Return the active Ollama model tag for routing evals."""
+    if model is None:
+        model = os.environ.get(OLLAMA_MODEL_ENV_VAR)
+    model = (model or DEFAULT_OLLAMA_MODEL).strip()
+    return model or DEFAULT_OLLAMA_MODEL
+
+
+def model_cache_namespace(model: str | None = None) -> str:
+    """Return a safe cache namespace derived from an Ollama model tag.
+
+    Examples:
+    - ``gemma4:latest`` -> ``gemma4``
+    - ``qwen3:8b`` -> ``qwen3``
+    - ``library/gemma4:latest`` -> ``gemma4``
+    """
+    model_name = resolve_ollama_model(model)
+    base = model_name.rsplit("/", 1)[-1].split(":", 1)[0].strip()
+    namespace = re.sub(r"[^A-Za-z0-9._-]+", "-", base).strip(".-_")
+    return namespace or "ollama"
+
+
+def cache_namespace(provider: str | None = None, model: str | None = None) -> str:
+    """Return the result-cache namespace for a provider/model pair."""
+    resolved = resolve_provider(provider)
+    if resolved == "ollama":
+        return model_cache_namespace(model)
+    return resolved
+
+
 def results_dir(provider: str | None = None) -> Path:
-    """Return the provider-scoped results directory (``RESULTS_BASE/{provider}``)."""
-    return RESULTS_BASE / resolve_provider(provider)
+    """Return the result directory for an explicit provider."""
+    return RESULTS_BASE / cache_namespace(provider)
 
 
 # Active provider — the single source of truth for which results directory
@@ -91,13 +128,18 @@ def get_active_provider() -> str:
     return _active_provider
 
 
+def get_active_cache_namespace() -> str:
+    """Return the currently active result-cache namespace."""
+    return cache_namespace(_active_provider)
+
+
 def active_results_dir() -> Path:
-    """Return the active provider-scoped results directory.
+    """Return the active result-cache directory.
 
     All behavioral eval tools read/write through this getter so CLI flag
     and env var stay in lockstep across the module graph.
     """
-    return RESULTS_BASE / _active_provider
+    return RESULTS_BASE / get_active_cache_namespace()
 
 
 def set_active_provider(name: str | None) -> str:

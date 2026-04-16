@@ -33,6 +33,7 @@ def normalize_prompt(prompt: str) -> str:
 
 
 def load_all_descriptions() -> dict[str, str]:
+    """Load top-level skill descriptions only."""
     descriptions: dict[str, str] = {}
     for skill_dir in sorted(SKILLS_DIR.iterdir()):
         if not skill_dir.is_dir():
@@ -43,6 +44,39 @@ def load_all_descriptions() -> dict[str, str]:
         fm = parse_frontmatter(skill_file.read_text(encoding="utf-8"))
         descriptions[skill_dir.name] = str(fm.get("description", ""))
     return descriptions
+
+
+def load_all_routing_descriptions() -> dict[str, dict[str, str]]:
+    """Load routing text fields used by LLM-based skill routing.
+
+    ``description`` explains broad intent; ``when_to_use`` carries trigger
+    phrases and negative routing notes. Behavioral and confusable-pair evals
+    need both to match the real routing surface.
+    """
+    descriptions: dict[str, dict[str, str]] = {}
+    for skill_dir in sorted(SKILLS_DIR.iterdir()):
+        if not skill_dir.is_dir():
+            continue
+        skill_file = skill_dir / "SKILL.md"
+        if not skill_file.is_file():
+            continue
+        fm = parse_frontmatter(skill_file.read_text(encoding="utf-8"))
+        descriptions[skill_dir.name] = {
+            "description": str(fm.get("description", "")).strip(),
+            "when_to_use": str(fm.get("when_to_use", "")).strip(),
+        }
+    return descriptions
+
+
+def routing_description_text(value: Any) -> str:
+    """Return full routing text from a description string or routing-field dict."""
+    if isinstance(value, dict):
+        desc = str(value.get("description", "")).strip()
+        when = str(value.get("when_to_use", "")).strip()
+        if desc and when:
+            return f"{desc} When to use: {when}"
+        return desc or when
+    return str(value).strip()
 
 
 def load_trigger_file(skill_name: str) -> dict[str, Any] | None:
@@ -122,7 +156,7 @@ def build_confusable_pairs(descriptions: dict[str, str], limit: int = 10) -> lis
         data = load_trigger_file(skill)
         if data is None:
             continue
-        tokens = set(tokenize(desc))
+        tokens = set(tokenize(routing_description_text(desc)))
         for bucket in ("should_trigger", "hard_should_trigger"):
             for item in data.get(bucket, []):
                 tokens.update(tokenize(extract_prompt(item)))
@@ -162,7 +196,10 @@ _SEMANTIC_SYSTEM_PROMPT = (
 def _descriptions_hash(descriptions: dict[str, str]) -> str:
     """Content hash of all descriptions for semantic pair cache invalidation."""
     import hashlib
-    combined = json.dumps(descriptions, sort_keys=True)
+    combined = json.dumps(
+        {name: routing_description_text(desc) for name, desc in descriptions.items()},
+        sort_keys=True,
+    )
     return hashlib.sha256(combined.encode()).hexdigest()[:16]
 
 
@@ -214,7 +251,8 @@ def _fetch_semantic_pairs(
 
     # Build the prompt
     desc_lines = "\n".join(
-        f"- {name}: {desc[:150]}" for name, desc in sorted(descriptions.items())
+        f"- {name}: {routing_description_text(desc)[:150]}"
+        for name, desc in sorted(descriptions.items())
     )
     known_lines = "\n".join(
         f"{p['left']} | {p['right']} | {p['overlap']:.2f}"
@@ -332,7 +370,7 @@ def _merge_pairs(
 
 
 def score_all(semantic: bool = False) -> dict[str, Any]:
-    descriptions = load_all_descriptions()
+    descriptions = load_all_routing_descriptions()
     scores = {}
     for path in sorted(TRIGGERS_DIR.glob("*.json")):
         if path.name.startswith("_"):
@@ -359,7 +397,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.overlap:
-        descriptions = load_all_descriptions()
+        descriptions = load_all_routing_descriptions()
         if args.semantic:
             pairs = build_semantic_confusable_pairs(descriptions)
         else:
