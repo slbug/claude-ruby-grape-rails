@@ -1,8 +1,9 @@
 ---
 name: rb:review
-description: Review changed code with parallel specialist agents for correctness, security, testing, Active Record, Grape, and Sidekiq boundaries. Use after implementation before commit or PR.
+description: "Use when you need code review of changed files with parallel specialist agents for correctness, security, testing, Active Record, Grape, and Sidekiq boundaries. Use after implementation before commit or PR."
+when_to_use: "Triggers: \"review my changes\", \"code review\", \"review before commit\", \"check this PR\", \"review for security\". Does NOT handle: fixing code, full project audit, planning, verification/test runs."
 argument-hint: "[test|security|sidekiq|deploy|iron-laws|all]"
-effort: high
+effort: max
 ---
 # Review Ruby/Rails/Grape Code
 
@@ -57,18 +58,40 @@ START ──▶ COLLECT CHANGES ──▶ SELECT AGENTS ──▶ SPAWN PARALLEL
            or learn                   or plan                 or plan
 ```
 
+## Complexity Classification
+
+Classify the review before spawning agents. File count determines base tier;
+critical-path files force escalation regardless of count.
+
+| Tier | Files Changed | Depth | Agents |
+|------|--------------|-------|--------|
+| **Simple** | 1-3 | Core reviewers only, concise output | 4 |
+| **Medium** | 4-10 | Core + conditional by file type | 4-8 |
+| **Complex** | 11+ | All relevant reviewers, detailed output | 8-11 |
+
+**Auto-escalate to Complex** when any changed file matches:
+
+- `**/auth/**`, `**/authentication/**`, `**/authorization/**`
+- `**/payment/**`, `**/billing/**`, `**/checkout/**`
+- `db/migrate/**`
+- `config/routes*`, `config/initializers/devise*`
+- `**/middleware/**`
+
+Log the classification in the consolidated review header:
+`**Complexity**: Simple (2 files) | Medium (7 files) | Complex (15 files, escalated: db/migrate)`
+
 ## Default Review Tracks
 
-Based on what changed, spawn appropriate reviewers:
+Based on complexity tier and what changed, spawn appropriate reviewers:
 
-### Core Reviewers (Always)
+### Core Reviewers (Always — all tiers)
 
 - `ruby-reviewer` - Ruby idioms, syntax, correctness
 - `security-analyzer` - Security vulnerabilities
 - `testing-reviewer` - Test coverage and quality
 - `verification-runner` - Automated checks pass
 
-### Conditional Reviewers
+### Conditional Reviewers (Medium + Complex tiers)
 
 - `iron-law-judge` - When diff is risky or touches critical paths
 - `sidekiq-specialist` - When workers or jobs changed
@@ -133,6 +156,21 @@ Rules:
 - Review artifacts never live under `.claude/plans/...`
 - If review is part of a plan, reference the consolidated review from the plan or progress log instead of nesting the report inside the plan namespace
 
+## Confidence Levels
+
+Every finding MUST include a confidence label. This tells the user which
+findings are backed by evidence vs. pattern-based hunches.
+
+| Level | Meaning | Example |
+|-------|---------|---------|
+| **HIGH** | Direct code evidence — specific line, test failure, static analysis finding | "Line 42: `params[:id]` interpolated into SQL string" |
+| **MEDIUM** | Pattern match — known anti-pattern or convention violation, no direct proof of bug | "Service object bypasses transaction boundary (common data-loss pattern)" |
+| **LOW** | Subjective — style preference, naming opinion, architecture suggestion | "Consider extracting this into a form object" |
+
+When consolidating findings from multiple agents, keep the highest confidence
+level among duplicates. Sort findings by confidence (HIGH first) within each
+severity level.
+
 ## Consolidated Review Format
 
 Write the synthesized review to `.claude/reviews/{review-slug}.md`:
@@ -140,6 +178,7 @@ Write the synthesized review to `.claude/reviews/{review-slug}.md`:
 ```markdown
 # Review: {track}
 **Date**: {timestamp}
+**Complexity**: {Simple|Medium|Complex} ({N} files{, escalated: reason})
 **Files Changed**: {list}
 
 ## Summary
@@ -152,7 +191,7 @@ Write the synthesized review to `.claude/reviews/{review-slug}.md`:
 
 ### 1. {Issue Title}
 **File**: `path/to/file.rb:{line}`
-**Severity**: Critical
+**Severity**: Critical | **Confidence**: HIGH
 **Category**: {security/performance/correctness}
 
 {description of issue}
@@ -173,6 +212,8 @@ Write the synthesized review to `.claude/reviews/{review-slug}.md`:
 ## Warnings
 
 ### 2. {Issue Title}
+
+**Confidence**: MEDIUM
 
 ...
 

@@ -1,6 +1,7 @@
 ---
 name: rb:work
-description: Use after /rb:plan to implement an existing checklist, resume active code changes, and verify each step in Active Record or Sequel work. Can resume the newest active plan automatically.
+description: "Use when implementing an existing plan checklist, resuming active code changes, or verifying each step in Active Record or Sequel work. Use after /rb:plan. Can resume the newest active plan automatically."
+when_to_use: "Triggers: \"implement plan\", \"start coding\", \"resume work\", \"continue plan\", \"execute plan\"."
 argument-hint: <path to plan file>
 effort: high
 ---

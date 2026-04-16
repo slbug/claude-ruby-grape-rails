@@ -1,6 +1,7 @@
 ---
 name: ruby-idioms
-description: Core Ruby 3.4+/4.0-ready idioms for application code. Value objects, service objects, error handling, adapters. Load for plain Ruby objects and service boundaries.
+description: "Use when writing core Ruby 3.4+/4.0-ready idioms: value objects, service objects, error handling, pattern matching, ractors, and frozen string patterns."
+when_to_use: "Triggers: \"Ruby idiom\", \"Ruby 3\", \"frozen string\", \"pattern matching\", \"ractor\"."
 user-invocable: false
 effort: medium
 paths:

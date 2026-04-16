@@ -134,7 +134,7 @@ Solution docs use YAML frontmatter (see `plugins/ruby-grape-rails/skills/compoun
 - [ ] "Iron Laws" section
 - [ ] `references/` for details
 - [ ] No `triggers:` field
-- [ ] Description at or under 250 chars
+- [ ] Description at or under 1,536 chars (combined with `when_to_use`; front-load key use case)
 
 ### New workflow skill
 

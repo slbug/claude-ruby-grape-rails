@@ -37,7 +37,7 @@ Edit — only add to agents that already have Write access.
 ## Size Limits
 
 - Target: 300 lines; hard limit: 365 (specialist) / 535 (orchestrator)
-- Description: <= 250 characters (longer descriptions are silently truncated)
+- Description: <= 250 characters (agent descriptions are shorter than skill descriptions)
 
 ## Why Orchestrators Exceed Targets
 

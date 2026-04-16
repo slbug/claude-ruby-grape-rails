@@ -32,6 +32,28 @@ skills:
 - `migration-safety-reviewer` for migrations adding columns or modifying tables
 - `output-verifier` when the final review makes external or version-specific claims that are not proven by the diff alone
 
+## Complexity Classification
+
+Before spawning reviewers, classify the change:
+
+- **Simple** (1-3 files): Core reviewers only, concise output
+- **Medium** (4-10 files): Core + conditional reviewers by file type
+- **Complex** (11+ files): All relevant reviewers, detailed output
+
+Auto-escalate to Complex when any changed file matches critical paths:
+`**/auth/**`, `**/payment/**`, `db/migrate/**`, `config/routes*`, `**/middleware/**`
+
+## Confidence Labels
+
+Instruct every spawned reviewer to tag each finding with a confidence level:
+
+- **HIGH**: Direct code evidence (specific line, test failure, static analysis)
+- **MEDIUM**: Pattern match (known anti-pattern, convention violation)
+- **LOW**: Subjective (style, naming, architecture opinion)
+
+When deduplicating, keep the highest confidence among duplicates. Sort findings
+by confidence (HIGH first) within each severity level.
+
 ## Review Rules
 
 - Scope all agents to changed files passed by the invoking skill.

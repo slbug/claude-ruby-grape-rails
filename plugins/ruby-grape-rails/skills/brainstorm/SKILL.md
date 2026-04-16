@@ -1,6 +1,7 @@
 ---
 name: rb:brainstorm
-description: "Brainstorm Ruby/Rails/Grape features — explore ideas, compare approaches, gather requirements. Use when vague idea, not sure how to approach, or want to discuss before plan."
+description: "Use when you have a vague idea and want to explore approaches, compare options, and gather requirements before planning a Ruby/Rails/Grape feature."
+when_to_use: "Triggers: \"brainstorm\", \"explore ideas\", \"not sure how to approach\", \"discuss before planning\", \"what if we\". Does NOT handle: detailed planning, implementation, research with citations."
 effort: high
 argument-hint: <topic or feature idea>
 disable-model-invocation: true

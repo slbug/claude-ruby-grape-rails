@@ -58,7 +58,7 @@
         {
           "type": "description_length",
           "min": 60,
-          "max": 250,
+          "max": 1536,
           "desc": "Description length"
         },
         {

@@ -1,6 +1,7 @@
 ---
 name: testing
-description: Testing patterns for Ruby, Rails, Grape, and Sidekiq. Load for request specs, model/service tests, worker tests, factories, and anti-flake practices.
+description: "Use when writing tests for Ruby, Rails, Grape, or Sidekiq: request specs, model/service tests, factories, fixtures, minitest, and anti-flake practices."
+when_to_use: "Triggers: \"test\", \"RSpec\", \"spec\", \"factory\", \"fixture\", \"minitest\", \"flaky test\"."
 user-invocable: false
 paths:
   - "{spec,test}/**"

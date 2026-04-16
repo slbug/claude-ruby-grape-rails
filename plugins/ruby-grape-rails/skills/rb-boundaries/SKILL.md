@@ -1,6 +1,7 @@
 ---
 name: rb:boundaries
-description: Analyze context and service boundaries in Rails applications. Detect coupling, misplaced logic, and violations of architectural boundaries. Use when refactoring services, splitting monoliths, or reviewing layer interactions.
+description: "Use when analyzing context and service boundaries in Rails applications. Detect coupling, misplaced logic, and violations of architectural boundaries. Use when refactoring services, splitting monoliths, or reviewing layer interactions."
+when_to_use: "Triggers: \"coupling\", \"service boundaries\", \"split monolith\", \"fat controller\", \"misplaced logic\"."
 argument-hint: "[path|service|context] [--focus controllers|models|services|grape]"
 effort: medium
 ---

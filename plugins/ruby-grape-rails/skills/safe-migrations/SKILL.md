@@ -1,6 +1,7 @@
 ---
 name: safe-migrations
-description: Safe database migration patterns for Rails. Covers zero-downtime deployments, locking concerns, and backfilling strategies. Use strong_migrations gem or follow manual patterns.
+description: "Use when writing safe database migrations for Rails: zero-downtime deployments, locking concerns, backfilling strategies, and strong_migrations patterns."
+when_to_use: "Triggers: \"migration\", \"zero-downtime\", \"strong_migrations\", \"add column\", \"backfill\", \"lock\"."
 user-invocable: false
 paths:
   - "db/**"

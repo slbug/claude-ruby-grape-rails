@@ -1,6 +1,7 @@
 ---
 name: intent-detection
 description: "Detect user intent from their first message and suggest the best /rb: command. Use when the user describes a task (bug, feature, refactor) without specifying a command."
+when_to_use: "Triggers: \"what command\", \"which rb:\", \"suggest command\", \"help me pick\"."
 user-invocable: false
 effort: low
 ---

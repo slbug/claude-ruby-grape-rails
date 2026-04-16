@@ -1,6 +1,7 @@
 ---
 name: security
-description: "Rails and Grape security patterns: authorization, parameter shaping, SQL safety, XSS prevention, secret handling, SSRF/open redirects, and secure background job workflows."
+description: "Use when applying Rails and Grape security patterns: authorization, SQL injection prevention, XSS, SSRF, secret handling, and secure background job workflows."
+when_to_use: "Triggers: \"security\", \"authorization\", \"SQL injection\", \"XSS\", \"SSRF\", \"Brakeman\"."
 user-invocable: false
 effort: medium
 paths:

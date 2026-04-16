@@ -1,6 +1,7 @@
 ---
 name: rb:challenge
-description: Challenge mode reviews - rigorous questioning before approving changes. Use when you want thorough scrutiny of Active Record changes, Hotwire/Turbo events, or PR readiness.
+description: "Use when you want rigorous adversarial scrutiny of Active Record changes, Hotwire/Turbo events, or PR readiness -- challenge mode questioning before approving."
+when_to_use: "Triggers: \"challenge this\", \"stress test this code\", \"adversarial review\", \"devil's advocate\", \"really scrutinize\". Does NOT handle: routine code review, planning, auditing."
 argument-hint: active record | hotwire | pr
 effort: high
 ---

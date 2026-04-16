@@ -1,6 +1,7 @@
 ---
 name: rb:research
-description: Research Ruby/Rails/Grape/Sidekiq gems, upgrade paths, security-sensitive choices, or architectural trade-offs. Use when the team needs evidence before implementation, verification, or adopting a pattern.
+description: "Use when the team needs evidence-based research on Ruby/Rails/Grape/Sidekiq gems, upgrade paths, security-sensitive choices, or architectural trade-offs before implementation or adopting a pattern."
+when_to_use: "Triggers: \"research this gem\", \"compare approaches\", \"what are the options\", \"upgrade path\", \"evidence for\". Does NOT handle: debugging, implementation, code review, brainstorming."
 argument-hint: <topic>
 disable-model-invocation: true
 effort: high

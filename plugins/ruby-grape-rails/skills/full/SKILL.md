@@ -1,8 +1,9 @@
 ---
 name: rb:full
-description: "Hands-off end-to-end lifecycle: autonomously runs plan, work, verify, review, and compound in one command with no user intervention needed."
+description: "Use when running the hands-off end-to-end lifecycle: autonomously runs plan, work, verify, review, and compound in one command with no user intervention needed."
+when_to_use: "Triggers: \"do everything\", \"full lifecycle\", \"hands-off\", \"plan and implement\", \"end to end\"."
 argument-hint: "<feature description OR plan path>"
-effort: high
+effort: max
 ---
 # Full Workflow
 

@@ -1,6 +1,7 @@
 ---
 name: rb:investigate
-description: "Root-cause analysis for bugs, errors, and failures. Use when something is broken and the cause is unknown. NOT for performance tuning (use /rb:perf) or code flow tracing (use /rb:trace)."
+description: "Use when something is broken and the cause is unknown -- root-cause analysis for bugs, errors, and failures. NOT for performance tuning (use /rb:perf) or code flow tracing (use /rb:trace)."
+when_to_use: "Triggers: \"why is this broken\", \"investigate this bug\", \"root cause\", \"error analysis\", \"find the cause\". Does NOT handle: performance tuning, code flow tracing, code review."
 argument-hint: <bug description>
 effort: high
 ---

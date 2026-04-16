@@ -29,14 +29,14 @@ class ScorerTests(unittest.TestCase):
         completeness_checks = [check.check_type for check in eval_def.dimensions["completeness"].checks]
         self.assertNotIn("section_exists", completeness_checks)
 
-    def test_default_skill_eval_uses_public_250_char_description_budget(self) -> None:
+    def test_default_skill_eval_uses_public_1536_char_description_budget(self) -> None:
         eval_def = default_eval("plugins/ruby-grape-rails/skills/runtime-integration/SKILL.md")
         description_check = next(
             check
             for check in eval_def.dimensions["triggering"].checks
             if check.check_type == "description_length"
         )
-        self.assertEqual(description_check.params["max"], 250)
+        self.assertEqual(description_check.params["max"], 1536)
 
     def test_runtime_integration_skill_refs_score_without_alias_false_negatives(self) -> None:
         runtime_path = next(path for path in find_all_skills() if path.endswith("/runtime-integration/SKILL.md"))

@@ -7,6 +7,39 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.12.5] - 2026-04-16
+
+### Added
+
+- **SubagentStop hook** — async metrics logging to
+  `${CLAUDE_PLUGIN_DATA}/.agent_metrics.jsonl` with agent_id, agent_type,
+  timestamp. New hook event (12→13 events)
+- **Review complexity tiering** — Simple (1-3 files), Medium (4-10),
+  Complex (11+) with auto-escalation on critical paths (auth, payment,
+  migrations, middleware)
+- **Review confidence levels** — HIGH (code evidence), MEDIUM (pattern match),
+  LOW (subjective) on all review findings
+- **`when_to_use` frontmatter** on all 51 skills with trigger phrases and
+  negative routing for overlap-prone skills
+- **Top-level `description`** in hooks.json for `/hooks` menu display
+
+### Changed
+
+- **Skill description cap** raised from 250 to 1,536 characters across
+  CLAUDE.md checklist, contributor rules, eval scorer, eval matchers, and
+  all 51 eval JSON fixtures
+- **All 51 skill descriptions** standardized with "Use when" prefix, trigger
+  phrases via `when_to_use`, and negative routing on overlap-prone skills
+  (review/audit/verify/challenge, investigate/trace/research,
+  brainstorm/plan, compound/learn)
+- **`effort: max`** (Opus 4.6) for heavy orchestrators: plan, audit,
+  review, full (was `high`)
+- **PreCompact hook** now blocks compaction (exit 2) during active `/rb:work`
+  or `/rb:full` execution; planning phase still allows compaction with
+  context warning
+- **Review template** updated with Complexity header and Confidence column
+  in summary table
+
 ## [1.12.4] - 2026-04-14
 
 ### Added
@@ -1500,7 +1533,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.4...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.5...HEAD
+[1.12.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.4...v1.12.5
 [1.12.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.3...v1.12.4
 [1.12.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.2...v1.12.3
 [1.12.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.1...v1.12.2

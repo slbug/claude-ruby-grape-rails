@@ -1,6 +1,7 @@
 ---
 name: rb:runtime
-description: Integrate with Tidewave Rails for enhanced runtime context, code execution, SQL queries, and introspection of your running Rails application.
+description: "Use when integrating with Tidewave Rails for enhanced runtime context, code execution, SQL queries, and introspection of your running Rails application."
+when_to_use: "Triggers: \"Tidewave\", \"runtime\", \"live Rails\", \"SQL query\", \"running server\"."
 argument-hint: "[inspect|execute|query|docs|logs|models|source]"
 effort: low
 ---

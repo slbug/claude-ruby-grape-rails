@@ -1,6 +1,7 @@
 ---
 name: rb:examples
-description: Point users to example areas and representative patterns inside the current Ruby/Rails/Grape codebase.
+description: "Use when the user wants to see example areas and representative patterns inside the current Ruby/Rails/Grape codebase."
+when_to_use: "Triggers: \"show me examples\", \"how does this codebase\", \"patterns in this project\", \"representative code\"."
 effort: low
 ---
 # Examples

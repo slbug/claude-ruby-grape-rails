@@ -1,6 +1,7 @@
 ---
 name: ruby-contexts
-description: General Ruby application boundaries outside framework glue. Load for service layers, command objects, adapters, value objects, and integration seams.
+description: "Use when designing Ruby application boundaries: service layers, command objects, adapters, value objects, and integration seams outside framework glue."
+when_to_use: "Triggers: \"service layer\", \"command object\", \"adapter\", \"value object\", \"plain Ruby\"."
 user-invocable: false
 effort: medium
 ---

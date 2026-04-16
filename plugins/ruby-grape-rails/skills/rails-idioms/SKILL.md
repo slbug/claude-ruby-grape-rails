@@ -1,6 +1,7 @@
 ---
 name: rails-idioms
-description: Idiomatic Rails patterns for controllers, params, callbacks, jobs, and application structure. Load when working in `app/`, `config/routes.rb`, or service/controller boundaries across Rails 7.x and 8.x.
+description: "Use when applying idiomatic Rails patterns for controllers, params, callbacks, jobs, routes, and application structure across Rails 7.x and 8.x."
+when_to_use: "Triggers: \"Rails pattern\", \"controller\", \"callback\", \"job\", \"routes\", \"Rails way\"."
 user-invocable: false
 effort: medium
 paths:

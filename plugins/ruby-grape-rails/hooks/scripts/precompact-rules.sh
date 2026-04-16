@@ -104,4 +104,11 @@ fi
 
 if [[ -n "$CONTEXT" ]]; then
   printf '%s\n' "$CONTEXT" >&2
+  # Block compaction during active work or full-mode execution.
+  # Planning phase allows compaction (less destructive — plan.md is on disk).
+  if [[ -n "$ACTIVE_PLAN_DIR" ]]; then
+    if is_full_mode "$ACTIVE_PLAN_DIR" || ! is_planning_phase "$ACTIVE_PLAN_DIR"; then
+      exit 2
+    fi
+  fi
 fi
