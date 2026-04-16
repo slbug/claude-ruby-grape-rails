@@ -17,7 +17,7 @@ import json
 import subprocess
 import sys
 from . import results_dir as rd
-from .behavioral_scorer import score_skill
+from .behavioral_scorer import _routing_descriptions_blob, score_skill
 from .results_dir import SUPPORTED_PROVIDERS
 from .trigger_scorer import (
     TRIGGERS_DIR,
@@ -151,6 +151,7 @@ def run_regression_check(
     skill_name: str,
     neighbor_map: dict[str, list[tuple[str, float]]],
     descriptions: RoutingDescriptions,
+    descriptions_blob: str | None = None,
     dry_run: bool = False,
     verbose: bool = False,
 ) -> bool:
@@ -192,7 +193,12 @@ def run_regression_check(
         baseline_path = rd.active_results_dir() / f"{name}.json"
         baseline_backup = baseline_path.read_bytes() if baseline_path.is_file() else None
 
-        current, _ = score_skill(name, descriptions, verbose=verbose)
+        current, _ = score_skill(
+            name,
+            descriptions,
+            verbose=verbose,
+            descriptions_blob=descriptions_blob,
+        )
 
         # Restore baseline so subsequent runs compare against stable reference
         if baseline_backup is not None:
@@ -252,6 +258,7 @@ def main() -> None:
 
     neighbor_map = build_neighbor_map()
     descriptions = load_all_routing_descriptions()
+    descriptions_blob = _routing_descriptions_blob(descriptions)
     all_passed = True
 
     if args.skill:
@@ -260,6 +267,7 @@ def main() -> None:
             raise SystemExit(1)
         passed = run_regression_check(
             args.skill, neighbor_map, descriptions,
+            descriptions_blob=descriptions_blob,
             dry_run=args.dry_run, verbose=args.verbose,
         )
         if not passed:
@@ -277,6 +285,7 @@ def main() -> None:
                 continue
             passed = run_regression_check(
                 skill, neighbor_map, descriptions,
+                descriptions_blob=descriptions_blob,
                 dry_run=args.dry_run, verbose=args.verbose,
             )
             if not passed:
@@ -292,6 +301,7 @@ def main() -> None:
                 continue
             passed = run_regression_check(
                 skill, neighbor_map, descriptions,
+                descriptions_blob=descriptions_blob,
                 dry_run=args.dry_run, verbose=args.verbose,
             )
             if not passed:

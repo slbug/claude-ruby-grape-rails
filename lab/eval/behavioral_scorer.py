@@ -792,6 +792,17 @@ def _ensure_ollama_server():
                 "Failed to start Ollama server: 'ollama' was not found on PATH. "
                 "Install Ollama or pass --provider haiku/apfel."
             ) from exc
+        except OSError as exc:
+            try:
+                os.unlink(stderr_path)
+            except OSError:
+                pass
+            _ollama_stderr_path = None
+            raise RuntimeError(
+                f"Failed to start Ollama server with 'ollama serve': {exc}. "
+                "Check that the ollama binary is executable or pass "
+                "--provider haiku/apfel."
+            ) from exc
         finally:
             os.close(stderr_fd)
         atexit.register(_stop_ollama_server)

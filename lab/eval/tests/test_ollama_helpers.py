@@ -91,6 +91,19 @@ class TestEnsureOllamaServer(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "requires an http URL"):
                 bs._ensure_ollama_server()
 
+    def test_spawn_oserror_cleans_temp_state(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {"RUBY_PLUGIN_EVAL_OLLAMA_BASE_URL": "http://127.0.0.1:11434/v1"},
+            clear=False,
+        ):
+            with patch("urllib.request.urlopen", side_effect=OSError("offline")):
+                with patch("subprocess.Popen", side_effect=PermissionError("denied")):
+                    with self.assertRaisesRegex(RuntimeError, "Failed to start Ollama"):
+                        bs._ensure_ollama_server()
+        self.assertIsNone(bs._ollama_server_proc)
+        self.assertIsNone(bs._ollama_stderr_path)
+
 
 if __name__ == "__main__":
     unittest.main()
