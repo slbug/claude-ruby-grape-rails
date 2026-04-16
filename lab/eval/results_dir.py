@@ -1,7 +1,7 @@
 """Single source of truth for behavioral trigger result locations.
 
 Behavioral routing results live under ``lab/eval/triggers/results/{namespace}/``.
-For Claude and apfel providers, the namespace is the provider name. For
+For haiku and apfel providers, the namespace is the provider name. For
 Ollama, the namespace is model-derived (``gemma4:latest`` -> ``gemma4``) so
 cache comparisons stay model-specific while the CLI provider remains
 ``ollama``.

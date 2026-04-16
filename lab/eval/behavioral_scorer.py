@@ -568,6 +568,7 @@ _ollama_server_proc = None
 _ollama_stderr_path: str | None = None
 _ollama_server_lock = threading.Lock()
 _ollama_client_lock = threading.Lock()
+_ollama_models_lock = threading.Lock()
 _ollama_base_url_cache: str | None = None
 _ollama_models_checked: set[str] = set()
 
@@ -829,25 +830,26 @@ def _ensure_ollama_model_available() -> None:
     import urllib.error
 
     model = rd.resolve_ollama_model()
-    if model in _ollama_models_checked:
-        return
-    tags_url = _derive_ollama_api_url(_get_ollama_base_url(), "/api/tags")
-    try:
-        with urllib.request.urlopen(tags_url, timeout=5) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
-    except (urllib.error.URLError, OSError, json.JSONDecodeError) as exc:
-        raise RuntimeError(f"Could not list Ollama models at {tags_url}: {exc}") from exc
-    models = {
-        str(item.get("name") or item.get("model") or "")
-        for item in payload.get("models", [])
-        if isinstance(item, dict)
-    }
-    if model not in models:
-        raise RuntimeError(
-            f"Ollama model {model!r} is not installed. "
-            f"Run: ollama pull {model}"
-        )
-    _ollama_models_checked.add(model)
+    with _ollama_models_lock:
+        if model in _ollama_models_checked:
+            return
+        tags_url = _derive_ollama_api_url(_get_ollama_base_url(), "/api/tags")
+        try:
+            with urllib.request.urlopen(tags_url, timeout=5) as resp:
+                payload = json.loads(resp.read().decode("utf-8"))
+        except (urllib.error.URLError, OSError, json.JSONDecodeError) as exc:
+            raise RuntimeError(f"Could not list Ollama models at {tags_url}: {exc}") from exc
+        models = {
+            str(item.get("name") or item.get("model") or "")
+            for item in payload.get("models", [])
+            if isinstance(item, dict)
+        }
+        if model not in models:
+            raise RuntimeError(
+                f"Ollama model {model!r} is not installed. "
+                f"Run: ollama pull {model}"
+            )
+        _ollama_models_checked.add(model)
 
 
 def _get_ollama_client():
