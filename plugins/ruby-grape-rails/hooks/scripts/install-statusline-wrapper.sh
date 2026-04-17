@@ -26,6 +26,7 @@ set -o nounset
 set -o pipefail
 
 [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]] || exit 0
+[[ -n "${HOME:-}" ]] || exit 0
 BIN_PATH="${CLAUDE_PLUGIN_ROOT}/bin/subagent-statusline"
 [[ -x "$BIN_PATH" && ! -L "$BIN_PATH" ]] || exit 0
 
@@ -59,7 +60,10 @@ if ! printf '%s' "$DESIRED" > "$TMP" 2>/dev/null; then
   rm -f -- "${TMP:?}" 2>/dev/null || true
   exit 0
 fi
-chmod 0755 -- "$TMP" 2>/dev/null || true
+if ! chmod 0755 -- "$TMP" 2>/dev/null; then
+  rm -f -- "${TMP:?}" 2>/dev/null || true
+  exit 0
+fi
 mv -f -- "$TMP" "$WRAPPER" 2>/dev/null || {
   rm -f -- "${TMP:?}" 2>/dev/null || true
   exit 0
