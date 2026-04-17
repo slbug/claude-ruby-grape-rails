@@ -35,6 +35,10 @@ WRAPPER="${WRAPPER_DIR}/ruby-grape-rails-subagent-statusline"
 [[ -d "$WRAPPER_DIR" && ! -L "$WRAPPER_DIR" ]] || exit 0
 # Refuse to replace a symlink at the target path.
 [[ ! -L "$WRAPPER" ]] || exit 0
+# Refuse to replace anything other than a regular file (e.g. a directory
+# would cause mv to move the temp file INTO it rather than replacing the
+# wrapper).
+[[ ! -e "$WRAPPER" || -f "$WRAPPER" ]] || exit 0
 
 DESIRED=$(printf '#!/usr/bin/env bash\nexec %q "$@"\n' "$BIN_PATH")
 
