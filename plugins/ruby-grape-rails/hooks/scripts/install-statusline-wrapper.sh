@@ -60,7 +60,7 @@ if ! printf '%s' "$DESIRED" > "$TMP" 2>/dev/null; then
   rm -f -- "${TMP:?}" 2>/dev/null || true
   exit 0
 fi
-if ! chmod 0755 -- "$TMP" 2>/dev/null; then
+if ! chmod 0755 "$TMP" 2>/dev/null; then
   rm -f -- "${TMP:?}" 2>/dev/null || true
   exit 0
 fi
