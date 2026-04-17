@@ -7,6 +7,52 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.12.8] - 2026-04-16
+
+### Added
+
+- **Plugin-level `subagentStatusLine`** — ships
+  `plugins/ruby-grape-rails/settings.json` plus
+  `bin/subagent-statusline`, overriding the default subagent panel row
+  with `{emoji} {label}  {status_dot} {elapsed}  {tokens}  {cwd_tail}`.
+  Emoji maps the task label to a role via stem-matching (review,
+  orchestrat, investigat, analy, research, verif/runner, valid,
+  architect/design, specialist/sidekiq, judge/iron-law,
+  advisor/runtime, trace, supervis, explore, plan/planning, security,
+  migration/deploy, test) with a generic fallback. Label source falls
+  back across `.label // .description // .name` (real CC payload omits
+  `.name` and only provides `.label` + `.description`). Status dot
+  reflects `task.status`. Elapsed derives from `task.startTime`
+  auto-detecting epoch milliseconds (13-digit), epoch seconds, or ISO
+  8601 strings. Tokens are humanized (`8432` → `8.4k`,
+  `1250000` → `1.2M`). `cwd_tail` shows the last path segment — useful
+  when specialists run in parallel git worktrees. Advisory: empty
+  stdout on any error falls back to CC's default row.
+- **`install-statusline-wrapper.sh` SessionStart hook** — idempotently
+  writes a small wrapper at
+  `~/.claude/ruby-grape-rails-subagent-statusline` that `exec`s the
+  current plugin's `bin/subagent-statusline`. Needed because plugin
+  `settings.json` does NOT expand `${CLAUDE_PLUGIN_ROOT}` and CC does
+  not export that variable to the statusline subprocess, nor does
+  plugin `bin/` get added to the statusline subprocess PATH (all three
+  confirmed via `claude --debug` diagnostic; see `plugins-reference.md`
+  documented substitution scope). The wrapper is rewritten only when
+  its content differs from the desired content, so version bumps
+  refresh it and unchanged sessions are no-ops. Advisory: any error
+  exits 0 silently.
+
+### Changed
+
+- **docs-check cached doc surface** expanded from 18 to 29 Claude Code doc
+  pages. Added Tier 1 schema/contract pages (`claude-directory.md`,
+  `commands.md`, `plugin-dependencies.md`, `env-vars.md`, `errors.md`) and
+  Tier 2 context pages (`cli-reference.md`, `statusline.md`,
+  `discover-plugins.md`, `sandboxing.md`, `context-window.md`,
+  `code-review.md`).
+- **`.claude/skills/docs-check/references/doc-pages.md`** indexes the new
+  pages and adds routing sections for `.claude/` layout, hook runtime
+  contract, CLI/statusline, and built-in feature overlap.
+
 ## [1.12.7] - 2026-04-16
 
 ### Fixed
@@ -1565,7 +1611,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.7...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.8...HEAD
+[1.12.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.7...v1.12.8
 [1.12.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.6...v1.12.7
 [1.12.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.5...v1.12.6
 [1.12.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.4...v1.12.5

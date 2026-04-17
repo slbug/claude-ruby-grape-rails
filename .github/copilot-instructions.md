@@ -14,6 +14,12 @@ The plugin ships specialist agents, skills, hooks, and eval tooling:
   auto-loaded knowledge with references/ subdirectories.
 - **Hooks** (`plugins/ruby-grape-rails/hooks/hooks.json` + `scripts/*.sh`):
   Shell scripts triggered by Claude Code events (PostToolUse, SessionStart, etc).
+- **Executables** (`plugins/ruby-grape-rails/bin/*`): plugin CLIs added to
+  the Bash tool PATH when the plugin is enabled. No file extension, chmod +x.
+  Includes `subagent-statusline` (subagent panel row renderer).
+- **Plugin settings** (`plugins/ruby-grape-rails/settings.json`): default
+  settings applied when the plugin is enabled. Only `agent` and
+  `subagentStatusLine` keys are supported per CC docs.
 - **Eval** (`lab/eval/`): Deterministic Python eval framework for plugin quality.
 - **Contributor tooling** (`.claude/`): Not shipped with the plugin.
   Includes `.claude/rules/` (auto-loaded context rules, some path-scoped)

@@ -56,6 +56,7 @@ PAGES=(
   "plugins-reference.md"        # plugin.json schema
   "plugin-marketplaces.md"      # marketplace.json schema
   "plugins.md"                  # General plugin creation
+  "plugin-dependencies.md"      # plugin.json dependency version constraints
   "settings.md"                 # Permission modes
   "mcp.md"                      # MCP server config
   "tools-reference.md"          # Tool schema and examples
@@ -67,6 +68,16 @@ PAGES=(
   "overview.md"                 # High-level overview of Claude Code and its components
   "permission-modes.md"         # Details on different permission modes and their implications for plugin behavior
   "permissions.md"              # Comprehensive guide to permissions, including best practices for requesting and using them in plugins
+  "claude-directory.md"         # .claude/ layout authority (CLAUDE.md, settings.json, hooks, skills, commands, subagents, rules, auto memory)
+  "commands.md"                 # Slash command reference and bundled skills — name/namespace surface
+  "env-vars.md"                 # Environment variables including CLAUDE_PLUGIN_ROOT, CLAUDE_PLUGIN_DATA, CLAUDE_PROJECT_DIR
+  "errors.md"                   # Error reference — hook failure classification and StopFailure taxonomy
+  "cli-reference.md"            # `claude plugin validate`, `--plugin-dir` contract used by eval/doctor scripts
+  "statusline.md"               # Plugin-level subagentStatusLine setting
+  "discover-plugins.md"         # Marketplace install flow and git-subdir path resolution
+  "sandboxing.md"               # Bash sandboxing semantics impacting hook side-effect guarantees
+  "context-window.md"           # PreCompact/PostCompact hook timing and payload context
+  "code-review.md"              # Built-in /code-review flow — overlap check with plugin /rb:review
 )
 
 # Parse arguments

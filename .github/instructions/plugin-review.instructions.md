@@ -54,6 +54,49 @@ excludeAgent: "coding-agent"
 - `async: true` is only valid on `type: "command"` hooks
 - `${CLAUDE_PLUGIN_ROOT}` is a valid runtime variable in hook commands
 
+## bin/ Executables (plugins/**/bin/*)
+
+- No file extension, chmod +x
+- Header policy comment near the top documents advisory vs fail-closed
+  behavior
+- `set -o nounset` + `set -o pipefail` at the top
+- `command -v <dep> >/dev/null 2>&1 || exit 0` for optional deps
+- Advisory fail-open pattern (empty stdout, exit 0 on any error) is
+  intentional for statusline and similar advisory executables — do NOT
+  flag as "missing error handling"
+- From `hooks.json`, `.mcp.json`, `monitors/monitors.json`, template
+  expansion is supported; reference bundled scripts via
+  `${CLAUDE_PLUGIN_ROOT}/...`
+
+## Plugin Settings (plugins/**/settings.json)
+
+- Only `agent` and `subagentStatusLine` keys are supported per CC docs
+  (`plugins-reference.md` standard plugin layout)
+- Unknown keys are silently ignored by CC — do NOT flag partial coverage
+  of other settings fields
+- `subagentStatusLine.command` does NOT expand `${CLAUDE_PLUGIN_ROOT}`
+  and CC does NOT export `CLAUDE_PLUGIN_ROOT` to the statusline
+  subprocess nor add plugin `bin/` to its PATH. Plugin-bundled
+  statusline scripts therefore require a SessionStart hook that writes
+  a small wrapper at `~/.claude/<plugin-id>-subagent-statusline`
+  pointing at the current absolute plugin path. The plugin
+  `settings.json` then references that stable user-home path. The
+  wrapper must be rewritten only when its content differs from the
+  desired content (plugin version changes change the absolute path).
+  Do NOT flag this indirection as unnecessary — it is required by the
+  documented CC substitution scope
+
+### subagentStatusLine payload schema (as observed, not fully documented)
+
+The statusline subprocess receives base hook fields plus `columns` and a
+`tasks[]` array. Each task provides `id`, `type` (e.g. `local_agent`),
+`status`, `description`, `label` (usually the same text as `description`),
+`startTime` as epoch milliseconds (13-digit integer), `tokenCount`,
+`tokenSamples` as a number array, and `cwd`. The docs also list `.name`
+but current CC payloads do NOT include it — match emoji/label from
+`.label` first, falling back to `.description` and finally `.name`. Do
+NOT flag the fallback chain as over-engineered.
+
 ## Do NOT Flag
 
 - Large file sizes on orchestrators or workflow skills (intentional)
@@ -61,3 +104,6 @@ excludeAgent: "coding-agent"
 - `omitClaudeMd: true` on specialist agents (intentional context savings)
 - Colon-namespaced skill names like `rb:plan` (known compatibility item)
 - `memory: project` on orchestrator agents (intentional cross-session learning)
+- Advisory fail-open (empty stdout, exit 0) in `bin/` and advisory hooks
+- Partial coverage in plugin `settings.json` (only `agent` and
+  `subagentStatusLine` are documented as supported)

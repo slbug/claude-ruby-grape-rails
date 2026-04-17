@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# Subagent status line: custom per-row rendering for the agent panel.
+#
+# Replaces CC's default `name · description · token count` row with:
+#
+#   {emoji} {name}  {dot} {elapsed}  {tokens}  {cwd_tail}
+#
+# Emoji maps the agent name prefix to a role (reviewer, orchestrator,
+# investigator, researcher, verifier, etc.). Status dot reflects the
+# task.status field. Elapsed is derived from task.startTime (epoch seconds
+# or ISO 8601 timestamp). Tokens are humanized. cwd_tail is the last path
+# segment — useful when specialist agents run in parallel git worktrees.
+#
+# Input (stdin): JSON with `columns`, `tasks[]`, base hook fields.
+# Output (stdout): one JSON line per overridden row:
+#   {"id": "<task id>", "content": "<row body>"}
+# Omitted rows fall through to CC's default rendering.
+#
+# Policy: advisory — any error path exits 0 with no stdout, letting CC
+# render its default rows. Requires `jq`; skips silently if absent.
+
+set -o nounset
+set -o pipefail
+
+command -v jq >/dev/null 2>&1 || exit 0
+
+INPUT=$(cat 2>/dev/null || true)
+[[ -n "$INPUT" ]] || exit 0
+printf '%s' "$INPUT" | jq -e . >/dev/null 2>&1 || exit 0
+
+printf '%s' "$INPUT" | jq -c '
+  def emoji(name):
+    if   name | test("review";              "i") then "🔍"
+    elif name | test("orchestrat";          "i") then "🧭"
+    elif name | test("investigat";          "i") then "🐛"
+    elif name | test("analy";               "i") then "🔬"
+    elif name | test("research";            "i") then "📚"
+    elif name | test("verif|runner";        "i") then "✅"
+    elif name | test("valid";               "i") then "🛡"
+    elif name | test("architect|design";    "i") then "📐"
+    elif name | test("specialist|sidekiq";  "i") then "⚙"
+    elif name | test("judge|iron.?law";     "i") then "⚖"
+    elif name | test("advisor|runtime";     "i") then "💡"
+    elif name | test("trace";               "i") then "🔎"
+    elif name | test("supervis";            "i") then "🗂"
+    elif name | test("explore";             "i") then "🔭"
+    elif name | test("^plan|planning";      "i") then "📋"
+    elif name | test("security";            "i") then "🔐"
+    elif name | test("migration|deploy";    "i") then "🚀"
+    elif name | test("test";                "i") then "🧪"
+    else "🤖" end;
+
+  def dot(s):
+    if   s == "running" or s == "active"   then "●"
+    elif s == "idle" or s == "waiting"     then "○"
+    elif s == "done" or s == "completed"   then "✓"
+    elif s == "error" or s == "failed"     then "✗"
+    else "·" end;
+
+  def toks(n):
+    if   n >= 1000000 then "\((n / 100000 | floor) / 10)M"
+    elif n >= 1000    then "\((n / 100    | floor) / 10)k"
+    else                   "\(n)"
+    end;
+
+  def elapsed(start; nw):
+    ((nw - start) | floor) as $s
+    | if   $s < 0      then "—"
+      elif $s < 60     then "\($s)s"
+      elif $s < 3600   then "\($s / 60   | floor)m\($s % 60)s"
+      else                  "\($s / 3600 | floor)h\(($s % 3600) / 60 | floor)m"
+      end;
+
+  def cwd_tail(c):
+    if (c // "") == "" then ""
+    else "  " + ((c | split("/") | map(select(length > 0)) | .[-1]) // "") end;
+
+  (now | floor) as $nw
+  | .tasks[]?
+  | select((.id // "") != "")
+  | (.label // .description // .name // "?") as $label
+  | (.startTime
+      | if type == "number" then
+          (if . > 10000000000 then . / 1000 else . end)
+        elif type == "string" then (fromdateiso8601? // 0)
+        else 0 end) as $st
+  | {
+      id: .id,
+      content:
+        "\(emoji($label))"
+        + " \($label)"
+        + "  \(dot(.status // ""))"
+        + " \(if $st > 0 then elapsed($st; $nw) else "—" end)"
+        + "  \(toks(.tokenCount // 0))"
+        + "\(cwd_tail(.cwd))"
+    }
+' 2>/dev/null
