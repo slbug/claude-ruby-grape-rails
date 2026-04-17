@@ -7,6 +7,35 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.12.8] - 2026-04-16
+
+### Added
+
+- **Plugin-level `subagentStatusLine`** — ships
+  `plugins/ruby-grape-rails/settings.json` plus
+  `bin/subagent-statusline`, overriding the default subagent panel row
+  with `{emoji} {name}  {status_dot} {elapsed}  {tokens}  {cwd_tail}`.
+  Emoji maps the agent name to a role (reviewer, orchestrator,
+  investigator, analyzer, researcher, verifier, validator, architect,
+  specialist, judge, advisor, tracer, supervisor, explore, plan) with a
+  generic fallback. Status dot reflects `task.status`. Elapsed derives
+  from `task.startTime` (epoch or ISO 8601). Tokens are humanized
+  (`8432` → `8.4k`, `1250000` → `1.2M`). `cwd_tail` shows the last path
+  segment — useful when specialists run in parallel git worktrees.
+  Advisory: empty stdout on any error falls back to CC's default row.
+
+### Changed
+
+- **docs-check cached doc surface** expanded from 18 to 29 Claude Code doc
+  pages. Added Tier 1 schema/contract pages (`claude-directory.md`,
+  `commands.md`, `plugin-dependencies.md`, `env-vars.md`, `errors.md`) and
+  Tier 2 context pages (`cli-reference.md`, `statusline.md`,
+  `discover-plugins.md`, `sandboxing.md`, `context-window.md`,
+  `code-review.md`).
+- **`.claude/skills/docs-check/references/doc-pages.md`** indexes the new
+  pages and adds routing sections for `.claude/` layout, hook runtime
+  contract, CLI/statusline, and built-in feature overlap.
+
 ## [1.12.7] - 2026-04-16
 
 ### Fixed
@@ -1565,7 +1594,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.7...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.8...HEAD
+[1.12.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.7...v1.12.8
 [1.12.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.6...v1.12.7
 [1.12.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.5...v1.12.6
 [1.12.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.4...v1.12.5

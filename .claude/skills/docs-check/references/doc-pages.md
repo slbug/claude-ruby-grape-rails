@@ -11,7 +11,7 @@ crosses those boundaries.
 The fetch script maintains:
 
 - `llms.txt` as the discovery index
-- 18 detailed cached pages under `.claude/docs-check/docs-cache/`
+- 29 detailed cached pages under `.claude/docs-check/docs-cache/`
 
 Primary cached pages (plugin-critical):
 
@@ -23,10 +23,21 @@ Primary cached pages (plugin-critical):
 | `hooks-guide.md` | Hook best practices, version-gated `if` behavior, design guidance |
 | `plugins-reference.md` | Plugin manifest, plugin-shipped agent support, `userConfig`, `channels`, `${CLAUDE_PLUGIN_DATA}` |
 | `plugin-marketplaces.md` | Marketplace manifest structure and source forms |
+| `plugin-dependencies.md` | `plugin.json` dependency version constraints |
 | `plugins.md` | Plugin structure, plugin creation guidance, high-level conventions |
 | `settings.md` | Settings semantics when a finding depends on permission or config behavior |
 | `mcp.md` | MCP config semantics when plugin findings touch bundled MCP servers |
 | `tools-reference.md` | Tool schema and examples |
+| `claude-directory.md` | Authoritative `.claude/` layout: CLAUDE.md, settings.json, hooks, skills, commands, subagents, rules, auto memory |
+| `commands.md` | Slash command reference and bundled skills; plugin `/rb:*` namespace overlap checks |
+| `env-vars.md` | Environment variable contract: `CLAUDE_PLUGIN_ROOT`, `CLAUDE_PLUGIN_DATA`, `CLAUDE_PROJECT_DIR`, etc. |
+| `errors.md` | Error taxonomy driving hook failure classification and `StopFailure` matchers |
+| `cli-reference.md` | `claude plugin validate`, `--plugin-dir`, flags used by eval/doctor scripts |
+| `statusline.md` | Plugin-level `subagentStatusLine` setting schema |
+| `discover-plugins.md` | Marketplace install flow, `git-subdir` path resolution |
+| `sandboxing.md` | Bash sandboxing semantics affecting hook side-effect guarantees |
+| `context-window.md` | PreCompact/PostCompact hook timing and payload |
+| `code-review.md` | Built-in `/code-review` flow — overlap check with plugin `/rb:review` |
 
 Additional cached pages (context/reference):
 
@@ -88,16 +99,70 @@ Use:
 
 - `plugins-reference.md`
 - `plugin-marketplaces.md`
+- `plugin-dependencies.md` when the question touches version constraints
 - `plugins.md`
 - `mcp.md` when MCP config is involved
 - `settings.md` only when a conclusion depends on settings behavior
+- `discover-plugins.md` when the marketplace install flow is in question
 
 Questions this answers:
 
 - Does `plugin.json` support this field?
-- Are `userConfig` or `channels` documented?
+- Are `userConfig`, `channels`, or `dependencies` documented?
 - Should a recommendation use `${CLAUDE_PLUGIN_ROOT}` or
   `${CLAUDE_PLUGIN_DATA}`?
+
+### Commands and `.claude/` Layout
+
+Use:
+
+- `claude-directory.md`
+- `commands.md`
+
+Questions this answers:
+
+- Is a `.claude/` subpath or file reserved by CC?
+- Does a plugin-shipped slash command collide with a built-in?
+
+### Hook Runtime Contract
+
+Use:
+
+- `env-vars.md`
+- `errors.md`
+- `sandboxing.md`
+- `context-window.md`
+
+Questions this answers:
+
+- Is a referenced env var (`CLAUDE_PLUGIN_ROOT`, `CLAUDE_PLUGIN_DATA`,
+  `CLAUDE_PROJECT_DIR`, etc.) documented?
+- Are `StopFailure` matcher values or error codes documented?
+- Does a hook's bash command rely on behavior the sandbox disallows?
+- Does a PreCompact/PostCompact hook see the payload fields it expects?
+
+### CLI and Status Line
+
+Use:
+
+- `cli-reference.md`
+- `statusline.md`
+
+Questions this answers:
+
+- Is the `claude plugin ...` subcommand used by doctor/eval still documented?
+- Does plugin-level `subagentStatusLine` match the documented schema?
+
+### Built-in Feature Overlap
+
+Use:
+
+- `code-review.md`
+
+Questions this answers:
+
+- Does a plugin `/rb:*` command duplicate or conflict with a built-in CC
+  command (e.g., `/code-review`)?
 
 ## Practical Loading Rules
 
