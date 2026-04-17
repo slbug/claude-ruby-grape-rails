@@ -23,6 +23,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`8432` → `8.4k`, `1250000` → `1.2M`). `cwd_tail` shows the last path
   segment — useful when specialists run in parallel git worktrees.
   Advisory: empty stdout on any error falls back to CC's default row.
+- **`install-statusline-wrapper.sh` SessionStart hook** — idempotently
+  writes a small wrapper at
+  `~/.claude/ruby-grape-rails-subagent-statusline` that `exec`s the
+  current plugin's `bin/subagent-statusline`. Needed because plugin
+  `settings.json` does NOT expand `${CLAUDE_PLUGIN_ROOT}` and CC does
+  not export that variable to the statusline subprocess (confirmed via
+  `claude --debug` diagnostic; see `plugins-reference.md` documented
+  substitution scope). The wrapper is rewritten only when its content
+  differs from the desired content, so version bumps refresh it and
+  unchanged sessions are no-ops. Advisory: any error exits 0 silently.
 
 ### Changed
 

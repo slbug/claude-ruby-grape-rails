@@ -30,6 +30,8 @@ Before editing, decide which surface you are changing:
   - skills
   - agents
   - hooks
+  - `bin/` executables
+  - plugin `settings.json`
   - plugin metadata
   - README / user-facing docs
 - contributor tooling:
@@ -48,6 +50,10 @@ Run the checks that match the files you touched:
 - Shell hooks:
   - `bash -n plugins/ruby-grape-rails/hooks/scripts/<file>.sh`
   - `shellcheck -x plugins/ruby-grape-rails/hooks/scripts/<file>.sh`
+- `bin/` executables:
+  - `bash -n plugins/ruby-grape-rails/bin/<name>`
+  - `shellcheck plugins/ruby-grape-rails/bin/<name>`
+  - mock-test via crafted stdin when the executable reads hook-style JSON
 - Ruby scripts:
   - `ruby -c <file>`
 - Shipped plugin shape:

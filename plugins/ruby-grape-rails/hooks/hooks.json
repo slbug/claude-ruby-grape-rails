@@ -414,6 +414,11 @@
           },
           {
             "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/install-statusline-wrapper.sh",
+            "timeout": 10
+          },
+          {
+            "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-fast.sh",
             "timeout": 15
           },

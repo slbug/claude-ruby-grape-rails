@@ -54,6 +54,31 @@ excludeAgent: "coding-agent"
 - `async: true` is only valid on `type: "command"` hooks
 - `${CLAUDE_PLUGIN_ROOT}` is a valid runtime variable in hook commands
 
+## bin/ Executables (plugins/**/bin/*)
+
+- No file extension, chmod +x
+- Header policy comment near the top documents advisory vs fail-closed
+  behavior
+- `set -o nounset` + `set -o pipefail` at the top
+- `command -v <dep> >/dev/null 2>&1 || exit 0` for optional deps
+- Advisory fail-open pattern (empty stdout, exit 0 on any error) is
+  intentional for statusline and similar advisory executables — do NOT
+  flag as "missing error handling"
+- From `hooks.json`, `.mcp.json`, `monitors/monitors.json`, and plugin-level
+  `settings.json` keys that document template expansion, reference bundled
+  scripts via `${CLAUDE_PLUGIN_ROOT}/...`
+- From plugin-level `settings.json` `subagentStatusLine.command`, `${CLAUDE_PLUGIN_ROOT}`
+  is NOT expanded — reference `bin/` executables by bare name
+  (`"command": "subagent-statusline"`), relying on plugin `bin/` being on PATH
+  per `plugins-reference.md`
+
+## Plugin Settings (plugins/**/settings.json)
+
+- Only `agent` and `subagentStatusLine` keys are supported per CC docs
+  (`plugins-reference.md` standard plugin layout)
+- Unknown keys are silently ignored by CC — do NOT flag partial coverage
+  of other settings fields
+
 ## Do NOT Flag
 
 - Large file sizes on orchestrators or workflow skills (intentional)
@@ -61,3 +86,6 @@ excludeAgent: "coding-agent"
 - `omitClaudeMd: true` on specialist agents (intentional context savings)
 - Colon-namespaced skill names like `rb:plan` (known compatibility item)
 - `memory: project` on orchestrator agents (intentional cross-session learning)
+- Advisory fail-open (empty stdout, exit 0) in `bin/` and advisory hooks
+- Partial coverage in plugin `settings.json` (only `agent` and
+  `subagentStatusLine` are documented as supported)

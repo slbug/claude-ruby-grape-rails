@@ -30,21 +30,24 @@ printf '%s' "$INPUT" | jq -e . >/dev/null 2>&1 || exit 0
 
 printf '%s' "$INPUT" | jq -c '
   def emoji(name):
-    if   name | test("reviewer";           "i") then "🔍"
-    elif name | test("orchestrator";       "i") then "🧭"
-    elif name | test("investigator";       "i") then "🐛"
-    elif name | test("analyzer|analyst";   "i") then "🔬"
-    elif name | test("researcher";         "i") then "📚"
-    elif name | test("verifier|runner";    "i") then "✅"
-    elif name | test("validator";          "i") then "🛡"
-    elif name | test("architect|designer"; "i") then "📐"
-    elif name | test("specialist";         "i") then "⚙"
-    elif name | test("judge";              "i") then "⚖"
-    elif name | test("advisor";            "i") then "💡"
-    elif name | test("tracer";             "i") then "🔎"
-    elif name | test("supervisor";         "i") then "🗂"
-    elif name | test("explore";            "i") then "🔭"
-    elif name | test("^plan";              "i") then "📋"
+    if   name | test("review";              "i") then "🔍"
+    elif name | test("orchestrat";          "i") then "🧭"
+    elif name | test("investigat";          "i") then "🐛"
+    elif name | test("analy";               "i") then "🔬"
+    elif name | test("research";            "i") then "📚"
+    elif name | test("verif|runner";        "i") then "✅"
+    elif name | test("valid";               "i") then "🛡"
+    elif name | test("architect|design";    "i") then "📐"
+    elif name | test("specialist|sidekiq";  "i") then "⚙"
+    elif name | test("judge|iron.?law";     "i") then "⚖"
+    elif name | test("advisor|runtime";     "i") then "💡"
+    elif name | test("trace";               "i") then "🔎"
+    elif name | test("supervis";            "i") then "🗂"
+    elif name | test("explore";             "i") then "🔭"
+    elif name | test("^plan|planning";      "i") then "📋"
+    elif name | test("security";            "i") then "🔐"
+    elif name | test("migration|deploy";    "i") then "🚀"
+    elif name | test("test";                "i") then "🧪"
     else "🤖" end;
 
   def dot(s):
@@ -75,15 +78,17 @@ printf '%s' "$INPUT" | jq -c '
   (now | floor) as $nw
   | .tasks[]?
   | select((.id // "") != "")
+  | (.label // .description // .name // "?") as $label
   | (.startTime
-      | if   type == "number" then .
+      | if type == "number" then
+          (if . > 10000000000 then . / 1000 else . end)
         elif type == "string" then (fromdateiso8601? // 0)
         else 0 end) as $st
   | {
       id: .id,
       content:
-        "\(emoji(.name // ""))"
-        + " \(.name // "?")"
+        "\(emoji($label))"
+        + " \($label)"
         + "  \(dot(.status // ""))"
         + " \(if $st > 0 then elapsed($st; $nw) else "—" end)"
         + "  \(toks(.tokenCount // 0))"

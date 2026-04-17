@@ -1,6 +1,6 @@
 {
   "subagentStatusLine": {
     "type": "command",
-    "command": "subagent-statusline"
+    "command": "~/.claude/ruby-grape-rails-subagent-statusline"
   }
 }
