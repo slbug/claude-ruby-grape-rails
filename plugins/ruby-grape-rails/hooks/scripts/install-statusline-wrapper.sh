@@ -12,10 +12,11 @@
 #   using the now-resolved absolute path. The plugin settings.json points
 #   at this stable wrapper path.
 #
-# The absolute path of the plugin install dir changes per version (e.g.
-# ~/.claude/plugins/cache/slbug/ruby-grape-rails/1.12.x/). We rewrite the
-# wrapper on every SessionStart, but only when its current content differs
-# from the desired content — cheap no-op on unchanged sessions.
+# The absolute path of the plugin install dir changes per version (see
+# ${CLAUDE_PLUGIN_ROOT}, which points into the user's plugin cache). We
+# rewrite the wrapper on every SessionStart, but only when its current
+# content differs from the desired content — cheap no-op on unchanged
+# sessions.
 #
 # Policy: advisory — any error path exits 0 silently. Never blocks session
 # start. Plugin settings.json falls back to CC's default row when the
