@@ -14,25 +14,32 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Plugin-level `subagentStatusLine`** — ships
   `plugins/ruby-grape-rails/settings.json` plus
   `bin/subagent-statusline`, overriding the default subagent panel row
-  with `{emoji} {name}  {status_dot} {elapsed}  {tokens}  {cwd_tail}`.
-  Emoji maps the agent name to a role (reviewer, orchestrator,
-  investigator, analyzer, researcher, verifier, validator, architect,
-  specialist, judge, advisor, tracer, supervisor, explore, plan) with a
-  generic fallback. Status dot reflects `task.status`. Elapsed derives
-  from `task.startTime` (epoch or ISO 8601). Tokens are humanized
-  (`8432` → `8.4k`, `1250000` → `1.2M`). `cwd_tail` shows the last path
-  segment — useful when specialists run in parallel git worktrees.
-  Advisory: empty stdout on any error falls back to CC's default row.
+  with `{emoji} {label}  {status_dot} {elapsed}  {tokens}  {cwd_tail}`.
+  Emoji maps the task label to a role via stem-matching (review,
+  orchestrat, investigat, analy, research, verif/runner, valid,
+  architect/design, specialist/sidekiq, judge/iron-law,
+  advisor/runtime, trace, supervis, explore, plan/planning, security,
+  migration/deploy, test) with a generic fallback. Label source falls
+  back across `.label // .description // .name` (real CC payload omits
+  `.name` and only provides `.label` + `.description`). Status dot
+  reflects `task.status`. Elapsed derives from `task.startTime`
+  auto-detecting epoch milliseconds (13-digit), epoch seconds, or ISO
+  8601 strings. Tokens are humanized (`8432` → `8.4k`,
+  `1250000` → `1.2M`). `cwd_tail` shows the last path segment — useful
+  when specialists run in parallel git worktrees. Advisory: empty
+  stdout on any error falls back to CC's default row.
 - **`install-statusline-wrapper.sh` SessionStart hook** — idempotently
   writes a small wrapper at
   `~/.claude/ruby-grape-rails-subagent-statusline` that `exec`s the
   current plugin's `bin/subagent-statusline`. Needed because plugin
   `settings.json` does NOT expand `${CLAUDE_PLUGIN_ROOT}` and CC does
-  not export that variable to the statusline subprocess (confirmed via
-  `claude --debug` diagnostic; see `plugins-reference.md` documented
-  substitution scope). The wrapper is rewritten only when its content
-  differs from the desired content, so version bumps refresh it and
-  unchanged sessions are no-ops. Advisory: any error exits 0 silently.
+  not export that variable to the statusline subprocess, nor does
+  plugin `bin/` get added to the statusline subprocess PATH (all three
+  confirmed via `claude --debug` diagnostic; see `plugins-reference.md`
+  documented substitution scope). The wrapper is rewritten only when
+  its content differs from the desired content, so version bumps
+  refresh it and unchanged sessions are no-ops. Advisory: any error
+  exits 0 silently.
 
 ### Changed
 

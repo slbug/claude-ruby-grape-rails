@@ -64,13 +64,9 @@ excludeAgent: "coding-agent"
 - Advisory fail-open pattern (empty stdout, exit 0 on any error) is
   intentional for statusline and similar advisory executables — do NOT
   flag as "missing error handling"
-- From `hooks.json`, `.mcp.json`, `monitors/monitors.json`, and plugin-level
-  `settings.json` keys that document template expansion, reference bundled
-  scripts via `${CLAUDE_PLUGIN_ROOT}/...`
-- From plugin-level `settings.json` `subagentStatusLine.command`, `${CLAUDE_PLUGIN_ROOT}`
-  is NOT expanded — reference `bin/` executables by bare name
-  (`"command": "subagent-statusline"`), relying on plugin `bin/` being on PATH
-  per `plugins-reference.md`
+- From `hooks.json`, `.mcp.json`, `monitors/monitors.json`, template
+  expansion is supported; reference bundled scripts via
+  `${CLAUDE_PLUGIN_ROOT}/...`
 
 ## Plugin Settings (plugins/**/settings.json)
 
@@ -78,6 +74,28 @@ excludeAgent: "coding-agent"
   (`plugins-reference.md` standard plugin layout)
 - Unknown keys are silently ignored by CC — do NOT flag partial coverage
   of other settings fields
+- `subagentStatusLine.command` does NOT expand `${CLAUDE_PLUGIN_ROOT}`
+  and CC does NOT export `CLAUDE_PLUGIN_ROOT` to the statusline
+  subprocess nor add plugin `bin/` to its PATH. Plugin-bundled
+  statusline scripts therefore require a SessionStart hook that writes
+  a small wrapper at `~/.claude/<plugin-id>-subagent-statusline`
+  pointing at the current absolute plugin path. The plugin
+  `settings.json` then references that stable user-home path. The
+  wrapper must be rewritten only when its content differs from the
+  desired content (plugin version changes change the absolute path).
+  Do NOT flag this indirection as unnecessary — it is required by the
+  documented CC substitution scope
+
+### subagentStatusLine payload schema (as observed, not fully documented)
+
+The statusline subprocess receives base hook fields plus `columns` and a
+`tasks[]` array. Each task provides `id`, `type` (e.g. `local_agent`),
+`status`, `description`, `label` (usually the same text as `description`),
+`startTime` as epoch milliseconds (13-digit integer), `tokenCount`,
+`tokenSamples` as a number array, and `cwd`. The docs also list `.name`
+but current CC payloads do NOT include it — match emoji/label from
+`.label` first, falling back to `.description` and finally `.name`. Do
+NOT flag the fallback chain as over-engineered.
 
 ## Do NOT Flag
 
