@@ -4012,7 +4012,8 @@ class RuntimeScriptTests(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0)
-        self.assertIn("Regenerate Iron Law projections", result.stdout)
+        self.assertIn("Regenerate Iron Law", result.stdout)
+        self.assertIn("preferences.yml", result.stdout)
         self.assertNotIn("claude", result.stdout)
         self.assertNotIn("changelog", result.stdout.lower())
 
