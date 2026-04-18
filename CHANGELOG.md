@@ -30,8 +30,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - **`/rb:init` injectable template** gains `{PLUGIN_VERSION}` placeholder
-  (`plugins/ruby-grape-rails/skills/init/references/injectable-template.md`
-  header line 2). Substitution documented in `conditional-sections.md` and
+  in the managed-block header comment
+  (`plugins/ruby-grape-rails/skills/init/references/injectable-template.md`).
+  Substitution documented in `conditional-sections.md` and
   enforced in `init/SKILL.md` (sourced from
   `jq -r .version ${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`). The
   `check-plugin-version.sh` hook depends on this marker being deterministic.
