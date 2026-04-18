@@ -45,22 +45,35 @@ REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 CLAUDE_MD="${REPO_ROOT}/CLAUDE.md"
 [[ -f "$CLAUDE_MD" && ! -L "$CLAUDE_MD" && -r "$CLAUDE_MD" ]] || exit 0
 
-# Extract pinned version between plugin sentinels. Uses the official semver
-# regex from https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
-# translated to POSIX ERE for `grep -oE`:
+# Extract pinned version between plugin sentinels and strict-validate against
+# the official semver regex from
+# https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+# translated to POSIX ERE:
 #   - MAJOR/MINOR/PATCH: `0` or a positive integer with no leading zeros
 #   - pre-release (optional): `-` + dot-separated identifiers. Numeric
 #     identifiers have no leading zeros; alphanumeric identifiers must
 #     contain at least one non-digit.
 #   - build metadata (optional): `+` + dot-separated [0-9A-Za-z-] groups.
+# NB: `grep -oE` alone would extract the longest PREFIX match, silently
+# truncating non-semver input like `1.2.3rc1` down to `1.2.3`. We instead
+# extract the greedy version token (chars until first non-semver-ish char)
+# and anchor-validate with the strict regex so non-semver stays silent.
 SEMVER_CORE='(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'
 SEMVER_PRE='(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?'
 SEMVER_BUILD='(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?'
-SEMVER_RE="plugin v${SEMVER_CORE}${SEMVER_PRE}${SEMVER_BUILD}"
-PINNED=$(sed -n '/<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->/,/<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->/p' "$CLAUDE_MD" 2>/dev/null \
-  | grep -oE "$SEMVER_RE" \
+ANCHORED_SEMVER="^${SEMVER_CORE}${SEMVER_PRE}${SEMVER_BUILD}$"
+
+# Require a word-boundary before `plugin v` so foreign markers like
+# `some-plugin v1.0.0` or `iplugin v2` inside the managed block do not
+# hijack the match (POSIX ERE has no portable `\b`; we approximate via
+# `(^|[^A-Za-z0-9_-])`).
+RAW=$(sed -n '/<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->/,/<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->/p' "$CLAUDE_MD" 2>/dev/null \
+  | grep -oE '(^|[^A-Za-z0-9_-])plugin v[0-9A-Za-z.+-]+' \
   | head -1 \
-  | sed 's/^plugin v//' || true)
+  | sed -E 's/.*plugin v//' || true)
+[[ -n "$RAW" ]] || exit 0
+printf '%s' "$RAW" | grep -qE "$ANCHORED_SEMVER" || exit 0
+PINNED="$RAW"
 [[ -n "$PINNED" ]] || exit 0
 
 [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]] || exit 0
