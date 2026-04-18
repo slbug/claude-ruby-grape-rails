@@ -32,6 +32,29 @@ unless yaml['categories'].is_a?(Array) && yaml['laws'].is_a?(Array)
   exit 1
 end
 
+# Shared validation helpers used by both iron-laws and preferences validators.
+def blank_string?(value)
+  value.is_a?(String) && value.strip.empty?
+end
+
+def nonblank_string?(value)
+  value.is_a?(String) && !value.strip.empty?
+end
+
+def integer_value(value)
+  return value if value.is_a?(Integer)
+  return nil unless value.is_a?(String)
+
+  stripped = value.strip
+  return nil unless stripped.match?(/\A\d+\z/)
+
+  stripped.to_i
+end
+
+def integerish?(value)
+  !integer_value(value).nil?
+end
+
 def validate_entries!(yaml)
   category_required = %w[id name law_count]
   law_required = %w[id category title rule summary_text rationale subagent_text]
@@ -39,28 +62,6 @@ def validate_entries!(yaml)
   law_ids = yaml['laws'].filter_map { |law| law['id'] if law.is_a?(Hash) }
   category_totals = Hash.new(0)
   errors = []
-
-  blank_string = lambda do |value|
-    value.is_a?(String) && value.strip.empty?
-  end
-
-  nonblank_string = lambda do |value|
-    value.is_a?(String) && !value.strip.empty?
-  end
-
-  integer_value = lambda do |value|
-    return value if value.is_a?(Integer)
-    return nil unless value.is_a?(String)
-
-    stripped = value.strip
-    return nil unless stripped.match?(/\A\d+\z/)
-
-    stripped.to_i
-  end
-
-  integerish = lambda do |value|
-    !integer_value.call(value).nil?
-  end
 
   yaml['categories'].each_with_index do |category, index|
     unless category.is_a?(Hash)
@@ -74,16 +75,16 @@ def validate_entries!(yaml)
 
     %w[id name].each do |key|
       value = category[key]
-      next if nonblank_string.call(value)
+      next if nonblank_string?(value)
 
-      if blank_string.call(value)
+      if blank_string?(value)
         errors << "category[#{index}] #{key} must not be blank"
       else
         errors << "category[#{index}] #{key} must be a non-blank String"
       end
     end
 
-    unless integerish.call(category['law_count'])
+    unless integerish?(category['law_count'])
       errors << "category[#{index}] law_count must be an integer"
     end
   end
@@ -97,8 +98,8 @@ def validate_entries!(yaml)
     missing = law_required.reject { |key| law.key?(key) && !law[key].nil? }
     errors << "law[#{index}] missing: #{missing.join(', ')}" unless missing.empty?
     if missing.empty?
-      unless law['id'].is_a?(Integer) || nonblank_string.call(law['id'])
-        if blank_string.call(law['id'])
+      unless law['id'].is_a?(Integer) || nonblank_string?(law['id'])
+        if blank_string?(law['id'])
           errors << "law[#{index}] id must not be blank"
         else
           errors << "law[#{index}] id must be an Integer or non-blank String"
@@ -107,9 +108,9 @@ def validate_entries!(yaml)
 
       %w[category title rule summary_text rationale subagent_text].each do |key|
         value = law[key]
-        next if nonblank_string.call(value)
+        next if nonblank_string?(value)
 
-        if blank_string.call(value)
+        if blank_string?(value)
           errors << "law[#{index}] #{key} must not be blank"
         else
           errors << "law[#{index}] #{key} must be a non-blank String"
@@ -128,7 +129,7 @@ def validate_entries!(yaml)
   errors << "duplicate category ids: #{duplicate_category_ids.join(', ')}" unless duplicate_category_ids.empty?
   errors << "duplicate law ids: #{duplicate_law_ids.join(', ')}" unless duplicate_law_ids.empty?
 
-  total_laws = integer_value.call(yaml['total_laws'])
+  total_laws = integer_value(yaml['total_laws'])
   if total_laws.nil?
     errors << 'total_laws must be an integer'
   elsif total_laws != yaml['laws'].length
@@ -144,7 +145,7 @@ def validate_entries!(yaml)
   yaml['categories'].each_with_index do |category, index|
     next unless category.is_a?(Hash) && category['id']
 
-    declared_count = integer_value.call(category['law_count'])
+    declared_count = integer_value(category['law_count'])
     next if declared_count.nil?
 
     actual_count = category_totals[category['id']]
@@ -167,45 +168,133 @@ PREFERENCES_YAML = ENV.fetch('RUBY_PLUGIN_PREFERENCES_YAML', DEFAULT_PREFERENCES
 
 def validate_preferences!(prefs, source_path)
   errors = []
+  category_required = %w[id name]
+  pref_text_required = %w[category title rule summary_text rationale subagent_text]
+
+  # Top-level metadata — these feed generated output, so require them.
+  %w[version last_updated].each do |key|
+    next if nonblank_string?(prefs[key])
+
+    if blank_string?(prefs[key])
+      errors << "top-level #{key} must not be blank"
+    else
+      errors << "top-level #{key} must be a non-blank String"
+    end
+  end
+  unless integerish?(prefs['total_preferences'])
+    errors << 'total_preferences must be an integer'
+  end
+
   category_ids = prefs['categories'].filter_map { |c| c['id'] if c.is_a?(Hash) }
+  pref_ids = prefs['preferences'].filter_map { |p| p['id'] if p.is_a?(Hash) }
   category_totals = Hash.new(0)
 
-  prefs['preferences'].each_with_index do |pref, idx|
-    unless pref.is_a?(Hash)
-      errors << "preference[#{idx}] must be a mapping"
+  prefs['categories'].each_with_index do |cat, index|
+    unless cat.is_a?(Hash)
+      errors << "category[#{index}] must be a mapping, got #{cat.class}"
       next
     end
-    %w[id category title rule rationale summary_text subagent_text].each do |key|
-      value = pref[key]
-      unless value.is_a?(String) ? !value.strip.empty? : !value.nil?
-        errors << "preference[#{idx}] missing or blank field: #{key}"
+
+    missing = category_required.reject { |key| cat.key?(key) && !cat[key].nil? }
+    errors << "category[#{index}] missing: #{missing.join(', ')}" unless missing.empty?
+    next unless missing.empty?
+
+    category_required.each do |key|
+      value = cat[key]
+      next if nonblank_string?(value)
+
+      if blank_string?(value)
+        errors << "category[#{index}] #{key} must not be blank"
+      else
+        errors << "category[#{index}] #{key} must be a non-blank String"
       end
     end
-    cat_id = pref['category']
-    if cat_id && !category_ids.include?(cat_id)
-      errors << "preference[#{idx}] references unknown category: #{cat_id.inspect}"
+
+    next unless cat.key?('preference_count')
+    next if integerish?(cat['preference_count'])
+
+    errors << "category[#{index}] preference_count must be an integer"
+  end
+
+  prefs['preferences'].each_with_index do |pref, index|
+    unless pref.is_a?(Hash)
+      errors << "preference[#{index}] must be a mapping, got #{pref.class}"
+      next
     end
-    category_totals[cat_id] += 1 if cat_id
+
+    unless pref['id'].is_a?(Integer) || nonblank_string?(pref['id'])
+      if blank_string?(pref['id'])
+        errors << "preference[#{index}] id must not be blank"
+      else
+        errors << "preference[#{index}] id must be an Integer or non-blank String"
+      end
+    end
+
+    pref_text_required.each do |key|
+      value = pref[key]
+      next if nonblank_string?(value)
+
+      if blank_string?(value)
+        errors << "preference[#{index}] #{key} must not be blank"
+      else
+        errors << "preference[#{index}] #{key} must be a non-blank String"
+      end
+    end
+
+    next unless pref.key?('category') && pref['category']
+    next if category_ids.include?(pref['category'])
+
+    errors << "preference[#{index}] references unknown category: #{pref['category'].inspect}"
   end
 
-  total_declared = prefs['total_preferences']
-  if total_declared.is_a?(Integer) && total_declared != prefs['preferences'].length
-    errors << "total_preferences=#{total_declared} does not match actual preferences count=#{prefs['preferences'].length}"
+  duplicate_category_ids = category_ids.group_by(&:itself).select { |_id, e| e.length > 1 }.keys.sort
+  duplicate_pref_ids = pref_ids.group_by(&:itself).select { |_id, e| e.length > 1 }.keys.sort
+  errors << "duplicate category ids: #{duplicate_category_ids.join(', ')}" unless duplicate_category_ids.empty?
+  errors << "duplicate preference ids: #{duplicate_pref_ids.join(', ')}" unless duplicate_pref_ids.empty?
+
+  total_prefs = integer_value(prefs['total_preferences'])
+  if total_prefs && total_prefs != prefs['preferences'].length
+    errors << "total_preferences=#{prefs['total_preferences']} does not match actual preferences count=#{prefs['preferences'].length}"
   end
 
-  prefs['categories'].each_with_index do |cat, idx|
+  prefs['preferences'].each do |pref|
+    next unless pref.is_a?(Hash) && pref['category']
+
+    category_totals[pref['category']] += 1
+  end
+
+  prefs['categories'].each_with_index do |cat, index|
     next unless cat.is_a?(Hash) && cat['id']
-    declared = cat['preference_count']
-    next unless declared.is_a?(Integer)
-    actual = category_totals[cat['id']]
-    next if declared == actual
-    errors << "category[#{idx}] #{cat['id'].inspect} preference_count=#{declared} does not match actual count=#{actual}"
+
+    declared_count = integer_value(cat['preference_count'])
+    next if declared_count.nil?
+
+    actual_count = category_totals[cat['id']]
+    next if declared_count == actual_count
+
+    errors << "category[#{index}] #{cat['id'].inspect} preference_count=#{cat['preference_count']} does not match actual count=#{actual_count}"
   end
 
   return if errors.empty?
+
   warn "Error: Invalid preferences.yml entries in #{source_path}"
-  errors.each { |e| warn "  - #{e}" }
+  errors.each { |error| warn "  - #{error}" }
   exit 1
+end
+
+def warn_missing_preferences_recommended(prefs)
+  return unless prefs
+
+  recommended = %w[severity applies_to init_text reference_files]
+  prefs['preferences'].each_with_index do |pref, index|
+    next unless pref.is_a?(Hash)
+
+    present = ->(v) { !v.nil? && !(v.is_a?(String) && v.strip.empty?) && !(v.is_a?(Array) && v.empty?) }
+    missing = recommended.reject { |key| pref.key?(key) && present.call(pref[key]) }
+    missing.each do |key|
+      warn "  WARNING: preference[#{index}] (#{pref['id']}) missing recommended field: #{key}"
+    end
+  end
 end
 
 prefs = nil
@@ -495,6 +584,7 @@ when 'judge'
   generate_judge_section(yaml)
 when 'validate'
   warn_missing_recommended(yaml)
+  warn_missing_preferences_recommended(prefs)
   warn "Validation complete."
 else
   puts "Usage: #{$PROGRAM_NAME} [injectable|preferences_injectable|tutorial|injector|canonical|readme|judge|validate]"
