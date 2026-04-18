@@ -147,7 +147,7 @@ outdated)
 [Ruby/Rails/Grape plugin — user action required]
 Installed plugin v${CURRENT} is ahead of project CLAUDE.md pinned at v${PINNED}.
 Tell the user at the start of your next response, then recommend:
-  /rb:init --update
+/rb:init --update
 NOTICE
   ;;
 newer)
