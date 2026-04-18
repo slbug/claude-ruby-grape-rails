@@ -307,9 +307,9 @@ def warn_missing_preferences_recommended(prefs)
 end
 
 unless File.exist?(PREFERENCES_YAML)
-  warn "Error: preferences.yml source not found: #{PREFERENCES_YAML}"
-  warn '(preferences.yml is a first-class shipped registry since v1.13.0.'
-  warn ' Override path via RUBY_PLUGIN_PREFERENCES_YAML env var.)'
+  warn "Error: preferences.yml source not found: #{PREFERENCES_YAML}. " \
+       'preferences.yml is a first-class shipped registry since v1.13.0; ' \
+       'override the path with the RUBY_PLUGIN_PREFERENCES_YAML env var.'
   exit 1
 end
 
@@ -478,8 +478,10 @@ def generate_injector_script(yaml, prefs)
     puts '# GENERATED FROM iron-laws.yml + preferences.yml — DO NOT EDIT'
     puts "# Source versions: iron-laws=#{yaml['version']} preferences=#{prefs['version']}"
   else
-    puts '# GENERATED FROM iron-laws.yml — DO NOT EDIT'
-    puts "# Source version: iron-laws=#{yaml['version']} (preferences.yml absent)"
+    # preferences.yml is required by the loader (exit 1 if missing), so this
+    # branch is only reachable when the file exists but defines no entries.
+    puts '# GENERATED FROM iron-laws.yml + preferences.yml — DO NOT EDIT'
+    puts "# Source versions: iron-laws=#{yaml['version']} preferences=#{prefs['version']} (no preferences defined)"
   end
   puts ''
   puts "cat <<'EOF'"
