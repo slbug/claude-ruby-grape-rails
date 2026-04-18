@@ -124,8 +124,10 @@ def validate_entries!(yaml)
     errors << "law[#{index}] references unknown category: #{law['category'].inspect}"
   end
 
-  duplicate_category_ids = category_ids.group_by(&:itself).select { |_id, entries| entries.length > 1 }.keys.sort
-  duplicate_law_ids = law_ids.group_by(&:itself).select { |_id, entries| entries.length > 1 }.keys.sort
+  # IDs can be Integer or String per schema; sort by stringified form so
+  # mixed-type arrays don't crash `.sort` with ArgumentError.
+  duplicate_category_ids = category_ids.group_by(&:itself).select { |_id, entries| entries.length > 1 }.keys.sort_by(&:to_s)
+  duplicate_law_ids = law_ids.group_by(&:itself).select { |_id, entries| entries.length > 1 }.keys.sort_by(&:to_s)
   errors << "duplicate category ids: #{duplicate_category_ids.join(', ')}" unless duplicate_category_ids.empty?
   errors << "duplicate law ids: #{duplicate_law_ids.join(', ')}" unless duplicate_law_ids.empty?
 
@@ -256,8 +258,10 @@ def validate_preferences!(prefs, source_path)
     errors << "preference[#{index}] references unknown category: #{pref['category'].inspect}"
   end
 
-  duplicate_category_ids = category_ids.group_by(&:itself).select { |_id, e| e.length > 1 }.keys.sort
-  duplicate_pref_ids = pref_ids.group_by(&:itself).select { |_id, e| e.length > 1 }.keys.sort
+  # IDs can be Integer or String per schema; sort by stringified form so
+  # mixed-type arrays don't crash `.sort` with ArgumentError.
+  duplicate_category_ids = category_ids.group_by(&:itself).select { |_id, e| e.length > 1 }.keys.sort_by(&:to_s)
+  duplicate_pref_ids = pref_ids.group_by(&:itself).select { |_id, e| e.length > 1 }.keys.sort_by(&:to_s)
   errors << "duplicate category ids: #{duplicate_category_ids.join(', ')}" unless duplicate_category_ids.empty?
   errors << "duplicate preference ids: #{duplicate_pref_ids.join(', ')}" unless duplicate_pref_ids.empty?
 
