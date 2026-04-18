@@ -115,7 +115,7 @@ Install: `brew install betterleaks`
 | `{PACKWERK_SECTION}` | If Packwerk or modular layout detected | Include package/boundary section |
 | `{BETTERLEAKS_SECTION}` | If betterleaks installed | Include Betterleaks section |
 | `{BETTERLEAKS_STATUS}` | `command -v betterleaks` result | available / missing |
-| `{PLUGIN_VERSION}` | `jq -r .version $CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json` | 1.13.1 |
+| `{PLUGIN_VERSION}` | `jq -r '.version // empty' "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"` | 1.13.1 |
 
 ## Detection Commands
 

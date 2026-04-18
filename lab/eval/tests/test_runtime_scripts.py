@@ -2630,6 +2630,24 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(second.stdout, "", "second call in same session should be silent")
         self.assertIn("v0.1.0", third.stdout, "different session_id should re-fire")
 
+    def test_check_plugin_version_ignores_build_metadata_per_semver(self) -> None:
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            # Per semver.org/#spec-item-10, build metadata (`+<build>`) MUST NOT
+            # affect equality or precedence. Same triple + different builds
+            # must stay silent.
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), f"{current}+build.5"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout,
+            "",
+            "same version with differing build metadata must not warn",
+        )
+
     def test_check_plugin_version_treats_prerelease_as_outdated_vs_release(
         self,
     ) -> None:

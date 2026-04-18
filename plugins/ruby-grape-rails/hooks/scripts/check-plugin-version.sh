@@ -15,8 +15,9 @@ command -v tr >/dev/null 2>&1 || exit 0
 command -v head >/dev/null 2>&1 || exit 0
 command -v sort >/dev/null 2>&1 || exit 0
 command -v tail >/dev/null 2>&1 || exit 0
-# sort -V (natural version sort) is required. Available on GNU coreutils 7+
-# and macOS 10.14+ BSD sort. Probe support rather than trust bare `sort`.
+# sort -V (natural version sort) is required. Commonly available via GNU
+# coreutils; some environments (minimal containers, older macOS) may require
+# GNU `sort`/`gsort`. Probe support rather than trust bare `sort`.
 printf 'a\n' | sort -V >/dev/null 2>&1 || exit 0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -50,13 +51,20 @@ PLUGIN_JSON="${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"
 CURRENT=$(jq -r '.version // empty' "$PLUGIN_JSON" 2>/dev/null) || exit 0
 [[ -n "$CURRENT" ]] || exit 0
 
+# Semver build metadata (`+...`) MUST NOT affect equality or precedence per
+# https://semver.org/#spec-item-10. Strip it before comparison, keep the
+# original strings for the user-facing message.
+PINNED_COMPARE="${PINNED%%+*}"
+CURRENT_COMPARE="${CURRENT%%+*}"
+[[ -n "$PINNED_COMPARE" && -n "$CURRENT_COMPARE" ]] || exit 0
+
 # Semver-aware compare via `sort -V` (natural version sort). Handles semver
 # pre-release precedence correctly: `1.13.1-rc1` sorts below `1.13.1`.
-[[ "$PINNED" == "$CURRENT" ]] && exit 0
-HIGHEST=$(printf '%s\n%s\n' "$PINNED" "$CURRENT" | sort -V | tail -n 1)
+[[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" ]] && exit 0
+HIGHEST=$(printf '%s\n%s\n' "$PINNED_COMPARE" "$CURRENT_COMPARE" | sort -V | tail -n 1)
 [[ -n "$HIGHEST" ]] || exit 0
 
-if [[ "$HIGHEST" == "$CURRENT" ]]; then
+if [[ "$HIGHEST" == "$CURRENT_COMPARE" ]]; then
   DIRECTION="outdated"
 else
   DIRECTION="newer"

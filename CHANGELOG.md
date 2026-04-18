@@ -15,11 +15,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   pinned in project CLAUDE.md (between `<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->`
   and `<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->`) against the installed plugin
   version from `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`. Semver-aware
-  ordering via `sort -V` (natural version sort; available on GNU coreutils 7+
-  and macOS 10.14+): pinned-outdated emits a refresh reminder, pinned-newer
-  flags a possible downgrade, equal versions stay silent. Pre-release
-  precedence honored per semver (e.g. `1.13.1-rc1 < 1.13.1`). Fires at most
-  once per session via atomic per-session lock at
+  ordering via `sort -V` when supported (natural version sort; commonly
+  available via GNU coreutils — some environments may require GNU `sort`/`gsort`):
+  pinned-outdated emits a refresh reminder, pinned-newer flags a possible
+  downgrade, equal versions stay silent. Pre-release precedence honored per
+  semver (e.g. `1.13.1-rc1 < 1.13.1`); build metadata (`+<build>`) stripped
+  before compare per semver.org/#spec-item-10. Fires at most once per session
+  via atomic per-session lock at
   `${CLAUDE_PLUGIN_DATA}/version-check/` (workspace
   `.claude/.hook-state/version-check/` fallback). Advisory fail-open on missing
   `CLAUDE.md`, missing marker, missing `plugin.json`, or tool unavailability.
