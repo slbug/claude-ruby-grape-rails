@@ -467,9 +467,9 @@ def generate_injector_script(yaml, prefs)
   puts 'set -o pipefail'
   puts ''
   puts '# SubagentStart hook: inject Iron Laws (+ Advisory Preferences when present)'
-  puts '# Policy: advisory injection via additionalContext; emit-then-exit. A'
-  puts '# HEREDOC failure drops the payload, leaving the subagent without the'
-  puts '# injected context — fail-open by design, no guardrail semantics.'
+  puts '# Policy: advisory injection via additionalContext; emit-then-exit.'
+  puts '# A HEREDOC failure drops the payload, leaving the subagent without'
+  puts '# the injected context — fail-open by design, no guardrail semantics.'
   if has_prefs
     puts '# GENERATED FROM iron-laws.yml + preferences.yml — DO NOT EDIT'
     puts "# Source versions: iron-laws=#{yaml['version']} preferences=#{prefs['version']}"

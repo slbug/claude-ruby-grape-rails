@@ -3,9 +3,9 @@ set -o nounset
 set -o pipefail
 
 # SubagentStart hook: inject Iron Laws (+ Advisory Preferences when present)
-# Policy: advisory injection via additionalContext; emit-then-exit. A
-# HEREDOC failure drops the payload, leaving the subagent without the
-# injected context — fail-open by design, no guardrail semantics.
+# Policy: advisory injection via additionalContext; emit-then-exit.
+# A HEREDOC failure drops the payload, leaving the subagent without
+# the injected context — fail-open by design, no guardrail semantics.
 # GENERATED FROM iron-laws.yml + preferences.yml — DO NOT EDIT
 # Source versions: iron-laws=1.0.0 preferences=1.0.0
 
