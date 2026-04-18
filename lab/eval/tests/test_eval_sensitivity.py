@@ -63,6 +63,8 @@ class TestAnalyzeSkill(unittest.TestCase):
             path.write_text("not json{{{")
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = analyze_skill("plan")
+                if result is None:
+                    self.fail("analyze_skill returned None")
                 self.assertIn("error", result)
                 self.assertIn("invalid cached results JSON", result["error"])
 
@@ -75,6 +77,8 @@ class TestAnalyzeSkill(unittest.TestCase):
             ])
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = analyze_skill("plan")
+                if result is None:
+                    self.fail("analyze_skill returned None")
                 self.assertIn("error", result)
                 self.assertIn("too few", result["error"])
 
@@ -86,6 +90,8 @@ class TestAnalyzeSkill(unittest.TestCase):
             ])
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = analyze_skill("plan")
+                if result is None:
+                    self.fail("analyze_skill returned None")
                 self.assertEqual(result["baseline_accuracy"], 1.0)
                 self.assertEqual(result["fragility_max"], 0.0)
                 self.assertEqual(result["high_leverage_count"], 0)
@@ -99,6 +105,8 @@ class TestAnalyzeSkill(unittest.TestCase):
             self._write_cache(tmpdir, "plan", results)
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = analyze_skill("plan")
+                if result is None:
+                    self.fail("analyze_skill returned None")
                 # Removing the failing prompt improves accuracy
                 self.assertGreater(result["drag_count"], 0)
 
@@ -110,6 +118,8 @@ class TestAnalyzeSkill(unittest.TestCase):
             self._write_cache(tmpdir, "plan", results)
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = analyze_skill("plan")
+                if result is None:
+                    self.fail("analyze_skill returned None")
                 # Removing the passing prompt drops accuracy
                 self.assertGreater(result["high_leverage_count"], 0)
 
@@ -121,6 +131,8 @@ class TestAnalyzeSkill(unittest.TestCase):
             ])
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = analyze_skill("plan")
+                if result is None:
+                    self.fail("analyze_skill returned None")
                 self.assertEqual(len(result["prompt_impacts"]), 6)
                 self.assertEqual(result["total_prompts"], 6)
 

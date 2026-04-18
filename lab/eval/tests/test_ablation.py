@@ -32,7 +32,8 @@ class TestBuildAblatedEval(unittest.TestCase):
         """Removing one check from a two-check dimension leaves one check."""
         eval_def = _make_eval({"clarity": ["action_density", "no_duplication"]})
         ablated = build_ablated_eval(eval_def, "clarity", 0)
-        self.assertIsNotNone(ablated)
+        if ablated is None:
+            self.fail("build_ablated_eval returned None")
         self.assertEqual(len(ablated.dimensions["clarity"].checks), 1)
         self.assertEqual(ablated.dimensions["clarity"].checks[0].check_type, "no_duplication")
 
@@ -40,7 +41,8 @@ class TestBuildAblatedEval(unittest.TestCase):
         """Removing the only check in a dimension drops the entire dimension."""
         eval_def = _make_eval({"safety": ["no_dangerous_patterns"], "clarity": ["action_density"]})
         ablated = build_ablated_eval(eval_def, "safety", 0)
-        self.assertIsNotNone(ablated)
+        if ablated is None:
+            self.fail("build_ablated_eval returned None")
         self.assertNotIn("safety", ablated.dimensions)
         self.assertIn("clarity", ablated.dimensions)
 
@@ -63,6 +65,8 @@ class TestBuildAblatedEval(unittest.TestCase):
             "safety": ["no_dangerous_patterns"],
         })
         ablated = build_ablated_eval(eval_def, "clarity", 0)
+        if ablated is None:
+            self.fail("build_ablated_eval returned None")
         self.assertEqual(
             len(ablated.dimensions["safety"].checks),
             len(eval_def.dimensions["safety"].checks),

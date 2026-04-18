@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 #
-# Generate Iron Law outputs from canonical YAML source
+# Generate Iron Law + Advisory Preferences outputs from canonical YAML sources
+# Sources:
+#   plugins/ruby-grape-rails/references/iron-laws.yml
+#   plugins/ruby-grape-rails/references/preferences.yml
+#
 # Usage: ./scripts/generate-iron-law-outputs.sh [target]
 #   target: optional specific target to regenerate
-#           (readme|canonical|init|tutorial|injector|judge|all)
+#           (readme|canonical|init|tutorial|injector|judge|preferences|validate|all)
 #
-# This script delegates to generate-iron-law-content.rb for actual content generation
+# This script delegates to generate-iron-law-content.rb for actual content generation.
 #
 
 set -euo pipefail

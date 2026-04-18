@@ -1725,7 +1725,8 @@ class RuntimeScriptTests(unittest.TestCase):
                 "cat",
             ):
                 source = shutil.which(name)
-                assert source is not None, name
+                if source is None:
+                    self.fail(name)
                 os.symlink(source, fake_bin / name)
             env = dict(os.environ)
             env["CLAUDE_PROJECT_DIR"] = tmpdir
@@ -1783,8 +1784,10 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin.mkdir()
             real_jq = shutil.which("jq")
             real_grep = shutil.which("grep")
-            assert real_jq is not None
-            assert real_grep is not None
+            if real_jq is None:
+                self.fail('real_jq')
+            if real_grep is None:
+                self.fail('real_grep')
             (fake_bin / "jq").write_text(
                 f'#!/bin/sh\nexec {real_jq} "$@"\n', encoding="utf-8"
             )
@@ -1841,7 +1844,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             real_git = shutil.which("git")
-            assert real_git is not None
+            if real_git is None:
+                self.fail('real_git')
             (fake_bin / "git").write_text(
                 f'#!/bin/sh\nexec {real_git} "$@"\n', encoding="utf-8"
             )
@@ -1993,7 +1997,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin.mkdir()
             for name in ("jq", "dirname", "head", "readlink", "grep", "sed"):
                 source = shutil.which(name)
-                assert source is not None, name
+                if source is None:
+                    self.fail(name)
                 os.symlink(source, fake_bin / name)
             env = dict(os.environ)
             env["CLAUDE_PROJECT_DIR"] = tmpdir
@@ -2046,7 +2051,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin.mkdir()
             for name in ("jq", "dirname", "head", "readlink"):
                 source = shutil.which(name)
-                assert source is not None, name
+                if source is None:
+                    self.fail(name)
                 os.symlink(source, fake_bin / name)
             env = dict(os.environ)
             env["CLAUDE_PROJECT_DIR"] = tmpdir
@@ -2196,7 +2202,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             real_git = shutil.which("git")
-            assert real_git is not None
+            if real_git is None:
+                self.fail('real_git')
             (fake_bin / "git").write_text(
                 f'#!/bin/sh\nexec {real_git} "$@"\n', encoding="utf-8"
             )
@@ -2228,7 +2235,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin.mkdir()
             for name in ("git", "npx", "python3", "bash"):
                 source = shutil.which(name)
-                assert source is not None, name
+                if source is None:
+                    self.fail(name)
                 os.symlink(source, fake_bin / name)
 
             env = dict(os.environ)
@@ -2656,7 +2664,8 @@ class RuntimeScriptTests(unittest.TestCase):
                 "date",
             ):
                 source = shutil.which(name)
-                assert source is not None, name
+                if source is None:
+                    self.fail(name)
                 os.symlink(source, fake_bin / name)
             payload = {
                 "tool_input": {"command": "bundle exec rspec spec/models"},
@@ -3150,10 +3159,14 @@ class RuntimeScriptTests(unittest.TestCase):
             grep_path = shutil.which("grep")
             awk_path = shutil.which("awk")
             python3_path = shutil.which("python3")
-            assert dirname_path is not None
-            assert grep_path is not None
-            assert awk_path is not None
-            assert python3_path is not None
+            if dirname_path is None:
+                self.fail('dirname_path')
+            if grep_path is None:
+                self.fail('grep_path')
+            if awk_path is None:
+                self.fail('awk_path')
+            if python3_path is None:
+                self.fail('python3_path')
             os.symlink(dirname_path, fake_bin / "dirname")
             os.symlink(grep_path, fake_bin / "grep")
             os.symlink(awk_path, fake_bin / "awk")
@@ -3194,10 +3207,14 @@ class RuntimeScriptTests(unittest.TestCase):
             grep_path = shutil.which("grep")
             awk_path = shutil.which("awk")
             python3_path = shutil.which("python3")
-            assert dirname_path is not None
-            assert grep_path is not None
-            assert awk_path is not None
-            assert python3_path is not None
+            if dirname_path is None:
+                self.fail('dirname_path')
+            if grep_path is None:
+                self.fail('grep_path')
+            if awk_path is None:
+                self.fail('awk_path')
+            if python3_path is None:
+                self.fail('python3_path')
             os.symlink(dirname_path, fake_bin / "dirname")
             os.symlink(grep_path, fake_bin / "grep")
             os.symlink(awk_path, fake_bin / "awk")
@@ -3225,7 +3242,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             real_git = shutil.which("git")
-            assert real_git is not None
+            if real_git is None:
+                self.fail('real_git')
             (fake_bin / "npm").write_text(
                 "#!/usr/bin/env bash\nexit 0\n", encoding="utf-8"
             )
@@ -3283,9 +3301,12 @@ class RuntimeScriptTests(unittest.TestCase):
             real_git = shutil.which("git")
             real_python3 = shutil.which("python3")
             real_jq = shutil.which("jq")
-            assert real_git is not None
-            assert real_python3 is not None
-            assert real_jq is not None
+            if real_git is None:
+                self.fail('real_git')
+            if real_python3 is None:
+                self.fail('real_python3')
+            if real_jq is None:
+                self.fail('real_jq')
             (fake_bin / "npm").write_text(
                 "#!/usr/bin/env bash\n"
                 'if [[ "${1:-}" == "exec" ]]; then\n'
@@ -3350,7 +3371,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             real_git = shutil.which("git")
-            assert real_git is not None
+            if real_git is None:
+                self.fail('real_git')
             (fake_bin / "git").write_text(
                 "#!/usr/bin/env bash\n"
                 f"REAL_GIT={shlex.quote(real_git)}\n"
@@ -3412,7 +3434,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             real_git = shutil.which("git")
-            assert real_git is not None
+            if real_git is None:
+                self.fail('real_git')
             (fake_bin / "npm").write_text(
                 "#!/usr/bin/env bash\nexit 0\n", encoding="utf-8"
             )
@@ -3532,11 +3555,16 @@ class RuntimeScriptTests(unittest.TestCase):
             git_path = shutil.which("git")
             mktemp_path = shutil.which("mktemp")
             jq_path = shutil.which("jq")
-            assert python3_path is not None
-            assert dirname_path is not None
-            assert git_path is not None
-            assert mktemp_path is not None
-            assert jq_path is not None
+            if python3_path is None:
+                self.fail('python3_path')
+            if dirname_path is None:
+                self.fail('dirname_path')
+            if git_path is None:
+                self.fail('git_path')
+            if mktemp_path is None:
+                self.fail('mktemp_path')
+            if jq_path is None:
+                self.fail('jq_path')
             os.symlink(python3_path, fake_bin / "python3")
             os.symlink(dirname_path, fake_bin / "dirname")
             os.symlink(git_path, fake_bin / "git")
@@ -3569,8 +3597,10 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin.mkdir()
             real_git = shutil.which("git")
             real_python3 = shutil.which("python3")
-            assert real_git is not None
-            assert real_python3 is not None
+            if real_git is None:
+                self.fail('real_git')
+            if real_python3 is None:
+                self.fail('real_python3')
             (fake_bin / "npm").write_text(
                 "#!/usr/bin/env bash\nexit 0\n", encoding="utf-8"
             )
@@ -3665,7 +3695,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             dirname_path = shutil.which("dirname")
-            assert dirname_path is not None
+            if dirname_path is None:
+                self.fail('dirname_path')
             python3 = fake_bin / "python3"
             python3.write_text(
                 "#!/bin/bash\n"
@@ -3723,7 +3754,8 @@ class RuntimeScriptTests(unittest.TestCase):
                 "wc",
             ):
                 source = shutil.which(name)
-                assert source is not None, name
+                if source is None:
+                    self.fail(name)
                 os.symlink(source, fake_bin / name)
             env = dict(os.environ)
             env["PATH"] = str(fake_bin)
