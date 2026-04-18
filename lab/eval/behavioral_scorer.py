@@ -771,6 +771,11 @@ def _ensure_ollama_server():
         _ollama_stderr_path = stderr_path
         env = dict(os.environ)
         env["OLLAMA_HOST"] = f"{ollama_host}:{ollama_port}"
+        # Plugin-spawned ollama daemons get flash-attention + quantized KV cache
+        # for lower memory pressure during eval. Do not set globally — applies
+        # only when behavioral_scorer starts the server itself.
+        env.setdefault("OLLAMA_FLASH_ATTENTION", "1")
+        env.setdefault("OLLAMA_KV_CACHE_TYPE", "q8_0")
         _emit_info(f"Starting ollama serve on {env['OLLAMA_HOST']} ...")
         try:
             _ollama_server_proc = subprocess.Popen(

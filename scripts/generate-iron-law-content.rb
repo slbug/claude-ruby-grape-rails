@@ -162,6 +162,24 @@ end
 
 validate_entries!(yaml)
 
+DEFAULT_PREFERENCES_YAML = File.expand_path('../plugins/ruby-grape-rails/references/preferences.yml', __dir__)
+PREFERENCES_YAML = ENV.fetch('RUBY_PLUGIN_PREFERENCES_YAML', DEFAULT_PREFERENCES_YAML)
+
+prefs = nil
+if File.exist?(PREFERENCES_YAML)
+  prefs_raw = File.read(PREFERENCES_YAML)
+  prefs = YAML.safe_load(
+    prefs_raw,
+    permitted_classes: [],
+    permitted_symbols: [],
+    aliases: false
+  )
+  unless prefs.is_a?(Hash) && prefs['preferences'].is_a?(Array) && prefs['categories'].is_a?(Array)
+    warn "Error: Invalid preferences.yml structure in #{PREFERENCES_YAML}"
+    exit 1
+  end
+end
+
 def warn_missing_recommended(yaml)
   recommended = %w[severity applies_to init_text reference_files]
   nullable = %w[detector_id]
@@ -205,6 +223,35 @@ def generate_injectable_section(yaml)
   end
 end
 
+# Generate preferences injectable section (rendered between PREFERENCES_START/END markers)
+def generate_preferences_injectable(prefs)
+  unless prefs && prefs['preferences'].is_a?(Array) && !prefs['preferences'].empty?
+    # No preferences defined — emit a sentinel comment so the block stays
+    # present but inert.
+    puts '<!-- no preferences defined -->'
+    return
+  end
+
+  puts '## Research Preferences (advisory)'
+  puts ''
+  puts 'Apply when possible; fall back gracefully when tools are unavailable.'
+  puts ''
+
+  prefs['categories'].each do |cat|
+    prefs_in_cat = prefs['preferences'].select { |p| p['category'] == cat['id'] }
+    next if prefs_in_cat.empty?
+
+    puts "**#{cat['name']}:**"
+    puts ''
+    prefs_in_cat.each_with_index do |pref, idx|
+      init = pref['init_text']
+      text = (init.is_a?(String) && !init.strip.empty?) ? init : pref['summary_text']
+      puts "#{idx + 1}. #{text}"
+    end
+    puts ''
+  end
+end
+
 # Escape pipe characters for markdown tables
 def escape_table_cell(text)
   text.to_s.gsub('|', '\|')
@@ -227,7 +274,7 @@ def generate_tutorial_section(yaml)
 end
 
 # Generate injector script
-def generate_injector_script(yaml)
+def generate_injector_script(yaml, prefs)
   output = "Ruby/Rails/Grape Iron Laws (NON-NEGOTIABLE) — #{yaml['total_laws']} Total:\n\n"
 
   yaml['categories'].each do |cat|
@@ -238,6 +285,14 @@ def generate_injector_script(yaml)
 
   yaml['laws'].each do |law|
     output += "#{law['subagent_text']}\n"
+  end
+
+  if prefs && prefs['preferences'].is_a?(Array) && !prefs['preferences'].empty?
+    total_prefs = prefs['total_preferences'] || prefs['preferences'].length
+    output += "\nAdvisory Preferences — #{total_prefs} Total:\n"
+    prefs['preferences'].each do |pref|
+      output += "#{pref['subagent_text']}\n"
+    end
   end
 
   payload = JSON.generate(
@@ -251,8 +306,9 @@ def generate_injector_script(yaml)
   puts 'set -o nounset'
   puts 'set -o pipefail'
   puts ''
-  puts '# GENERATED FROM iron-laws.yml — DO NOT EDIT'
-  puts "# Source version: #{yaml['version']} (updated #{yaml['last_updated']})"
+  puts '# GENERATED FROM iron-laws.yml + preferences.yml — DO NOT EDIT'
+  prefs_version = prefs ? prefs['version'] : 'n/a'
+  puts "# Source versions: iron-laws=#{yaml['version']} preferences=#{prefs_version}"
   puts ''
   puts "cat <<'EOF'"
   puts payload
@@ -359,10 +415,12 @@ end
 case ARGV[0]
 when 'injectable'
   generate_injectable_section(yaml)
+when 'preferences_injectable'
+  generate_preferences_injectable(prefs)
 when 'tutorial'
   generate_tutorial_section(yaml)
 when 'injector'
-  generate_injector_script(yaml)
+  generate_injector_script(yaml, prefs)
 when 'canonical'
   generate_canonical_registry(yaml)
 when 'readme'
@@ -373,6 +431,6 @@ when 'validate'
   warn_missing_recommended(yaml)
   warn "Validation complete."
 else
-  puts "Usage: #{$PROGRAM_NAME} [injectable|tutorial|injector|canonical|readme|judge|validate]"
+  puts "Usage: #{$PROGRAM_NAME} [injectable|preferences_injectable|tutorial|injector|canonical|readme|judge|validate]"
   exit 1
 end

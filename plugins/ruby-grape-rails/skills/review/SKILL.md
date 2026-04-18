@@ -3,7 +3,7 @@ name: rb:review
 description: "Use when you need code review of changed files with parallel specialist agents for correctness, security, testing, Active Record, Grape, and Sidekiq boundaries. Use after implementation before commit or PR."
 when_to_use: "Triggers: \"review my changes\", \"code review\", \"review before commit\", \"check this PR\", \"review for security\". Does NOT handle: fixing code, full project audit, planning, verification/test runs."
 argument-hint: "[test|security|sidekiq|deploy|iron-laws|all]"
-effort: max
+effort: xhigh
 ---
 # Review Ruby/Rails/Grape Code
 

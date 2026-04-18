@@ -1,8 +1,8 @@
 {
   "name": "ruby-grape-rails",
-  "version": "1.12.10",
-  "description": "Ruby/Rails/Grape development with specialist agents, Iron Laws, and verification workflows",
-  "keywords": ["ruby", "rails", "grape", "postgres", "redis", "sidekiq"],
+  "version": "1.13.0",
+  "description": "Specialist agents, Iron Laws, parallel code review, and plan→work→verify→review→compound workflow for Ruby, Rails, Grape, Sidekiq, Hotwire, Active Record, and Sequel projects.",
+  "keywords": ["ruby", "rails", "grape", "sidekiq", "hotwire", "turbo", "stimulus", "active-record", "sequel", "postgres", "redis", "rspec", "minitest", "brakeman", "rubocop", "karafka", "solid-queue", "tidewave", "iron-laws", "code-review", "specialist-agents", "plan-work-verify"],
   "author": {
     "name": "Alexander Grebennik",
     "url": "https://github.com/slbug"

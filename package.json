@@ -1,8 +1,8 @@
 {
   "name": "ruby-grape-rails-plugin",
-  "version": "1.12.10",
+  "version": "1.13.0",
   "private": true,
-  "description": "Claude Code plugin for Ruby, Rails, Grape, PostgreSQL, Redis, and Sidekiq development",
+  "description": "Specialist agents, Iron Laws, parallel code review, and plan→work→verify→review→compound workflow for Ruby, Rails, Grape, Sidekiq, Hotwire, Active Record, and Sequel projects.",
   "scripts": {
     "lint": "npm run lint:markdown && npm run validate:yaml && npm run validate:json && npm run validate:shell",
     "lint:markdown": "git ls-files -z '*.md' | xargs -0 markdownlint --",

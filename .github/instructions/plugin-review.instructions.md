@@ -24,8 +24,9 @@ excludeAgent: "coding-agent"
   contributor CLAUDE.md context
 - Do NOT flag `permissionMode` as missing — Claude Code ignores it on
   plugin agents
-- Model tiers: opus for primary orchestrators, sonnet for most specialists,
-  haiku for mechanical tasks
+- Model tiers: opus (or `opusplan` for plan-phase orchestrators that
+  benefit from 200K plan-phase context) for primary orchestrators,
+  sonnet for most specialists, haiku for mechanical tasks
 - Descriptions must be <= 250 characters
 
 ## Skill Conventions (plugins/**/skills/*/SKILL.md)
@@ -67,6 +68,22 @@ excludeAgent: "coding-agent"
 - From `hooks.json`, `.mcp.json`, `monitors/monitors.json`, template
   expansion is supported; reference bundled scripts via
   `${CLAUDE_PLUGIN_ROOT}/...`
+
+## References & Registries (plugins/**/references/)
+
+- `iron-laws.yml` — non-negotiable STOP-if-violated rules; generated
+  into README, canonical registry, init template, tutorial, injector
+  script, and iron-law-judge agent via
+  `scripts/generate-iron-law-outputs.sh`
+- `preferences.yml` — advisory soft-preference rules (parallel registry,
+  same schema minus `detector_id`, severity capped at `medium`/`low`);
+  generated into the init template `PREFERENCES_START/END` block and
+  appended to the subagent injector payload as "Advisory Preferences"
+- Do NOT flag `preferences.yml` references or the generated
+  `Advisory Preferences` section as unknown — both are first-class since
+  v1.13.0
+- `.claude/rules/iron-laws-governance.md` — contributor policy on when
+  to add/remove/demote Iron Laws; auto-loads on `**/iron-laws.yml` edits
 
 ## Plugin Settings (plugins/**/settings.json)
 

@@ -50,14 +50,15 @@ Usage: ./scripts/generate-iron-law-outputs.sh [target]
 Regenerate Iron Law projections from plugins/ruby-grape-rails/references/iron-laws.yml.
 
 Targets:
-  readme     Update bounded Iron Laws section in README.md
-  canonical  Regenerate canonical-registry.md
-  init       Update bounded Iron Laws section in init injectable template
-  tutorial   Update bounded Iron Laws section in intro tutorial content
-  injector   Regenerate inject-iron-laws.sh
-  judge      Update bounded Iron Laws section in iron-law-judge.md
-  validate   Run schema validation only (no generation)
-  all        Regenerate all supported targets
+  readme      Update bounded Iron Laws section in README.md
+  canonical   Regenerate canonical-registry.md
+  init        Update bounded Iron Laws + preferences sections in init injectable template
+  tutorial    Update bounded Iron Laws section in intro tutorial content
+  injector    Regenerate inject-iron-laws.sh (Iron Laws + advisory preferences)
+  judge       Update bounded Iron Laws section in iron-law-judge.md
+  preferences Update bounded preferences block in init injectable template
+  validate    Run schema validation only (no generation)
+  all         Regenerate all supported targets
 
 Options:
   -h, --help Show this help
@@ -66,7 +67,7 @@ EOF
 
 valid_target() {
   case "$1" in
-    readme|canonical|init|tutorial|injector|judge|validate|all) return 0 ;;
+    readme|canonical|init|tutorial|injector|judge|preferences|validate|all) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -211,6 +212,68 @@ update_file() {
   log_info "Updated $file"
 }
 
+# Update preferences block in a file using PREFERENCES_START/END markers
+update_preferences_block() {
+  local file="$1"
+  local start_marker="<!-- PREFERENCES_START -->"
+  local end_marker="<!-- PREFERENCES_END -->"
+  local tmp_file=""
+
+  validate_destination_path "$file" || return 1
+
+  if [[ ! -f "$file" ]]; then
+    log_error "File not found: $file"
+    return 1
+  fi
+
+  if [[ ! -r "$file" ]]; then
+    log_error "File not readable: $file"
+    return 1
+  fi
+
+  if ! grep -q "$start_marker" "$file" || ! grep -q "$end_marker" "$file"; then
+    log_error "Preferences markers not found or malformed in $file"
+    return 1
+  fi
+
+  local new_content
+  local ruby_exit=0
+  new_content=$(ruby "$RUBY_SCRIPT" preferences_injectable) || ruby_exit=$?
+  if [[ $ruby_exit -ne 0 ]]; then
+    log_error "Failed to generate preferences content (exit $ruby_exit)"
+    return 1
+  fi
+  tmp_file=$(new_output_temp_file "$file") || return 1
+
+  if ! ruby -e '
+    file = ARGV[0]
+    start_marker = ARGV[1]
+    end_marker = ARGV[2]
+    new_content = STDIN.read
+
+    content = File.read(file)
+
+    pattern = /(#{Regexp.escape(start_marker)}).*?(#{Regexp.escape(end_marker)})/m
+    unless content.match?(pattern)
+      warn "Preferences markers not found or malformed in #{file}"
+      exit 1
+    end
+    replacement = "#{start_marker}\n\n<!-- GENERATED FROM preferences.yml — DO NOT EDIT -->\n\n#{new_content}\n#{end_marker}"
+
+    puts content.sub(pattern, replacement)
+  ' "$file" "$start_marker" "$end_marker" <<< "$new_content" > "$tmp_file"; then
+    safe_remove_temp_output "$tmp_file" "${file%/*}" || true
+    return 1
+  fi
+
+  if ! atomic_move_into_target "$tmp_file" "$file"; then
+    safe_remove_temp_output "$tmp_file" "${file%/*}" || true
+    return 1
+  fi
+
+  log_info "Updated preferences block in $file"
+}
+
 # Generate whole file (no markers)
 generate_whole_file() {
   local output_file="$1"
@@ -315,6 +378,14 @@ generate_all() {
     init|all)
       log_info "Generating init injectable template..."
       update_file "${REPO_ROOT}/plugins/ruby-grape-rails/skills/init/references/injectable-template.md" "injectable"
+      update_preferences_block "${REPO_ROOT}/plugins/ruby-grape-rails/skills/init/references/injectable-template.md"
+      ;;
+  esac
+
+  case "$target" in
+    preferences)
+      log_info "Generating preferences block in init injectable template..."
+      update_preferences_block "${REPO_ROOT}/plugins/ruby-grape-rails/skills/init/references/injectable-template.md"
       ;;
   esac
 

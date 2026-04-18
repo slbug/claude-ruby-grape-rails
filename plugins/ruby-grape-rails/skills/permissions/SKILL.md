@@ -111,6 +111,26 @@ When writing:
 3. Rewrite deprecated `:*` patterns to the modern space-before-wildcard form.
 4. Show the final diff before writing unless the user explicitly asked for non-interactive application.
 
+## Network egress restriction (CC 2.1.113+)
+
+For strict environments, the top-level `sandbox.network.deniedDomains` setting
+in user or project `settings.json` blocks Bash tool network access to listed
+domains at the CC sandbox layer (separate from plugin permission rules).
+
+```json
+{
+  "sandbox": {
+    "network": {
+      "deniedDomains": ["metadata.google.internal", "169.254.169.254"]
+    }
+  }
+}
+```
+
+Use this when plugin permission rules alone cannot meet compliance
+constraints (e.g., blocking cloud metadata endpoints, known exfiltration
+targets). Applies beneath plugin permission rules — denylist wins.
+
 ## References
 
 - `${CLAUDE_SKILL_DIR}/references/extraction-script.md` — canonical extractor and output shape

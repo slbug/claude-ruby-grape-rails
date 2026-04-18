@@ -1,0 +1,27 @@
+# Advisory Preferences Registry
+# Source of truth for soft-preference rules across the Ruby/Grape/Rails plugin
+# Structure mirrors iron-laws.yml minus `detector_id` (no code-pattern check
+# for preferences). Severity capped at `medium` / `low`.
+
+version: "1.0.0"
+last_updated: "2026-04-18"
+total_preferences: 1
+
+categories:
+  - id: research
+    name: "Research & Docs"
+    description: "Preferred research tooling"
+    preference_count: 1
+
+preferences:
+  - id: 1
+    category: research
+    title: "Prefer Context7 MCP for Library Docs"
+    rule: "PREFER Context7 MCP (mcp__*context7*__query-docs / resolve-library-id) over WebFetch for library, gem, framework, or API docs — fallback to WebFetch only when Context7 tools are not available"
+    rationale: "Context7 returns up-to-date, version-specific docs from official sources; WebFetch may fetch stale or partial pages. Prevents wasted roundtrips during review/audit/investigate on unknown gems."
+    severity: medium
+    applies_to: ["*"]
+    summary_text: "Prefer Context7 MCP over WebFetch for library docs"
+    init_text: "PREFER Context7 MCP over WebFetch for library/gem/framework docs when mcp__*context7*__* tools are available"
+    subagent_text: "Preference: PREFER Context7 MCP (query-docs / resolve-library-id) over WebFetch for library/gem docs — fallback to WebFetch only if Context7 tools unavailable"
+    reference_files: ["research/context7-usage.md"]

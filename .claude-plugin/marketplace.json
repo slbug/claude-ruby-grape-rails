@@ -5,12 +5,12 @@
   },
   "metadata": {
     "description": "Claude Code plugins by Alexander Grebennik",
-    "version": "1.12.10"
+    "version": "1.13.0"
   },
   "plugins": [
     {
       "name": "ruby-grape-rails",
-      "description": "Ruby/Rails/Grape development with specialist agents, Iron Laws, and verification workflows",
+      "description": "Specialist agents, Iron Laws, parallel code review, and plan→work→verify→review→compound workflow for Ruby, Rails, Grape, Sidekiq, Hotwire, Active Record, and Sequel projects.",
       "author": {
         "name": "Alexander Grebennik",
         "url": "https://github.com/slbug"
@@ -19,10 +19,10 @@
         "source": "git-subdir",
         "url": "slbug/claude-ruby-grape-rails",
         "path": "plugins/ruby-grape-rails",
-        "ref": "v1.12.10"
+        "ref": "v1.13.0"
       },
       "category": "development",
-      "tags": ["ruby", "rails", "grape", "postgres", "redis", "sidekiq"]
+      "tags": ["ruby", "rails", "grape", "sidekiq", "hotwire", "turbo", "stimulus", "active-record", "sequel", "postgres", "redis", "rspec", "minitest", "brakeman", "rubocop", "karafka", "solid-queue", "tidewave", "iron-laws", "code-review", "specialist-agents", "plan-work-verify"]
     }
   ]
 }

@@ -3,7 +3,7 @@ name: rb:plan
 description: "Use when you need an implementation plan for multi-file Rails or Grape features, Sidekiq changes, or risky migrations and refactors before coding starts. Also accepts review files and existing plans."
 when_to_use: "Triggers: \"plan this feature\", \"make a plan\", \"implementation plan\", \"how should we build\", \"plan before coding\". Does NOT handle: brainstorming ideas, implementing code, code review."
 argument-hint: <feature description OR path to review/plan file>
-effort: max
+effort: xhigh
 ---
 # Plan Ruby/Rails/Grape Work
 
