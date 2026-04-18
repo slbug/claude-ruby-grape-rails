@@ -11,7 +11,7 @@ crosses those boundaries.
 The fetch script maintains:
 
 - `llms.txt` as the discovery index
-- 29 detailed cached pages under `.claude/docs-check/docs-cache/`
+- 46 detailed cached pages under `.claude/docs-check/docs-cache/` (includes nested `whats-new/` and `agent-sdk/` subdirectories)
 
 Primary cached pages (plugin-critical):
 
@@ -38,6 +38,14 @@ Primary cached pages (plugin-critical):
 | `sandboxing.md` | Bash sandboxing semantics affecting hook side-effect guarantees |
 | `context-window.md` | PreCompact/PostCompact hook timing and payload |
 | `code-review.md` | Built-in `/code-review` flow — overlap check with plugin `/rb:review` |
+| `best-practices.md` | Plugin development best practices — contributor baseline for authoring guidelines |
+| `security.md` | Plugin-facing security guidance — alignment for `block-dangerous-ops.sh` / `secret-scan.sh` policy |
+| `checkpointing.md` | File checkpointing semantics affecting hook ordering assumptions |
+| `remote-control.md` | `CronCreate` / scheduled trigger surface — `schedule` skill validation |
+| `model-config.md` | Agent/skill `model:` frontmatter validity (opus-4-7, sonnet-4-6, haiku-4-5) |
+| `ultraplan.md` | Bundled `/ultraplan` — overlap check with plugin `/rb:plan` |
+| `ultrareview.md` | Bundled `/ultrareview` — overlap check with plugin `/rb:review` |
+| `changelog.md` | Canonical CC changelog — authoritative source for `cc-changelog` skill |
 
 Additional cached pages (context/reference):
 
@@ -51,6 +59,15 @@ Additional cached pages (context/reference):
 | `overview.md` | High-level Claude Code overview |
 | `permission-modes.md` | Permission modes and implications for plugins |
 | `permissions.md` | Comprehensive permissions guide |
+| `fast-mode.md` | `/fast` Opus 4.6 semantics — relates to `effort: max` skill settings |
+| `output-styles.md` | Output-style surface adjacent to statusline + `subagentStatusLine` |
+| `troubleshooting.md` | Hook failure diagnosis patterns |
+| `common-workflows.md` | Plan/Work/Review lifecycle comparison with `/rb:*` workflows |
+| `whats-new/index.md` | Weekly release notes index — `cc-changelog` + docs-check feed |
+| `agent-sdk/hooks.md` | SDK hook interface parity check (SDK vs plugin surface) |
+| `agent-sdk/plugins.md` | SDK plugin packaging parity |
+| `agent-sdk/subagents.md` | SDK subagent frontmatter parity |
+| `agent-sdk/slash-commands.md` | SDK slash command parity |
 
 ## Which Pages To Read
 
@@ -158,11 +175,109 @@ Questions this answers:
 Use:
 
 - `code-review.md`
+- `ultraplan.md`
+- `ultrareview.md`
+- `common-workflows.md`
 
 Questions this answers:
 
 - Does a plugin `/rb:*` command duplicate or conflict with a built-in CC
-  command (e.g., `/code-review`)?
+  command (e.g., `/code-review`, `/ultraplan`, `/ultrareview`)?
+- Is a plugin workflow step already covered by a documented CC lifecycle?
+
+### CC Version Tracking
+
+Use:
+
+- `changelog.md`
+- `whats-new/index.md`
+
+Questions this answers:
+
+- Is a CC feature mentioned in the plugin actually shipped yet?
+- Does a plugin workaround predate an upstream fix that should remove it?
+- What new CC entries landed since the last `/cc-changelog` run?
+
+### Remote Control and Scheduled Tasks
+
+Use:
+
+- `remote-control.md`
+
+Questions this answers:
+
+- Does a plugin reference to `CronCreate` / scheduled triggers still match
+  the documented surface?
+- Are Remote Control-only features assumed present in a skill that should
+  degrade gracefully?
+
+### Effort Tiering and Fast Mode
+
+Use:
+
+- `fast-mode.md`
+- `model-config.md`
+
+Questions this answers:
+
+- Is `effort: max` valid for the model chosen in a given skill's frontmatter?
+- Does `/fast` Opus 4.6 behavior match assumptions in workflow skills?
+- Are agent/skill `model:` frontmatter values still supported?
+
+### Plugin Best Practices
+
+Use:
+
+- `best-practices.md`
+
+Questions this answers:
+
+- Does a contributor recommendation contradict documented plugin best
+  practices?
+- Is a structural guideline in this repo aligned with CC authoring guidance?
+
+### Security Baseline
+
+Use:
+
+- `security.md`
+
+Questions this answers:
+
+- Does `block-dangerous-ops.sh` or `secret-scan.sh` policy align with
+  documented plugin security guidance?
+- Are plugin-injected security reminders still matched by documented CC
+  behavior?
+
+### File Checkpointing and Hook Ordering
+
+Use:
+
+- `checkpointing.md`
+- `troubleshooting.md`
+
+Questions this answers:
+
+- Does a plugin hook rely on file-checkpoint ordering the docs still
+  describe?
+- Is a reported hook failure pattern a known documented issue?
+
+### SDK Parity Checks
+
+Use (only when the finding crosses plugin/SDK boundaries):
+
+- `agent-sdk/hooks.md`
+- `agent-sdk/plugins.md`
+- `agent-sdk/subagents.md`
+- `agent-sdk/slash-commands.md`
+
+Questions this answers:
+
+- Does a plugin-shipped agent frontmatter field match the SDK-documented
+  surface?
+- Does a plugin slash-command shape match the SDK command interface?
+- Is a hook event or payload field documented equivalently in plugin and
+  SDK surfaces?
 
 ## Practical Loading Rules
 
