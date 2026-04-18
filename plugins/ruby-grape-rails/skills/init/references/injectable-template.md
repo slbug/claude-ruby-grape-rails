@@ -187,13 +187,13 @@ If code would violate ANY of these, you MUST:
 
 <!-- GENERATED FROM preferences.yml — DO NOT EDIT -->
 
-## Research Preferences (advisory)
+## Advisory Preferences
 
 Apply when possible; fall back gracefully when tools are unavailable.
 
 **Research & Docs:**
 
-1. PREFER Context7 MCP over WebFetch for library/gem/framework docs when mcp__*context7*__* tools are available
+1. PREFER Context7 MCP over WebFetch for library/gem/framework docs when `mcp__*context7*__*` tools are available
 
 <!-- PREFERENCES_END -->
 

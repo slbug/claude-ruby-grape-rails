@@ -165,6 +165,49 @@ validate_entries!(yaml)
 DEFAULT_PREFERENCES_YAML = File.expand_path('../plugins/ruby-grape-rails/references/preferences.yml', __dir__)
 PREFERENCES_YAML = ENV.fetch('RUBY_PLUGIN_PREFERENCES_YAML', DEFAULT_PREFERENCES_YAML)
 
+def validate_preferences!(prefs, source_path)
+  errors = []
+  category_ids = prefs['categories'].filter_map { |c| c['id'] if c.is_a?(Hash) }
+  category_totals = Hash.new(0)
+
+  prefs['preferences'].each_with_index do |pref, idx|
+    unless pref.is_a?(Hash)
+      errors << "preference[#{idx}] must be a mapping"
+      next
+    end
+    %w[id category title rule rationale summary_text subagent_text].each do |key|
+      value = pref[key]
+      unless value.is_a?(String) ? !value.strip.empty? : !value.nil?
+        errors << "preference[#{idx}] missing or blank field: #{key}"
+      end
+    end
+    cat_id = pref['category']
+    if cat_id && !category_ids.include?(cat_id)
+      errors << "preference[#{idx}] references unknown category: #{cat_id.inspect}"
+    end
+    category_totals[cat_id] += 1 if cat_id
+  end
+
+  total_declared = prefs['total_preferences']
+  if total_declared.is_a?(Integer) && total_declared != prefs['preferences'].length
+    errors << "total_preferences=#{total_declared} does not match actual preferences count=#{prefs['preferences'].length}"
+  end
+
+  prefs['categories'].each_with_index do |cat, idx|
+    next unless cat.is_a?(Hash) && cat['id']
+    declared = cat['preference_count']
+    next unless declared.is_a?(Integer)
+    actual = category_totals[cat['id']]
+    next if declared == actual
+    errors << "category[#{idx}] #{cat['id'].inspect} preference_count=#{declared} does not match actual count=#{actual}"
+  end
+
+  return if errors.empty?
+  warn "Error: Invalid preferences.yml entries in #{source_path}"
+  errors.each { |e| warn "  - #{e}" }
+  exit 1
+end
+
 prefs = nil
 if File.exist?(PREFERENCES_YAML)
   prefs_raw = File.read(PREFERENCES_YAML)
@@ -178,6 +221,7 @@ if File.exist?(PREFERENCES_YAML)
     warn "Error: Invalid preferences.yml structure in #{PREFERENCES_YAML}"
     exit 1
   end
+  validate_preferences!(prefs, PREFERENCES_YAML)
 end
 
 def warn_missing_recommended(yaml)
@@ -232,10 +276,13 @@ def generate_preferences_injectable(prefs)
     return
   end
 
-  puts '## Research Preferences (advisory)'
+  puts '## Advisory Preferences'
   puts ''
   puts 'Apply when possible; fall back gracefully when tools are unavailable.'
   puts ''
+
+  known_category_ids = prefs['categories'].map { |c| c['id'] }
+  rendered_pref_ids = []
 
   prefs['categories'].each do |cat|
     prefs_in_cat = prefs['preferences'].select { |p| p['category'] == cat['id'] }
@@ -247,9 +294,25 @@ def generate_preferences_injectable(prefs)
       init = pref['init_text']
       text = (init.is_a?(String) && !init.strip.empty?) ? init : pref['summary_text']
       puts "#{idx + 1}. #{text}"
+      rendered_pref_ids << pref['id']
     end
     puts ''
   end
+
+  # Safety net: preferences whose category is not declared in `categories`
+  # should be loud, not silently dropped. Validator normally catches this;
+  # this renders them under an Uncategorized bucket as belt-and-suspenders.
+  orphans = prefs['preferences'].reject { |p| known_category_ids.include?(p['category']) }
+  return if orphans.empty?
+
+  puts '**Uncategorized:**'
+  puts ''
+  orphans.each_with_index do |pref, idx|
+    init = pref['init_text']
+    text = (init.is_a?(String) && !init.strip.empty?) ? init : pref['summary_text']
+    puts "#{idx + 1}. #{text}"
+  end
+  puts ''
 end
 
 # Escape pipe characters for markdown tables
@@ -302,13 +365,18 @@ def generate_injector_script(yaml, prefs)
     }
   )
 
+  has_prefs = prefs && prefs['preferences'].is_a?(Array) && !prefs['preferences'].empty?
   puts '#!/usr/bin/env bash'
   puts 'set -o nounset'
   puts 'set -o pipefail'
   puts ''
-  puts '# GENERATED FROM iron-laws.yml + preferences.yml — DO NOT EDIT'
-  prefs_version = prefs ? prefs['version'] : 'n/a'
-  puts "# Source versions: iron-laws=#{yaml['version']} preferences=#{prefs_version}"
+  if has_prefs
+    puts '# GENERATED FROM iron-laws.yml + preferences.yml — DO NOT EDIT'
+    puts "# Source versions: iron-laws=#{yaml['version']} preferences=#{prefs['version']}"
+  else
+    puts '# GENERATED FROM iron-laws.yml — DO NOT EDIT'
+    puts "# Source version: iron-laws=#{yaml['version']} (preferences.yml absent)"
+  end
   puts ''
   puts "cat <<'EOF'"
   puts payload

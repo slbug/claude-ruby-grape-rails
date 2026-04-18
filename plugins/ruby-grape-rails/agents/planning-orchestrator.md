@@ -3,7 +3,7 @@ name: planning-orchestrator
 description: Orchestrates Ruby/Rails/Grape feature planning by coordinating specialist agents and synthesizing a plan compatible with /rb:work.
 tools: Read, Write, Grep, Glob, Agent
 disallowedTools: Edit, NotebookEdit
-model: opusplan
+model: opus
 maxTurns: 40
 memory: project
 effort: high

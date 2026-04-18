@@ -33,8 +33,6 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `effort: max` → `effort: xhigh` on 4 skills (`plan`, `audit`, `review`,
   `full`). Opus 4.7 recommended default; `max` prone to overthinking per CC
   docs.
-- `planning-orchestrator` agent uses `model: opusplan` (Opus reasoning +
-  Sonnet code gen + 200K plan-phase context) instead of bare `opus`.
 - `lab/eval/behavioral_scorer.py` sets `OLLAMA_FLASH_ATTENTION=1` and
   `OLLAMA_KV_CACHE_TYPE=q8_0` on plugin-spawned `ollama serve` processes.
   `setdefault` respects contributor overrides.

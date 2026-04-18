@@ -24,9 +24,10 @@ excludeAgent: "coding-agent"
   contributor CLAUDE.md context
 - Do NOT flag `permissionMode` as missing — Claude Code ignores it on
   plugin agents
-- Model tiers: opus (or `opusplan` for plan-phase orchestrators that
-  benefit from 200K plan-phase context) for primary orchestrators,
-  sonnet for most specialists, haiku for mechanical tasks
+- Model tiers: opus for primary orchestrators, sonnet for most specialists,
+  haiku for mechanical tasks. `opusplan` is a session-level `/model` alias
+  only (sub-agents.md:237 does NOT list it as a valid subagent `model`
+  value) — do NOT flag its absence from agent frontmatter as a gap
 - Descriptions must be <= 250 characters
 
 ## Skill Conventions (plugins/**/skills/*/SKILL.md)
