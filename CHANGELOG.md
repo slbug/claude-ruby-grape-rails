@@ -7,6 +7,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.13.2] - 2026-04-19
+
+### Changed
+
+- **`check-plugin-version.sh` message rephrased as imperative** so Claude
+  surfaces the drift warning to the user at the start of the next response
+  instead of silently reading the fact from SessionStart context. Per
+  `hooks.md §SessionStart`, stdout is added to Claude's context — neutral
+  phrasing meant the agent could read the warning without relaying it.
+  New output is prefixed `[Ruby/Rails/Grape plugin — user action required]`
+  and explicitly directs the agent to tell the user and recommend
+  `/rb:init --update` (or warn about plugin downgrade for newer pins).
+
 ## [1.13.1] - 2026-04-18
 
 ### Added
@@ -1710,7 +1723,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.1...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.2...HEAD
+[1.13.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.1...v1.13.2
 [1.13.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.10...v1.13.0
 [1.12.10]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.9...v1.12.10

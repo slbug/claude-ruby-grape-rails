@@ -137,12 +137,26 @@ SESSION_LOCK="${LOCK_DIR}/${SESSION_KEY}"
 # mkdir is atomic: exits non-zero if the lock already exists.
 mkdir -- "$SESSION_LOCK" 2>/dev/null || exit 0
 
-# SessionStart stdout IS added to Claude's context.
+# SessionStart stdout is added to Claude's context (hooks.md §SessionStart).
+# Phrase the message as an imperative instruction so Claude surfaces the
+# drift to the user at the start of the next response instead of silently
+# reading the fact.
 case "$DIRECTION" in
 outdated)
-  echo "⚠ Ruby/Rails/Grape plugin v${CURRENT} active; project CLAUDE.md pinned to v${PINNED}. Run /rb:init --update to refresh."
+  cat <<NOTICE
+[Ruby/Rails/Grape plugin — user action required]
+Installed plugin v${CURRENT} is ahead of project CLAUDE.md pinned at v${PINNED}.
+Tell the user at the start of your next response, then recommend:
+  /rb:init --update
+NOTICE
   ;;
 newer)
-  echo "⚠ Project CLAUDE.md pinned to Ruby/Rails/Grape plugin v${PINNED}, but installed plugin is v${CURRENT}. Plugin may have been downgraded — verify before running /rb:init --update (it would overwrite newer marker content)."
+  cat <<NOTICE
+[Ruby/Rails/Grape plugin — user action required]
+Installed plugin v${CURRENT} is OLDER than project CLAUDE.md pinned at v${PINNED}.
+The plugin may have been downgraded. Tell the user at the start of your next
+response; recommend verifying the install before running /rb:init --update
+(it would overwrite the newer marker content with the older template).
+NOTICE
   ;;
 esac
