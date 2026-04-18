@@ -282,7 +282,6 @@ def generate_preferences_injectable(prefs)
   puts ''
 
   known_category_ids = prefs['categories'].map { |c| c['id'] }
-  rendered_pref_ids = []
 
   prefs['categories'].each do |cat|
     prefs_in_cat = prefs['preferences'].select { |p| p['category'] == cat['id'] }
@@ -294,7 +293,6 @@ def generate_preferences_injectable(prefs)
       init = pref['init_text']
       text = (init.is_a?(String) && !init.strip.empty?) ? init : pref['summary_text']
       puts "#{idx + 1}. #{text}"
-      rendered_pref_ids << pref['id']
     end
     puts ''
   end
