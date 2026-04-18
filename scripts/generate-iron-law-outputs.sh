@@ -47,7 +47,9 @@ show_usage() {
   cat <<'EOF'
 Usage: ./scripts/generate-iron-law-outputs.sh [target]
 
-Regenerate Iron Law projections from plugins/ruby-grape-rails/references/iron-laws.yml.
+Regenerate Iron Law + Advisory Preferences projections from
+plugins/ruby-grape-rails/references/iron-laws.yml and
+plugins/ruby-grape-rails/references/preferences.yml.
 
 Targets:
   readme      Update bounded Iron Laws section in README.md

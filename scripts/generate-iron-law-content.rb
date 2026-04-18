@@ -306,21 +306,25 @@ def warn_missing_preferences_recommended(prefs)
   end
 end
 
-prefs = nil
-if File.exist?(PREFERENCES_YAML)
-  prefs_raw = File.read(PREFERENCES_YAML)
-  prefs = YAML.safe_load(
-    prefs_raw,
-    permitted_classes: [],
-    permitted_symbols: [],
-    aliases: false
-  )
-  unless prefs.is_a?(Hash) && prefs['preferences'].is_a?(Array) && prefs['categories'].is_a?(Array)
-    warn "Error: Invalid preferences.yml structure in #{PREFERENCES_YAML}"
-    exit 1
-  end
-  validate_preferences!(prefs, PREFERENCES_YAML)
+unless File.exist?(PREFERENCES_YAML)
+  warn "Error: preferences.yml source not found: #{PREFERENCES_YAML}"
+  warn '(preferences.yml is a first-class shipped registry since v1.13.0.'
+  warn ' Override path via RUBY_PLUGIN_PREFERENCES_YAML env var.)'
+  exit 1
 end
+
+prefs_raw = File.read(PREFERENCES_YAML)
+prefs = YAML.safe_load(
+  prefs_raw,
+  permitted_classes: [],
+  permitted_symbols: [],
+  aliases: false
+)
+unless prefs.is_a?(Hash) && prefs['preferences'].is_a?(Array) && prefs['categories'].is_a?(Array)
+  warn "Error: Invalid preferences.yml structure in #{PREFERENCES_YAML}"
+  exit 1
+end
+validate_preferences!(prefs, PREFERENCES_YAML)
 
 def warn_missing_recommended(yaml)
   recommended = %w[severity applies_to init_text reference_files]
