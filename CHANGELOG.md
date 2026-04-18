@@ -7,6 +7,47 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-04-18
+
+### Added
+
+- **Advisory Preferences registry** (`plugins/ruby-grape-rails/references/preferences.yml`)
+  parallel to `iron-laws.yml`. First entry: prefer Context7 MCP over WebFetch
+  for library/gem docs when `mcp__*context7*__*` tools are available. Emitted
+  into `injectable-template.md` via new `PREFERENCES_START/END` markers and
+  appended to `inject-iron-laws.sh` subagent payload as an "Advisory
+  Preferences" section. Advisory only — plugin never requires Context7
+  installed.
+- `plugins/ruby-grape-rails/references/research/context7-usage.md` detection +
+  usage reference with WebFetch fallback guidance.
+- `.claude/rules/iron-laws-governance.md` contributor rule — Iron Laws may
+  only be added when repeated real incidents justify them. Auto-loads when
+  editing `**/iron-laws.yml`.
+
+### Changed
+
+- `scripts/generate-iron-law-content.rb` + `scripts/generate-iron-law-outputs.sh`
+  extended to load `preferences.yml`, emit the preferences injectable block,
+  and append preferences to the subagent injector payload. New bash target:
+  `preferences`.
+- `effort: max` → `effort: xhigh` on 4 skills (`plan`, `audit`, `review`,
+  `full`). Opus 4.7 recommended default; `max` prone to overthinking per CC
+  docs.
+- `lab/eval/behavioral_scorer.py` sets `OLLAMA_FLASH_ATTENTION=1` and
+  `OLLAMA_KV_CACHE_TYPE=q8_0` on plugin-spawned `ollama serve` processes.
+  `setdefault` respects contributor overrides.
+- `skills/permissions/SKILL.md` + `skills/security/SKILL.md` document
+  CC 2.1.113 `sandbox.network.deniedDomains` setting for infra-layer egress
+  restriction.
+- `.claude/rules/eval-workflow.md` notes `ENABLE_PROMPT_CACHING_1H=1` for
+  long contributor eval runs.
+
+### Fixed
+
+- `.claude/skills/cc-changelog/references/analysis-rules.md:37` stale
+  reference to 250-char description cap updated to 1,536 combined
+  `description` + `when_to_use` cap (shipped 1.12.5).
+
 ## [1.12.10] - 2026-04-18
 
 ### Changed
@@ -1638,7 +1679,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.10...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.0...HEAD
+[1.13.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.10...v1.13.0
 [1.12.10]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.9...v1.12.10
 [1.12.9]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.8...v1.12.9
 [1.12.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.7...v1.12.8

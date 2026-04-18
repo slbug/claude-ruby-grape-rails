@@ -83,7 +83,7 @@ checks.
 │    sidekiq-specialist              auto-format · ruby-syntax-check  │
 │    deployment-validator            iron-law-verify · security-scan  │
 │    ruby-gem-researcher             debug-stmt-detect · error-critic │
-│    web-researcher                  progress-tracking · db/prod/git guard │
+│    web-researcher                  progress-tracking · db/prod/git  │
 │                                                                     │
 │  ───────────────────────────────────────────────────────────        │
 │  22 Iron Laws · Runtime Tooling · plan→work→verify→review→compound  │

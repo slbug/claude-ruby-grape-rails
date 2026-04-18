@@ -30,6 +30,10 @@ Minimum runtime: python3 3.10+ for `lab/eval/`.
 - `eval-output` is separate from `eval-all` / `eval-ci`
 - `--include-untracked` makes results non-comparable; not part of `eval-ci`
 - `check-dynamic-injection.sh` expects git metadata for tracked-file scans
+- For long contributor eval runs (`make eval-all`, `make eval-behavioral-fresh`),
+  set `ENABLE_PROMPT_CACHING_1H=1` to opt into the 1-hour cache TTL and reduce
+  per-call cost. Complements `FORCE_PROMPT_CACHING_5M=1` when you need the
+  default shorter TTL on specific subruns. (CC 2.1.108+.)
 
 ## Current Scope
 

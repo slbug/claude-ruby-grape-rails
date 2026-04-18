@@ -1725,7 +1725,8 @@ class RuntimeScriptTests(unittest.TestCase):
                 "cat",
             ):
                 source = shutil.which(name)
-                self.assertIsNotNone(source, name)
+                if source is None:
+                    self.fail(name)
                 os.symlink(source, fake_bin / name)
             env = dict(os.environ)
             env["CLAUDE_PROJECT_DIR"] = tmpdir
@@ -1783,8 +1784,10 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin.mkdir()
             real_jq = shutil.which("jq")
             real_grep = shutil.which("grep")
-            self.assertIsNotNone(real_jq)
-            self.assertIsNotNone(real_grep)
+            if real_jq is None:
+                self.fail('real_jq')
+            if real_grep is None:
+                self.fail('real_grep')
             (fake_bin / "jq").write_text(
                 f'#!/bin/sh\nexec {real_jq} "$@"\n', encoding="utf-8"
             )
@@ -1841,7 +1844,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             real_git = shutil.which("git")
-            self.assertIsNotNone(real_git)
+            if real_git is None:
+                self.fail('real_git')
             (fake_bin / "git").write_text(
                 f'#!/bin/sh\nexec {real_git} "$@"\n', encoding="utf-8"
             )
@@ -1993,7 +1997,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin.mkdir()
             for name in ("jq", "dirname", "head", "readlink", "grep", "sed"):
                 source = shutil.which(name)
-                self.assertIsNotNone(source, name)
+                if source is None:
+                    self.fail(name)
                 os.symlink(source, fake_bin / name)
             env = dict(os.environ)
             env["CLAUDE_PROJECT_DIR"] = tmpdir
@@ -2046,7 +2051,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin.mkdir()
             for name in ("jq", "dirname", "head", "readlink"):
                 source = shutil.which(name)
-                self.assertIsNotNone(source, name)
+                if source is None:
+                    self.fail(name)
                 os.symlink(source, fake_bin / name)
             env = dict(os.environ)
             env["CLAUDE_PROJECT_DIR"] = tmpdir
@@ -2196,7 +2202,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             real_git = shutil.which("git")
-            self.assertIsNotNone(real_git)
+            if real_git is None:
+                self.fail('real_git')
             (fake_bin / "git").write_text(
                 f'#!/bin/sh\nexec {real_git} "$@"\n', encoding="utf-8"
             )
@@ -2228,7 +2235,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin.mkdir()
             for name in ("git", "npx", "python3", "bash"):
                 source = shutil.which(name)
-                self.assertIsNotNone(source, name)
+                if source is None:
+                    self.fail(name)
                 os.symlink(source, fake_bin / name)
 
             env = dict(os.environ)
@@ -2656,7 +2664,8 @@ class RuntimeScriptTests(unittest.TestCase):
                 "date",
             ):
                 source = shutil.which(name)
-                self.assertIsNotNone(source, name)
+                if source is None:
+                    self.fail(name)
                 os.symlink(source, fake_bin / name)
             payload = {
                 "tool_input": {"command": "bundle exec rspec spec/models"},
@@ -3150,10 +3159,14 @@ class RuntimeScriptTests(unittest.TestCase):
             grep_path = shutil.which("grep")
             awk_path = shutil.which("awk")
             python3_path = shutil.which("python3")
-            self.assertIsNotNone(dirname_path)
-            self.assertIsNotNone(grep_path)
-            self.assertIsNotNone(awk_path)
-            self.assertIsNotNone(python3_path)
+            if dirname_path is None:
+                self.fail('dirname_path')
+            if grep_path is None:
+                self.fail('grep_path')
+            if awk_path is None:
+                self.fail('awk_path')
+            if python3_path is None:
+                self.fail('python3_path')
             os.symlink(dirname_path, fake_bin / "dirname")
             os.symlink(grep_path, fake_bin / "grep")
             os.symlink(awk_path, fake_bin / "awk")
@@ -3194,10 +3207,14 @@ class RuntimeScriptTests(unittest.TestCase):
             grep_path = shutil.which("grep")
             awk_path = shutil.which("awk")
             python3_path = shutil.which("python3")
-            self.assertIsNotNone(dirname_path)
-            self.assertIsNotNone(grep_path)
-            self.assertIsNotNone(awk_path)
-            self.assertIsNotNone(python3_path)
+            if dirname_path is None:
+                self.fail('dirname_path')
+            if grep_path is None:
+                self.fail('grep_path')
+            if awk_path is None:
+                self.fail('awk_path')
+            if python3_path is None:
+                self.fail('python3_path')
             os.symlink(dirname_path, fake_bin / "dirname")
             os.symlink(grep_path, fake_bin / "grep")
             os.symlink(awk_path, fake_bin / "awk")
@@ -3225,7 +3242,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             real_git = shutil.which("git")
-            self.assertIsNotNone(real_git)
+            if real_git is None:
+                self.fail('real_git')
             (fake_bin / "npm").write_text(
                 "#!/usr/bin/env bash\nexit 0\n", encoding="utf-8"
             )
@@ -3283,9 +3301,12 @@ class RuntimeScriptTests(unittest.TestCase):
             real_git = shutil.which("git")
             real_python3 = shutil.which("python3")
             real_jq = shutil.which("jq")
-            self.assertIsNotNone(real_git)
-            self.assertIsNotNone(real_python3)
-            self.assertIsNotNone(real_jq)
+            if real_git is None:
+                self.fail('real_git')
+            if real_python3 is None:
+                self.fail('real_python3')
+            if real_jq is None:
+                self.fail('real_jq')
             (fake_bin / "npm").write_text(
                 "#!/usr/bin/env bash\n"
                 'if [[ "${1:-}" == "exec" ]]; then\n'
@@ -3350,7 +3371,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             real_git = shutil.which("git")
-            self.assertIsNotNone(real_git)
+            if real_git is None:
+                self.fail('real_git')
             (fake_bin / "git").write_text(
                 "#!/usr/bin/env bash\n"
                 f"REAL_GIT={shlex.quote(real_git)}\n"
@@ -3412,7 +3434,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             real_git = shutil.which("git")
-            self.assertIsNotNone(real_git)
+            if real_git is None:
+                self.fail('real_git')
             (fake_bin / "npm").write_text(
                 "#!/usr/bin/env bash\nexit 0\n", encoding="utf-8"
             )
@@ -3532,11 +3555,16 @@ class RuntimeScriptTests(unittest.TestCase):
             git_path = shutil.which("git")
             mktemp_path = shutil.which("mktemp")
             jq_path = shutil.which("jq")
-            self.assertIsNotNone(python3_path)
-            self.assertIsNotNone(dirname_path)
-            self.assertIsNotNone(git_path)
-            self.assertIsNotNone(mktemp_path)
-            self.assertIsNotNone(jq_path)
+            if python3_path is None:
+                self.fail('python3_path')
+            if dirname_path is None:
+                self.fail('dirname_path')
+            if git_path is None:
+                self.fail('git_path')
+            if mktemp_path is None:
+                self.fail('mktemp_path')
+            if jq_path is None:
+                self.fail('jq_path')
             os.symlink(python3_path, fake_bin / "python3")
             os.symlink(dirname_path, fake_bin / "dirname")
             os.symlink(git_path, fake_bin / "git")
@@ -3569,8 +3597,10 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin.mkdir()
             real_git = shutil.which("git")
             real_python3 = shutil.which("python3")
-            self.assertIsNotNone(real_git)
-            self.assertIsNotNone(real_python3)
+            if real_git is None:
+                self.fail('real_git')
+            if real_python3 is None:
+                self.fail('real_python3')
             (fake_bin / "npm").write_text(
                 "#!/usr/bin/env bash\nexit 0\n", encoding="utf-8"
             )
@@ -3665,7 +3695,8 @@ class RuntimeScriptTests(unittest.TestCase):
             fake_bin = tmp / "bin"
             fake_bin.mkdir()
             dirname_path = shutil.which("dirname")
-            self.assertIsNotNone(dirname_path)
+            if dirname_path is None:
+                self.fail('dirname_path')
             python3 = fake_bin / "python3"
             python3.write_text(
                 "#!/bin/bash\n"
@@ -3723,7 +3754,8 @@ class RuntimeScriptTests(unittest.TestCase):
                 "wc",
             ):
                 source = shutil.which(name)
-                self.assertIsNotNone(source, name)
+                if source is None:
+                    self.fail(name)
                 os.symlink(source, fake_bin / name)
             env = dict(os.environ)
             env["PATH"] = str(fake_bin)
@@ -4002,6 +4034,162 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("category[0] missing: law_count", result.stderr)
 
+    def test_generate_iron_law_content_rejects_invalid_preference_severity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            prefs_path = tmp / "preferences.yml"
+            prefs_path.write_text(
+                textwrap.dedent(
+                    """
+                    version: "1.0"
+                    last_updated: "2026-04-18"
+                    total_preferences: 1
+                    categories:
+                      - id: research
+                        name: Research
+                        preference_count: 1
+                    preferences:
+                      - id: 1
+                        category: research
+                        title: Example
+                        rule: Do this
+                        rationale: Because
+                        summary_text: Short
+                        subagent_text: Short
+                        severity: critical
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            env = dict(os.environ)
+            env["RUBY_PLUGIN_PREFERENCES_YAML"] = str(prefs_path)
+            result = subprocess.run(
+                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "preferences_injectable"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('severity="critical" not in', result.stderr)
+
+    def test_generate_iron_law_content_rejects_preference_unknown_category(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            prefs_path = tmp / "preferences.yml"
+            prefs_path.write_text(
+                textwrap.dedent(
+                    """
+                    version: "1.0"
+                    last_updated: "2026-04-18"
+                    total_preferences: 1
+                    categories:
+                      - id: research
+                        name: Research
+                        preference_count: 1
+                    preferences:
+                      - id: 1
+                        category: nonexistent
+                        title: Example
+                        rule: Do this
+                        rationale: Because
+                        summary_text: Short
+                        subagent_text: Short
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            env = dict(os.environ)
+            env["RUBY_PLUGIN_PREFERENCES_YAML"] = str(prefs_path)
+            result = subprocess.run(
+                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "preferences_injectable"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("references unknown category", result.stderr)
+
+    def test_generate_iron_law_content_rejects_preference_count_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            prefs_path = tmp / "preferences.yml"
+            prefs_path.write_text(
+                textwrap.dedent(
+                    """
+                    version: "1.0"
+                    last_updated: "2026-04-18"
+                    total_preferences: 2
+                    categories:
+                      - id: research
+                        name: Research
+                        preference_count: 1
+                    preferences:
+                      - id: 1
+                        category: research
+                        title: Example
+                        rule: Do this
+                        rationale: Because
+                        summary_text: Short
+                        subagent_text: Short
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            env = dict(os.environ)
+            env["RUBY_PLUGIN_PREFERENCES_YAML"] = str(prefs_path)
+            result = subprocess.run(
+                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "preferences_injectable"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("total_preferences=2 does not match actual preferences count=1", result.stderr)
+
+    def test_generate_iron_law_content_fails_when_preferences_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            missing = Path(tmpdir) / "does-not-exist.yml"
+            env = dict(os.environ)
+            env["RUBY_PLUGIN_PREFERENCES_YAML"] = str(missing)
+            result = subprocess.run(
+                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "preferences_injectable"],
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("preferences.yml source not found", result.stderr)
+        self.assertIn("RUBY_PLUGIN_PREFERENCES_YAML", result.stderr)
+
+    def test_generate_iron_law_content_preferences_injectable_happy_path(self) -> None:
+        result = subprocess.run(
+            ["ruby", str(GENERATE_IRON_LAW_CONTENT), "preferences_injectable"],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("## Advisory Preferences", result.stdout)
+        self.assertIn("Apply when possible", result.stdout)
+        self.assertIn("Context7 MCP", result.stdout)
+
     def test_generate_iron_law_outputs_help_succeeds(self) -> None:
         result = subprocess.run(
             ["bash", str(GENERATE_IRON_LAW_OUTPUTS), "--help"],
@@ -4012,7 +4200,8 @@ class RuntimeScriptTests(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0)
-        self.assertIn("Regenerate Iron Law projections", result.stdout)
+        self.assertIn("Regenerate Iron Law", result.stdout)
+        self.assertIn("preferences.yml", result.stdout)
         self.assertNotIn("claude", result.stdout)
         self.assertNotIn("changelog", result.stdout.lower())
 
