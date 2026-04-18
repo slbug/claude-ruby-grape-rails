@@ -36,8 +36,12 @@ ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 source "$ROOT_LIB"
 
 read_hook_input
-INPUT="$HOOK_INPUT_VALUE"
-[[ -n "$INPUT" ]] || exit 0
+# Do NOT gate on empty INPUT — resolve_workspace_root falls back to
+# CLAUDE_PROJECT_DIR and then PWD per workspace-root-lib.sh, so the drift
+# warning still works when SessionStart payload is missing/truncated/invalid
+# (e.g. some resume paths). session_id extraction below defaults to
+# "default" via jq's `||` fallback in degraded-input cases.
+INPUT="${HOOK_INPUT_VALUE:-}"
 
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
@@ -102,7 +106,11 @@ else
   DIRECTION="newer"
 fi
 
-SESSION_ID=$(printf '%s' "$INPUT" | jq -r '.session_id // .sessionId // "default"' 2>/dev/null) || SESSION_ID="default"
+SESSION_ID=$(printf '%s' "$INPUT" | jq -r '.session_id // .sessionId // "default"' 2>/dev/null) || SESSION_ID=""
+# jq on empty stdin returns empty+exit-0 (so `||` doesn't fire). Coerce any
+# empty/null result to the `default` key — degraded-input sessions share
+# one lock, trading session-isolation for resilient delivery.
+[[ -z "$SESSION_ID" || "$SESSION_ID" == "null" ]] && SESSION_ID="default"
 SESSION_KEY=$(printf '%s' "$SESSION_ID" | tr -c '[:alnum:]_-' '_')
 [[ -n "$SESSION_KEY" ]] || exit 0
 

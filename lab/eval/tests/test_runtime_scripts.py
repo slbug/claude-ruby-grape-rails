@@ -2630,6 +2630,30 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(second.stdout, "", "second call in same session should be silent")
         self.assertIn("v0.1.0", third.stdout, "different session_id should re-fire")
 
+    def test_check_plugin_version_works_with_empty_payload(self) -> None:
+        # SessionStart may deliver an empty / truncated / invalid payload on
+        # resume. resolve_workspace_root falls back to CLAUDE_PROJECT_DIR
+        # and PWD, so the drift warning must still fire when appropriate.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "0.1.0")
+            env = dict(os.environ)
+            env["CLAUDE_PROJECT_DIR"] = tmpdir
+            env["CLAUDE_PLUGIN_ROOT"] = str(PLUGIN_ROOT)
+            env["CLAUDE_PLUGIN_DATA"] = data
+            result = subprocess.run(
+                ["bash", str(CHECK_PLUGIN_VERSION)],
+                input="",  # empty payload — simulates degraded SessionStart input
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertIn("/rb:init --update", result.stdout)
+
     def test_check_plugin_version_handles_pipe_delimited_real_header(self) -> None:
         # Shape matching the actual injected template header comment (no space
         # between version and trailing pipe or comment close).
