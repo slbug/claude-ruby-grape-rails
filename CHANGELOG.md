@@ -7,6 +7,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.12.10] - 2026-04-18
+
+### Changed
+
+- **Contributor tooling: `scripts/fetch-claude-docs.sh` cache extended from 29
+  to 46 pages**, now supporting nested paths (`whats-new/`, `agent-sdk/`). Added
+  coverage for `best-practices`, `security`, `ultraplan`, `ultrareview`,
+  `changelog`, `checkpointing`, `whats-new/index`, `remote-control`,
+  `model-config`, `fast-mode`, `output-styles`, `troubleshooting`,
+  `common-workflows`, and four `agent-sdk/*` parity pages. `fetch_page()`
+  creates nested cache subdirectories safely; `validate_cache_target` already
+  permitted subdir targets.
+- **`docs-check` skill `references/doc-pages.md`** updated to reflect the
+  expanded cache: page count, table entries, and new "Which Pages To Read"
+  buckets for CC Version Tracking, Remote Control, Effort Tiering, Plugin
+  Best Practices, Security Baseline, File Checkpointing, and SDK Parity
+  Checks.
+
 ## [1.12.9] - 2026-04-17
 
 ### Fixed
@@ -1620,7 +1638,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.9...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.10...HEAD
+[1.12.10]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.9...v1.12.10
 [1.12.9]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.8...v1.12.9
 [1.12.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.7...v1.12.8
 [1.12.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.6...v1.12.7
