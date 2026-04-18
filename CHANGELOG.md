@@ -7,6 +7,33 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.13.1] - 2026-04-18
+
+### Added
+
+- **SessionStart `check-plugin-version.sh` hook** — compares `plugin v<SEMVER>`
+  pinned in project CLAUDE.md (between `<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->`
+  and `<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->`) against the installed plugin
+  version from `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`. Semver-aware
+  ordering via `sort -V` (natural version sort; available on GNU coreutils 7+
+  and macOS 10.14+): pinned-outdated emits a refresh reminder, pinned-newer
+  flags a possible downgrade, equal versions stay silent. Pre-release
+  precedence honored per semver (e.g. `1.13.1-rc1 < 1.13.1`). Fires at most
+  once per session via atomic per-session lock at
+  `${CLAUDE_PLUGIN_DATA}/version-check/` (workspace
+  `.claude/.hook-state/version-check/` fallback). Advisory fail-open on missing
+  `CLAUDE.md`, missing marker, missing `plugin.json`, or tool unavailability.
+  Registered under the `startup|resume` matcher alongside `check-resume.sh`.
+
+### Changed
+
+- **`/rb:init` injectable template** gains `{PLUGIN_VERSION}` placeholder
+  (`plugins/ruby-grape-rails/skills/init/references/injectable-template.md`
+  header line 2). Substitution documented in `conditional-sections.md` and
+  enforced in `init/SKILL.md` (sourced from
+  `jq -r .version ${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`). The
+  `check-plugin-version.sh` hook depends on this marker being deterministic.
+
 ## [1.13.0] - 2026-04-18
 
 ### Added
@@ -1679,7 +1706,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.0...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.1...HEAD
+[1.13.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.10...v1.13.0
 [1.12.10]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.9...v1.12.10
 [1.12.9]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.8...v1.12.9

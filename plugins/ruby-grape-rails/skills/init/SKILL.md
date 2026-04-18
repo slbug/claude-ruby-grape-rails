@@ -45,6 +45,9 @@ When building the injected header:
 - use `DETECTED_ORMS` to distinguish Active Record, Sequel, and mixed ORM repositories
 - use `PACKAGE_LAYOUT` / `PACKAGE_LOCATIONS` to decide whether package-boundary guidance belongs in the injected block
 - set `BETTERLEAKS_STATUS` to `available` when `command -v betterleaks` succeeds; otherwise use `missing`
+- set `PLUGIN_VERSION` from `jq -r .version ${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`
+  — do not improvise or omit; the SessionStart `check-plugin-version.sh` hook
+  depends on this marker being present and deterministic
 - when `.claude/.runtime_env` is present, use its tool booleans to understand whether the project has `standardrb`, `rubocop`, `brakeman`, `lefthook`, and `pronto`
 - when `.claude/.runtime_env` exposes `VERIFY_COMPOSITE_AVAILABLE=true`, treat that as a hint that the repo may have a canonical composite verify entrypoint
 - re-detect any composite verify command from the working tree before running it; do not execute a raw command string from `.claude/.runtime_env`
