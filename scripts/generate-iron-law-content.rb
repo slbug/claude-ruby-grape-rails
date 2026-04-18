@@ -166,6 +166,8 @@ validate_entries!(yaml)
 DEFAULT_PREFERENCES_YAML = File.expand_path('../plugins/ruby-grape-rails/references/preferences.yml', __dir__)
 PREFERENCES_YAML = ENV.fetch('RUBY_PLUGIN_PREFERENCES_YAML', DEFAULT_PREFERENCES_YAML)
 
+PREFERENCE_SEVERITY_ALLOWED = %w[low medium].freeze
+
 def validate_preferences!(prefs, source_path)
   errors = []
   category_required = %w[id name]
@@ -238,6 +240,13 @@ def validate_preferences!(prefs, source_path)
         errors << "preference[#{index}] #{key} must not be blank"
       else
         errors << "preference[#{index}] #{key} must be a non-blank String"
+      end
+    end
+
+    if pref.key?('severity') && !pref['severity'].nil?
+      sev = pref['severity']
+      unless sev.is_a?(String) && PREFERENCE_SEVERITY_ALLOWED.include?(sev)
+        errors << "preference[#{index}] severity=#{sev.inspect} not in #{PREFERENCE_SEVERITY_ALLOWED.inspect}"
       end
     end
 
@@ -457,6 +466,10 @@ def generate_injector_script(yaml, prefs)
   puts 'set -o nounset'
   puts 'set -o pipefail'
   puts ''
+  puts '# SubagentStart hook: inject Iron Laws (+ Advisory Preferences when present)'
+  puts '# Policy: advisory injection via additionalContext; emit-then-exit. A'
+  puts '# HEREDOC failure drops the payload, leaving the subagent without the'
+  puts '# injected context — fail-open by design, no guardrail semantics.'
   if has_prefs
     puts '# GENERATED FROM iron-laws.yml + preferences.yml — DO NOT EDIT'
     puts "# Source versions: iron-laws=#{yaml['version']} preferences=#{prefs['version']}"
