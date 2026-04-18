@@ -2,7 +2,9 @@
 set -o nounset
 set -o pipefail
 
-# SessionStart hook: warn when project CLAUDE.md pins an older plugin version.
+# SessionStart hook: warn when project CLAUDE.md pins a different plugin
+# version than the installed plugin. Outdated pin emits a refresh reminder;
+# newer pin flags a possible plugin downgrade.
 # Policy: advisory — silent on missing CLAUDE.md, missing plugin marker,
 # missing plugin.json, tool unavailability, or lock conflicts. Degraded
 # payload/root resolution must not block session startup. Fires at most once
@@ -13,12 +15,19 @@ command -v grep >/dev/null 2>&1 || exit 0
 command -v sed >/dev/null 2>&1 || exit 0
 command -v tr >/dev/null 2>&1 || exit 0
 command -v head >/dev/null 2>&1 || exit 0
-command -v sort >/dev/null 2>&1 || exit 0
 command -v tail >/dev/null 2>&1 || exit 0
 # sort -V (natural version sort) is required. Commonly available via GNU
-# coreutils; some environments (minimal containers, older macOS) may require
-# GNU `sort`/`gsort`. Probe support rather than trust bare `sort`.
-printf 'a\n' | sort -V >/dev/null 2>&1 || exit 0
+# coreutils; on macOS the brew `coreutils` package ships it as `gsort`
+# rather than replacing `sort`. Prefer bare `sort -V`; fall back to
+# `gsort -V`; exit silently if neither supports it.
+SORT_BIN=""
+if command -v sort >/dev/null 2>&1 && printf 'a\n' | sort -V >/dev/null 2>&1; then
+  SORT_BIN="sort"
+elif command -v gsort >/dev/null 2>&1 && printf 'a\n' | gsort -V >/dev/null 2>&1; then
+  SORT_BIN="gsort"
+else
+  exit 0
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
@@ -61,7 +70,7 @@ CURRENT_COMPARE="${CURRENT%%+*}"
 # Semver-aware compare via `sort -V` (natural version sort). Handles semver
 # pre-release precedence correctly: `1.13.1-rc1` sorts below `1.13.1`.
 [[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" ]] && exit 0
-HIGHEST=$(printf '%s\n%s\n' "$PINNED_COMPARE" "$CURRENT_COMPARE" | sort -V | tail -n 1)
+HIGHEST=$(printf '%s\n%s\n' "$PINNED_COMPARE" "$CURRENT_COMPARE" | "$SORT_BIN" -V | tail -n 1)
 [[ -n "$HIGHEST" ]] || exit 0
 
 if [[ "$HIGHEST" == "$CURRENT_COMPARE" ]]; then
