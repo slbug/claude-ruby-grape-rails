@@ -45,10 +45,20 @@ REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 CLAUDE_MD="${REPO_ROOT}/CLAUDE.md"
 [[ -f "$CLAUDE_MD" && ! -L "$CLAUDE_MD" && -r "$CLAUDE_MD" ]] || exit 0
 
-# Extract pinned version between plugin sentinels. Accept semver + optional
-# pre-release/build suffix (`plugin v1.2.3-rc1`, `plugin v1.2.3+build.5`).
+# Extract pinned version between plugin sentinels. Uses the official semver
+# regex from https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+# translated to POSIX ERE for `grep -oE`:
+#   - MAJOR/MINOR/PATCH: `0` or a positive integer with no leading zeros
+#   - pre-release (optional): `-` + dot-separated identifiers. Numeric
+#     identifiers have no leading zeros; alphanumeric identifiers must
+#     contain at least one non-digit.
+#   - build metadata (optional): `+` + dot-separated [0-9A-Za-z-] groups.
+SEMVER_CORE='(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'
+SEMVER_PRE='(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?'
+SEMVER_BUILD='(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?'
+SEMVER_RE="plugin v${SEMVER_CORE}${SEMVER_PRE}${SEMVER_BUILD}"
 PINNED=$(sed -n '/<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->/,/<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->/p' "$CLAUDE_MD" 2>/dev/null \
-  | grep -oE 'plugin v[0-9]+\.[0-9]+\.[0-9]+[A-Za-z0-9.+-]*' \
+  | grep -oE "$SEMVER_RE" \
   | head -1 \
   | sed 's/^plugin v//' || true)
 [[ -n "$PINNED" ]] || exit 0
