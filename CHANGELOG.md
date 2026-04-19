@@ -83,6 +83,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`.github/workflows/lint.yml`** Python version bumped 3.11 → 3.14
   to match the repo-documented contributor floor.
 
+### Fixed
+
+- **PreCompact hook no longer blocks compaction**. Previously `exit 2`
+  during active `/rb:work` or `/rb:full` stranded manual `/compact` with
+  only an error message and no re-read path, because PreCompact has no
+  context-injection channel. Now advisory-only (stderr warning);
+  PostCompact continues to emit the re-read reminder Claude acts on.
+  Supersedes the 1.13.0 "PreCompact blocks compaction" entry.
+
 ### Evidence
 
 Claims backed by Anthropic primary sources. Skips unsupported viral

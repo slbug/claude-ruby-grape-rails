@@ -3055,7 +3055,7 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("PRESERVE ACROSS COMPACTION", result.stderr)
 
-    def test_precompact_rules_blocks_during_work_phase(self) -> None:
+    def test_precompact_rules_warns_without_blocking_during_work_phase(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             plan_dir = tmp / ".claude" / "plans" / "demo"
@@ -3067,10 +3067,10 @@ class RuntimeScriptTests(unittest.TestCase):
 
             result = run_workspace_hook(PRECOMPACT_RULES, tmpdir, {})
 
-        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.returncode, 0)
         self.assertIn("PRESERVE ACROSS COMPACTION", result.stderr)
 
-    def test_precompact_rules_blocks_during_full_mode(self) -> None:
+    def test_precompact_rules_warns_without_blocking_during_full_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             plan_dir = tmp / ".claude" / "plans" / "demo"
@@ -3085,7 +3085,7 @@ class RuntimeScriptTests(unittest.TestCase):
 
             result = run_workspace_hook(PRECOMPACT_RULES, tmpdir, {})
 
-        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.returncode, 0)
         self.assertIn("PRESERVE ACROSS COMPACTION", result.stderr)
         self.assertIn("/rb:full", result.stderr)
 
