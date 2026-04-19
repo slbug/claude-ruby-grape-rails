@@ -159,3 +159,11 @@ These metrics are intentionally directional, not decision-grade.
 4. Use the canonical scorer script instead of hand-recomputing formulas.
 5. Keep the metrics ledger append-only.
 6. Treat scan output as triage input, not release proof.
+
+## Epistemic Posture
+
+Scan output is triage signal, not decision-grade. Report what the
+scorer actually produced with direct language; do not dress up raw
+heuristics in confident framing. Low-sample sessions remain low-
+confidence in the output. Apology cascades and hedge chains have no
+place in a scan summary.

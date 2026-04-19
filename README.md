@@ -723,7 +723,7 @@ PRs welcome! See [CLAUDE.md](CLAUDE.md) for development conventions.
 
 Local contributor workflows require more than `npm ci` alone:
 
-- `python3` `3.10+` for eval tooling and release checks
+- `python3` `3.14+` for eval tooling and release checks
 - `ruby` for YAML validation and Ruby maintenance scripts
 - `shellcheck` for `npm run lint`, `make ci`, and local shell pre-commit checks
 - Claude Code CLI for `npm run validate` / `make validate`
@@ -758,13 +758,14 @@ Common entrypoints:
 - `make eval-behavioral-verbose` / `npm run eval:behavioral:verbose` — same with
   verbose cache/score output
 - `make eval-behavioral-fresh` / `npm run eval:behavioral:fresh` — ignore
-  cache, re-run via the default provider (local Ollama `gemma4:latest`).
+  cache, re-run via the default provider (local Ollama `gemma4:26b-a4b-it-q8_0`).
   The npm script is a composite (`cmd1 && cmd2`), so
   `npm run ... -- --provider haiku`
   would append to the wrong target; `make` doesn't forward args either.
   To switch provider prefix with `RUBY_PLUGIN_EVAL_PROVIDER=haiku` or
   `RUBY_PLUGIN_EVAL_PROVIDER=apfel`; change the default Ollama model with
-  `RUBY_PLUGIN_EVAL_OLLAMA_MODEL=qwen3:8b`; or
+  `RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest` (low-RAM fallback,
+  10GB instead of 28GB) or any other Ollama tag; or
   call the module directly with
   `python3 -m lab.eval.behavioral_scorer --all --summary --provider haiku`
 - `make eval-behavioral-fresh-verbose` / `npm run eval:behavioral:fresh:verbose`
@@ -773,7 +774,7 @@ Common entrypoints:
   classification (deterministic, no API calls)
 - `make eval-neighbor` or `npm run eval:neighbor` for confusable-pair
   regression detection on changed skills (requires the active provider —
-  local Ollama `gemma4:latest` by default). `make` doesn't forward args;
+  local Ollama `gemma4:26b-a4b-it-q8_0` by default). `make` doesn't forward args;
   `npm run eval:neighbor -- --provider haiku` does (single-command script).
   For a cross-wrapper option prefix with `RUBY_PLUGIN_EVAL_PROVIDER=haiku`
   or `RUBY_PLUGIN_EVAL_PROVIDER=apfel`,
@@ -781,7 +782,7 @@ Common entrypoints:
   `python3 -m lab.eval.neighbor_regression --changed --provider haiku`
 - `make eval-hygiene` or `npm run eval:hygiene` for trigger corpus
   contamination scanning
-- contributor eval tooling requires `python3` 3.10+
+- contributor eval tooling requires `python3` 3.14+
 
 Notes:
 

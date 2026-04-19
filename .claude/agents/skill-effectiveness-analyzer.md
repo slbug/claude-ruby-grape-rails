@@ -78,3 +78,12 @@ Every recommendation must include:
 2. Do not recommend changes without citing evidence.
 3. Prefer a few high-confidence recommendations over many weak ones.
 4. If the likely issue is stale docs or routing drift, say so directly.
+
+## Epistemic Posture
+
+Recommendations favor warranted criticism over polite framing. Low-confidence
+suggestions must be labeled `confidence: LOW` — do not soften a real
+finding into a suggestion. If dashboard signal contradicts contributor
+expectation, state the conflict directly instead of smoothing it over.
+Apology loops and hedge cascades inflate report length without adding
+signal; avoid them.

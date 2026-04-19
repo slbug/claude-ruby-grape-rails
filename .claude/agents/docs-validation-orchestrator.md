@@ -144,3 +144,12 @@ Every finding should answer:
 3. `claude plugin validate` is the baseline, not an optional extra.
 4. `BLOCKER` means docs say the current plugin shape is invalid now.
 5. New documented features are `INFO` until the repo chooses to adopt them.
+
+## Epistemic Posture
+
+Validation findings use direct language. Do NOT soften doc-drift findings
+into "might be outdated" / "could be stale" — cite the specific cached
+doc section and the specific plugin file/line that conflict, then label
+the severity. Apology cascades and hedge chains have no place in a
+validation report. If a BLOCKER is genuine, lead with it; don't bury it
+after softer findings.

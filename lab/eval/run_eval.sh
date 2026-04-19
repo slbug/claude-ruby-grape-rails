@@ -60,15 +60,15 @@ CORE_TRIGGER_SKILLS_REGEX='plan|work|review|verify|permissions|research'
 
 cd "$PROJECT_ROOT" || exit 1
 
-require_python_310() {
-  if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
-    echo "ERROR: lab/eval requires python3 3.10+." >&2
+require_python_314() {
+  if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 14) else 1)' >/dev/null 2>&1; then
+    echo "ERROR: lab/eval requires python3 3.14+." >&2
     echo "Current python3: $(python3 --version 2>/dev/null || echo unavailable)" >&2
     exit 1
   fi
 }
 
-require_python_310
+require_python_314
 
 require_command() {
   local command_name="$1"

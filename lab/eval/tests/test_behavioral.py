@@ -293,8 +293,8 @@ class TestScoreSkill(unittest.TestCase):
 
         self.assertEqual(mock_ollama.call_count, 2)
         self.assertEqual(result["provider"], "ollama")
-        self.assertEqual(result["model"], "gemma4:latest")
-        self.assertEqual(result["cache_namespace"], "gemma4")
+        self.assertEqual(result["model"], "gemma4:26b-a4b-it-q8_0")
+        self.assertEqual(result["cache_namespace"], "gemma4-26b-a4b-it-q8_0")
         self.assertEqual(result["accuracy"], 1.0)
 
     @patch("lab.eval.behavioral_scorer.run_haiku")

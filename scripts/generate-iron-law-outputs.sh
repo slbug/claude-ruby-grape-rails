@@ -464,6 +464,22 @@ if [[ "$TARGET" == "validate" ]]; then
   exit 0
 fi
 
+# Epistemic baseline drift gate — blocks regeneration when the active
+# provider's baseline is missing or was captured against a different
+# injector state (post-change measurement would compare against a stale
+# reference). Healthy workflow = capture baseline at current state, run
+# this generator (gate passes when hashes match), measure delta in
+# post-change eval run. Checks the baseline for RUBY_PLUGIN_EVAL_PROVIDER
+# (or ollama/gemma4 default). Opt out with EPISTEMIC_BASELINE_CHECK=0
+# when no epistemic measurement is planned (initial generation, CI
+# without eval, etc.).
+if [[ "${EPISTEMIC_BASELINE_CHECK:-1}" != "0" ]]; then
+  DRIFT_GATE="${SCRIPT_DIR}/check-epistemic-baseline-drift.py"
+  if [[ -x "$DRIFT_GATE" ]]; then
+    python3 "$DRIFT_GATE" || exit $?
+  fi
+fi
+
 generate_all "$TARGET"
 
 # Post-generation drift check: SKILL.md is not generated, so verify it matches

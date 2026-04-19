@@ -195,6 +195,12 @@ Apply when possible; fall back gracefully when tools are unavailable.
 
 1. PREFER Context7 MCP over WebFetch for library/gem/framework docs when `mcp__*context7*__*` tools are available
 
+**Behavioral:**
+
+1. CHALLENGE false user premises before executing — surface conflicts with repo evidence directly
+2. AVOID apology cascades and hedge chains — acknowledge mistakes once, state the correction, continue
+3. PREFER positive success targets over long prohibition chains in task instructions
+
 <!-- PREFERENCES_END -->
 
 {SIDEKIQ_SECTION}

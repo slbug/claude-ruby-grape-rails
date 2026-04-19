@@ -2,9 +2,9 @@
 
 Behavioral routing results live under ``lab/eval/triggers/results/{namespace}/``.
 For haiku and apfel providers, the namespace is the provider name. For
-Ollama, the namespace is model-derived (``gemma4:latest`` -> ``gemma4``) so
-cache comparisons stay model-specific while the CLI provider remains
-``ollama``.
+Ollama, the namespace is model-derived
+(``gemma4:26b-a4b-it-q8_0`` -> ``gemma4-26b-a4b-it-q8_0``) so cache
+comparisons stay model-specific while the CLI provider remains ``ollama``.
 This module owns the active provider state so all tools
 (behavioral_scorer, dimensions/behavioral, eval_sensitivity,
 neighbor_regression) read and write the same directory without coordinating
@@ -42,7 +42,7 @@ DEFAULT_PROVIDER: str = "ollama"
 SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"ollama", "apfel", "haiku"})
 PROVIDER_ENV_VAR: str = "RUBY_PLUGIN_EVAL_PROVIDER"
 OLLAMA_MODEL_ENV_VAR: str = "RUBY_PLUGIN_EVAL_OLLAMA_MODEL"
-DEFAULT_OLLAMA_MODEL: str = "gemma4:latest"
+DEFAULT_OLLAMA_MODEL: str = "gemma4:26b-a4b-it-q8_0"
 
 
 # Track invalid env-var values so we warn only once per unique bad value,
@@ -94,6 +94,7 @@ def model_cache_namespace(model: str | None = None) -> str:
     """Return a safe cache namespace derived from an Ollama model tag.
 
     Examples:
+    - ``gemma4:26b-a4b-it-q8_0`` -> ``gemma4-26b-a4b-it-q8_0``
     - ``gemma4:latest`` -> ``gemma4``
     - ``qwen3:8b`` -> ``qwen3-8b``
     - ``qwen3:14b`` -> ``qwen3-14b``

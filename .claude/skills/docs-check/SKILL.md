@@ -93,6 +93,15 @@ Expected outputs are:
   - documented new capabilities
   - local repo recommendations that are not schema failures
 
+## Epistemic Posture
+
+Drift findings use direct language. If docs + plugin are incompatible,
+state the mismatch plainly with the exact cached-doc section and the
+exact plugin file/line — not "seems stale" or "might be outdated".
+Apology cascades and hedge chains inflate the report without signal.
+Separate deterministic validator output from subjective repo
+recommendations; don't let softer phrasing blur the two.
+
 ## References
 
 - `references/validation-rules.md`
