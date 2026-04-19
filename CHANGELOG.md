@@ -43,11 +43,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `behavioral_scorer.py` so the epistemic suite, trigger_expand, and
   behavioral_scorer all share one source of truth for stderr formatting
   and bare-mode claude CLI auth.
-- **`scripts/check-epistemic-baseline-drift.py`** — advisory gate in
+- **`scripts/check-epistemic-baseline-drift.py`** — presence gate in
   `generate-iron-law-outputs.sh` that blocks regeneration when the
-  active provider's epistemic baseline is missing; prints baseline
-  timestamp + hash when present so contributors can judge staleness.
-  Opt out with `EPISTEMIC_BASELINE_CHECK=0`.
+  active provider's epistemic baseline is missing, `python3` is not
+  on PATH, or `python3` is older than 3.14 (repo floor for `lab/eval/`
+  tooling); prints baseline timestamp + hash when present so
+  contributors can judge staleness. Opt out entirely with
+  `EPISTEMIC_BASELINE_CHECK=0` when no epistemic measurement is
+  planned.
 
 ### Changed
 

@@ -89,14 +89,16 @@ between your previous baseline and this PR.
 
 4. **Regenerate** — `bash scripts/generate-iron-law-outputs.sh all`. The
    presence gate at `scripts/check-epistemic-baseline-drift.py` blocks
-   regeneration only when the active provider's baseline is missing.
-   Baseline freshness (timestamp + hash) is printed so you can judge
-   whether it's from this PR or a leftover. Hash-mismatch between
-   baseline and current injector is expected during iteration (edit →
-   regen → edit → regen) — the gate does not block on mismatch. Skip
-   the gate entirely with `EPISTEMIC_BASELINE_CHECK=0` when no
-   epistemic measurement is planned (initial generation, CI without
-   eval, etc.).
+   regeneration under three conditions: the active provider's baseline
+   is missing, `python3` is not on PATH, or `python3` is older than
+   3.14 (repo floor for `lab/eval/` tooling). Baseline freshness
+   (timestamp + hash) is printed so you can judge whether it's from
+   this PR or a leftover. Hash-mismatch between baseline and current
+   injector is expected during iteration (edit → regen → edit → regen)
+   — the gate does not block on mismatch. Skip the gate entirely with
+   `EPISTEMIC_BASELINE_CHECK=0` when no epistemic measurement is
+   planned (initial generation, CI without eval, contributor without
+   python3 3.14+ installed, etc.).
 
 5. **Iterate.** Edit source, regen, edit, regen. Baseline stays as
    fixed reference. Each regen produces a new current state.
