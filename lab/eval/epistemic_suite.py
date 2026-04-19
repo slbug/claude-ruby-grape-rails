@@ -1119,7 +1119,10 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--cache",
         action="store_true",
-        help="Cache-only: use cached results, skip stale/missing (no provider calls)",
+        help=(
+            "Cache-only: use cached results only; stale or missing entries "
+            "fail the run (no provider calls)"
+        ),
     )
     parser.add_argument(
         "--workers",

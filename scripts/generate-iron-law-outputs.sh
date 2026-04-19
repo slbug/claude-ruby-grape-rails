@@ -482,6 +482,12 @@ if [[ "${EPISTEMIC_BASELINE_CHECK:-1}" != "0" ]]; then
       log_error "  Install python3 (3.14+), or opt out with EPISTEMIC_BASELINE_CHECK=0 when no epistemic measurement is planned."
       exit 1
     fi
+    if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 14) else 1)' >/dev/null 2>&1; then
+      log_error "python3 version too old for epistemic baseline gate (requires 3.14+)."
+      log_error "  Current: $(python3 --version 2>/dev/null || echo unavailable)"
+      log_error "  Upgrade python3 to 3.14+, or opt out with EPISTEMIC_BASELINE_CHECK=0 when no epistemic measurement is planned."
+      exit 1
+    fi
     python3 "$DRIFT_GATE" || exit $?
   fi
 fi
