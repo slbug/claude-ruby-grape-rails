@@ -45,7 +45,6 @@ from .trigger_scorer import (
     RoutingDescription,
     RoutingDescriptions,
     routing_description_text,
-    TRIGGERS_DIR,
 )
 
 log = logging.getLogger("behavioral_scorer")
@@ -56,9 +55,13 @@ log = logging.getLogger("behavioral_scorer")
 # rd.active_results_dir() at use-sites so CLI --provider flips and env-var
 # overrides propagate without per-module synchronization.
 
-# Resolved settings path — defaults to bare_settings.json, replaced by
-# _resolve_settings() at startup when a temp auth settings file is needed.
-_resolved_settings_path: str = str(TRIGGERS_DIR.parent / "bare_settings.json")
+# Resolved settings path — defaults to bare_settings.json, replaced at
+# startup when a temp auth settings file is needed (see eval_auth).
+from .eval_auth import BARE_SETTINGS_PATH
+from .eval_auth import cleanup_settings as _shared_cleanup_settings
+from .eval_auth import resolve_settings_path as _shared_resolve_settings_path
+
+_resolved_settings_path: str = str(BARE_SETTINGS_PATH)
 
 _ROUTING_SYSTEM_PROMPT = (
     "You are a skill router. Given a list of skills and a user message, "
@@ -104,67 +107,6 @@ def _provider_settings(provider: str | None = None) -> ProviderSettings:
     if provider_name == "ollama":
         return dataclasses.replace(settings, model=rd.resolve_ollama_model())
     return settings
-
-
-_RESOLVED_TOKEN_ENV = "_RUBY_PLUGIN_RESOLVED_TOKEN"
-
-
-def _resolve_settings() -> str:
-    """Resolve auth settings for bare mode.
-
-    If bare_settings.json uses apiKeyHelper, extract the token once and write
-    a temp settings file whose apiKeyHelper reads from an env var instead of
-    hitting the keychain. This avoids concurrent keychain access with --workers > 1.
-
-    Sets the token as an env var so all worker subprocesses inherit it.
-    Returns the path to use with --settings.
-    """
-    import tempfile
-
-    base_path = TRIGGERS_DIR.parent / "bare_settings.json"
-    if not base_path.is_file():
-        return str(base_path)
-
-    try:
-        settings = json.loads(base_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return str(base_path)
-
-    helper = settings.get("apiKeyHelper")
-    if not helper:
-        return str(base_path)
-
-    # Run the original helper once to get the token
-    try:
-        result = subprocess.run(
-            ["/bin/sh", "-c", helper],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        token = result.stdout.strip()
-        if not token or result.returncode != 0:
-            log.warning("apiKeyHelper failed, falling back to per-call helper")
-            return str(base_path)
-    except Exception as exc:
-        log.warning("apiKeyHelper failed (%s), falling back to per-call helper", exc)
-        return str(base_path)
-
-    # Set token in env — inherited by all subprocess workers
-    os.environ[_RESOLVED_TOKEN_ENV] = token
-
-    # Write temp settings to OS temp dir (avoids repo pollution on SIGKILL)
-    # Use printf to avoid echo mangling tokens starting with -n etc.
-    tmp = tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".json",
-        prefix="bare_resolved_",
-        delete=False,
-    )
-    settings["apiKeyHelper"] = f'printf %s "${_RESOLVED_TOKEN_ENV}"'
-    json.dump(settings, tmp)
-    tmp.close()
-    return tmp.name
 
 
 @dataclasses.dataclass(slots=True)
@@ -312,23 +254,11 @@ def _cache_profile_matches(
 _executor: ThreadPoolExecutor | None = None
 _executor_lock = threading.Lock()
 
-# Lock for serializing verbose output blocks across threads
-_verbose_lock = threading.Lock()
-
-
-def _emit_info(msg: str) -> None:
-    """Emit an informational message that must be visible to the user.
-
-    CLI entry (main()) configures logging.basicConfig so log.info shows; but
-    programmatic callers (neighbor_regression, tests) skip main() and leave
-    the root logger at WARNING — log.info would drop silently. Falling back
-    to stderr when INFO is disabled keeps verbose output reliable regardless
-    of entry point.
-    """
-    if log.isEnabledFor(logging.INFO):
-        log.info(msg)
-    else:
-        print(msg, file=sys.stderr, flush=True)
+# Shared stderr logging helpers moved to lab/eval/eval_logging.py so
+# epistemic_suite (and any future eval tool) can reuse the same verbose-
+# output semantics without duplicating the logic. Local underscore-prefixed
+# aliases preserve the existing ~16 call sites without churn.
+from .eval_logging import emit_info as _emit_info, verbose_lock as _verbose_lock
 
 
 def run_haiku(
@@ -746,6 +676,30 @@ def _ensure_ollama_server():
 
         try:
             with urllib.request.urlopen(version_url, timeout=2):
+                # Ollama is already running — started externally (Ollama.app
+                # GUI, a separate `ollama serve`, or a remote instance). The
+                # `OLLAMA_FLASH_ATTENTION=1` + `OLLAMA_KV_CACHE_TYPE=q8_0`
+                # env vars the eval suite sets on autostart are SERVER-SIDE:
+                # the external process was started without them, and we
+                # can't inject them via the API. Evals still work — they
+                # just run with whatever KV precision that server was
+                # configured with. Warn once so the contributor knows why
+                # per-run memory footprint might be higher than expected.
+                _emit_info(
+                    f"Ollama already running at {version_url} (not spawned "
+                    "by this process). OLLAMA_FLASH_ATTENTION, "
+                    "OLLAMA_KV_CACHE_TYPE, OLLAMA_NUM_PARALLEL, and "
+                    "OLLAMA_MAX_LOADED_MODELS env vars will NOT apply — "
+                    "they must be set BEFORE `ollama serve` starts. "
+                    "Consequences: KV cache runs at whatever precision the "
+                    "external server was started with, and --workers > 1 "
+                    "queues at the server instead of running in parallel "
+                    "unless the external server was launched with "
+                    "OLLAMA_NUM_PARALLEL > 1. To enable both, stop the "
+                    "external server first (e.g. kill Ollama.app / "
+                    "`killall ollama`) and re-run so this script "
+                    "autostarts the daemon with the eval-tuned env."
+                )
                 return
         except (urllib.error.URLError, OSError):
             pass
@@ -776,6 +730,14 @@ def _ensure_ollama_server():
         # only when behavioral_scorer starts the server itself.
         env.setdefault("OLLAMA_FLASH_ATTENTION", "1")
         env.setdefault("OLLAMA_KV_CACHE_TYPE", "q8_0")
+        # Without OLLAMA_NUM_PARALLEL, ollama defaults to single-concurrent
+        # request per loaded model — ThreadPoolExecutor workers > 1 queue at
+        # the server instead of running in parallel. Default 4 matches modern
+        # Ollama; each extra parallel slot adds KV cache overhead so users
+        # with tight VRAM can override (e.g. OLLAMA_NUM_PARALLEL=1 for the
+        # low-RAM fallback).
+        env.setdefault("OLLAMA_NUM_PARALLEL", "4")
+        env.setdefault("OLLAMA_MAX_LOADED_MODELS", "1")
         _emit_info(f"Starting ollama serve on {env['OLLAMA_HOST']} ...")
         try:
             _ollama_server_proc = subprocess.Popen(
@@ -930,6 +892,11 @@ def run_ollama(
     model = rd.resolve_ollama_model()
     try:
         client = _get_ollama_client()
+        # reasoning_effort=none disables hidden thinking output on
+        # Gemma4 26b+ / other reasoning-capable models. Skill routing is a
+        # simple classification task (list up to 3 skill names). Without
+        # this, thinking burns the entire max_tokens=64 budget and the
+        # returned content is empty.
         resp = client.chat.completions.create(
             model=model,
             messages=[
@@ -938,6 +905,7 @@ def run_ollama(
             ],
             temperature=0,
             max_tokens=64,
+            extra_body={"reasoning_effort": "none"},
         )
         text = resp.choices[0].message.content or ""
         usage = resp.usage
@@ -2118,21 +2086,11 @@ def main() -> None:
     # Skip for --cache (documented as "no provider calls" — no keychain touches)
     # Also skip for local providers (no Claude CLI credentials needed)
     global _resolved_settings_path
-    is_temp_settings = False
     if not args.cache and rd.get_active_provider() == "haiku":
-        _resolved_settings_path = _resolve_settings()
-        base_settings = str(TRIGGERS_DIR.parent / "bare_settings.json")
-        is_temp_settings = _resolved_settings_path != base_settings
-
-        def _cleanup_settings():
-            if is_temp_settings:
-                try:
-                    os.unlink(_resolved_settings_path)
-                except OSError:
-                    pass
-                os.environ.pop(_RESOLVED_TOKEN_ENV, None)
-
-        atexit.register(_cleanup_settings)
+        _resolved_settings_path, _is_temp = _shared_resolve_settings_path()
+        atexit.register(
+            _shared_cleanup_settings, _resolved_settings_path, _is_temp
+        )
 
     descriptions = load_all_routing_descriptions()
     descriptions_blob = _routing_descriptions_blob(descriptions)

@@ -107,3 +107,13 @@ historical snapshots.
 2. Low-sample and mixed-provider results must be labeled clearly.
 3. Corroborate strong claims with deterministic or manual evidence.
 4. Never modify `metrics.jsonl` from this skill.
+
+## Epistemic Posture
+
+Observational findings carry explicit confidence. Direct language for
+HIGH-confidence observations (deterministic signals, large-N agreement
+across providers). LOW-confidence observations must be labeled as such
+— don't promote noise into confident findings through polite phrasing.
+Hedge qualifiers belong on genuinely-uncertain claims, not scattered
+across the whole report. Acknowledge any contradiction with contributor
+expectations directly.

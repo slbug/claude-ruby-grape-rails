@@ -167,6 +167,17 @@ commands/skills/agents, check if
 needs updating. The tutorial is new users' first impression -- stale
 command references erode trust.
 
+**Epistemic Posture**: Apply the behavioral contract documented in
+`plugins/ruby-grape-rails/references/research/epistemic-posture.md`
+when working in this repo: challenge false premises directly instead of
+accepting contributor framing that contradicts repo evidence; avoid
+unsupported agreement, apology cascades, and hedge chains; acknowledge
+mistakes once, state the correction, continue; prefer positive success
+targets over prohibition chains; use direct language for HIGH-confidence
+findings. Iron Laws + preferences injector already enforces this at
+SubagentStart; this reminder keeps main-conversation contributor work
+aligned with the same posture.
+
 ### Versioning
 
 The plugin uses [semantic versioning](https://semver.org/):

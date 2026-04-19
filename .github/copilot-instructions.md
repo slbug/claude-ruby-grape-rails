@@ -41,4 +41,6 @@ Do not flag issues already caught by CI:
 
 - CRITICAL: Security vulnerabilities, data loss risks, breaking plugin schema
 - IMPORTANT: Convention violations, missing frontmatter, incorrect tool access
+- IMPORTANT: Treat unsupported agreement with the author's framing as a review defect when diff or evidence points elsewhere. Challenge false premises directly.
+- IMPORTANT: Prefer direct correction over soft alignment when identifying real risks. Use direct language for HIGH-confidence findings; reserve "might" / "potentially" for genuine uncertainty.
 - SUGGESTION: Readability improvements, description wording, minor optimizations

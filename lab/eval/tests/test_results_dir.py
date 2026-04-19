@@ -76,13 +76,19 @@ class TestResultsDir(unittest.TestCase):
 
     def test_explicit_provider(self) -> None:
         with patch.dict("os.environ", {rd.OLLAMA_MODEL_ENV_VAR: ""}, clear=False):
-            self.assertEqual(rd.results_dir("ollama"), rd.RESULTS_BASE / "gemma4")
+            self.assertEqual(
+                rd.results_dir("ollama"),
+                rd.RESULTS_BASE / "gemma4-26b-a4b-it-q8_0",
+            )
             self.assertEqual(rd.results_dir("apfel"), rd.RESULTS_BASE / "apfel")
             self.assertEqual(rd.results_dir("haiku"), rd.RESULTS_BASE / "haiku")
 
     def test_invalid_provider_uses_default(self) -> None:
         with patch.dict("os.environ", {rd.OLLAMA_MODEL_ENV_VAR: ""}, clear=False):
-            self.assertEqual(rd.results_dir("bogus"), rd.RESULTS_BASE / "gemma4")
+            self.assertEqual(
+                rd.results_dir("bogus"),
+                rd.RESULTS_BASE / "gemma4-26b-a4b-it-q8_0",
+            )
 
     def test_none_uses_env(self) -> None:
         with patch.dict("os.environ", {rd.PROVIDER_ENV_VAR: "haiku"}, clear=False):
@@ -100,8 +106,12 @@ class TestOllamaNamespace(unittest.TestCase):
 
     def test_default_model(self) -> None:
         with patch.dict("os.environ", {}, clear=True):
-            self.assertEqual(rd.resolve_ollama_model(), "gemma4:latest")
-            self.assertEqual(rd.model_cache_namespace(), "gemma4")
+            self.assertEqual(
+                rd.resolve_ollama_model(), "gemma4:26b-a4b-it-q8_0"
+            )
+            self.assertEqual(
+                rd.model_cache_namespace(), "gemma4-26b-a4b-it-q8_0"
+            )
 
     def test_non_latest_tags_are_preserved(self) -> None:
         self.assertEqual(rd.model_cache_namespace("qwen3:8b"), "qwen3-8b")

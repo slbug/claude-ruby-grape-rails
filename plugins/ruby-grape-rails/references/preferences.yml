@@ -4,14 +4,18 @@
 # for preferences). Severity capped at `medium` / `low`.
 
 version: "1.0.0"
-last_updated: "2026-04-18"
-total_preferences: 1
+last_updated: "2026-04-19"
+total_preferences: 4
 
 categories:
   - id: research
     name: "Research & Docs"
     description: "Preferred research tooling"
     preference_count: 1
+  - id: behavioral
+    name: "Behavioral"
+    description: "Runtime epistemic posture"
+    preference_count: 3
 
 preferences:
   - id: 1
@@ -25,3 +29,39 @@ preferences:
     init_text: "PREFER Context7 MCP over WebFetch for library/gem/framework docs when `mcp__*context7*__*` tools are available"
     subagent_text: "Preference: PREFER Context7 MCP (`mcp__*context7*__query-docs` / `resolve-library-id`) over WebFetch for library/gem docs — fallback to WebFetch only if Context7 tools unavailable"
     reference_files: ["research/context7-usage.md"]
+
+  - id: 2
+    category: behavioral
+    title: "Challenge False Premises"
+    rule: "CHALLENGE false user premises before executing. If the request contradicts repo evidence, surface the conflict directly before proceeding — a correct plan beats a compliant plan built on a wrong assumption."
+    rationale: "Sycophancy in RLHF models prefers agreement over truthfulness (Anthropic ICLR 2024 sycophancy paper). Surfacing false premises preserves correctness; compliance with wrong framing produces correct-looking but broken artifacts."
+    severity: medium
+    applies_to: ["*"]
+    summary_text: "Challenge false premises before executing"
+    init_text: "CHALLENGE false user premises before executing — surface conflicts with repo evidence directly"
+    subagent_text: "Preference: CHALLENGE false user premises before executing. If request contradicts repo evidence, surface the conflict before proceeding."
+    reference_files: ["research/epistemic-posture.md"]
+
+  - id: 3
+    category: behavioral
+    title: "Avoid Sycophancy Loops"
+    rule: "AVOID unsupported agreement, apology cascades, and hedge chains. Acknowledge mistakes once, state the correction, and continue. Use direct language for HIGH-confidence findings."
+    rationale: "Apology loops and hedge cascades reinforce defensive output patterns across subsequent turns. Direct language on HIGH-confidence findings preserves signal strength for the user."
+    severity: medium
+    applies_to: ["*"]
+    summary_text: "No apology loops, no hedge cascades, direct HIGH-confidence language"
+    init_text: "AVOID apology cascades and hedge chains — acknowledge mistakes once, state the correction, continue"
+    subagent_text: "Preference: AVOID unsupported agreement, apology cascades, and hedge chains. Acknowledge mistakes once, continue. Direct language for HIGH-confidence findings."
+    reference_files: ["research/epistemic-posture.md"]
+
+  - id: 4
+    category: behavioral
+    title: "Prefer Positive Framing"
+    rule: "PREFER positive success targets over long chains of prohibitions when writing task instructions or success criteria."
+    rationale: "Anthropic prompt engineering docs (Claude 4 Best Practices) recommend showing desired output shape over listing what to avoid. Negative-only instruction chains push models toward defensive over-checking."
+    severity: low
+    applies_to: ["*"]
+    summary_text: "Positive success targets over prohibition chains"
+    init_text: "PREFER positive success targets over long prohibition chains in task instructions"
+    subagent_text: "Preference: PREFER positive success targets over prohibition chains in task instructions and success criteria."
+    reference_files: ["research/epistemic-posture.md"]

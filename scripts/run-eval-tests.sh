@@ -25,8 +25,8 @@ SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_SOURCE}")" && pwd -P)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd -P)"
 cd "$PROJECT_ROOT" || exit 1
 
-if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
-  echo "ERROR: lab/eval tests require python3 3.10+." >&2
+if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 14) else 1)' >/dev/null 2>&1; then
+  echo "ERROR: lab/eval tests require python3 3.14+." >&2
   echo "Current python3: $(python3 --version 2>/dev/null || echo unavailable)" >&2
   exit 1
 fi
