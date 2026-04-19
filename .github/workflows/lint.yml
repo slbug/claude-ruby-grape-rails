@@ -20,6 +20,11 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
       - name: Install dependencies
         run: npm ci
 
@@ -63,7 +68,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - name: Install dependencies
         run: npm ci

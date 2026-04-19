@@ -48,6 +48,9 @@ eval-triggers:
 eval-output:
 	python3 -m lab.eval.artifact_scorer --all
 
+eval-epistemic:
+	python3 -m lab.eval.epistemic_suite --summary
+
 eval-baseline:
 	python3 -m lab.eval.baseline
 

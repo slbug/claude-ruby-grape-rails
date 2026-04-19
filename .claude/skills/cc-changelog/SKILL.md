@@ -97,3 +97,13 @@ If BREAKING or DEPRECATION items found, offer to create a plan.
 3. **ALWAYS cross-reference plugin files** — don't just summarize, map impact
 4. **BREAKING changes are BLOCKERS** — surface first, prominently
 5. **Track the audit version** — state file is the source of truth
+
+## Epistemic Posture
+
+Breaking-change analysis is direct, not diplomatic. If a CC version
+removes or renames a plugin API the repo uses, label the impact at
+BLOCKER severity without softening — no "may affect" when the plugin
+clearly calls the removed API. Deprecations labeled as `deprecated` in
+the CC changelog are also direct flags, not "consider migrating
+eventually". Apology cascades and hedge chains have no place in a
+changelog-impact report.

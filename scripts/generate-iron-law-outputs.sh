@@ -464,6 +464,41 @@ if [[ "$TARGET" == "validate" ]]; then
   exit 0
 fi
 
+# Epistemic baseline presence gate. When enabled (default), this block
+# hard-exits non-zero under three conditions:
+#
+#   1. Active provider's baseline file is missing (no reference point
+#      for later delta measurement) — the real baseline check, performed
+#      by scripts/check-epistemic-baseline-drift.py.
+#   2. python3 is not on PATH (gate tool is a python3 script).
+#   3. python3 is older than 3.14 (repo floor for lab/eval tooling).
+#
+# Hash-mismatch between baseline and current injector is the NORMAL
+# iteration state (edit → regen → edit → regen); the gate does NOT block
+# on mismatch — it prints baseline freshness info and passes. See
+# scripts/check-epistemic-baseline-drift.py for full baseline semantics.
+# Checks the baseline for RUBY_PLUGIN_EVAL_PROVIDER (or ollama/gemma4
+# default). Opt out entirely with EPISTEMIC_BASELINE_CHECK=0 when no
+# epistemic measurement is planned (initial generation, CI without
+# eval, contributors without python3 3.14+ installed, etc.).
+if [[ "${EPISTEMIC_BASELINE_CHECK:-1}" != "0" ]]; then
+  DRIFT_GATE="${SCRIPT_DIR}/check-epistemic-baseline-drift.py"
+  if [[ -f "$DRIFT_GATE" && -r "$DRIFT_GATE" ]]; then
+    if ! command -v python3 >/dev/null 2>&1; then
+      log_error "python3 not found on PATH — epistemic baseline gate cannot run."
+      log_error "  Install python3 (3.14+), or opt out with EPISTEMIC_BASELINE_CHECK=0 when no epistemic measurement is planned."
+      exit 1
+    fi
+    if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 14) else 1)' >/dev/null 2>&1; then
+      log_error "python3 version too old for epistemic baseline gate (requires 3.14+)."
+      log_error "  Current: $(python3 --version 2>/dev/null || echo unavailable)"
+      log_error "  Upgrade python3 to 3.14+, or opt out with EPISTEMIC_BASELINE_CHECK=0 when no epistemic measurement is planned."
+      exit 1
+    fi
+    python3 "$DRIFT_GATE" || exit $?
+  fi
+fi
+
 generate_all "$TARGET"
 
 # Post-generation drift check: SKILL.md is not generated, so verify it matches

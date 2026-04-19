@@ -7,6 +7,114 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.13.3] - 2026-04-19
+
+### Added
+
+- **`behavioral` preferences category** in
+  `plugins/ruby-grape-rails/references/preferences.yml` with 3 advisory
+  rules (`challenge-false-premises`, `avoid-sycophancy-loops`,
+  `prefer-positive-framing`). Propagates automatically to every subagent
+  via existing `inject-iron-laws.sh` (SubagentStart hook) on 1.13.3
+  install — no user action required. Also reaches end-user project
+  `CLAUDE.md` via `injectable-template.md` regeneration; existing
+  `check-plugin-version.sh` prompts users to run `/rb:init --update`.
+- **`plugins/ruby-grape-rails/references/research/epistemic-posture.md`**
+  — primary-source citations (Anthropic Constitution, Claude's Character,
+  Sycophancy ICLR 2024, Claude 4 Best Practices) and canonical wording
+  for the 3 posture rules. Explicitly lists folklore claims deliberately
+  NOT acted on ("criticism spirals", "praise resets", "absorbs
+  negativity from internet discourse").
+- **`lab/eval/epistemic_suite.py`** — behavioral measurement suite:
+  6 metrics (apology_density, hedge_cascade_rate, finding_recall,
+  false_positive_rate, unsupported_agreement_rate,
+  direct_contradiction_rate) over 10 scenarios. 4 regex metrics + 2
+  LLM-judge. Provider-scoped cache (keyed by system-prompt hash so
+  baseline-time and post-regen responses coexist). Judge verdicts also
+  cached so `--cache` reruns are fully offline after first fresh run.
+  Cache misses in `--cache` mode (and judge provider errors) propagate
+  as skipped scores and are excluded from the aggregate mean — a
+  missing verdict is not treated as DISAGREE, so it can't silently bias
+  `unsupported_agreement_rate` / `direct_contradiction_rate` toward
+  0.0. New targets: `make eval-epistemic` / `npm run eval:epistemic`.
+- **`lab/eval/eval_logging.py`** and **`lab/eval/eval_auth.py`** —
+  shared logging helpers (`emit_info`, `verbose_lock`) and auth-settings
+  helpers (`resolve_settings_path`, `cleanup_settings`) extracted from
+  `behavioral_scorer.py` so the epistemic suite, trigger_expand, and
+  behavioral_scorer all share one source of truth for stderr formatting
+  and bare-mode claude CLI auth.
+- **`scripts/check-epistemic-baseline-drift.py`** — presence gate in
+  `generate-iron-law-outputs.sh` that blocks regeneration when the
+  active provider's epistemic baseline is missing, `python3` is not
+  on PATH, or `python3` is older than 3.14 (repo floor for `lab/eval/`
+  tooling); prints baseline timestamp + hash when present so
+  contributors can judge staleness. Opt out entirely with
+  `EPISTEMIC_BASELINE_CHECK=0` when no epistemic measurement is
+  planned.
+
+### Changed
+
+- **`.github/copilot-instructions.md`** Review Priorities gain 2
+  IMPORTANT bullets: treat unsupported agreement with author framing as
+  a defect when evidence points elsewhere; prefer direct correction
+  over soft alignment for HIGH-confidence findings.
+- **Root `CLAUDE.md`** Behavioral Reminders section gains an
+  **Epistemic Posture** block pointing at the reference doc so
+  contributor main-conversation work stays aligned with what ships to
+  subagents.
+- **Contributor tier** — 2 agents (`skill-effectiveness-analyzer`,
+  `docs-validation-orchestrator`) and 6 skills (`docs-check`,
+  `cc-changelog`, `skill-monitor`, `session-deep-dive`, `session-scan`,
+  `session-trends`) gain short posture notes matching the shipped
+  contract: direct language for HIGH-confidence findings, no apology
+  cascades, no hedge chains, no softening of real drift into
+  diplomatic language.
+- **Default local eval provider/model** bumped from `gemma4:latest`
+  (E4B, ~10GB) to `gemma4:26b-a4b-it-q8_0` (26B MoE Q8, ~28GB). Judge
+  metrics need more capable model; smaller is documented as low-RAM
+  fallback via `RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest`. Updated
+  in `lab/eval/results_dir.py`, `README.md`,
+  `.claude/rules/eval-workflow.md`,
+  `scripts/check-contributor-prereqs.sh`, plus related tests.
+- **Ollama autostart env vars** extended in
+  `behavioral_scorer._ensure_ollama_server`: adds
+  `OLLAMA_NUM_PARALLEL=4` and `OLLAMA_MAX_LOADED_MODELS=1` so
+  `--workers > 1` actually runs concurrent provider calls instead of
+  queueing at the server. Warning emitted when ollama is already
+  running externally (env vars don't apply).
+- **Ollama fixture + judge calls** pass `reasoning_effort=none` to
+  Gemma4 26b+ reasoning models so hidden thinking tokens don't consume
+  the entire `max_tokens` budget (previously caused empty responses
+  even under `reasoning_effort=low` on long fixtures like
+  `apology-bait-aggressive` and `subtle-bugs-diff`).
+- **`scripts/generate-iron-law-outputs.sh`** now invokes the epistemic
+  baseline gate before regenerating; gate hard-fails on missing
+  baseline, missing `python3`, or `python3 <3.14` (opt out with
+  `EPISTEMIC_BASELINE_CHECK=0`).
+- **`.github/workflows/lint.yml`** Python version bumped 3.11 → 3.14
+  to match the repo-documented contributor floor.
+
+### Fixed
+
+- **PreCompact hook no longer blocks compaction**. Previously `exit 2`
+  during active `/rb:work` or `/rb:full` stranded manual `/compact` with
+  only an error message and no re-read path, because PreCompact has no
+  context-injection channel. Now advisory-only (stderr warning);
+  PostCompact continues to emit the re-read reminder Claude acts on.
+  Supersedes the 1.13.0 "PreCompact blocks compaction" entry.
+
+### Evidence
+
+Claims backed by Anthropic primary sources. Skips unsupported viral
+framing ("criticism spirals", "praise resets", "mood" language) that
+primary sources do not document. Behavioral measurement ran on 3
+providers (ollama gemma4:26b-a4b-it-q8_0, haiku, apfel); gate passes
+on the 2 gate providers (ollama + haiku) with ±0.05 tolerance. Apfel
+is kept in the provider set for future Apple Foundation Model context
+expansion but is not a gate input today (4096-token context window
+overflows on several fixtures, and the 4B model is too weak to serve
+as a reliable LLM-judge).
+
 ## [1.13.2] - 2026-04-19
 
 ### Changed
@@ -1723,7 +1831,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.2...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.3...HEAD
+[1.13.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.2...v1.13.3
 [1.13.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.1...v1.13.2
 [1.13.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.12.10...v1.13.0

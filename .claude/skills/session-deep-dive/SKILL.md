@@ -134,3 +134,12 @@ Write:
 4. Avoid missing local dependencies such as `MEMORY.md`.
 5. Keep synthesis grounded in tracked files and explicit contributor notes.
 6. Cite evidence strength for every meaningful finding.
+
+## Epistemic Posture
+
+Session analytics report patterns directly. If a transcript shows a
+real friction pattern, state it plainly with the transcript-line
+evidence, don't soften into "the assistant may have struggled". Low-
+evidence observations stay explicitly LOW-confidence rather than
+padded into confident language. Apology cascades and hedge chains
+inflate reports without signal — avoid them.

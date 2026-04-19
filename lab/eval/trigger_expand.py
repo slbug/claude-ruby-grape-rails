@@ -240,24 +240,15 @@ def main() -> None:
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON")
     args = parser.parse_args()
 
-    # Resolve auth once — mirrors behavioral_scorer's cleanup pattern
+    # Resolve auth once via shared helper — the same mechanism used by
+    # behavioral_scorer and epistemic_suite so all three eval entry points
+    # share a single source of truth for bare-mode settings resolution.
     import atexit
-    from .behavioral_scorer import _resolve_settings
     import lab.eval.behavioral_scorer as bs
-    bs._resolved_settings_path = _resolve_settings()
-    base_settings = str(TRIGGERS_DIR.parent / "bare_settings.json")
-    is_temp = bs._resolved_settings_path != base_settings
+    from .eval_auth import cleanup_settings, resolve_settings_path
 
-    def _cleanup():
-        if is_temp:
-            import os
-            try:
-                os.unlink(bs._resolved_settings_path)
-            except OSError:
-                pass
-            os.environ.pop(bs._RESOLVED_TOKEN_ENV, None)
-
-    atexit.register(_cleanup)
+    bs._resolved_settings_path, _is_temp = resolve_settings_path()
+    atexit.register(cleanup_settings, bs._resolved_settings_path, _is_temp)
 
     descriptions = load_all_routing_descriptions()
 

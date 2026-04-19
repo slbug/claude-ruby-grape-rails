@@ -100,3 +100,11 @@ Examples:
 2. Prefer provider-scoped comparisons over mixed-provider windows.
 3. Do not depend on missing local artifacts.
 4. Keep the raw ledger read-only.
+
+## Epistemic Posture
+
+Trend findings use direct language. A real drift pattern gets a direct
+statement with the ledger evidence; do not soften into "trends might
+be shifting". Mixed-provider windows get an explicit caveat, not a
+hedge that obscures the signal. Apology cascades and hedge chains
+inflate trend reports without signal — avoid them.

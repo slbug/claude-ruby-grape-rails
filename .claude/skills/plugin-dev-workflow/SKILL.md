@@ -81,7 +81,7 @@ Before trusting contributor analytics conclusions, prefer this order:
 
 When `lab/eval/` changes, also run:
 
-- use `python3` 3.10+ for the eval tooling
+- use `python3` 3.14+ for the eval tooling
 - `python3 -m compileall lab/eval`
 - `bash scripts/run-eval-tests.sh`
 - `python3 -m lab.eval.artifact_scorer --all`
