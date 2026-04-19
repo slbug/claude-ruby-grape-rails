@@ -43,6 +43,7 @@ Exit codes:
 from __future__ import annotations
 
 import os
+import shlex
 import sys
 from pathlib import Path
 
@@ -127,7 +128,7 @@ def main() -> int:
         "scoped to THIS PR's changes. To re-capture:",
         file=sys.stderr,
     )
-    print(f"    rm {baseline_path}", file=sys.stderr)
+    print(f"    rm -- {shlex.quote(str(baseline_path))}", file=sys.stderr)
     print(
         f"    python3 -m lab.eval.epistemic_suite --baseline-only "
         f"--provider {provider} --workers 4 --summary --pretty",

@@ -670,7 +670,15 @@ def score_llm_judge(
     verbose: bool,
     scenario_id: str = "",
     cache_only: bool = False,
-) -> float:
+) -> float | None:
+    """Score a scenario via LLM judge. Returns ``None`` when no verdict
+    is available (cache-miss in ``--cache`` mode, or provider call raised).
+
+    ``None`` signals the caller to exclude this scenario from aggregation.
+    Returning ``0.0`` would be indistinguishable from a real DISAGREE
+    verdict and would silently bias ``unsupported_agreement_rate`` /
+    ``direct_contradiction_rate`` toward "good posture" on cache misses.
+    """
     question = JUDGE_QUESTIONS[metric]
     judge_prompt = (
         f"User prompt:\n```\n{prompt_text}\n```\n\n"
@@ -690,7 +698,7 @@ def score_llm_judge(
             judge_response = cache_path.read_text(encoding="utf-8")
         else:
             emit_info(f"[epistemic judge] cache-miss {label} (skipping)")
-            return 0.0
+            return None
     else:
         emit_info(f"[epistemic judge] calling {provider} {label}")
         try:
@@ -705,7 +713,7 @@ def score_llm_judge(
         except Exception as exc:
             log.warning("judge call failed for %s: %s", metric, exc)
             emit_info(f"[epistemic judge] ERROR {label}: {exc}")
-            return 0.0
+            return None
         active_cache_dir().mkdir(parents=True, exist_ok=True)
         cache_path.write_text(judge_response, encoding="utf-8")
 
@@ -886,7 +894,11 @@ def score_run(
     provider: str,
     verbose: bool,
     cache_only: bool = False,
-) -> float:
+) -> float | None:
+    """Score a single fixture run. Returns ``None`` when no score is
+    available (judge cache-miss or judge provider error); aggregate
+    filters ``None`` values so they don't bias the mean.
+    """
     metric = run.metric
     if metric == "apology_density":
         return score_apology_density(run.response_text)
@@ -933,14 +945,24 @@ def aggregate(
         else:
             regex_runs.append(run)
 
+    # ``score_run`` may return ``None`` for judge runs with no verdict
+    # (cache miss in --cache mode, or provider call raised). Skip those
+    # at ingest time so they can't land in the aggregate mean as 0.0.
     scored: dict[str, list[tuple[str, float]]] = {}
+
+    def _record(scenario: Scenario, value: float | None) -> None:
+        if value is None:
+            return
+        scored.setdefault(scenario.metric, []).append((scenario.id, value))
 
     for run in regex_runs:
         scenario = by_id[run.scenario_id]
-        value = score_run(
-            run, scenario, fixtures_dir, provider, verbose, cache_only=cache_only
+        _record(
+            scenario,
+            score_run(
+                run, scenario, fixtures_dir, provider, verbose, cache_only=cache_only
+            ),
         )
-        scored.setdefault(scenario.metric, []).append((scenario.id, value))
 
     if judge_runs:
         emit_info(
@@ -950,15 +972,17 @@ def aggregate(
         if workers <= 1:
             for run in judge_runs:
                 scenario = by_id[run.scenario_id]
-                value = score_run(
-                    run,
+                _record(
                     scenario,
-                    fixtures_dir,
-                    provider,
-                    verbose,
-                    cache_only=cache_only,
+                    score_run(
+                        run,
+                        scenario,
+                        fixtures_dir,
+                        provider,
+                        verbose,
+                        cache_only=cache_only,
+                    ),
                 )
-                scored.setdefault(scenario.metric, []).append((scenario.id, value))
         else:
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 futures = {
@@ -975,11 +999,7 @@ def aggregate(
                 }
                 for future in as_completed(futures):
                     run = futures[future]
-                    value = future.result()
-                    scenario = by_id[run.scenario_id]
-                    scored.setdefault(scenario.metric, []).append(
-                        (scenario.id, value)
-                    )
+                    _record(by_id[run.scenario_id], future.result())
 
     reports: dict[str, MetricReport] = {}
     for metric, pairs in scored.items():

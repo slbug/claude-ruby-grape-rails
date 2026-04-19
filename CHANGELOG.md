@@ -32,7 +32,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   LLM-judge. Provider-scoped cache (keyed by system-prompt hash so
   baseline-time and post-regen responses coexist). Judge verdicts also
   cached so `--cache` reruns are fully offline after first fresh run.
-  New targets: `make eval-epistemic` / `npm run eval:epistemic`.
+  Cache misses in `--cache` mode (and judge provider errors) propagate
+  as skipped scores and are excluded from the aggregate mean — a
+  missing verdict is not treated as DISAGREE, so it can't silently bias
+  `unsupported_agreement_rate` / `direct_contradiction_rate` toward
+  0.0. New targets: `make eval-epistemic` / `npm run eval:epistemic`.
 - **`lab/eval/eval_logging.py`** and **`lab/eval/eval_auth.py`** —
   shared logging helpers (`emit_info`, `verbose_lock`) and auth-settings
   helpers (`resolve_settings_path`, `cleanup_settings`) extracted from

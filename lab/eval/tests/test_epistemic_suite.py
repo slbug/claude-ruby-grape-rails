@@ -164,6 +164,39 @@ class TestScoreLLMJudge(unittest.TestCase):
             )
         self.assertEqual(score, 0.0)
 
+    def test_cache_miss_returns_none_in_cache_only_mode(self) -> None:
+        # Judge cache miss in --cache mode must return None, not 0.0.
+        # Returning 0.0 would score as DISAGREE for unsupported_agreement
+        # and silently bias the mean toward "good posture".
+        with patch(
+            "lab.eval.epistemic_suite.call_provider",
+            side_effect=AssertionError("must not call provider in cache_only mode"),
+        ):
+            score = es.score_llm_judge(
+                prompt_text="wrong premise",
+                response_text="uncached response text",
+                metric="unsupported_agreement_rate",
+                provider="haiku",
+                verbose=False,
+                scenario_id="unused-scenario",
+                cache_only=True,
+            )
+        self.assertIsNone(score)
+
+    def test_provider_error_returns_none(self) -> None:
+        with patch(
+            "lab.eval.epistemic_suite.call_provider",
+            side_effect=RuntimeError("provider down"),
+        ):
+            score = es.score_llm_judge(
+                prompt_text="wrong premise",
+                response_text="response",
+                metric="unsupported_agreement_rate",
+                provider="haiku",
+                verbose=False,
+            )
+        self.assertIsNone(score)
+
 
 class TestAggregation(unittest.TestCase):
     def test_aggregate_computes_mean_per_metric(self) -> None:
@@ -207,6 +240,62 @@ class TestAggregation(unittest.TestCase):
             self.assertEqual(rep.value, 1.5)
             self.assertEqual(rep.per_scenario["scenario-x"], 3.0)
             self.assertEqual(rep.per_scenario["scenario-y"], 0.0)
+
+    def test_aggregate_skips_judge_cache_misses(self) -> None:
+        # Judge cache misses return None from score_run and must be
+        # excluded from aggregate mean — otherwise they'd bias the metric
+        # toward 0.0 (DISAGREE = good posture).
+        with TemporaryDirectory() as tmp:
+            fixtures_dir = Path(tmp)
+            (fixtures_dir / "hit.md").write_text("dummy", encoding="utf-8")
+            (fixtures_dir / "miss.md").write_text("dummy", encoding="utf-8")
+            scenarios = [
+                es.Scenario(
+                    id="hit",
+                    metric="unsupported_agreement_rate",
+                    description="has verdict",
+                ),
+                es.Scenario(
+                    id="miss",
+                    metric="unsupported_agreement_rate",
+                    description="cache miss",
+                ),
+            ]
+            runs = [
+                es.FixtureRun(
+                    scenario_id="hit",
+                    metric="unsupported_agreement_rate",
+                    response_text="sure you are right",
+                ),
+                es.FixtureRun(
+                    scenario_id="miss",
+                    metric="unsupported_agreement_rate",
+                    response_text="different text",
+                ),
+            ]
+
+            def fake_score(
+                run: es.FixtureRun, _scenario, *_args, **_kwargs
+            ) -> float | None:
+                return 1.0 if run.scenario_id == "hit" else None
+
+            with patch(
+                "lab.eval.epistemic_suite.score_run", side_effect=fake_score
+            ):
+                reports = es.aggregate(
+                    runs,
+                    scenarios,
+                    fixtures_dir,
+                    "haiku",
+                    verbose=False,
+                    cache_only=True,
+                )
+            rep = reports["unsupported_agreement_rate"]
+            # Mean over only the scored scenario (1.0), not (1.0 + 0.0)/2 = 0.5.
+            self.assertEqual(rep.value, 1.0)
+            self.assertEqual(len(rep.per_scenario), 1)
+            self.assertIn("hit", rep.per_scenario)
+            self.assertNotIn("miss", rep.per_scenario)
 
 
 class TestWriteReport(unittest.TestCase):

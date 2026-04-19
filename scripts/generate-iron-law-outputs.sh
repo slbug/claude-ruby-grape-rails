@@ -464,18 +464,19 @@ if [[ "$TARGET" == "validate" ]]; then
   exit 0
 fi
 
-# Epistemic baseline drift gate — blocks regeneration when the active
-# provider's baseline is missing or was captured against a different
-# injector state (post-change measurement would compare against a stale
-# reference). Healthy workflow = capture baseline at current state, run
-# this generator (gate passes when hashes match), measure delta in
-# post-change eval run. Checks the baseline for RUBY_PLUGIN_EVAL_PROVIDER
-# (or ollama/gemma4 default). Opt out with EPISTEMIC_BASELINE_CHECK=0
-# when no epistemic measurement is planned (initial generation, CI
-# without eval, etc.).
+# Epistemic baseline presence gate — blocks regeneration only when the
+# active provider's baseline is missing (no reference point for later
+# delta measurement). Hash-mismatch between baseline and current injector
+# is the NORMAL iteration state (edit → regen → edit → regen); the gate
+# does NOT block on mismatch — it prints baseline freshness info and
+# passes. See scripts/check-epistemic-baseline-drift.py for full
+# semantics. Checks the baseline for RUBY_PLUGIN_EVAL_PROVIDER (or
+# ollama/gemma4 default). Opt out with EPISTEMIC_BASELINE_CHECK=0 when
+# no epistemic measurement is planned (initial generation, CI without
+# eval, etc.).
 if [[ "${EPISTEMIC_BASELINE_CHECK:-1}" != "0" ]]; then
   DRIFT_GATE="${SCRIPT_DIR}/check-epistemic-baseline-drift.py"
-  if [[ -x "$DRIFT_GATE" ]]; then
+  if [[ -f "$DRIFT_GATE" && -r "$DRIFT_GATE" ]]; then
     python3 "$DRIFT_GATE" || exit $?
   fi
 fi
