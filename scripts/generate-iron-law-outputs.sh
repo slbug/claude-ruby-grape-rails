@@ -464,16 +464,23 @@ if [[ "$TARGET" == "validate" ]]; then
   exit 0
 fi
 
-# Epistemic baseline presence gate — blocks regeneration only when the
-# active provider's baseline is missing (no reference point for later
-# delta measurement). Hash-mismatch between baseline and current injector
-# is the NORMAL iteration state (edit → regen → edit → regen); the gate
-# does NOT block on mismatch — it prints baseline freshness info and
-# passes. See scripts/check-epistemic-baseline-drift.py for full
-# semantics. Checks the baseline for RUBY_PLUGIN_EVAL_PROVIDER (or
-# ollama/gemma4 default). Opt out with EPISTEMIC_BASELINE_CHECK=0 when
-# no epistemic measurement is planned (initial generation, CI without
-# eval, etc.).
+# Epistemic baseline presence gate. When enabled (default), this block
+# hard-exits non-zero under three conditions:
+#
+#   1. Active provider's baseline file is missing (no reference point
+#      for later delta measurement) — the real baseline check, performed
+#      by scripts/check-epistemic-baseline-drift.py.
+#   2. python3 is not on PATH (gate tool is a python3 script).
+#   3. python3 is older than 3.14 (repo floor for lab/eval tooling).
+#
+# Hash-mismatch between baseline and current injector is the NORMAL
+# iteration state (edit → regen → edit → regen); the gate does NOT block
+# on mismatch — it prints baseline freshness info and passes. See
+# scripts/check-epistemic-baseline-drift.py for full baseline semantics.
+# Checks the baseline for RUBY_PLUGIN_EVAL_PROVIDER (or ollama/gemma4
+# default). Opt out entirely with EPISTEMIC_BASELINE_CHECK=0 when no
+# epistemic measurement is planned (initial generation, CI without
+# eval, contributors without python3 3.14+ installed, etc.).
 if [[ "${EPISTEMIC_BASELINE_CHECK:-1}" != "0" ]]; then
   DRIFT_GATE="${SCRIPT_DIR}/check-epistemic-baseline-drift.py"
   if [[ -f "$DRIFT_GATE" && -r "$DRIFT_GATE" ]]; then

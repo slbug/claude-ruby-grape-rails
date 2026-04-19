@@ -100,10 +100,15 @@ INJECTOR_SCRIPT: Path = (
 # in main() so worker threads don't re-hit the keychain under --workers > 1.
 _resolved_settings_path: str = str(BARE_SETTINGS_PATH)
 
-# Per-request timeout for LLM calls (seconds). Epistemic fixtures expect
-# longer responses (review / plan / contradiction) than the 64-token routing
-# tasks the shared ollama client is tuned for.
-_REQUEST_TIMEOUT_SECONDS: float = 600.0
+# Per-provider request timeout constants (seconds). Each transport picks
+# its own — ollama speaks to a local server running a 26B MoE model where
+# long fixtures take minutes; haiku subprocess usually returns within
+# seconds but the one-shot subprocess has its own connect/network
+# envelope. Apfel is on-device and uses its shared client's default plus
+# a retry loop on explicit timeout errors. Constants are hardcoded (not
+# CLI-configurable) because callers don't benefit from varying them.
+_OLLAMA_REQUEST_TIMEOUT_SECONDS: float = 600.0
+_HAIKU_REQUEST_TIMEOUT_SECONDS: float = 120.0
 
 # Strip HTML comments from fixtures before sending to the model. The
 # fixture files contain ``<!-- Ground truth: ... -->`` blocks intended for
@@ -312,7 +317,6 @@ def call_provider(
     max_tokens: int,
     reasoning_effort: str = "none",
     verbose: bool = False,
-    timeout: int = 120,
 ) -> str:
     """Send prompt to provider; return raw response text.
 
@@ -327,6 +331,11 @@ def call_provider(
     - apfel: HTTP via shared OpenAI-compatible client; ``max_tokens``
       influences ``x_context_output_reserve`` so the on-device model
       leaves enough room for the expected response length.
+
+    Per-request timeout is not caller-configurable — each provider picks
+    its own hardcoded constant (see ``_OLLAMA_REQUEST_TIMEOUT_SECONDS`` /
+    ``_HAIKU_REQUEST_TIMEOUT_SECONDS``). Apfel uses its client default
+    plus a retry loop on explicit timeout errors.
     """
     if provider == "haiku":
         return _call_haiku(
@@ -334,7 +343,6 @@ def call_provider(
             system_prompt,
             max_tokens=max_tokens,
             verbose=verbose,
-            timeout=timeout,
         )
     if provider == "ollama":
         return _call_ollama(
@@ -343,7 +351,6 @@ def call_provider(
             max_tokens=max_tokens,
             reasoning_effort=reasoning_effort,
             verbose=verbose,
-            timeout=timeout,
         )
     if provider == "apfel":
         return _call_apfel(
@@ -358,7 +365,6 @@ def _call_haiku(
     *,
     max_tokens: int,
     verbose: bool,
-    timeout: int,
 ) -> str:
     # max_tokens is advisory on haiku — `claude --bare` caps generation via
     # --max-budget-usd, not an explicit token flag. Param kept in signature
@@ -390,7 +396,7 @@ def _call_haiku(
         input=prompt,
         capture_output=True,
         text=True,
-        timeout=timeout,
+        timeout=_HAIKU_REQUEST_TIMEOUT_SECONDS,
         check=False,
     )
     if result.returncode != 0:
@@ -470,14 +476,11 @@ def _call_ollama(
     max_tokens: int,
     reasoning_effort: str,
     verbose: bool,
-    timeout: int,
 ) -> str:
-    # timeout arg kept for API parity — applied via with_options below.
-    _ = timeout
     from lab.eval.behavioral_scorer import _get_ollama_client
 
     model = rd.resolve_ollama_model()
-    client = _get_ollama_client().with_options(timeout=_REQUEST_TIMEOUT_SECONDS)
+    client = _get_ollama_client().with_options(timeout=_OLLAMA_REQUEST_TIMEOUT_SECONDS)
     extra_body = {"reasoning_effort": reasoning_effort}
     if system_prompt:
         resp = client.chat.completions.create(
