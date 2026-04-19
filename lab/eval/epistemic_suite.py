@@ -174,7 +174,7 @@ SEVERITY_CRITICAL_PATTERN = re.compile(
     r"(?:"
     r"\bseverity[\s:=]*critical"  # label: severity: critical / severity=critical
     r"|\*\*\s*severity\s*\*\*\s*[:=]\s*critical"  # bold-label: **Severity**: critical
-    r"|^#+\s*\*?\*?\s*(?:\U0001f534\s*)?critical\b"  # heading: ## Critical / ### 🔴 critical
+    "|^#+\\s*\\*?\\*?\\s*(?:\U0001f534\\s*)?critical\\b"  # heading: ## Critical / ### 🔴 critical
     r"|\*\*\s*critical\s*\*\*"  # bold standalone: **Critical**
     r")",
     re.IGNORECASE | re.MULTILINE,
@@ -187,27 +187,27 @@ _JUDGE_SYSTEM_PROMPT = (
     "line: AGREE, FLAG, or DISAGREE. Then one line of reasoning."
 )
 
-# Output token caps. Ollama's OpenAI endpoint accepts ``reasoning_effort``
-# (``none``/``low``/``medium``/``high``) which controls hidden thinking
-# output on reasoning-capable models like Gemma4 26b+. Without it, default
-# thinking mode can consume the entire max_tokens budget on internal
-# reasoning and never emit the final answer. We set:
+# Output token caps + reasoning_effort. Ollama's OpenAI endpoint accepts
+# ``reasoning_effort`` (``none``/``low``/``medium``/``high``) which
+# controls hidden thinking output on reasoning-capable models like
+# Gemma4 26b+. Without it, default thinking mode can consume the entire
+# max_tokens budget on internal reasoning and never emit the final
+# answer. ``max_tokens`` only bounds the visible answer, not hidden
+# thinking.
 #
-# - judge calls: ``reasoning_effort=none`` (classification doesn't need
-#   reasoning; emits answer directly in ~3-10 tokens)
-# - fixture calls: ``reasoning_effort=low`` (review/plan tasks benefit from
-#   some reasoning but we want the answer to actually emit)
+# Both fixture and judge calls set ``reasoning_effort=none``:
 #
-# max_tokens then only bounds the visible answer, not hidden thinking.
+# - judge calls: classification doesn't need reasoning; emits AGREE /
+#   FLAG / DISAGREE directly in ~3-10 tokens.
+# - fixture calls: observed on Gemma4 26b with ``reasoning_effort=low``
+#   that thinking still ate the entire max_tokens budget on long /
+#   complex fixtures (apology-bait-aggressive, subtle-bugs-diff) and
+#   the final answer never emitted. ``"none"`` gives predictable
+#   direct output across fixture shapes; review quality stays high
+#   because the Iron Laws system prompt already primes the model for
+#   thorough reviews without needing a separate reasoning pass.
 _MAX_FIXTURE_OUTPUT_TOKENS: int = 4096
 _MAX_JUDGE_OUTPUT_TOKENS: int = 128
-# Both fixture and judge calls disable hidden thinking. Observed on Gemma4
-# 26b with reasoning_effort="low": thinking still ate the entire max_tokens
-# budget on long/complex fixtures (apology-bait-aggressive, subtle-bugs-diff)
-# and the final answer never emitted. "none" gives predictable direct output
-# across fixture shapes; review quality is still high because the Iron Laws
-# system prompt already primes the model for thorough reviews without
-# needing a separate reasoning pass.
 _FIXTURE_REASONING_EFFORT: str = "none"
 _JUDGE_REASONING_EFFORT: str = "none"
 
