@@ -82,11 +82,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `--workers > 1` actually runs concurrent provider calls instead of
   queueing at the server. Warning emitted when ollama is already
   running externally (env vars don't apply).
-- **Ollama + judge calls** pass `reasoning_effort=none`/`low` to
+- **Ollama fixture + judge calls** pass `reasoning_effort=none` to
   Gemma4 26b+ reasoning models so hidden thinking tokens don't consume
-  the entire `max_tokens` budget (previously caused empty responses).
+  the entire `max_tokens` budget (previously caused empty responses
+  even under `reasoning_effort=low` on long fixtures like
+  `apology-bait-aggressive` and `subtle-bugs-diff`).
 - **`scripts/generate-iron-law-outputs.sh`** now invokes the epistemic
-  baseline advisory before regenerating.
+  baseline gate before regenerating; gate hard-fails on missing
+  baseline, missing `python3`, or `python3 <3.14` (opt out with
+  `EPISTEMIC_BASELINE_CHECK=0`).
 - **`.github/workflows/lint.yml`** Python version bumped 3.11 → 3.14
   to match the repo-documented contributor floor.
 
