@@ -477,6 +477,11 @@ fi
 if [[ "${EPISTEMIC_BASELINE_CHECK:-1}" != "0" ]]; then
   DRIFT_GATE="${SCRIPT_DIR}/check-epistemic-baseline-drift.py"
   if [[ -f "$DRIFT_GATE" && -r "$DRIFT_GATE" ]]; then
+    if ! command -v python3 >/dev/null 2>&1; then
+      log_error "python3 not found on PATH — epistemic baseline gate cannot run."
+      log_error "  Install python3 (3.14+), or opt out with EPISTEMIC_BASELINE_CHECK=0 when no epistemic measurement is planned."
+      exit 1
+    fi
     python3 "$DRIFT_GATE" || exit $?
   fi
 fi
