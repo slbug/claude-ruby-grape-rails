@@ -91,10 +91,13 @@ with the flags from step 1.
 
 If the script exits with code `2`:
 
-1. Read stderr — it lists every candidate path that was tried.
-2. Ask the contributor where their ccrider DB lives.
-3. Re-run with `--db PATH` once they answer.
-4. Only treat the scan as impossible if the contributor confirms no local DB
+1. Read stderr.
+2. If it says `Error: --db path does not exist`, the contributor-provided
+   path is wrong; ask for the correct DB path and re-run with `--db PATH`.
+3. Otherwise stderr lists every default candidate path that was tried; ask
+   the contributor where their ccrider DB lives.
+4. Re-run with `--db PATH` once they answer.
+5. Only treat the scan as impossible if the contributor confirms no local DB
    exists (e.g. ccrider not installed, not synced).
 
 ### 4. Relay the Triage Table

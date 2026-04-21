@@ -23,7 +23,7 @@ Options:
 Exit codes:
     0  success
     1  other error
-    2  ccrider DB not found at any default path
+    2  ccrider DB path unavailable (explicit path missing or no default found)
 """
 
 from __future__ import annotations
