@@ -83,7 +83,7 @@ def default_db_candidates() -> list[Path]:
 
 def resolve_db(explicit: str | None) -> Path:
     if explicit:
-        p = Path(explicit).expanduser()
+        p = Path(os.path.expandvars(explicit)).expanduser()
         if not p.exists():
             sys.stderr.write(f"Error: --db path does not exist: {p}\n")
             sys.exit(2)

@@ -378,6 +378,45 @@ class SessionScanMetricTests(unittest.TestCase):
         self.assertEqual(metadata["provider"], "claude")
         self.assertEqual(metadata["date"], "2026-04-21")
 
+    def test_load_session_data_from_db_expands_env_vars(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute(
+                (
+                    "CREATE TABLE sessions ("
+                    "id INTEGER PRIMARY KEY, "
+                    "session_id TEXT NOT NULL, "
+                    "project_path TEXT, "
+                    "provider TEXT, "
+                    "updated_at TEXT)"
+                )
+            )
+            conn.execute(
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT)"
+            )
+            conn.execute(
+                (
+                    "INSERT INTO sessions (id, session_id, project_path, provider, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?)"
+                ),
+                (1, "session-1", "/tmp/app", "codex", "2026-04-21T17:00:00Z"),
+            )
+            conn.execute(
+                "INSERT INTO messages (session_id, sequence, content) VALUES (?, ?, ?)",
+                (1, 1, json.dumps({"role": "user", "content": "hello"})),
+            )
+            conn.commit()
+            conn.close()
+
+            with mock.patch.dict(os.environ, {"TEST_DB_ROOT": tmpdir}, clear=False):
+                messages, metadata = session_scan_metrics.load_session_data_from_db(
+                    "$TEST_DB_ROOT/sessions.db", "session-1"
+                )
+
+        self.assertEqual(messages, [{"role": "user", "content": "hello"}])
+        self.assertEqual(metadata["provider"], "codex")
+
     def test_load_session_data_from_db_raises_when_all_rows_are_malformed(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "sessions.db"

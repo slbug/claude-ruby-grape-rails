@@ -1454,7 +1454,7 @@ def compute_trends(
 
 def load_session_data_from_db(db_path, session_id):
     """Load one session's messages and metadata from a ccrider SQLite DB."""
-    expanded_db_path = Path(db_path).expanduser()
+    expanded_db_path = Path(os.path.expandvars(db_path)).expanduser()
     if not expanded_db_path.exists():
         raise FileNotFoundError(f"ccrider DB not found: {expanded_db_path}")
     if not expanded_db_path.is_file():

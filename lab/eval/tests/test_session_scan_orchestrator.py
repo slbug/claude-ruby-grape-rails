@@ -184,6 +184,22 @@ class SessionScanOrchestratorTests(unittest.TestCase):
         self.assertEqual(exc.exception.code, 2)
         self.assertIn("not a file", stderr.getvalue())
 
+    def test_resolve_db_expands_env_vars(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            db_path.write_text("", encoding="utf-8")
+
+            with mock.patch.dict(
+                session_scan_orchestrator.os.environ,
+                {"TEST_DB_ROOT": tmpdir},
+                clear=False,
+            ):
+                resolved = session_scan_orchestrator.resolve_db(
+                    "$TEST_DB_ROOT/sessions.db"
+                )
+
+        self.assertEqual(resolved, db_path)
+
 
 if __name__ == "__main__":
     unittest.main()
