@@ -568,9 +568,7 @@ class SessionScanOrchestratorTests(unittest.TestCase):
                 )
 
             self.assertEqual(rc, 0)
-            import json as _json
-
-            latest_scan = _json.loads(
+            latest_scan = json.loads(
                 (metrics_dir / "latest-scan.json").read_text(encoding="utf-8")
             )
             self.assertIn("backfilled-1", latest_scan["view_session_ids"])

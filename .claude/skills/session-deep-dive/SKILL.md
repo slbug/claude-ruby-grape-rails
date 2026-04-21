@@ -14,9 +14,8 @@ transcript evidence. It is not a replacement for deterministic evals.
 
 ## Requirements
 
-- `ccrider` CLI on PATH (for full transcript export — not MCP)
-- readable local ccrider SQLite DB (session-scan resolves the path; reuse
-  the same resolution order here)
+- `ccrider` CLI on PATH (used for full transcript export; resolves its
+  own DB path internally — no `--db` flag to pass)
 - populated `.claude/session-metrics/metrics.jsonl` from `/session-scan`
 
 If the ledger does not exist, tell the contributor to run `/session-scan`
