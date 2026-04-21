@@ -294,7 +294,9 @@ class SessionScanMetricTests(unittest.TestCase):
 
     def test_load_messages_from_db_expands_user_path(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = Path(tmpdir) / "sessions.db"
+            db_dir = Path(tmpdir) / "db dir"
+            db_dir.mkdir()
+            db_path = db_dir / "sessions.db"
             conn = sqlite3.connect(db_path)
             conn.execute(
                 "CREATE TABLE sessions (id INTEGER PRIMARY KEY, session_id TEXT NOT NULL)"
@@ -315,7 +317,7 @@ class SessionScanMetricTests(unittest.TestCase):
 
             with mock.patch.dict(os.environ, {"HOME": tmpdir}, clear=False):
                 messages = session_scan_metrics.load_messages_from_db(
-                    "~/sessions.db", "session-1"
+                    "~/db dir/sessions.db", "session-1"
                 )
 
         self.assertEqual(messages, [{"role": "user", "content": "hello"}])

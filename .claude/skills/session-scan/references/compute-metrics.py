@@ -34,6 +34,7 @@ import sqlite3
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 
 # ─── Friction Score Weights ───────────────────────────────────────────────────
@@ -1446,10 +1447,10 @@ def compute_trends(
 
 def load_messages_from_db(db_path, session_id):
     """Load messages for one session directly from a ccrider SQLite DB."""
-    expanded_db_path = os.path.expanduser(db_path)
-    if not os.path.exists(expanded_db_path):
+    expanded_db_path = Path(db_path).expanduser()
+    if not expanded_db_path.exists():
         raise FileNotFoundError(f"ccrider DB not found: {expanded_db_path}")
-    uri = f"file:{expanded_db_path}?mode=ro&immutable=1"
+    uri = f"{expanded_db_path.resolve().as_uri()}?mode=ro&immutable=1"
     conn = sqlite3.connect(uri, uri=True)
     try:
         row = conn.execute(

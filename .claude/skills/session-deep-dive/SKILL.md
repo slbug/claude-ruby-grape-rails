@@ -64,12 +64,8 @@ Do not assume they are correct until transcript evidence supports them.
 ### 3. Export Transcripts via ccrider CLI
 
 Use the `ccrider export` command — no MCP, no truncation, full session.
-One Bash call per target:
-
-```bash
-mkdir -p .claude/session-analysis
-ccrider export SESSION_ID --output .claude/session-analysis/{short_id}-transcript.md
-```
+Per target, run `mkdir -p .claude/session-analysis` and then
+`ccrider export SESSION_ID --output .claude/session-analysis/{short_id}-transcript.md`.
 
 Each exported file contains the complete session markdown with all user,
 assistant, and tool messages. Main context does not need to read these

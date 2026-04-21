@@ -103,7 +103,7 @@ def resolve_db(explicit: str | None) -> Path:
 
 
 def open_db_readonly(path: Path) -> sqlite3.Connection:
-    uri = f"file:{path}?mode=ro&immutable=1"
+    uri = f"{path.resolve().as_uri()}?mode=ro&immutable=1"
     conn = sqlite3.connect(uri, uri=True)
     conn.row_factory = sqlite3.Row
     return conn
@@ -257,7 +257,9 @@ def main(argv: list[str]) -> int:
 
     db_path = resolve_db(args.db)
     since = parse_since(args.since)
-    metrics_dir = Path(args.metrics_dir).resolve()
+    metrics_dir = (
+        Path(os.path.expandvars(args.metrics_dir)).expanduser().resolve()
+    )
     metrics_dir.mkdir(parents=True, exist_ok=True)
     metrics_path = metrics_dir / "metrics.jsonl"
     latest_scan_path = metrics_dir / "latest-scan.json"

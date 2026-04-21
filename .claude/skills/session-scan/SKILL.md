@@ -84,10 +84,8 @@ Pass `$ARGUMENTS` through to `scan-sessions.py`. Supported flags:
 
 ### 2. Invoke the Scanner
 
-```bash
-python3 .claude/skills/session-scan/references/scan-sessions.py \
-  [flags from step 1]
-```
+Run `python3 .claude/skills/session-scan/references/scan-sessions.py`
+with the flags from step 1.
 
 ### 3. Handle "DB Not Found"
 

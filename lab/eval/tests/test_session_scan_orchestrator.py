@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+import sqlite3
 import tempfile
 import unittest
 from unittest import mock
@@ -65,6 +66,32 @@ class SessionScanOrchestratorTests(unittest.TestCase):
 
         self.assertEqual(rc, 0)
         conn.close.assert_called_once()
+
+    def test_open_db_readonly_handles_paths_with_spaces(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_dir = Path(tmpdir) / "db dir"
+            db_dir.mkdir()
+            db_path = db_dir / "sessions.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute(
+                "CREATE TABLE sessions (id INTEGER PRIMARY KEY, session_id TEXT NOT NULL)"
+            )
+            conn.execute(
+                "INSERT INTO sessions (id, session_id) VALUES (?, ?)",
+                (1, "session-1"),
+            )
+            conn.commit()
+            conn.close()
+
+            readonly = session_scan_orchestrator.open_db_readonly(db_path)
+            try:
+                row = readonly.execute(
+                    "SELECT session_id FROM sessions WHERE id = 1"
+                ).fetchone()
+            finally:
+                readonly.close()
+
+        self.assertEqual(row["session_id"], "session-1")
 
 
 if __name__ == "__main__":
