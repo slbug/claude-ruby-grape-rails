@@ -1323,7 +1323,7 @@ def compute_trends(
     def load_latest_entries(path):
         deduped_entries = {}
         ordered_entries = []
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             for index, line in enumerate(f):
                 line = line.strip()
                 if not line:

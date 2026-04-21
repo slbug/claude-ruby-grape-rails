@@ -19,20 +19,20 @@ MODULE_PATH = (
     / "references"
     / "scan-sessions.py"
 )
+MODULE_FILENAME = MODULE_PATH.name
+MODULE_IMPORT_NAME = "scan_sessions"
 
 if not MODULE_PATH.exists():
-    raise ImportError(f"Cannot find 'session_scan_orchestrator' at {MODULE_PATH}")
+    raise ImportError(f"Cannot find '{MODULE_FILENAME}' at {MODULE_PATH}")
 
-SPEC = importlib.util.spec_from_file_location("session_scan_orchestrator", MODULE_PATH)
+SPEC = importlib.util.spec_from_file_location(MODULE_IMPORT_NAME, MODULE_PATH)
 if SPEC is None or SPEC.loader is None:
-    raise ImportError(f"Cannot load 'session_scan_orchestrator' from {MODULE_PATH}")
+    raise ImportError(f"Cannot load '{MODULE_FILENAME}' from {MODULE_PATH}")
 session_scan_orchestrator = importlib.util.module_from_spec(SPEC)
 try:
     SPEC.loader.exec_module(session_scan_orchestrator)
 except OSError as exc:
-    raise ImportError(
-        f"Cannot execute 'session_scan_orchestrator' from {MODULE_PATH}"
-    ) from exc
+    raise ImportError(f"Cannot execute '{MODULE_FILENAME}' from {MODULE_PATH}") from exc
 
 
 class SessionScanOrchestratorTests(unittest.TestCase):

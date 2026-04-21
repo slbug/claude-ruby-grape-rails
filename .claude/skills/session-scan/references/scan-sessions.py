@@ -40,6 +40,19 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 
+def positive_int(value: str) -> int:
+    """Argparse type for positive integer flags."""
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"invalid integer value: {value!r}"
+        ) from exc
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("value must be a positive integer")
+    return parsed
+
+
 def load_scoring_module():
     """Load compute-metrics.py as a module via importlib (hyphen in filename)."""
     path = SCRIPT_DIR / "compute-metrics.py"
@@ -352,7 +365,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--since")
     ap.add_argument("--project")
     ap.add_argument("--provider")
-    ap.add_argument("--limit", type=int, default=50)
+    ap.add_argument("--limit", type=positive_int, default=50)
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--rescan", action="store_true")
     ap.add_argument("--db")
