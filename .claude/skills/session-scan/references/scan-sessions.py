@@ -519,7 +519,12 @@ def main(argv: list[str]) -> int:
             min_messages=args.min_messages,
         )
     except sqlite3.Error as exc:
-        print(f"Error: failed to read ccrider DB at {db_path}: {exc}", file=sys.stderr)
+        print(
+            f"Error: failed to read ccrider DB at {db_path}: {exc}",
+            file=sys.stderr,
+        )
+        if conn is not None:
+            conn.close()
         return 1
     try:
 

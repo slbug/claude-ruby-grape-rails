@@ -461,6 +461,28 @@ class SessionScanOrchestratorTests(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("failed to read ccrider DB", stderr.getvalue())
 
+    def test_main_closes_connection_when_discover_fails(self) -> None:
+        """If discover_sessions raises after open_db_readonly succeeds, the
+        connection must still be closed — not leaked on the early return."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            db_path.write_text("", encoding="utf-8")
+            conn = mock.Mock()
+            stderr = io.StringIO()
+
+            with redirect_stderr(stderr), mock.patch.object(
+                session_scan_orchestrator, "open_db_readonly", return_value=conn
+            ), mock.patch.object(
+                session_scan_orchestrator,
+                "discover_sessions",
+                side_effect=sqlite3.OperationalError("disk I/O error"),
+            ):
+                rc = session_scan_orchestrator.main(["--db", str(db_path)])
+
+        self.assertEqual(rc, 1)
+        conn.close.assert_called_once()
+        self.assertIn("failed to read ccrider DB", stderr.getvalue())
+
     def test_resolve_db_expands_env_vars(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "sessions.db"
