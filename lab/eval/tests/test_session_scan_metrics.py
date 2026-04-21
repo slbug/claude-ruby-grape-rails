@@ -1,8 +1,12 @@
-from __future__ import annotations
-
+from datetime import datetime, timezone
 import importlib.util
+import json
+import os
 from pathlib import Path
+import sqlite3
+import tempfile
 import unittest
+from unittest import mock
 
 
 MODULE_PATH = (
@@ -232,6 +236,322 @@ class SessionScanMetricTests(unittest.TestCase):
             [item["tc"]["name"] for item in tool_positions],
             ["Task", "Agent", "Bash"],
         )
+
+    def test_compute_trends_keeps_latest_entry_per_session(self) -> None:
+        now = datetime.now(timezone.utc)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            metrics_path = Path(tmpdir) / "metrics.jsonl"
+            entries = [
+                {
+                    "session_id": "session-a",
+                    "scanned_at": (now.replace(microsecond=0)).isoformat(),
+                    "provider": "claude",
+                    "project": "alpha",
+                    "date": now.date().isoformat(),
+                    "friction_score": 0.1,
+                    "plugin_opportunity_score": 0.1,
+                    "fingerprint": "exploration",
+                    "tier2_eligible": False,
+                    "plugin_signals": {"rb_commands_used": []},
+                },
+                {
+                    "session_id": "session-b",
+                    "scanned_at": (now.replace(microsecond=0)).isoformat(),
+                    "provider": "claude",
+                    "project": "beta",
+                    "date": now.date().isoformat(),
+                    "friction_score": 0.3,
+                    "plugin_opportunity_score": 0.2,
+                    "fingerprint": "feature",
+                    "tier2_eligible": False,
+                    "plugin_signals": {"rb_commands_used": []},
+                },
+                {
+                    "session_id": "session-a",
+                    "scanned_at": (now.replace(microsecond=0)).isoformat(),
+                    "provider": "claude",
+                    "project": "alpha",
+                    "date": now.date().isoformat(),
+                    "friction_score": 0.9,
+                    "plugin_opportunity_score": 0.4,
+                    "fingerprint": "bug-fix",
+                    "tier2_eligible": True,
+                    "plugin_signals": {"rb_commands_used": ["/rb:investigate"]},
+                },
+            ]
+            with metrics_path.open("w", encoding="utf-8") as f:
+                for entry in entries:
+                    f.write(json.dumps(entry) + "\n")
+
+            trends = session_scan_metrics.compute_trends(str(metrics_path))
+
+        self.assertEqual(trends["total_sessions"], 2)
+        self.assertEqual(trends["windows"]["all"]["count"], 2)
+        self.assertEqual(trends["windows"]["all"]["avg_friction"], 0.6)
+        self.assertEqual(trends["windows"]["all"]["tier2_eligible_count"], 1)
+
+    def test_load_messages_from_db_expands_user_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_dir = Path(tmpdir) / "db dir"
+            db_dir.mkdir()
+            db_path = db_dir / "sessions.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute(
+                (
+                    "CREATE TABLE sessions ("
+                    "id INTEGER PRIMARY KEY, "
+                    "session_id TEXT NOT NULL, "
+                    "project_path TEXT, "
+                    "provider TEXT, "
+                    "updated_at TEXT)"
+                )
+            )
+            conn.execute(
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT, text_content TEXT, type TEXT, sender TEXT)"
+            )
+            conn.execute(
+                (
+                    "INSERT INTO sessions (id, session_id, project_path, provider, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?)"
+                ),
+                (1, "session-1", "/tmp/app", "claude", "2026-04-21T17:00:00Z"),
+            )
+            conn.execute(
+                "INSERT INTO messages (session_id, sequence, content) VALUES (?, ?, ?)",
+                (1, 1, json.dumps({"role": "user", "content": "hello"})),
+            )
+            conn.commit()
+            conn.close()
+
+            with mock.patch.dict(os.environ, {"HOME": tmpdir}, clear=False):
+                messages = session_scan_metrics.load_messages_from_db(
+                    "~/db dir/sessions.db", "session-1"
+                )
+
+        self.assertEqual(messages, [{"role": "user", "content": "hello"}])
+
+    def test_load_session_data_from_db_uses_session_metadata_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute(
+                (
+                    "CREATE TABLE sessions ("
+                    "id INTEGER PRIMARY KEY, "
+                    "session_id TEXT NOT NULL, "
+                    "project_path TEXT, "
+                    "provider TEXT, "
+                    "updated_at TEXT)"
+                )
+            )
+            conn.execute(
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT, text_content TEXT, type TEXT, sender TEXT)"
+            )
+            conn.execute(
+                (
+                    "INSERT INTO sessions (id, session_id, project_path, provider, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?)"
+                ),
+                (
+                    1,
+                    "session-1",
+                    "/tmp/my-app",
+                    "claude",
+                    "2026-04-21T17:00:00Z",
+                ),
+            )
+            conn.execute(
+                "INSERT INTO messages (session_id, sequence, content) VALUES (?, ?, ?)",
+                (1, 1, json.dumps({"role": "user", "content": "hello"})),
+            )
+            conn.commit()
+            conn.close()
+
+            messages, metadata = session_scan_metrics.load_session_data_from_db(
+                str(db_path), "session-1"
+            )
+
+        self.assertEqual(messages, [{"role": "user", "content": "hello"}])
+        self.assertEqual(metadata["project"], "/tmp/my-app")
+        self.assertEqual(metadata["provider"], "claude")
+        self.assertEqual(metadata["date"], "2026-04-21")
+
+    def test_load_session_data_from_db_expands_env_vars(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute(
+                (
+                    "CREATE TABLE sessions ("
+                    "id INTEGER PRIMARY KEY, "
+                    "session_id TEXT NOT NULL, "
+                    "project_path TEXT, "
+                    "provider TEXT, "
+                    "updated_at TEXT)"
+                )
+            )
+            conn.execute(
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT, text_content TEXT, type TEXT, sender TEXT)"
+            )
+            conn.execute(
+                (
+                    "INSERT INTO sessions (id, session_id, project_path, provider, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?)"
+                ),
+                (1, "session-1", "/tmp/app", "codex", "2026-04-21T17:00:00Z"),
+            )
+            conn.execute(
+                "INSERT INTO messages (session_id, sequence, content) VALUES (?, ?, ?)",
+                (1, 1, json.dumps({"role": "user", "content": "hello"})),
+            )
+            conn.commit()
+            conn.close()
+
+            with mock.patch.dict(os.environ, {"TEST_DB_ROOT": tmpdir}, clear=False):
+                messages, metadata = session_scan_metrics.load_session_data_from_db(
+                    "$TEST_DB_ROOT/sessions.db", "session-1"
+                )
+
+        self.assertEqual(messages, [{"role": "user", "content": "hello"}])
+        self.assertEqual(metadata["provider"], "codex")
+
+    def test_load_session_data_from_db_raises_when_all_rows_are_malformed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute(
+                (
+                    "CREATE TABLE sessions ("
+                    "id INTEGER PRIMARY KEY, "
+                    "session_id TEXT NOT NULL, "
+                    "project_path TEXT, "
+                    "provider TEXT, "
+                    "updated_at TEXT)"
+                )
+            )
+            conn.execute(
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT, text_content TEXT, type TEXT, sender TEXT)"
+            )
+            conn.execute(
+                (
+                    "INSERT INTO sessions (id, session_id, project_path, provider, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?)"
+                ),
+                (1, "session-1", "/tmp/my-app", "claude", "2026-04-21T17:00:00Z"),
+            )
+            conn.execute(
+                "INSERT INTO messages (session_id, sequence, content) VALUES (?, ?, ?)",
+                (1, 1, "{not json"),
+            )
+            conn.commit()
+            conn.close()
+
+            with self.assertRaises(ValueError):
+                session_scan_metrics.load_session_data_from_db(
+                    str(db_path), "session-1"
+                )
+
+    def test_load_session_data_from_db_rejects_directory_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with self.assertRaisesRegex(ValueError, "not a file"):
+                session_scan_metrics.load_session_data_from_db(tmpdir, "session-1")
+
+    def test_load_session_data_from_db_wraps_sqlite_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "not-a-db.sqlite"
+            db_path.write_text("plain text", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "failed to read ccrider DB"):
+                session_scan_metrics.load_session_data_from_db(
+                    str(db_path), "session-1"
+                )
+
+    def test_reconstruct_message_from_row_statuses(self) -> None:
+        ok_msg, ok_status = session_scan_metrics.reconstruct_message_from_row(
+            '{"role":"user","content":"hi"}', "hi", "user", "human"
+        )
+        self.assertEqual(ok_status, "ok")
+        self.assertEqual(ok_msg, {"role": "user", "content": "hi"})
+
+        synth_msg, synth_status = session_scan_metrics.reconstruct_message_from_row(
+            None, "codex text", "assistant", "assistant"
+        )
+        self.assertEqual(synth_status, "synth")
+        self.assertEqual(synth_msg, {"role": "assistant", "content": "codex text"})
+
+        fb_msg, fb_status = session_scan_metrics.reconstruct_message_from_row(
+            "{broken", "fallback text", "user", "human"
+        )
+        self.assertEqual(fb_status, "synth")
+        self.assertEqual(fb_msg, {"role": "user", "content": "fallback text"})
+
+        fail_msg, fail_status = session_scan_metrics.reconstruct_message_from_row(
+            "{broken", "", "user", "human"
+        )
+        self.assertEqual(fail_status, "decode_failed")
+        self.assertIsNone(fail_msg)
+
+        empty_msg, empty_status = session_scan_metrics.reconstruct_message_from_row(
+            None, "   ", "user", "human"
+        )
+        self.assertEqual(empty_status, "empty")
+        self.assertIsNone(empty_msg)
+
+    def test_load_session_data_from_db_synthesizes_codex_text_content(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute(
+                (
+                    "CREATE TABLE sessions ("
+                    "id INTEGER PRIMARY KEY, "
+                    "session_id TEXT NOT NULL, "
+                    "project_path TEXT, "
+                    "provider TEXT, "
+                    "updated_at TEXT)"
+                )
+            )
+            conn.execute(
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, "
+                "sequence INTEGER NOT NULL, content TEXT, text_content TEXT, "
+                "type TEXT, sender TEXT)"
+            )
+            conn.execute(
+                "INSERT INTO sessions "
+                "(id, session_id, project_path, provider, updated_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (1, "codex-1", "/tmp/app", "codex", "2026-04-21T17:00:00Z"),
+            )
+            # Codex rows: content empty, text_content populated.
+            conn.execute(
+                "INSERT INTO messages "
+                "(session_id, sequence, content, text_content, type, sender) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (1, 1, None, "ask a question", "user", "human"),
+            )
+            conn.execute(
+                "INSERT INTO messages "
+                "(session_id, sequence, content, text_content, type, sender) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (1, 2, "", "answer body", "assistant", "assistant"),
+            )
+            conn.commit()
+            conn.close()
+
+            messages, metadata = session_scan_metrics.load_session_data_from_db(
+                str(db_path), "codex-1"
+            )
+
+        self.assertEqual(
+            messages,
+            [
+                {"role": "user", "content": "ask a question"},
+                {"role": "assistant", "content": "answer body"},
+            ],
+        )
+        self.assertEqual(metadata["provider"], "codex")
+        self.assertEqual(metadata["synthesized_from_text"], 2)
+        self.assertEqual(metadata["decode_failures"], 0)
 
 
 if __name__ == "__main__":

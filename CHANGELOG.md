@@ -7,6 +7,31 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.13.4] - 2026-04-21
+
+### Changed
+
+- **Contributor-only `/session-scan` reworked as SQLite-direct scanner.**
+  Drops dependency on `ccrider` MCP (which truncated transcripts via
+  `MAX_MCP_OUTPUT_TOKENS` at ~25K tokens, producing meaningless scores for
+  sessions >~40 messages). New `.claude/skills/session-scan/references/scan-sessions.py`
+  reads the local ccrider SQLite DB read-only, runs the deterministic
+  scorer, appends to `metrics.jsonl`, and prints the triage table — no
+  subagents, no LLM, no MCP calls. Full scan of 24 sessions drops from
+  ~5.8M tokens (MCP+subagent fan-out) to <100K main-context tokens and
+  completes in seconds. DB path is resolved from a generic candidate list
+  (`CCRIDER_DB` env, `$XDG_CONFIG_HOME`, `~/.config/ccrider/sessions.db`,
+  macOS `Application Support`, Windows `APPDATA`); skill asks the user
+  for an explicit `--db PATH` before hard-failing when no candidate is
+  found. Pre-filters sessions with `message_count < 5` (configurable via
+  `--min-messages`). `--provider` filter retained for multi-stack users.
+- **`compute-metrics.py` gains `--from-db SESSION_ID --db PATH`** mode
+  for manual single-session rescoring without going through the
+  orchestrator.
+- **`/session-deep-dive` switches to `ccrider export` CLI** for full
+  transcript retrieval instead of MCP `get_session_messages`. Same
+  truncation fix, applied to qualitative analysis.
+
 ## [1.13.3] - 2026-04-19
 
 ### Added
@@ -1831,7 +1856,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.3...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.4...HEAD
+[1.13.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.3...v1.13.4
 [1.13.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.2...v1.13.3
 [1.13.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.1...v1.13.2
 [1.13.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.0...v1.13.1

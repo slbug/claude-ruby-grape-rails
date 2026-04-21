@@ -1,30 +1,56 @@
 ---
 name: session-scan
-description: Compute exploratory metrics for recent Claude sessions. Use for broad session triage, provider-scoped scans, and identifying transcripts worth deeper review.
-argument-hint: "[--since DATE] [--project NAME] [--provider NAME] [--limit N] [--list] [--rescan]"
+description: Compute exploratory metrics for recent Claude sessions. Deterministic SQLite-direct scan over the local ccrider database; no MCP, no LLM, no subagents for scoring.
+argument-hint: "[--since DATE] [--project NAME] [--provider NAME] [--limit N] [--list] [--rescan] [--db PATH] [--metrics-dir PATH] [--min-messages N]"
 disable-model-invocation: true
 ---
 
 # Session Scan (Tier 1)
 
-Compute deterministic-but-heuristic session metrics from ccrider-discovered
-sessions. This is contributor analytics, not release gating.
+Compute deterministic-but-heuristic session metrics from sessions indexed by
+the local `ccrider` SQLite database. Contributor analytics, not release
+gating.
+
+## How It Works
+
+Scoring is pure regex + aggregation in Python. No LLM reasoning. No subagent
+fan-out. One Bash call invokes `references/scan-sessions.py` which:
+
+1. Resolves the ccrider DB path.
+2. Runs a read-only SQL query to list candidate sessions.
+3. For each candidate: reads `messages.content`, `messages.text_content`,
+   `type`, and `sender`; reconstructs each message from the raw provider
+   JSON when present or falls back to `text_content` + role metadata
+   (Codex sessions leave `content` empty). Passes the message list to the
+   canonical scorer and appends the result to `metrics.jsonl`.
+4. Prints a triage table.
+
+Entire scan takes seconds and uses negligible main-context tokens — the
+transcript data never leaves the Python process.
 
 ## Requirements
 
-Interactive session discovery requires `ccrider` MCP. If it is unavailable:
+- `ccrider` installed locally — see <https://github.com/neilberkman/ccrider>
+- `ccrider sync` has run (populates the SQLite DB from Claude Code /
+  Codex session files)
+- Python 3.14+ (repo floor; uses `str | None` / `list[X]` annotations
+  natively without `from __future__ import annotations`)
 
-> ccrider MCP is unavailable. You can still run
-> `references/compute-metrics.py` manually on local transcript exports, but
-> this skill cannot discover sessions automatically without ccrider.
+## DB Path Resolution
 
-## Important Caveat
+The scanner searches these locations in order:
 
-Session-scan results are exploratory. Use them to decide what to inspect next,
-not as proof that a plugin change helped or hurt.
+1. `--db PATH` CLI flag
+2. `CCRIDER_DB` environment variable
+3. `$XDG_CONFIG_HOME/ccrider/sessions.db`
+4. `$HOME/.config/ccrider/sessions.db`  (Linux / macOS default)
+5. `$HOME/Library/Application Support/ccrider/sessions.db`  (macOS alt)
+6. `$APPDATA/ccrider/sessions.db`  (Windows)
 
-Prefer a single provider when analyzing trends. Mixed Claude Code and Codex
-sessions can produce misleading comparisons.
+**If no candidate exists**, the script exits with code `2` and lists the
+paths it tried. When that happens, ask the contributor for the DB path and
+re-run with `--db PATH` — do not hard-fail until the contributor confirms
+no path is available.
 
 ## Usage
 
@@ -32,133 +58,89 @@ sessions can produce misleading comparisons.
 /session-scan
 /session-scan --since 2026-02-01
 /session-scan --project myapp
-/session-scan --provider claude-code
+/session-scan --provider claude
 /session-scan --limit 20
 /session-scan --list
 /session-scan --rescan
+/session-scan --db /custom/path/to/sessions.db
 ```
 
-If your installed `ccrider` uses a different provider label, pass that exact
-label to `--provider`.
+Use the exact `sessions.provider` value shown in `--list` output when
+passing `--provider`. Values such as `claude`, `codex`, or `claude-code`
+are examples only; the filter is an exact match on your local ccrider DB.
+The contributor may use different project directories in the same stack;
+the `--provider` filter keeps single-stack comparisons honest.
 
 ## Main-Context Workflow
 
 ### 1. Parse Arguments
 
-Supported flags:
+Pass `$ARGUMENTS` through to `scan-sessions.py`. Supported flags:
 
-- `--since DATE`
-- `--project NAME`
-- `--provider NAME`
-- `--limit N`
-- `--list`
-- `--rescan`
+- `--since DATE`         (default: 7 days ago)
+- `--project SUBSTR`     (matches `sessions.project_path LIKE '%SUBSTR%'`)
+- `--provider NAME`      (exact match on `sessions.provider`)
+- `--limit N`            (default: 50)
+- `--list`               (discovery only, no scoring)
+- `--rescan`             (recompute already-scanned sessions)
+- `--db PATH`            (override DB path)
+- `--metrics-dir DIR`    (default: `.claude/session-metrics`)
+- `--min-messages N`     (default: 5 — filter trivial ping/hi sessions)
 
-Defaults:
+### 2. Invoke the Scanner
 
-- `--since`: 7 days ago
-- `--limit`: 50
-- `--provider`: unset unless the contributor asks for it
+Run `python3 .claude/skills/session-scan/references/scan-sessions.py`
+with the flags from step 1.
 
-### 2. Discover Candidate Sessions
+### 3. Handle "DB Not Found"
 
-Use the lightweight ccrider listing call first.
+If the script exits with code `2`:
 
-If your ccrider MCP exposes provider filtering, pass the contributor's
-`--provider` through to discovery. Otherwise:
+1. Read stderr.
+2. If it says `Error: --db path does not exist` or
+   `Error: --db path is not a file`, the contributor-provided path is wrong;
+   ask for the correct DB path and re-run with `--db PATH`.
+3. Otherwise stderr lists every default candidate path that was tried; ask
+   the contributor where their ccrider DB lives.
+4. Re-run with `--db PATH` once they answer.
+5. Only treat the scan as impossible if the contributor confirms no local DB
+   exists (e.g. ccrider not installed, not synced).
 
-1. list recent sessions normally
-2. inspect provider metadata in the returned session summaries
-3. keep only the requested provider before scoring
+### 4. Relay the Triage Table
 
-If `--list` is present, stop after showing the filtered candidate table.
+The script prints a Markdown table sorted by friction descending. Pass it
+through to the contributor as-is. Add a one-line summary with the
+scanned / skipped / error counts from stderr.
 
-### 3. Deduplicate Against the Ledger
+If the script reports `Tier2-eligible > 0`, suggest `/session-deep-dive
+--from-scan` for qualitative analysis.
 
-Read `.claude/session-metrics/metrics.jsonl` if present.
+### 5. Scan Metadata
 
-- skip sessions already scanned unless `--rescan` is set
-- preserve append-only history
-- report how many sessions were new vs already present
+The script writes `.claude/session-metrics/latest-scan.json` with scan
+timestamp, filters used, counts, and any session-level errors. No main-
+context action needed.
 
-### 4. Resolve the Canonical Scorer
+## Files
 
-Locate:
-
-```text
-${CLAUDE_SKILL_DIR}/references/compute-metrics.py
-```
-
-This script is the canonical scorer for contributor analytics. Do not
-re-implement the metric formulas inline in the prompt.
-
-### 5. Spawn One Subagent Per Session
-
-Use one lightweight subagent per session. Main context must not fetch large
-session transcripts directly.
-
-Use `Agent(...)`, not legacy `Task(...)`, in contributor guidance.
-
-Each scoring subagent should:
-
-1. fetch one session transcript from ccrider
-2. write the transcript JSON to a temp file under `.claude/session-metrics/`
-3. run `compute-metrics.py` once for that session
-4. include `--provider NAME` when the provider is known
-5. write the score to a temp result file
-6. delete its temp transcript file
-
-### 6. Collect Results
-
-Append each `_result_*.json` entry into
-`.claude/session-metrics/metrics.jsonl`, then remove the temp result files.
-
-### 7. Display a Triage Table
-
-Show a concise table sorted by friction descending, for example:
-
-```text
-| ID       | Provider    | Project | Date       | Fingerprint | Friction | Opportunity | Tier2? |
-|----------|-------------|---------|------------|-------------|----------|-------------|--------|
-| ffa155ee | claude-code | myapp   | 2026-02-18 | bug-fix     | 0.42     | 0.65        | Yes    |
-| 90a74843 | claude-code | myapp   | 2026-02-17 | feature     | 0.15     | 0.20        | No     |
-```
-
-If high-signal sessions exist, suggest `/session-deep-dive`.
-
-### 8. Write Scan Metadata
-
-Update `.claude/session-metrics/latest-scan.json` with:
-
-- scan time
-- provider filter used
-- sessions discovered
-- sessions scanned
-- sessions skipped
-- Tier 2 eligible count
-
-## Scoring Reference
-
-See `references/scoring-guide.md`.
-
-Core outputs:
-
-- friction score
-- fingerprint
-- plugin opportunity score
-- tool profile
-- skill-effectiveness hints
-
-These metrics are intentionally directional, not decision-grade.
+- `references/scan-sessions.py` — end-to-end orchestrator (discovery,
+  dedup, scoring, ledger append, table)
+- `references/compute-metrics.py` — canonical scorer; also supports
+  `--from-db SESSION_ID --db PATH` for manual single-session rescoring
+- `references/scoring-guide.md` — what each metric means
 
 ## Iron Laws
 
-1. Do not fetch large transcripts in main context.
-2. Use one subagent per scored session.
-3. Keep provider scope explicit when the contributor cares about trends.
-4. Use the canonical scorer script instead of hand-recomputing formulas.
-5. Keep the metrics ledger append-only.
-6. Treat scan output as triage input, not release proof.
+1. Read-only SQL only. No `UPDATE`, `DELETE`, `INSERT`, `DROP`, or PRAGMA
+   changes anywhere in the scan path.
+2. Transcript data never enters main context — the Python process reads
+   rows and emits metrics; only the small JSON metrics line and the final
+   table cross process boundaries.
+3. Keep `metrics.jsonl` append-only. Dedup happens before scoring.
+4. Use the canonical scorer, not ad-hoc reimplementations of the metric
+   formulas.
+5. Treat scan output as triage input, not release proof.
+6. Honor `--provider` when the contributor asks for a provider-scoped view.
 
 ## Epistemic Posture
 

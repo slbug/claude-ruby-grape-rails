@@ -14,10 +14,13 @@ transcript evidence. It is not a replacement for deterministic evals.
 
 ## Requirements
 
-Requires `ccrider` MCP and a populated `.claude/session-metrics/metrics.jsonl`.
+- `ccrider` CLI on PATH (used for full transcript export; resolves its
+  own DB path internally — no `--db` flag to pass)
+- populated `.claude/session-metrics/metrics.jsonl` from `/session-scan`
 
 If the ledger does not exist, tell the contributor to run `/session-scan`
-first.
+first. If `ccrider` is not on PATH, ask the contributor to install it
+(<https://github.com/neilberkman/ccrider>) before continuing.
 
 ## Usage
 
@@ -25,7 +28,7 @@ first.
 /session-deep-dive SESSION_ID
 /session-deep-dive --last
 /session-deep-dive --from-scan
-/session-deep-dive --from-scan --provider claude-code
+/session-deep-dive --from-scan --provider <exact-provider-from-scan>
 /session-deep-dive --compare .claude/session-analysis/insights-2026-03-20.md
 ```
 
@@ -57,18 +60,19 @@ starting hypotheses:
 
 Do not assume they are correct until transcript evidence supports them.
 
-### 3. Fetch One Transcript Per Subagent
+### 3. Export Transcripts via ccrider CLI
 
-Use one subagent per session. Main context should not pull multiple full
-transcripts directly.
+Use the `ccrider export` command — no MCP, no truncation, full session.
+Per target, run `mkdir -p .claude/session-analysis` and then
+`ccrider export SESSION_ID --output .claude/session-analysis/{short_id}-transcript.md`.
 
-Use `Agent(...)`, not historical `Task(...)`, in contributor prompts.
+Each exported file contains the complete session markdown with all user,
+assistant, and tool messages. Main context does not need to read these
+files — only the later analysis subagent does.
 
-Each fetch subagent should:
-
-1. call ccrider for one session
-2. write the transcript to `.claude/session-analysis/{short_id}-transcript.md`
-3. report the transcript path and message count
+For multiple sessions, loop over the selected session IDs and invoke
+`ccrider export` once per ID. This avoids loading transcript bytes into
+main-context tool output.
 
 ### 4. Analyze Each Session with the Shared Template
 
@@ -129,11 +133,14 @@ Write:
 ## Iron Laws
 
 1. Transcript-derived metrics are hints, not proof.
-2. Use one transcript-fetch subagent per session.
-3. Validate scan heuristics against actual transcript evidence.
-4. Avoid missing local dependencies such as `MEMORY.md`.
-5. Keep synthesis grounded in tracked files and explicit contributor notes.
-6. Cite evidence strength for every meaningful finding.
+2. Export full transcripts via `ccrider export`; do not rely on MCP
+   `get_session_messages` (it truncates large sessions).
+3. One analysis subagent per session (haiku or sonnet). The subagent reads
+   the exported markdown file; main context does not.
+4. Validate scan heuristics against actual transcript evidence.
+5. Avoid missing local dependencies such as `MEMORY.md`.
+6. Keep synthesis grounded in tracked files and explicit contributor notes.
+7. Cite evidence strength for every meaningful finding.
 
 ## Epistemic Posture
 

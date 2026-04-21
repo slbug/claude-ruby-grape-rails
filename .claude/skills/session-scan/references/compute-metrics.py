@@ -6,8 +6,11 @@ Reads ccrider message JSON and computes friction scores, fingerprints, plugin
 opportunity scores, tool bigrams, and file hotspots.
 
 Usage:
-    # Single session (outputs JSON to stdout)
+    # Single session from messages JSON file (outputs JSON to stdout)
     python3 compute-metrics.py <messages.json> --session-id ID --project NAME [--provider NAME]
+
+    # Single session directly from ccrider SQLite DB
+    python3 compute-metrics.py --from-db SESSION_ID --db PATH [--project NAME] [--provider NAME]
 
     # Batch mode (appends to metrics.jsonl)
     python3 compute-metrics.py --batch <manifest.json>
@@ -17,6 +20,9 @@ Usage:
 
     # Backfill from v1 extracts
     python3 compute-metrics.py --backfill <extracts-dir/>
+
+For full scans across many sessions prefer the scan-sessions.py orchestrator,
+which handles discovery, dedup, ledger append, and triage table in one call.
 """
 
 import json
@@ -24,9 +30,11 @@ import math
 import os
 import re
 import shlex
+import sqlite3
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 
 # ─── Friction Score Weights ───────────────────────────────────────────────────
@@ -110,6 +118,13 @@ def normalize_plugin_command_name(command):
     if normalized.startswith("/"):
         return normalized[1:]
     return normalized
+
+
+def normalize_project_path(path):
+    """Return a stable project path value for persisted metrics."""
+    if not path:
+        return "unknown"
+    return str(path)
 
 
 def extract_plugin_commands(user_msgs):
@@ -1304,24 +1319,41 @@ def compute_trends(
     metrics_path, notes_path=None, project_filter=None, provider_filter=None
 ):
     """Compute windowed aggregates from metrics.jsonl."""
-    entries = []
-    with open(metrics_path) as f:
-        for line in f:
-            line = line.strip()
-            if line:
+
+    def load_latest_entries(path):
+        deduped_entries = {}
+        ordered_entries = []
+        with open(path, encoding="utf-8") as f:
+            for index, line in enumerate(f):
+                line = line.strip()
+                if not line:
+                    continue
                 try:
                     entry = json.loads(line)
-                    if project_filter:
-                        proj = entry.get("project", "")
-                        if project_filter.lower() not in proj.lower():
-                            continue
-                    if provider_filter and provider_filter.lower() != "all":
-                        provider_name = str(entry.get("provider", "unknown"))
-                        if provider_name.lower() != provider_filter.lower():
-                            continue
-                    entries.append(entry)
                 except json.JSONDecodeError:
                     continue
+
+                session_id = entry.get("session_id")
+                if session_id:
+                    deduped_entries[session_id] = (index, entry)
+                else:
+                    ordered_entries.append((index, entry))
+
+        ordered_entries.extend(deduped_entries.values())
+        ordered_entries.sort(key=lambda item: item[0])
+        return [entry for _, entry in ordered_entries]
+
+    entries = []
+    for entry in load_latest_entries(metrics_path):
+        if project_filter:
+            proj = entry.get("project", "")
+            if project_filter.lower() not in proj.lower():
+                continue
+        if provider_filter and provider_filter.lower() != "all":
+            provider_name = str(entry.get("provider", "unknown"))
+            if provider_name.lower() != provider_filter.lower():
+                continue
+        entries.append(entry)
 
     if not entries:
         return {"error": "No metrics found", "total_sessions": 0}
@@ -1420,6 +1452,131 @@ def compute_trends(
 # ─── Batch Mode ──────────────────────────────────────────────────────────────
 
 
+def reconstruct_message_from_row(content, text_content, msg_type, sender):
+    """Rebuild one message dict from a ccrider ``messages`` row.
+
+    ccrider stores two projections per row:
+      - ``content``: raw provider payload as a JSON string (Claude sessions).
+      - ``text_content``: normalized plain-text projection (used by all
+        providers for search / FTS).
+
+    Codex rows leave ``content`` empty and only populate ``text_content``,
+    so provider-neutral reconstruction must fall back to ``text_content``
+    plus ``type``/``sender`` when ``content`` is unusable.
+
+    Return value:
+        (message_dict_or_None, status) where status is one of:
+            "ok"             - decoded provider JSON successfully
+            "synth"          - synthesized from text_content + type/sender
+            "decode_failed"  - content present but not valid JSON, no fallback
+            "empty"          - nothing usable; row should be skipped
+    """
+
+    if content:
+        try:
+            return json.loads(content), "ok"
+        except json.JSONDecodeError:
+            if text_content and isinstance(text_content, str) and text_content.strip():
+                role = msg_type or sender or "user"
+                return {"role": role, "content": text_content}, "synth"
+            return None, "decode_failed"
+
+    if text_content and isinstance(text_content, str) and text_content.strip():
+        role = msg_type or sender or "user"
+        return {"role": role, "content": text_content}, "synth"
+
+    return None, "empty"
+
+
+def load_session_data_from_db(db_path, session_id):
+    """Load one session's messages and metadata from a ccrider SQLite DB."""
+    expanded_db_path = Path(os.path.expandvars(db_path)).expanduser()
+    if not expanded_db_path.exists():
+        raise FileNotFoundError(f"ccrider DB not found: {expanded_db_path}")
+    if not expanded_db_path.is_file():
+        raise ValueError(f"ccrider DB path is not a file: {expanded_db_path}")
+    uri = f"{expanded_db_path.resolve().as_uri()}?mode=ro"
+    try:
+        conn = sqlite3.connect(uri, uri=True)
+    except sqlite3.Error as exc:
+        raise ValueError(
+            f"failed to read ccrider DB at {expanded_db_path}: {exc}"
+        ) from exc
+    try:
+        row = conn.execute(
+            (
+                "SELECT id, project_path, provider, updated_at "
+                "FROM sessions WHERE session_id = ?"
+            ),
+            (session_id,),
+        ).fetchone()
+        if not row:
+            raise LookupError(f"session_id not found in DB: {session_id}")
+        session_pk = row[0]
+        project_path = row[1]
+        provider = row[2]
+        updated_at = row[3]
+        rows = conn.execute(
+            (
+                "SELECT content, text_content, type, sender "
+                "FROM messages WHERE session_id = ? ORDER BY sequence"
+            ),
+            (session_pk,),
+        ).fetchall()
+    except sqlite3.Error as exc:
+        raise ValueError(
+            f"failed to read ccrider DB at {expanded_db_path}: {exc}"
+        ) from exc
+    finally:
+        conn.close()
+    messages = []
+    decode_failures = 0
+    synthesized = 0
+    candidate_rows = 0
+    for content, text_content, msg_type, sender in rows:
+        if not content and not (text_content and str(text_content).strip()):
+            continue
+        candidate_rows += 1
+        msg, status = reconstruct_message_from_row(
+            content, text_content, msg_type, sender
+        )
+        if status == "ok":
+            messages.append(msg)
+        elif status == "synth":
+            messages.append(msg)
+            synthesized += 1
+        elif status == "decode_failed":
+            decode_failures += 1
+        # status == "empty" was filtered above
+    if decode_failures:
+        print(
+            (
+                f"WARNING: skipped {decode_failures} malformed message row(s) "
+                f"while loading session {session_id} from {expanded_db_path}"
+            ),
+            file=sys.stderr,
+        )
+        if not messages and candidate_rows:
+            raise ValueError(
+                f"failed to decode all {candidate_rows} candidate message row(s) "
+                f"for session {session_id} in {expanded_db_path}"
+            )
+    metadata = {
+        "project": normalize_project_path(project_path),
+        "provider": provider or "unknown",
+        "date": (updated_at or "")[:10] or None,
+        "decode_failures": decode_failures,
+        "synthesized_from_text": synthesized,
+    }
+    return messages, metadata
+
+
+def load_messages_from_db(db_path, session_id):
+    """Load messages for one session directly from a ccrider SQLite DB."""
+    messages, _metadata = load_session_data_from_db(db_path, session_id)
+    return messages
+
+
 def run_batch(manifest_path):
     """Process multiple sessions from a manifest file.
 
@@ -1469,12 +1626,18 @@ def print_usage():
     print(
         "  python3 compute-metrics.py <messages.json> --session-id ID --project NAME [--provider NAME]"
     )
+    print(
+        "  python3 compute-metrics.py --from-db SESSION_ID --db PATH [--project NAME] [--provider NAME]"
+    )
     print("  python3 compute-metrics.py --batch <manifest.json>")
     print(
         "  python3 compute-metrics.py --trends <metrics.jsonl> [--project NAME] [--provider NAME] [--notes PATH]"
     )
     print("  python3 compute-metrics.py --backfill <extracts-dir/>")
     print("  python3 compute-metrics.py --help")
+    print(
+        "\nFor full scans prefer scan-sessions.py (discovery + dedup + triage)."
+    )
 
 
 if __name__ == "__main__":
@@ -1520,6 +1683,49 @@ if __name__ == "__main__":
             provider_filter=provider_filter,
         )
         print(json.dumps(result, indent=2))
+
+    elif mode == "--from-db":
+        if len(sys.argv) < 3:
+            print("Error: --from-db requires SESSION_ID")
+            sys.exit(1)
+        session_id = sys.argv[2]
+        db_path = None
+        project = None
+        provider = None
+        if "--db" in sys.argv:
+            idx = sys.argv.index("--db")
+            if idx + 1 < len(sys.argv):
+                db_path = sys.argv[idx + 1]
+        if "--project" in sys.argv:
+            idx = sys.argv.index("--project")
+            if idx + 1 < len(sys.argv):
+                project = sys.argv[idx + 1]
+        if "--provider" in sys.argv:
+            idx = sys.argv.index("--provider")
+            if idx + 1 < len(sys.argv):
+                provider = sys.argv[idx + 1]
+        if not db_path:
+            print("Error: --from-db requires --db PATH", file=sys.stderr)
+            sys.exit(1)
+        try:
+            messages, metadata = load_session_data_from_db(db_path, session_id)
+        except FileNotFoundError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(2)
+        except LookupError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
+        metrics = compute_session_metrics(
+            messages,
+            session_id,
+            project or metadata["project"],
+            date=metadata["date"],
+            provider=provider or metadata["provider"],
+        )
+        print(json.dumps(metrics, indent=2))
 
     elif mode == "--backfill":
         if len(sys.argv) < 3:
