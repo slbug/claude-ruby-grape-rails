@@ -6,8 +6,11 @@ Reads ccrider message JSON and computes friction scores, fingerprints, plugin
 opportunity scores, tool bigrams, and file hotspots.
 
 Usage:
-    # Single session (outputs JSON to stdout)
+    # Single session from messages JSON file (outputs JSON to stdout)
     python3 compute-metrics.py <messages.json> --session-id ID --project NAME [--provider NAME]
+
+    # Single session directly from ccrider SQLite DB
+    python3 compute-metrics.py --from-db SESSION_ID --db PATH --project NAME [--provider NAME]
 
     # Batch mode (appends to metrics.jsonl)
     python3 compute-metrics.py --batch <manifest.json>
@@ -17,6 +20,9 @@ Usage:
 
     # Backfill from v1 extracts
     python3 compute-metrics.py --backfill <extracts-dir/>
+
+For full scans across many sessions prefer the scan-sessions.py orchestrator,
+which handles discovery, dedup, ledger append, and triage table in one call.
 """
 
 import json
@@ -24,6 +30,7 @@ import math
 import os
 import re
 import shlex
+import sqlite3
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
@@ -1420,6 +1427,36 @@ def compute_trends(
 # ─── Batch Mode ──────────────────────────────────────────────────────────────
 
 
+def load_messages_from_db(db_path, session_id):
+    """Load messages for one session directly from a ccrider SQLite DB."""
+    if not os.path.exists(db_path):
+        raise FileNotFoundError(f"ccrider DB not found: {db_path}")
+    uri = f"file:{db_path}?mode=ro&immutable=1"
+    conn = sqlite3.connect(uri, uri=True)
+    try:
+        row = conn.execute(
+            "SELECT id FROM sessions WHERE session_id = ?", (session_id,)
+        ).fetchone()
+        if not row:
+            raise LookupError(f"session_id not found in DB: {session_id}")
+        session_pk = row[0]
+        rows = conn.execute(
+            "SELECT content FROM messages WHERE session_id = ? ORDER BY sequence",
+            (session_pk,),
+        ).fetchall()
+    finally:
+        conn.close()
+    messages = []
+    for (content,) in rows:
+        if not content:
+            continue
+        try:
+            messages.append(json.loads(content))
+        except json.JSONDecodeError:
+            continue
+    return messages
+
+
 def run_batch(manifest_path):
     """Process multiple sessions from a manifest file.
 
@@ -1469,12 +1506,18 @@ def print_usage():
     print(
         "  python3 compute-metrics.py <messages.json> --session-id ID --project NAME [--provider NAME]"
     )
+    print(
+        "  python3 compute-metrics.py --from-db SESSION_ID --db PATH --project NAME [--provider NAME]"
+    )
     print("  python3 compute-metrics.py --batch <manifest.json>")
     print(
         "  python3 compute-metrics.py --trends <metrics.jsonl> [--project NAME] [--provider NAME] [--notes PATH]"
     )
     print("  python3 compute-metrics.py --backfill <extracts-dir/>")
     print("  python3 compute-metrics.py --help")
+    print(
+        "\nFor full scans prefer scan-sessions.py (discovery + dedup + triage)."
+    )
 
 
 if __name__ == "__main__":
@@ -1520,6 +1563,42 @@ if __name__ == "__main__":
             provider_filter=provider_filter,
         )
         print(json.dumps(result, indent=2))
+
+    elif mode == "--from-db":
+        if len(sys.argv) < 3:
+            print("Error: --from-db requires SESSION_ID")
+            sys.exit(1)
+        session_id = sys.argv[2]
+        db_path = None
+        project = "unknown"
+        provider = None
+        if "--db" in sys.argv:
+            idx = sys.argv.index("--db")
+            if idx + 1 < len(sys.argv):
+                db_path = sys.argv[idx + 1]
+        if "--project" in sys.argv:
+            idx = sys.argv.index("--project")
+            if idx + 1 < len(sys.argv):
+                project = sys.argv[idx + 1]
+        if "--provider" in sys.argv:
+            idx = sys.argv.index("--provider")
+            if idx + 1 < len(sys.argv):
+                provider = sys.argv[idx + 1]
+        if not db_path:
+            print("Error: --from-db requires --db PATH", file=sys.stderr)
+            sys.exit(1)
+        try:
+            messages = load_messages_from_db(db_path, session_id)
+        except FileNotFoundError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(2)
+        except LookupError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
+        metrics = compute_session_metrics(
+            messages, session_id, project, provider=provider
+        )
+        print(json.dumps(metrics, indent=2))
 
     elif mode == "--backfill":
         if len(sys.argv) < 3:

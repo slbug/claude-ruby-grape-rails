@@ -1,7 +1,12 @@
 # Scoring Guide
 
-Reference for the exploratory metrics produced by
-`compute-metrics.py`.
+Reference for the exploratory metrics produced by `compute-metrics.py`
+(invoked per session by `scan-sessions.py`).
+
+The scan pipeline is fully deterministic: it reads messages straight out
+of the local ccrider SQLite DB, runs regex-based extraction and
+aggregation, and writes a JSON line per session. No LLM is involved in
+scoring.
 
 ## Read This First
 
