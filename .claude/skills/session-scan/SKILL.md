@@ -18,9 +18,11 @@ fan-out. One Bash call invokes `references/scan-sessions.py` which:
 
 1. Resolves the ccrider DB path.
 2. Runs a read-only SQL query to list candidate sessions.
-3. For each candidate: pulls `messages.content` rows, reconstructs the
-   message list, passes it to the canonical scorer, appends the result to
-   `metrics.jsonl`.
+3. For each candidate: reads `messages.content`, `messages.text_content`,
+   `type`, and `sender`; reconstructs each message from the raw provider
+   JSON when present or falls back to `text_content` + role metadata
+   (Codex sessions leave `content` empty). Passes the message list to the
+   canonical scorer and appends the result to `metrics.jsonl`.
 4. Prints a triage table.
 
 Entire scan takes seconds and uses negligible main-context tokens — the
