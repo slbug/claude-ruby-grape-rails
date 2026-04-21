@@ -126,9 +126,35 @@ def open_db_readonly(path: Path) -> sqlite3.Connection:
 
 
 def parse_since(value: str | None) -> str:
-    if value:
-        return value
-    return (datetime.now(timezone.utc) - timedelta(days=7)).date().isoformat()
+    """Return an ISO-8601 string suitable for SQL string comparison.
+
+    Accepts an ISO-8601 date (``YYYY-MM-DD``) or datetime (with optional
+    ``T`` separator and trailing ``Z`` / offset). Bails out with exit code
+    1 on anything else so malformed input does not silently produce an
+    empty result set.
+    """
+
+    if not value:
+        return (datetime.now(timezone.utc) - timedelta(days=7)).date().isoformat()
+
+    raw = value.strip()
+    if not raw:
+        sys.stderr.write(
+            "Error: --since must be an ISO-8601 date or datetime.\n"
+        )
+        sys.exit(1)
+
+    try:
+        if "T" not in raw and " " not in raw:
+            return datetime.fromisoformat(raw).date().isoformat()
+        normalized = raw[:-1] + "+00:00" if raw.endswith("Z") else raw
+        return datetime.fromisoformat(normalized).isoformat()
+    except ValueError:
+        sys.stderr.write(
+            f"Error: invalid --since value {value!r}. "
+            "Expected an ISO-8601 date or datetime.\n"
+        )
+        sys.exit(1)
 
 
 def discover_sessions(
@@ -429,7 +455,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--rescan", action="store_true")
     ap.add_argument("--db")
     ap.add_argument("--metrics-dir", default=".claude/session-metrics")
-    ap.add_argument("--min-messages", type=int, default=5)
+    ap.add_argument("--min-messages", type=positive_int, default=5)
     args = ap.parse_args(argv)
 
     db_path = resolve_db(args.db)

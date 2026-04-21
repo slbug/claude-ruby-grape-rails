@@ -86,8 +86,8 @@ class SessionScanOrchestratorTests(unittest.TestCase):
                     ["--db", str(db_path), "--metrics-dir", str(metrics_dir), "--list"]
                 )
 
-        self.assertEqual(rc, 0)
-        self.assertFalse(metrics_dir.exists())
+            self.assertEqual(rc, 0)
+            self.assertFalse(metrics_dir.exists())
 
     def test_open_db_readonly_handles_paths_with_spaces(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -378,6 +378,42 @@ class SessionScanOrchestratorTests(unittest.TestCase):
             [entry["session_id"] for entry in entries],
             ["session-b", "session-a"],
         )
+
+    def test_parse_since_accepts_iso_date(self) -> None:
+        self.assertEqual(
+            session_scan_orchestrator.parse_since("2026-04-21"), "2026-04-21"
+        )
+
+    def test_parse_since_accepts_iso_datetime_with_z(self) -> None:
+        self.assertEqual(
+            session_scan_orchestrator.parse_since("2026-04-21T12:00:00Z"),
+            "2026-04-21T12:00:00+00:00",
+        )
+
+    def test_parse_since_rejects_invalid_value(self) -> None:
+        stderr = io.StringIO()
+        with redirect_stderr(stderr), self.assertRaises(SystemExit) as exc:
+            session_scan_orchestrator.parse_since("last week")
+        self.assertEqual(exc.exception.code, 1)
+        self.assertIn("invalid --since", stderr.getvalue())
+
+    def test_parse_since_rejects_blank_string(self) -> None:
+        stderr = io.StringIO()
+        with redirect_stderr(stderr), self.assertRaises(SystemExit) as exc:
+            session_scan_orchestrator.parse_since("   ")
+        self.assertEqual(exc.exception.code, 1)
+        self.assertIn("ISO-8601", stderr.getvalue())
+
+    def test_min_messages_rejects_non_positive(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            db_path.write_text("", encoding="utf-8")
+            stderr = io.StringIO()
+            with redirect_stderr(stderr), self.assertRaises(SystemExit) as exc:
+                session_scan_orchestrator.main(
+                    ["--db", str(db_path), "--min-messages", "0"]
+                )
+            self.assertEqual(exc.exception.code, 2)
 
     def test_resolve_db_rejects_directory_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
