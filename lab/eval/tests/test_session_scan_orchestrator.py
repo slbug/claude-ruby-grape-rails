@@ -200,6 +200,29 @@ class SessionScanOrchestratorTests(unittest.TestCase):
 
         self.assertEqual(resolved, db_path)
 
+    def test_default_db_candidates_expand_env_vars(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home_dir = Path(tmpdir) / "home"
+            home_dir.mkdir()
+            expected_db = home_dir / ".config" / "ccrider" / "sessions.db"
+
+            with mock.patch.object(
+                session_scan_orchestrator.Path,
+                "home",
+                return_value=home_dir,
+            ), mock.patch.dict(
+                session_scan_orchestrator.os.environ,
+                {"CCRIDER_DB": "$HOME/.config/ccrider/sessions.db"},
+                clear=False,
+            ), mock.patch.dict(
+                "os.environ",
+                {"HOME": str(home_dir)},
+                clear=False,
+            ):
+                candidates = session_scan_orchestrator.default_db_candidates()
+
+        self.assertEqual(candidates[0], expected_db)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -59,9 +59,11 @@ def default_db_candidates() -> list[Path]:
     env_db = os.environ.get("CCRIDER_DB")
     cands: list[Path] = []
     if env_db:
-        cands.append(Path(env_db).expanduser())
+        cands.append(Path(os.path.expandvars(env_db)).expanduser())
     if xdg:
-        cands.append(Path(xdg) / "ccrider" / "sessions.db")
+        cands.append(
+            Path(os.path.expandvars(xdg)).expanduser() / "ccrider" / "sessions.db"
+        )
     cands.extend(
         [
             home / ".config" / "ccrider" / "sessions.db",
