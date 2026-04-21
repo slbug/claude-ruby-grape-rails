@@ -120,11 +120,11 @@ def normalize_plugin_command_name(command):
     return normalized
 
 
-def short_project_name(path):
-    """Return a stable short project label from a project_path string."""
+def normalize_project_path(path):
+    """Return a stable project path value for persisted metrics."""
     if not path:
         return "unknown"
-    return Path(path).name or str(path)
+    return str(path)
 
 
 def extract_plugin_commands(user_msgs):
@@ -1459,7 +1459,7 @@ def load_session_data_from_db(db_path, session_id):
         raise FileNotFoundError(f"ccrider DB not found: {expanded_db_path}")
     if not expanded_db_path.is_file():
         raise ValueError(f"ccrider DB path is not a file: {expanded_db_path}")
-    uri = f"{expanded_db_path.resolve().as_uri()}?mode=ro&immutable=1"
+    uri = f"{expanded_db_path.resolve().as_uri()}?mode=ro"
     try:
         conn = sqlite3.connect(uri, uri=True)
     except sqlite3.Error as exc:
@@ -1516,7 +1516,7 @@ def load_session_data_from_db(db_path, session_id):
                 f"for session {session_id} in {expanded_db_path}"
             )
     metadata = {
-        "project": short_project_name(project_path),
+        "project": normalize_project_path(project_path),
         "provider": provider or "unknown",
         "date": (updated_at or "")[:10] or None,
         "decode_failures": decode_failures,

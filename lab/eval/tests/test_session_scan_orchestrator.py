@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import json
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -179,7 +180,9 @@ class SessionScanOrchestratorTests(unittest.TestCase):
             with mock.patch.object(
                 session_scan_orchestrator, "open_db_readonly", return_value=conn
             ), mock.patch.object(
-                session_scan_orchestrator, "discover_sessions", return_value=rows
+                session_scan_orchestrator,
+                "discover_sessions",
+                side_effect=[rows, rows],
             ), mock.patch.object(
                 session_scan_orchestrator, "load_scoring_module", return_value=scorer
             ), mock.patch.object(
@@ -191,10 +194,89 @@ class SessionScanOrchestratorTests(unittest.TestCase):
                 ],
             ):
                 rc = session_scan_orchestrator.main(
-                    ["--db", str(db_path), "--metrics-dir", str(metrics_dir)]
+                    ["--db", str(db_path), "--metrics-dir", str(metrics_dir), "--limit", "2"]
                 )
 
         self.assertEqual(rc, 1)
+
+    def test_collect_unscanned_sessions_paginates_past_scanned_rows(self) -> None:
+        conn = mock.Mock()
+        page_one = [{"session_id": f"session-{i}"} for i in range(1, 51)]
+        page_two = [
+            {"session_id": "session-51"},
+            {"session_id": "session-52"},
+        ]
+
+        with mock.patch.object(
+            session_scan_orchestrator,
+            "discover_sessions",
+            side_effect=[page_one, page_two],
+        ):
+            collected, skipped = session_scan_orchestrator.collect_unscanned_sessions(
+                conn,
+                since="2026-04-14",
+                project=None,
+                provider=None,
+                limit=2,
+                min_messages=5,
+                ledger_ids={row["session_id"] for row in page_one},
+            )
+
+        self.assertEqual(
+            [row["session_id"] for row in collected],
+            ["session-51", "session-52"],
+        )
+        self.assertEqual(skipped, 50)
+
+    def test_main_uses_ledger_view_when_no_new_sessions_scored(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            db_path.write_text("", encoding="utf-8")
+            metrics_dir = Path(tmpdir) / "metrics"
+            metrics_dir.mkdir()
+            metrics_path = metrics_dir / "metrics.jsonl"
+            metrics_path.write_text(
+                (
+                    '{"session_id":"session-1","project":"/tmp/app","provider":"claude",'
+                    '"date":"2026-04-21","friction_score":0.6,'
+                    '"plugin_opportunity_score":0.1,"fingerprint":"bug-fix",'
+                    '"tier2_eligible":true,"plugin_signals":{"rb_commands_used":[]}}\n'
+                ),
+                encoding="utf-8",
+            )
+            conn = mock.Mock()
+            rows = [
+                {
+                    "id": 1,
+                    "session_id": "session-1",
+                    "project_path": "/tmp/app",
+                    "provider": "claude",
+                    "updated_at": "2026-04-21T17:00:00Z",
+                }
+            ]
+
+            with mock.patch.object(
+                session_scan_orchestrator, "open_db_readonly", return_value=conn
+            ), mock.patch.object(
+                session_scan_orchestrator,
+                "discover_sessions",
+                side_effect=[rows, rows, []],
+            ), mock.patch.object(
+                session_scan_orchestrator, "load_scoring_module", return_value=mock.Mock()
+            ):
+                rc = session_scan_orchestrator.main(
+                    ["--db", str(db_path), "--metrics-dir", str(metrics_dir), "--limit", "1"]
+                )
+
+            latest_scan = json.loads(
+                (metrics_dir / "latest-scan.json").read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(latest_scan["sessions_scanned"], 0)
+        self.assertEqual(latest_scan["sessions_in_view"], 1)
+        self.assertEqual(latest_scan["tier2_eligible"], 1)
+        self.assertEqual(latest_scan["view_session_ids"], ["session-1"])
 
     def test_resolve_db_rejects_directory_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

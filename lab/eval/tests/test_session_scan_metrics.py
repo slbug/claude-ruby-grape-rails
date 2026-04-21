@@ -374,7 +374,7 @@ class SessionScanMetricTests(unittest.TestCase):
             )
 
         self.assertEqual(messages, [{"role": "user", "content": "hello"}])
-        self.assertEqual(metadata["project"], "my-app")
+        self.assertEqual(metadata["project"], "/tmp/my-app")
         self.assertEqual(metadata["provider"], "claude")
         self.assertEqual(metadata["date"], "2026-04-21")
 

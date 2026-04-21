@@ -108,7 +108,7 @@ def resolve_db(explicit: str | None) -> Path:
 
 
 def open_db_readonly(path: Path) -> sqlite3.Connection:
-    uri = f"{path.resolve().as_uri()}?mode=ro&immutable=1"
+    uri = f"{path.resolve().as_uri()}?mode=ro"
     conn = sqlite3.connect(uri, uri=True)
     conn.row_factory = sqlite3.Row
     return conn
@@ -128,6 +128,7 @@ def discover_sessions(
     provider: str | None,
     limit: int,
     min_messages: int,
+    offset: int = 0,
 ) -> list[sqlite3.Row]:
     sql = [
         "SELECT id, session_id, project_path, provider, updated_at,",
@@ -140,6 +141,7 @@ def discover_sessions(
         "min_messages": min_messages,
         "since": since,
         "limit": limit,
+        "offset": offset,
     }
     if project:
         sql.append("  AND project_path LIKE :project")
@@ -149,6 +151,7 @@ def discover_sessions(
         params["provider"] = provider
     sql.append("ORDER BY updated_at DESC")
     sql.append("LIMIT :limit")
+    sql.append("OFFSET :offset")
     cursor = conn.execute("\n".join(sql), params)
     return list(cursor.fetchall())
 
@@ -200,9 +203,100 @@ def short_project(path: str | None) -> str:
     return Path(path).name or path
 
 
+def parse_entry_timestamp(entry: dict) -> datetime:
+    value = entry.get("date") or entry.get("scanned_at") or ""
+    if not value:
+        return datetime(2000, 1, 1, tzinfo=timezone.utc)
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except (ValueError, TypeError):
+        try:
+            return datetime.strptime(str(value)[:10], "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+        except (ValueError, TypeError):
+            return datetime(2000, 1, 1, tzinfo=timezone.utc)
+
+
+def read_latest_ledger_entries(metrics_path: Path) -> dict[str, dict]:
+    entries: dict[str, dict] = {}
+    if not metrics_path.exists():
+        return entries
+    with metrics_path.open(encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            session_id = entry.get("session_id")
+            if session_id:
+                entries[session_id] = entry
+    return entries
+
+
+def collect_unscanned_sessions(
+    conn: sqlite3.Connection,
+    *,
+    since: str,
+    project: str | None,
+    provider: str | None,
+    limit: int,
+    min_messages: int,
+    ledger_ids: set[str],
+) -> tuple[list[sqlite3.Row], int]:
+    page_size = max(limit, 50)
+    offset = 0
+    skipped = 0
+    collected: list[sqlite3.Row] = []
+
+    while len(collected) < limit:
+        batch = discover_sessions(
+            conn,
+            since=since,
+            project=project,
+            provider=provider,
+            limit=page_size,
+            min_messages=min_messages,
+            offset=offset,
+        )
+        if not batch:
+            break
+
+        for row in batch:
+            if row["session_id"] in ledger_ids:
+                skipped += 1
+                continue
+            collected.append(row)
+            if len(collected) >= limit:
+                break
+
+        offset += len(batch)
+        if len(batch) < page_size:
+            break
+
+    return collected, skipped
+
+
+def build_current_view_entries(
+    view_rows: list[sqlite3.Row], latest_entries: dict[str, dict]
+) -> list[dict]:
+    entries = [
+        latest_entries[row["session_id"]]
+        for row in view_rows
+        if row["session_id"] in latest_entries
+    ]
+    return sorted(entries, key=parse_entry_timestamp, reverse=True)
+
+
 def format_triage_table(entries: list[dict]) -> str:
     if not entries:
-        return "No sessions scored."
+        return "No scored sessions available for the current view."
     entries = sorted(entries, key=lambda e: e.get("friction_score", 0.0), reverse=True)
     header = (
         "| ID       | Provider    | Project        | Date       | "
@@ -317,13 +411,19 @@ def main(argv: list[str]) -> int:
         scorer = load_scoring_module()
         ledger_ids = read_ledger(metrics_path)
 
-        to_score: list[sqlite3.Row] = []
-        skipped = 0
-        for r in rows:
-            if r["session_id"] in ledger_ids and not args.rescan:
-                skipped += 1
-                continue
-            to_score.append(r)
+        if args.rescan:
+            to_score = rows
+            skipped = 0
+        else:
+            to_score, skipped = collect_unscanned_sessions(
+                conn,
+                since=since,
+                project=args.project,
+                provider=args.provider,
+                limit=args.limit,
+                min_messages=args.min_messages,
+                ledger_ids=ledger_ids,
+            )
 
         print(
             f"New: {len(to_score)}, already in ledger: {skipped} "
@@ -336,7 +436,7 @@ def main(argv: list[str]) -> int:
         warnings: list[dict[str, object]] = []
         for i, r in enumerate(to_score, 1):
             sid = r["session_id"]
-            project = short_project(r["project_path"])
+            project = r["project_path"] or "unknown"
             provider = r["provider"]
             date = (r["updated_at"] or "")[:10] or None
             try:
@@ -370,7 +470,8 @@ def main(argv: list[str]) -> int:
                     f.write(json.dumps(metrics) + "\n")
                 results.append(metrics)
                 print(
-                    f"  [{i}/{len(to_score)}] {sid[:8]} {project[:20]:<20} "
+                    f"  [{i}/{len(to_score)}] {sid[:8]} "
+                    f"{short_project(project)[:20]:<20} "
                     f"msgs={len(msgs):<4} friction={metrics['friction_score']:.2f} "
                     f"fp={metrics['fingerprint']}",
                     file=sys.stderr,
@@ -382,7 +483,9 @@ def main(argv: list[str]) -> int:
                     file=sys.stderr,
                 )
 
-        tier2 = [r for r in results if r.get("tier2_eligible")]
+        latest_entries = read_latest_ledger_entries(metrics_path)
+        view_entries = build_current_view_entries(rows, latest_entries)
+        view_tier2 = [entry for entry in view_entries if entry.get("tier2_eligible")]
         scan_meta = {
             "scanned_at": datetime.now(timezone.utc).isoformat(),
             "db_path": str(db_path),
@@ -396,7 +499,10 @@ def main(argv: list[str]) -> int:
             "sessions_skipped": skipped,
             "sessions_failed": len(errors),
             "sessions_warned": len(warnings),
-            "tier2_eligible": len(tier2),
+            "sessions_in_view": len(view_entries),
+            "tier2_eligible": len(view_tier2),
+            "view_session_ids": [entry["session_id"] for entry in view_entries],
+            "tier2_session_ids": [entry["session_id"] for entry in view_tier2],
             "errors": [{"session_id": s, "reason": r} for s, r in errors],
             "warnings": warnings,
         }
@@ -406,14 +512,15 @@ def main(argv: list[str]) -> int:
         )
 
         print()
-        print(format_triage_table(results))
+        print(format_triage_table(view_entries))
         print()
         print(
             f"Scanned {len(results)}, skipped {skipped}, warnings {len(warnings)}, "
-            f"errors {len(errors)}. Tier2-eligible: {len(tier2)}.",
+            f"errors {len(errors)}. View sessions: {len(view_entries)}. "
+            f"Tier2-eligible: {len(view_tier2)}.",
             file=sys.stderr,
         )
-        if tier2:
+        if view_tier2:
             print(
                 "Suggest: /session-deep-dive --from-scan  (inspect tier2 sessions)",
                 file=sys.stderr,
