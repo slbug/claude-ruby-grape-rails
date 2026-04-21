@@ -278,6 +278,30 @@ class SessionScanOrchestratorTests(unittest.TestCase):
         self.assertEqual(latest_scan["tier2_eligible"], 1)
         self.assertEqual(latest_scan["view_session_ids"], ["session-1"])
 
+    def test_build_current_view_entries_prefers_latest_scanned_at(self) -> None:
+        rows = [{"session_id": "session-a"}, {"session_id": "session-b"}]
+        latest_entries = {
+            "session-a": {
+                "session_id": "session-a",
+                "date": "2026-04-21",
+                "scanned_at": "2026-04-21T10:00:00+00:00",
+            },
+            "session-b": {
+                "session_id": "session-b",
+                "date": "2026-04-22",
+                "scanned_at": "2026-04-21T12:00:00+00:00",
+            },
+        }
+
+        entries = session_scan_orchestrator.build_current_view_entries(
+            rows, latest_entries
+        )
+
+        self.assertEqual(
+            [entry["session_id"] for entry in entries],
+            ["session-b", "session-a"],
+        )
+
     def test_resolve_db_rejects_directory_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             stderr = io.StringIO()

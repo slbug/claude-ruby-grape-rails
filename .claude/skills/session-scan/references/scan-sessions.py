@@ -204,7 +204,7 @@ def short_project(path: str | None) -> str:
 
 
 def parse_entry_timestamp(entry: dict) -> datetime:
-    value = entry.get("date") or entry.get("scanned_at") or ""
+    value = entry.get("scanned_at") or entry.get("date") or ""
     if not value:
         return datetime(2000, 1, 1, tzinfo=timezone.utc)
     try:

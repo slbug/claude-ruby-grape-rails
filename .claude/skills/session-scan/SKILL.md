@@ -62,9 +62,11 @@ no path is available.
 /session-scan --db /custom/path/to/sessions.db
 ```
 
-Providers exposed by the ccrider DB include `claude` and `codex`. The
-contributor may use different project directories in the same stack; the
-`--provider` filter keeps single-stack comparisons honest.
+Use the exact `sessions.provider` value shown in `--list` output when
+passing `--provider`. Values such as `claude`, `codex`, or `claude-code`
+are examples only; the filter is an exact match on your local ccrider DB.
+The contributor may use different project directories in the same stack;
+the `--provider` filter keeps single-stack comparisons honest.
 
 ## Main-Context Workflow
 

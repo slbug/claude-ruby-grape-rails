@@ -29,7 +29,7 @@ first. If `ccrider` is not on PATH, ask the contributor to install it
 /session-deep-dive SESSION_ID
 /session-deep-dive --last
 /session-deep-dive --from-scan
-/session-deep-dive --from-scan --provider claude
+/session-deep-dive --from-scan --provider <exact-provider-from-scan>
 /session-deep-dive --compare .claude/session-analysis/insights-2026-03-20.md
 ```
 
