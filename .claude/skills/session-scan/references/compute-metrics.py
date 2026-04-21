@@ -1460,7 +1460,12 @@ def load_session_data_from_db(db_path, session_id):
     if not expanded_db_path.is_file():
         raise ValueError(f"ccrider DB path is not a file: {expanded_db_path}")
     uri = f"{expanded_db_path.resolve().as_uri()}?mode=ro&immutable=1"
-    conn = sqlite3.connect(uri, uri=True)
+    try:
+        conn = sqlite3.connect(uri, uri=True)
+    except sqlite3.Error as exc:
+        raise ValueError(
+            f"failed to read ccrider DB at {expanded_db_path}: {exc}"
+        ) from exc
     try:
         row = conn.execute(
             (
@@ -1479,6 +1484,10 @@ def load_session_data_from_db(db_path, session_id):
             "SELECT content FROM messages WHERE session_id = ? ORDER BY sequence",
             (session_pk,),
         ).fetchall()
+    except sqlite3.Error as exc:
+        raise ValueError(
+            f"failed to read ccrider DB at {expanded_db_path}: {exc}"
+        ) from exc
     finally:
         conn.close()
     messages = []

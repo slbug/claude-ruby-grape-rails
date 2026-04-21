@@ -69,6 +69,27 @@ class SessionScanOrchestratorTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         conn.close.assert_called_once()
 
+    def test_main_list_mode_does_not_create_metrics_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            db_path.write_text("", encoding="utf-8")
+            metrics_dir = Path(tmpdir) / "metrics"
+            conn = mock.Mock()
+
+            with mock.patch.object(
+                session_scan_orchestrator, "open_db_readonly", return_value=conn
+            ), mock.patch.object(
+                session_scan_orchestrator, "discover_sessions", return_value=[]
+            ), mock.patch.object(
+                session_scan_orchestrator, "format_list_table", return_value="No rows"
+            ):
+                rc = session_scan_orchestrator.main(
+                    ["--db", str(db_path), "--metrics-dir", str(metrics_dir), "--list"]
+                )
+
+        self.assertEqual(rc, 0)
+        self.assertFalse(metrics_dir.exists())
+
     def test_open_db_readonly_handles_paths_with_spaces(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_dir = Path(tmpdir) / "db dir"
@@ -183,6 +204,22 @@ class SessionScanOrchestratorTests(unittest.TestCase):
 
         self.assertEqual(exc.exception.code, 2)
         self.assertIn("not a file", stderr.getvalue())
+
+    def test_main_reports_sqlite_errors_cleanly(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            db_path.write_text("", encoding="utf-8")
+            stderr = io.StringIO()
+
+            with redirect_stderr(stderr), mock.patch.object(
+                session_scan_orchestrator,
+                "open_db_readonly",
+                side_effect=sqlite3.DatabaseError("file is not a database"),
+            ):
+                rc = session_scan_orchestrator.main(["--db", str(db_path)])
+
+        self.assertEqual(rc, 1)
+        self.assertIn("failed to read ccrider DB", stderr.getvalue())
 
     def test_resolve_db_expands_env_vars(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

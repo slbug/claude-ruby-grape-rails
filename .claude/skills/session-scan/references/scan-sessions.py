@@ -271,9 +271,6 @@ def main(argv: list[str]) -> int:
     metrics_dir = (
         Path(os.path.expandvars(args.metrics_dir)).expanduser().resolve()
     )
-    metrics_dir.mkdir(parents=True, exist_ok=True)
-    metrics_path = metrics_dir / "metrics.jsonl"
-    latest_scan_path = metrics_dir / "latest-scan.json"
 
     print(f"DB: {db_path}", file=sys.stderr)
     print(
@@ -283,8 +280,9 @@ def main(argv: list[str]) -> int:
         file=sys.stderr,
     )
 
-    conn = open_db_readonly(db_path)
+    conn: sqlite3.Connection | None = None
     try:
+        conn = open_db_readonly(db_path)
         rows = discover_sessions(
             conn,
             since=since,
@@ -293,6 +291,10 @@ def main(argv: list[str]) -> int:
             limit=args.limit,
             min_messages=args.min_messages,
         )
+    except sqlite3.Error as exc:
+        print(f"Error: failed to read ccrider DB at {db_path}: {exc}", file=sys.stderr)
+        return 1
+    try:
 
         discovered = len(rows)
         print(
@@ -307,6 +309,10 @@ def main(argv: list[str]) -> int:
                 file=sys.stderr,
             )
             return 0
+
+        metrics_dir.mkdir(parents=True, exist_ok=True)
+        metrics_path = metrics_dir / "metrics.jsonl"
+        latest_scan_path = metrics_dir / "latest-scan.json"
 
         scorer = load_scoring_module()
         ledger_ids = read_ledger(metrics_path)
@@ -415,7 +421,8 @@ def main(argv: list[str]) -> int:
 
         return 1 if errors else 0
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 if __name__ == "__main__":
