@@ -10,7 +10,7 @@ Usage:
     python3 compute-metrics.py <messages.json> --session-id ID --project NAME [--provider NAME]
 
     # Single session directly from ccrider SQLite DB
-    python3 compute-metrics.py --from-db SESSION_ID --db PATH --project NAME [--provider NAME]
+    python3 compute-metrics.py --from-db SESSION_ID --db PATH [--project NAME] [--provider NAME]
 
     # Batch mode (appends to metrics.jsonl)
     python3 compute-metrics.py --batch <manifest.json>
@@ -1311,24 +1311,41 @@ def compute_trends(
     metrics_path, notes_path=None, project_filter=None, provider_filter=None
 ):
     """Compute windowed aggregates from metrics.jsonl."""
-    entries = []
-    with open(metrics_path) as f:
-        for line in f:
-            line = line.strip()
-            if line:
+
+    def load_latest_entries(path):
+        deduped_entries = {}
+        ordered_entries = []
+        with open(path) as f:
+            for index, line in enumerate(f):
+                line = line.strip()
+                if not line:
+                    continue
                 try:
                     entry = json.loads(line)
-                    if project_filter:
-                        proj = entry.get("project", "")
-                        if project_filter.lower() not in proj.lower():
-                            continue
-                    if provider_filter and provider_filter.lower() != "all":
-                        provider_name = str(entry.get("provider", "unknown"))
-                        if provider_name.lower() != provider_filter.lower():
-                            continue
-                    entries.append(entry)
                 except json.JSONDecodeError:
                     continue
+
+                session_id = entry.get("session_id")
+                if session_id:
+                    deduped_entries[session_id] = (index, entry)
+                else:
+                    ordered_entries.append((index, entry))
+
+        ordered_entries.extend(deduped_entries.values())
+        ordered_entries.sort(key=lambda item: item[0])
+        return [entry for _, entry in ordered_entries]
+
+    entries = []
+    for entry in load_latest_entries(metrics_path):
+        if project_filter:
+            proj = entry.get("project", "")
+            if project_filter.lower() not in proj.lower():
+                continue
+        if provider_filter and provider_filter.lower() != "all":
+            provider_name = str(entry.get("provider", "unknown"))
+            if provider_name.lower() != provider_filter.lower():
+                continue
+        entries.append(entry)
 
     if not entries:
         return {"error": "No metrics found", "total_sessions": 0}
@@ -1429,9 +1446,10 @@ def compute_trends(
 
 def load_messages_from_db(db_path, session_id):
     """Load messages for one session directly from a ccrider SQLite DB."""
-    if not os.path.exists(db_path):
-        raise FileNotFoundError(f"ccrider DB not found: {db_path}")
-    uri = f"file:{db_path}?mode=ro&immutable=1"
+    expanded_db_path = os.path.expanduser(db_path)
+    if not os.path.exists(expanded_db_path):
+        raise FileNotFoundError(f"ccrider DB not found: {expanded_db_path}")
+    uri = f"file:{expanded_db_path}?mode=ro&immutable=1"
     conn = sqlite3.connect(uri, uri=True)
     try:
         row = conn.execute(
@@ -1507,7 +1525,7 @@ def print_usage():
         "  python3 compute-metrics.py <messages.json> --session-id ID --project NAME [--provider NAME]"
     )
     print(
-        "  python3 compute-metrics.py --from-db SESSION_ID --db PATH --project NAME [--provider NAME]"
+        "  python3 compute-metrics.py --from-db SESSION_ID --db PATH [--project NAME] [--provider NAME]"
     )
     print("  python3 compute-metrics.py --batch <manifest.json>")
     print(

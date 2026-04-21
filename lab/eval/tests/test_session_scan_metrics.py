@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import importlib.util
+import json
+import os
 from pathlib import Path
+import sqlite3
+import tempfile
 import unittest
+from unittest import mock
 
 
 MODULE_PATH = (
@@ -232,6 +238,87 @@ class SessionScanMetricTests(unittest.TestCase):
             [item["tc"]["name"] for item in tool_positions],
             ["Task", "Agent", "Bash"],
         )
+
+    def test_compute_trends_keeps_latest_entry_per_session(self) -> None:
+        now = datetime.now(timezone.utc)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            metrics_path = Path(tmpdir) / "metrics.jsonl"
+            entries = [
+                {
+                    "session_id": "session-a",
+                    "scanned_at": (now.replace(microsecond=0)).isoformat(),
+                    "provider": "claude",
+                    "project": "alpha",
+                    "date": now.date().isoformat(),
+                    "friction_score": 0.1,
+                    "plugin_opportunity_score": 0.1,
+                    "fingerprint": "exploration",
+                    "tier2_eligible": False,
+                    "plugin_signals": {"rb_commands_used": []},
+                },
+                {
+                    "session_id": "session-b",
+                    "scanned_at": (now.replace(microsecond=0)).isoformat(),
+                    "provider": "claude",
+                    "project": "beta",
+                    "date": now.date().isoformat(),
+                    "friction_score": 0.3,
+                    "plugin_opportunity_score": 0.2,
+                    "fingerprint": "feature",
+                    "tier2_eligible": False,
+                    "plugin_signals": {"rb_commands_used": []},
+                },
+                {
+                    "session_id": "session-a",
+                    "scanned_at": (now.replace(microsecond=0)).isoformat(),
+                    "provider": "claude",
+                    "project": "alpha",
+                    "date": now.date().isoformat(),
+                    "friction_score": 0.9,
+                    "plugin_opportunity_score": 0.4,
+                    "fingerprint": "bug-fix",
+                    "tier2_eligible": True,
+                    "plugin_signals": {"rb_commands_used": ["/rb:investigate"]},
+                },
+            ]
+            with metrics_path.open("w", encoding="utf-8") as f:
+                for entry in entries:
+                    f.write(json.dumps(entry) + "\n")
+
+            trends = session_scan_metrics.compute_trends(str(metrics_path))
+
+        self.assertEqual(trends["total_sessions"], 2)
+        self.assertEqual(trends["windows"]["all"]["count"], 2)
+        self.assertEqual(trends["windows"]["all"]["avg_friction"], 0.6)
+        self.assertEqual(trends["windows"]["all"]["tier2_eligible_count"], 1)
+
+    def test_load_messages_from_db_expands_user_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute(
+                "CREATE TABLE sessions (id INTEGER PRIMARY KEY, session_id TEXT NOT NULL)"
+            )
+            conn.execute(
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT)"
+            )
+            conn.execute(
+                "INSERT INTO sessions (id, session_id) VALUES (?, ?)",
+                (1, "session-1"),
+            )
+            conn.execute(
+                "INSERT INTO messages (session_id, sequence, content) VALUES (?, ?, ?)",
+                (1, 1, json.dumps({"role": "user", "content": "hello"})),
+            )
+            conn.commit()
+            conn.close()
+
+            with mock.patch.dict(os.environ, {"HOME": tmpdir}, clear=False):
+                messages = session_scan_metrics.load_messages_from_db(
+                    "~/sessions.db", "session-1"
+                )
+
+        self.assertEqual(messages, [{"role": "user", "content": "hello"}])
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 ---
 name: session-scan
 description: Compute exploratory metrics for recent Claude sessions. Deterministic SQLite-direct scan over the local ccrider database; no MCP, no LLM, no subagents for scoring.
-argument-hint: "[--since DATE] [--project NAME] [--provider NAME] [--limit N] [--list] [--rescan] [--db PATH]"
+argument-hint: "[--since DATE] [--project NAME] [--provider NAME] [--limit N] [--list] [--rescan] [--db PATH] [--metrics-dir PATH] [--min-messages N]"
 disable-model-invocation: true
 ---
 

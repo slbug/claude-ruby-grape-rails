@@ -46,6 +46,8 @@ def load_scoring_module():
     if not path.exists():
         sys.exit(f"Error: scorer not found at {path}")
     spec = importlib.util.spec_from_file_location("compute_metrics", path)
+    if spec is None or spec.loader is None:
+        sys.exit(f"Error: unable to load scorer module from {path}")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -278,99 +280,101 @@ def main(argv: list[str]) -> int:
             limit=args.limit,
             min_messages=args.min_messages,
         )
-    finally:
-        pass
 
-    discovered = len(rows)
-    print(f"Discovered: {discovered} sessions (>= {args.min_messages} msgs).",
-          file=sys.stderr)
-
-    if args.list:
-        print(format_list_table(rows))
+        discovered = len(rows)
         print(
-            f"\n{discovered} candidate(s). Add --rescan to recompute scored ones.",
+            f"Discovered: {discovered} sessions (>= {args.min_messages} msgs).",
             file=sys.stderr,
         )
-        return 0
 
-    scorer = load_scoring_module()
-    ledger_ids = read_ledger(metrics_path)
-
-    to_score: list[sqlite3.Row] = []
-    skipped = 0
-    for r in rows:
-        if r["session_id"] in ledger_ids and not args.rescan:
-            skipped += 1
-            continue
-        to_score.append(r)
-
-    print(
-        f"New: {len(to_score)}, already in ledger: {skipped} "
-        f"(rescan={args.rescan}).",
-        file=sys.stderr,
-    )
-
-    results: list[dict] = []
-    errors: list[tuple[str, str]] = []
-    for i, r in enumerate(to_score, 1):
-        sid = r["session_id"]
-        project = short_project(r["project_path"])
-        provider = r["provider"]
-        date = (r["updated_at"] or "")[:10] or None
-        try:
-            msgs = load_session_messages(conn, r["id"])
-            metrics = scorer.compute_session_metrics(
-                msgs, sid, project, date=date, provider=provider
-            )
-            with metrics_path.open("a") as f:
-                f.write(json.dumps(metrics) + "\n")
-            results.append(metrics)
+        if args.list:
+            print(format_list_table(rows))
             print(
-                f"  [{i}/{len(to_score)}] {sid[:8]} {project[:20]:<20} "
-                f"msgs={len(msgs):<4} friction={metrics['friction_score']:.2f} "
-                f"fp={metrics['fingerprint']}",
+                f"\n{discovered} candidate(s). Add --rescan to recompute scored ones.",
                 file=sys.stderr,
             )
-        except Exception as exc:  # noqa: BLE001
-            errors.append((sid, repr(exc)))
-            print(f"  [{i}/{len(to_score)}] {sid[:8]} ERROR: {exc!r}",
-                  file=sys.stderr)
+            return 0
 
-    conn.close()
+        scorer = load_scoring_module()
+        ledger_ids = read_ledger(metrics_path)
 
-    tier2 = [r for r in results if r.get("tier2_eligible")]
-    scan_meta = {
-        "scanned_at": datetime.now(timezone.utc).isoformat(),
-        "db_path": str(db_path),
-        "since": since,
-        "project_filter": args.project,
-        "provider_filter": args.provider,
-        "min_messages": args.min_messages,
-        "limit": args.limit,
-        "sessions_discovered": discovered,
-        "sessions_scanned": len(results),
-        "sessions_skipped": skipped,
-        "sessions_failed": len(errors),
-        "tier2_eligible": len(tier2),
-        "errors": [{"session_id": s, "reason": r} for s, r in errors],
-    }
-    latest_scan_path.write_text(json.dumps(scan_meta, indent=2) + "\n")
+        to_score: list[sqlite3.Row] = []
+        skipped = 0
+        for r in rows:
+            if r["session_id"] in ledger_ids and not args.rescan:
+                skipped += 1
+                continue
+            to_score.append(r)
 
-    print()
-    print(format_triage_table(results))
-    print()
-    print(
-        f"Scanned {len(results)}, skipped {skipped}, errors {len(errors)}. "
-        f"Tier2-eligible: {len(tier2)}.",
-        file=sys.stderr,
-    )
-    if tier2:
         print(
-            "Suggest: /session-deep-dive --from-scan  (inspect tier2 sessions)",
+            f"New: {len(to_score)}, already in ledger: {skipped} "
+            f"(rescan={args.rescan}).",
             file=sys.stderr,
         )
 
-    return 1 if errors and not results else 0
+        results: list[dict] = []
+        errors: list[tuple[str, str]] = []
+        for i, r in enumerate(to_score, 1):
+            sid = r["session_id"]
+            project = short_project(r["project_path"])
+            provider = r["provider"]
+            date = (r["updated_at"] or "")[:10] or None
+            try:
+                msgs = load_session_messages(conn, r["id"])
+                metrics = scorer.compute_session_metrics(
+                    msgs, sid, project, date=date, provider=provider
+                )
+                with metrics_path.open("a") as f:
+                    f.write(json.dumps(metrics) + "\n")
+                results.append(metrics)
+                print(
+                    f"  [{i}/{len(to_score)}] {sid[:8]} {project[:20]:<20} "
+                    f"msgs={len(msgs):<4} friction={metrics['friction_score']:.2f} "
+                    f"fp={metrics['fingerprint']}",
+                    file=sys.stderr,
+                )
+            except Exception as exc:  # noqa: BLE001
+                errors.append((sid, repr(exc)))
+                print(
+                    f"  [{i}/{len(to_score)}] {sid[:8]} ERROR: {exc!r}",
+                    file=sys.stderr,
+                )
+
+        tier2 = [r for r in results if r.get("tier2_eligible")]
+        scan_meta = {
+            "scanned_at": datetime.now(timezone.utc).isoformat(),
+            "db_path": str(db_path),
+            "since": since,
+            "project_filter": args.project,
+            "provider_filter": args.provider,
+            "min_messages": args.min_messages,
+            "limit": args.limit,
+            "sessions_discovered": discovered,
+            "sessions_scanned": len(results),
+            "sessions_skipped": skipped,
+            "sessions_failed": len(errors),
+            "tier2_eligible": len(tier2),
+            "errors": [{"session_id": s, "reason": r} for s, r in errors],
+        }
+        latest_scan_path.write_text(json.dumps(scan_meta, indent=2) + "\n")
+
+        print()
+        print(format_triage_table(results))
+        print()
+        print(
+            f"Scanned {len(results)}, skipped {skipped}, errors {len(errors)}. "
+            f"Tier2-eligible: {len(tier2)}.",
+            file=sys.stderr,
+        )
+        if tier2:
+            print(
+                "Suggest: /session-deep-dive --from-scan  (inspect tier2 sessions)",
+                file=sys.stderr,
+            )
+
+        return 1 if errors and not results else 0
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":
