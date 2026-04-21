@@ -169,26 +169,87 @@ def discover_sessions(
     return list(cursor.fetchall())
 
 
+def reconstruct_message(
+    content: str | None,
+    text_content: str | None,
+    msg_type: str | None,
+    sender: str | None,
+) -> tuple[dict | None, str]:
+    """Rebuild one message dict from a ccrider ``messages`` row.
+
+    ccrider stores two projections: ``content`` (raw provider JSON, populated
+    for Claude) and ``text_content`` (normalized plain text, populated for
+    all providers). Codex sessions leave ``content`` empty, so provider-
+    neutral reconstruction falls back to ``text_content`` plus role metadata.
+
+    Returns ``(message_dict_or_None, status)`` with statuses:
+      - ``"ok"``             content parsed as provider JSON
+      - ``"synth"``          synthesized from text_content + type/sender
+      - ``"decode_failed"``  content present but malformed and no fallback
+      - ``"empty"``          row carries no usable data
+    """
+
+    text = text_content if isinstance(text_content, str) else ""
+    has_text = bool(text.strip())
+
+    if content:
+        try:
+            return json.loads(content), "ok"
+        except json.JSONDecodeError:
+            if has_text:
+                role = msg_type or sender or "user"
+                return {"role": role, "content": text}, "synth"
+            return None, "decode_failed"
+
+    if has_text:
+        role = msg_type or sender or "user"
+        return {"role": role, "content": text}, "synth"
+
+    return None, "empty"
+
+
 def load_session_messages(
     conn: sqlite3.Connection, session_pk: int
-) -> tuple[list[dict], int, int]:
+) -> tuple[list[dict], int, int, int]:
+    """Load messages for one session.
+
+    Returns ``(messages, decode_failures, candidate_rows, synthesized)``.
+    ``candidate_rows`` counts rows that had either ``content`` or a non-blank
+    ``text_content`` — i.e. rows the reconstructor actually considered.
+    ``synthesized`` counts rows where the message was synthesized from
+    ``text_content`` (Codex path or malformed-content fallback).
+    """
     rows = conn.execute(
-        "SELECT content FROM messages WHERE session_id = ? ORDER BY sequence",
+        (
+            "SELECT content, text_content, type, sender "
+            "FROM messages WHERE session_id = ? ORDER BY sequence"
+        ),
         (session_pk,),
     ).fetchall()
     msgs: list[dict] = []
     decode_failures = 0
-    non_empty_rows = 0
-    for (content,) in rows:
-        if not content:
+    candidate_rows = 0
+    synthesized = 0
+    for row in rows:
+        content = row["content"]
+        text_content = row["text_content"]
+        msg_type = row["type"]
+        sender = row["sender"]
+        if not content and not (
+            isinstance(text_content, str) and text_content.strip()
+        ):
             continue
-        non_empty_rows += 1
-        try:
-            msgs.append(json.loads(content))
-        except json.JSONDecodeError:
+        candidate_rows += 1
+        msg, status = reconstruct_message(content, text_content, msg_type, sender)
+        if status == "ok":
+            msgs.append(msg)
+        elif status == "synth":
+            msgs.append(msg)
+            synthesized += 1
+        elif status == "decode_failed":
             decode_failures += 1
-            continue
-    return msgs, decode_failures, non_empty_rows
+        # status == "empty" already filtered above
+    return msgs, decode_failures, candidate_rows, synthesized
 
 
 def read_ledger(metrics_path: Path) -> set[str]:
@@ -453,14 +514,15 @@ def main(argv: list[str]) -> int:
             provider = r["provider"]
             date = (r["updated_at"] or "")[:10] or None
             try:
-                msgs, decode_failures, non_empty_rows = load_session_messages(
-                    conn, r["id"]
+                msgs, decode_failures, candidate_rows, synthesized = (
+                    load_session_messages(conn, r["id"])
                 )
                 if decode_failures:
                     warning = {
                         "session_id": sid,
                         "decode_failures": decode_failures,
-                        "non_empty_rows": non_empty_rows,
+                        "candidate_rows": candidate_rows,
+                        "synthesized_from_text": synthesized,
                         "reason": (
                             f"skipped {decode_failures} malformed message JSON row(s)"
                         ),
@@ -471,9 +533,9 @@ def main(argv: list[str]) -> int:
                         f"{warning['reason']}",
                         file=sys.stderr,
                     )
-                    if not msgs and non_empty_rows:
+                    if not msgs and candidate_rows:
                         raise ValueError(
-                            f"failed to decode all {non_empty_rows} non-empty "
+                            f"failed to decode all {candidate_rows} candidate "
                             f"message row(s) for session {sid}"
                         )
                 metrics = scorer.compute_session_metrics(
@@ -498,6 +560,17 @@ def main(argv: list[str]) -> int:
 
         latest_entries = read_latest_ledger_entries(metrics_path)
         view_entries = build_current_view_entries(rows, latest_entries)
+        # Merge newly-scored sessions that fell outside the initial top-N
+        # `rows` window (paginated backfill hits). Without this, the triage
+        # table + latest-scan.json would reference only the first page and
+        # hide sessions actually scored on this run.
+        view_ids = {entry.get("session_id") for entry in view_entries}
+        for metric in results:
+            sid = metric.get("session_id")
+            if sid and sid not in view_ids:
+                view_entries.append(metric)
+                view_ids.add(sid)
+        view_entries = sorted(view_entries, key=parse_entry_timestamp, reverse=True)
         view_tier2 = [entry for entry in view_entries if entry.get("tier2_eligible")]
         scan_meta = {
             "scanned_at": datetime.now(timezone.utc).isoformat(),

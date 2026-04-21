@@ -1452,6 +1452,42 @@ def compute_trends(
 # ─── Batch Mode ──────────────────────────────────────────────────────────────
 
 
+def reconstruct_message_from_row(content, text_content, msg_type, sender):
+    """Rebuild one message dict from a ccrider ``messages`` row.
+
+    ccrider stores two projections per row:
+      - ``content``: raw provider payload as a JSON string (Claude sessions).
+      - ``text_content``: normalized plain-text projection (used by all
+        providers for search / FTS).
+
+    Codex rows leave ``content`` empty and only populate ``text_content``,
+    so provider-neutral reconstruction must fall back to ``text_content``
+    plus ``type``/``sender`` when ``content`` is unusable.
+
+    Return value:
+        (message_dict_or_None, status) where status is one of:
+            "ok"             - decoded provider JSON successfully
+            "synth"          - synthesized from text_content + type/sender
+            "decode_failed"  - content present but not valid JSON, no fallback
+            "empty"          - nothing usable; row should be skipped
+    """
+
+    if content:
+        try:
+            return json.loads(content), "ok"
+        except json.JSONDecodeError:
+            if text_content and isinstance(text_content, str) and text_content.strip():
+                role = msg_type or sender or "user"
+                return {"role": role, "content": text_content}, "synth"
+            return None, "decode_failed"
+
+    if text_content and isinstance(text_content, str) and text_content.strip():
+        role = msg_type or sender or "user"
+        return {"role": role, "content": text_content}, "synth"
+
+    return None, "empty"
+
+
 def load_session_data_from_db(db_path, session_id):
     """Load one session's messages and metadata from a ccrider SQLite DB."""
     expanded_db_path = Path(os.path.expandvars(db_path)).expanduser()
@@ -1481,7 +1517,10 @@ def load_session_data_from_db(db_path, session_id):
         provider = row[2]
         updated_at = row[3]
         rows = conn.execute(
-            "SELECT content FROM messages WHERE session_id = ? ORDER BY sequence",
+            (
+                "SELECT content, text_content, type, sender "
+                "FROM messages WHERE session_id = ? ORDER BY sequence"
+            ),
             (session_pk,),
         ).fetchall()
     except sqlite3.Error as exc:
@@ -1492,16 +1531,23 @@ def load_session_data_from_db(db_path, session_id):
         conn.close()
     messages = []
     decode_failures = 0
-    non_empty_rows = 0
-    for (content,) in rows:
-        if not content:
+    synthesized = 0
+    candidate_rows = 0
+    for content, text_content, msg_type, sender in rows:
+        if not content and not (text_content and str(text_content).strip()):
             continue
-        non_empty_rows += 1
-        try:
-            messages.append(json.loads(content))
-        except json.JSONDecodeError:
+        candidate_rows += 1
+        msg, status = reconstruct_message_from_row(
+            content, text_content, msg_type, sender
+        )
+        if status == "ok":
+            messages.append(msg)
+        elif status == "synth":
+            messages.append(msg)
+            synthesized += 1
+        elif status == "decode_failed":
             decode_failures += 1
-            continue
+        # status == "empty" was filtered above
     if decode_failures:
         print(
             (
@@ -1510,9 +1556,9 @@ def load_session_data_from_db(db_path, session_id):
             ),
             file=sys.stderr,
         )
-        if not messages and non_empty_rows:
+        if not messages and candidate_rows:
             raise ValueError(
-                f"failed to decode all {non_empty_rows} non-empty message row(s) "
+                f"failed to decode all {candidate_rows} candidate message row(s) "
                 f"for session {session_id} in {expanded_db_path}"
             )
     metadata = {
@@ -1520,6 +1566,7 @@ def load_session_data_from_db(db_path, session_id):
         "provider": provider or "unknown",
         "date": (updated_at or "")[:10] or None,
         "decode_failures": decode_failures,
+        "synthesized_from_text": synthesized,
     }
     return messages, metadata
 

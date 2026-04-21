@@ -119,21 +119,28 @@ class SessionScanOrchestratorTests(unittest.TestCase):
 
     def test_load_session_messages_reports_decode_failures(self) -> None:
         conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
         try:
             conn.execute(
-                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT)"
+                "CREATE TABLE messages ("
+                "session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, "
+                "content TEXT, text_content TEXT, type TEXT, sender TEXT)"
             )
             conn.execute(
-                "INSERT INTO messages (session_id, sequence, content) VALUES (?, ?, ?)",
-                (1, 1, '{"role":"user","content":"ok"}'),
+                "INSERT INTO messages "
+                "(session_id, sequence, content, text_content, type, sender) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (1, 1, '{"role":"user","content":"ok"}', "ok", "user", "human"),
             )
             conn.execute(
-                "INSERT INTO messages (session_id, sequence, content) VALUES (?, ?, ?)",
-                (1, 2, "{bad json"),
+                "INSERT INTO messages "
+                "(session_id, sequence, content, text_content, type, sender) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (1, 2, "{bad json", "", "assistant", "assistant"),
             )
             conn.commit()
 
-            messages, decode_failures, non_empty_rows = (
+            messages, decode_failures, candidate_rows, synthesized = (
                 session_scan_orchestrator.load_session_messages(conn, 1)
             )
         finally:
@@ -141,7 +148,79 @@ class SessionScanOrchestratorTests(unittest.TestCase):
 
         self.assertEqual(messages, [{"role": "user", "content": "ok"}])
         self.assertEqual(decode_failures, 1)
-        self.assertEqual(non_empty_rows, 2)
+        self.assertEqual(candidate_rows, 2)
+        self.assertEqual(synthesized, 0)
+
+    def test_load_session_messages_reconstructs_codex_rows_from_text_content(
+        self,
+    ) -> None:
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        try:
+            conn.execute(
+                "CREATE TABLE messages ("
+                "session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, "
+                "content TEXT, text_content TEXT, type TEXT, sender TEXT)"
+            )
+            # Codex sessions leave content empty; only text_content is populated.
+            conn.execute(
+                "INSERT INTO messages "
+                "(session_id, sequence, content, text_content, type, sender) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (1, 1, None, "hello from user", "user", "human"),
+            )
+            conn.execute(
+                "INSERT INTO messages "
+                "(session_id, sequence, content, text_content, type, sender) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (1, 2, "", "response body", "assistant", "assistant"),
+            )
+            conn.commit()
+
+            messages, decode_failures, candidate_rows, synthesized = (
+                session_scan_orchestrator.load_session_messages(conn, 1)
+            )
+        finally:
+            conn.close()
+
+        self.assertEqual(
+            messages,
+            [
+                {"role": "user", "content": "hello from user"},
+                {"role": "assistant", "content": "response body"},
+            ],
+        )
+        self.assertEqual(decode_failures, 0)
+        self.assertEqual(candidate_rows, 2)
+        self.assertEqual(synthesized, 2)
+
+    def test_reconstruct_message_statuses(self) -> None:
+        ok_msg, ok_status = session_scan_orchestrator.reconstruct_message(
+            '{"role":"user","content":"hi"}', "hi", "user", "human"
+        )
+        synth_msg, synth_status = session_scan_orchestrator.reconstruct_message(
+            None, "text only", "assistant", "assistant"
+        )
+        fallback_msg, fallback_status = session_scan_orchestrator.reconstruct_message(
+            "{bad", "recovered", "user", "human"
+        )
+        fail_msg, fail_status = session_scan_orchestrator.reconstruct_message(
+            "{bad", "", "user", "human"
+        )
+        empty_msg, empty_status = session_scan_orchestrator.reconstruct_message(
+            None, "   ", "user", "human"
+        )
+
+        self.assertEqual(ok_status, "ok")
+        self.assertEqual(ok_msg, {"role": "user", "content": "hi"})
+        self.assertEqual(synth_status, "synth")
+        self.assertEqual(synth_msg, {"role": "assistant", "content": "text only"})
+        self.assertEqual(fallback_status, "synth")
+        self.assertEqual(fallback_msg, {"role": "user", "content": "recovered"})
+        self.assertEqual(fail_status, "decode_failed")
+        self.assertIsNone(fail_msg)
+        self.assertEqual(empty_status, "empty")
+        self.assertIsNone(empty_msg)
 
     def test_main_returns_nonzero_on_partial_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -189,8 +268,8 @@ class SessionScanOrchestratorTests(unittest.TestCase):
                 session_scan_orchestrator,
                 "load_session_messages",
                 side_effect=[
-                    ([{"role": "user", "content": "ok"}], 0, 1),
-                    ([{"role": "user", "content": "still ok"}], 0, 1),
+                    ([{"role": "user", "content": "ok"}], 0, 1, 0),
+                    ([{"role": "user", "content": "still ok"}], 0, 1, 0),
                 ],
             ):
                 rc = session_scan_orchestrator.main(
@@ -365,6 +444,104 @@ class SessionScanOrchestratorTests(unittest.TestCase):
                 candidates = session_scan_orchestrator.default_db_candidates()
 
         self.assertEqual(candidates[0], expected_db)
+
+    def test_main_surfaces_backfilled_sessions_in_view(self) -> None:
+        """Sessions scored via pagination must appear in triage + latest-scan."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            db_path.write_text("", encoding="utf-8")
+            metrics_dir = Path(tmpdir) / "metrics"
+            conn = mock.Mock()
+            scorer = mock.Mock()
+            scorer.compute_session_metrics.side_effect = [
+                {
+                    "session_id": "backfilled-1",
+                    "scanned_at": "2026-04-21T17:02:00+00:00",
+                    "friction_score": 0.8,
+                    "fingerprint": "bug-fix",
+                    "plugin_opportunity_score": 0.1,
+                    "tier2_eligible": True,
+                    "provider": "claude",
+                    "project": "/tmp/app",
+                    "date": "2026-04-21",
+                },
+            ]
+            top_rows = [
+                {
+                    "id": 1,
+                    "session_id": "known-1",
+                    "project_path": "/tmp/app",
+                    "provider": "claude",
+                    "updated_at": "2026-04-21T17:00:00Z",
+                },
+            ]
+            deeper_rows = [
+                {
+                    "id": 2,
+                    "session_id": "backfilled-1",
+                    "project_path": "/tmp/app",
+                    "provider": "claude",
+                    "updated_at": "2026-04-20T10:00:00Z",
+                },
+            ]
+            metrics_dir.mkdir(parents=True, exist_ok=True)
+            (metrics_dir / "metrics.jsonl").write_text(
+                '{"session_id":"known-1","scanned_at":"2026-04-21T16:00:00+00:00",'
+                '"friction_score":0.1,"fingerprint":"feature",'
+                '"plugin_opportunity_score":0.0,"tier2_eligible":false,'
+                '"provider":"claude","project":"/tmp/app","date":"2026-04-21"}\n',
+                encoding="utf-8",
+            )
+
+            all_rows = top_rows + deeper_rows
+
+            def discover_side_effect(*_args, **kwargs):
+                # main() initial call uses --limit (1) for the visible top.
+                # collect_unscanned_sessions calls with page_size >= 50 to
+                # backfill past skipped top-N rows; simulate ccrider returning
+                # every matching session on the first page.
+                limit = kwargs.get("limit", 1)
+                offset = kwargs.get("offset", 0)
+                return all_rows[offset : offset + limit]
+
+            with mock.patch.object(
+                session_scan_orchestrator, "open_db_readonly", return_value=conn
+            ), mock.patch.object(
+                session_scan_orchestrator,
+                "discover_sessions",
+                side_effect=discover_side_effect,
+            ), mock.patch.object(
+                session_scan_orchestrator, "load_scoring_module", return_value=scorer
+            ), mock.patch.object(
+                session_scan_orchestrator,
+                "load_session_messages",
+                return_value=(
+                    [{"role": "user", "content": "ok"}],
+                    0,
+                    1,
+                    0,
+                ),
+            ):
+                rc = session_scan_orchestrator.main(
+                    [
+                        "--db",
+                        str(db_path),
+                        "--metrics-dir",
+                        str(metrics_dir),
+                        "--limit",
+                        "1",
+                    ]
+                )
+
+            self.assertEqual(rc, 0)
+            import json as _json
+
+            latest_scan = _json.loads(
+                (metrics_dir / "latest-scan.json").read_text(encoding="utf-8")
+            )
+            self.assertIn("backfilled-1", latest_scan["view_session_ids"])
+            self.assertIn("backfilled-1", latest_scan["tier2_session_ids"])
+            self.assertIn("known-1", latest_scan["view_session_ids"])
 
 
 if __name__ == "__main__":

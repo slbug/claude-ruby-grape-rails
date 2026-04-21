@@ -309,7 +309,7 @@ class SessionScanMetricTests(unittest.TestCase):
                 )
             )
             conn.execute(
-                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT)"
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT, text_content TEXT, type TEXT, sender TEXT)"
             )
             conn.execute(
                 (
@@ -347,7 +347,7 @@ class SessionScanMetricTests(unittest.TestCase):
                 )
             )
             conn.execute(
-                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT)"
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT, text_content TEXT, type TEXT, sender TEXT)"
             )
             conn.execute(
                 (
@@ -393,7 +393,7 @@ class SessionScanMetricTests(unittest.TestCase):
                 )
             )
             conn.execute(
-                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT)"
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT, text_content TEXT, type TEXT, sender TEXT)"
             )
             conn.execute(
                 (
@@ -432,7 +432,7 @@ class SessionScanMetricTests(unittest.TestCase):
                 )
             )
             conn.execute(
-                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT)"
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT, text_content TEXT, type TEXT, sender TEXT)"
             )
             conn.execute(
                 (
@@ -467,6 +467,93 @@ class SessionScanMetricTests(unittest.TestCase):
                 session_scan_metrics.load_session_data_from_db(
                     str(db_path), "session-1"
                 )
+
+    def test_reconstruct_message_from_row_statuses(self) -> None:
+        ok_msg, ok_status = session_scan_metrics.reconstruct_message_from_row(
+            '{"role":"user","content":"hi"}', "hi", "user", "human"
+        )
+        self.assertEqual(ok_status, "ok")
+        self.assertEqual(ok_msg, {"role": "user", "content": "hi"})
+
+        synth_msg, synth_status = session_scan_metrics.reconstruct_message_from_row(
+            None, "codex text", "assistant", "assistant"
+        )
+        self.assertEqual(synth_status, "synth")
+        self.assertEqual(synth_msg, {"role": "assistant", "content": "codex text"})
+
+        fb_msg, fb_status = session_scan_metrics.reconstruct_message_from_row(
+            "{broken", "fallback text", "user", "human"
+        )
+        self.assertEqual(fb_status, "synth")
+        self.assertEqual(fb_msg, {"role": "user", "content": "fallback text"})
+
+        fail_msg, fail_status = session_scan_metrics.reconstruct_message_from_row(
+            "{broken", "", "user", "human"
+        )
+        self.assertEqual(fail_status, "decode_failed")
+        self.assertIsNone(fail_msg)
+
+        empty_msg, empty_status = session_scan_metrics.reconstruct_message_from_row(
+            None, "   ", "user", "human"
+        )
+        self.assertEqual(empty_status, "empty")
+        self.assertIsNone(empty_msg)
+
+    def test_load_session_data_from_db_synthesizes_codex_text_content(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute(
+                (
+                    "CREATE TABLE sessions ("
+                    "id INTEGER PRIMARY KEY, "
+                    "session_id TEXT NOT NULL, "
+                    "project_path TEXT, "
+                    "provider TEXT, "
+                    "updated_at TEXT)"
+                )
+            )
+            conn.execute(
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, "
+                "sequence INTEGER NOT NULL, content TEXT, text_content TEXT, "
+                "type TEXT, sender TEXT)"
+            )
+            conn.execute(
+                "INSERT INTO sessions "
+                "(id, session_id, project_path, provider, updated_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (1, "codex-1", "/tmp/app", "codex", "2026-04-21T17:00:00Z"),
+            )
+            # Codex rows: content empty, text_content populated.
+            conn.execute(
+                "INSERT INTO messages "
+                "(session_id, sequence, content, text_content, type, sender) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (1, 1, None, "ask a question", "user", "human"),
+            )
+            conn.execute(
+                "INSERT INTO messages "
+                "(session_id, sequence, content, text_content, type, sender) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (1, 2, "", "answer body", "assistant", "assistant"),
+            )
+            conn.commit()
+            conn.close()
+
+            messages, metadata = session_scan_metrics.load_session_data_from_db(
+                str(db_path), "codex-1"
+            )
+
+        self.assertEqual(
+            messages,
+            [
+                {"role": "user", "content": "ask a question"},
+                {"role": "assistant", "content": "answer body"},
+            ],
+        )
+        self.assertEqual(metadata["provider"], "codex")
+        self.assertEqual(metadata["synthesized_from_text"], 2)
+        self.assertEqual(metadata["decode_failures"], 0)
 
 
 if __name__ == "__main__":
