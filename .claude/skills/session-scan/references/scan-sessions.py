@@ -148,27 +148,33 @@ def discover_sessions(
     return list(cursor.fetchall())
 
 
-def load_session_messages(conn: sqlite3.Connection, session_pk: int) -> list[dict]:
+def load_session_messages(
+    conn: sqlite3.Connection, session_pk: int
+) -> tuple[list[dict], int, int]:
     rows = conn.execute(
         "SELECT content FROM messages WHERE session_id = ? ORDER BY sequence",
         (session_pk,),
     ).fetchall()
     msgs: list[dict] = []
+    decode_failures = 0
+    non_empty_rows = 0
     for (content,) in rows:
         if not content:
             continue
+        non_empty_rows += 1
         try:
             msgs.append(json.loads(content))
         except json.JSONDecodeError:
+            decode_failures += 1
             continue
-    return msgs
+    return msgs, decode_failures, non_empty_rows
 
 
 def read_ledger(metrics_path: Path) -> set[str]:
     ids: set[str] = set()
     if not metrics_path.exists():
         return ids
-    with metrics_path.open() as f:
+    with metrics_path.open(encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -316,17 +322,40 @@ def main(argv: list[str]) -> int:
 
         results: list[dict] = []
         errors: list[tuple[str, str]] = []
+        warnings: list[dict[str, object]] = []
         for i, r in enumerate(to_score, 1):
             sid = r["session_id"]
             project = short_project(r["project_path"])
             provider = r["provider"]
             date = (r["updated_at"] or "")[:10] or None
             try:
-                msgs = load_session_messages(conn, r["id"])
+                msgs, decode_failures, non_empty_rows = load_session_messages(
+                    conn, r["id"]
+                )
+                if decode_failures:
+                    warning = {
+                        "session_id": sid,
+                        "decode_failures": decode_failures,
+                        "non_empty_rows": non_empty_rows,
+                        "reason": (
+                            f"skipped {decode_failures} malformed message JSON row(s)"
+                        ),
+                    }
+                    warnings.append(warning)
+                    print(
+                        f"  [{i}/{len(to_score)}] {sid[:8]} WARNING: "
+                        f"{warning['reason']}",
+                        file=sys.stderr,
+                    )
+                    if not msgs and non_empty_rows:
+                        raise ValueError(
+                            f"failed to decode all {non_empty_rows} non-empty "
+                            f"message row(s) for session {sid}"
+                        )
                 metrics = scorer.compute_session_metrics(
                     msgs, sid, project, date=date, provider=provider
                 )
-                with metrics_path.open("a") as f:
+                with metrics_path.open("a", encoding="utf-8") as f:
                     f.write(json.dumps(metrics) + "\n")
                 results.append(metrics)
                 print(
@@ -355,17 +384,22 @@ def main(argv: list[str]) -> int:
             "sessions_scanned": len(results),
             "sessions_skipped": skipped,
             "sessions_failed": len(errors),
+            "sessions_warned": len(warnings),
             "tier2_eligible": len(tier2),
             "errors": [{"session_id": s, "reason": r} for s, r in errors],
+            "warnings": warnings,
         }
-        latest_scan_path.write_text(json.dumps(scan_meta, indent=2) + "\n")
+        latest_scan_path.write_text(
+            json.dumps(scan_meta, indent=2) + "\n",
+            encoding="utf-8",
+        )
 
         print()
         print(format_triage_table(results))
         print()
         print(
-            f"Scanned {len(results)}, skipped {skipped}, errors {len(errors)}. "
-            f"Tier2-eligible: {len(tier2)}.",
+            f"Scanned {len(results)}, skipped {skipped}, warnings {len(warnings)}, "
+            f"errors {len(errors)}. Tier2-eligible: {len(tier2)}.",
             file=sys.stderr,
         )
         if tier2:
@@ -374,7 +408,7 @@ def main(argv: list[str]) -> int:
                 file=sys.stderr,
             )
 
-        return 1 if errors and not results else 0
+        return 1 if errors else 0
     finally:
         conn.close()
 

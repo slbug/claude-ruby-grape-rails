@@ -93,6 +93,86 @@ class SessionScanOrchestratorTests(unittest.TestCase):
 
         self.assertEqual(row["session_id"], "session-1")
 
+    def test_load_session_messages_reports_decode_failures(self) -> None:
+        conn = sqlite3.connect(":memory:")
+        try:
+            conn.execute(
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT)"
+            )
+            conn.execute(
+                "INSERT INTO messages (session_id, sequence, content) VALUES (?, ?, ?)",
+                (1, 1, '{"role":"user","content":"ok"}'),
+            )
+            conn.execute(
+                "INSERT INTO messages (session_id, sequence, content) VALUES (?, ?, ?)",
+                (1, 2, "{bad json"),
+            )
+            conn.commit()
+
+            messages, decode_failures, non_empty_rows = (
+                session_scan_orchestrator.load_session_messages(conn, 1)
+            )
+        finally:
+            conn.close()
+
+        self.assertEqual(messages, [{"role": "user", "content": "ok"}])
+        self.assertEqual(decode_failures, 1)
+        self.assertEqual(non_empty_rows, 2)
+
+    def test_main_returns_nonzero_on_partial_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            db_path.write_text("", encoding="utf-8")
+            metrics_dir = Path(tmpdir) / "metrics"
+            conn = mock.Mock()
+            scorer = mock.Mock()
+            scorer.compute_session_metrics.side_effect = [
+                {
+                    "session_id": "session-1",
+                    "friction_score": 0.1,
+                    "fingerprint": "feature",
+                    "plugin_opportunity_score": 0.0,
+                    "tier2_eligible": False,
+                },
+                RuntimeError("boom"),
+            ]
+            rows = [
+                {
+                    "id": 1,
+                    "session_id": "session-1",
+                    "project_path": "/tmp/app",
+                    "provider": "claude",
+                    "updated_at": "2026-04-21T17:00:00Z",
+                },
+                {
+                    "id": 2,
+                    "session_id": "session-2",
+                    "project_path": "/tmp/app",
+                    "provider": "claude",
+                    "updated_at": "2026-04-21T17:01:00Z",
+                },
+            ]
+
+            with mock.patch.object(
+                session_scan_orchestrator, "open_db_readonly", return_value=conn
+            ), mock.patch.object(
+                session_scan_orchestrator, "discover_sessions", return_value=rows
+            ), mock.patch.object(
+                session_scan_orchestrator, "load_scoring_module", return_value=scorer
+            ), mock.patch.object(
+                session_scan_orchestrator,
+                "load_session_messages",
+                side_effect=[
+                    ([{"role": "user", "content": "ok"}], 0, 1),
+                    ([{"role": "user", "content": "still ok"}], 0, 1),
+                ],
+            ):
+                rc = session_scan_orchestrator.main(
+                    ["--db", str(db_path), "--metrics-dir", str(metrics_dir)]
+                )
+
+        self.assertEqual(rc, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

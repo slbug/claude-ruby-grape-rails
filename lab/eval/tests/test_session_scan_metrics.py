@@ -299,14 +299,24 @@ class SessionScanMetricTests(unittest.TestCase):
             db_path = db_dir / "sessions.db"
             conn = sqlite3.connect(db_path)
             conn.execute(
-                "CREATE TABLE sessions (id INTEGER PRIMARY KEY, session_id TEXT NOT NULL)"
+                (
+                    "CREATE TABLE sessions ("
+                    "id INTEGER PRIMARY KEY, "
+                    "session_id TEXT NOT NULL, "
+                    "project_path TEXT, "
+                    "provider TEXT, "
+                    "updated_at TEXT)"
+                )
             )
             conn.execute(
                 "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT)"
             )
             conn.execute(
-                "INSERT INTO sessions (id, session_id) VALUES (?, ?)",
-                (1, "session-1"),
+                (
+                    "INSERT INTO sessions (id, session_id, project_path, provider, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?)"
+                ),
+                (1, "session-1", "/tmp/app", "claude", "2026-04-21T17:00:00Z"),
             )
             conn.execute(
                 "INSERT INTO messages (session_id, sequence, content) VALUES (?, ?, ?)",
@@ -321,6 +331,88 @@ class SessionScanMetricTests(unittest.TestCase):
                 )
 
         self.assertEqual(messages, [{"role": "user", "content": "hello"}])
+
+    def test_load_session_data_from_db_uses_session_metadata_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute(
+                (
+                    "CREATE TABLE sessions ("
+                    "id INTEGER PRIMARY KEY, "
+                    "session_id TEXT NOT NULL, "
+                    "project_path TEXT, "
+                    "provider TEXT, "
+                    "updated_at TEXT)"
+                )
+            )
+            conn.execute(
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT)"
+            )
+            conn.execute(
+                (
+                    "INSERT INTO sessions (id, session_id, project_path, provider, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?)"
+                ),
+                (
+                    1,
+                    "session-1",
+                    "/tmp/my-app",
+                    "claude",
+                    "2026-04-21T17:00:00Z",
+                ),
+            )
+            conn.execute(
+                "INSERT INTO messages (session_id, sequence, content) VALUES (?, ?, ?)",
+                (1, 1, json.dumps({"role": "user", "content": "hello"})),
+            )
+            conn.commit()
+            conn.close()
+
+            messages, metadata = session_scan_metrics.load_session_data_from_db(
+                str(db_path), "session-1"
+            )
+
+        self.assertEqual(messages, [{"role": "user", "content": "hello"}])
+        self.assertEqual(metadata["project"], "my-app")
+        self.assertEqual(metadata["provider"], "claude")
+        self.assertEqual(metadata["date"], "2026-04-21")
+
+    def test_load_session_data_from_db_raises_when_all_rows_are_malformed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "sessions.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute(
+                (
+                    "CREATE TABLE sessions ("
+                    "id INTEGER PRIMARY KEY, "
+                    "session_id TEXT NOT NULL, "
+                    "project_path TEXT, "
+                    "provider TEXT, "
+                    "updated_at TEXT)"
+                )
+            )
+            conn.execute(
+                "CREATE TABLE messages (session_id INTEGER NOT NULL, sequence INTEGER NOT NULL, content TEXT)"
+            )
+            conn.execute(
+                (
+                    "INSERT INTO sessions (id, session_id, project_path, provider, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?)"
+                ),
+                (1, "session-1", "/tmp/my-app", "claude", "2026-04-21T17:00:00Z"),
+            )
+            conn.execute(
+                "INSERT INTO messages (session_id, sequence, content) VALUES (?, ?, ?)",
+                (1, 1, "{not json"),
+            )
+            conn.commit()
+            conn.close()
+
+            with self.assertRaises(ValueError):
+                session_scan_metrics.load_session_data_from_db(
+                    str(db_path), "session-1"
+                )
 
 
 if __name__ == "__main__":

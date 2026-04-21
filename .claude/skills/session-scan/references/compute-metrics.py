@@ -120,6 +120,13 @@ def normalize_plugin_command_name(command):
     return normalized
 
 
+def short_project_name(path):
+    """Return a stable short project label from a project_path string."""
+    if not path:
+        return "unknown"
+    return Path(path).name or str(path)
+
+
 def extract_plugin_commands(user_msgs):
     """Extract shipped plugin commands while ignoring contributor analyzers."""
     commands = []
@@ -1445,8 +1452,8 @@ def compute_trends(
 # ─── Batch Mode ──────────────────────────────────────────────────────────────
 
 
-def load_messages_from_db(db_path, session_id):
-    """Load messages for one session directly from a ccrider SQLite DB."""
+def load_session_data_from_db(db_path, session_id):
+    """Load one session's messages and metadata from a ccrider SQLite DB."""
     expanded_db_path = Path(db_path).expanduser()
     if not expanded_db_path.exists():
         raise FileNotFoundError(f"ccrider DB not found: {expanded_db_path}")
@@ -1454,11 +1461,18 @@ def load_messages_from_db(db_path, session_id):
     conn = sqlite3.connect(uri, uri=True)
     try:
         row = conn.execute(
-            "SELECT id FROM sessions WHERE session_id = ?", (session_id,)
+            (
+                "SELECT id, project_path, provider, updated_at "
+                "FROM sessions WHERE session_id = ?"
+            ),
+            (session_id,),
         ).fetchone()
         if not row:
             raise LookupError(f"session_id not found in DB: {session_id}")
         session_pk = row[0]
+        project_path = row[1]
+        provider = row[2]
+        updated_at = row[3]
         rows = conn.execute(
             "SELECT content FROM messages WHERE session_id = ? ORDER BY sequence",
             (session_pk,),
@@ -1466,13 +1480,42 @@ def load_messages_from_db(db_path, session_id):
     finally:
         conn.close()
     messages = []
+    decode_failures = 0
+    non_empty_rows = 0
     for (content,) in rows:
         if not content:
             continue
+        non_empty_rows += 1
         try:
             messages.append(json.loads(content))
         except json.JSONDecodeError:
+            decode_failures += 1
             continue
+    if decode_failures:
+        print(
+            (
+                f"WARNING: skipped {decode_failures} malformed message row(s) "
+                f"while loading session {session_id} from {expanded_db_path}"
+            ),
+            file=sys.stderr,
+        )
+        if not messages and non_empty_rows:
+            raise ValueError(
+                f"failed to decode all {non_empty_rows} non-empty message row(s) "
+                f"for session {session_id} in {expanded_db_path}"
+            )
+    metadata = {
+        "project": short_project_name(project_path),
+        "provider": provider or "unknown",
+        "date": (updated_at or "")[:10] or None,
+        "decode_failures": decode_failures,
+    }
+    return messages, metadata
+
+
+def load_messages_from_db(db_path, session_id):
+    """Load messages for one session directly from a ccrider SQLite DB."""
+    messages, _metadata = load_session_data_from_db(db_path, session_id)
     return messages
 
 
@@ -1589,7 +1632,7 @@ if __name__ == "__main__":
             sys.exit(1)
         session_id = sys.argv[2]
         db_path = None
-        project = "unknown"
+        project = None
         provider = None
         if "--db" in sys.argv:
             idx = sys.argv.index("--db")
@@ -1607,15 +1650,22 @@ if __name__ == "__main__":
             print("Error: --from-db requires --db PATH", file=sys.stderr)
             sys.exit(1)
         try:
-            messages = load_messages_from_db(db_path, session_id)
+            messages, metadata = load_session_data_from_db(db_path, session_id)
         except FileNotFoundError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(2)
         except LookupError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
         metrics = compute_session_metrics(
-            messages, session_id, project, provider=provider
+            messages,
+            session_id,
+            project or metadata["project"],
+            date=metadata["date"],
+            provider=provider or metadata["provider"],
         )
         print(json.dumps(metrics, indent=2))
 
