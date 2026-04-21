@@ -26,8 +26,6 @@ Exit codes:
     2  ccrider DB path unavailable (explicit path missing or no default found)
 """
 
-from __future__ import annotations
-
 import argparse
 import importlib.util
 import json
