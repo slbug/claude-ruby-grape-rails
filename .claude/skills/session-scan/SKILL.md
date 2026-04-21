@@ -33,7 +33,8 @@ transcript data never leaves the Python process.
 - `ccrider` installed locally — see <https://github.com/neilberkman/ccrider>
 - `ccrider sync` has run (populates the SQLite DB from Claude Code /
   Codex session files)
-- python3 available
+- Python 3.14+ (repo floor; uses `str | None` / `list[X]` annotations
+  natively without `from __future__ import annotations`)
 
 ## DB Path Resolution
 

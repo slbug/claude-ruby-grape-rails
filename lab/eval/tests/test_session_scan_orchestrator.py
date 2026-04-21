@@ -379,15 +379,36 @@ class SessionScanOrchestratorTests(unittest.TestCase):
             ["session-b", "session-a"],
         )
 
-    def test_parse_since_accepts_iso_date(self) -> None:
+    def test_parse_since_pads_iso_date_to_midnight_utc(self) -> None:
         self.assertEqual(
-            session_scan_orchestrator.parse_since("2026-04-21"), "2026-04-21"
+            session_scan_orchestrator.parse_since("2026-04-21"),
+            "2026-04-21 00:00:00",
         )
 
     def test_parse_since_accepts_iso_datetime_with_z(self) -> None:
         self.assertEqual(
             session_scan_orchestrator.parse_since("2026-04-21T12:00:00Z"),
-            "2026-04-21T12:00:00+00:00",
+            "2026-04-21 12:00:00",
+        )
+
+    def test_parse_since_converts_positive_offset_to_utc(self) -> None:
+        # 12:00+01:00 is the same instant as 11:00 UTC; since ccrider rows
+        # are compared by 19-char prefix we must normalize to UTC.
+        self.assertEqual(
+            session_scan_orchestrator.parse_since("2026-04-21T12:00:00+01:00"),
+            "2026-04-21 11:00:00",
+        )
+
+    def test_parse_since_converts_negative_offset_to_utc(self) -> None:
+        self.assertEqual(
+            session_scan_orchestrator.parse_since("2026-04-21T12:00:00-05:00"),
+            "2026-04-21 17:00:00",
+        )
+
+    def test_parse_since_treats_naive_input_as_utc(self) -> None:
+        self.assertEqual(
+            session_scan_orchestrator.parse_since("2026-04-21 12:00:00"),
+            "2026-04-21 12:00:00",
         )
 
     def test_parse_since_rejects_invalid_value(self) -> None:

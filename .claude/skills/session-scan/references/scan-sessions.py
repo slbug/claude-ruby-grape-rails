@@ -126,16 +126,35 @@ def open_db_readonly(path: Path) -> sqlite3.Connection:
 
 
 def parse_since(value: str | None) -> str:
-    """Return an ISO-8601 string suitable for SQL string comparison.
+    """Normalize ``--since`` for SQL comparison against ccrider ``updated_at``.
 
-    Accepts an ISO-8601 date (``YYYY-MM-DD``) or datetime (with optional
-    ``T`` separator and trailing ``Z`` / offset). Bails out with exit code
-    1 on anything else so malformed input does not silently produce an
-    empty result set.
+    ccrider stores timestamps as ``"YYYY-MM-DD HH:MM:SS.<frac> +OFFSET TZ"``
+    with mixed offsets across rows, and SQLite's ``datetime()`` cannot parse
+    the trailing offset/zone suffix. To compare instants correctly we:
+
+    1. Accept ISO-8601 date (``YYYY-MM-DD``) or datetime with optional ``T``
+       separator and optional trailing ``Z`` or ``±HH:MM`` offset.
+    2. Convert tz-aware inputs to UTC; treat naive inputs as UTC.
+    3. Return a fixed-width ``"YYYY-MM-DD HH:MM:SS"`` string (space separator
+       matches the 19-char prefix of ccrider's ``updated_at``). Date-only
+       input is padded to ``"YYYY-MM-DD 00:00:00"`` so ``SUBSTR(updated_at,
+       1, 19) >= :since`` is a total order over all rows.
+
+    ccrider rows stored with non-UTC offsets still carry local wall-clock in
+    the first 19 chars, so rows imported from non-UTC environments can drift
+    by the offset amount. In practice the vast majority of ccrider imports
+    are UTC (the Go binary defaults to UTC), and rejecting malformed input
+    early is worth more than trying to parse every offset server-side.
+
+    Bails out with exit code 1 on invalid input so typos do not silently
+    yield empty result sets.
     """
 
     if not value:
-        return (datetime.now(timezone.utc) - timedelta(days=7)).date().isoformat()
+        start = (datetime.now(timezone.utc) - timedelta(days=7)).replace(
+            hour=0, minute=0, second=0, microsecond=0, tzinfo=None
+        )
+        return start.strftime("%Y-%m-%d %H:%M:%S")
 
     raw = value.strip()
     if not raw:
@@ -146,9 +165,17 @@ def parse_since(value: str | None) -> str:
 
     try:
         if "T" not in raw and " " not in raw:
-            return datetime.fromisoformat(raw).date().isoformat()
+            # Pure date; pad to midnight UTC.
+            day = datetime.fromisoformat(raw).date()
+            return datetime.combine(
+                day, datetime.min.time()
+            ).strftime("%Y-%m-%d %H:%M:%S")
+
         normalized = raw[:-1] + "+00:00" if raw.endswith("Z") else raw
-        return datetime.fromisoformat(normalized).isoformat()
+        dt = datetime.fromisoformat(normalized)
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
     except ValueError:
         sys.stderr.write(
             f"Error: invalid --since value {value!r}. "
@@ -167,12 +194,20 @@ def discover_sessions(
     min_messages: int,
     offset: int = 0,
 ) -> list[sqlite3.Row]:
+    # ``updated_at`` is stored as Go's ``time.Time.String()`` output —
+    # e.g. ``"2025-12-23 06:11:34.193 +0000 UTC"`` — which SQLite's
+    # ``datetime()`` cannot parse because of the trailing offset/zone
+    # suffix. Comparing against the 19-char prefix
+    # (``YYYY-MM-DD HH:MM:SS``) alongside a UTC-normalized ``:since``
+    # gives a lexical order that matches the instant order for rows that
+    # ccrider imported in UTC (the common case). See ``parse_since`` for
+    # the normalization contract.
     sql = [
         "SELECT id, session_id, project_path, provider, updated_at,",
         "       message_count, COALESCE(summary, '') AS summary",
         "FROM sessions",
         "WHERE message_count >= :min_messages",
-        "  AND updated_at >= :since",
+        "  AND SUBSTR(updated_at, 1, 19) >= :since",
     ]
     params: dict[str, object] = {
         "min_messages": min_messages,
