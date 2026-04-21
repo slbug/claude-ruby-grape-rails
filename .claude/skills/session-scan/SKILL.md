@@ -92,8 +92,9 @@ with the flags from step 1.
 If the script exits with code `2`:
 
 1. Read stderr.
-2. If it says `Error: --db path does not exist`, the contributor-provided
-   path is wrong; ask for the correct DB path and re-run with `--db PATH`.
+2. If it says `Error: --db path does not exist` or
+   `Error: --db path is not a file`, the contributor-provided path is wrong;
+   ask for the correct DB path and re-run with `--db PATH`.
 3. Otherwise stderr lists every default candidate path that was tried; ask
    the contributor where their ccrider DB lives.
 4. Re-run with `--db PATH` once they answer.

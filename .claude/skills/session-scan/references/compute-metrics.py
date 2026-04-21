@@ -1457,6 +1457,8 @@ def load_session_data_from_db(db_path, session_id):
     expanded_db_path = Path(db_path).expanduser()
     if not expanded_db_path.exists():
         raise FileNotFoundError(f"ccrider DB not found: {expanded_db_path}")
+    if not expanded_db_path.is_file():
+        raise ValueError(f"ccrider DB path is not a file: {expanded_db_path}")
     uri = f"{expanded_db_path.resolve().as_uri()}?mode=ro&immutable=1"
     conn = sqlite3.connect(uri, uri=True)
     try:

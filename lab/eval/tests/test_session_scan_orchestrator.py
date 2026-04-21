@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from unittest import mock
 
 
@@ -172,6 +174,15 @@ class SessionScanOrchestratorTests(unittest.TestCase):
                 )
 
         self.assertEqual(rc, 1)
+
+    def test_resolve_db_rejects_directory_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            stderr = io.StringIO()
+            with redirect_stderr(stderr), self.assertRaises(SystemExit) as exc:
+                session_scan_orchestrator.resolve_db(tmpdir)
+
+        self.assertEqual(exc.exception.code, 2)
+        self.assertIn("not a file", stderr.getvalue())
 
 
 if __name__ == "__main__":

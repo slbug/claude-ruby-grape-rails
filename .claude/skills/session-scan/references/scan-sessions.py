@@ -87,10 +87,13 @@ def resolve_db(explicit: str | None) -> Path:
         if not p.exists():
             sys.stderr.write(f"Error: --db path does not exist: {p}\n")
             sys.exit(2)
+        if not p.is_file():
+            sys.stderr.write(f"Error: --db path is not a file: {p}\n")
+            sys.exit(2)
         return p
     cands = default_db_candidates()
     for p in cands:
-        if p.exists():
+        if p.exists() and p.is_file():
             return p
     sys.stderr.write("ccrider DB not found. Tried:\n")
     for p in cands:

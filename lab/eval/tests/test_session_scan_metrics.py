@@ -414,6 +414,11 @@ class SessionScanMetricTests(unittest.TestCase):
                     str(db_path), "session-1"
                 )
 
+    def test_load_session_data_from_db_rejects_directory_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with self.assertRaisesRegex(ValueError, "not a file"):
+                session_scan_metrics.load_session_data_from_db(tmpdir, "session-1")
+
 
 if __name__ == "__main__":
     unittest.main()
