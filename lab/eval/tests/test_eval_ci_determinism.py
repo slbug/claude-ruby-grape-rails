@@ -102,15 +102,18 @@ class EvalCiDeterminismTests(unittest.TestCase):
             text = _read(rel)
             for pattern in BANNED_PATTERNS:
                 for m in re.finditer(pattern, text):
-                    # `trigger_scorer.py` legitimately gates a `--semantic`
-                    # LLM call inside `_fetch_semantic_pairs`; the
-                    # deterministic `--all` invocation never reaches it.
-                    # The exemption covers both the shell-string and the
-                    # list-arg `subprocess.run` forms of the same call.
+                    # `trigger_scorer.py` legitimately gates a Haiku call
+                    # inside `_fetch_semantic_pairs`; the deterministic
+                    # `--all` invocation never reaches it. The exemption
+                    # covers both the shell-string and the list-arg
+                    # `subprocess.run` forms. Anchor on the function name
+                    # rather than the `--semantic` flag string so list-arg
+                    # forms (where the flag never appears as a contiguous
+                    # token) are also exempted.
                     if rel == "lab/eval/trigger_scorer.py":
                         line_start = text.rfind("\n", 0, m.start()) + 1
                         snippet = text[max(0, line_start - 4000) : m.start()]
-                        if "--semantic" in snippet:
+                        if "_fetch_semantic_pairs" in snippet:
                             continue
                     self.fail(
                         f"{rel}: banned LLM pattern matched: {pattern!r}"
