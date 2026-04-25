@@ -29,6 +29,18 @@ The plugin ships specialist agents, skills, hooks, and eval tooling:
   Includes `.claude/rules/` (auto-loaded context rules, some path-scoped)
   and `.claude/skills/` (contributor-only skills).
 
+## How These Rules Are Scoped
+
+Each `.github/instructions/*.instructions.md` file has an `applyTo:`
+glob (`lab/eval/**`, `**/*.sh`, `**/*.md`, `plugins/**`) and an
+`excludeAgent: "coding-agent"` directive. The `excludeAgent` flag tells
+the harness that these rules are **review-only** — they apply to PR
+review agents, not to a coding-agent that is mid-implementation. The
+goal is to avoid feedback loops where the coding-agent over-fits to its
+own review checklist while writing the diff. Reviewers (this file +
+the four scoped files) follow the rules; the implementer ignores them
+until handing off for review.
+
 ## What CI Already Checks
 
 Do not flag issues already caught by CI:
@@ -115,6 +127,28 @@ even when the unmodified file is not part of the PR.
   `description + when_to_use` length still fits the ceilings (skills:
   1,536; agents: 250). Flag if the unchanged sibling field pushes the
   total over the limit after the edit.
+- **`compute_trust_state` schema change** in `lab/eval/output_checks.py`
+  → also update fixtures under `lab/eval/fixtures/output/` and
+  `lab/eval/fixtures/trust-states/` plus tests in
+  `lab/eval/tests/test_trust_states.py`. Schema rules (required keys,
+  allowed `kind` values, `supports` shape) live only in code — there is
+  no separate JSON Schema file. A schema rule edit without matching
+  fixture + test updates is a drift defect.
+- **`requirements-dev.txt` edited** (added/removed Python module) →
+  also update `scripts/check-contributor-prereqs.sh`
+  `check_dev_python_modules()` and the `pip install -r
+  requirements-dev.txt` step in `.github/workflows/lint.yml`. The
+  doctor script hardcodes module names by design (no user-supplied
+  argument flows into `python3 -c`); each new dep needs an explicit
+  `python3 -c "import <name>"` line.
+- **`make eval-ci-deterministic` Makefile target edited** → the audit
+  comment ("Must NOT transitively invoke any LLM provider …") is
+  self-checked by `lab/eval/tests/test_eval_ci_determinism.py`. If you
+  reword the comment, update the regex in
+  `EvalCiDeterminismTests.test_makefile_target_exists`. Removing the
+  comment without updating the test is a drift defect; removing it
+  without restoring an equivalent guard is a determinism-policy
+  regression.
 
 ### How to surface drift findings
 

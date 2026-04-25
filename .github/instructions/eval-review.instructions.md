@@ -33,44 +33,47 @@ excludeAgent: "coding-agent"
 - Wired into `--changed`, `--all`, and `--ci` modes in run_eval.sh
 - `EXPECTED_PATHS_SKILLS` list must be updated when adding framework skills
 
-## Additional Modules
+## Module Map
 
-- `matcher_ablation.py` — leave-one-out matcher signal/noise classification
-- `neighbor_regression.py` — confusable-pair regression detection
-- `eval_sensitivity.py` — threshold sensitivity analysis
-- `behavioral_scorer.py` — LLM-based trigger routing. Default provider
-  resolved by `--provider` flag → `RUBY_PLUGIN_EVAL_PROVIDER` env var →
-  `ollama` (local Gemma4, model tag `RUBY_PLUGIN_EVAL_OLLAMA_MODEL`,
-  default `gemma4:26b-a4b-it-q8_0`). Other choices: `apfel` (on-device,
-  no gate input), `haiku` (paid Anthropic API, prompt-cache via
-  `ENABLE_PROMPT_CACHING_1H=1` / `FORCE_PROMPT_CACHING_5M=1`)
-- `epistemic_suite.py` — epistemic-posture metrics (regex +
-  LLM-judge) over fixtures in `lab/eval/fixtures/epistemic/`. Captures
-  baselines at `lab/eval/baselines/epistemic/{namespace}/pre-posture.json`
-  (gitignored). Refuses to run when baseline is missing or injector hash
-  matches baseline (nothing changed). Gate providers: `ollama` and
-  `haiku` only — `apfel` results are reference-only
-- `agent_matchers.py` / `agent_scorer.py` — deterministic structural
-  scoring of agent frontmatter and body (separate from skill scoring)
-- `artifact_scorer.py` / `output_checks.py` — research/review output
-  artifact checks against fixtures in `lab/eval/fixtures/output/`
-  (canonical contributor check for provenance/report contract changes)
-- `check_refs.py` — validates internal `/rb:<skill>` and
-  `subagent_type: <agent>` cross-references resolve on disk
-- `trigger_expand.py` — Haiku-assisted self-sampled trigger corpus
-  expansion (contributor-only; not part of `eval-ci-deterministic`)
-- `trigger_scorer.py` — validation and scoring of deterministic
-  trigger corpora; enforces minimum counts, axis coverage,
-  contamination guards
-- `frontmatter.py` / `schemas.py` — shared YAML frontmatter parser and
-  result dataclasses; reuse instead of re-implementing
+The canonical module list is `ls lab/eval/*.py`. Re-derive on every
+review pass; do not rely on a frozen enumeration here.
+
+When reviewing a change under `lab/eval/`:
+
+1. Read the module's docstring and `import` block — they declare its
+   role and whether it touches an LLM provider.
+2. Check whether `make eval-ci-deterministic` reaches it transitively
+   (see `lab/eval/run_eval.sh --ci` body and the allowlist in
+   `lab/eval/tests/test_eval_ci_determinism.py::DETERMINISTIC_PATH_FILES`).
+   Modules on that path MUST stay LLM-free.
+3. LLM-bearing modules (`behavioral_scorer.py`, `epistemic_suite.py`,
+   `trigger_scorer.py --semantic` path) are intentionally OFF the
+   deterministic path. Confirm any new transport import goes into one
+   of those, not into the deterministic path.
+
+Provider conventions (apply when reviewing LLM-bearing changes):
+
+- `behavioral_scorer.py` — provider via `--provider` flag →
+  `RUBY_PLUGIN_EVAL_PROVIDER` → `ollama` default (Gemma4, model tag
+  `RUBY_PLUGIN_EVAL_OLLAMA_MODEL`, default `gemma4:26b-a4b-it-q8_0`).
+  Alt: `apfel` (on-device, reference-only), `haiku` (paid Anthropic
+  API, prompt-cache via `ENABLE_PROMPT_CACHING_1H=1` /
+  `FORCE_PROMPT_CACHING_5M=1`).
+- `epistemic_suite.py` — captures baselines at
+  `lab/eval/baselines/epistemic/{namespace}/pre-posture.json`
+  (gitignored). Refuses to run when baseline is missing or injector
+  hash matches baseline. Gate providers: `ollama` and `haiku` only;
+  `apfel` is reference-only.
+- `eval_auth.py` — `claude --bare` auth resolution (keychain via
+  `bare_settings.json` → cached OAuth).
+
+Shared infrastructure to reuse (do not re-implement):
+
+- `frontmatter.py` / `schemas.py` — YAML frontmatter parser, result
+  dataclasses
 - `results_dir.py` — single source of truth for behavioral result
   paths under `lab/eval/triggers/results/{namespace}/`
-- `eval_auth.py` — `claude --bare` auth resolution (keychain via
-  `bare_settings.json` → cached OAuth)
-- `eval_logging.py` — `emit_info` shared logger usable from CLI and tests
-- `baseline.py` / `compare.py` — snapshot + comparison (drives
-  `make eval-baseline` / `make eval-compare`)
+- `eval_logging.py` — `emit_info` shared logger usable from CLI + tests
 
 ## Matchers (lab/eval/matchers.py)
 

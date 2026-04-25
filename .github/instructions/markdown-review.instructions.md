@@ -11,9 +11,9 @@ Files under `plugins/**/skills/` and `plugins/**/agents/` use YAML
 frontmatter between `---` delimiters. This is Claude Code plugin syntax,
 not standard markdown metadata.
 
-Valid frontmatter fields for skills: name, description, argument-hint,
-effort, disable-model-invocation, user-invocable, allowed-tools, model,
-context, agent, hooks, paths, shell
+Valid frontmatter fields for skills: name, description, when_to_use,
+argument-hint, effort, disable-model-invocation, user-invocable,
+allowed-tools, model, context, agent, hooks, paths, shell
 
 Valid frontmatter fields for agents: name, description, model, effort,
 maxTurns, tools, disallowedTools, skills, memory, background, isolation,

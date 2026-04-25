@@ -41,49 +41,36 @@ excludeAgent: "coding-agent"
 
 ## Hook Failure Policy
 
-Each script must document its failure policy near the top. Current
-classification of shipped hooks under
-`plugins/ruby-grape-rails/hooks/scripts/`:
+Each script under `plugins/ruby-grape-rails/hooks/scripts/` must
+document its failure policy near the top via a `# Policy:` comment.
+Recognised classes:
 
-- **Advisory hooks** (warn/skip, exit 0 on degraded state):
-  `detect-runtime.sh`, `detect-runtime-async.sh`, `detect-runtime-fast.sh`,
-  `detect-runtime-file-changed.sh`, `check-resume.sh`,
-  `check-scratchpad.sh`, `check-pending-plans.sh`,
-  `check-plugin-version.sh`, `log-progress.sh`,
-  `log-subagent-metrics.sh`, `session-title.sh`, `setup-dirs.sh`,
-  `install-statusline-wrapper.sh`, `stop-failure-log.sh`,
-  `plan-stop-reminder.sh`, `postcompact-verify.sh`,
-  `precompact-rules.sh`, `security-reminder.sh`,
-  `ruby-failure-hints.sh`, `ruby-post-tool-use-failure.sh`,
-  `error-critic.sh`
-- **Delegated Ruby guardrails** (fail closed once selected for a
-  Ruby path): `rubyish-post-edit.sh`, `format-ruby.sh`,
-  `verify-ruby.sh`, `debug-statement-warning.sh`
-- **Security-sensitive hooks** (fail closed in strict/high-confidence
-  cases): `secret-scan.sh`, `block-dangerous-ops.sh`,
-  `iron-law-verifier.sh`
-- **Generated injector** (do NOT hand-edit): `inject-iron-laws.sh` is
-  rebuilt from `references/iron-laws.yml` + `preferences.yml` by
-  `scripts/generate-iron-law-outputs.sh`. Header carries
-  `Source versions: iron-laws=<v> preferences=<v>` — verify the header
-  matches the source YAML versions in any PR that edits the YAML
-- **Active-plan / scratchpad guards**: `active-plan-marker.sh` (uses
-  `set -e` for strict marker semantics), `active-plan-lib.sh`
-  (sourced library)
+- **Advisory** — warn/skip, exit 0 on degraded state. Default.
+- **Delegated Ruby guardrail** — fail closed (exit 2) once selected
+  for a Ruby path (e.g. `format-ruby.sh`, `verify-ruby.sh`).
+- **Security-sensitive** — fail closed in strict/high-confidence
+  cases (e.g. `secret-scan.sh`, `block-dangerous-ops.sh`,
+  `iron-law-verifier.sh`).
+- **Generated injector** — `inject-iron-laws.sh` is rebuilt from
+  `references/iron-laws.yml` + `preferences.yml` by
+  `scripts/generate-iron-law-outputs.sh`. Do NOT hand-edit. Header
+  carries `Source versions: iron-laws=<v> preferences=<v>` — verify the
+  header matches the source YAML versions in any PR that edits the YAML.
+- **Active-plan / scratchpad guard** — `active-plan-marker.sh` uses
+  `set -e` for strict marker semantics; `active-plan-lib.sh` is the
+  sourced library.
+
+When reviewing a hook, read the `# Policy:` comment to determine which
+class applies, then use the matching set/exit/timeout expectations from
+"Shell Hardening" + "Configurable Timeouts". Do not assume a class from
+the filename alone.
 
 ### Library files (`*-lib.sh`)
 
-These are sourced by other scripts and intentionally omit their own
-`set` flags (caller's settings apply). Currently shipped:
-
-- `workspace-root-lib.sh` — `read_hook_input`, `resolve_workspace_root`
-- `timeout-lib.sh` — `run_with_timeout`, `TIMEOUT_CMD` resolution
-- `scratchpad-lib.sh` — scratchpad path/format helpers
-- `active-plan-lib.sh` — active-plan marker helpers
-- `ruby-dependency-lib.sh` — Ruby manifest detection helpers
-
-Do NOT flag missing `set -o nounset` / `set -o pipefail` in these
-files. Do flag a non-`-lib.sh` script that omits them.
+Files matching `*-lib.sh` are sourced by other scripts and
+intentionally omit their own `set` flags (caller's settings apply).
+Do NOT flag missing `set -o nounset` / `set -o pipefail` in
+`*-lib.sh`. Do flag a non-`-lib.sh` script that omits them.
 
 ## Configurable Timeouts
 
