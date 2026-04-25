@@ -18,4 +18,4 @@ effort: medium
 - factories or fixtures that stay small and deterministic
 - explicit time and randomness control in flaky paths
 
-See also: references/discipline.md
+See also: `${CLAUDE_SKILL_DIR}/references/discipline.md`

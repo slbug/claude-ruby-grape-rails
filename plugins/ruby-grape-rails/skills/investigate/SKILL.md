@@ -44,4 +44,4 @@ pass an explicit output path in the prompt
 the agent writes its findings to that file and returns a ≤300-word chat
 summary. Read the file for the full report.
 
-See also: references/discipline.md
+See also: `${CLAUDE_SKILL_DIR}/references/discipline.md`
