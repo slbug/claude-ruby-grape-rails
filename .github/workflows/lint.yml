@@ -74,7 +74,7 @@ jobs:
         run: npm ci
 
       - name: Install Python dev dependencies
-        run: pip install -r requirements-dev.txt
+        run: python3 -m pip install -r requirements-dev.txt
 
       - name: Run eval tests
         run: npm run eval:test

@@ -31,7 +31,7 @@ check_required python3 "required for eval tests and release checks (python3 3.14
 # string and would be a code-injection vector if user-influenced.
 check_dev_python_modules() {
   if ! python3 -c "import yaml" >/dev/null 2>&1; then
-    echo "MISSING: python3 module 'yaml' — install with: pip install -r requirements-dev.txt" >&2
+    echo "MISSING: python3 module 'yaml' — install with: python3 -m pip install -r requirements-dev.txt" >&2
     MISSING=1
   fi
 }
