@@ -89,6 +89,54 @@ class TrustStateTests(unittest.TestCase):
         p.write_text("---\nclaims: []\nsources: []\nconflicts: []\n---\n")
         self.assertEqual(output_checks.compute_trust_state(p), "missing")
 
+    def test_claims_as_dict_maps_to_missing(self) -> None:
+        p = self.tmp_path / "shape.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  c1: {}\n"
+            "sources:\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "conflicts: []\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
+    def test_claim_without_id_maps_to_missing(self) -> None:
+        p = self.tmp_path / "shape.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - description: missing id field\n"
+            "sources:\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "conflicts: []\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
+    def test_claim_id_non_string_maps_to_missing(self) -> None:
+        p = self.tmp_path / "shape.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: 1\n"
+            "sources:\n"
+            "  - kind: primary\n"
+            "    supports: [1]\n"
+            "  - kind: primary\n"
+            "    supports: [1]\n"
+            "conflicts: []\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
     def test_tool_only_sources_map_to_weak(self) -> None:
         p = self.tmp_path / "tool.provenance.md"
         p.write_text(

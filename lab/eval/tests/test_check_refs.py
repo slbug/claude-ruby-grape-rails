@@ -20,29 +20,46 @@ class CheckRefsTests(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
-    def test_resolves_skill_name(self) -> None:
+    def test_resolves_slash_command(self) -> None:
         plugin_root = _make_plugin(self.tmp_path)
         (plugin_root / "skills" / "foo").mkdir()
         (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
-            "---\nname: foo\n---\nSee /rb:bar\n"
+            "---\nname: rb:foo\n---\nSee /rb:bar\n"
         )
         (plugin_root / "skills" / "bar").mkdir()
         (plugin_root / "skills" / "bar" / "SKILL.md").write_text(
-            "---\nname: bar\n---\n"
+            "---\nname: rb:bar\n---\n"
         )
         result = check_refs.scan(plugin_root)
         self.assertEqual(result.broken, [])
 
-    def test_flags_missing_skill(self) -> None:
+    def test_flags_missing_slash_command(self) -> None:
         plugin_root = _make_plugin(self.tmp_path)
         (plugin_root / "skills" / "foo").mkdir()
         (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
-            "---\nname: foo\n---\nSee /rb:nonexistent\n"
+            "---\nname: rb:foo\n---\nSee /rb:nonexistent\n"
         )
         result = check_refs.scan(plugin_root)
         self.assertEqual(len(result.broken), 1)
         self.assertEqual(result.broken[0].target, "nonexistent")
         self.assertIn("foo/SKILL.md", result.broken[0].source)
+
+    def test_non_command_skill_does_not_resolve_slash(self) -> None:
+        """`/rb:active-record-patterns` must NOT resolve when the skill's
+        frontmatter `name:` lacks the `rb:` prefix (auto-loading skill,
+        not a user-invocable command)."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "active-record-patterns").mkdir()
+        (plugin_root / "skills" / "active-record-patterns" / "SKILL.md").write_text(
+            "---\nname: active-record-patterns\n---\n"
+        )
+        (plugin_root / "skills" / "caller").mkdir()
+        (plugin_root / "skills" / "caller" / "SKILL.md").write_text(
+            "---\nname: rb:caller\n---\nSee /rb:active-record-patterns\n"
+        )
+        result = check_refs.scan(plugin_root)
+        self.assertEqual(len(result.broken), 1)
+        self.assertEqual(result.broken[0].target, "active-record-patterns")
 
     def test_resolves_slash_alias_when_dir_name_differs(self) -> None:
         """`/rb:trace` resolves through frontmatter alias when dir is `rb-trace`."""

@@ -42,4 +42,4 @@ Add the ones that matter. Document the ones you skipped (why).
 ## References
 
 - Anthropic skill-formation study: conceptual-inquiry patterns score 86% mastery vs delegation <40%. Writing tests yourself > reading-only review.
-- Parent skill: `/rb:testing`
+- Parent skill: `testing` (auto-loaded for files under `spec/` or `test/`)

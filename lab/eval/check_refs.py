@@ -47,9 +47,13 @@ def _frontmatter_name(md_path: Path) -> str | None:
 def _skill_universe(plugin_root: Path) -> tuple[set[str], set[str]]:
     """Return (dir_names, slash_aliases) for the skills tree.
 
-    `dir_names` resolves `skills/<name>` path references.
-    `slash_aliases` resolves `/rb:<name>` invocations through the
-    frontmatter `name:` field, with the `rb:` prefix stripped.
+    `dir_names` resolves `skills/<name>` path references and contains every
+    skill directory name.
+    `slash_aliases` resolves `/rb:<name>` invocations and contains ONLY
+    skills whose frontmatter `name:` starts with `rb:` — i.e. user-invocable
+    slash commands. Auto-loading reference skills (e.g. `name:
+    active-record-patterns`) are intentionally excluded so a typo like
+    `/rb:active-record-patterns` does not falsely resolve.
     """
     skills_dir = plugin_root / "skills"
     if not skills_dir.is_dir():
@@ -64,7 +68,7 @@ def _skill_universe(plugin_root: Path) -> tuple[set[str], set[str]]:
         if not skill_md.is_file():
             continue
         name = _frontmatter_name(skill_md)
-        if name:
+        if name and name.startswith("rb:"):
             aliases.add(name.removeprefix("rb:"))
     return dir_names, aliases
 
@@ -97,7 +101,9 @@ def _iter_non_fenced_lines(text: str):
 def scan(plugin_root: Path) -> ScanResult:
     skill_dirs, skill_aliases = _skill_universe(plugin_root)
     agents = _agent_names(plugin_root)
-    slash_universe = skill_dirs | skill_aliases
+    # `/rb:<name>` resolves only via `rb:`-prefixed frontmatter aliases;
+    # bare directory names are NOT a valid slash command.
+    slash_universe = skill_aliases
     result = ScanResult()
     for md in plugin_root.rglob("*.md"):
         rel = md.relative_to(plugin_root)

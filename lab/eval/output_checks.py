@@ -248,24 +248,28 @@ def compute_trust_state(sidecar: Path) -> str:
     claims = meta.get("claims") or []
     sources = meta.get("sources") or []
     conflicts = meta.get("conflicts") or []
-    if not claims or not sources:
+
+    # Strict shape validation. Anything off-spec (claims/sources not lists,
+    # entries not dicts, claim missing string `id`) maps to `missing` so
+    # malformed schemas surface as broken instead of being graded `clean`.
+    if not isinstance(claims, list) or not claims:
+        return "missing"
+    if not isinstance(sources, list) or not sources:
+        return "missing"
+    if not all(isinstance(c, dict) and isinstance(c.get("id"), str) for c in claims):
+        return "missing"
+    if not all(isinstance(s, dict) for s in sources):
         return "missing"
 
     if conflicts:
         return "conflicted"
 
-    support_counts: dict[str, int] = {
-        c["id"]: 0 for c in claims if isinstance(c, dict) and "id" in c
-    }
+    support_counts: dict[str, int] = {c["id"]: 0 for c in claims}
     for s in sources:
-        if not isinstance(s, dict):
-            continue
         for cid in s.get("supports") or []:
             if cid in support_counts:
                 support_counts[cid] += 1
-    all_tool_only = all(
-        isinstance(s, dict) and s.get("kind") == "tool-output" for s in sources
-    )
+    all_tool_only = all(s.get("kind") == "tool-output" for s in sources)
     if all_tool_only or any(count < 2 for count in support_counts.values()):
         return "weak"
     return "clean"
