@@ -280,11 +280,14 @@ class RuntimeScriptTests(unittest.TestCase):
                 missing.append(script.name)
                 continue
             body = policy_line.removeprefix("# Policy:").strip()
-            # Accept any separator after the class label: em-dash, hyphen,
-            # semicolon, plain space — only the leading class name is
-            # contractual.
+            # The class label must come first. The character following the
+            # label must be a literal space or end-of-string (i.e. the
+            # whole body is just the class). Free-form detail (em-dash,
+            # hyphen, semicolon, prose) is permitted only AFTER that
+            # space — it is not allowed to butt up against the class
+            # label.
             if not any(
-                body == cls or (body.startswith(cls) and body[len(cls):len(cls) + 1] in (" ", ""))
+                body == cls or (body.startswith(cls) and body[len(cls):len(cls) + 1] == " ")
                 for cls in canonical_classes
             ):
                 unclassified.append((script.name, body))
