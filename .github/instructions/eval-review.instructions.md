@@ -108,8 +108,11 @@ Shared infrastructure to reuse (do not re-implement):
 - Removed skill/agent → require removal of corresponding eval/trigger
   JSONs; `check_refs.py` will fail on stale cross-references
 - Added/renamed module under `lab/eval/` → also update `run_eval.sh`,
-  `Makefile`, `package.json` scripts, and the "Additional Modules"
-  list in this file
+  `Makefile`, `package.json` scripts, and (if the new module is reached
+  by `make eval-ci-deterministic`)
+  `lab/eval/tests/test_eval_ci_determinism.py::DETERMINISTIC_PATH_FILES`.
+  Reviewers rely on the canonical `ls lab/eval/*.py` set re-derived each
+  pass, not a frozen list in this file.
 - `EXPECTED_PATHS_SKILLS` in `context_budget.py` must include any new
   framework skill paths
 

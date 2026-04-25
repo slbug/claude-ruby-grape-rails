@@ -15,12 +15,14 @@ SLASH_REF_RE = re.compile(r"/rb:([a-z][a-z0-9-]+)")
 PATH_SKILL_REF_RE = re.compile(r"skills/([a-z][a-z0-9-]+)")
 PATH_AGENT_REF_RE = re.compile(r"agents/([a-z][a-z0-9-]+)")
 FRONTMATTER_NAME_RE = re.compile(r"^name:\s*(\S+)\s*$", re.MULTILINE)
-# Fenced code blocks open with 3+ backticks or tildes; the closing fence
-# must use the SAME delimiter character and at least as many of them.
-# Plain `^\s*```` does not handle 4-backtick fences (used for embedding
-# 3-backtick code samples), so we capture the delimiter run and require
-# a same-character match on close.
+# Fenced code blocks open with 3+ backticks or tildes followed by an
+# optional info string (`````ruby`, `````bash my-file.sh`, etc). Closing
+# fences per CommonMark MAY NOT carry an info string — they are the
+# delimiter run on its own (with optional surrounding whitespace). Two
+# regexes keep the asymmetry explicit so a `````ruby` line inside an
+# outer 3-backtick block is NOT matched as a close.
 FENCE_OPEN_RE = re.compile(r"^\s*(`{3,}|~{3,})")
+FENCE_CLOSE_RE = re.compile(r"^\s*(`{3,}|~{3,})\s*$")
 
 
 @dataclass
@@ -95,20 +97,25 @@ def _iter_non_fenced_lines(text: str):
     """Yield (lineno, line) tuples skipping fenced code blocks.
 
     Tracks the opening delimiter character and length so that a closing
-    fence must use the same character and at least as many of them. This
-    handles 4-backtick fences that wrap 3-backtick samples.
+    fence must use the same character and at least as many of them. The
+    close match also requires the line to be *only* the delimiter run
+    (CommonMark forbids info strings on closing fences) so an inner
+    `````ruby` line inside an outer 3-backtick block does not falsely
+    end the outer fence.
     """
     open_delim: str | None = None
     for lineno, line in enumerate(text.splitlines(), start=1):
-        m = FENCE_OPEN_RE.match(line)
         if open_delim is None:
+            m = FENCE_OPEN_RE.match(line)
             if m:
                 open_delim = m.group(1)
                 continue
             yield lineno, line
             continue
-        # Inside a fence — close only on a same-character run >= the
-        # opening length.
+        # Inside a fence — close only on a delimiter-only line whose
+        # delimiter character matches the opener and whose length is at
+        # least the opener's length.
+        m = FENCE_CLOSE_RE.match(line)
         if m and m.group(1)[0] == open_delim[0] and len(m.group(1)) >= len(open_delim):
             open_delim = None
             continue

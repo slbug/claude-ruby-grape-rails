@@ -137,6 +137,24 @@ class CheckRefsTests(unittest.TestCase):
         broken = sorted(r.target for r in result.broken)
         self.assertEqual(broken, ["also-nope", "nope"])
 
+    def test_inner_info_string_line_does_not_close_outer_fence(self) -> None:
+        """A line like `````ruby` is a NEW open per CommonMark, not a
+        close. Inside a 3-backtick fence it must not terminate the fence
+        and let inner refs leak as broken."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "caller").mkdir()
+        (plugin_root / "skills" / "caller" / "SKILL.md").write_text(
+            "---\nname: rb:caller\n---\n"
+            "```\n"
+            "```ruby\n"
+            "/rb:fake-still-inside\n"
+            "```\n"
+            "Real ref after fence: /rb:nope\n"
+        )
+        result = check_refs.scan(plugin_root)
+        broken = sorted(r.target for r in result.broken)
+        self.assertEqual(broken, ["nope"])
+
     def test_skips_fenced_code_blocks(self) -> None:
         """References inside fenced code blocks are not flagged."""
         plugin_root = _make_plugin(self.tmp_path)
