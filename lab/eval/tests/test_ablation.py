@@ -1,6 +1,5 @@
 """Tests for the matcher ablation tooling."""
 
-from __future__ import annotations
 
 import unittest
 from unittest.mock import patch

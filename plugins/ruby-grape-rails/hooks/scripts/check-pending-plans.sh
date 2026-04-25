@@ -2,6 +2,9 @@
 set -o nounset
 set -o pipefail
 
+# Policy: advisory — warn/skip on degraded state, exit 0.
+
+
 # Stop hook: Warn about plans with uncompleted tasks
 # Guard against infinite loops per Claude Code docs
 HOOK_NAME="${BASH_SOURCE[0]##*/}"

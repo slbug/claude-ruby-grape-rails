@@ -2,6 +2,9 @@
 set -o nounset
 set -o pipefail
 
+# Policy: advisory — warn/skip on degraded state, exit 0.
+
+
 # StopFailure hook: persist API-failure context to the active plan scratchpad.
 # Output is ignored for StopFailure, so this hook focuses on durable resume state.
 

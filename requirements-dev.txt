@@ -1,0 +1,5 @@
+# Contributor dev dependencies for lab/eval/ tooling.
+# Python 3.14+ required (see .claude/rules/eval-workflow.md).
+# Tests run via stdlib unittest discovery (`scripts/run-eval-tests.sh`); no
+# third-party test runner required.
+pyyaml>=6.0.3

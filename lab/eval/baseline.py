@@ -1,6 +1,5 @@
 """Create a baseline snapshot for skills, agents, and triggers."""
 
-from __future__ import annotations
 
 from datetime import datetime, timezone
 import json

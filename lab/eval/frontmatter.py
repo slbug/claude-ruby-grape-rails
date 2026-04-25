@@ -4,7 +4,6 @@ Lightweight delimiter-aware parser for SKILL.md and agent frontmatter.
 Not a full YAML parser — handles the subset used by Claude Code plugin files.
 """
 
-from __future__ import annotations
 
 import re
 from typing import Any
@@ -30,22 +29,50 @@ def _coerce_frontmatter_value(key: str, value: str) -> Any:
     return _coerce_scalar(value)
 
 
-def parse_frontmatter(content: str) -> dict[str, Any]:
-    """Parse YAML frontmatter from a --- delimited block."""
+def _find_delimiter_lines(content: str) -> tuple[list[str], int] | None:
+    """Locate the closing `---` line index for a frontmatter block.
+
+    Returns `(lines, end)` where `lines` is the full split content and
+    `end` is the index of the closing `---` line. Returns None when no
+    frontmatter is present or the closing delimiter is missing. Both
+    delimiters are matched line-aware (`strip() == "---"`) so `---`
+    inside a YAML value cannot mis-split the block.
+    """
     lines = content.splitlines()
     if not lines or lines[0].strip() != "---":
-        return {}
-
-    end = None
+        return None
     for index in range(1, len(lines)):
         if lines[index].strip() == "---":
-            end = index
-            break
-    if end is None:
-        return {}
+            return lines, index
+    return None
 
+
+def extract_frontmatter_block(content: str) -> str | None:
+    """Return the raw YAML text between leading `---` delimiter lines.
+
+    Line-aware: only `---` on its own line (after `strip()`) is treated
+    as a delimiter, so `---` appearing inside a YAML value (URL, string)
+    does not mis-split the frontmatter. Returns the inner YAML body
+    (without the `---` lines themselves) or None when no frontmatter is
+    present or the closing delimiter is missing.
+
+    Use this when feeding the block to `yaml.safe_load` for full-YAML
+    parsing; use `parse_frontmatter` for the flat-key subset.
+    """
+    found = _find_delimiter_lines(content)
+    if found is None:
+        return None
+    lines, end = found
+    return "\n".join(lines[1:end])
+
+
+def parse_frontmatter(content: str) -> dict[str, Any]:
+    """Parse YAML frontmatter from a --- delimited block."""
+    block = extract_frontmatter_block(content)
+    if block is None:
+        return {}
+    body = block.splitlines()
     data: dict[str, Any] = {}
-    body = lines[1:end]
     i = 0
     while i < len(body):
         line = body[i]
@@ -78,10 +105,8 @@ def parse_frontmatter(content: str) -> dict[str, Any]:
 
 def get_body(content: str) -> str:
     """Return content after the frontmatter block."""
-    lines = content.splitlines()
-    if not lines or lines[0].strip() != "---":
+    found = _find_delimiter_lines(content)
+    if found is None:
         return content
-    for index in range(1, len(lines)):
-        if lines[index].strip() == "---":
-            return "\n".join(lines[index + 1:]).strip()
-    return content
+    lines, end = found
+    return "\n".join(lines[end + 1 :]).strip()

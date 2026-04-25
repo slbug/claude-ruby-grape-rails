@@ -2,6 +2,9 @@
 set -o nounset
 set -o pipefail
 
+# Policy: advisory — warn/skip on degraded state, exit 0.
+
+
 # PostCompact hook: surface a recovery reminder after compaction.
 # Uses stderr + exit 2 to advise Claude which workflow artifacts to re-read.
 

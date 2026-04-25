@@ -3,8 +3,9 @@ set -o nounset
 set -o pipefail
 
 # Delegated Ruby-ish post-edit entrypoint.
-# Policy: fail closed on malformed payloads or missing delegates, but aggregate
-# delegate diagnostics so one failure does not mask later high-signal warnings.
+# Policy: delegated Ruby guardrail — fail closed on malformed payloads or
+# missing delegates, but aggregate delegate diagnostics so one failure
+# does not mask later high-signal warnings.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"

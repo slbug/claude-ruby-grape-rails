@@ -2,8 +2,9 @@
 set -o nounset
 set -o pipefail
 
-# Policy: delegated Ruby post-edit guardrail; once selected for a Ruby-ish path,
-# payload and path-resolution failures block rather than silently skipping.
+# Policy: delegated Ruby guardrail — post-edit; once selected for a
+# Ruby-ish path, payload and path-resolution failures block rather than
+# silently skipping.
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 

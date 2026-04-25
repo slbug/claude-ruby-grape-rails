@@ -1,6 +1,5 @@
 """Tests for the shared results_dir helper module."""
 
-from __future__ import annotations
 
 import logging
 import unittest

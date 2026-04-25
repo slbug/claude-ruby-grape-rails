@@ -1,6 +1,6 @@
 {
   "name": "ruby-grape-rails-plugin",
-  "version": "1.13.4",
+  "version": "1.14.0",
   "private": true,
   "description": "Specialist agents, Iron Laws, parallel code review, and plan→work→verify→review→compound workflow for Ruby, Rails, Grape, Sidekiq, Hotwire, Active Record, and Sequel projects.",
   "scripts": {
@@ -15,7 +15,7 @@
     "doctor": "bash scripts/check-contributor-prereqs.sh",
     "eval": "bash lab/eval/run_eval.sh --changed",
     "eval:all": "bash lab/eval/run_eval.sh --all",
-    "eval:ci": "bash lab/eval/run_eval.sh --ci",
+    "eval:ci:deterministic": "make eval-ci-deterministic",
     "eval:skills": "bash lab/eval/run_eval.sh --skills",
     "eval:agents": "bash lab/eval/run_eval.sh --agents",
     "eval:triggers": "bash lab/eval/run_eval.sh --triggers",
@@ -49,7 +49,8 @@
     "eval-tests-unittest": "npm run eval:test:unittest",
     "security:injection": "bash scripts/check-dynamic-injection.sh",
     "check:iron-law-drift": "bash scripts/check-iron-law-drift.sh",
-    "ci": "npm run doctor && npm run lint && npm run release:check && npm run validate && npm run eval:test && npm run eval:ci",
+    "check:refs": "python3 -m lab.eval.check_refs plugins/ruby-grape-rails",
+    "ci": "npm run doctor && npm run lint && npm run release:check && npm run validate && npm run eval:test && npm run eval:ci:deterministic",
     "prepare": "husky"
   },
   "devDependencies": {

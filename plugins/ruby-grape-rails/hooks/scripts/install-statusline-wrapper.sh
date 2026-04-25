@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Policy: advisory — any error path exits 0 silently. Never blocks session
+# start. Plugin settings.json falls back to CC's default row when the
+# wrapper is missing or broken.
+#
 # SessionStart hook: install/refresh a statusline wrapper in the user's home.
 #
 # Why this exists:
@@ -17,10 +21,6 @@
 # rewrite the wrapper on every SessionStart, but only when its current
 # content differs from the desired content — cheap no-op on unchanged
 # sessions.
-#
-# Policy: advisory — any error path exits 0 silently. Never blocks session
-# start. Plugin settings.json falls back to CC's default row when the
-# wrapper is missing or broken.
 
 set -o nounset
 set -o pipefail

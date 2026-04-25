@@ -1,6 +1,5 @@
 """Tests for Ollama URL helpers in behavioral_scorer."""
 
-from __future__ import annotations
 
 import unittest
 from unittest.mock import patch

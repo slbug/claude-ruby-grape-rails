@@ -1,3 +1,12 @@
+---
+claims:
+  - id: c1
+sources:
+  - kind: tool-output
+    supports: [c1]
+conflicts: []
+---
+
 # Provenance: sidekiq-retries.md
 
 **Artifact**: `.claude/research/sidekiq-retries.md`

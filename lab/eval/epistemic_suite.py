@@ -53,7 +53,6 @@ unaffected.
 Python 3.14+. No backward-compatibility shims.
 """
 
-from __future__ import annotations
 
 import argparse
 import atexit

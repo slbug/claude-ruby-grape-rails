@@ -7,8 +7,8 @@ set -o pipefail
 #
 # Hook input: JSON via stdin with .tool_input.file_path
 # Exit 2 with stderr message to surface warning to Claude
-# Policy: secret scanning now fails closed when payload/root/scanner coverage
-# cannot be trusted.
+# Policy: security-sensitive — secret scanning fails closed when
+# payload/root/scanner coverage cannot be trusted.
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 

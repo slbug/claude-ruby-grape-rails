@@ -19,7 +19,6 @@ with haiku (621 prompts): ~$3.70 single-shot, ~$19 with rotations 5, ~$11
 with samples 3.
 """
 
-from __future__ import annotations
 
 import argparse
 import atexit

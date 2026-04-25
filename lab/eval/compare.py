@@ -1,6 +1,5 @@
 """Compare current deterministic eval results with a stored baseline."""
 
-from __future__ import annotations
 
 import argparse
 import json

@@ -58,11 +58,15 @@ excludeAgent: "coding-agent"
 
 ## bin/ Executables (plugins/**/bin/*)
 
-- No file extension, chmod +x
+- No file extension, chmod +x. Mixed languages allowed: bash and Ruby
+  shebangs are both first-class
 - Header policy comment near the top documents advisory vs fail-closed
   behavior
-- `set -o nounset` + `set -o pipefail` at the top
-- `command -v <dep> >/dev/null 2>&1 || exit 0` for optional deps
+- bash bin scripts: `set -o nounset` + `set -o pipefail` at the top;
+  `command -v <dep> >/dev/null 2>&1 || exit 0` for optional deps
+- Ruby bin scripts: `# frozen_string_literal: true` immediately after
+  the shebang; rescue at process boundary, never use `Kernel#eval` /
+  `Kernel#system` with unvalidated input (Iron Law 12)
 - Advisory fail-open pattern (empty stdout, exit 0 on any error) is
   intentional for statusline and similar advisory executables — do NOT
   flag as "missing error handling"
@@ -70,7 +74,27 @@ excludeAgent: "coding-agent"
   expansion is supported; reference bundled scripts via
   `${CLAUDE_PLUGIN_ROOT}/...`
 
+### Currently shipped binaries (plugins/ruby-grape-rails/bin/)
+
+- `subagent-statusline` (bash) — advisory, fail-open. Empty stdout +
+  exit 0 on any error. Referenced from `settings.json` indirectly via
+  `~/.claude/ruby-grape-rails-subagent-statusline` wrapper
+- `detect-stack` (Ruby) — `/rb:init` stack detection. Outputs
+  `key=value` pairs; treats unreadable manifests as absent
+- `extract-permissions` (Ruby) — analyzes session transcripts to
+  recommend Bash permission entries; reads `~/.claude/projects/...`
+  transcripts read-only
+- `resolve-base-ref` (bash) — emits `eval`-able shell assigning
+  `BASE_REF` for diff comparisons; handles custom remotes and stale
+  local refs
+
+When adding a binary, also add it to the `CLAUDE.md` "Executables"
+list, ensure `chmod +x` is committed, and (if it is wired into hooks
+or settings) cross-check `hooks.json` / `settings.json` references.
+
 ## References & Registries (plugins/**/references/)
+
+Top-level YAML registries:
 
 - `iron-laws.yml` — non-negotiable STOP-if-violated rules; generated
   into README, canonical registry, init template, tutorial, injector
@@ -80,6 +104,23 @@ excludeAgent: "coding-agent"
   same schema minus `detector_id`, severity capped at `medium`/`low`);
   generated into the init template `PREFERENCES_START/END` block and
   appended to the subagent injector payload as "Advisory Preferences"
+
+Subdirectories (treat as data, not skills):
+
+- `references/iron-laws/` — generated canonical Iron Law artifacts and
+  source-of-truth registry consumed by the judge agent
+- `references/agent-playbooks/` — opinionated playbooks consumed by
+  specialist agents (read-only reference content, not skills)
+- `references/output-verification/` — schemas and fixtures consumed by
+  `output-verifier` agent and `lab/eval/output_checks.py`
+- `references/research/` — long-form research notes (`epistemic-posture.md`
+  etc.) referenced from CLAUDE.md and skills
+
+Notes:
+
+- Any change to `iron-laws.yml` or `preferences.yml` is a generated-file
+  trigger — verify regenerated artifacts ride along in the same PR
+  (see `copilot-instructions.md` "Cross-File Consistency")
 - Do NOT flag `preferences.yml` references or the generated
   `Advisory Preferences` section as unknown — both are first-class since
   v1.13.0

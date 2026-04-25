@@ -1,6 +1,5 @@
 """Tests for trigger expansion quality gates."""
 
-from __future__ import annotations
 
 import unittest
 

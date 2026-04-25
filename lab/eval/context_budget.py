@@ -4,7 +4,7 @@ Two deterministic, zero-API-cost checks:
 1. Root CLAUDE.md line count (warn if > 200)
 2. Framework-specific skills missing paths: frontmatter
 
-Run as part of make eval (--changed), make eval-all, and make eval-ci. Advisory only.
+Run as part of make eval (--changed), make eval-all, and make eval-ci-deterministic. Advisory only.
 """
 
 import re

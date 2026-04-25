@@ -1,4 +1,4 @@
-.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate doctor eval eval-all eval-ci eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-ablation eval-neighbor eval-hygiene eval-behavioral eval-behavioral-verbose eval-behavioral-fresh eval-behavioral-fresh-verbose eval-behavioral-compare eval-behavioral-passk eval-behavioral-rotations eval-sensitivity eval-stress eval-tests eval-tests-pytest eval-tests-unittest eval-trigger-expand ci
+.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate doctor eval eval-all eval-ci-deterministic eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-ablation eval-neighbor eval-hygiene eval-behavioral eval-behavioral-verbose eval-behavioral-fresh eval-behavioral-fresh-verbose eval-behavioral-compare eval-behavioral-passk eval-behavioral-rotations eval-sensitivity eval-stress eval-tests eval-tests-pytest eval-tests-unittest eval-trigger-expand check-refs ci
 
 lint:
 	npm run lint
@@ -33,7 +33,26 @@ eval:
 eval-all:
 	bash lab/eval/run_eval.sh --all
 
-eval-ci:
+# DETERMINISTIC GATE — full plugin scoring stack.
+# Runs lint, injection guard, skill/agent/trigger scoring, ablation, hygiene
+# advisory, context-budget advisory, plus output-artifact checks and
+# skill/agent cross-reference validation. Must NOT transitively invoke any
+# LLM provider. Re-audit before adding subtargets.
+#
+# Modules used (all audited deterministic):
+#   lab.eval.scorer (--core, --all)
+#   lab.eval.agent_scorer (--all)
+#   lab.eval.trigger_scorer (--all, no --semantic)
+#   lab.eval.matcher_ablation
+#   lab.eval.triggers.hygiene
+#   lab.eval.context_budget
+#   lab.eval.artifact_scorer (--all)
+#   lab.eval.check_refs
+#
+# Modules excluded (LLM-bearing — must NEVER appear here):
+#   lab.eval.behavioral_scorer, lab.eval.epistemic_suite,
+#   lab.eval.trigger_scorer --semantic, lab.tournament.*
+eval-ci-deterministic: eval-output check-refs
 	bash lab/eval/run_eval.sh --ci
 
 eval-skills:
@@ -128,4 +147,7 @@ eval-tests-pytest:
 eval-tests-unittest:
 	python3 -m unittest discover -s lab/eval/tests -p 'test_*.py' -t . -v
 
-ci: doctor lint release-metadata validate eval-tests eval-ci
+check-refs:
+	python3 -m lab.eval.check_refs plugins/ruby-grape-rails
+
+ci: doctor lint release-metadata validate eval-tests eval-ci-deterministic

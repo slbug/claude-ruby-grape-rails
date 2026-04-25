@@ -2,6 +2,8 @@
 set -o nounset
 set -o pipefail
 
+# Policy: delegated Ruby guardrail — fail closed once selected for a Ruby path.
+
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
 emit_missing_dependency_block() {

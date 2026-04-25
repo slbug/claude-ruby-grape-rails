@@ -1,6 +1,5 @@
 """Tests for the trigger contamination hygiene checker."""
 
-from __future__ import annotations
 
 import unittest
 

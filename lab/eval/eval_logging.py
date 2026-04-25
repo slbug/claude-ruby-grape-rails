@@ -17,7 +17,6 @@ Prefer these helpers over direct ``print(..., file=sys.stderr)`` or module-
 local clones to keep stderr formatting consistent across the suite.
 """
 
-from __future__ import annotations
 
 import logging
 import sys

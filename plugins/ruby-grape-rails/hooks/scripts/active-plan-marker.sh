@@ -3,6 +3,9 @@ set -e
 set -o nounset
 set -o pipefail
 
+# Policy: active-plan guard — strict (set -e); abort on any failure to keep
+# the .claude/ACTIVE_PLAN marker consistent across the workflow lifecycle.
+
 #
 # Active Plan Marker Management
 # 

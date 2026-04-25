@@ -25,6 +25,39 @@ check_optional() {
 check_required git "required for tracked-file lint, eval changed-mode, and contributor workflows"
 check_required bash "required for hook and validation scripts"
 check_required python3 "required for eval tests and release checks (python3 3.14+)"
+
+# Verify python3 actually meets the floor (3.14+) — `command -v python3`
+# alone passes for older interpreters and `lab/eval/run_eval.sh` would
+# hard-fail later. Mirror the predicate used by
+# `lab/eval/run_eval.sh::require_python_314`.
+check_python_version_314() {
+  if python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 14) else 1)' >/dev/null 2>&1; then
+    return
+  fi
+  local actual
+  actual="$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null || true)"
+  if [[ -z "$actual" ]]; then
+    echo "MISSING: python3 is on PATH but its version cannot be determined; lab/eval/ requires 3.14+" >&2
+  else
+    echo "MISSING: python3 ${actual} is below the 3.14 floor required by lab/eval/" >&2
+  fi
+  MISSING=1
+}
+
+# Verify the required Python modules. Module names are hardcoded — never
+# pass a function argument here; the module name flows into a `python3 -c`
+# string and would be a code-injection vector if user-influenced.
+check_dev_python_modules() {
+  if ! python3 -c "import yaml" >/dev/null 2>&1; then
+    echo "MISSING: python3 module 'yaml' — install with: python3 -m pip install -r requirements-dev.txt" >&2
+    MISSING=1
+  fi
+}
+
+if command -v python3 >/dev/null 2>&1; then
+  check_python_version_314
+  check_dev_python_modules
+fi
 check_required ruby "required for YAML validation and Ruby maintenance scripts"
 check_required jq "required for shipped hook payload parsing"
 check_required grep "required by hook scripts for pattern matching"
@@ -43,6 +76,7 @@ check_required wc "required by block-dangerous-ops.sh for size checks"
 check_required mv "required by hook scripts for atomic file moves"
 check_required rm "required by hook scripts for temp file cleanup"
 check_required curl "required by fetch-cc-changelog.sh and fetch-claude-docs.sh"
+check_required make "required for the deterministic CI gate (npm run eval:ci:deterministic shells out to make eval-ci-deterministic)"
 check_required npm "required for lint, pre-commit hooks, and package scripts"
 check_required npx "required by pre-commit hook for markdownlint"
 check_required shellcheck "required for local shell linting and pre-commit shell validation"

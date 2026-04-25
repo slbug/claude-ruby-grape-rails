@@ -11,6 +11,16 @@ Preferred paths:
   - `.claude/reviews/{review-slug}.provenance.md`
 
 ```markdown
+---
+claims:
+  - id: c1
+sources:
+  - kind: primary       # primary | secondary | tool-output
+    url: https://...    # or file:line for local code
+    supports: [c1]
+conflicts: []
+---
+
 # Provenance: {artifact-name}
 
 **Artifact**: `{artifact-path}`

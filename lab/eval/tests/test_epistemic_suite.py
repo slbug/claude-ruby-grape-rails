@@ -6,7 +6,6 @@ run without Ollama/apfel/haiku.
 Python 3.14+.
 """
 
-from __future__ import annotations
 
 import json
 import unittest

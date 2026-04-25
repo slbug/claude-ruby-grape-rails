@@ -2,6 +2,8 @@
 set -o nounset
 set -o pipefail
 
+# Policy: security-sensitive — fail closed in strict / high-confidence cases.
+
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
 emit_missing_dependency_block() {

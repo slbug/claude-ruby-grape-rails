@@ -1,6 +1,5 @@
 """Tests for the behavioral eval dimension and scorer."""
 
-from __future__ import annotations
 
 import json
 import os

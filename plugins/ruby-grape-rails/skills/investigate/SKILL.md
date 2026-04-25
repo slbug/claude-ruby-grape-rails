@@ -35,6 +35,13 @@ Write a short investigation report with:
 
 ## Agent Dispatch
 
-This is a **skill** (`/rb:investigate`), not an agent. Do NOT spawn `investigate`
-or `rb-investigate` via the Agent tool. For agent-based deep investigation, use
-`deep-bug-investigator` (`subagent_type: "ruby-grape-rails:deep-bug-investigator"`).
+This is a **skill** (`/rb:investigate`), not an agent. Do NOT spawn
+`investigate` or `rb-investigate` via the Agent tool. For agent-based deep
+investigation, use `deep-bug-investigator`
+(`subagent_type: "ruby-grape-rails:deep-bug-investigator"`). When spawning,
+pass an explicit output path in the prompt
+(`.claude/investigations/deep-bug-investigator/{slug}-{datesuffix}.md`);
+the agent writes its findings to that file and returns a ≤300-word chat
+summary. Read the file for the full report.
+
+See also: `${CLAUDE_SKILL_DIR}/references/discipline.md`

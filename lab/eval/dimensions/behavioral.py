@@ -5,7 +5,6 @@ If no cached results exist, returns a neutral score (dimension skipped).
 Run behavioral_scorer.py first to populate cache.
 """
 
-from __future__ import annotations
 
 import json
 from pathlib import Path

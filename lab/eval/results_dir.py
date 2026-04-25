@@ -23,7 +23,6 @@ Public API:
 path from an explicit provider/model pair without touching the active state.
 """
 
-from __future__ import annotations
 
 import logging
 import os

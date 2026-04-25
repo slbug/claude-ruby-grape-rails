@@ -1,6 +1,5 @@
 """Tests for eval-set sensitivity analysis."""
 
-from __future__ import annotations
 
 import json
 import tempfile

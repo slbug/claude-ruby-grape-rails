@@ -1,3 +1,18 @@
+---
+claims:
+  - id: c1
+  - id: c2
+  - id: c3
+sources:
+  - kind: primary
+    url: https://github.com/sidekiq/sidekiq/wiki/Error-Handling
+    supports: [c1, c2, c3]
+  - kind: primary
+    url: https://github.com/sidekiq/sidekiq/blob/main/Changes.md
+    supports: [c1, c2, c3]
+conflicts: []
+---
+
 # Provenance: sidekiq-retry-configuration.md
 
 **Artifact**: `.claude/research/sidekiq-retry-configuration.md`

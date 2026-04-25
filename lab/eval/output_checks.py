@@ -1,8 +1,13 @@
 """Deterministic checks for research/review output artifacts."""
 
-from __future__ import annotations
 
 import re
+import sys
+from pathlib import Path
+
+import yaml
+
+from .frontmatter import extract_frontmatter_block
 
 
 STATUS_RE = re.compile(r"^\d+\.\s+\[(VERIFIED|UNSUPPORTED|CONFLICT|WEAK)\]", re.MULTILINE)
@@ -209,3 +214,97 @@ def has_provenance_local_evidence(content: str) -> tuple[bool, str]:
     body = _section(content, "Claim Log")
     count = len(LOCAL_EVIDENCE_RE.findall(body))
     return count >= 1, f"{count} local-evidence line(s) present"
+
+
+def compute_trust_state(sidecar: Path) -> str:
+    """Return one of {clean, weak, conflicted, missing}.
+
+    Canonical YAML-frontmatter schema:
+
+        ---
+        claims:
+          - id: c1
+        sources:
+          - kind: primary
+            supports: [c1]
+        conflicts: []
+        ---
+
+    Anything not matching this shape (no frontmatter, malformed YAML,
+    unparsable, missing claims/sources lists) returns `missing` — callers
+    treat that as "needs migration". YAML parse errors are surfaced via
+    `yaml.YAMLError` to stderr (with line/column from the parser) so
+    contributors can locate the malformed line, but the function still
+    returns `missing` so the eval gate keeps a deterministic outcome.
+    """
+    if not sidecar.exists():
+        return "missing"
+    text = sidecar.read_text(encoding="utf-8", errors="replace")
+    block = extract_frontmatter_block(text)
+    if block is None:
+        return "missing"
+    try:
+        meta = yaml.safe_load(block)
+    except yaml.YAMLError as exc:
+        mark = getattr(exc, "problem_mark", None)
+        location = ""
+        if mark is not None:
+            # Frontmatter starts on line 2 of the file (after the opening
+            # `---`). Adjust the parser's 0-based line number so the
+            # diagnostic points at the real line in `sidecar`.
+            location = f" at {sidecar}:{mark.line + 2}:{mark.column + 1}"
+        sys.stderr.write(
+            f"compute_trust_state: malformed YAML{location}: "
+            f"{exc.__class__.__name__}\n"
+        )
+        return "missing"
+    if not isinstance(meta, dict):
+        return "missing"
+    # Strict shape validation. All three top-level keys are required; any
+    # off-spec frontmatter (missing key, wrong type, claim missing string
+    # `id`, supports not a list of strings, kind absent or unknown) maps
+    # to `missing` so malformed schemas surface as broken instead of being
+    # graded `clean`, `weak`, or `conflicted`.
+    if "claims" not in meta or "sources" not in meta or "conflicts" not in meta:
+        return "missing"
+    claims = meta.get("claims")
+    sources = meta.get("sources")
+    conflicts = meta.get("conflicts")
+
+    if not isinstance(claims, list) or not claims:
+        return "missing"
+    if not isinstance(sources, list) or not sources:
+        return "missing"
+    if not all(isinstance(c, dict) and isinstance(c.get("id"), str) for c in claims):
+        return "missing"
+    if not all(isinstance(s, dict) for s in sources):
+        return "missing"
+    if not isinstance(conflicts, list):
+        return "missing"
+    allowed_kinds = {"primary", "secondary", "tool-output"}
+    for s in sources:
+        kind = s.get("kind")
+        if kind not in allowed_kinds:
+            return "missing"
+        if "supports" not in s:
+            return "missing"
+        supports = s.get("supports")
+        if not isinstance(supports, list) or not supports:
+            return "missing"
+        if not all(isinstance(cid, str) for cid in supports):
+            return "missing"
+
+    if conflicts:
+        return "conflicted"
+
+    support_counts: dict[str, int] = {c["id"]: 0 for c in claims}
+    for s in sources:
+        # Dedupe within a single source so `supports: [c1, c1]` does not
+        # inflate the count toward the "≥2 independent sources" rule.
+        for cid in set(s.get("supports") or []):
+            if cid in support_counts:
+                support_counts[cid] += 1
+    all_tool_only = all(s.get("kind") == "tool-output" for s in sources)
+    if all_tool_only or any(count < 2 for count in support_counts.values()):
+        return "weak"
+    return "clean"

@@ -16,7 +16,6 @@ Used by:
 Callers pass the returned path via ``claude --bare --settings <path>``.
 """
 
-from __future__ import annotations
 
 import json
 import logging

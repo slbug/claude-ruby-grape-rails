@@ -15,7 +15,8 @@
 
 ## Ralph Wiggum Checklist
 
-Spawn `deep-bug-investigator` agent to systematically check:
+Spawn `deep-bug-investigator` (writes to
+`.claude/investigations/deep-bug-investigator/{slug}-{datesuffix}.md`) to check:
 
 1. Is the file saved?
 2. Nil checking - did you call method on nil?

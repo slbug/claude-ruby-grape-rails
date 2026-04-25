@@ -45,3 +45,6 @@ See `${CLAUDE_SKILL_DIR}/references/tutorial-content.md` for the complete walkth
 - Knowledge & safety net (Iron Laws, auto-loading)
 - Hooks & behavioral rules explanation
 - Command cheat sheet and best practices
+- Claude Code built-in features (`xhigh`, `/focus`, `/recap`,
+  `/less-permission-prompts`, `/output-styles`)
+- Keeping `CLAUDE.md` small + scoped-rule pattern

@@ -11,7 +11,6 @@ Usage:
     python3 -m lab.eval.triggers.hygiene --all --summary    # Summary only
 """
 
-from __future__ import annotations
 
 import argparse
 import json

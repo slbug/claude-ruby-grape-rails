@@ -16,7 +16,11 @@ The plugin ships specialist agents, skills, hooks, and eval tooling:
   Shell scripts triggered by Claude Code events (PostToolUse, SessionStart, etc).
 - **Executables** (`plugins/ruby-grape-rails/bin/*`): plugin CLIs added to
   the Bash tool PATH when the plugin is enabled. No file extension, chmod +x.
-  Includes `subagent-statusline` (subagent panel row renderer).
+  Mixed languages (bash + Ruby). Currently shipped: `subagent-statusline`
+  (bash, advisory statusline renderer), `detect-stack` (Ruby, `/rb:init`
+  stack detection), `extract-permissions` (Ruby, transcript-based Bash
+  permission recommender), `resolve-base-ref` (bash, eval-able BASE_REF
+  resolver for diff comparisons).
 - **Plugin settings** (`plugins/ruby-grape-rails/settings.json`): default
   settings applied when the plugin is enabled. Only `agent` and
   `subagentStatusLine` keys are supported per CC docs.
@@ -24,6 +28,18 @@ The plugin ships specialist agents, skills, hooks, and eval tooling:
 - **Contributor tooling** (`.claude/`): Not shipped with the plugin.
   Includes `.claude/rules/` (auto-loaded context rules, some path-scoped)
   and `.claude/skills/` (contributor-only skills).
+
+## How These Rules Are Scoped
+
+Each `.github/instructions/*.instructions.md` file has an `applyTo:`
+glob (`lab/eval/**`, `**/*.sh`, `**/*.md`, `plugins/**`) and an
+`excludeAgent: "coding-agent"` directive. The `excludeAgent` flag tells
+the harness that these rules are **review-only** — they apply to PR
+review agents, not to a coding-agent that is mid-implementation. The
+goal is to avoid feedback loops where the coding-agent over-fits to its
+own review checklist while writing the diff. Reviewers (this file +
+the four scoped files) follow the rules; the implementer ignores them
+until handing off for review.
 
 ## What CI Already Checks
 
@@ -33,7 +49,7 @@ Do not flag issues already caught by CI:
 - Shell linting (shellcheck)
 - JSON/YAML validation
 - Plugin manifest validation (`claude plugin validate`)
-- Eval scoring gate (`make eval-ci`)
+- Eval scoring gate (`make eval-ci-deterministic`)
 - Release metadata alignment (`check-release-metadata.py`)
 - Dynamic injection scanning (`check-dynamic-injection.sh`)
 
@@ -44,3 +60,99 @@ Do not flag issues already caught by CI:
 - IMPORTANT: Treat unsupported agreement with the author's framing as a review defect when diff or evidence points elsewhere. Challenge false premises directly.
 - IMPORTANT: Prefer direct correction over soft alignment when identifying real risks. Use direct language for HIGH-confidence findings; reserve "might" / "potentially" for genuine uncertainty.
 - SUGGESTION: Readability improvements, description wording, minor optimizations
+
+## Cross-File Consistency (Drift Check)
+
+A PR diff is necessary but not sufficient. Many defects in this repo
+surface as drift between modified and unmodified files. When reviewing a
+PR, also inspect untouched files for stale references, missed
+regenerations, and inconsistent state introduced by the diff. Flag drift
+even when the unmodified file is not part of the PR.
+
+### Required cross-file checks
+
+- **Skill rename / removal / description change** → also check
+  `plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md`,
+  `plugins/ruby-grape-rails/skills/init/references/template.md`,
+  `lab/eval/evals/<skill>.json`, `lab/eval/triggers/<skill>.json`,
+  `lab/eval/triggers/_hard_corpus.json`, `lab/eval/triggers/_confusable_pairs.json`,
+  `lab/eval/triggers/_semantic_pairs.json`, `README.md`, `CHANGELOG.md`,
+  cross-skill `/rb:<name>` mentions in other skills/agents.
+- **Agent rename / removal / description change** → also check
+  `plugins/ruby-grape-rails/agents/parallel-reviewer.md` (delegation list),
+  `plugins/ruby-grape-rails/agents/planning-orchestrator.md`,
+  `plugins/ruby-grape-rails/agents/workflow-orchestrator.md`,
+  skill files mentioning `subagent_type: <name>`, intro tutorial,
+  agent count claims in `CLAUDE.md`/`README.md`.
+- **`plugins/ruby-grape-rails/references/iron-laws.yml`** edited →
+  required regeneration via `scripts/generate-iron-law-outputs.sh all`.
+  Verify these regenerated artifacts are in the diff and match source:
+  `README.md` (Iron Laws section), `plugins/ruby-grape-rails/skills/init/references/template.md`,
+  `plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md`,
+  `plugins/ruby-grape-rails/agents/iron-law-judge.md`,
+  `plugins/ruby-grape-rails/hooks/scripts/inject-iron-laws.sh`
+  (header `Source versions: iron-laws=<v>`). A `iron-laws.yml` change
+  with no regenerated outputs in the diff is a drift defect.
+- **`plugins/ruby-grape-rails/references/preferences.yml`** edited →
+  required regeneration as above; verify the `PREFERENCES_START/END`
+  block in `init/references/template.md` and the `Advisory Preferences`
+  block in `inject-iron-laws.sh` match source. Also flag if
+  `lab/eval/baselines/epistemic/*/pre-posture.json` is committed
+  (baselines are gitignored snapshots).
+- **Plugin version bump** in any of `package.json`,
+  `.claude-plugin/marketplace.json`,
+  `plugins/ruby-grape-rails/.claude-plugin/plugin.json` → all three must
+  match, and `CHANGELOG.md` must have a section for the new version
+  (categories: Added, Changed, Fixed, Removed). Validated by
+  `scripts/check-release-metadata.py`; flag locally before CI runs it.
+- **Hook renamed / added / removed** under
+  `plugins/ruby-grape-rails/hooks/scripts/` → also check
+  `plugins/ruby-grape-rails/hooks/hooks.json` references, sourcing in
+  other `*.sh` files (`source ".../<lib>.sh"`), and any matching tests
+  under `lab/eval/tests/test_runtime_scripts.py`.
+- **`bin/<exec>` renamed / added / removed** → also check
+  `plugins/ruby-grape-rails/settings.json` (statusline command path),
+  `plugins/ruby-grape-rails/hooks/scripts/install-statusline-wrapper.sh`,
+  any skill/agent/script that shells out to the executable, and
+  `CLAUDE.md` "Executables" enumeration.
+- **New skill / agent / hook added** → also check the corresponding
+  `lab/eval/evals/`, `lab/eval/triggers/`, `lab/eval/dimensions/`
+  artifacts exist; intro tutorial mentions it; CLAUDE.md skill/agent
+  counts updated.
+- **Eval module added / renamed under `lab/eval/`** → also check
+  `lab/eval/run_eval.sh`, `Makefile`, `package.json` `scripts:` block,
+  `.claude/rules/eval-workflow.md`, and `.github/instructions/eval-review.instructions.md`
+  list of "Additional Modules".
+- **Skill / agent description text change** → check the combined
+  `description + when_to_use` length still fits the ceilings (skills:
+  1,536; agents: 250). Flag if the unchanged sibling field pushes the
+  total over the limit after the edit.
+- **`compute_trust_state` schema change** in `lab/eval/output_checks.py`
+  → also update fixtures under `lab/eval/fixtures/output/` and
+  `lab/eval/fixtures/trust-states/` plus tests in
+  `lab/eval/tests/test_trust_states.py`. Schema rules (required keys,
+  allowed `kind` values, `supports` shape) live only in code — there is
+  no separate JSON Schema file. A schema rule edit without matching
+  fixture + test updates is a drift defect.
+- **`requirements-dev.txt` edited** (added/removed Python module) →
+  also update `scripts/check-contributor-prereqs.sh`
+  `check_dev_python_modules()` and the `pip install -r
+  requirements-dev.txt` step in `.github/workflows/lint.yml`. The
+  doctor script hardcodes module names by design (no user-supplied
+  argument flows into `python3 -c`); each new dep needs an explicit
+  `python3 -c "import <name>"` line.
+- **`make eval-ci-deterministic` Makefile target edited** → the audit
+  comment ("Must NOT transitively invoke any LLM provider …") is
+  self-checked by `lab/eval/tests/test_eval_ci_determinism.py`. If you
+  reword the comment, update the regex in
+  `EvalCiDeterminismTests.test_makefile_target_exists`. Removing the
+  comment without updating the test is a drift defect; removing it
+  without restoring an equivalent guard is a determinism-policy
+  regression.
+
+### How to surface drift findings
+
+State the drift directly: "PR edits `<file A>` but unchanged `<file B>`
+still references the old name/value. Also update `<file B>`."
+Do not soften with "might want to" / "consider also" — drift is a
+correctness defect, not a style suggestion.

@@ -3,6 +3,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# Policy: security-sensitive — fail closed in strict / high-confidence cases.
+
 emit_missing_dependency_block() {
   local dependency="$1"
 

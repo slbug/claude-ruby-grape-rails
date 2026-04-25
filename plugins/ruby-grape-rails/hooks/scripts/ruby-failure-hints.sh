@@ -2,6 +2,9 @@
 set -o nounset
 set -o pipefail
 
+# Policy: advisory — warn/skip on degraded state, exit 0.
+
+
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 
 emit_missing_dependency_block() {

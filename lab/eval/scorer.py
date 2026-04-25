@@ -1,6 +1,5 @@
 """Score Ruby plugin skills with deterministic structural checks."""
 
-from __future__ import annotations
 
 import argparse
 import json

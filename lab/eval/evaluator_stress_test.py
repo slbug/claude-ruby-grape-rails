@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Check that deterministic eval output is stable across repeated runs."""
 
-from __future__ import annotations
 
 import json
 from pathlib import Path

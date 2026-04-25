@@ -1,6 +1,5 @@
 """Score research/review output fixtures with deterministic checks."""
 
-from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
@@ -295,6 +294,37 @@ def score_all() -> dict[str, dict]:
     return {suite: score_suite(suite) for suite in ("research", "review")}
 
 
+TRUST_STATE_FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "trust-states"
+
+
+def _trust_state_targets() -> list[Path]:
+    """All provenance sidecar files the eval suite knows about."""
+    targets: list[Path] = []
+    targets.extend(sorted(FIXTURES_DIR.glob("*.provenance.md")))
+    if TRUST_STATE_FIXTURES_DIR.is_dir():
+        targets.extend(sorted(TRUST_STATE_FIXTURES_DIR.glob("*.md")))
+    return targets
+
+
+def trust_state_distribution(paths: list[Path] | None = None) -> dict[str, int]:
+    """Count {clean, weak, conflicted, missing} across given sidecar paths."""
+    if paths is None:
+        paths = _trust_state_targets()
+    counts = {"clean": 0, "weak": 0, "conflicted": 0, "missing": 0}
+    for p in paths:
+        state = output_checks.compute_trust_state(p)
+        counts[state] = counts.get(state, 0) + 1
+    return counts
+
+
+def _print_trust_state_distribution(stream=None) -> None:
+    out = stream if stream is not None else sys.stderr
+    counts = trust_state_distribution()
+    out.write("Trust-state distribution:\n")
+    for state in ("clean", "weak", "conflicted", "missing"):
+        out.write(f"  {state:<10} : {counts.get(state, 0)}\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Score research/review output fixtures")
     parser.add_argument("--suite", choices=("research", "review"), help="Score one artifact suite")
@@ -315,6 +345,7 @@ def main() -> None:
     if args.all:
         results = score_all()
         print(json.dumps(results, indent=2 if args.pretty else None))
+        _print_trust_state_distribution()
         failing = [suite for suite, result in results.items() if result["summary"]["composite"] < args.fail_under]
         if failing:
             sys.exit(1)
@@ -322,6 +353,7 @@ def main() -> None:
 
     result = score_suite(args.suite)
     print(json.dumps(result, indent=2 if args.pretty else None))
+    _print_trust_state_distribution()
     if result["summary"]["composite"] < args.fail_under:
         sys.exit(1)
 

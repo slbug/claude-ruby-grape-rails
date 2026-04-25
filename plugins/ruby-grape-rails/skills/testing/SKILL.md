@@ -17,3 +17,5 @@ effort: medium
 - worker tests for enqueue and perform paths
 - factories or fixtures that stay small and deterministic
 - explicit time and randomness control in flaky paths
+
+See also: `${CLAUDE_SKILL_DIR}/references/discipline.md`

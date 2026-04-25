@@ -10,7 +10,6 @@ Usage:
     python3 -m lab.eval.neighbor_regression --dry-run --changed # Show what would be tested
 """
 
-from __future__ import annotations
 
 import argparse
 import json

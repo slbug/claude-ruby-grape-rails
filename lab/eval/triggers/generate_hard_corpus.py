@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Generate a deterministic hard trigger corpus from existing trigger files."""
 
-from __future__ import annotations
 
 import json
 from pathlib import Path
