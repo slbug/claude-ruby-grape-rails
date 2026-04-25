@@ -105,10 +105,9 @@ class EvalCiDeterminismTests(unittest.TestCase):
                     # `trigger_scorer.py` legitimately gates a `--semantic`
                     # LLM call inside `_fetch_semantic_pairs`; the
                     # deterministic `--all` invocation never reaches it.
-                    if (
-                        rel == "lab/eval/trigger_scorer.py"
-                        and pattern == r"\bclaude\s+--bare\b"
-                    ):
+                    # The exemption covers both the shell-string and the
+                    # list-arg `subprocess.run` forms of the same call.
+                    if rel == "lab/eval/trigger_scorer.py":
                         line_start = text.rfind("\n", 0, m.start()) + 1
                         snippet = text[max(0, line_start - 4000) : m.start()]
                         if "--semantic" in snippet:
