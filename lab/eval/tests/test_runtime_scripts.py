@@ -253,23 +253,27 @@ HOOK_SCRIPTS_DIR = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts"
 class RuntimeScriptTests(unittest.TestCase):
     def test_every_hook_script_declares_policy(self) -> None:
         """Every non-library hook script under hooks/scripts/ must carry a
-        `# Policy:` comment near the top so reviewers can classify it
-        without guessing from the filename. `*-lib.sh` files are sourced
-        helpers and intentionally exempt — caller's policy applies."""
+        `# Policy:` comment at the start of a line within the first 20
+        lines so reviewers can classify it without guessing from the
+        filename. Substring-anywhere matching would let stray occurrences
+        deeper in the file pass; this test enforces the header position
+        the convention promises. `*-lib.sh` files are sourced helpers and
+        intentionally exempt — caller's policy applies."""
+        header_window = 20
         missing: list[str] = []
         for script in sorted(HOOK_SCRIPTS_DIR.glob("*.sh")):
             if script.name.endswith("-lib.sh"):
                 continue
-            text = script.read_text(encoding="utf-8")
-            if "# Policy:" not in text:
+            head_lines = script.read_text(encoding="utf-8").splitlines()[:header_window]
+            if not any(line.startswith("# Policy:") for line in head_lines):
                 missing.append(script.name)
         self.assertEqual(
             missing,
             [],
-            f"hook script(s) missing `# Policy:` header: {missing}. "
-            "Add a one-line comment near the top declaring class "
-            "(advisory / delegated guardrail / security-sensitive / "
-            "active-plan guard / generated injector).",
+            f"hook script(s) missing `# Policy:` header in the first "
+            f"{header_window} lines: {missing}. Add a one-line comment "
+            "near the top declaring class (advisory / delegated guardrail / "
+            "security-sensitive / active-plan guard / generated injector).",
         )
 
     def test_hook_command_targets_are_executable(self) -> None:
