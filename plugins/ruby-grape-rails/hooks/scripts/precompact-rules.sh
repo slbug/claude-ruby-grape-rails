@@ -2,6 +2,9 @@
 set -o nounset
 set -o pipefail
 
+# Policy: advisory — warn/skip on degraded state, exit 0.
+
+
 # PreCompact hook: Detect active workflow phase and warn the user before
 # compaction so the next session re-reads the right plan artifacts.
 

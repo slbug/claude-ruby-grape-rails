@@ -247,7 +247,31 @@ def run_secret_scan(
     )
 
 
+HOOK_SCRIPTS_DIR = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts"
+
+
 class RuntimeScriptTests(unittest.TestCase):
+    def test_every_hook_script_declares_policy(self) -> None:
+        """Every non-library hook script under hooks/scripts/ must carry a
+        `# Policy:` comment near the top so reviewers can classify it
+        without guessing from the filename. `*-lib.sh` files are sourced
+        helpers and intentionally exempt — caller's policy applies."""
+        missing: list[str] = []
+        for script in sorted(HOOK_SCRIPTS_DIR.glob("*.sh")):
+            if script.name.endswith("-lib.sh"):
+                continue
+            text = script.read_text(encoding="utf-8")
+            if "# Policy:" not in text:
+                missing.append(script.name)
+        self.assertEqual(
+            missing,
+            [],
+            f"hook script(s) missing `# Policy:` header: {missing}. "
+            "Add a one-line comment near the top declaring class "
+            "(advisory / delegated guardrail / security-sensitive / "
+            "active-plan guard / generated injector).",
+        )
+
     def test_hook_command_targets_are_executable(self) -> None:
         hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]
         command_paths: set[Path] = set()

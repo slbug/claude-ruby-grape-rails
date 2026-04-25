@@ -2,6 +2,9 @@
 set -o nounset
 set -o pipefail
 
+# Policy: advisory — warn/skip on degraded state, exit 0.
+
+
 # SessionStart hook: Surface existing scratchpads, auto-initialize missing
 # scratchpads for active/resumable plans, and highlight dead-end-heavy plans.
 

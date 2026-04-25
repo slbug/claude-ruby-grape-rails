@@ -2,6 +2,9 @@
 set -o nounset
 set -o pipefail
 
+# Policy: advisory — warn/skip on degraded state, exit 0.
+
+
 # PostToolUse hook: When a plan.md file is CREATED (Write, not Edit),
 # remind Claude to STOP and present the plan to the user.
 # Skips in /rb:full autonomous mode (detected by progress.md with State).
