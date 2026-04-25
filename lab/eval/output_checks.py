@@ -263,9 +263,15 @@ def compute_trust_state(sidecar: Path) -> str:
         return "missing"
     if conflicts is None or not isinstance(conflicts, list):
         return "missing"
+    allowed_kinds = {"primary", "secondary", "tool-output"}
     for s in sources:
-        supports = s.get("supports", [])
-        if not isinstance(supports, list):
+        kind = s.get("kind")
+        if kind not in allowed_kinds:
+            return "missing"
+        if "supports" not in s:
+            return "missing"
+        supports = s.get("supports")
+        if not isinstance(supports, list) or not supports:
             return "missing"
         if not all(isinstance(cid, str) for cid in supports):
             return "missing"

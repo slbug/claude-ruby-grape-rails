@@ -202,6 +202,67 @@ class TrustStateTests(unittest.TestCase):
         )
         self.assertEqual(output_checks.compute_trust_state(p), "missing")
 
+    def test_missing_kind_maps_to_missing(self) -> None:
+        p = self.tmp_path / "no-kind.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: c1\n"
+            "sources:\n"
+            "  - supports: [c1]\n"
+            "  - supports: [c1]\n"
+            "conflicts: []\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
+    def test_unknown_kind_maps_to_missing(self) -> None:
+        p = self.tmp_path / "bad-kind.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: c1\n"
+            "sources:\n"
+            "  - kind: hearsay\n"
+            "    supports: [c1]\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "conflicts: []\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
+    def test_missing_supports_key_maps_to_missing(self) -> None:
+        p = self.tmp_path / "no-supports.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: c1\n"
+            "sources:\n"
+            "  - kind: primary\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "conflicts: []\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
+    def test_empty_supports_list_maps_to_missing(self) -> None:
+        p = self.tmp_path / "empty-supports.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: c1\n"
+            "sources:\n"
+            "  - kind: primary\n"
+            "    supports: []\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "conflicts: []\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
     def test_duplicate_supports_in_one_source_does_not_satisfy_two_source_rule(self) -> None:
         """Single source listing `[c1, c1]` must not be counted as 2 supports."""
         p = self.tmp_path / "dup.provenance.md"
