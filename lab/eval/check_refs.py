@@ -15,7 +15,12 @@ SLASH_REF_RE = re.compile(r"/rb:([a-z][a-z0-9-]+)")
 PATH_SKILL_REF_RE = re.compile(r"skills/([a-z][a-z0-9-]+)")
 PATH_AGENT_REF_RE = re.compile(r"agents/([a-z][a-z0-9-]+)")
 FRONTMATTER_NAME_RE = re.compile(r"^name:\s*(\S+)\s*$", re.MULTILINE)
-FENCE_RE = re.compile(r"^\s*(```|~~~)")
+# Fenced code blocks open with 3+ backticks or tildes; the closing fence
+# must use the SAME delimiter character and at least as many of them.
+# Plain `^\s*```` does not handle 4-backtick fences (used for embedding
+# 3-backtick code samples), so we capture the delimiter run and require
+# a same-character match on close.
+FENCE_OPEN_RE = re.compile(r"^\s*(`{3,}|~{3,})")
 
 
 @dataclass
@@ -87,15 +92,27 @@ def _agent_names(plugin_root: Path) -> set[str]:
 
 
 def _iter_non_fenced_lines(text: str):
-    """Yield (lineno, line) tuples skipping fenced code blocks."""
-    in_fence = False
+    """Yield (lineno, line) tuples skipping fenced code blocks.
+
+    Tracks the opening delimiter character and length so that a closing
+    fence must use the same character and at least as many of them. This
+    handles 4-backtick fences that wrap 3-backtick samples.
+    """
+    open_delim: str | None = None
     for lineno, line in enumerate(text.splitlines(), start=1):
-        if FENCE_RE.match(line):
-            in_fence = not in_fence
+        m = FENCE_OPEN_RE.match(line)
+        if open_delim is None:
+            if m:
+                open_delim = m.group(1)
+                continue
+            yield lineno, line
             continue
-        if in_fence:
+        # Inside a fence — close only on a same-character run >= the
+        # opening length.
+        if m and m.group(1)[0] == open_delim[0] and len(m.group(1)) >= len(open_delim):
+            open_delim = None
             continue
-        yield lineno, line
+        # Still fenced; skip.
 
 
 def scan(plugin_root: Path) -> ScanResult:
