@@ -31,12 +31,17 @@ check_required python3 "required for eval tests and release checks (python3 3.14
 # hard-fail later. Mirror the predicate used by
 # `lab/eval/run_eval.sh::require_python_314`.
 check_python_version_314() {
-  if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 14) else 1)' >/dev/null 2>&1; then
-    local actual
-    actual="$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null || echo unknown)"
-    echo "MISSING: python3 ${actual} is below the 3.14 floor required by lab/eval/" >&2
-    MISSING=1
+  if python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 14) else 1)' >/dev/null 2>&1; then
+    return
   fi
+  local actual
+  actual="$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null || true)"
+  if [[ -z "$actual" ]]; then
+    echo "MISSING: python3 is on PATH but its version cannot be determined; lab/eval/ requires 3.14+" >&2
+  else
+    echo "MISSING: python3 ${actual} is below the 3.14 floor required by lab/eval/" >&2
+  fi
+  MISSING=1
 }
 
 # Verify the required Python modules. Module names are hardcoded — never

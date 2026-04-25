@@ -202,6 +202,26 @@ class TrustStateTests(unittest.TestCase):
         )
         self.assertEqual(output_checks.compute_trust_state(p), "missing")
 
+    def test_inline_triple_dash_in_value_does_not_split_frontmatter(self) -> None:
+        """A `---` substring inside a YAML value (URL fragment, string)
+        must not be treated as the closing delimiter."""
+        p = self.tmp_path / "inline-dash.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: c1\n"
+            "sources:\n"
+            "  - kind: primary\n"
+            "    url: https://example.com/path---with-dashes\n"
+            "    supports: [c1]\n"
+            "  - kind: primary\n"
+            "    url: https://example.com/other\n"
+            "    supports: [c1]\n"
+            "conflicts: []\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "clean")
+
     def test_missing_conflicts_key_maps_to_missing(self) -> None:
         """`conflicts` is required schema; absence is malformed → missing."""
         p = self.tmp_path / "no-conflicts.provenance.md"

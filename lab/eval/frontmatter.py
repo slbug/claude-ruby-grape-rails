@@ -29,22 +29,34 @@ def _coerce_frontmatter_value(key: str, value: str) -> Any:
     return _coerce_scalar(value)
 
 
-def parse_frontmatter(content: str) -> dict[str, Any]:
-    """Parse YAML frontmatter from a --- delimited block."""
+def extract_frontmatter_block(content: str) -> str | None:
+    """Return the raw YAML text between leading `---` delimiter lines.
+
+    Line-aware: only `---` on its own line (after `strip()`) is treated
+    as a delimiter, so `---` appearing inside a YAML value (URL, string)
+    does not mis-split the frontmatter. Returns the inner YAML body
+    (without the `---` lines themselves) or None when no frontmatter is
+    present or the closing delimiter is missing.
+
+    Use this when feeding the block to `yaml.safe_load` for full-YAML
+    parsing; use `parse_frontmatter` for the flat-key subset.
+    """
     lines = content.splitlines()
     if not lines or lines[0].strip() != "---":
-        return {}
-
-    end = None
+        return None
     for index in range(1, len(lines)):
         if lines[index].strip() == "---":
-            end = index
-            break
-    if end is None:
-        return {}
+            return "\n".join(lines[1:index])
+    return None
 
+
+def parse_frontmatter(content: str) -> dict[str, Any]:
+    """Parse YAML frontmatter from a --- delimited block."""
+    block = extract_frontmatter_block(content)
+    if block is None:
+        return {}
+    body = block.splitlines()
     data: dict[str, Any] = {}
-    body = lines[1:end]
     i = 0
     while i < len(body):
         line = body[i]

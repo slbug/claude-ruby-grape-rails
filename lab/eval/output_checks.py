@@ -6,6 +6,8 @@ from pathlib import Path
 
 import yaml
 
+from .frontmatter import extract_frontmatter_block
+
 
 STATUS_RE = re.compile(r"^\d+\.\s+\[(VERIFIED|UNSUPPORTED|CONFLICT|WEAK)\]", re.MULTILINE)
 LOCAL_EVIDENCE_RE = re.compile(
@@ -234,13 +236,11 @@ def compute_trust_state(sidecar: Path) -> str:
     if not sidecar.exists():
         return "missing"
     text = sidecar.read_text(encoding="utf-8", errors="replace")
-    if not text.startswith("---"):
-        return "missing"
-    parts = text.split("---", 2)
-    if len(parts) < 3:
+    block = extract_frontmatter_block(text)
+    if block is None:
         return "missing"
     try:
-        meta = yaml.safe_load(parts[1])
+        meta = yaml.safe_load(block)
     except yaml.YAMLError:
         return "missing"
     if not isinstance(meta, dict):
