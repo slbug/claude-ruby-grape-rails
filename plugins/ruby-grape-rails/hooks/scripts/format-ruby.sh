@@ -7,8 +7,9 @@ set -o pipefail
 #
 # Hook input: JSON via stdin with .tool_input.file_path
 # Auto-fixes formatting issues when possible
-# Policy: delegated Ruby post-edit guardrail; once selected for a Ruby-ish path,
-# payload and path-resolution failures block rather than silently skipping.
+# Policy: delegated Ruby guardrail — post-edit; once selected for a
+# Ruby-ish path, payload and path-resolution failures block rather than
+# silently skipping.
 
 HOOK_NAME="${BASH_SOURCE[0]##*/}"
 

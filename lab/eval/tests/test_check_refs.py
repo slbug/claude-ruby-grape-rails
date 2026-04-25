@@ -155,6 +155,28 @@ class CheckRefsTests(unittest.TestCase):
         broken = sorted(r.target for r in result.broken)
         self.assertEqual(broken, ["nope"])
 
+    def test_unterminated_fence_yields_buffered_lines_for_scanning(self) -> None:
+        """If a file ends inside an open fence (missing close delimiter),
+        the scanner must NOT silently skip the buffered tail — it falls
+        back to scanning those lines so accidental references are still
+        flagged instead of disappearing into a never-closed fence."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "caller").mkdir()
+        (plugin_root / "skills" / "caller" / "SKILL.md").write_text(
+            "---\nname: rb:caller\n---\n"
+            "Real ref before fence: /rb:before-nope\n"
+            "```\n"
+            "tail body — /rb:tail-nope\n"
+            "more — /rb:also-tail-nope\n"
+            # NO closing fence
+        )
+        result = check_refs.scan(plugin_root)
+        broken = sorted(r.target for r in result.broken)
+        self.assertEqual(
+            broken,
+            ["also-tail-nope", "before-nope", "tail-nope"],
+        )
+
     def test_skips_fenced_code_blocks(self) -> None:
         """References inside fenced code blocks are not flagged."""
         plugin_root = _make_plugin(self.tmp_path)

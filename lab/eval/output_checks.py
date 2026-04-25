@@ -2,6 +2,7 @@
 
 
 import re
+import sys
 from pathlib import Path
 
 import yaml
@@ -231,7 +232,10 @@ def compute_trust_state(sidecar: Path) -> str:
 
     Anything not matching this shape (no frontmatter, malformed YAML,
     unparsable, missing claims/sources lists) returns `missing` — callers
-    treat that as "needs migration".
+    treat that as "needs migration". YAML parse errors are surfaced via
+    `yaml.YAMLError` to stderr (with line/column from the parser) so
+    contributors can locate the malformed line, but the function still
+    returns `missing` so the eval gate keeps a deterministic outcome.
     """
     if not sidecar.exists():
         return "missing"
@@ -241,7 +245,18 @@ def compute_trust_state(sidecar: Path) -> str:
         return "missing"
     try:
         meta = yaml.safe_load(block)
-    except yaml.YAMLError:
+    except yaml.YAMLError as exc:
+        mark = getattr(exc, "problem_mark", None)
+        location = ""
+        if mark is not None:
+            # Frontmatter starts on line 2 of the file (after the opening
+            # `---`). Adjust the parser's 0-based line number so the
+            # diagnostic points at the real line in `sidecar`.
+            location = f" at {sidecar}:{mark.line + 2}:{mark.column + 1}"
+        sys.stderr.write(
+            f"compute_trust_state: malformed YAML{location}: "
+            f"{exc.__class__.__name__}\n"
+        )
         return "missing"
     if not isinstance(meta, dict):
         return "missing"

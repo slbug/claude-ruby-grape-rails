@@ -1,5 +1,7 @@
+import io
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 
 from lab.eval import output_checks
@@ -78,6 +80,29 @@ class TrustStateTests(unittest.TestCase):
         p = self.tmp_path / "broken.provenance.md"
         p.write_text("---\nclaims: [unclosed\n---\n")
         self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
+    def test_malformed_yaml_emits_line_diagnostic(self) -> None:
+        """YAML parse failures must surface a line:column hint on stderr
+        so contributors can locate the broken line. Frontmatter line 1
+        of the YAML body is line 2 of the file (after the opening `---`),
+        so the diagnostic line number must be offset accordingly."""
+        p = self.tmp_path / "broken.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: c1\n"
+            "sources: [unclosed\n"
+            "---\n"
+        )
+        buf = io.StringIO()
+        with redirect_stderr(buf):
+            state = output_checks.compute_trust_state(p)
+        self.assertEqual(state, "missing")
+        err = buf.getvalue()
+        self.assertIn("compute_trust_state: malformed YAML", err)
+        self.assertIn(str(p), err)
+        # Line ref must be present (format `<path>:<line>:<col>`).
+        self.assertRegex(err, rf"{p}:\d+:\d+")
 
     def test_non_dict_frontmatter_maps_to_missing(self) -> None:
         p = self.tmp_path / "scalar.provenance.md"

@@ -104,13 +104,21 @@ def _iter_non_fenced_lines(text: str):
     (CommonMark forbids info strings on closing fences) so an inner
     `````ruby` line inside an outer 3-backtick block does not falsely
     end the outer fence.
+
+    Unterminated-fence policy: if a file ends inside an open fence
+    (missing closing delimiter), we conservatively yield the buffered
+    in-fence lines back as scannable content. This trades CommonMark
+    purity for not silently swallowing an entire tail of references
+    that the author probably intended as prose.
     """
     open_delim: str | None = None
+    fenced_buffer: list[tuple[int, str]] = []
     for lineno, line in enumerate(text.splitlines(), start=1):
         if open_delim is None:
             m = FENCE_OPEN_RE.match(line)
             if m:
                 open_delim = m.group(1)
+                fenced_buffer = []
                 continue
             yield lineno, line
             continue
@@ -120,8 +128,12 @@ def _iter_non_fenced_lines(text: str):
         m = FENCE_CLOSE_RE.match(line)
         if m and m.group(1)[0] == open_delim[0] and len(m.group(1)) >= len(open_delim):
             open_delim = None
+            fenced_buffer = []
             continue
-        # Still fenced; skip.
+        fenced_buffer.append((lineno, line))
+    if open_delim is not None:
+        # Fence never closed — fall back to scanning the buffered lines.
+        yield from fenced_buffer
 
 
 def scan(plugin_root: Path) -> ScanResult:

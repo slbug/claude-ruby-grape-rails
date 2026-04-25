@@ -29,6 +29,24 @@ def _coerce_frontmatter_value(key: str, value: str) -> Any:
     return _coerce_scalar(value)
 
 
+def _find_delimiter_lines(content: str) -> tuple[list[str], int] | None:
+    """Locate the closing `---` line index for a frontmatter block.
+
+    Returns `(lines, end)` where `lines` is the full split content and
+    `end` is the index of the closing `---` line. Returns None when no
+    frontmatter is present or the closing delimiter is missing. Both
+    delimiters are matched line-aware (`strip() == "---"`) so `---`
+    inside a YAML value cannot mis-split the block.
+    """
+    lines = content.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return None
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            return lines, index
+    return None
+
+
 def extract_frontmatter_block(content: str) -> str | None:
     """Return the raw YAML text between leading `---` delimiter lines.
 
@@ -41,13 +59,11 @@ def extract_frontmatter_block(content: str) -> str | None:
     Use this when feeding the block to `yaml.safe_load` for full-YAML
     parsing; use `parse_frontmatter` for the flat-key subset.
     """
-    lines = content.splitlines()
-    if not lines or lines[0].strip() != "---":
+    found = _find_delimiter_lines(content)
+    if found is None:
         return None
-    for index in range(1, len(lines)):
-        if lines[index].strip() == "---":
-            return "\n".join(lines[1:index])
-    return None
+    lines, end = found
+    return "\n".join(lines[1:end])
 
 
 def parse_frontmatter(content: str) -> dict[str, Any]:
@@ -89,10 +105,8 @@ def parse_frontmatter(content: str) -> dict[str, Any]:
 
 def get_body(content: str) -> str:
     """Return content after the frontmatter block."""
-    lines = content.splitlines()
-    if not lines or lines[0].strip() != "---":
+    found = _find_delimiter_lines(content)
+    if found is None:
         return content
-    for index in range(1, len(lines)):
-        if lines[index].strip() == "---":
-            return "\n".join(lines[index + 1:]).strip()
-    return content
+    lines, end = found
+    return "\n".join(lines[end + 1 :]).strip()

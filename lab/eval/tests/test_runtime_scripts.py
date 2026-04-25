@@ -254,26 +254,53 @@ class RuntimeScriptTests(unittest.TestCase):
     def test_every_hook_script_declares_policy(self) -> None:
         """Every non-library hook script under hooks/scripts/ must carry a
         `# Policy:` comment at the start of a line within the first 20
-        lines so reviewers can classify it without guessing from the
-        filename. Substring-anywhere matching would let stray occurrences
-        deeper in the file pass; this test enforces the header position
-        the convention promises. `*-lib.sh` files are sourced helpers and
-        intentionally exempt — caller's policy applies."""
+        lines, AND the comment must open with one of four canonical class
+        labels so reviewers can classify it without guessing from the
+        filename. Free-form detail may follow ` — `. `*-lib.sh` files are
+        sourced helpers and intentionally exempt — caller's policy
+        applies."""
         header_window = 20
+        canonical_classes = (
+            "advisory",
+            "delegated Ruby guardrail",
+            "security-sensitive",
+            "active-plan guard",
+        )
         missing: list[str] = []
+        unclassified: list[tuple[str, str]] = []
         for script in sorted(HOOK_SCRIPTS_DIR.glob("*.sh")):
             if script.name.endswith("-lib.sh"):
                 continue
             head_lines = script.read_text(encoding="utf-8").splitlines()[:header_window]
-            if not any(line.startswith("# Policy:") for line in head_lines):
+            policy_line = next(
+                (line for line in head_lines if line.startswith("# Policy:")),
+                None,
+            )
+            if policy_line is None:
                 missing.append(script.name)
+                continue
+            body = policy_line.removeprefix("# Policy:").strip()
+            # Accept any separator after the class label: em-dash, hyphen,
+            # semicolon, plain space — only the leading class name is
+            # contractual.
+            if not any(
+                body == cls or (body.startswith(cls) and body[len(cls):len(cls) + 1] in (" ", ""))
+                for cls in canonical_classes
+            ):
+                unclassified.append((script.name, body))
         self.assertEqual(
             missing,
             [],
             f"hook script(s) missing `# Policy:` header in the first "
             f"{header_window} lines: {missing}. Add a one-line comment "
-            "near the top declaring class (advisory / delegated guardrail / "
-            "security-sensitive / active-plan guard / generated injector).",
+            f"opening with one of {list(canonical_classes)}.",
+        )
+        self.assertEqual(
+            unclassified,
+            [],
+            f"hook script(s) with non-canonical Policy class: {unclassified}. "
+            f"Open the comment with one of {list(canonical_classes)} "
+            "followed by ' — <detail>'.",
         )
 
     def test_hook_command_targets_are_executable(self) -> None:

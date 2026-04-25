@@ -80,6 +80,27 @@ def _read(rel: str) -> str:
     return (PROJECT_ROOT / rel).read_text(encoding="utf-8", errors="replace")
 
 
+# Single source of truth for the trigger_scorer.py semantic-LLM exemption.
+# The deterministic `--all` path never reaches `_fetch_semantic_pairs`, so
+# any banned-pattern / banned-import match upstream of (or inside) that
+# function is intentional and exempt. Anchoring on the function name
+# rather than the `--semantic` flag string covers list-arg subprocess
+# forms where the flag never appears as a contiguous token.
+_SEMANTIC_FN_NAME = "_fetch_semantic_pairs"
+_SEMANTIC_EXEMPT_FILE = "lab/eval/trigger_scorer.py"
+_SEMANTIC_EXEMPT_WINDOW = 4000
+
+
+def _is_semantic_pairs_exempt(rel: str, text: str, position: int) -> bool:
+    """Whether a match at `position` in `rel` falls under the
+    `_fetch_semantic_pairs` LLM-gate exemption."""
+    if rel != _SEMANTIC_EXEMPT_FILE:
+        return False
+    line_start = text.rfind("\n", 0, position) + 1
+    snippet = text[max(0, line_start - _SEMANTIC_EXEMPT_WINDOW) : position]
+    return _SEMANTIC_FN_NAME in snippet
+
+
 class EvalCiDeterminismTests(unittest.TestCase):
     def test_makefile_target_exists(self) -> None:
         body = _read("Makefile")
@@ -102,19 +123,8 @@ class EvalCiDeterminismTests(unittest.TestCase):
             text = _read(rel)
             for pattern in BANNED_PATTERNS:
                 for m in re.finditer(pattern, text):
-                    # `trigger_scorer.py` legitimately gates a Haiku call
-                    # inside `_fetch_semantic_pairs`; the deterministic
-                    # `--all` invocation never reaches it. The exemption
-                    # covers both the shell-string and the list-arg
-                    # `subprocess.run` forms. Anchor on the function name
-                    # rather than the `--semantic` flag string so list-arg
-                    # forms (where the flag never appears as a contiguous
-                    # token) are also exempted.
-                    if rel == "lab/eval/trigger_scorer.py":
-                        line_start = text.rfind("\n", 0, m.start()) + 1
-                        snippet = text[max(0, line_start - 4000) : m.start()]
-                        if "_fetch_semantic_pairs" in snippet:
-                            continue
+                    if _is_semantic_pairs_exempt(rel, text, m.start()):
+                        continue
                     self.fail(
                         f"{rel}: banned LLM pattern matched: {pattern!r}"
                     )
@@ -125,20 +135,18 @@ class EvalCiDeterminismTests(unittest.TestCase):
                 continue
             text = _read(rel)
             for module in BANNED_IMPORTS:
-                if not re.search(
-                    rf"^(import|from)\s.*\b{module}\b", text, re.MULTILINE
-                ):
+                pattern = rf"(?m)^(import|from)\s.*\b{module}\b"
+                match = re.search(pattern, text)
+                if match is None:
                     continue
-                if (
-                    rel == "lab/eval/trigger_scorer.py"
-                    and module == "behavioral_scorer"
-                ):
-                    # confirm only inside `_fetch_semantic_pairs`, never
-                    # at module top level.
-                    top_level = text.split("def ")[0]
+                if _is_semantic_pairs_exempt(rel, text, match.start()):
+                    # Lazy-imported inside `_fetch_semantic_pairs`. Confirm
+                    # the same module name is NOT also imported at module
+                    # top level (above the first `def`).
+                    top_level = text.split("def ", 1)[0]
                     self.assertNotRegex(
                         top_level,
-                        rf"(?m)^(import|from)\s.*\b{module}\b",
+                        pattern,
                         f"{rel}: top-level import of {module}",
                     )
                     continue
