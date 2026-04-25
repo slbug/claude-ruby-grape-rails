@@ -202,6 +202,45 @@ class TrustStateTests(unittest.TestCase):
         )
         self.assertEqual(output_checks.compute_trust_state(p), "missing")
 
+    def test_missing_conflicts_key_maps_to_missing(self) -> None:
+        """`conflicts` is required schema; absence is malformed → missing."""
+        p = self.tmp_path / "no-conflicts.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: c1\n"
+            "sources:\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
+    def test_missing_claims_key_maps_to_missing(self) -> None:
+        p = self.tmp_path / "no-claims.provenance.md"
+        p.write_text(
+            "---\n"
+            "sources:\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "conflicts: []\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
+    def test_missing_sources_key_maps_to_missing(self) -> None:
+        p = self.tmp_path / "no-sources.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: c1\n"
+            "conflicts: []\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
     def test_missing_kind_maps_to_missing(self) -> None:
         p = self.tmp_path / "no-kind.provenance.md"
         p.write_text(

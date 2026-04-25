@@ -7,7 +7,7 @@ Practical rules for writing tests in this repo. Not framework docs.
 1. **Grep for existing coverage.**
 
 ```bash
-grep -rn 'describe .*<ClassUnderTest>\|def test_<behavior>' spec/ test/
+grep -rnE 'describe .*<ClassUnderTest>|def test_<behavior>' spec/ test/
 ```
 
 If found: extend it. Don't spawn a parallel spec for the same class.

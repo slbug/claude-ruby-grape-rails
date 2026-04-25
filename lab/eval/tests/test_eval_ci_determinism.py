@@ -17,15 +17,25 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 BANNED_PATTERNS = (
+    # Shell-string forms — `bash -c` / shell scripts.
     r"\bclaude\s+--bare\b",
     r"\bclaude\s+-p\b",
     r"\bollama\s+(run|generate|serve)\b",
+    # API hosts in any context (URL string, env var, comment).
     r"\bapi\.anthropic\.com\b",
     r"\bapi\.openai\.com\b",
+    # Python imports of provider SDKs.
     r"\bimport\s+anthropic\b",
     r"\bfrom\s+anthropic\b",
     r"\bimport\s+openai\b",
     r"\bfrom\s+openai\b",
+    # Python list/tuple `subprocess.run(...)` args. The CLI tokens are
+    # quoted and comma-separated, so the shell-string regexes above never
+    # match. Catch them by anchoring on the program token sitting next to
+    # an opening bracket or a comma.
+    r'["\']claude["\']\s*,\s*["\']--bare["\']',
+    r'["\']claude["\']\s*,\s*["\']-p["\']',
+    r'["\']ollama["\']\s*,\s*["\'](?:run|generate|serve)["\']',
 )
 
 BANNED_IMPORTS = (

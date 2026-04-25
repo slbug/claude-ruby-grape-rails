@@ -245,14 +245,17 @@ def compute_trust_state(sidecar: Path) -> str:
         return "missing"
     if not isinstance(meta, dict):
         return "missing"
-    claims = meta.get("claims") or []
-    sources = meta.get("sources") or []
-    conflicts = meta.get("conflicts") if "conflicts" in meta else []
+    # Strict shape validation. All three top-level keys are required; any
+    # off-spec frontmatter (missing key, wrong type, claim missing string
+    # `id`, supports not a list of strings, kind absent or unknown) maps
+    # to `missing` so malformed schemas surface as broken instead of being
+    # graded `clean`, `weak`, or `conflicted`.
+    if "claims" not in meta or "sources" not in meta or "conflicts" not in meta:
+        return "missing"
+    claims = meta.get("claims")
+    sources = meta.get("sources")
+    conflicts = meta.get("conflicts")
 
-    # Strict shape validation. Anything off-spec (claims/sources not lists,
-    # entries not dicts, claim missing string `id`, conflicts not a list,
-    # supports not a list of strings) maps to `missing` so malformed schemas
-    # surface as broken instead of being graded `clean` or `conflicted`.
     if not isinstance(claims, list) or not claims:
         return "missing"
     if not isinstance(sources, list) or not sources:
@@ -261,7 +264,7 @@ def compute_trust_state(sidecar: Path) -> str:
         return "missing"
     if not all(isinstance(s, dict) for s in sources):
         return "missing"
-    if conflicts is None or not isinstance(conflicts, list):
+    if not isinstance(conflicts, list):
         return "missing"
     allowed_kinds = {"primary", "secondary", "tool-output"}
     for s in sources:
