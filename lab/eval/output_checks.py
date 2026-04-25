@@ -247,11 +247,12 @@ def compute_trust_state(sidecar: Path) -> str:
         return "missing"
     claims = meta.get("claims") or []
     sources = meta.get("sources") or []
-    conflicts = meta.get("conflicts") or []
+    conflicts = meta.get("conflicts") if "conflicts" in meta else []
 
     # Strict shape validation. Anything off-spec (claims/sources not lists,
-    # entries not dicts, claim missing string `id`) maps to `missing` so
-    # malformed schemas surface as broken instead of being graded `clean`.
+    # entries not dicts, claim missing string `id`, conflicts not a list,
+    # supports not a list of strings) maps to `missing` so malformed schemas
+    # surface as broken instead of being graded `clean` or `conflicted`.
     if not isinstance(claims, list) or not claims:
         return "missing"
     if not isinstance(sources, list) or not sources:
@@ -260,13 +261,23 @@ def compute_trust_state(sidecar: Path) -> str:
         return "missing"
     if not all(isinstance(s, dict) for s in sources):
         return "missing"
+    if conflicts is None or not isinstance(conflicts, list):
+        return "missing"
+    for s in sources:
+        supports = s.get("supports", [])
+        if not isinstance(supports, list):
+            return "missing"
+        if not all(isinstance(cid, str) for cid in supports):
+            return "missing"
 
     if conflicts:
         return "conflicted"
 
     support_counts: dict[str, int] = {c["id"]: 0 for c in claims}
     for s in sources:
-        for cid in s.get("supports") or []:
+        # Dedupe within a single source so `supports: [c1, c1]` does not
+        # inflate the count toward the "≥2 independent sources" rule.
+        for cid in set(s.get("supports") or []):
             if cid in support_counts:
                 support_counts[cid] += 1
     all_tool_only = all(s.get("kind") == "tool-output" for s in sources)

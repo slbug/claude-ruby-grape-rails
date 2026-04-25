@@ -137,6 +137,86 @@ class TrustStateTests(unittest.TestCase):
         )
         self.assertEqual(output_checks.compute_trust_state(p), "missing")
 
+    def test_conflicts_as_dict_maps_to_missing(self) -> None:
+        p = self.tmp_path / "shape.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: c1\n"
+            "sources:\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "conflicts:\n"
+            "  c1: disputed\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
+    def test_conflicts_as_string_maps_to_missing(self) -> None:
+        p = self.tmp_path / "shape.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: c1\n"
+            "sources:\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "  - kind: primary\n"
+            "    supports: [c1]\n"
+            "conflicts: nope\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
+    def test_supports_as_string_maps_to_missing(self) -> None:
+        """`supports: c1` (string instead of list) must NOT iterate
+        character-by-character; it is malformed schema → missing."""
+        p = self.tmp_path / "shape.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: c1\n"
+            "sources:\n"
+            "  - kind: primary\n"
+            "    supports: c1\n"
+            "  - kind: primary\n"
+            "    supports: c1\n"
+            "conflicts: []\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
+    def test_supports_with_non_string_entry_maps_to_missing(self) -> None:
+        p = self.tmp_path / "shape.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: c1\n"
+            "sources:\n"
+            "  - kind: primary\n"
+            "    supports: [1]\n"
+            "conflicts: []\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "missing")
+
+    def test_duplicate_supports_in_one_source_does_not_satisfy_two_source_rule(self) -> None:
+        """Single source listing `[c1, c1]` must not be counted as 2 supports."""
+        p = self.tmp_path / "dup.provenance.md"
+        p.write_text(
+            "---\n"
+            "claims:\n"
+            "  - id: c1\n"
+            "sources:\n"
+            "  - kind: primary\n"
+            "    supports: [c1, c1]\n"
+            "conflicts: []\n"
+            "---\n"
+        )
+        self.assertEqual(output_checks.compute_trust_state(p), "weak")
+
     def test_tool_only_sources_map_to_weak(self) -> None:
         p = self.tmp_path / "tool.provenance.md"
         p.write_text(
