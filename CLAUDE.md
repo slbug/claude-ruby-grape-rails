@@ -43,10 +43,11 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 ### Artifact Directories
 
 Each plan owns artifacts in `.claude/plans/{slug}/` (plan.md, research/,
-summaries/, progress.md, scratchpad.md). Other namespaces:
-`audit/` (reports + summaries), `reviews/`,
-`investigations/{agent}/{slug}-{datesuffix}.md`
-(e.g. `deep-bug-investigator/`), `skill-metrics/`, `solutions/{category}/`.
+summaries/, progress.md, scratchpad.md). Other `.claude/` namespaces:
+`.claude/audit/` (reports + summaries), `.claude/reviews/`,
+`.claude/investigations/{agent}/{slug}-{datesuffix}.md`
+(e.g. `.claude/investigations/deep-bug-investigator/`),
+`.claude/skill-metrics/`, `.claude/solutions/{category}/`.
 
 ### Context Supervisor Pattern
 
