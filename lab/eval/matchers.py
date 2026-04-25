@@ -1,6 +1,5 @@
 """Deterministic matcher functions for Ruby plugin skill evals."""
 
-from __future__ import annotations
 
 import os
 from pathlib import Path

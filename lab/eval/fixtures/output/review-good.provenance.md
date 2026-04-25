@@ -1,3 +1,17 @@
+---
+claims:
+  - id: c1
+  - id: c2
+sources:
+  - kind: primary
+    url: app/jobs/sync_customer_job.rb:14
+    supports: [c1, c2]
+  - kind: primary
+    url: https://github.com/sidekiq/sidekiq/wiki/Error-Handling
+    supports: [c1, c2]
+conflicts: []
+---
+
 # Provenance: sync-customer-job-review.md
 
 **Artifact**: `.claude/reviews/sync-customer-job-review.md`

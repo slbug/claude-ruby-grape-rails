@@ -1,3 +1,12 @@
+---
+claims:
+  - id: c1
+sources:
+  - kind: tool-output
+    supports: [c1]
+conflicts: []
+---
+
 # Provenance: retry-stuff-review.md
 
 **Artifact**: `.claude/reviews/retry-stuff-review.md`

@@ -128,3 +128,13 @@ Include based on detected stack and installed tools:
 - `{BETTERLEAKS_SECTION}` — If Betterleaks installed (secrets scanning)
 
 See `${CLAUDE_SKILL_DIR}/references/conditional-sections.md` for full content of each section.
+
+## CLAUDE.md sizing
+
+Keep root `CLAUDE.md` under ~200 lines. Heavy repo-level context inflates
+inference cost and can reduce task success. Subtree-specific rules belong in
+`.claude/rules/*.md` with `paths:` frontmatter so they auto-load only when
+relevant.
+
+See `${CLAUDE_PLUGIN_ROOT}/skills/intro/references/tutorial-content.md`
+(Section 8) for the rule-of-thumb checklist and the scoped-rule template.

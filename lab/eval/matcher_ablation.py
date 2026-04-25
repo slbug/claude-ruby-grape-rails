@@ -6,7 +6,6 @@ each check type one at a time and measuring the impact on composite scores.
 Purely deterministic -- no LLM calls.
 """
 
-from __future__ import annotations
 
 import argparse
 import json

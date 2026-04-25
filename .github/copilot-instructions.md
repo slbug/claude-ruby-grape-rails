@@ -33,7 +33,7 @@ Do not flag issues already caught by CI:
 - Shell linting (shellcheck)
 - JSON/YAML validation
 - Plugin manifest validation (`claude plugin validate`)
-- Eval scoring gate (`make eval-ci`)
+- Eval scoring gate (`make eval-ci-deterministic`)
 - Release metadata alignment (`check-release-metadata.py`)
 - Dynamic injection scanning (`check-dynamic-injection.sh`)
 

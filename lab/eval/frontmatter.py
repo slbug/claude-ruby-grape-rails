@@ -4,7 +4,6 @@ Lightweight delimiter-aware parser for SKILL.md and agent frontmatter.
 Not a full YAML parser — handles the subset used by Claude Code plugin files.
 """
 
-from __future__ import annotations
 
 import re
 from typing import Any

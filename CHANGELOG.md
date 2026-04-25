@@ -7,6 +7,76 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-04-25
+
+### Added
+
+- `/rb:intro` tutorial: Section 7 (CC built-in features — `xhigh`, `/focus`,
+  `/recap`, `/less-permission-prompts`, `/output-styles`) and Section 8
+  (CLAUDE.md sizing teaching + scoped-rule pattern).
+- Trust-state definitions (`clean` / `weak` / `conflicted` / `missing`) on
+  provenance sidecars: `references/output-verification/trust-states.md`
+  and `compute_trust_state` in `lab/eval/output_checks.py`. State is
+  runtime-derived (not stored in the file). `make eval-output` emits a
+  trust-state distribution table over all known sidecars.
+- `make check-refs` / `npm run check:refs` validator for skill and agent
+  cross-references (`/rb:<name>`, `skills/<name>`, `agents/<name>`).
+  Resolves frontmatter aliases and directory names; skips fenced code
+  blocks; tested via `lab/eval/tests/test_check_refs.py`.
+- Testing and investigation discipline references:
+  `skills/testing/references/discipline.md` and
+  `skills/investigate/references/discipline.md` with cross-refs from parent
+  SKILL.md files.
+- `init` skill: CLAUDE.md sizing pointer to tutorial Section 8.
+- `requirements-dev.txt`: pins `pyyaml` for `lab/eval/` contributor
+  tooling. Tests run via stdlib `unittest`; no third-party test runner
+  required.
+- **`make eval-ci-deterministic` / `npm run eval:ci:deterministic`** —
+  full deterministic CI gate: `eval-output` + `check-refs` +
+  `lab/eval/run_eval.sh --ci` (lint, injection guard,
+  skill / agent / trigger scoring, ablation, hygiene + context-budget
+  advisory). Audited so it never transitively invokes any LLM provider
+  (`behavioral_scorer`, `epistemic_suite`, `trigger_scorer --semantic`,
+  `lab.tournament.*` are all excluded). Determinism guarantee enforced by
+  `lab/eval/tests/test_eval_ci_determinism.py`.
+
+### Changed
+
+- `permissions/references/risk-classification.md`: narrow bare-`find`
+  recommendations to `find -type f -name *`, `find . -path *`, and
+  `find -maxdepth *` (CC 2.1.113 no longer auto-approves `-exec`/`-delete`
+  under broad `find` patterns).
+- Provenance sidecars migrated to YAML-frontmatter schema (`claims`,
+  `sources`, `conflicts`). `compute_trust_state` reads only this canonical
+  schema; sidecars without it (or with empty `claims`/`sources`) map to
+  `missing`. No markdown-body fallback. Existing tracked fixtures
+  (`research-good`, `research-bad`, `review-good`, `review-bad`) updated.
+  `provenance-template.md` rewritten to show the YAML schema.
+- `Makefile`: new `check-refs` target.
+- **`deep-bug-investigator` agent now writes its report to a file.**
+  Aligned with the sibling reviewer/analyzer convention (data-integrity,
+  ruby, security, migration-safety reviewers). `Write` removed from
+  `disallowedTools`; added "Save Findings File First" section with the
+  same turn-budget rules as siblings (write a partial mid-run, overwrite
+  later). Default output path:
+  `.claude/investigations/deep-bug-investigator/{slug}-{datesuffix}.md`.
+  Chat response capped at ≤300 words; the file is the real output.
+  `maxTurns` raised 30 → 40 to give room for live evidence gathering
+  (rspec / runner / psql / redis-cli) plus a final synthesis turn —
+  reviewers run static analysis at 25, investigators iterate against a
+  running app and need more turns. `skills/investigate/SKILL.md` and
+  `skills/investigate/references/error-patterns.md` updated to instruct
+  spawners to pass an output path.
+
+### Removed
+
+- **`make eval-ci` / `npm run eval:ci`** — renamed to
+  `eval-ci-deterministic` / `eval:ci:deterministic` to make the
+  determinism guarantee explicit in the name. No back-compat alias;
+  external scripts and shell history calling the old name will break and
+  must be updated. The GitHub workflow, top-level `make ci`, and
+  top-level `npm run ci` already point at the new name.
+
 ## [1.13.4] - 2026-04-21
 
 ### Changed
@@ -1856,7 +1926,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.4...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.14.0...HEAD
+[1.14.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.4...v1.14.0
 [1.13.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.3...v1.13.4
 [1.13.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.2...v1.13.3
 [1.13.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.1...v1.13.2

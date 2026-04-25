@@ -25,6 +25,19 @@ check_optional() {
 check_required git "required for tracked-file lint, eval changed-mode, and contributor workflows"
 check_required bash "required for hook and validation scripts"
 check_required python3 "required for eval tests and release checks (python3 3.14+)"
+
+check_python_module() {
+  local module_name="$1"
+  local hint="$2"
+  if ! python3 -c "import ${module_name}" >/dev/null 2>&1; then
+    echo "MISSING: python3 module '${module_name}' — ${hint}" >&2
+    MISSING=1
+  fi
+}
+
+if command -v python3 >/dev/null 2>&1; then
+  check_python_module yaml "install with: pip install -r requirements-dev.txt"
+fi
 check_required ruby "required for YAML validation and Ruby maintenance scripts"
 check_required jq "required for shipped hook payload parsing"
 check_required grep "required by hook scripts for pattern matching"

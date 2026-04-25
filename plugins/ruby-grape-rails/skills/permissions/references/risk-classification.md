@@ -19,7 +19,7 @@ project state.
 | Pattern | Rationale |
 |---------|-----------|
 | `ls *`, `cat *`, `head *`, `tail *`, `wc *` | Read-only inspection |
-| `find *`, `grep *`, `rg *`, `ag *` | Read-only search |
+| `find -type f -name *`, `find . -path *`, `find -maxdepth *`, `grep *`, `rg *`, `ag *` | Read-only search (CC 2.1.113: broad bare-`find` patterns no longer auto-approve `-exec` / `-delete`; prefer the narrow forms shown) |
 | `jq *`, `sed *`, `awk *`, `sort *`, `cut *`, `uniq *` | Read-only transformation |
 | `pwd`, `date`, `whoami`, `which *`, `file *` | Information only |
 | `git status *`, `git log *`, `git diff *`, `git show *` | Read-only git inspection |

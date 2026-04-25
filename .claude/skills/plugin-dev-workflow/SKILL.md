@@ -61,7 +61,7 @@ Run the checks that match the files you touched:
 - Contributor eval tooling:
   - `make eval`
   - `make eval-all`
-  - `make eval-ci`
+  - `make eval-ci-deterministic`
   - `make eval-output`
   - `make security-injection`
   - `make eval-tests`

@@ -8,7 +8,8 @@ Minimum runtime: python3 3.14+ for `lab/eval/`.
 |---------|-------------|
 | `make eval` / `npm run eval` | Lint + injection check + tracked changed surfaces |
 | `make eval-all` / `npm run eval:all` | Full eval snapshot |
-| `make eval-ci` / `npm run eval:ci` | Contributor CI gate |
+| `make eval-ci-deterministic` / `npm run eval:ci:deterministic` | Full deterministic CI gate. Runs `eval-output` + `check-refs` + `run_eval.sh --ci` (lint, injection guard, skill/agent/trigger scoring, ablation, hygiene + context-budget advisory). Used by GitHub CI. Must NOT transitively invoke any LLM provider |
+| `make check-refs` / `npm run check:refs` | Validate skill/agent cross-references resolve on disk |
 | `make eval-output` / `npm run eval:output` | Deterministic research/review artifact checks |
 | `make eval-epistemic` / `npm run eval:epistemic` | Epistemic-posture metrics (6 metrics, 10 scenarios, 1 system-prompt snapshot per run) |
 | `make security-injection` / `npm run security:injection` | Dynamic injection scanning |
@@ -28,8 +29,8 @@ Minimum runtime: python3 3.14+ for `lab/eval/`.
 
 ## Notes
 
-- `eval-output` is separate from `eval-all` / `eval-ci`
-- `--include-untracked` makes results non-comparable; not part of `eval-ci`
+- `eval-output` is part of `eval-ci-deterministic` and can also be invoked standalone
+- `--include-untracked` makes results non-comparable; not part of `eval-ci-deterministic`
 - `check-dynamic-injection.sh` expects git metadata for tracked-file scans
 - For long contributor eval runs (`make eval-all`, `make eval-behavioral-fresh`),
   set `ENABLE_PROMPT_CACHING_1H=1` to opt into the 1-hour cache TTL and reduce

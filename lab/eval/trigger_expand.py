@@ -13,7 +13,6 @@ Usage:
 Cost: ~$0.01/skill (one bare-mode Haiku call per skill, ~$0.51 for all 51).
 """
 
-from __future__ import annotations
 
 import argparse
 import json

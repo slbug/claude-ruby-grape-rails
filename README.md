@@ -239,6 +239,10 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 - **Scratchpads are durable workflow memory.** Dead ends, decisions, and
   handoffs survive long sessions and compaction instead of living only in chat.
 - **Reviews are standalone artifacts.** Reviewer outputs live under `.claude/reviews/`, not inside plan namespaces.
+- **Investigations are standalone artifacts.** `deep-bug-investigator`
+  writes its report to
+  `.claude/investigations/deep-bug-investigator/{slug}-{datesuffix}.md`
+  and returns a ≤300-word chat summary; the file is the real output.
 - **Plan checkboxes track progress.** `[x]` = done, `[ ]` = pending. `/rb:work` finds the first unchecked task and continues.
 - **One plan = one work unit.** Large features get split into multiple plans. Each is self-contained.
 - **Agents are automatic.** The plugin spawns specialist agents behind the scenes. You don't manage them directly.
@@ -750,7 +754,8 @@ and caveats.
 Common entrypoints:
 
 - `make eval` or `npm run eval` for lint + injection check + changed surfaces
-- `make eval-ci` or `npm run eval:ci` for the contributor CI gate
+- `make eval-ci-deterministic` or `npm run eval:ci:deterministic` for the
+  contributor CI gate (deterministic; used by GitHub CI)
 - `make eval-tests` or `npm run eval:test` for the default contributor test
   path (`unittest` by default for deterministic cross-environment runs)
 - `make eval-behavioral` or `npm run eval:behavioral` for LLM-based trigger
@@ -787,7 +792,7 @@ Common entrypoints:
 Notes:
 
 - `--include-untracked` is local-only for changed-mode exploration and is not
-  part of `eval-ci`
+  part of `eval-ci-deterministic`
 - `scripts/check-dynamic-injection.sh` expects git metadata for comparable
   tracked-file scans and now refuses broad non-git fallback scans
 - local pre-commit checks staged Markdown (markdownlint), JSON validation,

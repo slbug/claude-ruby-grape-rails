@@ -12,6 +12,8 @@ IMPORTANT: Present ALL content in each section — every paragraph, table, and c
 - [Section 4: Hooks and Behavioral Rules](#section-4-hooks-and-behavioral-rules)
 - [Section 5: Init, Review and Gaps](#section-5-init-review-and-gaps)
 - [Section 6: Cheat Sheet and Next Steps](#section-6-cheat-sheet-and-next-steps)
+- [Section 7: Claude Code Built-in Features](#section-7-claude-code-built-in-features)
+- [Section 8: Keep CLAUDE.md Small](#section-8-keep-claudemd-small)
 
 ---
 
@@ -381,3 +383,62 @@ These rules exist because the Ruby community learned them the hard way
 - Run `/rb:verify` to see your project's current health
 - Run `/rb:audit` for a comprehensive project assessment
 - Check `/rb:examples` for detailed walkthroughs
+
+## Section 7: Claude Code Built-in Features
+
+These are Claude Code native, not plugin. They complement the plugin.
+
+- **`xhigh` effort** (Opus 4.7 default, CC 2.1.111) — between `high` and `max`; recommended default. Plugin's plan/audit/review/full skills use `effort: xhigh`.
+- **Auto mode** (CC 2.1.111) — no longer requires `--enable-auto-mode` flag. Used for subagent spawning.
+- **`/focus` command** (CC 2.1.110) — fullscreen TUI mode; keeps plugin SessionStart status-line output visible.
+- **`/recap` command** (CC 2.1.108) — summary when resuming a session. Useful between `/rb:plan` → `/rb:work` sessions across days.
+- **`/less-permission-prompts`** (CC 2.1.111) — interactive slider; the plugin's `/rb:permissions` skill produces analysis that feeds into this.
+- **`/output-styles`** — choose communication mode:
+  - `Default` — plugin's normal behavior
+  - `Explanatory` — Claude narrates thought process; good for learning
+  - `Learning` — interactive pair-programming; Claude stops for user to write `#TODO` sections
+  - Recommend `Explanatory` or `Learning` when comprehension matters more than speed (Anthropic skill-formation study: conceptual-inquiry patterns score 86% mastery vs delegation <40%).
+
+Each is a CC-native feature — the plugin does not reimplement any of them.
+
+## Section 8: Keep CLAUDE.md Small
+
+CLAUDE.md loads every session and counts against the context budget.
+Anthropic recommends keeping it **under 200 lines**. Heavy repo-level
+context files inflate per-call inference cost and crowd out task-specific
+context, which can reduce task success on long-running sessions.
+
+**Rule of thumb:** "Would removing this line cause Claude to make mistakes?"
+If no, cut it.
+
+**Belongs in root `CLAUDE.md`:**
+
+- Exact verify commands for this repo
+- How to run tests
+- Dangerous commands to avoid
+- Package boundaries
+- Required tooling wrappers
+- Short list of non-obvious local facts
+
+**Does NOT belong (put in skills / scoped rules):**
+
+- Long generic Ruby advice
+- Repeated best practices already encoded in skills
+- Verbose workflow philosophy
+- Big example blocks
+
+**Scoped rule files:** drop subtree-specific rules into `.claude/rules/*.md` with `paths:` frontmatter. They auto-load only when editing matching files.
+
+Example `.claude/rules/migrations.md`:
+
+```yaml
+---
+name: migrations
+description: Safe migration rules
+paths:
+  - "db/migrate/**/*.rb"
+  - "db/schema.rb"
+---
+```
+
+This loads only when editing migrations — no permanent tax on context.

@@ -1,6 +1,5 @@
 """Tests for semantic confusable pair parsing, dedup, merge, and cache."""
 
-from __future__ import annotations
 
 import json
 import tempfile

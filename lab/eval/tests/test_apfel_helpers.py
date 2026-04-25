@@ -1,6 +1,5 @@
 """Tests for apfel URL/port helpers in behavioral_scorer."""
 
-from __future__ import annotations
 
 import logging
 import unittest

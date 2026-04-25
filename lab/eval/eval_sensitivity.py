@@ -8,7 +8,6 @@ Usage:
     python3 -m lab.eval.eval_sensitivity --all --summary
 """
 
-from __future__ import annotations
 
 import argparse
 import json

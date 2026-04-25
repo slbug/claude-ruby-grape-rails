@@ -54,7 +54,7 @@ excludeAgent: "coding-agent"
 
 - default_eval() provides fallback for skills without explicit eval JSONs
 - score_skill() returns SubjectScore with composite 0.0-1.0
-- The eval-ci gate requires all skills to pass a minimum threshold
+- The eval-ci-deterministic gate requires all skills to pass a minimum threshold
 
 ## Do NOT Flag
 

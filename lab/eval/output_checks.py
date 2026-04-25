@@ -1,8 +1,10 @@
 """Deterministic checks for research/review output artifacts."""
 
-from __future__ import annotations
 
 import re
+from pathlib import Path
+
+import yaml
 
 
 STATUS_RE = re.compile(r"^\d+\.\s+\[(VERIFIED|UNSUPPORTED|CONFLICT|WEAK)\]", re.MULTILINE)
@@ -209,3 +211,61 @@ def has_provenance_local_evidence(content: str) -> tuple[bool, str]:
     body = _section(content, "Claim Log")
     count = len(LOCAL_EVIDENCE_RE.findall(body))
     return count >= 1, f"{count} local-evidence line(s) present"
+
+
+def compute_trust_state(sidecar: Path) -> str:
+    """Return one of {clean, weak, conflicted, missing}.
+
+    Canonical YAML-frontmatter schema:
+
+        ---
+        claims:
+          - id: c1
+        sources:
+          - kind: primary
+            supports: [c1]
+        conflicts: []
+        ---
+
+    Anything not matching this shape (no frontmatter, malformed YAML,
+    unparsable, missing claims/sources lists) returns `missing` — callers
+    treat that as "needs migration".
+    """
+    if not sidecar.exists():
+        return "missing"
+    text = sidecar.read_text(encoding="utf-8", errors="replace")
+    if not text.startswith("---"):
+        return "missing"
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        return "missing"
+    try:
+        meta = yaml.safe_load(parts[1])
+    except yaml.YAMLError:
+        return "missing"
+    if not isinstance(meta, dict):
+        return "missing"
+    claims = meta.get("claims") or []
+    sources = meta.get("sources") or []
+    conflicts = meta.get("conflicts") or []
+    if not claims or not sources:
+        return "missing"
+
+    if conflicts:
+        return "conflicted"
+
+    support_counts: dict[str, int] = {
+        c["id"]: 0 for c in claims if isinstance(c, dict) and "id" in c
+    }
+    for s in sources:
+        if not isinstance(s, dict):
+            continue
+        for cid in s.get("supports") or []:
+            if cid in support_counts:
+                support_counts[cid] += 1
+    all_tool_only = all(
+        isinstance(s, dict) and s.get("kind") == "tool-output" for s in sources
+    )
+    if all_tool_only or any(count < 2 for count in support_counts.values()):
+        return "weak"
+    return "clean"
