@@ -11,10 +11,11 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .frontmatter import parse_frontmatter
+
 SLASH_REF_RE = re.compile(r"/rb:([a-z][a-z0-9-]+)")
 PATH_SKILL_REF_RE = re.compile(r"skills/([a-z][a-z0-9-]+)")
 PATH_AGENT_REF_RE = re.compile(r"agents/([a-z][a-z0-9-]+)")
-FRONTMATTER_NAME_RE = re.compile(r"^name:\s*(\S+)\s*$", re.MULTILINE)
 # Fenced code blocks open with 3+ backticks or tildes followed by an
 # optional info string (`````ruby`, `````bash my-file.sh`, etc). Closing
 # fences per CommonMark MAY NOT carry an info string — they are the
@@ -38,17 +39,18 @@ class ScanResult:
 
 
 def _frontmatter_name(md_path: Path) -> str | None:
+    """Extract the frontmatter `name:` value via the shared parser.
+
+    Reuses `lab.eval.frontmatter.parse_frontmatter` so cross-reference
+    resolution applies the same parsing rules as the rest of the eval
+    suite (leading-whitespace tolerance, quote stripping, etc).
+    """
     try:
         text = md_path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return None
-    if not text.startswith("---"):
-        return None
-    parts = text.split("---", 2)
-    if len(parts) < 3:
-        return None
-    m = FRONTMATTER_NAME_RE.search(parts[1])
-    return m.group(1) if m else None
+    name = parse_frontmatter(text).get("name")
+    return name if isinstance(name, str) and name else None
 
 
 def _skill_universe(plugin_root: Path) -> tuple[set[str], set[str]]:
