@@ -34,6 +34,7 @@ RULES="${PLUGIN_ROOT}/references/compression/rules.yml"
 # Single Ruby block: parses thresholds from rules.yml, sums telemetry
 # size, counts jsonl samples, emits the nudge to stdout when either
 # threshold crosses. Pure read-only.
+# shellcheck disable=SC2016  # Ruby script body uses Ruby interpolation, not shell expansion
 ruby -ryaml -rshellwords -e '
   rules_path, data_dir, jsonl_path, raw_dir = ARGV
   begin
@@ -66,7 +67,10 @@ ruby -ryaml -rshellwords -e '
       if raw_real && data_real &&
          File.basename(raw_real) == "verify-raw" &&
          raw_real.start_with?(data_real + File::SEPARATOR)
-        Dir.children(raw_real).each do |name|
+        # `Dir.each_child` streams entries without materializing the
+        # full filename array; keeps SessionStart memory bounded even
+        # when `verify-raw/` accumulates thousands of files.
+        Dir.each_child(raw_real) do |name|
           break if size_hit
           path = File.join(raw_real, name)
           next if File.symlink?(path)

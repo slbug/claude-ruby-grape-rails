@@ -104,9 +104,10 @@ command class:
   `${CLAUDE_PLUGIN_DATA}/verify-raw/<uuid>.log` and aggregated stats
   under `${CLAUDE_PLUGIN_DATA}/compression.jsonl`. Plugin does not
   auto-delete: the user opted in to collection, and they decide when
-  to clean up. A `SessionStart` advisory hook surfaces an `rm`-ready
-  message once accumulated telemetry crosses either
-  `rules.yml` `advisory.size_threshold_bytes` or
+  to clean up. A `SessionStart` advisory hook surfaces a
+  cleanup-paths message (the on-disk paths only — no literal `rm` /
+  `rm -rf` command strings) once accumulated telemetry crosses
+  either `rules.yml` `advisory.size_threshold_bytes` or
   `advisory.sample_threshold`.
 - **Fail-open:** if `ruby` is unavailable, or the CLI binaries are
   missing / not executable, or the rules file is unreadable, the hook

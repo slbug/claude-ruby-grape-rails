@@ -37,8 +37,11 @@ replacement mechanism.
    lists, capped at the most interesting ~5.
 5. **Never delete the user's telemetry yourself.** The skill ships no
    destructive command. After drafting the report, list the exact
-   `rm` commands the user can run when they choose to clean up. The
-   user runs them; the skill never does.
+   cleanup paths the user can remove when they choose to clean up.
+   The user composes and runs the deletion command themselves; the
+   skill never does. Do not embed literal `rm` / `rm -rf` strings in
+   the drafted output — that mirrors the SessionStart advisory's
+   safer-context posture.
 6. **Never quote reconstructed absolute paths in the drafted report
    body.** `${CLAUDE_PLUGIN_DATA}` substitutes inline to a path that
    contains the user's home directory and plugin install id. Use the
