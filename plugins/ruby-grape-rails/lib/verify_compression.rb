@@ -126,26 +126,38 @@ module VerifyCompression
   end
 
   def collapse_deprecations(lines, template)
+    # Collapse a run of CONSECUTIVE IDENTICAL deprecation lines into the
+    # first occurrence + a `[+N similar deprecations]` suffix. A
+    # different deprecation message, or any non-deprecation line, ends
+    # the run and is emitted in full. The previous implementation kept
+    # a global `seen` flag and treated every later DEPRECATION line as
+    # a duplicate regardless of content, which silently dropped
+    # distinct deprecation messages later in the same output.
     result = []
-    seen = false
+    last_dep = nil
     dupe = 0
+    flush_dupe = lambda do
+      if dupe.positive?
+        result << render_collapse(template, dupe)
+        dupe = 0
+      end
+    end
     lines.each do |line|
       if DEPRECATION_RE.match?(line)
-        if seen
+        if line == last_dep
           dupe += 1
         else
+          flush_dupe.call
           result << line
-          seen = true
+          last_dep = line
         end
       else
-        if dupe.positive?
-          result << render_collapse(template, dupe)
-          dupe = 0
-        end
+        flush_dupe.call
+        last_dep = nil
         result << line
       end
     end
-    result << render_collapse(template, dupe) if dupe.positive?
+    flush_dupe.call
     result
   end
 

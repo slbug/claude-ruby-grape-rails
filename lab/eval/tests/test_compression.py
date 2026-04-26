@@ -60,3 +60,36 @@ def test_compress_records_no_violation_when_sqlstate_kept(tmp_path: Path) -> Non
     log = _log(raw, tmp_path / "compression.jsonl")
     assert log["violations"] == []
     assert log["raw_bytes"] == len(raw.encode("utf-8"))
+
+
+def test_compress_collapses_only_consecutive_identical_deprecations() -> None:
+    # Three different deprecation messages must NOT collapse into one
+    # `[+N similar deprecations]` summary; they are distinct facts. Only
+    # consecutive identical lines collapse.
+    a = "DEPRECATION WARNING: `attr_accessible` is deprecated"
+    b = "DEPRECATION WARNING: `update_attributes` is deprecated"
+    c = "DEPRECATION WARNING: `find_by_email` dynamic finders are removed"
+    raw = "\n".join([a, a, a, b, c]) + "\n"
+    text = _emit(raw)
+    # All three distinct messages survive.
+    assert a in text
+    assert b in text
+    assert c in text
+    # The three identical `a` collapse to one + `[+2 similar]`.
+    assert "[+2 similar deprecations]" in text
+    # First-occurrence `b` and `c` must NOT be tagged as similar to `a`.
+    assert text.count(a) == 1
+    assert text.count(b) == 1
+    assert text.count(c) == 1
+
+
+def test_compress_resets_dupe_run_across_non_deprecation_lines() -> None:
+    # An interleaved non-deprecation line breaks the run; subsequent
+    # identical deprecation does NOT count toward the previous run.
+    dep = "DEPRECATION WARNING: `attr_accessible` is deprecated"
+    raw = "\n".join([dep, dep, "Finished in 1.2s, 5 examples", dep]) + "\n"
+    text = _emit(raw)
+    # First run: 2 dupes (1 emitted + 1 collapsed via "+1 similar").
+    assert "[+1 similar deprecations]" in text
+    # Two distinct emissions of `dep` (one before "Finished", one after).
+    assert text.count(dep) == 2
