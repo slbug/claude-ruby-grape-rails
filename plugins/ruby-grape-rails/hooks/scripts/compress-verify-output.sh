@@ -83,8 +83,19 @@ CLI="${PLUGIN_ROOT}/bin/compress-verify"
 
 [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]] || exit 0
 DATA_DIR="$CLAUDE_PLUGIN_DATA"
+# Refuse to write through a symlinked plugin-data dir: a manipulated
+# env var pointing CLAUDE_PLUGIN_DATA at a symlink to an unrelated
+# directory would otherwise let this hook materialize files outside
+# the plugin-owned tree. Mirrors the symlink guards used elsewhere
+# in this repo's hook scripts (workspace-root-lib.sh and friends).
+[[ -d "$DATA_DIR" && ! -L "$DATA_DIR" ]] || exit 0
+
 RAW_DIR="${DATA_DIR}/verify-raw"
+# `mkdir -p` is a no-op if RAW_DIR already exists. After the call
+# verify it is a real directory (not a pre-existing symlink to
+# elsewhere) before any writes land underneath it.
 mkdir -p "$RAW_DIR"
+[[ -d "$RAW_DIR" && ! -L "$RAW_DIR" ]] || exit 0
 
 # UUID via Ruby stdlib `SecureRandom.uuid`. The previous fallback chain
 # (`uuidgen` → `/proc/sys/kernel/random/uuid` → `date +%s%N`) was not
@@ -119,10 +130,14 @@ printf '%s' "$HOOK_INPUT_VALUE" \
 # the same path appearing in both positions is read-only. On
 # compressor failure the JSONL entry simply does not get appended and
 # the raw log stays on disk for the user to inspect (or clean up).
+# stderr is redirected to /dev/null: PostToolUse stderr feeds messages
+# back to Claude, and a Ruby exception or OptionParser error from the
+# CLI escaping into the transcript would violate the documented
+# fail-open contract.
 # shellcheck disable=SC2094  # --raw-log is a path-string flag, not a write target
 "$CLI" \
   --log "${DATA_DIR}/compression.jsonl" \
   --cmd "$COMMAND" \
   --raw-log "$RAW_LOG" \
-  < "$RAW_LOG" || true
+  < "$RAW_LOG" 2>/dev/null || true
 exit 0
