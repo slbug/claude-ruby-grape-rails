@@ -123,16 +123,18 @@ replacement mechanism.
    owner/repo). Do not run `gh issue create`.
 
 6. **Hand cleanup back to the user.** After the draft, list the
-   exact paths the user can `rm` once they have filed the report.
+   exact paths the user can remove once they have filed the report.
    Use `${CLAUDE_PLUGIN_DATA}` directly — Claude Code has already
    substituted the variable inline by the time you read this skill,
    so the resolved path appears in your context. Path shape:
    `${CLAUDE_PLUGIN_DATA}/compression.jsonl` for the aggregate jsonl
    and `${CLAUDE_PLUGIN_DATA}/verify-raw` for the raw-log directory.
    This is the ONE place in the workflow where the absolute path is
-   allowed to appear (the user runs the commands locally; the
-   absolute path never leaves their machine). Do NOT run `rm`
-   yourself. Suggested wording:
+   allowed to appear (the deletion happens locally on the user's
+   machine; the absolute path never leaves it). Do not run any
+   destructive command yourself, and do not embed literal `rm` /
+   `rm -rf` strings in the drafted output — surface only the paths,
+   per Iron Law 5. Suggested wording:
 
    ```text
    When you (the user) decide to clean up, the relevant paths are:
