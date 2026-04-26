@@ -203,12 +203,15 @@ module VerifyCompression
   end
 
   # Returns a Hash mapping the full-match string of each occurrence to
-  # its count. Uses `enum_for(:scan, re)` so we capture the full match
-  # (`Regexp.last_match(0)`) regardless of whether the pattern declares
-  # capture groups — `String#scan` returns groups-only arrays when the
-  # regex has groups, which would mishandle preserve patterns like
+  # its count. Streams counts directly into the Hash via `String#scan`'s
+  # block form so verify outputs in the multi-MB range never materialize
+  # a full Array of every match before tallying. The block-form scan
+  # also makes `Regexp.last_match(0)` (the full match) available even
+  # for patterns with capture groups — needed for preserve regexes like
   # `file_colon_line` that capture path and line number.
   def scan_counts(text, re)
-    text.enum_for(:scan, re).map { Regexp.last_match(0) }.tally
+    counts = Hash.new(0)
+    text.scan(re) { counts[Regexp.last_match(0)] += 1 }
+    counts
   end
 end
