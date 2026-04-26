@@ -1,6 +1,13 @@
-"""Contributor tests for trigger-matcher CLI (Ruby runtime)."""
+"""Contributor tests for trigger-matcher CLI (Ruby runtime).
+
+Uses `unittest.TestCase` to match the rest of `lab/eval/tests/`; CI runs
+`python3 -m unittest discover` via `scripts/run-eval-tests.sh`, so
+pytest-only conventions (`tmp_path`, bare `assert`) would be skipped.
+"""
 
 import subprocess
+import tempfile
+import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
@@ -8,117 +15,109 @@ CLI = REPO / "plugins" / "ruby-grape-rails" / "bin" / "match-trigger"
 TRIGGERS = REPO / "plugins" / "ruby-grape-rails" / "references" / "compression" / "triggers.yml"
 
 
-def _matches(cmd: str) -> bool:
+def _matches(cmd: str, triggers: Path = TRIGGERS) -> bool:
     proc = subprocess.run(
-        [str(CLI), "--triggers", str(TRIGGERS), "--cmd", cmd],
+        [str(CLI), "--triggers", str(triggers), "--cmd", cmd],
         capture_output=True,
         text=True,
     )
     return proc.returncode == 0
 
 
-def test_matches_rspec() -> None:
-    assert _matches("rspec spec/models/user_spec.rb")
+class TriggerMatcherTests(unittest.TestCase):
+    def test_matches_rspec(self) -> None:
+        self.assertTrue(_matches("rspec spec/models/user_spec.rb"))
+
+    def test_matches_bundle_exec_brakeman(self) -> None:
+        self.assertTrue(_matches("bundle exec brakeman"))
+
+    def test_matches_rails_db_migrate(self) -> None:
+        self.assertTrue(_matches("bundle exec rails db:migrate"))
+
+    def test_does_not_match_rake_routes(self) -> None:
+        self.assertFalse(_matches("bundle exec rake routes"))
+
+    def test_rake_excluded_wins_over_trigger(self) -> None:
+        # rake db:drop must NEVER trigger compression even if rake_verify_only had overlap
+        self.assertFalse(_matches("bundle exec rake db:drop"))
+
+    def test_unrelated_command(self) -> None:
+        self.assertFalse(_matches("ls -la"))
+
+    def test_matches_env_prefix_rspec(self) -> None:
+        self.assertTrue(_matches("RAILS_ENV=test rspec spec/models/user_spec.rb"))
+
+    def test_matches_multi_env_prefix_bundle_exec(self) -> None:
+        self.assertTrue(_matches("RAILS_ENV=test BUNDLE_GEMFILE=Gemfile bundle exec rspec"))
+
+    def test_matches_env_prefix_rails_db_migrate(self) -> None:
+        self.assertTrue(_matches("RAILS_ENV=production bundle exec rails db:migrate"))
+
+    def test_env_prefix_does_not_bypass_rake_excluded(self) -> None:
+        self.assertFalse(_matches("RAILS_ENV=test bundle exec rake db:drop"))
+
+    def test_does_not_match_rtk_rspec(self) -> None:
+        # rtk's PreToolUse rewrite produces `rtk rspec` — must NOT compress.
+        self.assertFalse(_matches("rtk rspec spec/foo_spec.rb"))
+
+    def test_matches_binstub_rspec(self) -> None:
+        self.assertTrue(_matches("bin/rspec spec/models/user_spec.rb"))
+
+    def test_matches_dot_slash_binstub_rspec(self) -> None:
+        self.assertTrue(_matches("./bin/rspec spec/models/user_spec.rb"))
+
+    def test_matches_env_prefix_binstub_rspec(self) -> None:
+        self.assertTrue(_matches("RAILS_ENV=test bin/rspec spec/models/user_spec.rb"))
+
+    def test_matches_binstub_rake_verify(self) -> None:
+        self.assertTrue(_matches("bin/rake test"))
+
+    def test_binstub_rake_excluded_still_wins(self) -> None:
+        self.assertFalse(_matches("bin/rake routes"))
 
 
-def test_matches_bundle_exec_brakeman() -> None:
-    assert _matches("bundle exec brakeman")
+class TriggerMatcherFailOpenTests(unittest.TestCase):
+    """Malformed triggers.yml must not crash the matcher (fail-open contract)."""
+
+    def test_non_string_pattern_does_not_crash(self) -> None:
+        # A malformed triggers.yml entry (nil / numeric / list-of-list)
+        # used to raise TypeError out of Regexp.new, taking down the whole
+        # matcher. The compile() helper must skip non-string entries and
+        # keep evaluating the rest of the file.
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = Path(tmp) / "triggers.yml"
+            bad.write_text(
+                "verify_commands:\n"
+                "  direct:\n"
+                "    - 42\n"  # numeric — TypeError
+                "    - ~\n"   # nil — TypeError
+                "    - '^rspec\\b'\n"  # valid; this MUST still match
+                "rake_excluded: []\n"
+            )
+            proc = subprocess.run(
+                [str(CLI), "--triggers", str(bad), "--cmd", "rspec spec/foo_spec.rb"],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 0, f"matcher crashed: stderr={proc.stderr!r}")
+
+    def test_invalid_regex_does_not_crash(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = Path(tmp) / "triggers.yml"
+            bad.write_text(
+                "verify_commands:\n"
+                "  direct:\n"
+                "    - '[unclosed'\n"  # invalid regex — RegexpError
+                "    - '^rspec\\b'\n"
+                "rake_excluded: []\n"
+            )
+            proc = subprocess.run(
+                [str(CLI), "--triggers", str(bad), "--cmd", "rspec spec/foo_spec.rb"],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 0, f"matcher crashed: stderr={proc.stderr!r}")
 
 
-def test_matches_rails_db_migrate() -> None:
-    assert _matches("bundle exec rails db:migrate")
-
-
-def test_does_not_match_rake_routes() -> None:
-    assert not _matches("bundle exec rake routes")
-
-
-def test_rake_excluded_wins_over_trigger() -> None:
-    # rake db:drop must NEVER trigger compression even if rake_verify_only had overlap
-    assert not _matches("bundle exec rake db:drop")
-
-
-def test_unrelated_command() -> None:
-    assert not _matches("ls -la")
-
-
-def test_matches_env_prefix_rspec() -> None:
-    assert _matches("RAILS_ENV=test rspec spec/models/user_spec.rb")
-
-
-def test_matches_multi_env_prefix_bundle_exec() -> None:
-    assert _matches("RAILS_ENV=test BUNDLE_GEMFILE=Gemfile bundle exec rspec")
-
-
-def test_matches_env_prefix_rails_db_migrate() -> None:
-    assert _matches("RAILS_ENV=production bundle exec rails db:migrate")
-
-
-def test_env_prefix_does_not_bypass_rake_excluded() -> None:
-    assert not _matches("RAILS_ENV=test bundle exec rake db:drop")
-
-
-def test_does_not_match_rtk_rspec() -> None:
-    # rtk's PreToolUse rewrite produces `rtk rspec` — must NOT compress.
-    assert not _matches("rtk rspec spec/foo_spec.rb")
-
-
-def test_non_string_pattern_does_not_crash(tmp_path: Path) -> None:
-    # A malformed triggers.yml entry (nil / numeric / list-of-list)
-    # used to raise TypeError out of Regexp.new, taking down the whole
-    # matcher. The compile() helper must skip non-string entries and
-    # keep evaluating the rest of the file.
-    bad = tmp_path / "triggers.yml"
-    bad.write_text(
-        "verify_commands:\n"
-        "  direct:\n"
-        "    - 42\n"  # numeric — TypeError
-        "    - ~\n"   # nil — TypeError
-        "    - '^rspec\\b'\n"  # valid; this MUST still match
-        "rake_excluded: []\n"
-    )
-    # match-trigger should treat the bad entries as non-matching and
-    # then succeed on the valid `^rspec\b` pattern.
-    proc = subprocess.run(
-        [str(CLI), "--triggers", str(bad), "--cmd", "rspec spec/foo_spec.rb"],
-        capture_output=True,
-        text=True,
-    )
-    assert proc.returncode == 0, f"matcher crashed: stderr={proc.stderr!r}"
-
-
-def test_matches_binstub_rspec() -> None:
-    assert _matches("bin/rspec spec/models/user_spec.rb")
-
-
-def test_matches_dot_slash_binstub_rspec() -> None:
-    assert _matches("./bin/rspec spec/models/user_spec.rb")
-
-
-def test_matches_env_prefix_binstub_rspec() -> None:
-    assert _matches("RAILS_ENV=test bin/rspec spec/models/user_spec.rb")
-
-
-def test_matches_binstub_rake_verify() -> None:
-    assert _matches("bin/rake test")
-
-
-def test_binstub_rake_excluded_still_wins() -> None:
-    assert not _matches("bin/rake routes")
-
-
-def test_invalid_regex_does_not_crash(tmp_path: Path) -> None:
-    bad = tmp_path / "triggers.yml"
-    bad.write_text(
-        "verify_commands:\n"
-        "  direct:\n"
-        "    - '[unclosed'\n"  # invalid regex — RegexpError
-        "    - '^rspec\\b'\n"
-        "rake_excluded: []\n"
-    )
-    proc = subprocess.run(
-        [str(CLI), "--triggers", str(bad), "--cmd", "rspec spec/foo_spec.rb"],
-        capture_output=True,
-        text=True,
-    )
-    assert proc.returncode == 0, f"matcher crashed: stderr={proc.stderr!r}"
+if __name__ == "__main__":
+    unittest.main()

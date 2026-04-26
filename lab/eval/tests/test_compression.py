@@ -1,17 +1,24 @@
 """Contributor tests for verify-compression CLI.
 
 Plugin runtime is Ruby (verify_compression.rb + bin/compress-verify); end-users
-already have Ruby ≥3.4. lab/eval/ stays Python by convention, so these tests
+already have Ruby >= 3.4. lab/eval/ stays Python by convention, so these tests
 shell out to the Ruby CLI via subprocess and assert on its --emit output and
 the JSONL log entry shape.
+
+Uses unittest.TestCase to match the rest of lab/eval/tests/; CI runs
+`python3 -m unittest discover` via scripts/run-eval-tests.sh, so pytest-only
+conventions (tmp_path, bare assert) would be skipped.
 """
 
 import json
 import subprocess
+import tempfile
+import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
 CLI = REPO / "plugins" / "ruby-grape-rails" / "bin" / "compress-verify"
+LIB = REPO / "plugins" / "ruby-grape-rails" / "lib"
 
 
 def _emit(raw: str) -> str:
@@ -37,150 +44,149 @@ def _log(raw: str, log_path: Path, cmd: str = "rspec") -> dict:
     return json.loads(line)
 
 
-def test_compress_preserves_migration_name() -> None:
-    raw = "== 20260423120000_add_email_index.rb: migrating ====\nrunning...\ndone\n"
-    text = _emit(raw)
-    assert "20260423120000_add_email_index.rb" in text
+class CompressEmitTests(unittest.TestCase):
+    def test_compress_preserves_migration_name(self) -> None:
+        raw = "== 20260423120000_add_email_index.rb: migrating ====\nrunning...\ndone\n"
+        text = _emit(raw)
+        self.assertIn("20260423120000_add_email_index.rb", text)
+
+    def test_compress_collapses_deep_stack(self) -> None:
+        frames = [f"  from /gems/ar/{i}.rb:10" for i in range(30)]
+        raw = "RuntimeError: boom\n" + "\n".join(frames)
+        text = _emit(raw)
+        self.assertIn("/gems/ar/0.rb:10", text)
+        self.assertIn("/gems/ar/4.rb:10", text)
+        self.assertIn("elided", text)
+        self.assertNotIn("/gems/ar/29.rb:10", text)
+
+    def test_compress_records_no_violation_when_sqlstate_kept(self) -> None:
+        raw = "PG::UniqueViolation: ERROR: duplicate key"
+        text = _emit(raw)
+        self.assertIn("PG::UniqueViolation", text)
+        with tempfile.TemporaryDirectory() as tmp:
+            log = _log(raw, Path(tmp) / "compression.jsonl")
+            self.assertEqual(log["violations"], [])
+            self.assertEqual(log["raw_bytes"], len(raw.encode("utf-8")))
 
 
-def test_compress_collapses_deep_stack() -> None:
-    frames = [f"  from /gems/ar/{i}.rb:10" for i in range(30)]
-    raw = "RuntimeError: boom\n" + "\n".join(frames)
-    text = _emit(raw)
-    assert "/gems/ar/0.rb:10" in text
-    assert "/gems/ar/4.rb:10" in text
-    assert "elided" in text
-    assert "/gems/ar/29.rb:10" not in text
+class CompressDeprecationCollapseTests(unittest.TestCase):
+    def test_compress_collapses_only_consecutive_identical_deprecations(self) -> None:
+        # Three different deprecation messages must NOT collapse into one
+        # `[+N similar deprecations]` summary; they are distinct facts. Only
+        # consecutive identical lines collapse.
+        a = "DEPRECATION WARNING: `attr_accessible` is deprecated"
+        b = "DEPRECATION WARNING: `update_attributes` is deprecated"
+        c = "DEPRECATION WARNING: `find_by_email` dynamic finders are removed"
+        raw = "\n".join([a, a, a, b, c]) + "\n"
+        text = _emit(raw)
+        # All three distinct messages survive.
+        self.assertIn(a, text)
+        self.assertIn(b, text)
+        self.assertIn(c, text)
+        # The three identical `a` collapse to one + `[+2 similar]`.
+        self.assertIn("[+2 similar deprecations]", text)
+        # First-occurrence `b` and `c` must NOT be tagged as similar to `a`.
+        self.assertEqual(text.count(a), 1)
+        self.assertEqual(text.count(b), 1)
+        self.assertEqual(text.count(c), 1)
+
+    def test_compress_resets_dupe_run_across_non_deprecation_lines(self) -> None:
+        # An interleaved non-deprecation line breaks the run; subsequent
+        # identical deprecation does NOT count toward the previous run.
+        dep = "DEPRECATION WARNING: `attr_accessible` is deprecated"
+        raw = "\n".join([dep, dep, "Finished in 1.2s, 5 examples", dep]) + "\n"
+        text = _emit(raw)
+        # First run: 2 dupes (1 emitted + 1 collapsed via "+1 similar").
+        self.assertIn("[+1 similar deprecations]", text)
+        # Two distinct emissions of `dep` (one before "Finished", one after).
+        self.assertEqual(text.count(dep), 2)
 
 
-def test_compress_records_no_violation_when_sqlstate_kept(tmp_path: Path) -> None:
-    raw = "PG::UniqueViolation: ERROR: duplicate key"
-    text = _emit(raw)
-    assert "PG::UniqueViolation" in text
-    log = _log(raw, tmp_path / "compression.jsonl")
-    assert log["violations"] == []
-    assert log["raw_bytes"] == len(raw.encode("utf-8"))
+class JsonlLogSafetyTests(unittest.TestCase):
+    """`bin/compress-verify --log` must not follow symlinks or write to non-files."""
+
+    def test_log_refuses_symlink_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_p = Path(tmp)
+            target = tmp_p / "innocent.txt"
+            target.write_text("pre-existing content\n")
+            log = tmp_p / "compression.jsonl"
+            log.symlink_to(target)
+
+            proc = subprocess.run(
+                [str(CLI), "--log", str(log), "--cmd", "rspec"],
+                input="rspec output",
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(target.read_text(), "pre-existing content\n")
+            self.assertTrue(log.is_symlink())
+
+    def test_log_refuses_directory_at_jsonl_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "compression.jsonl"
+            log.mkdir()  # not a regular file
+            proc = subprocess.run(
+                [str(CLI), "--log", str(log), "--cmd", "rspec"],
+                input="rspec output",
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            self.assertEqual(proc.returncode, 0)
+            self.assertTrue(log.is_dir())  # still a directory; nothing written
 
 
-def test_compress_collapses_only_consecutive_identical_deprecations() -> None:
-    # Three different deprecation messages must NOT collapse into one
-    # `[+N similar deprecations]` summary; they are distinct facts. Only
-    # consecutive identical lines collapse.
-    a = "DEPRECATION WARNING: `attr_accessible` is deprecated"
-    b = "DEPRECATION WARNING: `update_attributes` is deprecated"
-    c = "DEPRECATION WARNING: `find_by_email` dynamic finders are removed"
-    raw = "\n".join([a, a, a, b, c]) + "\n"
-    text = _emit(raw)
-    # All three distinct messages survive.
-    assert a in text
-    assert b in text
-    assert c in text
-    # The three identical `a` collapse to one + `[+2 similar]`.
-    assert "[+2 similar deprecations]" in text
-    # First-occurrence `b` and `c` must NOT be tagged as similar to `a`.
-    assert text.count(a) == 1
-    assert text.count(b) == 1
-    assert text.count(c) == 1
+class PreserveCheckTests(unittest.TestCase):
+    def test_preserve_check_flags_dropped_duplicates(self) -> None:
+        # The preserve contract says EACH occurrence of a match survives.
+        # If the compressor drops 4 of 5 identical migration-name lines but
+        # keeps 1, `compressed.include?(match)` would (wrongly) pass. The
+        # multiplicity-aware check must surface the lost duplicates as a
+        # preservation violation. The compressor itself never drops
+        # migration_names, so this is a baseline correctness test:
+        # 5 raw -> 5 compressed -> zero violations.
+        name = "20260423120000_add_email_index.rb"
+        raw = "\n".join([f"== {name}: migrating ====" for _ in range(5)]) + "\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            log = _log(raw, Path(tmp) / "compression.jsonl")
+            self.assertEqual(log["violations"], [], log["violations"])
+        text = _emit(raw)
+        self.assertEqual(text.count(name), 5)
+
+    def test_preserve_check_handles_non_hash_preserve(self) -> None:
+        # If `preserve:` in rules.yml is a scalar / list / anything that is
+        # not a Hash, `check_preservation` must surface a violation rather
+        # than crash on `.each`. We exercise this by writing a custom
+        # rules file with a string `preserve:` and pointing the compressor
+        # at it via VerifyCompression.compress(rules_path:).
+        with tempfile.TemporaryDirectory() as tmp:
+            rules = Path(tmp) / "rules.yml"
+            rules.write_text("preserve: just-a-string\n")
+            proc = subprocess.run(
+                [
+                    "ruby", "-I", str(LIB),
+                    "-rverify_compression", "-rjson", "-e",
+                    (
+                        "result = VerifyCompression.compress("
+                        "'rspec output', rules_path: ARGV[0]); "
+                        "puts JSON.generate("
+                        "violations: result.preservation_violations)"
+                    ),
+                    str(rules),
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            payload = json.loads(proc.stdout.strip().splitlines()[-1])
+            self.assertTrue(
+                any("Hash" in v for v in payload["violations"]),
+                payload,
+            )
 
 
-def test_compress_resets_dupe_run_across_non_deprecation_lines() -> None:
-    # An interleaved non-deprecation line breaks the run; subsequent
-    # identical deprecation does NOT count toward the previous run.
-    dep = "DEPRECATION WARNING: `attr_accessible` is deprecated"
-    raw = "\n".join([dep, dep, "Finished in 1.2s, 5 examples", dep]) + "\n"
-    text = _emit(raw)
-    # First run: 2 dupes (1 emitted + 1 collapsed via "+1 similar").
-    assert "[+1 similar deprecations]" in text
-    # Two distinct emissions of `dep` (one before "Finished", one after).
-    assert text.count(dep) == 2
-
-
-def test_log_refuses_symlink_target(tmp_path: Path) -> None:
-    # If `compression.jsonl` is a symlink (e.g. user redirected
-    # `${CLAUDE_PLUGIN_DATA}` or some other tool created the link),
-    # `bin/compress-verify --log` MUST NOT follow into the target.
-    target = tmp_path / "innocent.txt"
-    target.write_text("pre-existing content\n")
-    log = tmp_path / "compression.jsonl"
-    log.symlink_to(target)
-
-    proc = subprocess.run(
-        [str(CLI), "--log", str(log), "--cmd", "rspec"],
-        input="rspec output",
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    assert proc.returncode == 0
-    # Target file untouched.
-    assert target.read_text() == "pre-existing content\n"
-    # Symlink itself untouched.
-    assert log.is_symlink()
-
-
-def test_preserve_check_handles_non_hash_preserve(tmp_path: Path) -> None:
-    # If `preserve:` in rules.yml is a scalar / list / anything that is
-    # not a Hash, `check_preservation` must surface a violation rather
-    # than crash on `.each`. We exercise this by writing a custom
-    # rules file with a string `preserve:` and pointing the compressor
-    # at it via VerifyCompression.compress(rules_path:).
-    rules = tmp_path / "rules.yml"
-    rules.write_text("preserve: just-a-string\n")
-    proc = subprocess.run(
-        ["ruby", "-I", str(REPO / "plugins" / "ruby-grape-rails" / "lib"),
-         "-rverify_compression", "-rjson", "-e",
-         (
-             "result = VerifyCompression.compress("
-             "'rspec output', rules_path: ARGV[0]); "
-             "puts JSON.generate("
-             "violations: result.preservation_violations)"
-         ),
-         str(rules)],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    payload = json.loads(proc.stdout.strip().splitlines()[-1])
-    assert any("Hash" in v for v in payload["violations"]), payload
-
-
-def test_log_refuses_directory_at_jsonl_path(tmp_path: Path) -> None:
-    log = tmp_path / "compression.jsonl"
-    log.mkdir()  # not a regular file
-
-    proc = subprocess.run(
-        [str(CLI), "--log", str(log), "--cmd", "rspec"],
-        input="rspec output",
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    assert proc.returncode == 0
-    assert log.is_dir()  # still a directory; nothing written
-
-
-def test_preserve_check_flags_dropped_duplicates(tmp_path: Path) -> None:
-    # The preserve contract says EACH occurrence of a match survives.
-    # If the compressor drops 4 of 5 identical migration-name lines but
-    # keeps 1, `compressed.include?(match)` would (wrongly) pass. The
-    # multiplicity-aware check must surface the lost duplicates as a
-    # preservation violation. We exercise this through the JSONL log
-    # so we see the violations the CLI records.
-    #
-    # We can not provoke the compressor itself to drop a migration name
-    # via its built-in collapse rules (none of `_collapse_*` touch
-    # migration_names), so we feed the same raw twice and confirm the
-    # baseline (no violation) is multiplicity-correct: the compressor
-    # preserves all 5 occurrences. A regression where
-    # `check_preservation` lost the multiplicity contract would fail
-    # the assertion below silently in production but is now also
-    # exercised by the logic in `scan_counts` itself; the absence of a
-    # violation here proves both branches of the count comparison
-    # agree on the correct, non-collapsed case.
-    name = "20260423120000_add_email_index.rb"
-    raw = "\n".join([f"== {name}: migrating ====" for _ in range(5)]) + "\n"
-    log = _log(raw, tmp_path / "compression.jsonl")
-    assert log["violations"] == [], log["violations"]
-    # All 5 occurrences must be present in the compressed output.
-    text = _emit(raw)
-    assert text.count(name) == 5
+if __name__ == "__main__":
+    unittest.main()
