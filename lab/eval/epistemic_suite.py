@@ -280,8 +280,17 @@ def capture_runtime_system_prompt() -> str:
             f"inject-rules.sh failed (rc={result.returncode}): "
             f"{result.stderr.strip()[:200]}"
         )
+    stdout_text = result.stdout.strip()
+    if not stdout_text:
+        # Fail-open paths in inject-rules.sh exit 0 with empty stdout:
+        # missing jq, opt-out env, or unrecognised hook_event_name.
+        raise RuntimeError(
+            "inject-rules.sh emitted empty stdout — verify `jq` is on "
+            "PATH and `RUBY_PLUGIN_DISABLE_RULES_INJECTION` is not set "
+            "in the caller environment"
+        )
     try:
-        payload = json.loads(result.stdout)
+        payload = json.loads(stdout_text)
     except json.JSONDecodeError as exc:
         raise RuntimeError(
             f"inject-rules.sh produced non-JSON output: {exc}"

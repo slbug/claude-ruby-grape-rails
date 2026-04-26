@@ -1728,10 +1728,11 @@ class RuntimeScriptTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "")
-        # stderr may carry "jq: command not found" on some shells when
-        # the jq pipe is invoked with errexit-disabled fallback. The
-        # contract is: no JSON emitted, no nonzero exit. Don't pin
-        # stderr emptiness — that's host-dependent.
+        # `inject-rules.sh` checks for jq before invoking it, so the
+        # missing-jq path is a silent fail-open: no JSON emitted and no
+        # expected jq-specific stderr from the script itself. We do not
+        # pin stderr emptiness here because unrelated shell/environment
+        # noise would be host-dependent.
 
     def test_secret_scan_treats_stdout_findings_as_secret_hits_even_on_nonzero_exit(
         self,
