@@ -431,6 +431,33 @@ class RuntimeScriptTests(unittest.TestCase):
         ]
         hook_entries = [hook for group in hooks for hook in group.get("hooks", [])]
         self.assertTrue(hook_entries)
+
+        # Two separate concerns share PostToolUseFailure:Bash:
+        # 1. ruby-post-tool-use-failure.sh — Ruby-family failure hints,
+        #    routed via per-command `if` filters so the wrapper only spawns
+        #    for known Ruby command shapes.
+        # 2. compress-verify-output.rb — verify-output compression
+        #    telemetry. Match-trigger filtering happens inside the Ruby
+        #    library at runtime (against references/compression/triggers.yml),
+        #    so the hook entry has no `if` filter — adding one would
+        #    duplicate the trigger list and drift over time.
+        ruby_failure_hooks = [
+            hook
+            for hook in hook_entries
+            if hook.get("command", "").endswith("/ruby-post-tool-use-failure.sh")
+        ]
+        compression_hooks = [
+            hook
+            for hook in hook_entries
+            if hook.get("command", "").endswith("/compress-verify-output.rb")
+        ]
+        self.assertEqual(
+            len(ruby_failure_hooks) + len(compression_hooks),
+            len(hook_entries),
+            "PostToolUseFailure has unexpected hook entries beyond "
+            "ruby-post-tool-use-failure.sh and compress-verify-output.rb",
+        )
+
         expected_filters = {
             "Bash(bundle *)",
             "Bash(*=* bundle *)",
@@ -473,14 +500,14 @@ class RuntimeScriptTests(unittest.TestCase):
             "Bash(./bin/brakeman *)",
             "Bash(*=* ./bin/brakeman *)",
         }
-        seen_filters = {hook.get("if") for hook in hook_entries}
+        seen_filters = {hook.get("if") for hook in ruby_failure_hooks}
         self.assertEqual(seen_filters, expected_filters)
-        self.assertTrue(all(hook.get("if") for hook in hook_entries))
-        self.assertEqual(len(hook_entries), len(expected_filters))
-        self.assertEqual(
-            {hook.get("command") for hook in hook_entries},
-            {"${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"},
-        )
+        self.assertTrue(all(hook.get("if") for hook in ruby_failure_hooks))
+        self.assertEqual(len(ruby_failure_hooks), len(expected_filters))
+
+        self.assertEqual(len(compression_hooks), 1)
+        self.assertIsNone(compression_hooks[0].get("if"))
+        self.assertTrue(compression_hooks[0].get("async"))
 
     def test_ruby_post_tool_use_failure_prefers_error_critic_output(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -88,15 +88,21 @@ are NOT timeouts; they gate whether the hook does anything at all.
 Default is **off** — the hook exits 0 immediately when the env var is
 unset, leaving the user's data dir untouched.
 
-- `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1` — `compress-verify-output.sh`.
+- `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1` — `compress-verify-output.rb`.
   When unset (default), the verify-output compression collector is a
   no-op. When set, the hook appends to
-  `${CLAUDE_PLUGIN_DATA}/compression.jsonl` and preserves raw stdout
-  under `${CLAUDE_PLUGIN_DATA}/verify-raw/<uuid>.log`. The plugin ships
-  no command that deletes this telemetry: cleanup is the user's
-  manual action. `compression-data-status.sh` is the matched
-  `SessionStart` advisory hook — read-only, prints an `rm`-ready
-  nudge when telemetry on disk crosses
+  `${CLAUDE_PLUGIN_DATA}/compression.jsonl` and preserves the
+  captured Bash output under
+  `${CLAUDE_PLUGIN_DATA}/verify-raw/<uuid>.log`. Registered on BOTH
+  `PostToolUse:Bash` and `PostToolUseFailure:Bash` so verify
+  failures (rspec failures, brakeman findings, rubocop offenses)
+  are captured alongside successful runs. Reads
+  `tool_response.stdout`+`stderr` on `PostToolUse` and the top-level
+  `error` field on `PostToolUseFailure`. Skips on user-interrupt.
+  The plugin ships no command that deletes this telemetry: cleanup
+  is the user's manual action. `compression-data-status.sh` is the
+  matched `SessionStart` advisory hook — read-only, prints an
+  `rm`-ready nudge when telemetry on disk crosses
   `references/compression/rules.yml` `advisory.size_threshold_bytes`
   or `advisory.sample_threshold`.
 

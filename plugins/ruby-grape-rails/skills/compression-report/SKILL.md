@@ -119,8 +119,11 @@ replacement mechanism.
 
 5. **Show the draft to the user.** Print the full report inside a
    fenced code block so it is easy to copy. Append a short footer
-   with a suggested GitHub issue URL (the user fills in
-   owner/repo). Do not run `gh issue create`.
+   with the GitHub issue URL: read `repository` from
+   `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json` and append
+   `/issues/new` (e.g. `https://github.com/<owner>/<repo>/issues/new`).
+   Forks automatically point at the fork's repo via the same
+   manifest field. Do not run `gh issue create`.
 
 6. **Hand cleanup back to the user.** After the draft, list the
    exact paths the user can remove once they have filed the report.

@@ -1,0 +1,47 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Contributor-test CLI. Wraps VerifyCompression.compress + append_jsonl
+# for Python subprocess invocation from lab/eval/compression_eval.py
+# (fixture eval) and lab/eval/tests/test_compression.py. Not shipped
+# to end-users — the runtime hook calls the libs directly.
+
+require 'json'
+require 'optparse'
+
+require_relative '../../../plugins/ruby-grape-rails/lib/verify_compression'
+
+def main(argv)
+  opts = { log: nil, cmd: '', raw_log: nil, emit: false }
+  OptionParser.new do |p|
+    p.on('--log PATH') { |v| opts[:log] = v }
+    p.on('--cmd CMD') { |v| opts[:cmd] = v }
+    p.on('--raw-log PATH') { |v| opts[:raw_log] = v }
+    p.on('--emit') { opts[:emit] = true }
+  end.parse!(argv)
+
+  raw = $stdin.read
+  result = VerifyCompression.compress(raw)
+
+  # `--emit` and `--log` compose: a single invocation writes the compressed
+  # text to stdout AND appends the stats entry to the JSONL log when both
+  # flags are present. Callers that want only one effect pass only that
+  # flag.
+  $stdout.write(result.text) if opts[:emit]
+
+  if opts[:log]
+    entry = {
+      'ts' => Time.now.to_f,
+      'cmd' => opts[:cmd],
+      'raw_bytes' => result.raw_bytes,
+      'compressed_bytes' => result.compressed_bytes,
+      'ratio' => result.ratio,
+      'violations' => result.preservation_violations,
+      'raw_log' => opts[:raw_log]
+    }
+    VerifyCompression.append_jsonl(opts[:log], entry)
+  end
+  0
+end
+
+exit main(ARGV.dup) if $PROGRAM_NAME == __FILE__

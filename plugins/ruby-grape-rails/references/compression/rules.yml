@@ -2,7 +2,7 @@
 # Hot-reloadable. Hook re-reads per invocation.
 
 # Every value under `preserve:` is a Ruby regex string. The compressor
-# scans `tool_response.output` for matches and asserts each match
+# scans the captured Bash output for matches and asserts each match
 # survives in the compressed output; a missing match emits a
 # preservation violation. Per-rule misconfigurations inside `preserve:`
 # (non-string values, invalid regexes, a non-Hash `preserve:` block)
@@ -36,12 +36,14 @@ collapse:
   deprecation_warnings: "  [+{count} similar deprecations]"
   gem_loading: "Loaded {count} gems"
 
-# Raw stdout is preserved next to compression.jsonl under
-# ${CLAUDE_PLUGIN_DATA}/verify-raw/<uuid>.log. The plugin does NOT
-# auto-delete telemetry: the user opted in to collection and decides
-# when to clean up. A SessionStart advisory hook nudges the user when
-# accumulated telemetry crosses either threshold below; cleanup is then
-# the user's manual action via plain `rm` on the surfaced paths.
+# Captured Bash output (stdout + stderr from PostToolUse, or the
+# top-level `error` blob from PostToolUseFailure) is preserved next
+# to compression.jsonl under ${CLAUDE_PLUGIN_DATA}/verify-raw/<uuid>.log.
+# The plugin does NOT auto-delete telemetry: the user opted in to
+# collection and decides when to clean up. A SessionStart advisory
+# hook nudges the user when accumulated telemetry crosses either
+# threshold below; cleanup is then the user's manual action via plain
+# `rm` on the surfaced paths.
 #
 # No anchor template — PostToolUse cannot replace Bash output; see
 # references/compression/README.md "Why no replacement". A real

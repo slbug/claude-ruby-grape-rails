@@ -1,9 +1,9 @@
-"""Contributor tests for verify-compression CLI.
+"""Contributor tests for verify-compression library + contributor CLI.
 
-Plugin runtime is Ruby (verify_compression.rb + bin/compress-verify); end-users
-already have Ruby >= 3.4. lab/eval/ stays Python by convention, so these tests
-shell out to the Ruby CLI via subprocess and assert on its --emit output and
-the JSONL log entry shape.
+Plugin runtime is Ruby (lib/verify_compression.rb). The hook calls the
+library directly. lab/eval/bin/compress-verify is a contributor-only
+CLI wrapper used here for subprocess testing — lab/eval/ stays Python
+by convention.
 
 Uses unittest.TestCase to match the rest of lab/eval/tests/; CI runs
 `python3 -m unittest discover` via scripts/run-eval-tests.sh, so pytest-only
@@ -17,7 +17,7 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
-CLI = REPO / "plugins" / "ruby-grape-rails" / "bin" / "compress-verify"
+CLI = REPO / "lab" / "eval" / "bin" / "compress-verify"
 LIB = REPO / "plugins" / "ruby-grape-rails" / "lib"
 
 
@@ -103,7 +103,7 @@ class CompressDeprecationCollapseTests(unittest.TestCase):
 
 
 class JsonlLogSafetyTests(unittest.TestCase):
-    """`bin/compress-verify --log` must not follow symlinks or write to non-files."""
+    """`compress-verify --log` must not follow symlinks or write to non-files."""
 
     def test_log_refuses_symlink_target(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

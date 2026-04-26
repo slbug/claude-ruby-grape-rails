@@ -12,21 +12,20 @@ The plugin ships specialist agents, skills, hooks, and eval tooling:
   frontmatter. Specialist reviewers that analyze code without modifying it.
 - **Skills** (`plugins/ruby-grape-rails/skills/*/SKILL.md`): Command-driven or
   auto-loaded knowledge with references/ subdirectories.
-- **Hooks** (`plugins/ruby-grape-rails/hooks/hooks.json` + `scripts/*.sh`):
-  Shell scripts triggered by Claude Code events (PostToolUse, SessionStart, etc).
+- **Hooks** (`plugins/ruby-grape-rails/hooks/hooks.json` + `scripts/*`):
+  Shell scripts and Ruby scripts triggered by Claude Code events
+  (PostToolUse, PostToolUseFailure, SessionStart, etc).
 - **Executables** (`plugins/ruby-grape-rails/bin/*`): plugin CLIs added to
   the Bash tool PATH when the plugin is enabled. No file extension, chmod +x.
   Mixed languages (bash + Ruby). Currently shipped: `subagent-statusline`
   (bash, advisory statusline renderer), `detect-stack` (Ruby, `/rb:init`
   stack detection), `extract-permissions` (Ruby, transcript-based Bash
   permission recommender), `resolve-base-ref` (bash, eval-able BASE_REF
-  resolver for diff comparisons), `compress-verify` (Ruby, verify-output
-  compressor CLI), `match-trigger` (Ruby, verify-command trigger matcher),
-  `compression-stats` (Ruby, end-user reader for verify-output telemetry
-  with `--redact` mode that emits intermediate input for the
-  `/rb:compression-report` skill — NOT a final paste-anywhere
-  artifact; the skill drafts the markdown report users review and
-  share).
+  resolver for diff comparisons), `compression-stats` (Ruby, end-user
+  reader for verify-output telemetry with `--redact` mode that emits
+  intermediate input for the `/rb:compression-report` skill — NOT a
+  final paste-anywhere artifact; the skill drafts the markdown report
+  users review and share).
 - **Plugin-owned Ruby library** (`plugins/ruby-grape-rails/lib/*.rb`):
   end-user runtime modules required by `bin/` CLIs and hook scripts.
   Ruby ≥ 3.4. Stdlib only (no Bundler gems). PyYAML is contributor-only;

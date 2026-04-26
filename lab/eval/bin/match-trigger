@@ -1,12 +1,15 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Standalone CLI. Exit 0 = match, exit 1 = no match / excluded / error.
+# Contributor-test CLI. Wraps Triggers.matches? for Python subprocess
+# invocation from lab/eval/tests/test_triggers.py. Not shipped to
+# end-users — the runtime hook calls Triggers.matches? directly.
+# Exit 0 = match, exit 1 = no match / excluded / error.
 
 require 'optparse'
 
 begin
-  require_relative '../lib/triggers'
+  require_relative '../../../plugins/ruby-grape-rails/lib/triggers'
 rescue LoadError
   exit 1
 end

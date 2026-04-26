@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
-CLI = REPO / "plugins" / "ruby-grape-rails" / "bin" / "match-trigger"
+CLI = REPO / "lab" / "eval" / "bin" / "match-trigger"
 TRIGGERS = REPO / "plugins" / "ruby-grape-rails" / "references" / "compression" / "triggers.yml"
 
 

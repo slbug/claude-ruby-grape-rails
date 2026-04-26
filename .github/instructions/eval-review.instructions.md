@@ -99,7 +99,7 @@ Shared infrastructure to reuse (do not re-implement):
 - `lab/eval/fixtures/compression/` — `{rspec_long_failure,
   brakeman_noisy, migration_success}/{raw.txt,expected.txt}` consumed
   by `compression_eval.py` (the deterministic-path fixture eval that
-  shells to the Ruby `bin/compress-verify` CLI)
+  shells to `lab/eval/bin/compress-verify`)
 - `lab/eval/baselines/` — gitignored local snapshots; never commit
 - `lab/eval/tests/` — unittest-discoverable test modules; tests are
   required for any new module under `lab/eval/`

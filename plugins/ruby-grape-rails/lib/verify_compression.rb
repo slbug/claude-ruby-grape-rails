@@ -7,6 +7,8 @@
 # DEPRECATION WARNING blocks. Verifies preserve patterns survive compression.
 
 require 'yaml'
+require 'json'
+require 'fileutils'
 
 module VerifyCompression
   RULES_PATH = File.expand_path('../references/compression/rules.yml', __dir__)
@@ -218,6 +220,32 @@ module VerifyCompression
       end
     end
     violations
+  end
+
+  # Append a JSONL stats entry to log_path. Symlink-safe (lstat + NOFOLLOW)
+  # and concurrency-safe (LOCK_EX). Returns true on success, false on any
+  # bail condition (including disk-full / permission-denied / not-a-dir
+  # surfaced via SystemCallError or IOError). Never raises — the runtime
+  # hook calls this and depends on the fail-open contract.
+  def append_jsonl(log_path, entry)
+    FileUtils.mkdir_p(File.dirname(log_path))
+    begin
+      st = File.lstat(log_path)
+      return false if st.symlink? || !st.file?
+    rescue Errno::ENOENT
+      # path will be created below
+    rescue SystemCallError
+      return false
+    end
+
+    File.open(log_path, File::WRONLY | File::CREAT | File::APPEND | File::NOFOLLOW, 0o644) do |fh|
+      fh.flock(File::LOCK_EX)
+      fh.puts(JSON.generate(entry))
+      fh.flush
+    end
+    true
+  rescue SystemCallError, IOError
+    false
   end
 
   # Returns a Hash mapping the full-match string of each occurrence to
