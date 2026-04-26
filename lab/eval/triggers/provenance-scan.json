@@ -1,0 +1,51 @@
+{
+  "skill": "provenance-scan",
+  "should_trigger": [
+    {
+      "prompt": "Audit how clean my .claude/research artifacts are before I cite them in a plan"
+    },
+    {
+      "prompt": "Walk my plan namespaces and report which research sidecars carry weak or conflicted evidence"
+    },
+    {
+      "prompt": "Show the trust-state distribution across review sidecars in this project"
+    },
+    {
+      "prompt": "Tell me which research artifacts have missing or conflicting sources before I plan against them"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Re-author this research note to add a new claim and re-run the analysis"
+    },
+    {
+      "prompt": "Explain what the trust_state field means in the schema documentation"
+    },
+    {
+      "prompt": "Run my rspec suite and report the failures"
+    },
+    {
+      "prompt": "Strengthen the weak source on my-topic by finding a second independent reference"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "Before I write a plan citing this research bundle, tell me how trustworthy each evidence file is and where conflicts hide",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "Sweep every research and review artifact under .claude/, classify each by evidence strength, then write a dated report I can review",
+      "axis": "multi_step"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Add a new claim entry to topic.provenance.md and confirm the YAML still parses",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "Fix the conflicted source on topic, then re-run the research, then update the citing plan",
+      "axis": "multi_step"
+    }
+  ]
+}

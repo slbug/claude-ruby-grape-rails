@@ -4,7 +4,6 @@ description: "Use when sharing verify-output compression telemetry with the plug
 when_to_use: "Triggers: \"share my compression stats\", \"send compression report\", \"compression telemetry report\", \"file compression issue\", \"contribute compression data\". Does NOT handle: per-run compression diagnosis (use Bash tool against compression-stats directly), changing rules.yml (edit the file)."
 argument-hint: "[--log PATH]"
 effort: medium
-allowed-tools: Bash, Read
 user-invocable: true
 ---
 

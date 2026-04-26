@@ -67,6 +67,6 @@ If the detection check fails (no `mcp__*context7*__*` tools visible), use
 
 - `plugins/ruby-grape-rails/references/preferences.yml` — the advisory
   preference itself.
-- `plugins/ruby-grape-rails/hooks/scripts/inject-iron-laws.sh` — generated
-  subagent payload; includes a one-line Advisory Preference section with
-  Context7 guidance.
+- `plugins/ruby-grape-rails/hooks/scripts/inject-rules.sh` — generated
+  injector payload (wired to `SessionStart` + `SubagentStart`); includes
+  a one-line Advisory Preference section with Context7 guidance.

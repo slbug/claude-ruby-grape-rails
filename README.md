@@ -2,7 +2,7 @@
 
 **Claude Code is great. But it doesn't know that `default_scope` will bite you later, that `t.float` will corrupt your money fields, or that your Sidekiq job isn't idempotent.**
 
-This plugin does. It coordinates **23 specialist agents** and **52 skills** that plan, implement,
+This plugin does. It coordinates **23 specialist agents** and **53 skills** that plan, implement,
 review, and verify your Ruby/Rails/Grape code in parallel -- each with domain
 expertise, fresh context, and enforced [Iron Laws](#iron-laws-non-negotiable-rules)
 that catch the bugs your tests won't. It is now stack-aware enough to handle
@@ -48,7 +48,7 @@ checks.
 │  💎 Ruby/Rails/Grape Plugin for Claude Code                         │
 │                                                                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
-│  │    23    │    52    │   100+   │    12    │    22    │           │
+│  │    23    │    53    │   100+   │    14    │    22    │           │
 │  │  Agents  │  Skills  │   Refs   │  Events  │Iron Laws │           │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘           │
 │                                                                     │
@@ -171,6 +171,20 @@ rules for the tools they need.
 2. Run `/rb:permissions` to scan recent prompts and propose safer
    `settings.json` allowlists instead of growing them blindly
 3. Use `--plugin-dir` for local development while iterating on the plugin itself
+
+## Configuration
+
+Per-shell environment toggles (no `settings.json` edit required):
+
+| Env var | Default | Effect when set |
+|---------|---------|-----------------|
+| `RUBY_PLUGIN_DISABLE_RULES_INJECTION` | `0` (injection on) | `=1` skips Iron Laws + Advisory Preferences injection on `SessionStart` and `SubagentStart`. Use when the plugin is installed at user scope but the active project is not Ruby/Rails/Grape. |
+| `RUBY_PLUGIN_STRICT_PERMS` | `0` (soft deny) | `=1` makes `block-dangerous-ops.sh` `PermissionRequest` deny include `interrupt: true`, fully stopping Claude rather than just denying the single command. |
+| `RUBY_PLUGIN_HOOK_MODE` | `default` | `=strict` broadens `secret-scan.sh` to recent-change sweeps and fails closed when broader coverage cannot be trusted. |
+| `RUBY_PLUGIN_COMPRESSION_TELEMETRY` | `0` (off) | `=1` opts in to verify-output compression telemetry collection at `${CLAUDE_PLUGIN_DATA}/compression.jsonl`. |
+
+Set per-shell, per-command, or via [direnv](https://direnv.net/) `.envrc`
+for project-scoped values.
 
 ## Getting Started
 
@@ -607,6 +621,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | `/rb:examples`           | Practical examples and pattern walkthroughs                |
 | `/rb:constraint-debug`   | Debug ActiveRecord constraint violations                   |
 | `/rb:compression-report` | Anonymized verify-output compression telemetry report (opt-in via `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1`) |
+| `/rb:provenance-scan`    | Audit `.claude/` provenance sidecars; classifies each via the 4-state trust algorithm and writes a dated Markdown report |
 
 ### Analysis
 

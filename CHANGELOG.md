@@ -7,6 +7,96 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-04-26
+
+### Added
+
+- Trust-state consumption in workflow skills: `/rb:plan --existing`,
+  `/rb:triage`, `/rb:work`, and `/rb:review` now read the
+  `trust_state` of referenced research / review provenance sidecars
+  and adjust behavior — `clean` proceeds, `weak` warns, `missing`
+  warns or tags `[unverified]`, and `conflicted` halts the step.
+- New end-user `/rb:provenance-scan` skill plus
+  `bin/provenance-scan` Ruby CLI. Walks the project's
+  `.claude/{research,reviews,audit,plans/*/{research,reviews}}`
+  subtree, classifies each `*.provenance.md` sidecar via the 4-state
+  algorithm, and writes a dated Markdown report so the user can
+  audit research quality before a plan or review decision.
+- New `inject-rules.sh` hook delivers Iron Laws + Advisory Preferences
+  via `additionalContext` to both the main session (wired under
+  `SessionStart`) and to each subagent spawn (wired under
+  `SubagentStart`). One generated script handles both events: it reads
+  `hook_event_name` from the hook input and echoes the matching value
+  back in `hookSpecificOutput.hookEventName`, so the same body works
+  for both targets without duplicate scripts or de-dup guards.
+  End-user opt-out: set `RUBY_PLUGIN_DISABLE_RULES_INJECTION=1` (per
+  shell or via direnv) when the plugin is installed at user scope but
+  the active project is not Ruby/Rails/Grape. The script short-circuits
+  before reading stdin or sourcing helpers when this env is set.
+- `block-dangerous-ops.sh` now branches on `hook_event_name`:
+  `PermissionRequest` emits a structured deny via
+  `hookSpecificOutput.decision.behavior="deny"` with a `message`
+  (per CC schema) by default, and hard-blocks via exit 2 when
+  `RUBY_PLUGIN_STRICT_PERMS=1`; `PermissionDenied` appends an entry
+  (`{ts, cmd, pattern, classifier_reason}`) to
+  `${CLAUDE_PLUGIN_DATA}/denied-commands.jsonl` capturing both the
+  matched plugin-side danger pattern and CC's auto-mode classifier
+  explanation (silent when the data dir env is unset, matching
+  plugin hook convention).
+- `hooks.json` registrations for `PermissionRequest` and
+  `PermissionDenied`; `SessionStart` extended with `inject-rules.sh`;
+  `SubagentStart` repointed at `inject-rules.sh`.
+
+### Changed
+
+- Iron Laws + Advisory Preferences delivery moved from inline
+  `CLAUDE.md` blocks to runtime hook injection. The init injectable
+  template no longer ships `<!-- IRON_LAWS_START -->` /
+  `<!-- PREFERENCES_START -->` blocks. Existing installs from
+  earlier plugin versions can run `/rb:init --update` to replace the
+  managed block; the runtime hooks then take over.
+- The legacy `inject-iron-laws.sh` (SubagentStart-only) script is
+  retired in favor of `inject-rules.sh`, which serves both the main
+  session and subagents.
+- Iron-laws output generator (`scripts/generate-iron-law-content.rb`
+  and `scripts/generate-iron-law-outputs.sh`) now emits a single
+  unified `inject-rules.sh` instead of two split scripts. The
+  generator no longer takes an `event_kind` parameter; the `injector`
+  target produces one output that dispatches on the runtime
+  `hook_event_name`.
+- `compression-report` and `provenance-scan` skill frontmatter no
+  longer set `allowed-tools` (the field is permission UX, not a
+  restriction; Iron Laws are the actual behavioral boundary, and
+  the rest of the plugin's skills have always omitted it).
+- Several skill SKILL.md cross-references switched from legacy
+  `../../references/...` and `../<sibling-skill>/...` relative paths
+  to explicit `${CLAUDE_PLUGIN_ROOT}/...` form so resolution does
+  not depend on Claude's CWD.
+- New generic `collapse_repeated_blocks` compression rule (K=2..5)
+  collapses consecutive identical multi-line stanzas that
+  single-line collapsers miss (warn + caller frame pairs from
+  `Dry::Core::Deprecations.warn`, multi-line gem warnings, repeated
+  banners). New collapse template `repeated_blocks` exposed in
+  `rules.yml`. K=1 deliberately excluded to avoid over-collapsing
+  legitimate single-line repeats.
+- `file_colon_line` preserve regex tightened to reject the
+  `<path>:<line>:in '<method>'` warn-caller-frame suffix. Real
+  file:line refs (rspec failures, rubocop findings) still match;
+  caller frames consumed by repeated-block dedup no longer trigger
+  false preservation violations.
+
+### Removed
+
+- Generator dispatcher targets `injectable` and `preferences` plus
+  the `update_preferences_block` helper — both are obsolete now
+  that Iron Laws + Preferences are runtime-injected.
+- Inline `<!-- IRON_LAWS_START -->` / `<!-- PREFERENCES_START -->`
+  blocks no longer ship in the init injectable template. Existing
+  projects upgrading from a previous version should run
+  `/rb:init --update` to replace the managed block; the runtime
+  hooks (`SessionStart`, `SubagentStart`) take over delivery via
+  the shared `inject-rules.sh`.
+
 ## [1.15.2] - 2026-04-26
 
 ### Changed
@@ -2063,7 +2153,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.2...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.0...HEAD
+[1.16.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.2...v1.16.0
 [1.15.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.1...v1.15.2
 [1.15.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.0...v1.15.1
 [1.15.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.14.0...v1.15.0

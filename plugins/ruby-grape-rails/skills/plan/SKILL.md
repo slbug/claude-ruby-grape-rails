@@ -344,3 +344,16 @@ A good plan has:
 - [ ] Verification steps for each phase
 - [ ] Error recovery strategy
 - [ ] No hidden assumptions
+
+## Trust States
+
+When `--existing` references a research sidecar, read the sidecar's
+`trust_state` (see
+`${CLAUDE_PLUGIN_ROOT}/references/output-verification/trust-states.md`):
+
+- `conflicted`: halt; surface the `conflicts[]` list; ask the user to
+  resolve before planning proceeds.
+- `missing`: warn that provenance is missing; suggest `/rb:research`
+  to strengthen evidence before planning.
+- `weak`: warn that evidence is weak; suggest `/rb:research`.
+- `clean`: proceed silently.

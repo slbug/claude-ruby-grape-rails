@@ -2,7 +2,7 @@
 """Epistemic baseline presence gate.
 
 Used by ``scripts/generate-iron-law-outputs.sh`` before regenerating
-``inject-iron-laws.sh``. Blocks regeneration only when the active
+``inject-rules.sh``. Blocks regeneration only when the active
 provider's epistemic baseline is missing — without a baseline, any
 later ``make eval-epistemic`` run has no reference point to measure
 delta against.

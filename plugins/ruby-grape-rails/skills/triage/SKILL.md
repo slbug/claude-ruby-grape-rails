@@ -484,3 +484,17 @@ potential_root_cause: "Missing includes pattern across controllers"
 | `group by file` | Reorganize display by file |
 | `export` | Export triage to issue tracker |
 | `skip all` | Exclude all findings |
+
+## Trust States
+
+When triaging a review with a provenance sidecar, read the sidecar's
+`trust_state` (see
+`${CLAUDE_PLUGIN_ROOT}/references/output-verification/trust-states.md`):
+
+- `conflicted`: surface findings in a dedicated section labeled
+  "Conflicted evidence — resolve before triage".
+- `missing`: tag each finding `[unverified]`; treat as hint, not
+  decision.
+- `weak`: include findings but sort after `runtime-confirmed`
+  evidence.
+- `clean`: proceed with normal triage.

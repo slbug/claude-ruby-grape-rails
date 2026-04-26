@@ -17,8 +17,8 @@ BLOCK_DANGEROUS_OPS = (
 IRON_LAW_VERIFIER = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/iron-law-verifier.sh"
 )
-INJECT_IRON_LAWS = (
-    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/inject-iron-laws.sh"
+INJECT_RULES = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/inject-rules.sh"
 )
 SECURITY_REMINDER = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/security-reminder.sh"
@@ -1689,25 +1689,49 @@ class RuntimeScriptTests(unittest.TestCase):
             result.stderr,
         )
 
-    def test_inject_iron_laws_no_longer_requires_jq(self) -> None:
-        env = dict(os.environ)
-        env["PATH"] = "/usr/bin:/bin"
+    def test_inject_rules_silent_exits_when_jq_missing(self) -> None:
+        """`inject-rules.sh` builds its JSON output via jq so the body's
+        special characters (newlines, backticks, quotes) survive
+        encoding without manual escape work. When jq is not on PATH,
+        the script silent-exits per the script's fail-open policy:
+        receiver runs without injected context, but the hook does not
+        block the lifecycle event.
 
-        result = subprocess.run(
-            ["bash", str(INJECT_IRON_LAWS)],
-            capture_output=True,
-            text=True,
-            cwd=REPO_ROOT,
-            check=False,
-            env=env,
-        )
+        Test stages a private bin dir containing symlinks to the
+        utilities the script and its sourced workspace-root-lib need
+        (dirname, head, cd via bash builtin) but deliberately omits
+        jq, then runs the script with that PATH. Both the host's real
+        PATH and Homebrew installs are isolated so the assertion is
+        deterministic across CI runners and developer laptops."""
+        required_utils = ("dirname", "head")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            bin_dir = Path(tmpdir) / "bin"
+            bin_dir.mkdir()
+            for util in required_utils:
+                resolved = shutil.which(util)
+                if resolved is None:
+                    self.skipTest(f"host lacks required util `{util}` for this test")
+                (bin_dir / util).symlink_to(resolved)
+
+            env = dict(os.environ)
+            env["PATH"] = str(bin_dir)
+
+            result = subprocess.run(
+                ["/bin/bash", str(INJECT_RULES)],
+                input=json.dumps({"hook_event_name": "SubagentStart"}),
+                capture_output=True,
+                text=True,
+                cwd=REPO_ROOT,
+                check=False,
+                env=env,
+            )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        payload = json.loads(result.stdout)
-        self.assertEqual(
-            payload["hookSpecificOutput"]["hookEventName"], "SubagentStart"
-        )
-        self.assertIn("Iron Law 1", payload["hookSpecificOutput"]["additionalContext"])
+        self.assertEqual(result.stdout, "")
+        # stderr may carry "jq: command not found" on some shells when
+        # the jq pipe is invoked with errexit-disabled fallback. The
+        # contract is: no JSON emitted, no nonzero exit. Don't pin
+        # stderr emptiness — that's host-dependent.
 
     def test_secret_scan_treats_stdout_findings_as_secret_hits_even_on_nonzero_exit(
         self,
@@ -4460,7 +4484,7 @@ class RuntimeScriptTests(unittest.TestCase):
             env = dict(os.environ)
             env["RUBY_PLUGIN_PREFERENCES_YAML"] = str(prefs_path)
             result = subprocess.run(
-                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "preferences_injectable"],
+                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "validate"],
                 capture_output=True,
                 text=True,
                 cwd=REPO_ROOT,
@@ -4501,7 +4525,7 @@ class RuntimeScriptTests(unittest.TestCase):
             env = dict(os.environ)
             env["RUBY_PLUGIN_PREFERENCES_YAML"] = str(prefs_path)
             result = subprocess.run(
-                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "preferences_injectable"],
+                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "validate"],
                 capture_output=True,
                 text=True,
                 cwd=REPO_ROOT,
@@ -4542,7 +4566,7 @@ class RuntimeScriptTests(unittest.TestCase):
             env = dict(os.environ)
             env["RUBY_PLUGIN_PREFERENCES_YAML"] = str(prefs_path)
             result = subprocess.run(
-                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "preferences_injectable"],
+                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "validate"],
                 capture_output=True,
                 text=True,
                 cwd=REPO_ROOT,
@@ -4559,7 +4583,7 @@ class RuntimeScriptTests(unittest.TestCase):
             env = dict(os.environ)
             env["RUBY_PLUGIN_PREFERENCES_YAML"] = str(missing)
             result = subprocess.run(
-                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "preferences_injectable"],
+                ["ruby", str(GENERATE_IRON_LAW_CONTENT), "validate"],
                 capture_output=True,
                 text=True,
                 cwd=REPO_ROOT,
@@ -4570,20 +4594,6 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("preferences.yml source not found", result.stderr)
         self.assertIn("RUBY_PLUGIN_PREFERENCES_YAML", result.stderr)
-
-    def test_generate_iron_law_content_preferences_injectable_happy_path(self) -> None:
-        result = subprocess.run(
-            ["ruby", str(GENERATE_IRON_LAW_CONTENT), "preferences_injectable"],
-            capture_output=True,
-            text=True,
-            cwd=REPO_ROOT,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0)
-        self.assertIn("## Advisory Preferences", result.stdout)
-        self.assertIn("Apply when possible", result.stdout)
-        self.assertIn("Context7 MCP", result.stdout)
 
     def test_generate_iron_law_outputs_help_succeeds(self) -> None:
         result = subprocess.run(
@@ -4606,6 +4616,274 @@ class RuntimeScriptTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertNotIn('file: "CHANGELOG.md"', yaml_text)
+
+
+def _danger_payload(event: str, command: str) -> str:
+    return json.dumps(
+        {
+            "hook_event_name": event,
+            "tool_name": "Bash",
+            "tool_input": {"command": command},
+        }
+    )
+
+
+class BlockDangerousOpsPermissionRequestTests(unittest.TestCase):
+    """`block-dangerous-ops.sh` PermissionRequest path emits the structured
+    deny shape per CC schema (`hookSpecificOutput.decision.behavior=deny`
+    with a `message`), and falls back to exit 2 in strict mode so strict
+    environments do not depend on the model honoring the soft deny."""
+
+    def test_dangerous_command_emits_structured_deny_json(self) -> None:
+        payload = _danger_payload(
+            "PermissionRequest", "git push --force origin main"
+        )
+        result = run_block_hook("", payload_override=payload)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stderr, "")
+        body = json.loads(result.stdout)
+        decision = body["hookSpecificOutput"]["decision"]
+        self.assertEqual(
+            body["hookSpecificOutput"]["hookEventName"], "PermissionRequest"
+        )
+        self.assertEqual(decision["behavior"], "deny")
+        self.assertFalse(decision["interrupt"])
+        self.assertIn("force push detected", decision["message"])
+
+    def test_safe_command_exits_silently(self) -> None:
+        payload = _danger_payload("PermissionRequest", "ls")
+        result = run_block_hook("", payload_override=payload)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.stderr, "")
+
+    def test_strict_mode_emits_deny_with_interrupt(self) -> None:
+        """`RUBY_PLUGIN_STRICT_PERMS=1` keeps the structured JSON deny
+        envelope (so Claude still receives the deny `message` per CC
+        schema) but adds `decision.interrupt: true` to fully stop
+        Claude rather than just deny this single command."""
+        payload = _danger_payload(
+            "PermissionRequest", "git push --force origin main"
+        )
+        result = run_block_hook(
+            "",
+            payload_override=payload,
+            extra_env={"RUBY_PLUGIN_STRICT_PERMS": "1"},
+        )
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stderr, "")
+        body = json.loads(result.stdout)
+        decision = body["hookSpecificOutput"]["decision"]
+        self.assertEqual(
+            body["hookSpecificOutput"]["hookEventName"], "PermissionRequest"
+        )
+        self.assertEqual(decision["behavior"], "deny")
+        self.assertTrue(decision["interrupt"])
+        self.assertIn("force push detected", decision["message"])
+
+    def test_strict_mode_safe_command_exits_zero(self) -> None:
+        payload = _danger_payload("PermissionRequest", "ls")
+        result = run_block_hook(
+            "",
+            payload_override=payload,
+            extra_env={"RUBY_PLUGIN_STRICT_PERMS": "1"},
+        )
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.stderr, "")
+
+
+class BlockDangerousOpsPermissionDeniedTests(unittest.TestCase):
+    """`block-dangerous-ops.sh` PermissionDenied path appends an audit
+    entry to `${CLAUDE_PLUGIN_DATA}/denied-commands.jsonl` capturing both
+    the matched plugin-side danger pattern and CC's auto-mode classifier
+    explanation. Stdout stays empty (CC ignores exit code/stderr on this
+    event); the jsonl side effect is the contract."""
+
+    def test_dangerous_command_appends_jsonl_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload = json.dumps(
+                {
+                    "hook_event_name": "PermissionDenied",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "git push --force origin main"},
+                    "reason": "Auto mode denied: force push targets remote main",
+                }
+            )
+            result = run_block_hook(
+                "",
+                payload_override=payload,
+                extra_env={"CLAUDE_PLUGIN_DATA": tmpdir},
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            log_path = Path(tmpdir) / "denied-commands.jsonl"
+            self.assertTrue(log_path.is_file())
+            entries = [
+                json.loads(line)
+                for line in log_path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+            self.assertEqual(len(entries), 1)
+            entry = entries[0]
+            self.assertEqual(entry["cmd"], "git push --force origin main")
+            self.assertEqual(entry["pattern"], "force_push_command")
+            self.assertEqual(
+                entry["classifier_reason"],
+                "Auto mode denied: force push targets remote main",
+            )
+            self.assertIsInstance(entry["ts"], (int, float))
+
+    def test_safe_command_does_not_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            payload = json.dumps(
+                {
+                    "hook_event_name": "PermissionDenied",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "ls"},
+                    "reason": "Auto mode denied: opaque command shape",
+                }
+            )
+            result = run_block_hook(
+                "",
+                payload_override=payload,
+                extra_env={"CLAUDE_PLUGIN_DATA": tmpdir},
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            self.assertFalse((Path(tmpdir) / "denied-commands.jsonl").exists())
+
+    def test_unset_data_dir_skips_log_silently(self) -> None:
+        # Hooks bail-on-unset for CLAUDE_PLUGIN_DATA per plugin convention.
+        # The hook still exits 0 — denial stands; only the log side effect
+        # is suppressed when the data dir is unset.
+        payload = json.dumps(
+            {
+                "hook_event_name": "PermissionDenied",
+                "tool_name": "Bash",
+                "tool_input": {"command": "git push --force origin main"},
+            }
+        )
+        env = dict(os.environ)
+        env.pop("CLAUDE_PLUGIN_DATA", None)
+        result = subprocess.run(
+            ["bash", str(BLOCK_DANGEROUS_OPS)],
+            input=payload,
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+            env=env,
+        )
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+
+
+class InjectRulesTests(unittest.TestCase):
+    """`inject-rules.sh` is wired in `hooks.json` under both `SessionStart`
+    (main session) and `SubagentStart` (per-subagent). Reads
+    `hook_event_name` from input and echoes it back in
+    `hookSpecificOutput.hookEventName`, so one body works for both events
+    without duplicate scripts or de-dup guards."""
+
+    def _run(self, payload: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["bash", str(INJECT_RULES)],
+            input=payload,
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+            env=dict(os.environ),
+        )
+
+    def _assert_payload(self, stdout: str, expected_event: str) -> None:
+        body = json.loads(stdout)
+        spec = body["hookSpecificOutput"]
+        self.assertEqual(spec["hookEventName"], expected_event)
+        ctx = spec["additionalContext"]
+        self.assertIn("Iron Laws (NON-NEGOTIABLE)", ctx)
+        self.assertIn("Iron Law 1:", ctx)
+        self.assertIn("Iron Law 22:", ctx)
+        self.assertIn("Advisory Preferences", ctx)
+
+    def test_subagent_start_event_emits_matching_payload(self) -> None:
+        result = self._run(
+            json.dumps(
+                {
+                    "hook_event_name": "SubagentStart",
+                    "agent_type": "ruby-reviewer",
+                }
+            )
+        )
+        self.assertEqual(result.returncode, 0)
+        self._assert_payload(result.stdout, "SubagentStart")
+
+    def test_session_start_event_emits_matching_payload(self) -> None:
+        result = self._run(
+            json.dumps({"hook_event_name": "SessionStart", "source": "startup"})
+        )
+        self.assertEqual(result.returncode, 0)
+        self._assert_payload(result.stdout, "SessionStart")
+
+    def test_subagent_and_main_payloads_share_identical_context(self) -> None:
+        sub = self._run(json.dumps({"hook_event_name": "SubagentStart"}))
+        main = self._run(json.dumps({"hook_event_name": "SessionStart"}))
+        self.assertEqual(sub.returncode, 0)
+        self.assertEqual(main.returncode, 0)
+        sub_ctx = json.loads(sub.stdout)["hookSpecificOutput"]["additionalContext"]
+        main_ctx = json.loads(main.stdout)["hookSpecificOutput"]["additionalContext"]
+        self.assertEqual(sub_ctx, main_ctx)
+
+    def test_missing_event_name_silent_exits(self) -> None:
+        result = self._run(json.dumps({}))
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(result.stderr, "")
+
+    def test_invalid_json_silent_exits(self) -> None:
+        # Fail-open per script policy: malformed input drops the payload
+        # without surfacing an error. Receiver runs without injected
+        # context but the hook does not block the lifecycle event.
+        result = self._run("{not-json")
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+
+    def test_hooks_json_wires_both_session_and_subagent_starts(self) -> None:
+        hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]
+        for event in ("SessionStart", "SubagentStart"):
+            commands = [
+                hook.get("command", "")
+                for group in hooks.get(event, [])
+                for hook in group.get("hooks", [])
+            ]
+            self.assertTrue(
+                any(cmd.endswith("/inject-rules.sh") for cmd in commands),
+                f"{event} is not wired to inject-rules.sh",
+            )
+
+    def test_disable_env_opt_out_silences_injection(self) -> None:
+        """End-user opt-out: `RUBY_PLUGIN_DISABLE_RULES_INJECTION=1`
+        short-circuits before workspace-root-lib is sourced or stdin
+        is read, so the hook produces no output regardless of payload.
+        Useful when the plugin is installed at user scope but the
+        active project is not Ruby/Rails/Grape."""
+        env = dict(os.environ)
+        env["RUBY_PLUGIN_DISABLE_RULES_INJECTION"] = "1"
+        for event in ("SubagentStart", "SessionStart"):
+            with self.subTest(event=event):
+                result = subprocess.run(
+                    ["bash", str(INJECT_RULES)],
+                    input=json.dumps({"hook_event_name": event}),
+                    capture_output=True,
+                    text=True,
+                    cwd=REPO_ROOT,
+                    check=False,
+                    env=env,
+                )
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, "")
+                self.assertEqual(result.stderr, "")
 
 
 if __name__ == "__main__":

@@ -115,6 +115,46 @@ class CompressBracketWarningCollapseTests(unittest.TestCase):
         self.assertEqual(text.count(b), 1)
         self.assertNotIn("repeated", text)
 
+
+class CompressRepeatedBlockCollapseTests(unittest.TestCase):
+    def test_compress_collapses_2_line_warn_caller_stanzas(self) -> None:
+        # dry-core emission shape: warning line + caller frame line.
+        # Four consecutive identical 2-line stanzas → first 2 lines +
+        # `[+3× repeated 2-line block]`.
+        warn = "[dry-types] [] is mutable. Be careful: ... discard this warning."
+        caller = "/repo/config/bundler.rb:6:in '<top (required)>'"
+        raw = "\n".join([warn, caller] * 4) + "\n"
+        text = _emit(raw)
+        self.assertIn("[+3× repeated 2-line block]", text)
+        self.assertEqual(text.count(warn), 1)
+        self.assertEqual(text.count(caller), 1)
+
+    def test_compress_collapses_3_line_block(self) -> None:
+        # Three-line block repeated 3× → first 3 lines + `[+2× repeated 3-line block]`.
+        block = ["[bundler] X", "  detail", "  hint"]
+        raw = "\n".join(block * 3) + "\n"
+        text = _emit(raw)
+        self.assertIn("[+2× repeated 3-line block]", text)
+
+    def test_compress_does_not_collapse_single_line_repeats(self) -> None:
+        # K=1 not part of generic block dedup (over-collapse risk).
+        # Identical singletons that aren't deprecation/bracket-warning
+        # shapes survive untouched.
+        line = "Loaded fixture data"
+        raw = "\n".join([line, line, line]) + "\n"
+        text = _emit(raw)
+        self.assertNotIn("repeated", text)
+        self.assertEqual(text.count(line), 3)
+
+    def test_compress_does_not_collapse_distinct_blocks(self) -> None:
+        block_a = ["[a] msg-a", "/path/a.rb:1:in 'x'"]
+        block_b = ["[b] msg-b", "/path/b.rb:2:in 'y'"]
+        raw = "\n".join(block_a + block_b + block_a) + "\n"
+        text = _emit(raw)
+        self.assertNotIn("repeated", text)
+        self.assertEqual(text.count("msg-a"), 2)
+        self.assertEqual(text.count("msg-b"), 1)
+
     def test_compress_records_no_violation_when_sqlstate_kept(self) -> None:
         raw = "PG::UniqueViolation: ERROR: duplicate key"
         text = _emit(raw)
@@ -196,21 +236,38 @@ class JsonlLogSafetyTests(unittest.TestCase):
 
 
 class PreserveCheckTests(unittest.TestCase):
-    def test_preserve_check_flags_dropped_duplicates(self) -> None:
-        # The preserve contract says EACH occurrence of a match survives.
-        # If the compressor drops 4 of 5 identical migration-name lines but
-        # keeps 1, `compressed.include?(match)` would (wrongly) pass. The
-        # multiplicity-aware check must surface the lost duplicates as a
-        # preservation violation. The compressor itself never drops
-        # migration_names, so this is a baseline correctness test:
-        # 5 raw -> 5 compressed -> zero violations.
-        name = "20260423120000_add_email_index.rb"
-        raw = "\n".join([f"== {name}: migrating ====" for _ in range(5)]) + "\n"
+    def test_preserve_check_passes_when_each_occurrence_survives(self) -> None:
+        # Real-world migration output emits each migration name once
+        # (3 distinct migrations here). All occurrences survive
+        # compression unchanged → zero preservation violations.
+        names = [
+            "20260423120000_add_email_index.rb",
+            "20260423130000_add_audit_log.rb",
+            "20260423140000_drop_legacy_field.rb",
+        ]
+        raw = "\n".join([f"== {n}: migrating ====" for n in names]) + "\n"
         with tempfile.TemporaryDirectory() as tmp:
             log = _log(raw, Path(tmp) / "compression.jsonl")
             self.assertEqual(log["violations"], [], log["violations"])
         text = _emit(raw)
-        self.assertEqual(text.count(name), 5)
+        for n in names:
+            self.assertEqual(text.count(n), 1)
+
+    def test_preserve_check_flags_dropped_duplicates(self) -> None:
+        # The multiplicity-aware preserve check must surface a
+        # violation when a preserve-matching line is dropped from
+        # compressed output. Generic K-line block dedup (K=2..5)
+        # collapses 4 identical migration-name lines into the first
+        # 2 + a `[+1× repeated 2-line block]` summary. Raw has 4
+        # migration_name matches; compressed has 2 → violation.
+        name = "20260423120000_add_email_index.rb"
+        raw = "\n".join([f"== {name}: migrating ====" for _ in range(4)]) + "\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            log = _log(raw, Path(tmp) / "compression.jsonl")
+            self.assertEqual(len(log["violations"]), 1)
+            v = log["violations"][0]
+            self.assertIn("migration_names", v)
+            self.assertIn("preserved 2/4", v)
 
     def test_preserve_check_handles_non_hash_preserve(self) -> None:
         # If `preserve:` in rules.yml is a scalar / list / anything that is

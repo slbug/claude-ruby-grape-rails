@@ -9,7 +9,12 @@ excludeAgent: "coding-agent"
 
 - Agents use YAML frontmatter. Common: name, description, model,
   disallowedTools, omitClaudeMd, skills, memory. Also valid per CC docs:
-  tools, effort, maxTurns, background, isolation, color, initialPrompt
+  tools, effort, maxTurns, background, isolation. The general subagent
+  reference (<https://docs.claude.com/en/docs/claude-code/sub-agents>)
+  also lists `color` and `initialPrompt`, but the plugin-supported set
+  documented at <https://docs.claude.com/en/docs/claude-code/plugins-reference>
+  does NOT include them — CC silently drops these on plugin-shipped
+  agents. Do NOT add them to plugin agents under `plugins/**/agents/`
 - Prefer denylist-only (`disallowedTools:`) over allowlist (`tools:`).
   A missing `tools:` field is intentional — agents inherit all tools minus
   those in disallowedTools
@@ -26,17 +31,20 @@ excludeAgent: "coding-agent"
   plugin agents
 - Model tiers: opus for primary orchestrators, sonnet for most specialists,
   haiku for mechanical tasks. `opusplan` is a session-level `/model` alias
-  only (sub-agents.md:237 does NOT list it as a valid subagent `model`
-  value) — do NOT flag its absence from agent frontmatter as a gap
+  only (the subagent frontmatter table at
+  <https://docs.claude.com/en/docs/claude-code/sub-agents> does NOT list
+  it as a valid subagent `model` value) — do NOT flag its absence from
+  agent frontmatter as a gap
 - Descriptions must be <= 250 characters
 
 ## Skill Conventions (plugins/**/skills/*/SKILL.md)
 
 - Skills use YAML frontmatter. Required: name, description. Common:
-  argument-hint (command skills), effort, user-invocable,
-  disable-model-invocation, paths (framework-specific skills),
-  when_to_use (trigger phrases and negative routing). Also valid per CC
-  docs: allowed-tools, model, context, agent, hooks, shell
+  argument-hint (command skills), arguments (positional `$name`
+  substitution, space-separated string or YAML list), effort,
+  user-invocable, disable-model-invocation, paths (framework-specific
+  skills), when_to_use (trigger phrases and negative routing). Also
+  valid per CC docs: allowed-tools, model, context, agent, hooks, shell
 - No `triggers:` field — skills docs do not support it
 - No executable bash blocks (``` bash) — use inline prose instructions
   instead ("Run `bundle exec rspec`")
@@ -97,6 +105,13 @@ excludeAgent: "coding-agent"
   paste-anywhere artifact (the skill's drafted markdown is what the
   user reviews + shares). Stdlib only — no `lib/` dependency,
   contributor or otherwise
+- `provenance-scan` (Ruby) — end-user provenance-sidecar auditor.
+  Walks `.claude/{research,reviews,audit,plans/*/{research,reviews}}`,
+  classifies each `*.provenance.md` via the 4-state algorithm
+  (`clean` / `weak` / `conflicted` / `missing`), and writes a dated
+  Markdown report under `.claude/provenance-scan/`. Stdlib only;
+  pure deterministic — no LLM, no network. Surfaced via
+  `/rb:provenance-scan` user-invocable skill
 
 When adding a binary, also add it to this "Currently shipped
 binaries" section above, ensure `chmod +x` is committed, and (if it
@@ -119,10 +134,11 @@ the calling CLI / hook.
   flock'd). Used by the PostToolUse / PostToolUseFailure compression
   hook (`hooks/scripts/compress-verify-output.rb`) and the
   contributor CLI (`lab/eval/bin/compress-verify`)
-- `triggers.rb` — YAML trigger matcher for verification commands.
-  Loads `references/compression/triggers.yml`. Handles `rake_excluded`
-  precedence over `rake_verify_only`. Used by the same compression
-  hook and `lab/eval/bin/match-trigger`
+- `triggers.rb` — path-agnostic YAML trigger matcher for verification
+  commands. Exposes `matches?(triggers_path, command)` taking the YAML
+  path as a parameter; callers (`hooks/scripts/compress-verify-output.rb`,
+  `lab/eval/bin/match-trigger`) pass `references/compression/triggers.yml`.
+  Handles `rake_excluded` precedence over `rake_verify_only`
 
 Notes:
 
@@ -139,13 +155,16 @@ Notes:
 Top-level YAML registries:
 
 - `iron-laws.yml` — non-negotiable STOP-if-violated rules; generated
-  into README, canonical registry, init template, tutorial, injector
-  script, and iron-law-judge agent via
-  `scripts/generate-iron-law-outputs.sh`
+  into README, canonical registry, intro tutorial, injector script
+  (`inject-rules.sh`), and iron-law-judge agent via
+  `scripts/generate-iron-law-outputs.sh`. Iron Laws are NOT injected
+  into the init template — runtime hook delivery via `SessionStart` +
+  `SubagentStart` covers both audiences.
 - `preferences.yml` — advisory soft-preference rules (parallel registry,
   same schema minus `detector_id`, severity capped at `medium`/`low`);
-  generated into the init template `PREFERENCES_START/END` block and
-  appended to the subagent injector payload as "Advisory Preferences"
+  appended to the shared injector payload as "Advisory Preferences",
+  delivered via the same `inject-rules.sh` hook to both main session
+  and subagents.
 
 Subdirectories (treat as data, not skills):
 

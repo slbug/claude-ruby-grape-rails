@@ -102,6 +102,17 @@ Managed block markers:
 <!-- RUBY-GRAPE-RAILS-PLUGIN:END -->
 ```
 
+### Iron Laws + Preferences delivery
+
+Iron Laws and Advisory Preferences are delivered at runtime by the
+plugin's `inject-rules.sh` hook, wired in `hooks.json` under both
+`SessionStart` (main-session delivery) and `SubagentStart` (per-subagent
+delivery). They are not written into `CLAUDE.md`. Running
+`/rb:init --update` on a project that has the legacy inline blocks
+(from earlier plugin versions) replaces the whole managed block with
+the current template, removing the `<!-- IRON_LAWS_START -->` /
+`<!-- PREFERENCES_START -->` blocks automatically.
+
 ## What Gets Installed
 
 - workflow routing for `/rb:plan`, `/rb:work`, `/rb:review`, `/rb:verify`, `/rb:permissions`

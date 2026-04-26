@@ -50,10 +50,14 @@ Recognised classes:
 - **Security-sensitive** — fail closed in strict/high-confidence
   cases (e.g. `secret-scan.sh`, `block-dangerous-ops.sh`,
   `iron-law-verifier.sh`).
-- **Generated injector** — `inject-iron-laws.sh` is rebuilt from
+- **Generated injector** — `inject-rules.sh` is rebuilt from
   `references/iron-laws.yml` + `preferences.yml` by
-  `scripts/generate-iron-law-outputs.sh`. Do NOT hand-edit. Header
-  carries `Source versions: iron-laws=<v> preferences=<v>` — verify the
+  `scripts/generate-iron-law-outputs.sh`. Do NOT hand-edit. The script
+  is wired in `hooks.json` under both `SessionStart` (main session)
+  and `SubagentStart` (per-subagent) and reads `hook_event_name`
+  from the input to echo the matching value back in
+  `hookSpecificOutput.hookEventName`. Header carries
+  `Source versions: iron-laws=<v> preferences=<v>` — verify the
   header matches the source YAML versions in any PR that edits the YAML.
 - **Active-plan / scratchpad guard** — `active-plan-marker.sh` uses
   `set -e` for strict marker semantics; `active-plan-lib.sh` is the
@@ -80,13 +84,29 @@ Hook scripts wrap slow sub-commands with `timeout` and env var overrides:
 - `RUBY_PLUGIN_BETTERLEAKS_TIMEOUT` (default 60s) — secret-scan.sh
 - `RUBY_PLUGIN_DETECT_STACK_TIMEOUT` (default 15s) — detect-runtime.sh
 
-## Opt-in Telemetry Env Vars
+## Opt-out / Opt-in Env Vars
 
-Some hooks collect telemetry only when an opt-in env var is set. These
-are NOT timeouts; they gate whether the hook does anything at all.
-Default is **off** — the hook exits 0 immediately when the env var is
-unset, leaving the user's data dir untouched.
+Some hooks honor an env var to gate behavior end-users want to control
+without editing `settings.json`. Two shapes:
 
+- **Opt-out** (`*_DISABLE_*`): hook does work by default; env=1 short-
+  circuits to silent exit.
+- **Opt-in** (`*_TELEMETRY=1`, `*_STRICT_*=1`): hook is dormant by
+  default; env=1 turns on broader behavior.
+
+Both forms must short-circuit BEFORE side effects, so toggling has
+zero residue on the user's data dir, transcript, or context.
+
+- `RUBY_PLUGIN_DISABLE_RULES_INJECTION=1` — `inject-rules.sh`. Skips
+  Iron Laws + Advisory Preferences injection on `SessionStart` and
+  `SubagentStart`. Useful when the plugin is installed at user scope
+  but the active project is not Ruby/Rails/Grape. Short-circuits at
+  the top of the script before reading stdin or sourcing
+  `workspace-root-lib.sh`.
+- `RUBY_PLUGIN_STRICT_PERMS=1` — `block-dangerous-ops.sh`. Adds
+  `decision.interrupt: true` to the structured `PermissionRequest`
+  deny, stopping Claude rather than just denying the single command.
+  Pre-existing exit-2 hard-block on `PreToolUse` unchanged.
 - `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1` — `compress-verify-output.rb`.
   When unset (default), the verify-output compression collector is a
   no-op. When set, the hook appends to
@@ -124,7 +144,7 @@ Scripts resolve `timeout` → `gtimeout` → no-timeout fallback via
 - Any new/renamed `*.sh` under `hooks/scripts/` → check
   `hooks/hooks.json` references and any other script that sources it
   via `source "${BASH_SOURCE[0]%/*}/<lib>.sh"`
-- Edit to `inject-iron-laws.sh` directly → reject; it is generated.
+- Edit to `inject-rules.sh` directly → reject; it is generated.
   Source change must go through `references/iron-laws.yml` /
   `preferences.yml` + `scripts/generate-iron-law-outputs.sh`
 - New `RUBY_PLUGIN_*_TIMEOUT` env var → also document it in
@@ -145,6 +165,7 @@ Scripts resolve `timeout` → `gtimeout` → no-timeout fallback via
 - `TIMEOUT_CMD` resolution pattern (timeout → gtimeout → empty fallback)
 - `RUBY_PLUGIN_*` env var defaults via `${VAR:-default}` syntax
 - `*-lib.sh` files without their own `set -o nounset` / `set -o pipefail`
-- `inject-iron-laws.sh` containing a single HEREDOC with no `set` flags
+- `inject-rules.sh` reading `hook_event_name` and echoing it back in
+  `hookSpecificOutput.hookEventName`. Same body, two registrations
   (advisory injection, fail-open by design — see header comment)
 - `active-plan-marker.sh` using `set -e` (strict marker semantics)

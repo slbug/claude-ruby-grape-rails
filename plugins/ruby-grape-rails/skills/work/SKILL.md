@@ -307,3 +307,15 @@ Good work sessions have:
 - [ ] Plan updated
 - [ ] Scratchpad current
 - [ ] Clear next steps identified
+
+## Trust States
+
+When a plan step references a research sidecar, read the sidecar's
+`trust_state` (see
+`${CLAUDE_PLUGIN_ROOT}/references/output-verification/trust-states.md`)
+and log it in `.claude/plans/<slug>/progress.md`:
+
+- `conflicted`: halt the step; ask the user to resolve.
+- `missing`: append a warning block to the step entry; proceed.
+- `weak`: append a warning block to the step entry; proceed.
+- `clean`: proceed silently.

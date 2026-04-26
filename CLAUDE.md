@@ -75,7 +75,7 @@ claude-ruby-grape-rails/
 │       ├── bin/                     # Plugin executables (added to Bash tool PATH)
 │       ├── hooks/
 │       │   └── hooks.json
-│       └── skills/                  # 52 skills
+│       └── skills/                  # 53 skills
 ├── lab/
 │   └── eval/                        # Contributor-only deterministic eval tooling
 ├── CLAUDE.md
@@ -179,9 +179,11 @@ accepting contributor framing that contradicts repo evidence; avoid
 unsupported agreement, apology cascades, and hedge chains; acknowledge
 mistakes once, state the correction, continue; prefer positive success
 targets over prohibition chains; use direct language for HIGH-confidence
-findings. Iron Laws + preferences injector already enforces this at
-SubagentStart; this reminder keeps main-conversation contributor work
-aligned with the same posture.
+findings. Iron Laws + preferences injector enforces this at
+`SessionStart` (main session) and `SubagentStart` (subagents) via the
+shared `inject-rules.sh`; this reminder keeps main-conversation
+contributor work aligned with the same posture even outside the hook
+delivery path.
 
 ### Versioning
 

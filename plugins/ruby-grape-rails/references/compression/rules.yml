@@ -21,12 +21,12 @@ preserve:
   rspec_failure_ids: "rspec \\./spec/[^ ]+ # .+"
   minitest_failures: "^(FAIL|ERROR) (test_|\\w+#test_)"
   exit_codes: "(Exit (code )?[0-9]+|RuntimeError|StandardError)"
-  # file:line refs OUTSIDE stack frames. Stack frames (`  from /path:N:in '...'`,
-  # `  at /path:N:in '...'`, and RSpec's `# /path:N:in '...'` "outside of
-  # examples" formatter) are intentionally elided beyond top-5 by the
-  # collapse rules; this regex rejects those prefixes via negative
-  # lookahead.
-  file_colon_line: "^(?!\\s*((from|at)\\b|# ))[ \\t]*([a-zA-Z0-9_/.-]+):(\\d+)(:in .+)?"
+  # file:line refs OUTSIDE stack frames and warn-style caller frames.
+  # Excluded prefixes (handled by collapse_stack): `from `, `at `, `# `.
+  # Excluded suffix (warn caller frames consumed by repeated-block dedup):
+  # `:in '<method>'`. Real file:line refs (rspec failure paths, rubocop
+  # findings) lack the `:in ` suffix and still match.
+  file_colon_line: "^(?!\\s*((from|at)\\b|# ))[ \\t]*([a-zA-Z0-9_/.-]+):(\\d+)(?!:in )"
 
 # Templates for the collapse-summary lines the compressor writes when
 # eliding repeated content. `{count}` is substituted with the elided
@@ -37,6 +37,9 @@ collapse:
   deprecation_warnings: "  [+{count} similar deprecations]"
   gem_loading: "Loaded {count} gems"
   repeated_warnings: "  [+{count} repeated]"
+  # Generic K-line block dedup (K=2..5). `{size}` is the block
+  # length; `{count}` is the number of dropped repetitions.
+  repeated_blocks: "  [+{count}× repeated {size}-line block]"
 
 # Captured Bash output (stdout + stderr from PostToolUse, or the
 # top-level `error` blob from PostToolUseFailure) is preserved next
