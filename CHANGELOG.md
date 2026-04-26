@@ -7,6 +7,50 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.15.2] - 2026-04-26
+
+### Changed
+
+- Compression rule extension: `STACK_FRAME_RE` now matches the RSpec
+  "outside of examples" formatter prefix (`# /path:line:in '...'`)
+  in addition to the bare `from`/`at` Ruby backtrace prefixes.
+  Boot-failure stacks (Sequel/PG connection errors, autoload
+  crashes) now collapse beyond top-5 frames as intended.
+- `file_colon_line` preserve regex updated to also reject hash-prefixed
+  (`# /path:line`) file:line refs from being preserved when they belong
+  to collapsed stack frames.
+- New `collapse_bracket_warnings` rule collapses runs of consecutive
+  identical gem-prefixed warning lines (e.g. `[dry-types] ...`,
+  `[bundler] ...`) the same way `DEPRECATION WARNING` blocks are
+  collapsed. New collapse template `repeated_warnings: "  [+{count}
+  repeated]"` exposed in `rules.yml`.
+- Trigger exclusion list extended to cover both `rake` and `rails`
+  uniformly. `rails routes`, `rails db:drop`, `rails db:create`,
+  `rails assets:`, `rails stats`, `rails notes` are now excluded
+  alongside the equivalent `rake` subcommands.
+- Trigger exclusion list now drops `--version` invocations across
+  the whole verify-tool family (`rake`, `rails`, `rspec`, `rubocop`,
+  `standardrb`, `brakeman`, `reek`). Static banners do not compress
+  and skewed the underpowered-class denominator.
+- `verify_commands.rake_verify_only` extended to accept `rails`
+  alongside `rake` for the `(ci|test|spec|verify|lint|brakeman|...)`
+  subcommands. Captures the Rails 5+ canonical form (`rails test`,
+  `rails test:system`, `bin/rails test`).
+
+### Removed
+
+- Legacy `SubagentStop` hook + `.agent_metrics.jsonl` writer
+  (`hooks/scripts/log-subagent-metrics.sh`). The writer had no
+  consumer in the plugin or contributor tooling and the official
+  `SubagentStopHookInput` payload does not expose the `duration_ms` /
+  `tokenCount` fields the original design relied on. Superseded by
+  the ccrider-driven session-scan + skill-monitor pipeline under
+  `.claude/skills/session-scan/` and `.claude/skills/skill-monitor/`,
+  which derives richer per-skill effectiveness data from session
+  transcripts. Existing `${CLAUDE_PLUGIN_DATA}/.agent_metrics.jsonl`
+  files left on disk by previous releases are inert; remove with
+  plain `rm` when convenient.
+
 ## [1.15.1] - 2026-04-26
 
 ### Fixed
@@ -2019,7 +2063,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.1...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.2...HEAD
+[1.15.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.1...v1.15.2
 [1.15.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.0...v1.15.1
 [1.15.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.4...v1.14.0

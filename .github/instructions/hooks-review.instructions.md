@@ -34,7 +34,6 @@ excludeAgent: "coding-agent"
   messages to Claude
 - SessionStart stdout IS added to Claude's context
 - SubagentStart uses `hookSpecificOutput.additionalContext`
-- SubagentStop logs metrics asynchronously — always exits 0
 - PostToolUseFailure uses `hookSpecificOutput.additionalContext`
 - PreCompact uses stderr for context reminders; exit 2 blocks compaction
   during active work/full phases

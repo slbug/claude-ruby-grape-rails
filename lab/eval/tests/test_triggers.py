@@ -84,6 +84,53 @@ class TriggerMatcherTests(unittest.TestCase):
         # A literal `.bin/` directory (typo of `./bin/`) must not match.
         self.assertFalse(_matches(".bin/rspec spec/foo"))
 
+    def test_matches_rails_test(self) -> None:
+        # Rails 5+ canonical: `rails test` replaces `rake test`.
+        self.assertTrue(_matches("rails test"))
+
+    def test_matches_rails_test_with_path(self) -> None:
+        self.assertTrue(_matches("rails test test/models/user_test.rb"))
+
+    def test_matches_rails_test_system(self) -> None:
+        self.assertTrue(_matches("rails test:system"))
+
+    def test_matches_binstub_rails_test(self) -> None:
+        self.assertTrue(_matches("bin/rails test"))
+
+    def test_matches_bundle_exec_rails_test(self) -> None:
+        self.assertTrue(_matches("bundle exec rails test"))
+
+    def test_does_not_match_rails_routes(self) -> None:
+        # `rails routes` mirrors `rake routes` — uncompressable table output,
+        # excluded by rake_excluded.
+        self.assertFalse(_matches("rails routes"))
+
+    def test_does_not_match_rails_db_drop(self) -> None:
+        self.assertFalse(_matches("rails db:drop"))
+
+    def test_does_not_match_rails_db_create(self) -> None:
+        self.assertFalse(_matches("rails db:create"))
+
+    def test_does_not_match_rails_version(self) -> None:
+        # `--version` is a static banner — exclusion applies across the whole
+        # verify-tool family.
+        self.assertFalse(_matches("rails --version"))
+
+    def test_does_not_match_rspec_version(self) -> None:
+        self.assertFalse(_matches("rspec --version"))
+
+    def test_does_not_match_bundle_exec_rspec_version(self) -> None:
+        self.assertFalse(_matches("bundle exec rspec --version"))
+
+    def test_does_not_match_rubocop_version(self) -> None:
+        self.assertFalse(_matches("rubocop --version"))
+
+    def test_does_not_match_rake_version(self) -> None:
+        self.assertFalse(_matches("rake --version"))
+
+    def test_binstub_rails_routes_still_excluded(self) -> None:
+        self.assertFalse(_matches("bin/rails routes"))
+
 
 class TriggerMatcherFailOpenTests(unittest.TestCase):
     """Malformed triggers.yml must not crash the matcher (fail-open contract)."""

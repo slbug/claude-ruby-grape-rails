@@ -15,10 +15,13 @@ only one who should choose whether to record it.
 
 - `PostToolUse` and `PostToolUseFailure` hooks on `Bash` that, **when
   `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1`**, run after a triggered
-  verify command (rspec, rubocop, standardrb, brakeman, reek,
-  `rails db:*`, whitelisted rake targets, with `rake_excluded`
-  overriding `rake_verify_only`). When the env var is unset (the
-  default), the hook exits 0 immediately.
+  verify command. Triggered families: `rspec`, `rubocop`, `standardrb`,
+  `brakeman`, `reek`, `rails db:(migrate|rollback|schema:load|seed)`,
+  and `(rake|rails) (ci|test|spec|verify|lint|brakeman|...)`. The
+  `rake_excluded` list overrides every trigger family — it covers
+  `(rake|rails) (routes|db:drop|db:create|assets:|stats|notes)` and
+  `--version` invocations across the whole verify-tool family. When
+  the env var is unset (the default), the hook exits 0 immediately.
 - For each match (env var enabled): appends a JSONL stats entry to
   `${CLAUDE_PLUGIN_DATA}/compression.jsonl` and preserves the
   captured Bash output (stdout + stderr on success events, or the
