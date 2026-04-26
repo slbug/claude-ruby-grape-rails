@@ -58,6 +58,7 @@ import argparse
 import atexit
 import json
 import logging
+import os
 import re
 import subprocess
 import sys
@@ -261,6 +262,10 @@ def capture_runtime_system_prompt() -> str:
     ``.hookSpecificOutput.additionalContext`` from its stdout.
     """
     hook_input = json.dumps({"hook_event_name": "SubagentStart"})
+    # Override end-user opt-out so eval is reproducible regardless of
+    # caller shell rc (RUBY_PLUGIN_DISABLE_RULES_INJECTION=1 would
+    # silence the injector and break json.loads downstream).
+    scrubbed_env = {**os.environ, "RUBY_PLUGIN_DISABLE_RULES_INJECTION": "0"}
     result = subprocess.run(
         ["bash", str(INJECTOR_SCRIPT)],
         input=hook_input,
@@ -268,6 +273,7 @@ def capture_runtime_system_prompt() -> str:
         text=True,
         timeout=10,
         check=False,
+        env=scrubbed_env,
     )
     if result.returncode != 0:
         raise RuntimeError(

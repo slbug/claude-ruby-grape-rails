@@ -36,8 +36,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `block-dangerous-ops.sh` now branches on `hook_event_name`:
   `PermissionRequest` emits a structured deny via
   `hookSpecificOutput.decision.behavior="deny"` with a `message`
-  (per CC schema) by default, and hard-blocks via exit 2 when
-  `RUBY_PLUGIN_STRICT_PERMS=1`; `PermissionDenied` appends an entry
+  (per CC schema) and `decision.interrupt=false` by default,
+  flipping to `decision.interrupt=true` when `RUBY_PLUGIN_STRICT_PERMS=1`;
+  exit 0 in both cases. `PermissionDenied` appends an entry
   (`{ts, cmd, pattern, classifier_reason}`) to
   `${CLAUDE_PLUGIN_DATA}/denied-commands.jsonl` capturing both the
   matched plugin-side danger pattern and CC's auto-mode classifier
