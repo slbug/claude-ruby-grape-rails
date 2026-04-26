@@ -118,6 +118,32 @@ def test_log_refuses_symlink_target(tmp_path: Path) -> None:
     assert log.is_symlink()
 
 
+def test_preserve_check_handles_non_hash_preserve(tmp_path: Path) -> None:
+    # If `preserve:` in rules.yml is a scalar / list / anything that is
+    # not a Hash, `check_preservation` must surface a violation rather
+    # than crash on `.each`. We exercise this by writing a custom
+    # rules file with a string `preserve:` and pointing the compressor
+    # at it via VerifyCompression.compress(rules_path:).
+    rules = tmp_path / "rules.yml"
+    rules.write_text("preserve: just-a-string\n")
+    proc = subprocess.run(
+        ["ruby", "-I", str(REPO / "plugins" / "ruby-grape-rails" / "lib"),
+         "-rverify_compression", "-rjson", "-e",
+         (
+             "result = VerifyCompression.compress("
+             "'rspec output', rules_path: ARGV[0]); "
+             "puts JSON.generate("
+             "violations: result.preservation_violations)"
+         ),
+         str(rules)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    payload = json.loads(proc.stdout.strip().splitlines()[-1])
+    assert any("Hash" in v for v in payload["violations"]), payload
+
+
 def test_log_refuses_directory_at_jsonl_path(tmp_path: Path) -> None:
     log = tmp_path / "compression.jsonl"
     log.mkdir()  # not a regular file

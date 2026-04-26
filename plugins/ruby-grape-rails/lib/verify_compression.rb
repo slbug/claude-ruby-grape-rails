@@ -172,7 +172,23 @@ module VerifyCompression
     # disabling preservation is exactly the failure mode this check is
     # meant to catch.
     violations = []
-    (rules['preserve'] || {}).each do |name, pattern|
+    preserve = rules['preserve']
+    case preserve
+    when nil
+      # No preserve rules configured → nothing to check.
+      return violations
+    when Hash
+      # Expected shape; fall through to the per-rule loop below.
+    else
+      # Misconfiguration (scalar, array, …): emit a single violation
+      # describing the schema problem rather than crashing on `.each`.
+      # This preserves the documented "config errors surface as
+      # violations" contract from the comment block above.
+      violations << "preserve: top-level value must be a Hash, got #{preserve.class}"
+      return violations
+    end
+
+    preserve.each do |name, pattern|
       unless pattern.is_a?(String)
         violations << "#{name}: preserve rule is not a string regex (#{pattern.class})"
         next

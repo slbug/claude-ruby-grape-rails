@@ -99,10 +99,14 @@ ruby -ryaml -rshellwords -e '
 
   exit 0 unless size_hit || sample_hit
 
+  # total_bytes is a lower bound when size_hit fires: the directory
+  # walk short-circuits as soon as the threshold is crossed, so the
+  # walk never finishes summing every verify-raw/*.log. Wording in the
+  # advisory reflects a ">=" floor, not a final total.
   mb = (total_bytes / (1024.0 * 1024.0)).round(1)
   reasons = []
-  reasons << format("%.1f MB on disk", mb) if size_hit
-  reasons << "#{sample_count} samples" if sample_hit
+  reasons << format(">= %.1f MB on disk", mb) if size_hit
+  reasons << ">= #{sample_count} samples" if sample_hit
 
   # SessionStart stdout enters the model context. Surface only the
   # telemetry paths, never literal rm / rm -rf command strings; the
