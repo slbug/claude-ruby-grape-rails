@@ -413,18 +413,6 @@
         ]
       }
     ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/log-subagent-metrics.sh",
-            "timeout": 10,
-            "async": true
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "matcher": "",

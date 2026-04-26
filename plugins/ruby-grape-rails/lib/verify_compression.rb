@@ -12,9 +12,18 @@ require 'fileutils'
 
 module VerifyCompression
   RULES_PATH = File.expand_path('../references/compression/rules.yml', __dir__)
-  STACK_FRAME_RE = /^\s*(from|at) .+:\d+/
+  # `from `, `at ` are Ruby's bare backtrace prefixes. `# ` is RSpec's
+  # "outside of examples" formatter prefix used for boot failures
+  # (Sequel/PG connection errors, autoload crashes); without it, the
+  # >5-frame collapse misses every Ruby boot-failure stack.
+  STACK_FRAME_RE = /^\s*(from |at |# ).+:\d+/
   DEPRECATION_RE = /DEPRECATION WARNING/i
   GEM_LOADING_RE = /^\s*Loaded gem /i
+  # Generic gem-prefixed warnings (`[dry-types] ...`, `[bundler] ...`)
+  # are commonly emitted once per Bundler require pass and repeat
+  # verbatim on every spec invocation. Collapse consecutive identical
+  # bracket-prefixed lines the same way deprecations are collapsed.
+  BRACKET_WARNING_RE = /^\[\w[\w-]*\]/
 
   Result = Data.define(:text, :raw_bytes, :compressed_bytes, :preservation_violations) do
     def ratio
@@ -29,7 +38,8 @@ module VerifyCompression
   DEFAULT_COLLAPSE = {
     'stack_beyond_5' => '  [... {count} more frames elided ...]',
     'deprecation_warnings' => '  [+{count} similar deprecations]',
-    'gem_loading' => 'Loaded {count} gems'
+    'gem_loading' => 'Loaded {count} gems',
+    'repeated_warnings' => '  [+{count} repeated]'
   }.freeze
 
   module_function
@@ -41,6 +51,7 @@ module VerifyCompression
     lines = collapse_stack(lines, collapse['stack_beyond_5'])
     lines = collapse_gem_loading(lines, collapse['gem_loading'])
     lines = collapse_deprecations(lines, collapse['deprecation_warnings'])
+    lines = collapse_bracket_warnings(lines, collapse['repeated_warnings'])
     compressed = lines.join("\n")
     violations = check_preservation(raw, compressed, rules)
     Result.new(
@@ -158,6 +169,40 @@ module VerifyCompression
       else
         flush_dupe.call
         last_dep = nil
+        result << line
+      end
+    end
+    flush_dupe.call
+    result
+  end
+
+  def collapse_bracket_warnings(lines, template)
+    # Collapse runs of CONSECUTIVE IDENTICAL bracket-prefixed warning
+    # lines (e.g. `[dry-types] [] is mutable...`). Same shape as
+    # `collapse_deprecations` but matches the gem-tag prefix instead of
+    # the literal `DEPRECATION WARNING` substring; many gems emit warning
+    # lines without that token.
+    result = []
+    last_warn = nil
+    dupe = 0
+    flush_dupe = lambda do
+      if dupe.positive?
+        result << render_collapse(template, dupe)
+        dupe = 0
+      end
+    end
+    lines.each do |line|
+      if BRACKET_WARNING_RE.match?(line)
+        if line == last_warn
+          dupe += 1
+        else
+          flush_dupe.call
+          result << line
+          last_warn = line
+        end
+      else
+        flush_dupe.call
+        last_warn = nil
         result << line
       end
     end

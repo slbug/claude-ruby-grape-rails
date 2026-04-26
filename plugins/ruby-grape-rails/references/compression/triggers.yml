@@ -22,7 +22,15 @@ verify_commands:
   migrations:
     - "^(\\S+=\\S*\\s+)*(bundle exec )?(?:(?:\\./)?bin/)?rails db:(migrate|rollback|schema:load|seed)\\b"
   rake_verify_only:
-    - "^(\\S+=\\S*\\s+)*(bundle exec )?(?:(?:\\./)?bin/)?rake (ci|test|spec|verify|lint|standard:fix_unsafely|brakeman)\\b"
+    - "^(\\S+=\\S*\\s+)*(bundle exec )?(?:(?:\\./)?bin/)?(rake|rails) (ci|test|spec|verify|lint|standard:fix_unsafely|brakeman)\\b"
 
+# Universal exclusion list checked BEFORE the trigger sections. The
+# key is named `rake_excluded` for historical reasons but the matcher
+# applies it across every trigger family. `rake` and `rails` share
+# the same subcommand shape (routes, db:drop, db:create, ...); both
+# are excluded together. `--version` invocations across the whole
+# verify-tool family produce a static banner that never compresses
+# and would inflate the underpowered-class denominator.
 rake_excluded:
-  - "^(\\S+=\\S*\\s+)*(bundle exec )?(?:(?:\\./)?bin/)?rake (routes|db:drop|db:create|assets:|generators:|stats|notes)\\b"
+  - "^(\\S+=\\S*\\s+)*(bundle exec )?(?:(?:\\./)?bin/)?(rake|rails) (routes|db:drop|db:create|assets:|stats|notes)\\b"
+  - "^(\\S+=\\S*\\s+)*(bundle exec )?(?:(?:\\./)?bin/)?(rake|rails|rspec|rubocop|standardrb|brakeman|reek) --version\\b"
