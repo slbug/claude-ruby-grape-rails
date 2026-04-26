@@ -29,7 +29,7 @@ def test_matches_rails_db_migrate() -> None:
     assert _matches("bundle exec rails db:migrate")
 
 
-def test_does_not_match_bare_rake() -> None:
+def test_does_not_match_rake_routes() -> None:
     assert not _matches("bundle exec rake routes")
 
 

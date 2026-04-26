@@ -51,7 +51,12 @@ module VerifyCompression
 
   def load_rules(path)
     YAML.safe_load_file(path) || {}
-  rescue Errno::ENOENT
+  rescue Errno::ENOENT, Errno::EACCES, Psych::SyntaxError, Psych::DisallowedClass, IOError
+    # Missing / unreadable / malformed rules.yml falls back to an empty
+    # ruleset. The compressor still runs (collapse uses DEFAULT_COLLAPSE,
+    # preserve check has no patterns to verify) and the hook's
+    # documented fail-open contract is preserved — a misconfigured rules
+    # file MUST NOT crash the caller.
     {}
   end
 

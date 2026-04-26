@@ -17,16 +17,26 @@ module Triggers
   def matches?(triggers_path, command)
     data = YAML.safe_load_file(triggers_path) || {}
     walk(data, EXCLUDE_SECTION).each do |pat|
-      return false if Regexp.new(pat).match?(command)
+      return false if compile(pat)&.match?(command)
     end
     TRIGGER_SECTIONS.each do |section|
       walk(data, section).each do |pat|
-        return true if Regexp.new(pat).match?(command)
+        return true if compile(pat)&.match?(command)
       end
     end
     false
-  rescue Errno::ENOENT, Psych::SyntaxError
+  rescue Errno::ENOENT, Errno::EACCES, Psych::SyntaxError, IOError
     false
+  end
+
+  # Compile a YAML-supplied pattern. Returns nil on RegexpError so a
+  # single invalid pattern in triggers.yml does not crash the matcher;
+  # the caller treats nil as "this pattern did not match" and continues
+  # evaluating the next pattern (fail-open per the hook's contract).
+  def compile(pattern)
+    Regexp.new(pattern)
+  rescue RegexpError
+    nil
   end
 
   def walk(data, keys)

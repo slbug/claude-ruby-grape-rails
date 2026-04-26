@@ -60,7 +60,14 @@ COMMAND=""
 [[ -n "$COMMAND" ]] || exit 0
 
 TRIGGERS="${PLUGIN_ROOT}/references/compression/triggers.yml"
+RULES="${PLUGIN_ROOT}/references/compression/rules.yml"
+# Preflight both config files BEFORE writing any telemetry. An
+# unreadable rules.yml during the compressor stage would still produce
+# a JSONL entry (the Ruby loader rescues to an empty ruleset), but it
+# would also write a raw log without a fully-validated config — better
+# to bail here so the user's data dir stays consistent.
 [[ -r "$TRIGGERS" ]] || exit 0
+[[ -r "$RULES" ]] || exit 0
 
 # Fail-open: if ruby is unavailable or CLI binaries missing, exit silently.
 command -v ruby >/dev/null 2>&1 || exit 0
@@ -76,38 +83,42 @@ CLI="${PLUGIN_ROOT}/bin/compress-verify"
 
 [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]] || exit 0
 DATA_DIR="$CLAUDE_PLUGIN_DATA"
-mkdir -p "${DATA_DIR}/verify-raw"
+RAW_DIR="${DATA_DIR}/verify-raw"
+mkdir -p "$RAW_DIR"
 
 # UUID via Ruby stdlib `SecureRandom.uuid`. The previous fallback chain
 # (`uuidgen` → `/proc/sys/kernel/random/uuid` → `date +%s%N`) was not
 # portable: BSD/macOS `date` ignores `%N` and emits a literal `N`, so
 # concurrent invocations would collide on the same RAW_LOG path. Ruby
-# is already a hard dependency at this point.
+# is already a hard dependency at this point. The basename shape is
+# also constrained to the SecureRandom.uuid output so a malformed UUID
+# can never escape RAW_DIR via path traversal.
 UUID="$(ruby -rsecurerandom -e 'puts SecureRandom.uuid' 2>/dev/null)"
-[[ -n "$UUID" ]] || exit 0
-RAW_LOG="${DATA_DIR}/verify-raw/${UUID}.log"
+[[ "$UUID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]] || exit 0
+RAW_LOG="${RAW_DIR}/${UUID}.log"
 
 # Stream `tool_response.output` from the hook payload directly to the
 # raw-log file via a SECOND jq pass (one for metadata above, one for
 # the body here — total 2 jq invocations vs the original 3). `-j`
 # emits the raw string with no trailing newline jq would otherwise
 # append, so byte counts match the original Bash output exactly.
-# Fail-closed on the redirect: an empty RAW_LOG (e.g. tool produced
-# nothing) skips logging entirely.
+#
+# The plugin never `rm`s a user-visible telemetry file itself: that is
+# the user's data, the status-advisory hook surfaces accumulation, and
+# the user runs `rm` themselves when they decide to clean up. So a
+# partial / empty / errored write here just leaves whatever bytes
+# landed on disk; an early `exit 0` skips the JSONL entry and the
+# leftover raw log is treated like any other accumulated telemetry.
 printf '%s' "$HOOK_INPUT_VALUE" \
-  | jq -j '.tool_response.output // ""' 2>/dev/null > "$RAW_LOG" || {
-    rm -f "$RAW_LOG"
-    exit 0
-  }
-[[ -s "$RAW_LOG" ]] || {
-  rm -f "$RAW_LOG"
-  exit 0
-}
+  | jq -j '.tool_response.output // ""' 2>/dev/null > "$RAW_LOG" || exit 0
+[[ -s "$RAW_LOG" ]] || exit 0
 
 # Compressor reads the raw output from stdin (redirect from RAW_LOG)
 # and records the RAW_LOG path string into the JSONL entry's `raw_log`
 # field via the `--raw-log` flag. The CLI never writes to RAW_LOG —
-# the same path appearing in both positions is read-only.
+# the same path appearing in both positions is read-only. On
+# compressor failure the JSONL entry simply does not get appended and
+# the raw log stays on disk for the user to inspect (or clean up).
 # shellcheck disable=SC2094  # --raw-log is a path-string flag, not a write target
 "$CLI" \
   --log "${DATA_DIR}/compression.jsonl" \
