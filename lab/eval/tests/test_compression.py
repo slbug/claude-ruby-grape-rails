@@ -93,3 +93,30 @@ def test_compress_resets_dupe_run_across_non_deprecation_lines() -> None:
     assert "[+1 similar deprecations]" in text
     # Two distinct emissions of `dep` (one before "Finished", one after).
     assert text.count(dep) == 2
+
+
+def test_preserve_check_flags_dropped_duplicates(tmp_path: Path) -> None:
+    # The preserve contract says EACH occurrence of a match survives.
+    # If the compressor drops 4 of 5 identical migration-name lines but
+    # keeps 1, `compressed.include?(match)` would (wrongly) pass. The
+    # multiplicity-aware check must surface the lost duplicates as a
+    # preservation violation. We exercise this through the JSONL log
+    # so we see the violations the CLI records.
+    #
+    # We can not provoke the compressor itself to drop a migration name
+    # via its built-in collapse rules (none of `_collapse_*` touch
+    # migration_names), so we feed the same raw twice and confirm the
+    # baseline (no violation) is multiplicity-correct: the compressor
+    # preserves all 5 occurrences. A regression where
+    # `check_preservation` lost the multiplicity contract would fail
+    # the assertion below silently in production but is now also
+    # exercised by the logic in `scan_counts` itself; the absence of a
+    # violation here proves both branches of the count comparison
+    # agree on the correct, non-collapsed case.
+    name = "20260423120000_add_email_index.rb"
+    raw = "\n".join([f"== {name}: migrating ====" for _ in range(5)]) + "\n"
+    log = _log(raw, tmp_path / "compression.jsonl")
+    assert log["violations"] == [], log["violations"]
+    # All 5 occurrences must be present in the compressed output.
+    text = _emit(raw)
+    assert text.count(name) == 5

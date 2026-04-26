@@ -34,7 +34,7 @@ def default_log_path
   return File.join(data_dir, 'compression.jsonl') if data_dir && !data_dir.empty?
 
   candidates = Dir.glob(DEFAULT_GLOB).select { |p| File.file?(p) }
-  return nil if candidates.empty?
+  return if candidates.empty?
   return candidates.first if candidates.length == 1
 
   candidates.max_by { |p| File.mtime(p) }
@@ -130,7 +130,7 @@ def redact_cmd(cmd)
 end
 
 def raw_log_id(path)
-  return nil if path.nil? || path.empty?
+  return if path.nil? || path.empty?
 
   File.basename(path, '.log')
 end

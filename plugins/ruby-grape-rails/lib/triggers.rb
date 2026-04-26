@@ -29,11 +29,17 @@ module Triggers
     false
   end
 
-  # Compile a YAML-supplied pattern. Returns nil on RegexpError so a
-  # single invalid pattern in triggers.yml does not crash the matcher;
+  # Compile a YAML-supplied pattern. Returns nil for non-string values
+  # (e.g. an accidentally-numeric or nil entry in triggers.yml) and on
+  # RegexpError so a single invalid pattern does not crash the matcher;
   # the caller treats nil as "this pattern did not match" and continues
   # evaluating the next pattern (fail-open per the hook's contract).
+  # `Regexp.new(nil)` and `Regexp.new(42)` raise `TypeError`, which an
+  # explicit `is_a?(String)` guard avoids without paying the exception
+  # cost on every invocation.
   def compile(pattern)
+    return unless pattern.is_a?(String)
+
     Regexp.new(pattern)
   rescue RegexpError
     nil

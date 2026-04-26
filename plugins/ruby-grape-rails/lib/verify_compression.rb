@@ -182,11 +182,33 @@ module VerifyCompression
         violations << "#{name}: invalid preserve regex (#{e.message})"
         next
       end
-      raw.scan(re) do
-        match = Regexp.last_match(0)
-        violations << "#{name}: dropped #{match.inspect}" unless compressed.include?(match)
+      # Multiplicity check: every occurrence of a preserve pattern in
+      # raw output must appear at least the same number of times in
+      # the compressed output. `compressed.include?(match)` alone would
+      # incorrectly accept a compressed copy that dropped 4 of 5
+      # duplicate matches — passing the contract "each occurrence
+      # survives" only by coincidence on the first hit.
+      raw_counts = scan_counts(raw, re)
+      next if raw_counts.empty?
+
+      compressed_counts = scan_counts(compressed, re)
+      raw_counts.each do |match, raw_n|
+        kept = compressed_counts.fetch(match, 0)
+        next if kept >= raw_n
+
+        violations << "#{name}: #{match.inspect} preserved #{kept}/#{raw_n} occurrences"
       end
     end
     violations
+  end
+
+  # Returns a Hash mapping the full-match string of each occurrence to
+  # its count. Uses `enum_for(:scan, re)` so we capture the full match
+  # (`Regexp.last_match(0)`) regardless of whether the pattern declares
+  # capture groups — `String#scan` returns groups-only arrays when the
+  # regex has groups, which would mishandle preserve patterns like
+  # `file_colon_line` that capture path and line number.
+  def scan_counts(text, re)
+    text.enum_for(:scan, re).map { Regexp.last_match(0) }.tally
   end
 end
