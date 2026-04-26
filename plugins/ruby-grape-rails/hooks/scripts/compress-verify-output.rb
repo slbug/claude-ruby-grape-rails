@@ -44,34 +44,32 @@ begin
   end
   exit 0 unless data.is_a?(Hash)
 
-  tool_name  = data['tool_name'].to_s
-  command    = data.dig('tool_input', 'command').to_s
-  event_name = data['hook_event_name'].to_s
-
-  # PostToolUse Bash `tool_response`: {stdout, stderr, interrupted, ...}.
-  # PostToolUseFailure: top-level `error` carries the full output blob.
-  # Skip on user-interrupt — partial output is not representative.
-  extract_post_tool_use_text = lambda do |tr|
-    next '' unless tr.is_a?(Hash)
-    next '' if tr['interrupted'] == true
-
-    out = tr['stdout'].to_s
-    err = tr['stderr'].to_s
-    next out if err.empty?
-    next err if out.empty?
-
-    "#{out}\n--- stderr ---\n#{err}"
-  end
-
-  output = case event_name
-           when 'PostToolUseFailure'
-             data['is_interrupt'] == true ? '' : data['error'].to_s
-           else
-             extract_post_tool_use_text.call(data['tool_response'])
-           end
-
+  tool_name = data['tool_name'].to_s
+  command   = data.dig('tool_input', 'command').to_s
   exit 0 unless tool_name == 'Bash'
   exit 0 if command.empty?
+
+  # Skip on user-interrupt (partial output not representative).
+  exit 0 if data.dig('tool_response', 'interrupted') == true
+  exit 0 if data['is_interrupt'] == true
+
+  # Three output channels across PostToolUse + PostToolUseFailure:
+  #   - tool_response.stdout — captured stdout (PostToolUse)
+  #   - tool_response.stderr — captured stderr (PostToolUse)
+  #   - top-level `error`    — failure blob (PostToolUseFailure)
+  # Treat `error` as another stderr stream. Combine stderr + error
+  # into one stream so the `--- stderr ---` marker is consistent
+  # whether the source was a successful run with stderr or a failure
+  # event with an `error` blob.
+  out = data.dig('tool_response', 'stdout').to_s
+  stderr_stream = [data.dig('tool_response', 'stderr').to_s, data['error'].to_s]
+                  .reject(&:empty?)
+                  .join("\n")
+
+  parts = []
+  parts << out unless out.empty?
+  parts << "--- stderr ---\n#{stderr_stream}" unless stderr_stream.empty?
+  output = parts.join("\n")
 
   triggers_path = File.join(plugin_root, 'references/compression/triggers.yml')
   rules_path    = File.join(plugin_root, 'references/compression/rules.yml')
