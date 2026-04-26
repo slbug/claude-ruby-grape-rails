@@ -186,6 +186,8 @@ and reports:
 Contributors developing changes against the reader can run the binary
 directly from the repo (`plugins/ruby-grape-rails/bin/compression-stats`)
 or via the contributor test suite
-(`pytest lab/eval/tests/test_compression_stats.py`). There is no
-contributor `make` target — the reader is end-user tooling, not part
-of the eval gate.
+(`python3 -m unittest lab.eval.tests.test_compression_stats` — repo
+canonical runner; `bash scripts/run-eval-tests.sh` discovers the same
+tests as part of the wider sweep). There is no contributor `make`
+target for the reader itself — the reader is end-user tooling, not
+part of the eval gate.

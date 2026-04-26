@@ -120,8 +120,21 @@ RAW_LOG="${RAW_DIR}/${UUID}.log"
 # partial / empty / errored write here just leaves whatever bytes
 # landed on disk; an early `exit 0` skips the JSONL entry and the
 # leftover raw log is treated like any other accumulated telemetry.
+# Stream into RAW_LOG via Ruby with `O_CREAT | O_EXCL | O_NOFOLLOW`
+# rather than shell `>`. EXCL refuses to clobber a pre-existing file
+# at the UUID path (collision is cryptographically improbable but
+# defense-in-depth); NOFOLLOW refuses to follow a symlink there. Mode
+# 0o600 keeps raw outputs readable only by the owner — these capture
+# whatever the user's verify command emitted, which can include
+# project-internal data.
+# shellcheck disable=SC2016  # Ruby script body uses Ruby interpolation, not shell expansion
 printf '%s' "$HOOK_INPUT_VALUE" \
-  | jq -j '.tool_response.output // ""' 2>/dev/null > "$RAW_LOG" || exit 0
+  | jq -j '.tool_response.output // ""' 2>/dev/null \
+  | ruby -e '
+      flags = File::WRONLY | File::CREAT | File::EXCL | File::NOFOLLOW
+      $stdin.binmode
+      File.open(ARGV[0], flags, 0o600) { |out| IO.copy_stream($stdin, out) }
+    ' "$RAW_LOG" 2>/dev/null || exit 0
 [[ -s "$RAW_LOG" ]] || exit 0
 
 # Compressor reads the raw output from stdin (redirect from RAW_LOG)
