@@ -48,7 +48,7 @@ checks.
 │  💎 Ruby/Rails/Grape Plugin for Claude Code                         │
 │                                                                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
-│  │    23    │    51    │   100+   │    13    │    22    │           │
+│  │    23    │    52    │   100+   │    13    │    22    │           │
 │  │  Agents  │  Skills  │   Refs   │  Events  │Iron Laws │           │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘           │
 │                                                                     │
@@ -180,7 +180,7 @@ New to the plugin? Run the interactive tutorial:
 /rb:intro
 ```
 
-It walks through the workflow, commands, and features in 6 short sections (~5 min).
+It walks through the workflow, commands, and features in 8 short sections (~5 min).
 Skip to any section with `/rb:intro --section N`.
 
 ## Quick Examples

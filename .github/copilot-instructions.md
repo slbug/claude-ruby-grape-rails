@@ -23,7 +23,10 @@ The plugin ships specialist agents, skills, hooks, and eval tooling:
   resolver for diff comparisons), `compress-verify` (Ruby, verify-output
   compressor CLI), `match-trigger` (Ruby, verify-command trigger matcher),
   `compression-stats` (Ruby, end-user reader for verify-output telemetry
-  with `--redact` mode for anonymized GitHub-issue-ready JSON).
+  with `--redact` mode that emits intermediate input for the
+  `/rb:compression-report` skill — NOT a final paste-anywhere
+  artifact; the skill drafts the markdown report users review and
+  share).
 - **Plugin-owned Ruby library** (`plugins/ruby-grape-rails/lib/*.rb`):
   end-user runtime modules required by `bin/` CLIs and hook scripts.
   Ruby ≥ 3.4. Stdlib only (no Bundler gems). PyYAML is contributor-only;
