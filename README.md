@@ -691,9 +691,9 @@ bundle add tidewave --group development
 
 - Claude Code CLI
 - Ruby/Rails/Grape project
-- Ruby >= 3.4 — required by plugin runtime CLIs under
-  `plugins/ruby-grape-rails/bin/` (e.g. `compress-verify`,
-  `match-trigger`, `compression-stats`). Stdlib only; no Bundler gems
+- Ruby >= 3.4 — required by plugin runtime hooks and the
+  `compression-stats` end-user CLI under
+  `plugins/ruby-grape-rails/bin/`. Stdlib only; no Bundler gems
   required at runtime.
 
 ### Optional

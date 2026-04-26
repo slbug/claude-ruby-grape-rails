@@ -70,11 +70,12 @@ jobs:
         with:
           python-version: "3.14"
 
-      # Ruby >= 3.4 is required by the plugin runtime CLIs the
-      # deterministic eval gate now shells out to (bin/compress-verify
-      # uses Data.define, frozen_string_literal: true, and stdlib
-      # yaml). Fail fast in CI rather than depending on whatever
-      # interpreter happens to be on the runner.
+      # Ruby >= 3.4 is required by the plugin runtime hook and the
+      # contributor eval CLI (lab/eval/bin/compress-verify) the
+      # deterministic eval gate shells out to (Data.define,
+      # frozen_string_literal: true, stdlib yaml). Fail fast in CI
+      # rather than depending on whatever interpreter happens to be
+      # on the runner.
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:

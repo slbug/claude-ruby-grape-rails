@@ -125,7 +125,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/compress-verify-output.sh",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/compress-verify-output.rb",
             "timeout": 30,
             "async": true
           }
@@ -387,6 +387,17 @@
             "if": "Bash(*=* ./bin/brakeman *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
             "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/compress-verify-output.rb",
+            "timeout": 30,
+            "async": true
           }
         ]
       }

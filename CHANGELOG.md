@@ -7,6 +7,52 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.15.1] - 2026-04-26
+
+### Fixed
+
+- Compression hook read `tool_response.output` for Bash; that key
+  does not exist. Real shape is `{stdout, stderr, interrupted,
+  isImage, noOutputExpected}`. Every Bash telemetry capture in 1.15.0
+  silently produced 0 bytes; `compression.jsonl` was never written.
+- Hook only registered on `PostToolUse:Bash`. Failed verify commands
+  (rspec failures, brakeman exit 3, rubocop exit 1) route to
+  `PostToolUseFailure` and were never captured — exactly the
+  most-compressable cases. Now registered on both events; reads the
+  top-level `error` field on failures.
+- Hook opened raw-log file via `O_CREAT|O_EXCL` before checking the
+  source had bytes. Empty `tool_response` materialized 0-byte
+  orphans that the plugin never deletes by design. Empty-output
+  short-circuit now runs before file creation.
+- `/rb:compression-report` skill emitted `<owner>/<repo>` placeholder
+  in the issue-URL footer. Skill now reads `repository` from
+  `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`.
+- Skip telemetry on user-interrupt (`tool_response.interrupted=true`
+  or top-level `is_interrupt=true`). Partial output is not a
+  representative compression sample.
+
+### Changed
+
+- `compress-verify-output.sh` (bash + jq + NUL-delimited shell
+  parsing) replaced by `compress-verify-output.rb`. Plugin already
+  requires Ruby. Drops jq dependency for this hook entirely.
+- Hook calls `Triggers.matches?` and `VerifyCompression.compress` /
+  `VerifyCompression.append_jsonl` directly via `require_relative`;
+  no longer shells out to `bin/match-trigger` and `bin/compress-verify`.
+  Saves two Ruby process spawns per Bash event.
+- Successful events capture stdout AND stderr; some verify tools
+  (rubocop deprecations, bundler warnings) split findings between the
+  two streams.
+- `bin/compress-verify` and `bin/match-trigger` moved from
+  `plugins/ruby-grape-rails/bin/` to `lab/eval/bin/`. They were only
+  consumed by `lab/eval/compression_eval.py` and Python subprocess
+  tests; they were never end-user surfaces. End-user `bin/` now
+  contains only the operator CLI (`compression-stats`) and the other
+  shipped tools.
+- `VerifyCompression.append_jsonl(log_path, entry)` extracted as the
+  single source of truth for symlink-safe + flock'd jsonl writes.
+  Hook and the contributor CLI share it.
+
 ## [1.15.0] - 2026-04-26
 
 ### Added
@@ -1973,7 +2019,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.0...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.1...HEAD
+[1.15.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.0...v1.15.1
 [1.15.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.4...v1.14.0
 [1.13.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.13.3...v1.13.4

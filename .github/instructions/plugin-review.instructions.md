@@ -87,15 +87,6 @@ excludeAgent: "coding-agent"
 - `resolve-base-ref` (bash) — emits `eval`-able shell assigning
   `BASE_REF` for diff comparisons; handles custom remotes and stale
   local refs
-- `compress-verify` (Ruby) — verify-output compressor CLI used by
-  `compress-verify-output.sh` PostToolUse hook. Reads stdin, writes
-  compressed text on `--emit` or appends a JSONL stats entry on
-  `--log` under exclusive `flock`. No lab/ dependency; loads sibling
-  `lib/verify_compression.rb`
-- `match-trigger` (Ruby) — trigger-matcher CLI used by the same hook
-  to decide whether the Bash command should be measured. Exit 0 =
-  match, exit 1 = no match / excluded / loader error. Loads sibling
-  `lib/triggers.rb`
 - `compression-stats` (Ruby) — end-user reader for verify-output
   compression telemetry. Reads
   `${CLAUDE_PLUGIN_DATA}/compression.jsonl` (default) or `--log
@@ -124,10 +115,14 @@ the calling CLI / hook.
   Loads YAML rules from `references/compression/rules.yml`. Collapses
   stack frames > 5, repeated `Loaded gem` lines, and duplicate
   `DEPRECATION WARNING` blocks. Verifies preserve patterns survive
-  compression. Used by `bin/compress-verify`
+  compression. Provides `append_jsonl(path, entry)` (symlink-safe +
+  flock'd). Used by the PostToolUse / PostToolUseFailure compression
+  hook (`hooks/scripts/compress-verify-output.rb`) and the
+  contributor CLI (`lab/eval/bin/compress-verify`)
 - `triggers.rb` — YAML trigger matcher for verification commands.
   Loads `references/compression/triggers.yml`. Handles `rake_excluded`
-  precedence over `rake_verify_only`. Used by `bin/match-trigger`
+  precedence over `rake_verify_only`. Used by the same compression
+  hook and `lab/eval/bin/match-trigger`
 
 Notes:
 

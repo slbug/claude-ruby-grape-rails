@@ -1,7 +1,7 @@
 """Fixture-based evaluation. Contributor-only.
 
-Plugin runtime is Ruby; this harness shells out to bin/compress-verify and
-asserts ratio + diff thresholds + zero preservation violations.
+Plugin runtime is Ruby; this harness shells out to lab/eval/bin/compress-verify
+and asserts ratio + diff thresholds + zero preservation violations.
 """
 
 import difflib
@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-CLI = REPO / "plugins" / "ruby-grape-rails" / "bin" / "compress-verify"
+CLI = REPO / "lab" / "eval" / "bin" / "compress-verify"
 FIXTURES = Path(__file__).parent / "fixtures" / "compression"
 SUCCESS_MEAN_RATIO = 0.40
 SUCCESS_DIFF_SCORE = 0.15
