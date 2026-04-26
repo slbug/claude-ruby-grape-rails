@@ -3,8 +3,11 @@
 # Deterministic verify-output compressor. Plugin-owned runtime.
 #
 # Loads rules from references/compression/rules.yml. Operates line-by-line;
-# collapses stack frames beyond top-5, "Loaded gem" preamble, and repeated
-# DEPRECATION WARNING blocks. Verifies preserve patterns survive compression.
+# collapses stack frames beyond top-5, "Loaded gem" preamble, repeated
+# DEPRECATION WARNING blocks, and consecutive identical bracket-prefixed
+# warnings (e.g. `[dry-types] ...`). Verifies preserve patterns survive
+# compression. Also exposes `append_jsonl(path, entry)` for symlink-safe +
+# flock'd JSONL writes used by the hook and contributor CLI.
 
 require 'yaml'
 require 'json'
