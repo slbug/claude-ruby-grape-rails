@@ -39,12 +39,38 @@ def main(argv)
     log_path = opts[:log]
     require 'fileutils'
     FileUtils.mkdir_p(File.dirname(log_path))
+
+    # Symlink guard: bail before append if the jsonl path is a symlink
+    # OR exists but is not a regular file. A manipulated
+    # ${CLAUDE_PLUGIN_DATA}/compression.jsonl symlinked to an unrelated
+    # target would otherwise let opt-in telemetry append into that
+    # target. Use lstat so we never follow the symlink ourselves to
+    # check it. Mirrors the symlink discipline the calling hook
+    # already applies to ${CLAUDE_PLUGIN_DATA} and verify-raw/.
+    begin
+      st = File.lstat(log_path)
+      return 0 if st.symlink? || !st.file?
+    rescue Errno::ENOENT
+      # Path does not exist yet — File.open(..., 'a') below will
+      # create it as a regular file. Continue.
+    rescue SystemCallError
+      return 0
+    end
+
     # Exclusive flock so concurrent CLI invocations from pipelined Bash
-    # tool calls do not interleave bytes inside a JSONL line.
-    File.open(log_path, 'a') do |fh|
-      fh.flock(File::LOCK_EX)
-      fh.puts(JSON.generate(entry))
-      fh.flush
+    # tool calls do not interleave bytes inside a JSONL line. `O_NOFOLLOW`
+    # ensures the open itself refuses to traverse a symlink that races
+    # in between the lstat above and the open here (TOCTOU defense).
+    begin
+      File.open(log_path, File::WRONLY | File::CREAT | File::APPEND | File::NOFOLLOW, 0o644) do |fh|
+        fh.flock(File::LOCK_EX)
+        fh.puts(JSON.generate(entry))
+        fh.flush
+      end
+    rescue Errno::ELOOP, Errno::EMLINK
+      # NOFOLLOW raised on a symlink between lstat and open — bail
+      # without writing rather than follow into an unexpected target.
+      return 0
     end
   end
   0

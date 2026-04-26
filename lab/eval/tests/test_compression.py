@@ -95,6 +95,44 @@ def test_compress_resets_dupe_run_across_non_deprecation_lines() -> None:
     assert text.count(dep) == 2
 
 
+def test_log_refuses_symlink_target(tmp_path: Path) -> None:
+    # If `compression.jsonl` is a symlink (e.g. user redirected
+    # `${CLAUDE_PLUGIN_DATA}` or some other tool created the link),
+    # `bin/compress-verify --log` MUST NOT follow into the target.
+    target = tmp_path / "innocent.txt"
+    target.write_text("pre-existing content\n")
+    log = tmp_path / "compression.jsonl"
+    log.symlink_to(target)
+
+    proc = subprocess.run(
+        [str(CLI), "--log", str(log), "--cmd", "rspec"],
+        input="rspec output",
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert proc.returncode == 0
+    # Target file untouched.
+    assert target.read_text() == "pre-existing content\n"
+    # Symlink itself untouched.
+    assert log.is_symlink()
+
+
+def test_log_refuses_directory_at_jsonl_path(tmp_path: Path) -> None:
+    log = tmp_path / "compression.jsonl"
+    log.mkdir()  # not a regular file
+
+    proc = subprocess.run(
+        [str(CLI), "--log", str(log), "--cmd", "rspec"],
+        input="rspec output",
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert proc.returncode == 0
+    assert log.is_dir()  # still a directory; nothing written
+
+
 def test_preserve_check_flags_dropped_duplicates(tmp_path: Path) -> None:
     # The preserve contract says EACH occurrence of a match survives.
     # If the compressor drops 4 of 5 identical migration-name lines but

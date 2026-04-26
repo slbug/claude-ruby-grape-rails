@@ -42,10 +42,10 @@ replacement mechanism.
 6. **Never quote reconstructed absolute paths in the drafted report
    body.** `${CLAUDE_PLUGIN_DATA}` substitutes inline to a path that
    contains the user's home directory and plugin install id. Use the
-   resolved path locally for `Read` and for the user-facing `rm`
-   block at the very end of the workflow. Do NOT paste it into the
-   per-sample explanations, citations, or any other prose that the
-   user will copy into a public GitHub issue.
+   resolved path locally for `Read` and for the cleanup-paths block
+   at the very end of the workflow. Do NOT paste it into the
+   per-sample explanations, citations, or any other prose the user
+   will paste into a shared report.
 
 ## Workflow
 

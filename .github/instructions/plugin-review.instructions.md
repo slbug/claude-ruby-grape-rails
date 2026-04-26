@@ -100,11 +100,12 @@ excludeAgent: "coding-agent"
   compression telemetry. Reads
   `${CLAUDE_PLUGIN_DATA}/compression.jsonl` (default) or `--log
   <path>`. Default mode prints a human-readable report; `--json`
-  emits machine-readable aggregate JSON; `--redact` emits anonymized
-  JSON safe for filing as a public GitHub issue (strips env-var
-  values, file paths, freeform args, and `raw_log` paths). Used by
-  the `/rb:compression-report` skill. Stdlib only — no `lib/`
-  dependency, contributor or otherwise
+  emits machine-readable aggregate JSON; `--redact` emits
+  privacy-reduced JSON for the `/rb:compression-report` skill —
+  intermediate input for the skill's report drafter, NOT a final
+  paste-anywhere artifact (the skill's drafted markdown is what the
+  user reviews + shares). Stdlib only — no `lib/` dependency,
+  contributor or otherwise
 
 When adding a binary, also add it to the `CLAUDE.md` "Executables"
 list, ensure `chmod +x` is committed, and (if it is wired into hooks

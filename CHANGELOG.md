@@ -11,58 +11,48 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **Verify-output compression telemetry (opt-in).** Ruby runtime
-  (`lib/verify_compression.rb`, `lib/triggers.rb`) plus three CLIs
-  (`bin/compress-verify`, `bin/match-trigger`,
-  `bin/compression-stats`). Hook `compress-verify-output.sh`
-  (`PostToolUse` on `Bash`) appends to
+- **Verify-output compression telemetry (opt-in via
+  `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1`).** Ruby runtime
+  (`lib/verify_compression.rb`, `lib/triggers.rb`) + three CLIs
+  (`bin/compress-verify`, `bin/match-trigger`, `bin/compression-stats`).
+  `PostToolUse` hook on `Bash` appends to
   `${CLAUDE_PLUGIN_DATA}/compression.jsonl` and preserves raw stdout
-  under `verify-raw/<uuid>.log` only when
-  `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1`. The hook does NOT replace
-  the Bash tool output the model sees — PostToolUse cannot do that
-  for non-MCP tools per the Anthropic hooks docs; a real replacement
-  mechanism is deferred. See `references/compression/README.md`.
+  under `verify-raw/<uuid>.log`. Telemetry-only — the hook does NOT
+  replace Bash tool output (PostToolUse cannot do that for non-MCP
+  tools per the Anthropic hooks docs). See
+  `references/compression/README.md`.
 - `references/compression/{triggers.yml,rules.yml,README.md}` —
   trigger regexes (rspec / rubocop / standardrb / brakeman / reek /
-  `rails db:*` / whitelisted rake targets, env-var prefix tolerant,
-  `rake_excluded` precedence), preserve patterns, retention
-  thresholds, and the no-replacement rationale.
-- `make eval-compression` / `npm run eval:compression` — fixture
-  eval (3 fixtures, ≥ 40% mean bytes reduction, 0 violations,
-  ≤ 15% diff). Wired into `eval-ci-deterministic`. Current run:
-  73% mean, 0 violations.
-- `bin/compression-stats` — end-user reader on the Bash tool PATH.
-  Reports samples, p50 / p95 / mean per command class, weak-savings,
-  violation count, recommendation verdict. `--redact` emits
-  paste-safe JSON (no absolute paths; consumers reconstruct paths
-  via `${CLAUDE_PLUGIN_DATA}` inline substitution). Outside Claude
-  Code, falls back to globbing `~/.claude/plugins/data/ruby-grape-rails*`.
-- `/rb:compression-report` skill — drafts an anonymized markdown
-  report from the redacted aggregate, agentically reads selected
-  raw logs to explain weak/violation samples, hands the draft to
-  the user for filing as a GitHub issue. Never auto-creates the
-  issue or deletes telemetry.
-- `hooks/scripts/compression-data-status.sh` — `SessionStart`
-  advisory hook. Read-only. Emits a single nudge per SessionStart
-  invocation when accumulated telemetry crosses
-  `rules.yml` `advisory.size_threshold_bytes` (default 50 MB) or
-  `advisory.sample_threshold` (default 1000), with `rm` commands
-  the user can run themselves. The plugin ships no destructive
-  command.
-- Subprocess-driven contributor tests for the Ruby CLIs:
-  `lab/eval/tests/test_compression.py`, `test_triggers.py`,
-  `test_compression_stats.py`.
+  `rails db:*` / whitelisted rake; env-prefix and binstub tolerant;
+  `rake_excluded` precedence), preserve patterns, advisory thresholds.
+- `make eval-compression` / `npm run eval:compression` — fixture eval
+  wired into `eval-ci-deterministic`. Current run: 73% mean ratio, 0
+  violations.
+- `bin/compression-stats` — reader on Bash tool PATH. Reports counts,
+  mean / p50 / p95 per command class, weak-savings, violations,
+  recommendation. `--redact` emits privacy-reduced JSON intended as
+  intermediate input to the `/rb:compression-report` skill (NOT a
+  final paste-anywhere artifact).
+- `/rb:compression-report` skill — drafts a markdown report from the
+  redacted aggregate plus selective raw-log reads. User reviews the
+  markdown and decides whether to file it. Skill never auto-creates
+  the issue or deletes telemetry.
+- `hooks/scripts/compression-data-status.sh` — `SessionStart` advisory
+  hook. Read-only. Surfaces the on-disk telemetry paths when
+  thresholds (`rules.yml advisory.size_threshold_bytes` /
+  `sample_threshold`) cross. Does not print literal `rm` / `rm -rf`
+  command strings; the user composes cleanup themselves.
+- Subprocess-driven Ruby-CLI tests under `lab/eval/tests/`.
 
 ### Notes
 
-- Telemetry-only and opt-in by default; nothing on disk unless the
-  env var is set. Measurement is best-effort and fail-open.
-- Runtime: Ruby ≥ 3.4 (stdlib `yaml`); no new Python / PyYAML dep
-  for end users. CI lint workflow now installs Ruby 3.4 alongside
-  Node and Python so the deterministic eval gate is not
-  environment-dependent.
-- Cleanup is the user's manual action via `rm` on the paths the
-  advisory hook surfaces; the plugin does not auto-delete.
+- Default OFF. Best-effort, fail-open. No destructive code path
+  shipped — cleanup is the user's `rm`.
+- Symlink discipline at every write site (`${CLAUDE_PLUGIN_DATA}`,
+  `verify-raw/`, `compression.jsonl`); jsonl append uses
+  `O_NOFOLLOW` + `lstat` precheck.
+- Runtime: Ruby ≥ 3.4, stdlib only. CI workflow installs Ruby 3.4 so
+  the deterministic eval gate is not environment-dependent.
 
 ## [1.14.0] - 2026-04-25
 

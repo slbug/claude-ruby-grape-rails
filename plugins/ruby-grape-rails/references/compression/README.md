@@ -27,11 +27,19 @@ only one who should choose whether to record it.
 - `SessionStart` advisory hook nudges the user when accumulated
   telemetry crosses either threshold from `rules.yml`
   (`advisory.size_threshold_bytes`, `advisory.sample_threshold`). The
-  hook is read-only — it never deletes or rewrites telemetry. Cleanup
-  is the user's manual action: the advisory message lists the exact
-  `rm` commands.
-- `/rb:compression-report` skill bridges the reader to a
-  contributor-shareable, anonymized GitHub issue draft.
+  hook is read-only — it never deletes or rewrites telemetry. The
+  advisory surfaces the relevant on-disk paths (jsonl + verify-raw
+  directory). It deliberately does NOT print literal `rm` / `rm -rf`
+  command strings into the SessionStart context — a model re-reading
+  that context could otherwise misinterpret them as self-delete
+  instructions. The user composes the cleanup command from the
+  surfaced paths.
+- `/rb:compression-report` skill bridges the reader to a markdown
+  report draft. `compression-stats --redact` is the skill's
+  intermediate input (privacy-reduced JSON), not the user-facing
+  artifact: the skill drafts a markdown report from the redacted
+  aggregate plus selective raw-log Reads, and the user reviews the
+  markdown before filing it as a GitHub issue.
 
 ## Why no replacement (yet)
 

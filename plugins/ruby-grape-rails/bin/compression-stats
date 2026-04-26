@@ -114,8 +114,11 @@ end
 
 # Redact obvious PII from a command string. Keeps the verb + key flags so
 # command-class classification stays accurate; replaces paths / env values /
-# non-stdlib tokens with stable placeholders so the redacted output is safe
-# to paste into a public GitHub issue.
+# `--flag=value` payloads with stable placeholders. Output is intermediate
+# input for the `/rb:compression-report` skill (which then drafts the
+# user-facing markdown report). It is NOT the final shareable artifact —
+# the skill is responsible for reading raw logs, reviewing each citation,
+# and producing the markdown the user pastes into a public issue.
 def redact_cmd(cmd)
   out = cmd.dup
   # `KEY=value` env-var assignments → keep key, redact value.
@@ -145,8 +148,11 @@ def redact_stats(stats)
   # needs to Read raw logs reconstructs the absolute path locally as
   # `${CLAUDE_PLUGIN_DATA}/verify-raw/<raw_log_id>.log`. The
   # ${CLAUDE_PLUGIN_DATA} env var lives in the user's session and
-  # never enters the CLI output, so the redacted JSON is paste-safe
-  # for a public GitHub issue.
+  # never enters the CLI output. This JSON is the intermediate input
+  # for the `/rb:compression-report` skill — it is NOT the final
+  # shareable artifact. The skill drafts a markdown report from this
+  # JSON (plus selective raw-log Reads), and the user reviews that
+  # markdown before pasting anywhere public.
   redacted_weak = stats[:weak_samples].map do |s|
     {
       ratio: s[:ratio],
@@ -220,7 +226,7 @@ def main(argv)
   OptionParser.new do |p|
     p.on('--log PATH') { |v| opts[:log] = v }
     p.on('--json') { opts[:json] = true }
-    p.on('--redact', 'Emit anonymized JSON suitable for public GitHub issues') do
+    p.on('--redact', 'Emit privacy-reduced JSON for the report-drafter skill; review the drafted markdown report before sharing publicly') do
       opts[:redact] = true
       opts[:json] = true
     end
