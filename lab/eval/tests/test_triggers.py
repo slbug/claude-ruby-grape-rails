@@ -75,6 +75,15 @@ class TriggerMatcherTests(unittest.TestCase):
     def test_binstub_rake_excluded_still_wins(self) -> None:
         self.assertFalse(_matches("bin/rake routes"))
 
+    def test_does_not_match_system_bin_rspec(self) -> None:
+        # `/bin/rspec` (absolute system path) must NOT match — only the
+        # in-repo binstub forms `bin/rspec` and `./bin/rspec` count.
+        self.assertFalse(_matches("/bin/rspec spec/foo"))
+
+    def test_does_not_match_dot_bin_directory(self) -> None:
+        # A literal `.bin/` directory (typo of `./bin/`) must not match.
+        self.assertFalse(_matches(".bin/rspec spec/foo"))
+
 
 class TriggerMatcherFailOpenTests(unittest.TestCase):
     """Malformed triggers.yml must not crash the matcher (fail-open contract)."""

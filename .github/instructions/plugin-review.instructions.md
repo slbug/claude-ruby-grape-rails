@@ -107,9 +107,10 @@ excludeAgent: "coding-agent"
   user reviews + shares). Stdlib only — no `lib/` dependency,
   contributor or otherwise
 
-When adding a binary, also add it to the `CLAUDE.md` "Executables"
-list, ensure `chmod +x` is committed, and (if it is wired into hooks
-or settings) cross-check `hooks.json` / `settings.json` references.
+When adding a binary, also add it to this "Currently shipped
+binaries" section above, ensure `chmod +x` is committed, and (if it
+is wired into hooks or settings) cross-check `hooks.json` /
+`settings.json` references.
 
 ## Plugin-owned Ruby Library (plugins/ruby-grape-rails/lib/)
 
