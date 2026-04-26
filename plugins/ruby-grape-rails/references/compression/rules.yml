@@ -4,10 +4,13 @@
 # Every value under `preserve:` is a Ruby regex string. The compressor
 # scans `tool_response.output` for matches and asserts each match
 # survives in the compressed output; a missing match emits a
-# preservation violation. Non-string values, invalid regexes, and other
-# misconfigurations also emit violations rather than silently passing.
-# Prose / explanatory text belongs ONLY in YAML comments — never in a
-# `preserve:` value.
+# preservation violation. Per-rule misconfigurations inside `preserve:`
+# (non-string values, invalid regexes, a non-Hash `preserve:` block)
+# also emit violations rather than silently passing. Whole-file load
+# failures (missing / unreadable / malformed YAML) instead fall back
+# to an empty ruleset to keep the hook's documented fail-open contract
+# — load errors do NOT emit violations. Prose / explanatory text
+# belongs ONLY in YAML comments — never in a `preserve:` value.
 #
 # Top-5 stack-frame retention is implemented in code (`collapse_stack`)
 # rather than as a `preserve:` regex, because the count-based behavior
