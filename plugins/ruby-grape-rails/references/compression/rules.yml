@@ -9,7 +9,7 @@
 # Prose / explanatory text belongs ONLY in YAML comments — never in a
 # `preserve:` value.
 #
-# Top-5 stack-frame retention is implemented in code (`_collapse_stack`)
+# Top-5 stack-frame retention is implemented in code (`collapse_stack`)
 # rather than as a `preserve:` regex, because the count-based behavior
 # does not map onto a per-line pattern.
 preserve:
