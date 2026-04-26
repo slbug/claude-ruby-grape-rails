@@ -59,6 +59,62 @@ class CompressEmitTests(unittest.TestCase):
         self.assertIn("elided", text)
         self.assertNotIn("/gems/ar/29.rb:10", text)
 
+    def test_compress_collapses_rspec_outside_of_examples_stack(self) -> None:
+        # RSpec's "outside of examples" formatter (boot failures) emits
+        # frames prefixed with `# /path:line:in '...'` rather than the bare
+        # `from ...` form. STACK_FRAME_RE must match this prefix so the
+        # >5-frame collapse fires for boot-failure stacks too.
+        frames = [
+            f"# /gems/sequel-5.103.0/lib/sequel/{i}.rb:{100 + i}:in 'method_{i}'"
+            for i in range(20)
+        ]
+        raw = "Sequel::DatabaseConnectionError:\n" + "\n".join(frames)
+        text = _emit(raw)
+        # First 5 frames preserved.
+        self.assertIn("sequel/0.rb:100:in 'method_0'", text)
+        self.assertIn("sequel/4.rb:104:in 'method_4'", text)
+        # Frames beyond the top 5 are elided.
+        self.assertIn("elided", text)
+        self.assertNotIn("sequel/19.rb:119", text)
+
+
+class CompressBracketWarningCollapseTests(unittest.TestCase):
+    def test_compress_collapses_consecutive_identical_bracket_warnings(self) -> None:
+        # Bracket-prefixed warnings (`[dry-types] ...`, `[bundler] ...`) commonly
+        # repeat verbatim once per Bundler require pass. Consecutive identical
+        # lines collapse into the first occurrence + a `[+N repeated]` summary.
+        warn = "[dry-types] [] is mutable. Be careful: types will return same instance."
+        raw = "\n".join(["Loading...", warn, warn, warn, warn, "Continuing."]) + "\n"
+        text = _emit(raw)
+        # First occurrence preserved.
+        self.assertEqual(text.count(warn), 1)
+        # Three additional dupes collapsed.
+        self.assertIn("[+3 repeated]", text)
+        # Surrounding non-warning lines untouched.
+        self.assertIn("Loading...", text)
+        self.assertIn("Continuing.", text)
+
+    def test_compress_resets_bracket_warning_run_across_non_warning_lines(self) -> None:
+        # An interleaved non-warning line breaks the run; subsequent identical
+        # warning does NOT count toward the previous run.
+        warn = "[dry-types] [] is mutable"
+        raw = "\n".join([warn, warn, "Finished in 1.2s, 5 examples", warn]) + "\n"
+        text = _emit(raw)
+        # First run: 2 dupes (1 emitted + 1 collapsed via "+1 repeated").
+        self.assertIn("[+1 repeated]", text)
+        # Two distinct emissions of `warn` (one before "Finished", one after).
+        self.assertEqual(text.count(warn), 2)
+
+    def test_compress_does_not_collapse_distinct_bracket_warnings(self) -> None:
+        # Different bracket-prefixed lines must NOT collapse together.
+        a = "[dry-types] [] is mutable"
+        b = "[bundler] dependency outdated"
+        raw = "\n".join([a, b, a]) + "\n"
+        text = _emit(raw)
+        self.assertEqual(text.count(a), 2)
+        self.assertEqual(text.count(b), 1)
+        self.assertNotIn("repeated", text)
+
     def test_compress_records_no_violation_when_sqlstate_kept(self) -> None:
         raw = "PG::UniqueViolation: ERROR: duplicate key"
         text = _emit(raw)
