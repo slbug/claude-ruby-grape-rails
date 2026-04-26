@@ -224,7 +224,9 @@ module VerifyCompression
 
   # Append a JSONL stats entry to log_path. Symlink-safe (lstat + NOFOLLOW)
   # and concurrency-safe (LOCK_EX). Returns true on success, false on any
-  # bail condition. Caller is responsible for input validation.
+  # bail condition (including disk-full / permission-denied / not-a-dir
+  # surfaced via SystemCallError or IOError). Never raises — the runtime
+  # hook calls this and depends on the fail-open contract.
   def append_jsonl(log_path, entry)
     FileUtils.mkdir_p(File.dirname(log_path))
     begin
@@ -242,7 +244,7 @@ module VerifyCompression
       fh.flush
     end
     true
-  rescue Errno::ELOOP, Errno::EMLINK
+  rescue SystemCallError, IOError
     false
   end
 
