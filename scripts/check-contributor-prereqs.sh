@@ -58,7 +58,33 @@ if command -v python3 >/dev/null 2>&1; then
   check_python_version_314
   check_dev_python_modules
 fi
-check_required ruby "required for YAML validation and Ruby maintenance scripts"
+check_required ruby "required for plugin runtime CLIs, YAML validation, and Ruby maintenance scripts (ruby 3.4+)"
+
+# Verify ruby actually meets the 3.4 floor — `command -v ruby` alone
+# passes for older interpreters and the shipped runtime
+# (`Data.define`, frozen-string + 3.4 idioms in
+# `plugins/ruby-grape-rails/lib/`) would hard-fail at hook execution
+# time. Uses Gem::Version for SemVer-correct comparison (array <=>
+# is only correct on equal-length numeric arrays — 4.0.3 vs 3.4
+# happens to work, but 3.10.0 vs 3.4 would not).
+check_ruby_version_34() {
+  if ruby -rrubygems -e 'exit(Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.4") ? 0 : 1)' >/dev/null 2>&1; then
+    return
+  fi
+  local actual
+  actual="$(ruby -e 'puts RUBY_VERSION' 2>/dev/null || true)"
+  if [[ -z "$actual" ]]; then
+    echo "MISSING: ruby is on PATH but its version cannot be determined; plugin runtime requires 3.4+" >&2
+  else
+    echo "MISSING: ruby ${actual} is below the 3.4 floor required by plugin runtime CLIs" >&2
+  fi
+  MISSING=1
+}
+
+if command -v ruby >/dev/null 2>&1; then
+  check_ruby_version_34
+fi
+
 check_required jq "required for shipped hook payload parsing"
 check_required grep "required by hook scripts for pattern matching"
 check_required sed "required by hook scripts for text processing"
