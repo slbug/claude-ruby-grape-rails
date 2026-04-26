@@ -160,6 +160,41 @@ def test_redact_drops_trailing_freeform_args(tmp_path: Path) -> None:
     assert "myapp" not in json.dumps(payload)
 
 
+def test_redact_omits_absolute_paths(tmp_path: Path) -> None:
+    """--redact JSON must carry no absolute path components.
+
+    Specifically the raw-log directory under ${CLAUDE_PLUGIN_DATA}
+    contains the user's home dir on real installs; pasting redacted
+    JSON into a public GitHub issue must not leak it. Consumers that
+    need to Read raw logs reconstruct the path locally from the
+    inline-substituted ${CLAUDE_PLUGIN_DATA}, never from --redact
+    output.
+    """
+    log = tmp_path / "compression.jsonl"
+    entry = {
+        "ts": 1.0,
+        "cmd": "rspec",
+        "raw_bytes": 100,
+        "compressed_bytes": 30,
+        "ratio": 0.7,
+        "violations": [],
+        "raw_log": "/data/cache/plugins/verify-raw/uuid-1.log",
+    }
+    log.write_text(json.dumps(entry) + "\n")
+
+    payload = _run_redact(log)
+    assert "raw_log_dir" not in payload
+    blob = json.dumps(payload)
+    assert "/data/cache" not in blob
+    # Generic absolute-path guard. Catches any value starting with `/`
+    # followed by an alphanumeric segment that looks like a real
+    # filesystem path (excluding pure-id basenames like `/uuid-1`).
+    import re
+    assert not re.search(r'"/(?:Users|home|var|opt|data|repo)/', blob), (
+        f"redacted JSON contains an absolute path-shaped value: {blob}"
+    )
+
+
 def test_redact_keeps_aggregate_stats(tmp_path: Path) -> None:
     log = tmp_path / "compression.jsonl"
     entries = [

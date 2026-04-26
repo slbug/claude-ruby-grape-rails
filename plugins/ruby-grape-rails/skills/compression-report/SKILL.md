@@ -39,6 +39,13 @@ replacement mechanism.
    destructive command. After drafting the report, list the exact
    `rm` commands the user can run when they choose to clean up. The
    user runs them; the skill never does.
+6. **Never quote reconstructed absolute paths in the drafted report
+   body.** `${CLAUDE_PLUGIN_DATA}` substitutes inline to a path that
+   contains the user's home directory and plugin install id. Use the
+   resolved path locally for `Read` and for the user-facing `rm`
+   block at the very end of the workflow. Do NOT paste it into the
+   per-sample explanations, citations, or any other prose that the
+   user will copy into a public GitHub issue.
 
 ## Workflow
 
@@ -68,17 +75,26 @@ replacement mechanism.
    - `violation_samples` — up to 10 samples whose preservation check
      flagged something, with redacted `cmd`, `raw_log_id`,
      `violation_count`
-   - `raw_log_dir` — directory holding the raw stdout captures
    - `recommendation` — verdict against the documented promotion
      criteria
 
+   The redacted JSON deliberately omits absolute paths. The raw
+   captures live next to the jsonl on the user's local machine; you
+   reconstruct the path yourself per Step 3 below.
+
 3. **Decide which raw logs are worth quoting.** Read the raw log file
    only for samples that genuinely need explaining (worst weak
-   ratios; preservation-violation samples). Reconstruct the path as
-   `${raw_log_dir}/${raw_log_id}.log`. Use the `Read` tool with a
-   modest line budget; if the file is large (verify outputs often
-   are), read the first 100 lines plus tail 50 to characterize what
-   compressed well or poorly.
+   ratios; preservation-violation samples). Reconstruct the absolute
+   path locally as
+   `${CLAUDE_PLUGIN_DATA}/verify-raw/<raw_log_id>.log`. Claude Code
+   substitutes `${CLAUDE_PLUGIN_DATA}` inline in this skill's
+   content before you see it (per the Anthropic plugins-reference
+   docs), so the variable resolves to the user's actual data dir at
+   load time — do NOT shell to `echo "$CLAUDE_PLUGIN_DATA"`, the env
+   var is not inherited by Bash subprocesses you spawn from a skill.
+   Use the `Read` tool with a modest line budget; if the file is
+   large (verify outputs often are), read the first 100 lines plus
+   tail 50 to characterize what compressed well or poorly.
 
 4. **Draft the markdown report.** Suggested sections:
 
@@ -105,15 +121,20 @@ replacement mechanism.
 
 6. **Hand cleanup back to the user.** After the draft, list the
    exact paths the user can `rm` once they have filed the report.
-   Compute them from the `raw_log_dir` value in the redacted JSON
-   (jsonl path = the parent dir + `compression.jsonl`). Do NOT run
-   `rm` yourself: the telemetry is the user's data, and cleanup is
-   theirs to perform. Suggested wording:
+   Use `${CLAUDE_PLUGIN_DATA}` directly — Claude Code has already
+   substituted the variable inline by the time you read this skill,
+   so the resolved path appears in your context. Path shape:
+   `${CLAUDE_PLUGIN_DATA}/compression.jsonl` for the aggregate jsonl
+   and `${CLAUDE_PLUGIN_DATA}/verify-raw` for the raw-log directory.
+   This is the ONE place in the workflow where the absolute path is
+   allowed to appear (the user runs the commands locally; the
+   absolute path never leaves their machine). Do NOT run `rm`
+   yourself. Suggested wording:
 
    ```text
    After filing the report, clean up the local telemetry:
-     rm <jsonl_path>
-     rm -rf <raw_log_dir>
+     rm ${CLAUDE_PLUGIN_DATA}/compression.jsonl
+     rm -rf ${CLAUDE_PLUGIN_DATA}/verify-raw
    ```
 
 ## Privacy posture

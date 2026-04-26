@@ -30,7 +30,7 @@ DEFAULT_GLOB = File.join(
 ).freeze
 
 def default_log_path
-  data_dir = ENV['CLAUDE_PLUGIN_DATA']
+  data_dir = ENV.fetch('CLAUDE_PLUGIN_DATA', nil)
   return File.join(data_dir, 'compression.jsonl') if data_dir && !data_dir.empty?
 
   candidates = Dir.glob(DEFAULT_GLOB).select { |p| File.file?(p) }
@@ -89,7 +89,10 @@ def aggregate(entries)
     violations = entry['violations'] || []
     total_violations += violations.length
     weak_samples << { ratio: ratio, cmd: cmd, raw_log: entry['raw_log'] } if ratio < 0.20
-    violation_samples << { cmd: cmd, raw_log: entry['raw_log'], violation_count: violations.length } unless violations.empty?
+    unless violations.empty?
+      violation_samples << { cmd: cmd, raw_log: entry['raw_log'],
+                             violation_count: violations.length }
+    end
   end
 
   {
@@ -118,7 +121,7 @@ def redact_cmd(cmd)
   # `KEY=value` env-var assignments → keep key, redact value.
   out.gsub!(/(\b[A-Z_][A-Z0-9_]*=)\S*/) { "#{Regexp.last_match(1)}<v>" }
   # spec/foo/bar_spec.rb → spec/<file>; same for test/...
-  out.gsub!(%r{\b(spec|test)/[\S]+}, '\\1/<file>')
+  out.gsub!(%r{\b(spec|test)/\S+}, '\\1/<file>')
   # Absolute paths → /<path>
   out.gsub!(%r{/[\w./-]{4,}}, '/<path>')
   # Trailing free-form arguments after `--` are dropped.
@@ -132,7 +135,14 @@ def raw_log_id(path)
   File.basename(path, '.log')
 end
 
-def redact_stats(stats, raw_dir)
+def redact_stats(stats)
+  # `--redact` output carries no absolute paths. Per-sample
+  # `raw_log_id` is a basename only (e.g. "abc-123"); a consumer that
+  # needs to Read raw logs reconstructs the absolute path locally as
+  # `${CLAUDE_PLUGIN_DATA}/verify-raw/<raw_log_id>.log`. The
+  # ${CLAUDE_PLUGIN_DATA} env var lives in the user's session and
+  # never enters the CLI output, so the redacted JSON is paste-safe
+  # for a public GitHub issue.
   redacted_weak = stats[:weak_samples].map do |s|
     {
       ratio: s[:ratio],
@@ -153,7 +163,6 @@ def redact_stats(stats, raw_dir)
     by_class: stats[:by_class],
     weak_samples: redacted_weak,
     violation_samples: redacted_violations,
-    raw_log_dir: raw_dir,
     redaction_applied: true,
     recommendation: verdict(stats)
   }
@@ -178,7 +187,7 @@ def verdict(stats)
 end
 
 def render(stats, log_path)
-  out = +"compression telemetry from #{log_path}\n"
+  out = "compression telemetry from #{log_path}\n"
   out << "samples: #{stats[:total_count]}\n"
   out << "preservation violations: #{stats[:total_violations]}\n\n"
 
@@ -246,8 +255,7 @@ def main(argv)
   stats = aggregate(entry_stream)
 
   if opts[:redact]
-    raw_dir = File.dirname(opts[:log]) + '/verify-raw'
-    $stdout.puts JSON.generate(redact_stats(stats, raw_dir))
+    $stdout.puts JSON.generate(redact_stats(stats))
   elsif opts[:json]
     payload = {
       'log' => opts[:log],

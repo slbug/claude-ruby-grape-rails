@@ -32,10 +32,15 @@ read_hook_input
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-}"
 [[ -n "$PLUGIN_ROOT" ]] || exit 0
 
-TOOL_NAME="$(printf '%s' "$HOOK_INPUT_VALUE" | jq -r '.tool_name // empty')"
+# Fail-open: missing jq → exit silently. PostToolUse stderr feeds messages
+# back to Claude, so a `jq: command not found` slipping through would
+# violate the documented fail-open contract.
+command -v jq >/dev/null 2>&1 || exit 0
+
+TOOL_NAME="$(printf '%s' "$HOOK_INPUT_VALUE" | jq -r '.tool_name // empty' 2>/dev/null)"
 [[ "$TOOL_NAME" == "Bash" ]] || exit 0
-COMMAND="$(printf '%s' "$HOOK_INPUT_VALUE" | jq -r '.tool_input.command // empty')"
-STDOUT="$(printf '%s' "$HOOK_INPUT_VALUE" | jq -r '.tool_response.output // empty')"
+COMMAND="$(printf '%s' "$HOOK_INPUT_VALUE" | jq -r '.tool_input.command // empty' 2>/dev/null)"
+STDOUT="$(printf '%s' "$HOOK_INPUT_VALUE" | jq -r '.tool_response.output // empty' 2>/dev/null)"
 [[ -n "$COMMAND" && -n "$STDOUT" ]] || exit 0
 
 TRIGGERS="${PLUGIN_ROOT}/references/compression/triggers.yml"
@@ -48,7 +53,9 @@ MATCHER="${PLUGIN_ROOT}/bin/match-trigger"
 CLI="${PLUGIN_ROOT}/bin/compress-verify"
 [[ -x "$MATCHER" && -x "$CLI" ]] || exit 0
 
-# Exit codes: 0 = matched (compress), 1 = not matched OR excluded (skip), nonzero = loader error.
+# match-trigger exit codes: 0 = matched (proceed); any non-zero = either
+# "no match" / "excluded by rake_excluded" / "loader error" — these are
+# not distinguished by the CLI, and the hook treats them all as "skip".
 "$MATCHER" --triggers "$TRIGGERS" --cmd "$COMMAND" || exit 0
 
 [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]] || exit 0
