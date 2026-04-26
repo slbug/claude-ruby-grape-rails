@@ -22,14 +22,23 @@ module VerifyCompression
     end
   end
 
+  # Default templates used when rules.yml omits a `collapse:` key.
+  # rules.yml is hot-reloadable; the file's templates win when present.
+  DEFAULT_COLLAPSE = {
+    'stack_beyond_5' => '  [... {count} more frames elided ...]',
+    'deprecation_warnings' => '  [+{count} similar deprecations]',
+    'gem_loading' => 'Loaded {count} gems'
+  }.freeze
+
   module_function
 
   def compress(raw, rules_path: RULES_PATH)
     rules = load_rules(rules_path)
+    collapse = build_collapse(rules)
     lines = raw.split("\n", -1)
-    lines = collapse_stack(lines)
-    lines = collapse_gem_loading(lines)
-    lines = collapse_deprecations(lines)
+    lines = collapse_stack(lines, collapse['stack_beyond_5'])
+    lines = collapse_gem_loading(lines, collapse['gem_loading'])
+    lines = collapse_deprecations(lines, collapse['deprecation_warnings'])
     compressed = lines.join("\n")
     violations = check_preservation(raw, compressed, rules)
     Result.new(
@@ -46,7 +55,21 @@ module VerifyCompression
     {}
   end
 
-  def collapse_stack(lines)
+  def build_collapse(rules)
+    file_collapse = rules['collapse']
+    return DEFAULT_COLLAPSE.dup unless file_collapse.is_a?(Hash)
+
+    DEFAULT_COLLAPSE.each_with_object({}) do |(key, default), out|
+      val = file_collapse[key]
+      out[key] = val.is_a?(String) ? val : default
+    end
+  end
+
+  def render_collapse(template, count)
+    template.gsub('{count}', count.to_s)
+  end
+
+  def collapse_stack(lines, template)
     result = []
     buf = []
     flush = lambda do
@@ -56,7 +79,7 @@ module VerifyCompression
         result.concat(buf)
       else
         result.concat(buf.first(5))
-        result << "  [... #{buf.length - 5} more frames elided ...]"
+        result << render_collapse(template, buf.length - 5)
       end
       buf.clear
     end
@@ -72,7 +95,7 @@ module VerifyCompression
     result
   end
 
-  def collapse_gem_loading(lines)
+  def collapse_gem_loading(lines, template)
     result = []
     buf = []
     flush = lambda do
@@ -81,7 +104,7 @@ module VerifyCompression
       if buf.length <= 1
         result.concat(buf)
       else
-        result << "Loaded #{buf.length} gems"
+        result << render_collapse(template, buf.length)
       end
       buf.clear
     end
@@ -97,7 +120,7 @@ module VerifyCompression
     result
   end
 
-  def collapse_deprecations(lines)
+  def collapse_deprecations(lines, template)
     result = []
     seen = false
     dupe = 0
@@ -111,27 +134,35 @@ module VerifyCompression
         end
       else
         if dupe.positive?
-          result << "  [+#{dupe} similar deprecations]"
+          result << render_collapse(template, dupe)
           dupe = 0
         end
         result << line
       end
     end
-    result << "  [+#{dupe} similar deprecations]" if dupe.positive?
+    result << render_collapse(template, dupe) if dupe.positive?
     result
   end
 
   def check_preservation(raw, compressed, rules)
-    # Ruby `^` matches each line by default; no flag needed (unlike Python's
-    # re.MULTILINE).
+    # Every value under `preserve:` is treated as a regex; non-string
+    # values are a config bug and surface as a violation. Ruby `^` matches
+    # each line by default — no flag needed (unlike Python's re.MULTILINE).
+    # Prose / explanatory text belongs in YAML comments, never in a
+    # `preserve:` value, because a misconfigured pattern silently
+    # disabling preservation is exactly the failure mode this check is
+    # meant to catch.
     violations = []
     (rules['preserve'] || {}).each do |name, pattern|
-      next unless pattern.is_a?(String)
-      next if pattern.include?('verbatim')
+      unless pattern.is_a?(String)
+        violations << "#{name}: preserve rule is not a string regex (#{pattern.class})"
+        next
+      end
 
       begin
         re = Regexp.new(pattern)
-      rescue RegexpError
+      rescue RegexpError => e
+        violations << "#{name}: invalid preserve regex (#{e.message})"
         next
       end
       raw.scan(re) do

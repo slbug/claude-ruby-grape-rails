@@ -1,23 +1,36 @@
 # plugins/ruby-grape-rails/references/compression/rules.yml
 # Hot-reloadable. Hook re-reads per invocation.
 
+# Every value under `preserve:` is a Ruby regex string. The compressor
+# scans `tool_response.output` for matches and asserts each match
+# survives in the compressed output; a missing match emits a
+# preservation violation. Non-string values, invalid regexes, and other
+# misconfigurations also emit violations rather than silently passing.
+# Prose / explanatory text belongs ONLY in YAML comments — never in a
+# `preserve:` value.
+#
+# Top-5 stack-frame retention is implemented in code (`_collapse_stack`)
+# rather than as a `preserve:` regex, because the count-based behavior
+# does not map onto a per-line pattern.
 preserve:
   migration_names: "[0-9]{14}_[a-z_]+\\.rb"
   sqlstate: "(PG::[A-Z][a-zA-Z]+|Mysql2::Error[^\\n]*)"
   rspec_failure_ids: "rspec \\./spec/[^ ]+ # .+"
   minitest_failures: "^(FAIL|ERROR) (test_|\\w+#test_)"
-  backtrace_top_5: "keep first 5 stack frames verbatim"
   exit_codes: "(Exit (code )?[0-9]+|RuntimeError|StandardError)"
   # file:line refs OUTSIDE stack frames. Stack frames (`  from /path:N:in '...'`,
   # `  at /path:N:in '...'`) are intentionally elided beyond top-5 by the
-  # collapse rules; the preserve check applies in MULTILINE mode and excludes
-  # `from /at ` prefixed lines.
+  # collapse rules; this regex anchors at line start and rejects
+  # `from `/`at ` prefixed lines via negative lookahead.
   file_colon_line: "^(?!\\s*(from|at)\\b)[ \\t]*([a-zA-Z0-9_/.-]+):(\\d+)(:in .+)?"
 
+# Templates for the collapse-summary lines the compressor writes when
+# eliding repeated content. `{count}` is substituted with the elided
+# count at runtime. Hot-reloadable; the compressor reads these on every
+# invocation.
 collapse:
-  stack_beyond_5: "[... {count} more frames elided ...]"
-  deprecation_warnings: "first occurrence + [+{count} similar deprecations]"
-  passing_tests: "Finished in {time}s, {count} tests, 0 failures"
+  stack_beyond_5: "  [... {count} more frames elided ...]"
+  deprecation_warnings: "  [+{count} similar deprecations]"
   gem_loading: "Loaded {count} gems"
 
 # Raw stdout is preserved next to compression.jsonl under

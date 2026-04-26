@@ -46,31 +46,53 @@ ruby -ryaml -rshellwords -e '
   sample_threshold = Integer(advisory["sample_threshold"] || 0) rescue 0
   exit 0 if size_threshold <= 0 && sample_threshold <= 0
 
+  # Short-circuit as soon as either threshold is crossed: a SessionStart
+  # hook should not stat or stream every byte under verify-raw/ when one
+  # answer is already enough to fire the advisory.
+  size_hit = false
+  sample_hit = false
   total_bytes = 0
-  total_bytes += File.size(jsonl_path) if File.file?(jsonl_path)
-  if File.directory?(raw_dir)
-    raw_real = File.realpath(raw_dir) rescue nil
-    data_real = File.realpath(data_dir) rescue nil
-    if raw_real && data_real &&
-       File.basename(raw_real) == "verify-raw" &&
-       raw_real.start_with?(data_real + File::SEPARATOR)
-      Dir.children(raw_real).each do |name|
-        path = File.join(raw_real, name)
-        next if File.symlink?(path)
-        next unless File.file?(path)
-        next unless name.end_with?(".log")
-        total_bytes += File.size(path) rescue next
+  sample_count = 0
+
+  if File.file?(jsonl_path)
+    total_bytes += File.size(jsonl_path)
+    size_hit = true if size_threshold.positive? && total_bytes >= size_threshold
+  end
+
+  unless size_hit
+    if File.directory?(raw_dir)
+      raw_real = File.realpath(raw_dir) rescue nil
+      data_real = File.realpath(data_dir) rescue nil
+      if raw_real && data_real &&
+         File.basename(raw_real) == "verify-raw" &&
+         raw_real.start_with?(data_real + File::SEPARATOR)
+        Dir.children(raw_real).each do |name|
+          break if size_hit
+          path = File.join(raw_real, name)
+          next if File.symlink?(path)
+          next unless File.file?(path)
+          next unless name.end_with?(".log")
+          begin
+            total_bytes += File.size(path)
+          rescue StandardError
+            next
+          end
+          size_hit = true if size_threshold.positive? && total_bytes >= size_threshold
+        end
       end
     end
   end
 
-  sample_count = 0
-  if File.file?(jsonl_path)
-    File.foreach(jsonl_path) { |line| sample_count += 1 unless line.strip.empty? }
+  if File.file?(jsonl_path) && sample_threshold.positive?
+    File.foreach(jsonl_path) do |line|
+      sample_count += 1 unless line.strip.empty?
+      if sample_count >= sample_threshold
+        sample_hit = true
+        break
+      end
+    end
   end
 
-  size_hit = size_threshold.positive? && total_bytes >= size_threshold
-  sample_hit = sample_threshold.positive? && sample_count >= sample_threshold
   exit 0 unless size_hit || sample_hit
 
   mb = (total_bytes / (1024.0 * 1024.0)).round(1)

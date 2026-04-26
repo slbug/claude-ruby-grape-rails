@@ -8,7 +8,7 @@ Minimum runtime: python3 3.14+ for `lab/eval/`.
 |---------|-------------|
 | `make eval` / `npm run eval` | Lint + injection check + tracked changed surfaces |
 | `make eval-all` / `npm run eval:all` | Full eval snapshot |
-| `make eval-ci-deterministic` / `npm run eval:ci:deterministic` | Full deterministic CI gate. Runs `eval-output` + `check-refs` + `run_eval.sh --ci` (lint, injection guard, skill/agent/trigger scoring, ablation, hygiene + context-budget advisory). Used by GitHub CI. Must NOT transitively invoke any LLM provider |
+| `make eval-ci-deterministic` / `npm run eval:ci:deterministic` | Full deterministic CI gate. Runs `eval-output` + `check-refs` + `eval-compression` + `run_eval.sh --ci` (lint, injection guard, skill/agent/trigger scoring, ablation, hygiene + context-budget advisory). Used by GitHub CI. Must NOT transitively invoke any LLM provider |
 | `make check-refs` / `npm run check:refs` | Validate skill/agent cross-references resolve on disk |
 | `make eval-output` / `npm run eval:output` | Deterministic research/review artifact checks |
 | `make eval-compression` / `npm run eval:compression` | Deterministic fixture eval for the verify-output compressor (Ruby CLI). Pass thresholds: ≥40% mean bytes reduction, 0 preservation violations, ≤15% diff |

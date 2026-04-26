@@ -21,6 +21,12 @@ set -o pipefail
 # sets the env var. Keeps the plugin privacy-respecting by default.
 [[ "${RUBY_PLUGIN_COMPRESSION_TELEMETRY:-0}" == "1" ]] || exit 0
 
+# Verify-output telemetry's whole point is the LARGE outputs (full rspec
+# runs, brakeman scans). The default 256 KiB cap in `read_hook_input`
+# would systematically drop those, so raise it for this hook unless the
+# user already overrode it. 8 MiB covers ~150K-line rspec output.
+export RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES="${RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES:-8388608}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0
@@ -37,11 +43,21 @@ PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-}"
 # violate the documented fail-open contract.
 command -v jq >/dev/null 2>&1 || exit 0
 
-TOOL_NAME="$(printf '%s' "$HOOK_INPUT_VALUE" | jq -r '.tool_name // empty' 2>/dev/null)"
+# Single jq pass extracts the small metadata (tool_name + command),
+# NUL-delimited, into shell vars. The large `tool_response.output`
+# field is streamed to a file later — never captured into a shell
+# variable, where command substitution would strip trailing newlines
+# and force the whole payload into memory.
+TOOL_NAME=""
+COMMAND=""
+{
+  IFS= read -r -d '' TOOL_NAME || true
+  IFS= read -r -d '' COMMAND || true
+} < <(printf '%s' "$HOOK_INPUT_VALUE" \
+        | jq -j '(.tool_name // "") + "\u0000" + (.tool_input.command // "") + "\u0000"' \
+          2>/dev/null)
 [[ "$TOOL_NAME" == "Bash" ]] || exit 0
-COMMAND="$(printf '%s' "$HOOK_INPUT_VALUE" | jq -r '.tool_input.command // empty' 2>/dev/null)"
-STDOUT="$(printf '%s' "$HOOK_INPUT_VALUE" | jq -r '.tool_response.output // empty' 2>/dev/null)"
-[[ -n "$COMMAND" && -n "$STDOUT" ]] || exit 0
+[[ -n "$COMMAND" ]] || exit 0
 
 TRIGGERS="${PLUGIN_ROOT}/references/compression/triggers.yml"
 [[ -r "$TRIGGERS" ]] || exit 0
@@ -61,12 +77,41 @@ CLI="${PLUGIN_ROOT}/bin/compress-verify"
 [[ -n "${CLAUDE_PLUGIN_DATA:-}" ]] || exit 0
 DATA_DIR="$CLAUDE_PLUGIN_DATA"
 mkdir -p "${DATA_DIR}/verify-raw"
-UUID="$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || date +%s%N)"
-RAW_LOG="${DATA_DIR}/verify-raw/${UUID}.log"
-printf '%s' "$STDOUT" > "$RAW_LOG"
 
-printf '%s' "$STDOUT" | "$CLI" \
+# UUID via Ruby stdlib `SecureRandom.uuid`. The previous fallback chain
+# (`uuidgen` → `/proc/sys/kernel/random/uuid` → `date +%s%N`) was not
+# portable: BSD/macOS `date` ignores `%N` and emits a literal `N`, so
+# concurrent invocations would collide on the same RAW_LOG path. Ruby
+# is already a hard dependency at this point.
+UUID="$(ruby -rsecurerandom -e 'puts SecureRandom.uuid' 2>/dev/null)"
+[[ -n "$UUID" ]] || exit 0
+RAW_LOG="${DATA_DIR}/verify-raw/${UUID}.log"
+
+# Stream `tool_response.output` from the hook payload directly to the
+# raw-log file via a SECOND jq pass (one for metadata above, one for
+# the body here — total 2 jq invocations vs the original 3). `-j`
+# emits the raw string with no trailing newline jq would otherwise
+# append, so byte counts match the original Bash output exactly.
+# Fail-closed on the redirect: an empty RAW_LOG (e.g. tool produced
+# nothing) skips logging entirely.
+printf '%s' "$HOOK_INPUT_VALUE" \
+  | jq -j '.tool_response.output // ""' 2>/dev/null > "$RAW_LOG" || {
+    rm -f "$RAW_LOG"
+    exit 0
+  }
+[[ -s "$RAW_LOG" ]] || {
+  rm -f "$RAW_LOG"
+  exit 0
+}
+
+# Compressor reads the raw output from stdin (redirect from RAW_LOG)
+# and records the RAW_LOG path string into the JSONL entry's `raw_log`
+# field via the `--raw-log` flag. The CLI never writes to RAW_LOG —
+# the same path appearing in both positions is read-only.
+# shellcheck disable=SC2094  # --raw-log is a path-string flag, not a write target
+"$CLI" \
   --log "${DATA_DIR}/compression.jsonl" \
   --cmd "$COMMAND" \
-  --raw-log "$RAW_LOG" || true
+  --raw-log "$RAW_LOG" \
+  < "$RAW_LOG" || true
 exit 0
