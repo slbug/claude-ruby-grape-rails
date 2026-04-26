@@ -2,9 +2,12 @@
 set -o nounset
 set -o pipefail
 
-# Policy: advisory SessionStart hook. Read-only. Emits a one-shot
-# nudge to stdout when accumulated verify-output compression telemetry
-# crosses either threshold from `references/compression/rules.yml`
+# Policy: advisory SessionStart hook. Read-only. Emits a single
+# advisory per SessionStart invocation (no cross-session
+# de-duplication; it fires every startup/resume while the thresholds
+# are crossed) to stdout when accumulated verify-output compression
+# telemetry crosses either threshold from
+# `references/compression/rules.yml`
 # (`advisory.size_threshold_bytes`, `advisory.sample_threshold`).
 # SessionStart stdout IS added to Claude's context per Anthropic Claude
 # Code hooks docs, so the message reaches both the model and the user.

@@ -10,18 +10,35 @@
 require 'json'
 require 'optparse'
 
-# When invoked inside Claude Code, ${CLAUDE_PLUGIN_DATA} resolves to the
-# install-specific plugin data dir (e.g. ~/.claude/plugins/data/ruby-grape-rails-slbug
-# or ~/.claude/plugins/data/ruby-grape-rails-inline). When invoked outside CC
-# (e.g. a user inspecting the on-disk telemetry from a normal shell), the
-# CC env vars are not set; fall back to the convention path under the
-# documented ~/.claude/plugins/data/ tree.
-DEFAULT_LOG = File.join(
-  ENV.fetch('CLAUDE_PLUGIN_DATA') do
-    File.join(Dir.home, '.claude', 'plugins', 'data', 'ruby-grape-rails')
-  end,
+# Default jsonl location:
+#
+# - Inside Claude Code, ${CLAUDE_PLUGIN_DATA} resolves to the
+#   install-specific plugin data dir under
+#   ~/.claude/plugins/data/ruby-grape-rails-<install-id>/ (e.g.
+#   `-slbug` for the marketplace install or `-inline` for `--plugin-dir`
+#   installs). Use it directly.
+# - Outside CC the env var is unset and the install id is not known up
+#   front. Glob the conventional plugin-data tree for any
+#   `ruby-grape-rails*/compression.jsonl`; if exactly one matches, use
+#   it; if several match (multiple installs side by side), pick the
+#   most recently modified. If none match, return nil and the caller
+#   prints a helpful error listing the search pattern so the user can
+#   pass an explicit `--log <path>`.
+DEFAULT_GLOB = File.join(
+  Dir.home, '.claude', 'plugins', 'data', 'ruby-grape-rails*',
   'compression.jsonl'
-)
+).freeze
+
+def default_log_path
+  data_dir = ENV['CLAUDE_PLUGIN_DATA']
+  return File.join(data_dir, 'compression.jsonl') if data_dir && !data_dir.empty?
+
+  candidates = Dir.glob(DEFAULT_GLOB).select { |p| File.file?(p) }
+  return nil if candidates.empty?
+  return candidates.first if candidates.length == 1
+
+  candidates.max_by { |p| File.mtime(p) }
+end
 
 # Promotion criteria thresholds. Mirrors the criteria documented in
 # references/compression/README.md "Promotion criteria".
@@ -186,7 +203,7 @@ def render(stats, log_path)
 end
 
 def main(argv)
-  opts = { log: DEFAULT_LOG, json: false, redact: false }
+  opts = { log: nil, json: false, redact: false }
   OptionParser.new do |p|
     p.on('--log PATH') { |v| opts[:log] = v }
     p.on('--json') { opts[:json] = true }
@@ -196,8 +213,17 @@ def main(argv)
     end
   end.parse!(argv)
 
+  opts[:log] ||= default_log_path
+
+  if opts[:log].nil?
+    warn 'compression-stats: no compression.jsonl found.'
+    warn "  searched glob: #{DEFAULT_GLOB}"
+    warn '  pass --log <path> if your plugin data dir is elsewhere.'
+    return 1
+  end
   unless File.file?(opts[:log])
     warn "compression-stats: no jsonl at #{opts[:log]}"
+    warn '  pass --log <path> to point at an alternate location.'
     return 1
   end
 

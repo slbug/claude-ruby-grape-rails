@@ -66,13 +66,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `hooks/scripts/compression-data-status.sh` — `SessionStart` advisory
   hook. Read-only. When telemetry on disk crosses either
   `rules.yml` `advisory.size_threshold_bytes` (default 50 MB) or
-  `advisory.sample_threshold` (default 1000), the hook prints a
-  one-shot nudge to SessionStart stdout (which CC adds to context per
-  the Anthropic hooks docs), suggesting the user run
-  `/rb:compression-report` to draft a redacted report, and listing the
-  exact `rm` commands they can run after filing it. The plugin ships
-  no destructive command — cleanup is always the user's manual
-  action.
+  `advisory.sample_threshold` (default 1000), the hook prints a single
+  advisory per SessionStart invocation (no cross-session
+  de-duplication — it fires on every startup/resume while the
+  thresholds remain crossed) to SessionStart stdout (which CC adds
+  to context per the Anthropic hooks docs), suggesting the user run
+  `/rb:compression-report` to draft a redacted report, and listing
+  the exact `rm` commands they can run after filing it. The plugin
+  ships no destructive command — cleanup is always the user's
+  manual action.
 - `lab/eval/tests/test_compression.py`,
   `lab/eval/tests/test_triggers.py`, and
   `lab/eval/tests/test_compression_stats.py` — subprocess-driven
