@@ -13,15 +13,17 @@ only one who should choose whether to record it.
 
 ## What this ships
 
-- `PostToolUse` hook on `Bash` that, **when
-  `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1`**, runs after a triggered
+- `PostToolUse` and `PostToolUseFailure` hooks on `Bash` that, **when
+  `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1`**, run after a triggered
   verify command (rspec, rubocop, standardrb, brakeman, reek,
   `rails db:*`, whitelisted rake targets, with `rake_excluded`
   overriding `rake_verify_only`). When the env var is unset (the
   default), the hook exits 0 immediately.
 - For each match (env var enabled): appends a JSONL stats entry to
-  `${CLAUDE_PLUGIN_DATA}/compression.jsonl` and preserves raw stdout
-  under `${CLAUDE_PLUGIN_DATA}/verify-raw/<uuid>.log`.
+  `${CLAUDE_PLUGIN_DATA}/compression.jsonl` and preserves the
+  captured Bash output (stdout + stderr on success events, or the
+  top-level `error` blob on failure events) under
+  `${CLAUDE_PLUGIN_DATA}/verify-raw/<uuid>.log`.
 - Reader CLI `bin/compression-stats` aggregates the jsonl on demand
   (also a no-op when no jsonl exists).
 - `SessionStart` advisory hook nudges the user when accumulated
