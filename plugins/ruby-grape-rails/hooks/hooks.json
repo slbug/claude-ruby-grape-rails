@@ -119,6 +119,16 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/compress-verify-output.sh",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -428,6 +438,11 @@
             "timeout": 30,
             "statusMessage": "Refreshing Ruby runtime context...",
             "async": true
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/compression-data-status.sh",
+            "timeout": 5
           }
         ]
       },

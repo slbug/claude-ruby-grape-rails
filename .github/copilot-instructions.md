@@ -20,7 +20,14 @@ The plugin ships specialist agents, skills, hooks, and eval tooling:
   (bash, advisory statusline renderer), `detect-stack` (Ruby, `/rb:init`
   stack detection), `extract-permissions` (Ruby, transcript-based Bash
   permission recommender), `resolve-base-ref` (bash, eval-able BASE_REF
-  resolver for diff comparisons).
+  resolver for diff comparisons), `compress-verify` (Ruby, verify-output
+  compressor CLI), `match-trigger` (Ruby, verify-command trigger matcher),
+  `compression-stats` (Ruby, end-user reader for verify-output telemetry
+  with `--redact` mode for anonymized GitHub-issue-ready JSON).
+- **Plugin-owned Ruby library** (`plugins/ruby-grape-rails/lib/*.rb`):
+  end-user runtime modules required by `bin/` CLIs and hook scripts.
+  Ruby ≥ 3.4. Stdlib only (no Bundler gems). PyYAML is contributor-only;
+  do NOT introduce a Python runtime dep under `lib/`.
 - **Plugin settings** (`plugins/ruby-grape-rails/settings.json`): default
   settings applied when the plugin is enabled. Only `agent` and
   `subagentStatusLine` keys are supported per CC docs.

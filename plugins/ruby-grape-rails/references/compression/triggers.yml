@@ -1,0 +1,22 @@
+# plugins/ruby-grape-rails/references/compression/triggers.yml
+# Commands whose stdout is eligible for observation compression.
+# No broad `bundle exec rake` matcher — too wide.
+
+# Env-prefix is a leading run of `KEY=value` (or `KEY=`) assignments separated
+# by whitespace, e.g. `RAILS_ENV=test BUNDLE_GEMFILE=Gemfile rspec`.  All
+# patterns below tolerate any number of those prefixes via `(\\S+=\\S*\\s+)*`.
+verify_commands:
+  direct:
+    - "^(\\S+=\\S*\\s+)*rspec\\b"
+    - "^(\\S+=\\S*\\s+)*rubocop\\b"
+    - "^(\\S+=\\S*\\s+)*standardrb\\b"
+    - "^(\\S+=\\S*\\s+)*brakeman\\b"
+    - "^(\\S+=\\S*\\s+)*reek\\b"
+    - "^(\\S+=\\S*\\s+)*bundle exec (rspec|rubocop|standardrb|brakeman|reek)\\b"
+  migrations:
+    - "^(\\S+=\\S*\\s+)*(bundle exec )?rails db:(migrate|rollback|schema:load|seed)\\b"
+  rake_verify_only:
+    - "^(\\S+=\\S*\\s+)*(bundle exec )?rake (ci|test|spec|verify|lint|standard:fix_unsafely|brakeman)\\b"
+
+rake_excluded:
+  - "^(\\S+=\\S*\\s+)*(bundle exec )?rake (routes|db:drop|db:create|assets:|generators:|stats|notes)\\b"

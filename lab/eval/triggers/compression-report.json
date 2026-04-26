@@ -1,0 +1,51 @@
+{
+  "skill": "compression-report",
+  "should_trigger": [
+    {
+      "prompt": "Share my verify-output compression telemetry with the maintainers"
+    },
+    {
+      "prompt": "Generate an anonymized report from my compression jsonl I can paste into a GitHub issue"
+    },
+    {
+      "prompt": "Help me file a compression telemetry report so contributors can see real-world ratios"
+    },
+    {
+      "prompt": "Build a redacted summary of what compressed well and what did not on my Rails project"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Why did my last rspec run produce so much output? Diagnose this single failure"
+    },
+    {
+      "prompt": "Edit references/compression/rules.yml to relax the file_colon_line preserve pattern"
+    },
+    {
+      "prompt": "Investigate why this verify command is slow"
+    },
+    {
+      "prompt": "Show me the recent git commits on this branch"
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "I have a few weeks of compression.jsonl on disk and want to send it back to the plugin team — can you help redact and format it?",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "After enabling RUBY_PLUGIN_COMPRESSION_TELEMETRY for a sprint, package up an issue-ready report that explains where compression worked and where it did not",
+      "axis": "multi_step"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Run my rspec suite and explain the failures (no need to send anything anywhere)",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "Triage the failed CI run, then fix the migration bug it surfaced, then push the fix",
+      "axis": "multi_step"
+    }
+  ]
+}

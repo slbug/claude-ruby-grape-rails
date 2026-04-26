@@ -1,0 +1,56 @@
+Brakeman 6.0.1
+Loading scanner...
+Loaded 80 gems
+
+== Warnings ==
+
+Warning: Cross-Site Scripting
+Location: app/views/users/show.html.erb:12
+  from /gems/brakeman/lib/brakeman/checks.rb:100:in `scan'
+  from /gems/brakeman/lib/brakeman/scanner.rb:50:in `walk'
+  from /gems/brakeman/lib/brakeman/runner.rb:25:in `run'
+  from /gems/brakeman/lib/brakeman/file_parser.rb:80:in `parse'
+  from /gems/brakeman/lib/brakeman/processor.rb:200:in `process'
+  [... 3 more frames elided ...]
+
+Warning: SQL Injection
+Location: app/models/user.rb:42
+  from /gems/brakeman/lib/brakeman/checks.rb:100:in `scan'
+  from /gems/brakeman/lib/brakeman/scanner.rb:50:in `walk'
+  from /gems/brakeman/lib/brakeman/runner.rb:25:in `run'
+  from /gems/brakeman/lib/brakeman/file_parser.rb:80:in `parse'
+  from /gems/brakeman/lib/brakeman/processor.rb:200:in `process'
+  [... 3 more frames elided ...]
+
+Warning: Mass Assignment
+Location: app/controllers/users_controller.rb:25
+  from /gems/brakeman/lib/brakeman/checks.rb:100:in `scan'
+  from /gems/brakeman/lib/brakeman/scanner.rb:50:in `walk'
+  from /gems/brakeman/lib/brakeman/runner.rb:25:in `run'
+  from /gems/brakeman/lib/brakeman/file_parser.rb:80:in `parse'
+  from /gems/brakeman/lib/brakeman/processor.rb:200:in `process'
+  [... 3 more frames elided ...]
+
+Warning: Cross-Site Scripting
+Location: app/views/posts/index.html.erb:7
+  from /gems/brakeman/lib/brakeman/checks.rb:100:in `scan'
+  from /gems/brakeman/lib/brakeman/scanner.rb:50:in `walk'
+  from /gems/brakeman/lib/brakeman/runner.rb:25:in `run'
+  from /gems/brakeman/lib/brakeman/file_parser.rb:80:in `parse'
+  from /gems/brakeman/lib/brakeman/processor.rb:200:in `process'
+  [... 3 more frames elided ...]
+
+Warning: Redirect
+Location: app/controllers/redirects_controller.rb:3
+  from /gems/brakeman/lib/brakeman/checks.rb:100:in `scan'
+  from /gems/brakeman/lib/brakeman/scanner.rb:50:in `walk'
+  from /gems/brakeman/lib/brakeman/runner.rb:25:in `run'
+  from /gems/brakeman/lib/brakeman/file_parser.rb:80:in `parse'
+  from /gems/brakeman/lib/brakeman/processor.rb:200:in `process'
+  [... 3 more frames elided ...]
+
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+  [+19 similar deprecations]
+
+Finished. 5 warnings, 0 errors
+Exit code 1

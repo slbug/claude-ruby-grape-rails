@@ -39,8 +39,21 @@ BANNED_PATTERNS = (
 )
 
 BANNED_IMPORTS = (
-    "behavioral_scorer",
-    "epistemic_suite",
+    # Modules that shell out to an LLM provider in their function bodies.
+    # The ban applies to DIRECT imports from a deterministic-path file:
+    # `^(import|from)\s.*\b<module>\b` flagged on any file in
+    # DETERMINISTIC_PATH_FILES. Indirect chains (a deterministic-path
+    # file imports module A, which itself imports a banned module) are
+    # NOT detected here — the regex sees only the deterministic file's
+    # own import lines. None exist today (verified by the cross-import
+    # graph audit), but if one is introduced, add the intermediary to
+    # this list as well or scan its imports too. The BANNED_PATTERNS
+    # list is independent and catches inlined `claude --bare` /
+    # `ollama run` invocations regardless of where they appear in a
+    # deterministic-path file.
+    "behavioral_scorer",   # LLM provider call for trigger routing
+    "epistemic_suite",     # LLM provider call for posture metrics
+    "trigger_expand",      # LLM provider call for corpus expansion
 )
 
 # Hardcoded allowlist of files transitively executed by
@@ -69,6 +82,7 @@ DETERMINISTIC_PATH_FILES = (
     "lab/eval/artifact_scorer.py",
     "lab/eval/output_checks.py",
     "lab/eval/check_refs.py",
+    "lab/eval/compression_eval.py",
     "lab/eval/frontmatter.py",
     "lab/eval/results_dir.py",
     "lab/eval/schemas.py",

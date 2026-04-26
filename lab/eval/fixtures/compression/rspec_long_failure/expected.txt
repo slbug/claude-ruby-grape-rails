@@ -1,0 +1,110 @@
+Run options: include {:focus=>true}
+All examples were filtered out; ignoring {:focus=>true}
+
+Randomized with seed 12345
+
+1) UserSpec creates user with email#0
+   ./spec/models/user_spec.rb:10
+2) UserSpec creates user with email#1
+   ./spec/models/user_spec.rb:11
+3) UserSpec creates user with email#2
+   ./spec/models/user_spec.rb:12
+4) UserSpec creates user with email#3
+   ./spec/models/user_spec.rb:13
+5) UserSpec creates user with email#4
+   ./spec/models/user_spec.rb:14
+6) UserSpec creates user with email#5
+   ./spec/models/user_spec.rb:15
+7) UserSpec creates user with email#6
+   ./spec/models/user_spec.rb:16
+8) UserSpec creates user with email#7
+   ./spec/models/user_spec.rb:17
+9) UserSpec creates user with email#8
+   ./spec/models/user_spec.rb:18
+10) UserSpec creates user with email#9
+   ./spec/models/user_spec.rb:19
+11) UserSpec creates user with email#10
+   ./spec/models/user_spec.rb:20
+12) UserSpec creates user with email#11
+   ./spec/models/user_spec.rb:21
+13) UserSpec creates user with email#12
+   ./spec/models/user_spec.rb:22
+14) UserSpec creates user with email#13
+   ./spec/models/user_spec.rb:23
+15) UserSpec creates user with email#14
+   ./spec/models/user_spec.rb:24
+16) UserSpec creates user with email#15
+   ./spec/models/user_spec.rb:25
+17) UserSpec creates user with email#16
+   ./spec/models/user_spec.rb:26
+18) UserSpec creates user with email#17
+   ./spec/models/user_spec.rb:27
+19) UserSpec creates user with email#18
+   ./spec/models/user_spec.rb:28
+20) UserSpec creates user with email#19
+   ./spec/models/user_spec.rb:29
+21) UserSpec creates user with email#20
+   ./spec/models/user_spec.rb:30
+22) UserSpec creates user with email#21
+   ./spec/models/user_spec.rb:31
+23) UserSpec creates user with email#22
+   ./spec/models/user_spec.rb:32
+24) UserSpec creates user with email#23
+   ./spec/models/user_spec.rb:33
+25) UserSpec creates user with email#24
+   ./spec/models/user_spec.rb:34
+26) UserSpec creates user with email#25
+   ./spec/models/user_spec.rb:35
+27) UserSpec creates user with email#26
+   ./spec/models/user_spec.rb:36
+28) UserSpec creates user with email#27
+   ./spec/models/user_spec.rb:37
+29) UserSpec creates user with email#28
+   ./spec/models/user_spec.rb:38
+30) UserSpec creates user with email#29
+   ./spec/models/user_spec.rb:39
+31) UserSpec creates user with email#30
+   ./spec/models/user_spec.rb:40
+32) UserSpec creates user with email#31
+   ./spec/models/user_spec.rb:41
+33) UserSpec creates user with email#32
+   ./spec/models/user_spec.rb:42
+34) UserSpec creates user with email#33
+   ./spec/models/user_spec.rb:43
+35) UserSpec creates user with email#34
+   ./spec/models/user_spec.rb:44
+36) UserSpec creates user with email#35
+   ./spec/models/user_spec.rb:45
+37) UserSpec creates user with email#36
+   ./spec/models/user_spec.rb:46
+38) UserSpec creates user with email#37
+   ./spec/models/user_spec.rb:47
+39) UserSpec creates user with email#38
+   ./spec/models/user_spec.rb:48
+40) UserSpec creates user with email#39
+   ./spec/models/user_spec.rb:49
+DEPRECATION WARNING: Using `attr_accessible` is deprecated. Please use `permit` (called from spec/models/user_spec.rb:42)
+  [+9 similar deprecations]
+
+Failures:
+
+  1) UserSpec#create raises on duplicate email
+     Failure/Error: User.create!(email: 'dup@example.com')
+
+     PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint "users_email_idx"
+     DETAIL:  Key (email)=(dup@example.com) already exists.
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/0.rb:10:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/1.rb:11:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/2.rb:12:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/3.rb:13:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/4.rb:14:in `block in execute'
+  [... 25 more frames elided ...]
+
+Loaded 420 gems
+
+Failed examples:
+
+rspec ./spec/models/user_spec.rb:42 # UserSpec#create raises on duplicate email
+
+Finished in 12.34s, 41 examples, 1 failure
+Exit code 1

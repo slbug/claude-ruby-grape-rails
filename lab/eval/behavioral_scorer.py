@@ -1784,8 +1784,8 @@ def score_skill(
     # Expand for rotations or samples — each produces independent work items.
     # Tuple: (item, expected, tier, rotation, run_index, prompt_id)
     # For rotations: use strided offsets (BiasBusters method) for maximum positional spread.
-    # With N rotations over L skills, stride = L // N. E.g., 5 rotations over 51 skills
-    # gives offsets [0, 10, 20, 30, 40] — each skill shifts ~10 positions per rotation.
+    # With N rotations over L skills, stride = L // N. E.g., 5 rotations over L skills
+    # gives offsets [0, L//5, 2*L//5, ...] — each skill shifts ~L/5 positions per rotation.
     multiplier = max(rotations, samples)
     num_skills = len(descriptions)
     rotation_stride = max(num_skills // rotations, 1) if rotations > 1 else 0

@@ -2,7 +2,7 @@
 
 **Claude Code is great. But it doesn't know that `default_scope` will bite you later, that `t.float` will corrupt your money fields, or that your Sidekiq job isn't idempotent.**
 
-This plugin does. It coordinates **23 specialist agents** and **51 skills** that plan, implement,
+This plugin does. It coordinates **23 specialist agents** and **52 skills** that plan, implement,
 review, and verify your Ruby/Rails/Grape code in parallel -- each with domain
 expertise, fresh context, and enforced [Iron Laws](#iron-laws-non-negotiable-rules)
 that catch the bugs your tests won't. It is now stack-aware enough to handle
@@ -606,6 +606,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | `/rb:boundaries`         | Analyze Rails service boundaries                           |
 | `/rb:examples`           | Practical examples and pattern walkthroughs                |
 | `/rb:constraint-debug`   | Debug ActiveRecord constraint violations                   |
+| `/rb:compression-report` | Anonymized verify-output compression telemetry report (opt-in via `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1`) |
 
 ### Analysis
 
@@ -690,6 +691,10 @@ bundle add tidewave --group development
 
 - Claude Code CLI
 - Ruby/Rails/Grape project
+- Ruby >= 3.4 — required by plugin runtime CLIs under
+  `plugins/ruby-grape-rails/bin/` (e.g. `compress-verify`,
+  `match-trigger`, `compression-stats`). Stdlib only; no Bundler gems
+  required at runtime.
 
 ### Optional
 

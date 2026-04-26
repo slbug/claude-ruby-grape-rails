@@ -81,6 +81,29 @@ Hook scripts wrap slow sub-commands with `timeout` and env var overrides:
 - `RUBY_PLUGIN_BETTERLEAKS_TIMEOUT` (default 60s) — secret-scan.sh
 - `RUBY_PLUGIN_DETECT_STACK_TIMEOUT` (default 15s) — detect-runtime.sh
 
+## Opt-in Telemetry Env Vars
+
+Some hooks collect telemetry only when an opt-in env var is set. These
+are NOT timeouts; they gate whether the hook does anything at all.
+Default is **off** — the hook exits 0 immediately when the env var is
+unset, leaving the user's data dir untouched.
+
+- `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1` — `compress-verify-output.sh`.
+  When unset (default), the verify-output compression collector is a
+  no-op. When set, the hook appends to
+  `${CLAUDE_PLUGIN_DATA}/compression.jsonl` and preserves raw stdout
+  under `${CLAUDE_PLUGIN_DATA}/verify-raw/<uuid>.log`. The plugin ships
+  no command that deletes this telemetry: cleanup is the user's
+  manual action. `compression-data-status.sh` is the matched
+  `SessionStart` advisory hook — read-only, prints an `rm`-ready
+  nudge when telemetry on disk crosses
+  `references/compression/rules.yml` `advisory.size_threshold_bytes`
+  or `advisory.sample_threshold`.
+
+When reviewing changes that introduce a new opt-in env var, also
+update this list and ensure the hook's `# Policy:` header documents
+the opt-in default-off behavior explicitly.
+
 Exit code 124 from `timeout`/`gtimeout` is handled explicitly:
 
 - **Delegated guardrails** (format-ruby, verify-ruby): fail closed (exit 2)
