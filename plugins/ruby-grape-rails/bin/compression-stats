@@ -121,8 +121,12 @@ end
 # and producing the markdown the user pastes into a public issue.
 def redact_cmd(cmd)
   out = cmd.dup
-  # `KEY=value` env-var assignments → keep key, redact value.
-  out.gsub!(/(\b[A-Z_][A-Z0-9_]*=)\S*/) { "#{Regexp.last_match(1)}<v>" }
+  # `KEY=value` env-var assignments → keep key, redact value. Matches
+  # both uppercase (`RAILS_ENV=test`) and lowercase (`http_proxy=...`,
+  # `lang=...`) keys. POSIX allows lowercase env identifiers, and
+  # values like `http_proxy=https://user:pass@host` carry credentials
+  # that the redacted output must not leak.
+  out.gsub!(/(\b[A-Za-z_][A-Za-z0-9_]*=)\S*/) { "#{Regexp.last_match(1)}<v>" }
   # `--flag=value` CLI options → keep flag name, redact value. Catches
   # tokens, API keys, seeds, ticket ids, and any other inline secret
   # users routinely pass via `--token=...` / `--api-key=...` / etc.

@@ -142,6 +142,34 @@ def test_redact_drops_violation_message_strings(tmp_path: Path) -> None:
     assert sample["raw_log_id"] == "uuid-2"
 
 
+def test_redact_strips_lowercase_env_values(tmp_path: Path) -> None:
+    # Lowercase env keys (http_proxy, https_proxy, no_proxy, lang, …)
+    # are POSIX-valid and carry credentials in real usage, e.g.
+    # `http_proxy=https://user:pass@host`. The redactor must mask the
+    # value the same way it masks uppercase keys.
+    log = tmp_path / "compression.jsonl"
+    entry = {
+        "ts": 1.0,
+        "cmd": "http_proxy=https://user:pass@proxy.internal lang=en_US.UTF-8 rspec",
+        "raw_bytes": 100,
+        "compressed_bytes": 10,
+        "ratio": 0.05,
+        "violations": [],
+        "raw_log": None,
+    }
+    log.write_text(json.dumps(entry) + "\n")
+
+    payload = _run_redact(log)
+    blob = json.dumps(payload)
+    assert "user:pass" not in blob
+    assert "proxy.internal" not in blob
+    assert "en_US.UTF-8" not in blob
+    weak = payload["weak_samples"][0]
+    assert "http_proxy=<v>" in weak["cmd"]
+    assert "lang=<v>" in weak["cmd"]
+    assert "rspec" in weak["cmd"]
+
+
 def test_redact_strips_cli_flag_values(tmp_path: Path) -> None:
     # `--flag=value` style CLI options can carry tokens, API keys,
     # JIRA-shaped ticket ids, seed values, and other inline secrets
