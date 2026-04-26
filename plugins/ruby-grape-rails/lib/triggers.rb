@@ -25,7 +25,12 @@ module Triggers
       end
     end
     false
-  rescue Errno::ENOENT, Errno::EACCES, Psych::SyntaxError, IOError
+  rescue Errno::ENOENT, Errno::EACCES, Psych::Exception, IOError
+    # `Psych::Exception` covers the full safe-load failure surface:
+    # `Psych::SyntaxError` (malformed YAML) and `Psych::DisallowedClass`
+    # (tagged objects rejected by `safe_load_file`). The hook contract
+    # is fail-open; any of these → "no match" rather than an exception
+    # propagating up through the matcher CLI.
     false
   end
 
