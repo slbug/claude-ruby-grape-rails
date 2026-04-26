@@ -8,9 +8,10 @@ Minimum runtime: python3 3.14+ for `lab/eval/`.
 |---------|-------------|
 | `make eval` / `npm run eval` | Lint + injection check + tracked changed surfaces |
 | `make eval-all` / `npm run eval:all` | Full eval snapshot |
-| `make eval-ci-deterministic` / `npm run eval:ci:deterministic` | Full deterministic CI gate. Runs `eval-output` + `check-refs` + `run_eval.sh --ci` (lint, injection guard, skill/agent/trigger scoring, ablation, hygiene + context-budget advisory). Used by GitHub CI. Must NOT transitively invoke any LLM provider |
+| `make eval-ci-deterministic` / `npm run eval:ci:deterministic` | Full deterministic CI gate. Runs `eval-output` + `check-refs` + `eval-compression` + `run_eval.sh --ci` (lint, injection guard, skill/agent/trigger scoring, ablation, hygiene + context-budget advisory). Used by GitHub CI. Must NOT transitively invoke any LLM provider |
 | `make check-refs` / `npm run check:refs` | Validate skill/agent cross-references resolve on disk |
 | `make eval-output` / `npm run eval:output` | Deterministic research/review artifact checks |
+| `make eval-compression` / `npm run eval:compression` | Deterministic fixture eval for the verify-output compressor (Ruby CLI). Pass thresholds: ≥40% mean bytes reduction, 0 preservation violations, ≤15% diff |
 | `make eval-epistemic` / `npm run eval:epistemic` | Epistemic-posture metrics (6 metrics, 10 scenarios, 1 system-prompt snapshot per run) |
 | `make security-injection` / `npm run security:injection` | Dynamic injection scanning |
 | `make eval-tests` / `npm run eval:test` | Default unittest discovery |
@@ -39,7 +40,7 @@ Minimum runtime: python3 3.14+ for `lab/eval/`.
 
 ## Current Scope
 
-- 51/51 skill eval coverage and trigger corpora
+- 52/52 skill eval coverage and trigger corpora
 - Structural scoring for all shipped agents
 - Deterministic trigger corpora and confusable-pair analysis
 - Optional behavioral routing dimension (cached Ollama model namespace, apfel, or haiku results per `RUBY_PLUGIN_EVAL_PROVIDER`)

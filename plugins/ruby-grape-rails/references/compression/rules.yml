@@ -1,0 +1,57 @@
+# plugins/ruby-grape-rails/references/compression/rules.yml
+# Hot-reloadable. Hook re-reads per invocation.
+
+# Every value under `preserve:` is a Ruby regex string. The compressor
+# scans `tool_response.output` for matches and asserts each match
+# survives in the compressed output; a missing match emits a
+# preservation violation. Per-rule misconfigurations inside `preserve:`
+# (non-string values, invalid regexes, a non-Hash `preserve:` block)
+# also emit violations rather than silently passing. Whole-file load
+# failures (missing / unreadable / malformed YAML) instead fall back
+# to an empty ruleset to keep the hook's documented fail-open contract
+# — load errors do NOT emit violations. Prose / explanatory text
+# belongs ONLY in YAML comments — never in a `preserve:` value.
+#
+# Top-5 stack-frame retention is implemented in code (`collapse_stack`)
+# rather than as a `preserve:` regex, because the count-based behavior
+# does not map onto a per-line pattern.
+preserve:
+  migration_names: "[0-9]{14}_[a-z_]+\\.rb"
+  sqlstate: "(PG::[A-Z][a-zA-Z]+|Mysql2::Error[^\\n]*)"
+  rspec_failure_ids: "rspec \\./spec/[^ ]+ # .+"
+  minitest_failures: "^(FAIL|ERROR) (test_|\\w+#test_)"
+  exit_codes: "(Exit (code )?[0-9]+|RuntimeError|StandardError)"
+  # file:line refs OUTSIDE stack frames. Stack frames (`  from /path:N:in '...'`,
+  # `  at /path:N:in '...'`) are intentionally elided beyond top-5 by the
+  # collapse rules; this regex anchors at line start and rejects
+  # `from `/`at ` prefixed lines via negative lookahead.
+  file_colon_line: "^(?!\\s*(from|at)\\b)[ \\t]*([a-zA-Z0-9_/.-]+):(\\d+)(:in .+)?"
+
+# Templates for the collapse-summary lines the compressor writes when
+# eliding repeated content. `{count}` is substituted with the elided
+# count at runtime. Hot-reloadable; the compressor reads these on every
+# invocation.
+collapse:
+  stack_beyond_5: "  [... {count} more frames elided ...]"
+  deprecation_warnings: "  [+{count} similar deprecations]"
+  gem_loading: "Loaded {count} gems"
+
+# Raw stdout is preserved next to compression.jsonl under
+# ${CLAUDE_PLUGIN_DATA}/verify-raw/<uuid>.log. The plugin does NOT
+# auto-delete telemetry: the user opted in to collection and decides
+# when to clean up. A SessionStart advisory hook nudges the user when
+# accumulated telemetry crosses either threshold below; cleanup is then
+# the user's manual action via plain `rm` on the surfaced paths.
+#
+# No anchor template — PostToolUse cannot replace Bash output; see
+# references/compression/README.md "Why no replacement". A real
+# replacement mechanism is deferred until telemetry quantifies
+# real-world ratios.
+advisory:
+  # Total bytes across compression.jsonl + verify-raw/*.log. Roughly
+  # the point at which a redacted report becomes statistically
+  # interesting and disk usage starts being noticeable.
+  size_threshold_bytes: 52428800  # 50 MB
+  # Number of jsonl entries (sample count). Aligns with the promotion
+  # criteria in references/compression/README.md "Promotion criteria".
+  sample_threshold: 1000

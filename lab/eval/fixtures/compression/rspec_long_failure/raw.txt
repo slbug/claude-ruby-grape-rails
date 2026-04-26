@@ -1,0 +1,561 @@
+Run options: include {:focus=>true}
+All examples were filtered out; ignoring {:focus=>true}
+
+Randomized with seed 12345
+
+1) UserSpec creates user with email#0
+   ./spec/models/user_spec.rb:10
+2) UserSpec creates user with email#1
+   ./spec/models/user_spec.rb:11
+3) UserSpec creates user with email#2
+   ./spec/models/user_spec.rb:12
+4) UserSpec creates user with email#3
+   ./spec/models/user_spec.rb:13
+5) UserSpec creates user with email#4
+   ./spec/models/user_spec.rb:14
+6) UserSpec creates user with email#5
+   ./spec/models/user_spec.rb:15
+7) UserSpec creates user with email#6
+   ./spec/models/user_spec.rb:16
+8) UserSpec creates user with email#7
+   ./spec/models/user_spec.rb:17
+9) UserSpec creates user with email#8
+   ./spec/models/user_spec.rb:18
+10) UserSpec creates user with email#9
+   ./spec/models/user_spec.rb:19
+11) UserSpec creates user with email#10
+   ./spec/models/user_spec.rb:20
+12) UserSpec creates user with email#11
+   ./spec/models/user_spec.rb:21
+13) UserSpec creates user with email#12
+   ./spec/models/user_spec.rb:22
+14) UserSpec creates user with email#13
+   ./spec/models/user_spec.rb:23
+15) UserSpec creates user with email#14
+   ./spec/models/user_spec.rb:24
+16) UserSpec creates user with email#15
+   ./spec/models/user_spec.rb:25
+17) UserSpec creates user with email#16
+   ./spec/models/user_spec.rb:26
+18) UserSpec creates user with email#17
+   ./spec/models/user_spec.rb:27
+19) UserSpec creates user with email#18
+   ./spec/models/user_spec.rb:28
+20) UserSpec creates user with email#19
+   ./spec/models/user_spec.rb:29
+21) UserSpec creates user with email#20
+   ./spec/models/user_spec.rb:30
+22) UserSpec creates user with email#21
+   ./spec/models/user_spec.rb:31
+23) UserSpec creates user with email#22
+   ./spec/models/user_spec.rb:32
+24) UserSpec creates user with email#23
+   ./spec/models/user_spec.rb:33
+25) UserSpec creates user with email#24
+   ./spec/models/user_spec.rb:34
+26) UserSpec creates user with email#25
+   ./spec/models/user_spec.rb:35
+27) UserSpec creates user with email#26
+   ./spec/models/user_spec.rb:36
+28) UserSpec creates user with email#27
+   ./spec/models/user_spec.rb:37
+29) UserSpec creates user with email#28
+   ./spec/models/user_spec.rb:38
+30) UserSpec creates user with email#29
+   ./spec/models/user_spec.rb:39
+31) UserSpec creates user with email#30
+   ./spec/models/user_spec.rb:40
+32) UserSpec creates user with email#31
+   ./spec/models/user_spec.rb:41
+33) UserSpec creates user with email#32
+   ./spec/models/user_spec.rb:42
+34) UserSpec creates user with email#33
+   ./spec/models/user_spec.rb:43
+35) UserSpec creates user with email#34
+   ./spec/models/user_spec.rb:44
+36) UserSpec creates user with email#35
+   ./spec/models/user_spec.rb:45
+37) UserSpec creates user with email#36
+   ./spec/models/user_spec.rb:46
+38) UserSpec creates user with email#37
+   ./spec/models/user_spec.rb:47
+39) UserSpec creates user with email#38
+   ./spec/models/user_spec.rb:48
+40) UserSpec creates user with email#39
+   ./spec/models/user_spec.rb:49
+DEPRECATION WARNING: Using `attr_accessible` is deprecated. Please use `permit` (called from spec/models/user_spec.rb:42)
+DEPRECATION WARNING: Using `attr_accessible` is deprecated. Please use `permit` (called from spec/models/user_spec.rb:42)
+DEPRECATION WARNING: Using `attr_accessible` is deprecated. Please use `permit` (called from spec/models/user_spec.rb:42)
+DEPRECATION WARNING: Using `attr_accessible` is deprecated. Please use `permit` (called from spec/models/user_spec.rb:42)
+DEPRECATION WARNING: Using `attr_accessible` is deprecated. Please use `permit` (called from spec/models/user_spec.rb:42)
+DEPRECATION WARNING: Using `attr_accessible` is deprecated. Please use `permit` (called from spec/models/user_spec.rb:42)
+DEPRECATION WARNING: Using `attr_accessible` is deprecated. Please use `permit` (called from spec/models/user_spec.rb:42)
+DEPRECATION WARNING: Using `attr_accessible` is deprecated. Please use `permit` (called from spec/models/user_spec.rb:42)
+DEPRECATION WARNING: Using `attr_accessible` is deprecated. Please use `permit` (called from spec/models/user_spec.rb:42)
+DEPRECATION WARNING: Using `attr_accessible` is deprecated. Please use `permit` (called from spec/models/user_spec.rb:42)
+
+Failures:
+
+  1) UserSpec#create raises on duplicate email
+     Failure/Error: User.create!(email: 'dup@example.com')
+
+     PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint "users_email_idx"
+     DETAIL:  Key (email)=(dup@example.com) already exists.
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/0.rb:10:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/1.rb:11:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/2.rb:12:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/3.rb:13:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/4.rb:14:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/5.rb:15:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/6.rb:16:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/7.rb:17:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/8.rb:18:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/9.rb:19:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/10.rb:20:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/11.rb:21:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/12.rb:22:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/13.rb:23:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/14.rb:24:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/15.rb:25:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/16.rb:26:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/17.rb:27:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/18.rb:28:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/19.rb:29:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/20.rb:30:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/21.rb:31:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/22.rb:32:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/23.rb:33:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/24.rb:34:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/25.rb:35:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/26.rb:36:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/27.rb:37:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/28.rb:38:in `block in execute'
+     from /gems/activerecord-7.1.0/lib/connection_adapters/pg/29.rb:39:in `block in execute'
+
+  Loaded gem #0: minor-package-0
+  Loaded gem #1: minor-package-1
+  Loaded gem #2: minor-package-2
+  Loaded gem #3: minor-package-3
+  Loaded gem #4: minor-package-4
+  Loaded gem #5: minor-package-5
+  Loaded gem #6: minor-package-6
+  Loaded gem #7: minor-package-7
+  Loaded gem #8: minor-package-8
+  Loaded gem #9: minor-package-9
+  Loaded gem #10: minor-package-10
+  Loaded gem #11: minor-package-11
+  Loaded gem #12: minor-package-12
+  Loaded gem #13: minor-package-13
+  Loaded gem #14: minor-package-14
+  Loaded gem #15: minor-package-15
+  Loaded gem #16: minor-package-16
+  Loaded gem #17: minor-package-17
+  Loaded gem #18: minor-package-18
+  Loaded gem #19: minor-package-19
+  Loaded gem #20: minor-package-20
+  Loaded gem #21: minor-package-21
+  Loaded gem #22: minor-package-22
+  Loaded gem #23: minor-package-23
+  Loaded gem #24: minor-package-24
+  Loaded gem #25: minor-package-25
+  Loaded gem #26: minor-package-26
+  Loaded gem #27: minor-package-27
+  Loaded gem #28: minor-package-28
+  Loaded gem #29: minor-package-29
+  Loaded gem #30: minor-package-30
+  Loaded gem #31: minor-package-31
+  Loaded gem #32: minor-package-32
+  Loaded gem #33: minor-package-33
+  Loaded gem #34: minor-package-34
+  Loaded gem #35: minor-package-35
+  Loaded gem #36: minor-package-36
+  Loaded gem #37: minor-package-37
+  Loaded gem #38: minor-package-38
+  Loaded gem #39: minor-package-39
+  Loaded gem #40: minor-package-40
+  Loaded gem #41: minor-package-41
+  Loaded gem #42: minor-package-42
+  Loaded gem #43: minor-package-43
+  Loaded gem #44: minor-package-44
+  Loaded gem #45: minor-package-45
+  Loaded gem #46: minor-package-46
+  Loaded gem #47: minor-package-47
+  Loaded gem #48: minor-package-48
+  Loaded gem #49: minor-package-49
+  Loaded gem #50: minor-package-50
+  Loaded gem #51: minor-package-51
+  Loaded gem #52: minor-package-52
+  Loaded gem #53: minor-package-53
+  Loaded gem #54: minor-package-54
+  Loaded gem #55: minor-package-55
+  Loaded gem #56: minor-package-56
+  Loaded gem #57: minor-package-57
+  Loaded gem #58: minor-package-58
+  Loaded gem #59: minor-package-59
+  Loaded gem #60: minor-package-60
+  Loaded gem #61: minor-package-61
+  Loaded gem #62: minor-package-62
+  Loaded gem #63: minor-package-63
+  Loaded gem #64: minor-package-64
+  Loaded gem #65: minor-package-65
+  Loaded gem #66: minor-package-66
+  Loaded gem #67: minor-package-67
+  Loaded gem #68: minor-package-68
+  Loaded gem #69: minor-package-69
+  Loaded gem #70: minor-package-70
+  Loaded gem #71: minor-package-71
+  Loaded gem #72: minor-package-72
+  Loaded gem #73: minor-package-73
+  Loaded gem #74: minor-package-74
+  Loaded gem #75: minor-package-75
+  Loaded gem #76: minor-package-76
+  Loaded gem #77: minor-package-77
+  Loaded gem #78: minor-package-78
+  Loaded gem #79: minor-package-79
+  Loaded gem #80: minor-package-80
+  Loaded gem #81: minor-package-81
+  Loaded gem #82: minor-package-82
+  Loaded gem #83: minor-package-83
+  Loaded gem #84: minor-package-84
+  Loaded gem #85: minor-package-85
+  Loaded gem #86: minor-package-86
+  Loaded gem #87: minor-package-87
+  Loaded gem #88: minor-package-88
+  Loaded gem #89: minor-package-89
+  Loaded gem #90: minor-package-90
+  Loaded gem #91: minor-package-91
+  Loaded gem #92: minor-package-92
+  Loaded gem #93: minor-package-93
+  Loaded gem #94: minor-package-94
+  Loaded gem #95: minor-package-95
+  Loaded gem #96: minor-package-96
+  Loaded gem #97: minor-package-97
+  Loaded gem #98: minor-package-98
+  Loaded gem #99: minor-package-99
+  Loaded gem #100: minor-package-100
+  Loaded gem #101: minor-package-101
+  Loaded gem #102: minor-package-102
+  Loaded gem #103: minor-package-103
+  Loaded gem #104: minor-package-104
+  Loaded gem #105: minor-package-105
+  Loaded gem #106: minor-package-106
+  Loaded gem #107: minor-package-107
+  Loaded gem #108: minor-package-108
+  Loaded gem #109: minor-package-109
+  Loaded gem #110: minor-package-110
+  Loaded gem #111: minor-package-111
+  Loaded gem #112: minor-package-112
+  Loaded gem #113: minor-package-113
+  Loaded gem #114: minor-package-114
+  Loaded gem #115: minor-package-115
+  Loaded gem #116: minor-package-116
+  Loaded gem #117: minor-package-117
+  Loaded gem #118: minor-package-118
+  Loaded gem #119: minor-package-119
+  Loaded gem #120: minor-package-120
+  Loaded gem #121: minor-package-121
+  Loaded gem #122: minor-package-122
+  Loaded gem #123: minor-package-123
+  Loaded gem #124: minor-package-124
+  Loaded gem #125: minor-package-125
+  Loaded gem #126: minor-package-126
+  Loaded gem #127: minor-package-127
+  Loaded gem #128: minor-package-128
+  Loaded gem #129: minor-package-129
+  Loaded gem #130: minor-package-130
+  Loaded gem #131: minor-package-131
+  Loaded gem #132: minor-package-132
+  Loaded gem #133: minor-package-133
+  Loaded gem #134: minor-package-134
+  Loaded gem #135: minor-package-135
+  Loaded gem #136: minor-package-136
+  Loaded gem #137: minor-package-137
+  Loaded gem #138: minor-package-138
+  Loaded gem #139: minor-package-139
+  Loaded gem #140: minor-package-140
+  Loaded gem #141: minor-package-141
+  Loaded gem #142: minor-package-142
+  Loaded gem #143: minor-package-143
+  Loaded gem #144: minor-package-144
+  Loaded gem #145: minor-package-145
+  Loaded gem #146: minor-package-146
+  Loaded gem #147: minor-package-147
+  Loaded gem #148: minor-package-148
+  Loaded gem #149: minor-package-149
+  Loaded gem #150: minor-package-150
+  Loaded gem #151: minor-package-151
+  Loaded gem #152: minor-package-152
+  Loaded gem #153: minor-package-153
+  Loaded gem #154: minor-package-154
+  Loaded gem #155: minor-package-155
+  Loaded gem #156: minor-package-156
+  Loaded gem #157: minor-package-157
+  Loaded gem #158: minor-package-158
+  Loaded gem #159: minor-package-159
+  Loaded gem #160: minor-package-160
+  Loaded gem #161: minor-package-161
+  Loaded gem #162: minor-package-162
+  Loaded gem #163: minor-package-163
+  Loaded gem #164: minor-package-164
+  Loaded gem #165: minor-package-165
+  Loaded gem #166: minor-package-166
+  Loaded gem #167: minor-package-167
+  Loaded gem #168: minor-package-168
+  Loaded gem #169: minor-package-169
+  Loaded gem #170: minor-package-170
+  Loaded gem #171: minor-package-171
+  Loaded gem #172: minor-package-172
+  Loaded gem #173: minor-package-173
+  Loaded gem #174: minor-package-174
+  Loaded gem #175: minor-package-175
+  Loaded gem #176: minor-package-176
+  Loaded gem #177: minor-package-177
+  Loaded gem #178: minor-package-178
+  Loaded gem #179: minor-package-179
+  Loaded gem #180: minor-package-180
+  Loaded gem #181: minor-package-181
+  Loaded gem #182: minor-package-182
+  Loaded gem #183: minor-package-183
+  Loaded gem #184: minor-package-184
+  Loaded gem #185: minor-package-185
+  Loaded gem #186: minor-package-186
+  Loaded gem #187: minor-package-187
+  Loaded gem #188: minor-package-188
+  Loaded gem #189: minor-package-189
+  Loaded gem #190: minor-package-190
+  Loaded gem #191: minor-package-191
+  Loaded gem #192: minor-package-192
+  Loaded gem #193: minor-package-193
+  Loaded gem #194: minor-package-194
+  Loaded gem #195: minor-package-195
+  Loaded gem #196: minor-package-196
+  Loaded gem #197: minor-package-197
+  Loaded gem #198: minor-package-198
+  Loaded gem #199: minor-package-199
+  Loaded gem #200: minor-package-200
+  Loaded gem #201: minor-package-201
+  Loaded gem #202: minor-package-202
+  Loaded gem #203: minor-package-203
+  Loaded gem #204: minor-package-204
+  Loaded gem #205: minor-package-205
+  Loaded gem #206: minor-package-206
+  Loaded gem #207: minor-package-207
+  Loaded gem #208: minor-package-208
+  Loaded gem #209: minor-package-209
+  Loaded gem #210: minor-package-210
+  Loaded gem #211: minor-package-211
+  Loaded gem #212: minor-package-212
+  Loaded gem #213: minor-package-213
+  Loaded gem #214: minor-package-214
+  Loaded gem #215: minor-package-215
+  Loaded gem #216: minor-package-216
+  Loaded gem #217: minor-package-217
+  Loaded gem #218: minor-package-218
+  Loaded gem #219: minor-package-219
+  Loaded gem #220: minor-package-220
+  Loaded gem #221: minor-package-221
+  Loaded gem #222: minor-package-222
+  Loaded gem #223: minor-package-223
+  Loaded gem #224: minor-package-224
+  Loaded gem #225: minor-package-225
+  Loaded gem #226: minor-package-226
+  Loaded gem #227: minor-package-227
+  Loaded gem #228: minor-package-228
+  Loaded gem #229: minor-package-229
+  Loaded gem #230: minor-package-230
+  Loaded gem #231: minor-package-231
+  Loaded gem #232: minor-package-232
+  Loaded gem #233: minor-package-233
+  Loaded gem #234: minor-package-234
+  Loaded gem #235: minor-package-235
+  Loaded gem #236: minor-package-236
+  Loaded gem #237: minor-package-237
+  Loaded gem #238: minor-package-238
+  Loaded gem #239: minor-package-239
+  Loaded gem #240: minor-package-240
+  Loaded gem #241: minor-package-241
+  Loaded gem #242: minor-package-242
+  Loaded gem #243: minor-package-243
+  Loaded gem #244: minor-package-244
+  Loaded gem #245: minor-package-245
+  Loaded gem #246: minor-package-246
+  Loaded gem #247: minor-package-247
+  Loaded gem #248: minor-package-248
+  Loaded gem #249: minor-package-249
+  Loaded gem #250: minor-package-250
+  Loaded gem #251: minor-package-251
+  Loaded gem #252: minor-package-252
+  Loaded gem #253: minor-package-253
+  Loaded gem #254: minor-package-254
+  Loaded gem #255: minor-package-255
+  Loaded gem #256: minor-package-256
+  Loaded gem #257: minor-package-257
+  Loaded gem #258: minor-package-258
+  Loaded gem #259: minor-package-259
+  Loaded gem #260: minor-package-260
+  Loaded gem #261: minor-package-261
+  Loaded gem #262: minor-package-262
+  Loaded gem #263: minor-package-263
+  Loaded gem #264: minor-package-264
+  Loaded gem #265: minor-package-265
+  Loaded gem #266: minor-package-266
+  Loaded gem #267: minor-package-267
+  Loaded gem #268: minor-package-268
+  Loaded gem #269: minor-package-269
+  Loaded gem #270: minor-package-270
+  Loaded gem #271: minor-package-271
+  Loaded gem #272: minor-package-272
+  Loaded gem #273: minor-package-273
+  Loaded gem #274: minor-package-274
+  Loaded gem #275: minor-package-275
+  Loaded gem #276: minor-package-276
+  Loaded gem #277: minor-package-277
+  Loaded gem #278: minor-package-278
+  Loaded gem #279: minor-package-279
+  Loaded gem #280: minor-package-280
+  Loaded gem #281: minor-package-281
+  Loaded gem #282: minor-package-282
+  Loaded gem #283: minor-package-283
+  Loaded gem #284: minor-package-284
+  Loaded gem #285: minor-package-285
+  Loaded gem #286: minor-package-286
+  Loaded gem #287: minor-package-287
+  Loaded gem #288: minor-package-288
+  Loaded gem #289: minor-package-289
+  Loaded gem #290: minor-package-290
+  Loaded gem #291: minor-package-291
+  Loaded gem #292: minor-package-292
+  Loaded gem #293: minor-package-293
+  Loaded gem #294: minor-package-294
+  Loaded gem #295: minor-package-295
+  Loaded gem #296: minor-package-296
+  Loaded gem #297: minor-package-297
+  Loaded gem #298: minor-package-298
+  Loaded gem #299: minor-package-299
+  Loaded gem #300: minor-package-300
+  Loaded gem #301: minor-package-301
+  Loaded gem #302: minor-package-302
+  Loaded gem #303: minor-package-303
+  Loaded gem #304: minor-package-304
+  Loaded gem #305: minor-package-305
+  Loaded gem #306: minor-package-306
+  Loaded gem #307: minor-package-307
+  Loaded gem #308: minor-package-308
+  Loaded gem #309: minor-package-309
+  Loaded gem #310: minor-package-310
+  Loaded gem #311: minor-package-311
+  Loaded gem #312: minor-package-312
+  Loaded gem #313: minor-package-313
+  Loaded gem #314: minor-package-314
+  Loaded gem #315: minor-package-315
+  Loaded gem #316: minor-package-316
+  Loaded gem #317: minor-package-317
+  Loaded gem #318: minor-package-318
+  Loaded gem #319: minor-package-319
+  Loaded gem #320: minor-package-320
+  Loaded gem #321: minor-package-321
+  Loaded gem #322: minor-package-322
+  Loaded gem #323: minor-package-323
+  Loaded gem #324: minor-package-324
+  Loaded gem #325: minor-package-325
+  Loaded gem #326: minor-package-326
+  Loaded gem #327: minor-package-327
+  Loaded gem #328: minor-package-328
+  Loaded gem #329: minor-package-329
+  Loaded gem #330: minor-package-330
+  Loaded gem #331: minor-package-331
+  Loaded gem #332: minor-package-332
+  Loaded gem #333: minor-package-333
+  Loaded gem #334: minor-package-334
+  Loaded gem #335: minor-package-335
+  Loaded gem #336: minor-package-336
+  Loaded gem #337: minor-package-337
+  Loaded gem #338: minor-package-338
+  Loaded gem #339: minor-package-339
+  Loaded gem #340: minor-package-340
+  Loaded gem #341: minor-package-341
+  Loaded gem #342: minor-package-342
+  Loaded gem #343: minor-package-343
+  Loaded gem #344: minor-package-344
+  Loaded gem #345: minor-package-345
+  Loaded gem #346: minor-package-346
+  Loaded gem #347: minor-package-347
+  Loaded gem #348: minor-package-348
+  Loaded gem #349: minor-package-349
+  Loaded gem #350: minor-package-350
+  Loaded gem #351: minor-package-351
+  Loaded gem #352: minor-package-352
+  Loaded gem #353: minor-package-353
+  Loaded gem #354: minor-package-354
+  Loaded gem #355: minor-package-355
+  Loaded gem #356: minor-package-356
+  Loaded gem #357: minor-package-357
+  Loaded gem #358: minor-package-358
+  Loaded gem #359: minor-package-359
+  Loaded gem #360: minor-package-360
+  Loaded gem #361: minor-package-361
+  Loaded gem #362: minor-package-362
+  Loaded gem #363: minor-package-363
+  Loaded gem #364: minor-package-364
+  Loaded gem #365: minor-package-365
+  Loaded gem #366: minor-package-366
+  Loaded gem #367: minor-package-367
+  Loaded gem #368: minor-package-368
+  Loaded gem #369: minor-package-369
+  Loaded gem #370: minor-package-370
+  Loaded gem #371: minor-package-371
+  Loaded gem #372: minor-package-372
+  Loaded gem #373: minor-package-373
+  Loaded gem #374: minor-package-374
+  Loaded gem #375: minor-package-375
+  Loaded gem #376: minor-package-376
+  Loaded gem #377: minor-package-377
+  Loaded gem #378: minor-package-378
+  Loaded gem #379: minor-package-379
+  Loaded gem #380: minor-package-380
+  Loaded gem #381: minor-package-381
+  Loaded gem #382: minor-package-382
+  Loaded gem #383: minor-package-383
+  Loaded gem #384: minor-package-384
+  Loaded gem #385: minor-package-385
+  Loaded gem #386: minor-package-386
+  Loaded gem #387: minor-package-387
+  Loaded gem #388: minor-package-388
+  Loaded gem #389: minor-package-389
+  Loaded gem #390: minor-package-390
+  Loaded gem #391: minor-package-391
+  Loaded gem #392: minor-package-392
+  Loaded gem #393: minor-package-393
+  Loaded gem #394: minor-package-394
+  Loaded gem #395: minor-package-395
+  Loaded gem #396: minor-package-396
+  Loaded gem #397: minor-package-397
+  Loaded gem #398: minor-package-398
+  Loaded gem #399: minor-package-399
+  Loaded gem #400: minor-package-400
+  Loaded gem #401: minor-package-401
+  Loaded gem #402: minor-package-402
+  Loaded gem #403: minor-package-403
+  Loaded gem #404: minor-package-404
+  Loaded gem #405: minor-package-405
+  Loaded gem #406: minor-package-406
+  Loaded gem #407: minor-package-407
+  Loaded gem #408: minor-package-408
+  Loaded gem #409: minor-package-409
+  Loaded gem #410: minor-package-410
+  Loaded gem #411: minor-package-411
+  Loaded gem #412: minor-package-412
+  Loaded gem #413: minor-package-413
+  Loaded gem #414: minor-package-414
+  Loaded gem #415: minor-package-415
+  Loaded gem #416: minor-package-416
+  Loaded gem #417: minor-package-417
+  Loaded gem #418: minor-package-418
+  Loaded gem #419: minor-package-419
+
+Failed examples:
+
+rspec ./spec/models/user_spec.rb:42 # UserSpec#create raises on duplicate email
+
+Finished in 12.34s, 41 examples, 1 failure
+Exit code 1

@@ -87,10 +87,57 @@ excludeAgent: "coding-agent"
 - `resolve-base-ref` (bash) — emits `eval`-able shell assigning
   `BASE_REF` for diff comparisons; handles custom remotes and stale
   local refs
+- `compress-verify` (Ruby) — verify-output compressor CLI used by
+  `compress-verify-output.sh` PostToolUse hook. Reads stdin, writes
+  compressed text on `--emit` or appends a JSONL stats entry on
+  `--log` under exclusive `flock`. No lab/ dependency; loads sibling
+  `lib/verify_compression.rb`
+- `match-trigger` (Ruby) — trigger-matcher CLI used by the same hook
+  to decide whether the Bash command should be measured. Exit 0 =
+  match, exit 1 = no match / excluded / loader error. Loads sibling
+  `lib/triggers.rb`
+- `compression-stats` (Ruby) — end-user reader for verify-output
+  compression telemetry. Reads
+  `${CLAUDE_PLUGIN_DATA}/compression.jsonl` (default) or `--log
+  <path>`. Default mode prints a human-readable report; `--json`
+  emits machine-readable aggregate JSON; `--redact` emits
+  privacy-reduced JSON for the `/rb:compression-report` skill —
+  intermediate input for the skill's report drafter, NOT a final
+  paste-anywhere artifact (the skill's drafted markdown is what the
+  user reviews + shares). Stdlib only — no `lib/` dependency,
+  contributor or otherwise
 
-When adding a binary, also add it to the `CLAUDE.md` "Executables"
-list, ensure `chmod +x` is committed, and (if it is wired into hooks
-or settings) cross-check `hooks.json` / `settings.json` references.
+When adding a binary, also add it to this "Currently shipped
+binaries" section above, ensure `chmod +x` is committed, and (if it
+is wired into hooks or settings) cross-check `hooks.json` /
+`settings.json` references.
+
+## Plugin-owned Ruby Library (plugins/ruby-grape-rails/lib/)
+
+`lib/` holds plugin-owned Ruby modules required by `bin/` CLIs. Each
+file is `# frozen_string_literal: true`, uses Ruby ≥ 3.4 idioms
+(`Data.define`, pattern matching, `module_function`), and rescues
+errors at the process boundary so loader failures fail-open back to
+the calling CLI / hook.
+
+- `verify_compression.rb` — deterministic verify-output compressor.
+  Loads YAML rules from `references/compression/rules.yml`. Collapses
+  stack frames > 5, repeated `Loaded gem` lines, and duplicate
+  `DEPRECATION WARNING` blocks. Verifies preserve patterns survive
+  compression. Used by `bin/compress-verify`
+- `triggers.rb` — YAML trigger matcher for verification commands.
+  Loads `references/compression/triggers.yml`. Handles `rake_excluded`
+  precedence over `rake_verify_only`. Used by `bin/match-trigger`
+
+Notes:
+
+- `lib/` is end-user runtime, NOT contributor tooling. End users get
+  these files. Stay Ruby-only; do NOT introduce a Python runtime
+  dependency here. PyYAML is dev-only via `requirements-dev.txt`
+- Ruby stdlib `yaml` (Psych) is the canonical YAML loader — no Bundler
+  gems required at runtime
+- New `lib/<name>.rb` modules MUST also be referenced from a `bin/`
+  CLI or hook script; an unreferenced library file is a drift defect
 
 ## References & Registries (plugins/**/references/)
 

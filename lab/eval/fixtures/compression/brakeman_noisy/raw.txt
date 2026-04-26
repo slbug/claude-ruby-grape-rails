@@ -1,0 +1,163 @@
+Brakeman 6.0.1
+Loading scanner...
+  Loaded gem brakeman-rule-0
+  Loaded gem brakeman-rule-1
+  Loaded gem brakeman-rule-2
+  Loaded gem brakeman-rule-3
+  Loaded gem brakeman-rule-4
+  Loaded gem brakeman-rule-5
+  Loaded gem brakeman-rule-6
+  Loaded gem brakeman-rule-7
+  Loaded gem brakeman-rule-8
+  Loaded gem brakeman-rule-9
+  Loaded gem brakeman-rule-10
+  Loaded gem brakeman-rule-11
+  Loaded gem brakeman-rule-12
+  Loaded gem brakeman-rule-13
+  Loaded gem brakeman-rule-14
+  Loaded gem brakeman-rule-15
+  Loaded gem brakeman-rule-16
+  Loaded gem brakeman-rule-17
+  Loaded gem brakeman-rule-18
+  Loaded gem brakeman-rule-19
+  Loaded gem brakeman-rule-20
+  Loaded gem brakeman-rule-21
+  Loaded gem brakeman-rule-22
+  Loaded gem brakeman-rule-23
+  Loaded gem brakeman-rule-24
+  Loaded gem brakeman-rule-25
+  Loaded gem brakeman-rule-26
+  Loaded gem brakeman-rule-27
+  Loaded gem brakeman-rule-28
+  Loaded gem brakeman-rule-29
+  Loaded gem brakeman-rule-30
+  Loaded gem brakeman-rule-31
+  Loaded gem brakeman-rule-32
+  Loaded gem brakeman-rule-33
+  Loaded gem brakeman-rule-34
+  Loaded gem brakeman-rule-35
+  Loaded gem brakeman-rule-36
+  Loaded gem brakeman-rule-37
+  Loaded gem brakeman-rule-38
+  Loaded gem brakeman-rule-39
+  Loaded gem brakeman-rule-40
+  Loaded gem brakeman-rule-41
+  Loaded gem brakeman-rule-42
+  Loaded gem brakeman-rule-43
+  Loaded gem brakeman-rule-44
+  Loaded gem brakeman-rule-45
+  Loaded gem brakeman-rule-46
+  Loaded gem brakeman-rule-47
+  Loaded gem brakeman-rule-48
+  Loaded gem brakeman-rule-49
+  Loaded gem brakeman-rule-50
+  Loaded gem brakeman-rule-51
+  Loaded gem brakeman-rule-52
+  Loaded gem brakeman-rule-53
+  Loaded gem brakeman-rule-54
+  Loaded gem brakeman-rule-55
+  Loaded gem brakeman-rule-56
+  Loaded gem brakeman-rule-57
+  Loaded gem brakeman-rule-58
+  Loaded gem brakeman-rule-59
+  Loaded gem brakeman-rule-60
+  Loaded gem brakeman-rule-61
+  Loaded gem brakeman-rule-62
+  Loaded gem brakeman-rule-63
+  Loaded gem brakeman-rule-64
+  Loaded gem brakeman-rule-65
+  Loaded gem brakeman-rule-66
+  Loaded gem brakeman-rule-67
+  Loaded gem brakeman-rule-68
+  Loaded gem brakeman-rule-69
+  Loaded gem brakeman-rule-70
+  Loaded gem brakeman-rule-71
+  Loaded gem brakeman-rule-72
+  Loaded gem brakeman-rule-73
+  Loaded gem brakeman-rule-74
+  Loaded gem brakeman-rule-75
+  Loaded gem brakeman-rule-76
+  Loaded gem brakeman-rule-77
+  Loaded gem brakeman-rule-78
+  Loaded gem brakeman-rule-79
+
+== Warnings ==
+
+Warning: Cross-Site Scripting
+Location: app/views/users/show.html.erb:12
+  from /gems/brakeman/lib/brakeman/checks.rb:100:in `scan'
+  from /gems/brakeman/lib/brakeman/scanner.rb:50:in `walk'
+  from /gems/brakeman/lib/brakeman/runner.rb:25:in `run'
+  from /gems/brakeman/lib/brakeman/file_parser.rb:80:in `parse'
+  from /gems/brakeman/lib/brakeman/processor.rb:200:in `process'
+  from /gems/brakeman/lib/brakeman/processor.rb:215:in `block (2 levels) in process'
+  from /gems/brakeman/lib/brakeman/processor.rb:220:in `each'
+  from /gems/brakeman/lib/brakeman/processor.rb:225:in `each_with_index'
+
+Warning: SQL Injection
+Location: app/models/user.rb:42
+  from /gems/brakeman/lib/brakeman/checks.rb:100:in `scan'
+  from /gems/brakeman/lib/brakeman/scanner.rb:50:in `walk'
+  from /gems/brakeman/lib/brakeman/runner.rb:25:in `run'
+  from /gems/brakeman/lib/brakeman/file_parser.rb:80:in `parse'
+  from /gems/brakeman/lib/brakeman/processor.rb:200:in `process'
+  from /gems/brakeman/lib/brakeman/processor.rb:215:in `block (2 levels) in process'
+  from /gems/brakeman/lib/brakeman/processor.rb:220:in `each'
+  from /gems/brakeman/lib/brakeman/processor.rb:225:in `each_with_index'
+
+Warning: Mass Assignment
+Location: app/controllers/users_controller.rb:25
+  from /gems/brakeman/lib/brakeman/checks.rb:100:in `scan'
+  from /gems/brakeman/lib/brakeman/scanner.rb:50:in `walk'
+  from /gems/brakeman/lib/brakeman/runner.rb:25:in `run'
+  from /gems/brakeman/lib/brakeman/file_parser.rb:80:in `parse'
+  from /gems/brakeman/lib/brakeman/processor.rb:200:in `process'
+  from /gems/brakeman/lib/brakeman/processor.rb:215:in `block (2 levels) in process'
+  from /gems/brakeman/lib/brakeman/processor.rb:220:in `each'
+  from /gems/brakeman/lib/brakeman/processor.rb:225:in `each_with_index'
+
+Warning: Cross-Site Scripting
+Location: app/views/posts/index.html.erb:7
+  from /gems/brakeman/lib/brakeman/checks.rb:100:in `scan'
+  from /gems/brakeman/lib/brakeman/scanner.rb:50:in `walk'
+  from /gems/brakeman/lib/brakeman/runner.rb:25:in `run'
+  from /gems/brakeman/lib/brakeman/file_parser.rb:80:in `parse'
+  from /gems/brakeman/lib/brakeman/processor.rb:200:in `process'
+  from /gems/brakeman/lib/brakeman/processor.rb:215:in `block (2 levels) in process'
+  from /gems/brakeman/lib/brakeman/processor.rb:220:in `each'
+  from /gems/brakeman/lib/brakeman/processor.rb:225:in `each_with_index'
+
+Warning: Redirect
+Location: app/controllers/redirects_controller.rb:3
+  from /gems/brakeman/lib/brakeman/checks.rb:100:in `scan'
+  from /gems/brakeman/lib/brakeman/scanner.rb:50:in `walk'
+  from /gems/brakeman/lib/brakeman/runner.rb:25:in `run'
+  from /gems/brakeman/lib/brakeman/file_parser.rb:80:in `parse'
+  from /gems/brakeman/lib/brakeman/processor.rb:200:in `process'
+  from /gems/brakeman/lib/brakeman/processor.rb:215:in `block (2 levels) in process'
+  from /gems/brakeman/lib/brakeman/processor.rb:220:in `each'
+  from /gems/brakeman/lib/brakeman/processor.rb:225:in `each_with_index'
+
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+DEPRECATION WARNING: Brakeman 7 will require Ruby 3.2+. (called from /gems/brakeman/lib/brakeman.rb:1)
+
+Finished. 5 warnings, 0 errors
+Exit code 1

@@ -75,7 +75,7 @@ claude-ruby-grape-rails/
 │       ├── bin/                     # Plugin executables (added to Bash tool PATH)
 │       ├── hooks/
 │       │   └── hooks.json
-│       └── skills/                  # 51 skills
+│       └── skills/                  # 52 skills
 ├── lab/
 │   └── eval/                        # Contributor-only deterministic eval tooling
 ├── CLAUDE.md

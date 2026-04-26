@@ -33,7 +33,7 @@ When analyzing CC changelog entries, map them to specific plugin components:
 
 | CC Change Pattern | Plugin Files to Check |
 |-------------------|-----------------------|
-| Skill format changes | All 51 skills in `plugins/ruby-grape-rails/skills/` |
+| Skill format changes | All 52 skills in `plugins/ruby-grape-rails/skills/` |
 | `description` / `when_to_use` length | All SKILL.md frontmatter (1,536 char combined cap) |
 | `paths:` field behavior | Skills with `paths:` for auto-loading |
 | Skill listing/truncation | Skill descriptions and ordering |

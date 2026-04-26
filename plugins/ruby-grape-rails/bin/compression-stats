@@ -1,0 +1,289 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Compression telemetry reader. Reads ${CLAUDE_PLUGIN_DATA}/compression.jsonl
+# (or --log <path>) and prints aggregate statistics for the contributor
+# operator surface: sample count; mean / p50 / p95 ratios overall and per
+# command class; top weak-savings commands; preservation-violation count;
+# recommendation verdict against documented promotion criteria.
+
+require 'json'
+require 'optparse'
+
+# Default jsonl location:
+#
+# - Inside Claude Code, ${CLAUDE_PLUGIN_DATA} resolves to the
+#   install-specific plugin data dir under
+#   ~/.claude/plugins/data/ruby-grape-rails-<install-id>/ (e.g.
+#   `-slbug` for the marketplace install or `-inline` for `--plugin-dir`
+#   installs). Use it directly.
+# - Outside CC the env var is unset and the install id is not known up
+#   front. Glob the conventional plugin-data tree for any
+#   `ruby-grape-rails*/compression.jsonl`; if exactly one matches, use
+#   it; if several match (multiple installs side by side), pick the
+#   most recently modified. If none match, return nil and the caller
+#   prints a helpful error listing the search pattern so the user can
+#   pass an explicit `--log <path>`.
+DEFAULT_GLOB = File.join(
+  Dir.home, '.claude', 'plugins', 'data', 'ruby-grape-rails*',
+  'compression.jsonl'
+).freeze
+
+def default_log_path
+  data_dir = ENV.fetch('CLAUDE_PLUGIN_DATA', nil)
+  return File.join(data_dir, 'compression.jsonl') if data_dir && !data_dir.empty?
+
+  candidates = Dir.glob(DEFAULT_GLOB).select { |p| File.file?(p) }
+  return if candidates.empty?
+  return candidates.first if candidates.length == 1
+
+  candidates.max_by { |p| File.mtime(p) }
+end
+
+# Promotion criteria thresholds. Mirrors the criteria documented in
+# references/compression/README.md "Promotion criteria".
+MIN_SAMPLES_PER_CLASS = 100
+MIN_P50_RATIO = 0.40
+
+# Heuristic command-class buckets. Order matters — first match wins.
+COMMAND_CLASSES = [
+  ['rspec',       /\b(?:bundle exec )?rspec\b/],
+  ['rubocop',     /\b(?:bundle exec )?rubocop\b/],
+  ['standardrb',  /\b(?:bundle exec )?standardrb\b/],
+  ['brakeman',    /\b(?:bundle exec )?brakeman\b/],
+  ['reek',        /\b(?:bundle exec )?reek\b/],
+  ['migration',   /\brails db:(?:migrate|rollback|schema:load|seed)\b/],
+  ['rake',        /\b(?:bundle exec )?rake\b/]
+].freeze
+
+def classify(cmd)
+  COMMAND_CLASSES.each do |label, pattern|
+    return label if pattern.match?(cmd)
+  end
+  'other'
+end
+
+def percentile(sorted, p)
+  return 0.0 if sorted.empty?
+
+  rank = (p * (sorted.length - 1)).round
+  sorted[rank]
+end
+
+def aggregate(entries)
+  # `entries` is any enumerable (Array OR streaming Enumerator). Track
+  # totals incrementally so we never need `entries.length`, which an
+  # Enumerator does not implement.
+  ratios_by_class = Hash.new { |h, k| h[k] = [] }
+  total_count = 0
+  total_violations = 0
+  weak_samples = []
+  violation_samples = []
+
+  entries.each do |entry|
+    total_count += 1
+    cmd = entry['cmd'].to_s
+    ratio = entry['ratio'].to_f
+    klass = classify(cmd)
+    ratios_by_class[klass] << ratio
+    violations = entry['violations'] || []
+    total_violations += violations.length
+    weak_samples << { ratio: ratio, cmd: cmd, raw_log: entry['raw_log'] } if ratio < 0.20
+    unless violations.empty?
+      violation_samples << { cmd: cmd, raw_log: entry['raw_log'],
+                             violation_count: violations.length }
+    end
+  end
+
+  {
+    by_class: ratios_by_class.transform_values do |ratios|
+      sorted = ratios.sort
+      {
+        count: sorted.length,
+        mean: sorted.sum / sorted.length.to_f,
+        p50: percentile(sorted, 0.50),
+        p95: percentile(sorted, 0.95)
+      }
+    end,
+    total_count: total_count,
+    total_violations: total_violations,
+    weak_samples: weak_samples.sort_by { |s| s[:ratio] }.first(10),
+    violation_samples: violation_samples.first(10)
+  }
+end
+
+# Redact obvious PII from a command string. Keeps the verb + key flags so
+# command-class classification stays accurate; replaces paths / env values /
+# `--flag=value` payloads with stable placeholders. Output is intermediate
+# input for the `/rb:compression-report` skill (which then drafts the
+# user-facing markdown report). It is NOT the final shareable artifact —
+# the skill is responsible for reading raw logs, reviewing each citation,
+# and producing the markdown the user pastes into a public issue.
+def redact_cmd(cmd)
+  out = cmd.dup
+  # `KEY=value` env-var assignments → keep key, redact value. Matches
+  # both uppercase (`RAILS_ENV=test`) and lowercase (`http_proxy=...`,
+  # `lang=...`) keys. POSIX allows lowercase env identifiers, and
+  # values like `http_proxy=https://user:pass@host` carry credentials
+  # that the redacted output must not leak.
+  out.gsub!(/(\b[A-Za-z_][A-Za-z0-9_]*=)\S*/) { "#{Regexp.last_match(1)}<v>" }
+  # `--flag=value` CLI options → keep flag name, redact value. Catches
+  # tokens, API keys, seeds, ticket ids, and any other inline secret
+  # users routinely pass via `--token=...` / `--api-key=...` / etc.
+  out.gsub!(/(--[A-Za-z][A-Za-z0-9_-]*=)\S*/) { "#{Regexp.last_match(1)}<v>" }
+  # spec/foo/bar_spec.rb → spec/<file>; same for test/...
+  out.gsub!(%r{\b(spec|test)/\S+}, '\\1/<file>')
+  # Absolute paths → /<path>
+  out.gsub!(%r{/[\w./-]{4,}}, '/<path>')
+  # Trailing free-form arguments after `--` are dropped.
+  out.sub!(/\s+--\s+.*\z/, ' -- <args>')
+  out
+end
+
+def raw_log_id(path)
+  return if path.nil? || path.empty?
+
+  File.basename(path, '.log')
+end
+
+def redact_stats(stats)
+  # `--redact` output carries no absolute paths. Per-sample
+  # `raw_log_id` is a basename only (e.g. "abc-123"); a consumer that
+  # needs to Read raw logs reconstructs the absolute path locally as
+  # `${CLAUDE_PLUGIN_DATA}/verify-raw/<raw_log_id>.log`. The
+  # ${CLAUDE_PLUGIN_DATA} env var lives in the user's session and
+  # never enters the CLI output. This JSON is the intermediate input
+  # for the `/rb:compression-report` skill — it is NOT the final
+  # shareable artifact. The skill drafts a markdown report from this
+  # JSON (plus selective raw-log Reads), and the user reviews that
+  # markdown before pasting anywhere public.
+  redacted_weak = stats[:weak_samples].map do |s|
+    {
+      ratio: s[:ratio],
+      cmd: redact_cmd(s[:cmd]),
+      raw_log_id: raw_log_id(s[:raw_log])
+    }
+  end
+  redacted_violations = stats[:violation_samples].map do |s|
+    {
+      cmd: redact_cmd(s[:cmd]),
+      raw_log_id: raw_log_id(s[:raw_log]),
+      violation_count: s[:violation_count]
+    }
+  end
+  {
+    samples: stats[:total_count],
+    preservation_violations: stats[:total_violations],
+    by_class: stats[:by_class],
+    weak_samples: redacted_weak,
+    violation_samples: redacted_violations,
+    redaction_applied: true,
+    recommendation: verdict(stats)
+  }
+end
+
+def verdict(stats)
+  return 'no-samples' if stats[:total_count].zero?
+
+  unmet = []
+  unmet << 'preservation-violations' if stats[:total_violations].positive?
+
+  underpowered_classes = stats[:by_class].select { |_k, v| v[:count] < MIN_SAMPLES_PER_CLASS }
+  unmet << "underpowered-classes=#{underpowered_classes.keys.join(',')}" if underpowered_classes.any?
+
+  weak_classes = stats[:by_class].reject { |_k, v| v[:count] < MIN_SAMPLES_PER_CLASS }
+                                 .select { |_k, v| v[:p50] < MIN_P50_RATIO }
+  unmet << "weak-p50=#{weak_classes.keys.join(',')}" if weak_classes.any?
+
+  return "keep-collecting (unmet: #{unmet.join('; ')})" if unmet.any?
+
+  'safe-to-evaluate-replacement'
+end
+
+def render(stats, log_path)
+  out = "compression telemetry from #{log_path}\n"
+  out << "samples: #{stats[:total_count]}\n"
+  out << "preservation violations: #{stats[:total_violations]}\n\n"
+
+  out << "by command class:\n"
+  out << format("  %-12s %7s %8s %8s %8s\n", 'class', 'count', 'mean', 'p50', 'p95')
+  stats[:by_class].sort.each do |klass, agg|
+    out << format(
+      "  %-12s %7d %7.1f%% %7.1f%% %7.1f%%\n",
+      klass, agg[:count], agg[:mean] * 100, agg[:p50] * 100, agg[:p95] * 100
+    )
+  end
+
+  unless stats[:weak_samples].empty?
+    out << "\ntop weak-savings (ratio < 20%):\n"
+    stats[:weak_samples].each do |sample|
+      out << format("  %5.1f%%  %s\n", sample[:ratio] * 100, sample[:cmd])
+    end
+  end
+
+  out << "\nrecommendation: #{verdict(stats)}\n"
+  out
+end
+
+def main(argv)
+  opts = { log: nil, json: false, redact: false }
+  OptionParser.new do |p|
+    p.on('--log PATH') { |v| opts[:log] = v }
+    p.on('--json') { opts[:json] = true }
+    p.on('--redact', 'Emit privacy-reduced JSON for the report-drafter skill; review the drafted markdown report before sharing publicly') do
+      opts[:redact] = true
+      opts[:json] = true
+    end
+  end.parse!(argv)
+
+  opts[:log] ||= default_log_path
+
+  if opts[:log].nil?
+    warn 'compression-stats: no compression.jsonl found.'
+    warn "  searched glob: #{DEFAULT_GLOB}"
+    warn '  pass --log <path> if your plugin data dir is elsewhere.'
+    return 1
+  end
+  unless File.file?(opts[:log])
+    warn "compression-stats: no jsonl at #{opts[:log]}"
+    warn '  pass --log <path> to point at an alternate location.'
+    return 1
+  end
+
+  # Stream entries line-by-line. Months of opt-in telemetry can produce
+  # 100s of MB of jsonl; never materialize the full entry list. Aggregator
+  # only retains per-class ratio arrays, weak samples (ratio < 20%), and
+  # violation samples — all bounded subsets of the input.
+  entry_stream = Enumerator.new do |yielder|
+    File.foreach(opts[:log], chomp: true) do |line|
+      next if line.empty?
+
+      begin
+        yielder << JSON.parse(line)
+      rescue JSON::ParserError
+        next
+      end
+    end
+  end
+
+  stats = aggregate(entry_stream)
+
+  if opts[:redact]
+    $stdout.puts JSON.generate(redact_stats(stats))
+  elsif opts[:json]
+    payload = {
+      'log' => opts[:log],
+      'samples' => stats[:total_count],
+      'preservation_violations' => stats[:total_violations],
+      'by_class' => stats[:by_class],
+      'weak_samples' => stats[:weak_samples].map { |s| { 'ratio' => s[:ratio], 'cmd' => s[:cmd] } },
+      'recommendation' => verdict(stats)
+    }
+    $stdout.puts JSON.generate(payload)
+  else
+    $stdout.write render(stats, opts[:log])
+  end
+  0
+end
+
+exit main(ARGV.dup) if $PROGRAM_NAME == __FILE__

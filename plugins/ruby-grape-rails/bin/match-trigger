@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Standalone CLI. Exit 0 = match, exit 1 = no match / excluded / error.
+
+require 'optparse'
+
+begin
+  require_relative '../lib/triggers'
+rescue LoadError
+  exit 1
+end
+
+def main(argv)
+  opts = { triggers: nil, cmd: nil }
+  OptionParser.new do |p|
+    p.on('--triggers PATH') { |v| opts[:triggers] = v }
+    p.on('--cmd CMD') { |v| opts[:cmd] = v }
+  end.parse!(argv)
+
+  return 1 unless opts[:triggers] && opts[:cmd]
+  return 1 unless File.file?(opts[:triggers])
+
+  begin
+    Triggers.matches?(opts[:triggers], opts[:cmd]) ? 0 : 1
+  rescue StandardError
+    1
+  end
+end
+
+exit main(ARGV.dup) if $PROGRAM_NAME == __FILE__

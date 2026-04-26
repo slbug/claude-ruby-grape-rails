@@ -1,0 +1,28 @@
+# plugins/ruby-grape-rails/references/compression/triggers.yml
+# Commands whose stdout is eligible for observation compression.
+# No broad `bundle exec rake` matcher — too wide.
+
+# Env-prefix is a leading run of `KEY=value` (or `KEY=`) assignments separated
+# by whitespace, e.g. `RAILS_ENV=test BUNDLE_GEMFILE=Gemfile rspec`.  All
+# patterns below tolerate any number of those prefixes via `(\\S+=\\S*\\s+)*`.
+#
+# Binstub-prefix is `bin/` or `./bin/` directly before the verb, e.g.
+# `bin/rspec spec/foo` or `./bin/rake test` — common in Rails apps.
+# Patterns below tolerate exactly those two forms via `(?:\\./)?bin/`
+# (optional `./`, then `bin/`). System-level paths like `/bin/rspec`
+# or stray `.bin/` directories are NOT matched.
+verify_commands:
+  direct:
+    - "^(\\S+=\\S*\\s+)*(?:(?:\\./)?bin/)?rspec\\b"
+    - "^(\\S+=\\S*\\s+)*(?:(?:\\./)?bin/)?rubocop\\b"
+    - "^(\\S+=\\S*\\s+)*(?:(?:\\./)?bin/)?standardrb\\b"
+    - "^(\\S+=\\S*\\s+)*(?:(?:\\./)?bin/)?brakeman\\b"
+    - "^(\\S+=\\S*\\s+)*(?:(?:\\./)?bin/)?reek\\b"
+    - "^(\\S+=\\S*\\s+)*bundle exec (?:(?:\\./)?bin/)?(rspec|rubocop|standardrb|brakeman|reek)\\b"
+  migrations:
+    - "^(\\S+=\\S*\\s+)*(bundle exec )?(?:(?:\\./)?bin/)?rails db:(migrate|rollback|schema:load|seed)\\b"
+  rake_verify_only:
+    - "^(\\S+=\\S*\\s+)*(bundle exec )?(?:(?:\\./)?bin/)?rake (ci|test|spec|verify|lint|standard:fix_unsafely|brakeman)\\b"
+
+rake_excluded:
+  - "^(\\S+=\\S*\\s+)*(bundle exec )?(?:(?:\\./)?bin/)?rake (routes|db:drop|db:create|assets:|generators:|stats|notes)\\b"

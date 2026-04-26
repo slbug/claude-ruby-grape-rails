@@ -1,0 +1,58 @@
+== 20260423120000_add_index_0.rb: migrating ====================================
+-- add_index(:users, :email_0)
+  from /gems/activerecord-7.1.0/lib/migration/0.rb:10:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/1.rb:11:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/2.rb:12:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/3.rb:13:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/4.rb:14:in `block in migrate'
+  [... 3 more frames elided ...]
+   -> 0.1234s
+== 20260423120000_add_index_0.rb: migrated  ====================================
+
+== 20260423120001_add_index_1.rb: migrating ====================================
+-- add_index(:users, :email_1)
+  from /gems/activerecord-7.1.0/lib/migration/0.rb:10:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/1.rb:11:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/2.rb:12:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/3.rb:13:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/4.rb:14:in `block in migrate'
+  [... 3 more frames elided ...]
+   -> 0.1235s
+== 20260423120001_add_index_1.rb: migrated  ====================================
+
+== 20260423120002_add_index_2.rb: migrating ====================================
+-- add_index(:users, :email_2)
+  from /gems/activerecord-7.1.0/lib/migration/0.rb:10:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/1.rb:11:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/2.rb:12:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/3.rb:13:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/4.rb:14:in `block in migrate'
+  [... 3 more frames elided ...]
+   -> 0.1236s
+== 20260423120002_add_index_2.rb: migrated  ====================================
+
+== 20260423120003_add_index_3.rb: migrating ====================================
+-- add_index(:users, :email_3)
+  from /gems/activerecord-7.1.0/lib/migration/0.rb:10:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/1.rb:11:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/2.rb:12:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/3.rb:13:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/4.rb:14:in `block in migrate'
+  [... 3 more frames elided ...]
+   -> 0.1237s
+== 20260423120003_add_index_3.rb: migrated  ====================================
+
+== 20260423120004_add_index_4.rb: migrating ====================================
+-- add_index(:users, :email_4)
+  from /gems/activerecord-7.1.0/lib/migration/0.rb:10:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/1.rb:11:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/2.rb:12:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/3.rb:13:in `block in migrate'
+  from /gems/activerecord-7.1.0/lib/migration/4.rb:14:in `block in migrate'
+  [... 3 more frames elided ...]
+   -> 0.1238s
+== 20260423120004_add_index_4.rb: migrated  ====================================
+
+DEPRECATION WARNING: rake db:migrate behavior change in Rails 8 (called from /gems/rake/lib/rake.rb:1)
+  [+59 similar deprecations]
+Migrations done. Exit code 0
