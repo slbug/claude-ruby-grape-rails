@@ -4631,8 +4631,9 @@ def _danger_payload(event: str, command: str) -> str:
 class BlockDangerousOpsPermissionRequestTests(unittest.TestCase):
     """`block-dangerous-ops.sh` PermissionRequest path emits the structured
     deny shape per CC schema (`hookSpecificOutput.decision.behavior=deny`
-    with a `message`), and falls back to exit 2 in strict mode so strict
-    environments do not depend on the model honoring the soft deny."""
+    with a `message`), and in strict mode keeps the exit-0 JSON envelope
+    while setting `hookSpecificOutput.decision.interrupt=true` so Claude
+    fully stops instead of treating the deny as soft-only."""
 
     def test_dangerous_command_emits_structured_deny_json(self) -> None:
         payload = _danger_payload(
