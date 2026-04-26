@@ -120,6 +120,10 @@ def redact_cmd(cmd)
   out = cmd.dup
   # `KEY=value` env-var assignments → keep key, redact value.
   out.gsub!(/(\b[A-Z_][A-Z0-9_]*=)\S*/) { "#{Regexp.last_match(1)}<v>" }
+  # `--flag=value` CLI options → keep flag name, redact value. Catches
+  # tokens, API keys, seeds, ticket ids, and any other inline secret
+  # users routinely pass via `--token=...` / `--api-key=...` / etc.
+  out.gsub!(/(--[A-Za-z][A-Za-z0-9_-]*=)\S*/) { "#{Regexp.last_match(1)}<v>" }
   # spec/foo/bar_spec.rb → spec/<file>; same for test/...
   out.gsub!(%r{\b(spec|test)/\S+}, '\\1/<file>')
   # Absolute paths → /<path>

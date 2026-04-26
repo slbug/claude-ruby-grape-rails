@@ -87,6 +87,26 @@ def test_non_string_pattern_does_not_crash(tmp_path: Path) -> None:
     assert proc.returncode == 0, f"matcher crashed: stderr={proc.stderr!r}"
 
 
+def test_matches_binstub_rspec() -> None:
+    assert _matches("bin/rspec spec/models/user_spec.rb")
+
+
+def test_matches_dot_slash_binstub_rspec() -> None:
+    assert _matches("./bin/rspec spec/models/user_spec.rb")
+
+
+def test_matches_env_prefix_binstub_rspec() -> None:
+    assert _matches("RAILS_ENV=test bin/rspec spec/models/user_spec.rb")
+
+
+def test_matches_binstub_rake_verify() -> None:
+    assert _matches("bin/rake test")
+
+
+def test_binstub_rake_excluded_still_wins() -> None:
+    assert not _matches("bin/rake routes")
+
+
 def test_invalid_regex_does_not_crash(tmp_path: Path) -> None:
     bad = tmp_path / "triggers.yml"
     bad.write_text(

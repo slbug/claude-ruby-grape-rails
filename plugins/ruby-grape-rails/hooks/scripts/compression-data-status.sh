@@ -100,11 +100,14 @@ ruby -ryaml -rshellwords -e '
   reasons << format("%.1f MB on disk", mb) if size_hit
   reasons << "#{sample_count} samples" if sample_hit
 
+  # SessionStart stdout enters the model context. Surface only the
+  # telemetry paths, never literal rm / rm -rf command strings; the
+  # user composes the cleanup command from these paths.
   puts "[ruby-grape-rails] Verify-output compression telemetry has accumulated (#{reasons.join(", ")})."
   puts "[ruby-grape-rails] Run /rb:compression-report to draft a redacted report you can share."
-  puts "[ruby-grape-rails] After filing the report, clean up locally:"
-  puts "[ruby-grape-rails]   rm #{Shellwords.escape(jsonl_path)}"
-  puts "[ruby-grape-rails]   rm -rf #{Shellwords.escape(raw_dir)}"
+  puts "[ruby-grape-rails] When you (the user) decide to clean up, the relevant paths on disk are:"
+  puts "[ruby-grape-rails]   jsonl:     #{Shellwords.escape(jsonl_path)}"
+  puts "[ruby-grape-rails]   raw logs:  #{Shellwords.escape(raw_dir)} (directory)"
 ' "$RULES" "$DATA_DIR" "$JSONL" "$RAW_DIR" 2>/dev/null || true
 
 exit 0

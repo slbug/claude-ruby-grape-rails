@@ -132,9 +132,9 @@ replacement mechanism.
    yourself. Suggested wording:
 
    ```text
-   After filing the report, clean up the local telemetry:
-     rm ${CLAUDE_PLUGIN_DATA}/compression.jsonl
-     rm -rf ${CLAUDE_PLUGIN_DATA}/verify-raw
+   When you (the user) decide to clean up, the relevant paths are:
+     jsonl:     ${CLAUDE_PLUGIN_DATA}/compression.jsonl
+     raw logs:  ${CLAUDE_PLUGIN_DATA}/verify-raw  (directory)
    ```
 
 ## Privacy posture

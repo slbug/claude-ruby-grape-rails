@@ -142,6 +142,33 @@ def test_redact_drops_violation_message_strings(tmp_path: Path) -> None:
     assert sample["raw_log_id"] == "uuid-2"
 
 
+def test_redact_strips_cli_flag_values(tmp_path: Path) -> None:
+    # `--flag=value` style CLI options can carry tokens, API keys,
+    # JIRA-shaped ticket ids, seed values, and other inline secrets
+    # users routinely pass directly. The redactor keeps the flag name
+    # for classification but replaces the value with `<v>`.
+    log = tmp_path / "compression.jsonl"
+    entry = {
+        "ts": 1.0,
+        "cmd": "rspec --token=ghs_secretXYZ --tag=feature:auth --seed=12345",
+        "raw_bytes": 100,
+        "compressed_bytes": 10,
+        "ratio": 0.05,
+        "violations": [],
+        "raw_log": None,
+    }
+    log.write_text(json.dumps(entry) + "\n")
+
+    payload = _run_redact(log)
+    weak = payload["weak_samples"][0]
+    assert "ghs_secretXYZ" not in weak["cmd"]
+    assert "12345" not in weak["cmd"]
+    assert "feature:auth" not in weak["cmd"]
+    assert "--token=<v>" in weak["cmd"]
+    assert "--tag=<v>" in weak["cmd"]
+    assert "--seed=<v>" in weak["cmd"]
+
+
 def test_redact_drops_trailing_freeform_args(tmp_path: Path) -> None:
     log = tmp_path / "compression.jsonl"
     entry = {
