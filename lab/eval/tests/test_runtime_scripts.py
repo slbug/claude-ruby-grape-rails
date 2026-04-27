@@ -4780,6 +4780,66 @@ class BlockDangerousOpsPermissionDeniedTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stdout, "")
 
+    def test_symlinked_target_file_is_refused(self) -> None:
+        """Refuse to write through a pre-existing symlink at the jsonl
+        target path. Mirrors `verify_compression.append_jsonl`'s
+        `lstat`/`O_NOFOLLOW` guard. Fail-open per hook policy: hook still
+        exits 0, the symlink target is not appended to, and no real file
+        is created at the jsonl path."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            data_dir = Path(tmpdir) / "data"
+            data_dir.mkdir()
+            decoy = Path(tmpdir) / "decoy.txt"
+            decoy.write_text("untouched\n", encoding="utf-8")
+            (data_dir / "denied-commands.jsonl").symlink_to(decoy)
+
+            payload = json.dumps(
+                {
+                    "hook_event_name": "PermissionDenied",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "git push --force origin main"},
+                    "reason": "Auto mode denied: force push targets remote main",
+                }
+            )
+            result = run_block_hook(
+                "",
+                payload_override=payload,
+                extra_env={"CLAUDE_PLUGIN_DATA": str(data_dir)},
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            self.assertEqual(
+                decoy.read_text(encoding="utf-8"),
+                "untouched\n",
+                "symlink target was modified — guard failed",
+            )
+
+    def test_symlinked_data_dir_is_refused(self) -> None:
+        """Refuse to traverse a symlinked plugin-data dir. Hook still
+        exits 0 (fail-open); no file is created under the symlink target."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            real_dir = Path(tmpdir) / "real"
+            real_dir.mkdir()
+            link_dir = Path(tmpdir) / "link"
+            link_dir.symlink_to(real_dir)
+
+            payload = json.dumps(
+                {
+                    "hook_event_name": "PermissionDenied",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "git push --force origin main"},
+                    "reason": "Auto mode denied: force push targets remote main",
+                }
+            )
+            result = run_block_hook(
+                "",
+                payload_override=payload,
+                extra_env={"CLAUDE_PLUGIN_DATA": str(link_dir)},
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            self.assertFalse((real_dir / "denied-commands.jsonl").exists())
+
 
 class InjectRulesTests(unittest.TestCase):
     """`inject-rules.sh` is wired in `hooks.json` under both `SessionStart`

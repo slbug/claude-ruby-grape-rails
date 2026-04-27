@@ -76,7 +76,15 @@ log_denied_command() {
   local our_reason="$1"
   local data_dir="${CLAUDE_PLUGIN_DATA:-}"
   [[ -n "$data_dir" ]] || return 0
+  # Refuse to follow a symlinked plugin-data dir or a symlinked target
+  # file. Mirrors the symlink/NOFOLLOW guard in
+  # `lib/verify_compression.rb#append_jsonl`. Bash has no O_NOFOLLOW
+  # primitive on `>>`, so a pre-existing symlink at the path is the
+  # exploit surface we close here. Fail-open per hook policy.
+  [[ -L "$data_dir" ]] && return 0
   mkdir -p "$data_dir" 2>/dev/null || return 0
+  local target="${data_dir}/denied-commands.jsonl"
+  [[ -L "$target" ]] && return 0
   local cc_reason=""
   cc_reason="$(printf '%s' "$INPUT" | jq -r '.reason // empty' 2>/dev/null || true)"
   jq -nc \
@@ -84,7 +92,7 @@ log_denied_command() {
     --arg pattern "$our_reason" \
     --arg classifier "$cc_reason" \
     '{ts: now, cmd: $cmd, pattern: $pattern, classifier_reason: $classifier}' \
-    >> "${data_dir}/denied-commands.jsonl" 2>/dev/null || return 0
+    >> "$target" 2>/dev/null || return 0
 }
 
 respond_to_danger() {
