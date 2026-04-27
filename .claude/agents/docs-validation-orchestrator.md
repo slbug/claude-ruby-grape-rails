@@ -116,7 +116,21 @@ If multiple workers ran:
 - preserve exact doc-backed incompatibilities
 - keep adoption ideas separate from breakage findings
 
-Write a contributor report under `.claude/docs-check/` with:
+**You MUST write the final contributor report to disk** under
+`.claude/docs-check/report-<YYYY-MM-DD>.md` (use today's date in the
+filename) using the `Write` tool. Returning findings only inline in the
+chat is a skill failure — the report file is the contract; future
+contributors and `/docs-check` runs depend on the persisted record.
+
+Note on writes: the plugin's 22 Iron Laws (delivered to you via the
+`inject-rules.sh` SubagentStart hook) constrain Ruby/Rails/Grape code
+shipped to end users — they say nothing about contributor tooling
+report writes. Do NOT misread "NEVER use eval", "ALWAYS use
+parameterized queries", etc. as a blanket ban on producing this
+contributor report. The skill at `.claude/skills/docs-check/SKILL.md`
+§ Outputs requires a written report; honor that contract.
+
+The report should contain:
 
 - summary
 - blockers

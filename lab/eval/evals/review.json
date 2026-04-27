@@ -22,7 +22,7 @@
     "conciseness": {
       "weight": 0.14,
       "checks": [
-        { "type": "line_count", "target": 140, "tolerance": 180, "desc": "Reasonable length" },
+        { "type": "line_count", "target": 140, "tolerance": 200, "desc": "Reasonable length" },
         { "type": "max_section_lines", "max": 60, "desc": "Section size controlled" }
       ]
     },

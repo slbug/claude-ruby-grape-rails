@@ -284,7 +284,7 @@ When you use it:
 
 Use the shared provenance contract:
 
-- `../../references/output-verification/provenance-template.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/output-verification/provenance-template.md`
 
 ## Reuse Rules
 

@@ -22,10 +22,10 @@ module VerifyCompression
   STACK_FRAME_RE = /^\s*(from |at |# ).+:\d+/
   DEPRECATION_RE = /DEPRECATION WARNING/i
   GEM_LOADING_RE = /^\s*Loaded gem /i
-  # Generic gem-prefixed warnings (`[dry-types] ...`, `[bundler] ...`)
-  # are commonly emitted once per Bundler require pass and repeat
-  # verbatim on every spec invocation. Collapse consecutive identical
-  # bracket-prefixed lines the same way deprecations are collapsed.
+  # Bracket-prefixed warnings (`[dry-types] ...`, `[bundler] ...`).
+  # Single-line consecutive identical dedup; multi-line emission
+  # shapes (warning + caller frame, etc.) handled by
+  # `collapse_repeated_blocks`.
   BRACKET_WARNING_RE = /^\[\w[\w-]*\]/
 
   Result = Data.define(:text, :raw_bytes, :compressed_bytes, :preservation_violations) do
@@ -42,7 +42,8 @@ module VerifyCompression
     'stack_beyond_5' => '  [... {count} more frames elided ...]',
     'deprecation_warnings' => '  [+{count} similar deprecations]',
     'gem_loading' => 'Loaded {count} gems',
-    'repeated_warnings' => '  [+{count} repeated]'
+    'repeated_warnings' => '  [+{count} repeated]',
+    'repeated_blocks' => '  [+{count}× repeated {size}-line block]'
   }.freeze
 
   module_function
@@ -55,6 +56,7 @@ module VerifyCompression
     lines = collapse_gem_loading(lines, collapse['gem_loading'])
     lines = collapse_deprecations(lines, collapse['deprecation_warnings'])
     lines = collapse_bracket_warnings(lines, collapse['repeated_warnings'])
+    lines = collapse_repeated_blocks(lines, collapse['repeated_blocks'])
     compressed = lines.join("\n")
     violations = check_preservation(raw, compressed, rules)
     Result.new(
@@ -177,6 +179,50 @@ module VerifyCompression
     end
     flush_dupe.call
     result
+  end
+
+  # Generic K-line block dedup. Runs LAST so single-line collapsers
+  # (DEPRECATION/Loaded gem/bracket-warning) handle their shapes
+  # first. K=2..5 covers warn+caller stanzas, multi-line gem
+  # warnings, repeated test-runner banners. K=1 NOT included —
+  # over-collapse risk (would drop legitimate single-line repeats).
+  # Template `{size}` and `{count}` both substituted; `{count}` is
+  # the number of dropped REPETITIONS (so total occurrences = count + 1).
+  def collapse_repeated_blocks(lines, template)
+    result = []
+    i = 0
+    while i < lines.length
+      collapsed = false
+      (2..5).each do |k|
+        next if i + (k * 2) > lines.length
+
+        block = lines[i, k]
+        next unless lines[i + k, k] == block
+
+        dupes = 0
+        j = i + k
+        while j + k <= lines.length && lines[j, k] == block
+          dupes += 1
+          j += k
+        end
+        next if dupes.zero?
+
+        result.concat(block)
+        result << render_block_collapse(template, dupes, k)
+        i = j
+        collapsed = true
+        break
+      end
+      next if collapsed
+
+      result << lines[i]
+      i += 1
+    end
+    result
+  end
+
+  def render_block_collapse(template, count, size)
+    template.gsub('{count}', count.to_s).gsub('{size}', size.to_s)
   end
 
   def collapse_bracket_warnings(lines, template)

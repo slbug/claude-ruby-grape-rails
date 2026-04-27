@@ -349,76 +349,6 @@ def law_count_label(count)
   "#{count} #{count == 1 ? 'law' : 'laws'}"
 end
 
-# Generate injectable template section
-def generate_injectable_section(yaml)
-  puts '## IRON LAWS — STOP if violated'
-  puts ''
-  puts 'If code would violate ANY of these, you MUST:'
-  puts ''
-  puts '1. STOP immediately'
-  puts '2. Show the problematic code'
-  puts '3. Show the correct pattern'
-  puts '4. Ask permission to apply the fix'
-  puts ''
-
-  yaml['categories'].each do |cat|
-    puts "**#{cat['name']}:**"
-    puts ''
-    yaml['laws'].select { |l| l['category'] == cat['id'] }.each_with_index do |law, idx|
-      init = law['init_text']
-      text = (init.is_a?(String) && !init.strip.empty?) ? init : law['summary_text']
-      puts "#{idx + 1}. #{text}"
-    end
-    puts ''
-  end
-end
-
-# Generate preferences injectable section (rendered between PREFERENCES_START/END markers)
-def generate_preferences_injectable(prefs)
-  unless prefs && prefs['preferences'].is_a?(Array) && !prefs['preferences'].empty?
-    # No preferences defined — emit a sentinel comment so the block stays
-    # present but inert.
-    puts '<!-- no preferences defined -->'
-    return
-  end
-
-  puts '## Advisory Preferences'
-  puts ''
-  puts 'Apply when possible; fall back gracefully when tools are unavailable.'
-  puts ''
-
-  known_category_ids = prefs['categories'].map { |c| c['id'] }
-
-  prefs['categories'].each do |cat|
-    prefs_in_cat = prefs['preferences'].select { |p| p['category'] == cat['id'] }
-    next if prefs_in_cat.empty?
-
-    puts "**#{cat['name']}:**"
-    puts ''
-    prefs_in_cat.each_with_index do |pref, idx|
-      init = pref['init_text']
-      text = (init.is_a?(String) && !init.strip.empty?) ? init : pref['summary_text']
-      puts "#{idx + 1}. #{text}"
-    end
-    puts ''
-  end
-
-  # Safety net: preferences whose category is not declared in `categories`
-  # should be loud, not silently dropped. Validator normally catches this;
-  # this renders them under an Uncategorized bucket as belt-and-suspenders.
-  orphans = prefs['preferences'].reject { |p| known_category_ids.include?(p['category']) }
-  return if orphans.empty?
-
-  puts '**Uncategorized:**'
-  puts ''
-  orphans.each_with_index do |pref, idx|
-    init = pref['init_text']
-    text = (init.is_a?(String) && !init.strip.empty?) ? init : pref['summary_text']
-    puts "#{idx + 1}. #{text}"
-  end
-  puts ''
-end
-
 # Escape pipe characters for markdown tables
 def escape_table_cell(text)
   text.to_s.gsub('|', '\|')
@@ -440,44 +370,51 @@ def generate_tutorial_section(yaml)
   end
 end
 
-# Generate injector script
+# Generate the rules-injection hook script.
+#
+# Single shipped script, wired in hooks.json under both `SessionStart`
+# (main-session delivery) and `SubagentStart` (per-subagent delivery).
+# Reads `.hook_event_name` from the hook input on stdin and echoes it
+# back as `hookSpecificOutput.hookEventName` per CC output convention,
+# so one body works for both events. No de-dup guard — events mutually
+# exclude by trigger (SessionStart never fires inside a subagent;
+# SubagentStart never fires for the main session).
 def generate_injector_script(yaml, prefs)
-  output = "Ruby/Rails/Grape Iron Laws (NON-NEGOTIABLE) — #{yaml['total_laws']} Total:\n\n"
+  body = "Ruby/Rails/Grape Iron Laws (NON-NEGOTIABLE) — #{yaml['total_laws']} Total:\n\n"
 
   yaml['categories'].each do |cat|
-    output += "#{cat['name']} (#{cat['law_count']}):\n"
+    body += "#{cat['name']} (#{cat['law_count']}):\n"
   end
 
-  output += "\n"
+  body += "\n"
 
   yaml['laws'].each do |law|
-    output += "#{law['subagent_text']}\n"
+    body += "#{law['subagent_text']}\n"
   end
 
-  if prefs && prefs['preferences'].is_a?(Array) && !prefs['preferences'].empty?
+  has_prefs = prefs && prefs['preferences'].is_a?(Array) && !prefs['preferences'].empty?
+  if has_prefs
     total_prefs = prefs['total_preferences'] || prefs['preferences'].length
-    output += "\nAdvisory Preferences — #{total_prefs} Total:\n"
+    body += "\nAdvisory Preferences — #{total_prefs} Total:\n"
     prefs['preferences'].each do |pref|
-      output += "#{pref['subagent_text']}\n"
+      body += "#{pref['subagent_text']}\n"
     end
   end
 
-  payload = JSON.generate(
-    'hookSpecificOutput' => {
-      'hookEventName' => 'SubagentStart',
-      'additionalContext' => output
-    }
-  )
+  body_marker = 'RULES_BODY_EOF'
+  raise "body collides with heredoc marker #{body_marker.inspect}" if body.include?(body_marker)
 
-  has_prefs = prefs && prefs['preferences'].is_a?(Array) && !prefs['preferences'].empty?
   puts '#!/usr/bin/env bash'
   puts 'set -o nounset'
   puts 'set -o pipefail'
   puts ''
-  puts '# SubagentStart hook: inject Iron Laws (+ Advisory Preferences when present)'
-  puts '# Policy: advisory injection via additionalContext; emit-then-exit.'
-  puts '# A HEREDOC failure drops the payload, leaving the subagent without'
-  puts '# the injected context — fail-open by design, no guardrail semantics.'
+  puts '# Inject Iron Laws + Advisory Preferences via additionalContext.'
+  puts '# Wired in hooks.json under both SessionStart (main-session) and'
+  puts '# SubagentStart (per-subagent). Reads hook_event_name from input,'
+  puts '# echoes it back in hookSpecificOutput.hookEventName per CC schema.'
+  puts '# Policy: advisory injection; emit-then-exit. Failure to emit'
+  puts '# leaves the receiver without injected context — fail-open by'
+  puts '# design, no guardrail semantics.'
   if has_prefs
     puts '# GENERATED FROM iron-laws.yml + preferences.yml — DO NOT EDIT'
     puts "# Source versions: iron-laws=#{yaml['version']} preferences=#{prefs['version']}"
@@ -488,9 +425,34 @@ def generate_injector_script(yaml, prefs)
     puts "# Source versions: iron-laws=#{yaml['version']} preferences=#{prefs['version']} (no preferences defined)"
   end
   puts ''
-  puts "cat <<'EOF'"
-  puts payload
-  puts 'EOF'
+  puts '# End-user opt-out: skip injection entirely. Useful when the plugin'
+  puts '# is installed at user scope but the active project is not Ruby/Rails/'
+  puts '# Grape. Set per shell, per-command, or via direnv (.envrc).'
+  puts '[[ "${RUBY_PLUGIN_DISABLE_RULES_INJECTION:-0}" == "1" ]] && exit 0'
+  puts ''
+  puts 'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"'
+  puts 'ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"'
+  puts '[[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || exit 0'
+  puts '# shellcheck disable=SC1090,SC1091'
+  puts 'source "$ROOT_LIB"'
+  puts 'read_hook_input'
+  puts ''
+  puts '# Need jq to construct the JSON output safely.'
+  puts 'command -v jq >/dev/null 2>&1 || exit 0'
+  puts ''
+  puts '# Echo the firing event name back per CC output convention.'
+  puts 'EVENT=""'
+  puts '[[ "${HOOK_INPUT_STATUS:-empty}" == "valid" ]] && \\'
+  puts '  EVENT="$(printf "%s" "$HOOK_INPUT_VALUE" | jq -r ".hook_event_name // empty" 2>/dev/null || true)"'
+  puts '[[ -n "$EVENT" ]] || exit 0'
+  puts ''
+  puts "BODY=$(cat <<'#{body_marker}'"
+  print body
+  puts body_marker
+  puts ')'
+  puts ''
+  puts 'jq -nc --arg ev "$EVENT" --arg ctx "$BODY" \\'
+  puts '  \'{hookSpecificOutput:{hookEventName:$ev,additionalContext:$ctx}}\''
 end
 
 # Generate canonical registry
@@ -591,10 +553,6 @@ end
 
 # Main
 case ARGV[0]
-when 'injectable'
-  generate_injectable_section(yaml)
-when 'preferences_injectable'
-  generate_preferences_injectable(prefs)
 when 'tutorial'
   generate_tutorial_section(yaml)
 when 'injector'
@@ -610,6 +568,6 @@ when 'validate'
   warn_missing_preferences_recommended(prefs)
   warn "Validation complete."
 else
-  puts "Usage: #{$PROGRAM_NAME} [injectable|preferences_injectable|tutorial|injector|canonical|readme|judge|validate]"
+  puts "Usage: #{$PROGRAM_NAME} [tutorial|injector|canonical|readme|judge|validate]"
   exit 1
 end

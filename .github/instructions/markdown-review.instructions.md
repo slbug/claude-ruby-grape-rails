@@ -12,12 +12,20 @@ frontmatter between `---` delimiters. This is Claude Code plugin syntax,
 not standard markdown metadata.
 
 Valid frontmatter fields for skills: name, description, when_to_use,
-argument-hint, effort, disable-model-invocation, user-invocable,
-allowed-tools, model, context, agent, hooks, paths, shell
+argument-hint, arguments, effort, disable-model-invocation,
+user-invocable, allowed-tools, model, context, agent, hooks, paths,
+shell
 
-Valid frontmatter fields for agents: name, description, model, effort,
-maxTurns, tools, disallowedTools, skills, memory, background, isolation,
-omitClaudeMd, color, initialPrompt
+Valid frontmatter fields for agents (general subagent surface, see
+<https://docs.claude.com/en/docs/claude-code/sub-agents>): name,
+description, model, effort, maxTurns, tools, disallowedTools, skills,
+memory, background, isolation, omitClaudeMd, color, initialPrompt.
+Plugin-shipped agents under `plugins/**/agents/` are narrowed by the
+plugins reference
+(<https://docs.claude.com/en/docs/claude-code/plugins-reference>) to
+the subset CC honors on plugin agents — do not add `color` or
+`initialPrompt` to plugin-shipped agents (see
+`plugin-review.instructions.md` for the narrowed set).
 
 ## Runtime Variables
 
@@ -50,18 +58,29 @@ These markdown blocks are generated from
 `preferences.yml` via `scripts/generate-iron-law-outputs.sh`. Do not
 hand-edit; flag PRs that change them without a matching YAML edit:
 
-- `README.md` Iron Laws section
-- `plugins/ruby-grape-rails/skills/init/references/template.md`
-  `IRON_LAWS_START/END` and `PREFERENCES_START/END` blocks
+- `README.md` Iron Laws section (`IRON_LAWS_START/END` markers)
+- `plugins/ruby-grape-rails/skills/iron-laws/references/canonical-registry.md`
+  (whole-file generation; no markers)
 - `plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md`
-  Iron Laws walkthrough block
+  Iron Laws walkthrough block (`IRON_LAWS_START/END` markers)
 - `plugins/ruby-grape-rails/agents/iron-law-judge.md` Iron Laws roster
+  (`IRON_LAWS_JUDGE_START/END` markers)
+- `plugins/ruby-grape-rails/hooks/scripts/inject-rules.sh` (whole-file
+  generation; carries `Source versions: iron-laws=<v> preferences=<v>`
+  in the header — verify the version pair matches source YAML)
+
+The init injectable template
+(`plugins/ruby-grape-rails/skills/init/references/injectable-template.md`)
+no longer ships `IRON_LAWS_START/END` or `PREFERENCES_START/END` blocks
+— Iron Laws + Preferences are delivered at runtime via the
+`inject-rules.sh` hook (wired to both `SessionStart` and
+`SubagentStart`), not inline in CLAUDE.md.
 
 ## Cross-File Drift Around Markdown Changes
 
 - Skill or agent renamed → check `intro/references/tutorial-content.md`,
-  `init/references/template.md`, README, CHANGELOG, and other skills'
-  `/rb:<name>` mentions
+  `init/references/injectable-template.md`, README, CHANGELOG, and
+  other skills' `/rb:<name>` mentions
 - Iron Law count claim ("22 Total", "N Iron Laws") in any markdown →
   verify against `plugins/ruby-grape-rails/references/iron-laws.yml`
 - Plugin version mentioned in markdown → align with manifest trio

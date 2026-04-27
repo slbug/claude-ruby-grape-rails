@@ -54,6 +54,77 @@ COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/nul
 [[ -n "$COMMAND" ]] || emit_payload_schema_block "tool_input.command was missing"
 REPO_ROOT="$(resolve_workspace_root "$INPUT" 2>/dev/null || true)"
 
+# Hook event name routes the danger response. Schema references:
+#   .claude/docs-check/docs-cache/hooks.md PermissionRequest /
+#   PermissionDenied decision-control sections.
+#
+# - PreToolUse (and unset event): preserve historical hard-block via
+#   exit 2 + stderr.
+# - PermissionRequest: emit a structured `hookSpecificOutput.decision`
+#   with `behavior: "deny"` and a `message`. (`allow`/`deny` are the
+#   only behaviors for this event; `"ask"` belongs to PreToolUse.)
+#   When `RUBY_PLUGIN_STRICT_PERMS=1`, the same JSON deny is emitted
+#   with `interrupt: true` so Claude is fully stopped (not just told
+#   "no") and still receives the deny `message` as feedback.
+# - PermissionDenied: append the rejected command to
+#   `${CLAUDE_PLUGIN_DATA}/denied-commands.jsonl` for later review.
+#   Exit code and stderr are ignored on this event per CC, so we let
+#   the denial stand and do not request retry.
+EVENT=$(printf '%s' "$INPUT" | jq -r '.hook_event_name // empty' 2>/dev/null || true)
+
+log_denied_command() {
+  local our_reason="$1"
+  local data_dir="${CLAUDE_PLUGIN_DATA:-}"
+  [[ -n "$data_dir" ]] || return 0
+  # Refuse to follow a symlinked plugin-data dir or a symlinked target
+  # file. Mirrors the symlink/NOFOLLOW guard in
+  # `lib/verify_compression.rb#append_jsonl`. Bash has no O_NOFOLLOW
+  # primitive on `>>`, so a pre-existing symlink at the path is the
+  # exploit surface we close here. Fail-open per hook policy.
+  [[ -L "$data_dir" ]] && return 0
+  mkdir -p "$data_dir" 2>/dev/null || return 0
+  local target="${data_dir}/denied-commands.jsonl"
+  [[ -L "$target" ]] && return 0
+  local cc_reason=""
+  cc_reason="$(printf '%s' "$INPUT" | jq -r '.reason // empty' 2>/dev/null || true)"
+  jq -nc \
+    --arg cmd "$COMMAND" \
+    --arg pattern "$our_reason" \
+    --arg classifier "$cc_reason" \
+    '{ts: now, cmd: $cmd, pattern: $pattern, classifier_reason: $classifier}' \
+    >> "$target" 2>/dev/null || return 0
+}
+
+respond_to_danger() {
+  local reason="$1"
+  local block_message="$2"
+  local interrupt="false"
+  case "$EVENT" in
+    PermissionRequest)
+      [[ "${RUBY_PLUGIN_STRICT_PERMS:-0}" == "1" ]] && interrupt="true"
+      jq -nc \
+        --arg msg "$block_message" \
+        --argjson interrupt "$interrupt" \
+        '{
+          hookSpecificOutput: {
+            hookEventName: "PermissionRequest",
+            decision: { behavior: "deny", message: $msg, interrupt: $interrupt }
+          }
+        }'
+      exit 0
+      ;;
+    PermissionDenied)
+      log_denied_command "$reason"
+      exit 0
+      ;;
+    *)
+      # PreToolUse or unset event — preserve historical hard-block.
+      printf '%s\n' "$block_message" >&2
+      exit 2
+      ;;
+  esac
+}
+
 command_to_shfmt_ast() {
   local command_text="$1"
 
@@ -1087,34 +1158,22 @@ is_production_env_command() {
 }
 
 if is_destructive_db_command "$COMMAND"; then
-  cat >&2 <<'MSG'
-BLOCKED: destructive Rails database command detected.
+  respond_to_danger "destructive_db_command" "BLOCKED: destructive Rails database command detected.
 Use a targeted rollback or migration instead. If you truly need a full reset,
-run it manually outside Claude Code.
-MSG
-  exit 2
+run it manually outside Claude Code."
 fi
 
 if is_destructive_redis_command "$COMMAND"; then
-  cat >&2 <<'MSG'
-BLOCKED: destructive Redis flush detected.
-If intentional, run it manually outside Claude Code.
-MSG
-  exit 2
+  respond_to_danger "destructive_redis_command" "BLOCKED: destructive Redis flush detected.
+If intentional, run it manually outside Claude Code."
 fi
 
 if is_force_push_command "$COMMAND"; then
-  cat >&2 <<'MSG'
-BLOCKED: force push detected. Prefer git push --force-with-lease.
-MSG
-  exit 2
+  respond_to_danger "force_push_command" "BLOCKED: force push detected. Prefer git push --force-with-lease."
 fi
 
 if is_production_env_command "$COMMAND"; then
-  cat >&2 <<'MSG'
-BLOCKED: production environment detected. Re-check that this command belongs in Claude Code.
-MSG
-  exit 2
+  respond_to_danger "production_env_command" "BLOCKED: production environment detected. Re-check that this command belongs in Claude Code."
 fi
 
 exit 0

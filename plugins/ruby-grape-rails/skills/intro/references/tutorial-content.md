@@ -46,7 +46,7 @@ Each phase reads from the previous phase's output. Plans become checkboxes. Chec
 | Feature | What It Does |
 |---------|-------------|
 | 23 specialist agents | ActiveRecord, Hotwire, security, Sidekiq, deployment, provenance experts |
-| 52 skills | Commands for every phase of development |
+| 53 skills | Commands for every phase of development |
 | 22 Iron Laws | Non-negotiable rules enforced automatically |
 | Auto-loaded references | Context-aware docs loaded when you edit relevant files |
 | Runtime tooling integration | Runtime debugging when runtime tooling is connected |
@@ -346,6 +346,7 @@ The plugin works best when all layers are active: `/rb:init` for persistent rule
 | `/rb:secrets` | Scan for leaked credentials |
 | `/rb:document` | Generate YARD/RDoc, README, ADRs |
 | `/rb:compression-report` | Anonymize and draft a verify-output compression telemetry report (opt-in via `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1`) |
+| `/rb:provenance-scan` | Audit `.claude/` provenance sidecars and write a dated trust-state report |
 
 **Analysis:**
 

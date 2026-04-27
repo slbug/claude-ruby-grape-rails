@@ -134,7 +134,7 @@ When used:
 
 Use the shared provenance contract:
 
-- `../../references/output-verification/provenance-template.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/output-verification/provenance-template.md`
 
 Detailed reviewer focus areas, file-type checklists, and common Ruby
 anti-patterns live in
@@ -317,3 +317,13 @@ Review happens after `/rb:work` and before commit:
 ```
 
 Reviews can also be triggered standalone for existing code audits.
+
+## Trust States
+
+When a finding cites a sidecar, read the sidecar's `trust_state` (see
+`${CLAUDE_PLUGIN_ROOT}/references/output-verification/trust-states.md`):
+
+- `conflicted`: escalate severity by one level.
+- `missing`: tag the finding `[unverified]`; do not gate merge.
+- `weak`: keep severity; add a provenance note.
+- `clean`: proceed silently.

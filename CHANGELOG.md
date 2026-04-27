@@ -7,6 +7,70 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-04-26
+
+### Added
+
+- Trust-state consumption in `/rb:plan --existing`, `/rb:triage`,
+  `/rb:work`, and `/rb:review`. Each reads the `trust_state` of
+  referenced sidecars: `clean` proceeds, `weak` warns, `missing` warns
+  or tags `[unverified]`, `conflicted` halts.
+- `/rb:provenance-scan` skill + `bin/provenance-scan` Ruby CLI. Walks
+  `.claude/{research,reviews,audit,plans/*/{research,reviews}}`,
+  classifies each `*.provenance.md` via the 4-state algorithm, writes
+  a dated Markdown report under `.claude/provenance-scan/`.
+- `inject-rules.sh` hook delivers Iron Laws + Advisory Preferences via
+  `additionalContext` to both the main session (`SessionStart`) and
+  subagents (`SubagentStart`). One generated script reads
+  `hook_event_name` and echoes it back in
+  `hookSpecificOutput.hookEventName`. End-user opt-out:
+  `RUBY_PLUGIN_DISABLE_RULES_INJECTION=1` short-circuits before stdin
+  read or helper sourcing.
+- `block-dangerous-ops.sh` branches on `hook_event_name`:
+  `PermissionRequest` emits `decision.behavior="deny"` with `message`
+  and `decision.interrupt=false` (flipping to `true` under
+  `RUBY_PLUGIN_STRICT_PERMS=1`), exit 0 in both cases.
+  `PermissionDenied` appends `{ts, cmd, pattern, classifier_reason}`
+  to `${CLAUDE_PLUGIN_DATA}/denied-commands.jsonl`, capturing the
+  plugin pattern and CC's auto-mode classifier reason.
+- `hooks.json`: `PermissionRequest` + `PermissionDenied` events
+  registered against `block-dangerous-ops.sh`; `SessionStart` and
+  `SubagentStart` both wired to `inject-rules.sh`.
+
+### Changed
+
+- Iron Laws + Advisory Preferences delivery moved from inline
+  `CLAUDE.md` blocks to runtime hook injection. Existing installs run
+  `/rb:init --update` to replace the managed block.
+- Iron-laws generator (`scripts/generate-iron-law-content.rb`,
+  `scripts/generate-iron-law-outputs.sh`) emits one unified
+  `inject-rules.sh`. The `event_kind` parameter is gone; the single
+  `injector` target dispatches on runtime `hook_event_name`.
+- Several SKILL.md cross-references switched from
+  `../../references/...` / `../<sibling>/...` to explicit
+  `${CLAUDE_PLUGIN_ROOT}/...`, removing CWD dependence.
+- `compression-report` and `provenance-scan` skill frontmatter drop
+  `allowed-tools` (permission UX, not a restriction; Iron Laws are
+  the behavioral boundary).
+- New `collapse_repeated_blocks` compression rule (K=2..5) collapses
+  consecutive identical multi-line stanzas (warn + caller frame pairs
+  from `Dry::Core::Deprecations.warn`, multi-line gem warnings,
+  repeated banners). K=1 excluded to avoid over-collapsing legitimate
+  single-line repeats.
+- `file_colon_line` preserve regex tightened to reject the
+  `<path>:<line>:in '<method>'` warn-caller-frame suffix. Real
+  file:line refs (rspec, rubocop) still match.
+
+### Removed
+
+- Legacy `inject-iron-laws.sh` (SubagentStart-only); replaced by
+  `inject-rules.sh`.
+- Generator dispatcher targets `injectable` + `preferences` and the
+  `update_preferences_block` helper — runtime injection makes them
+  obsolete.
+- Inline `<!-- IRON_LAWS_START -->` / `<!-- PREFERENCES_START -->`
+  blocks no longer ship in the init injectable template.
+
 ## [1.15.2] - 2026-04-26
 
 ### Changed
@@ -2063,7 +2127,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.2...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.0...HEAD
+[1.16.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.2...v1.16.0
 [1.15.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.1...v1.15.2
 [1.15.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.0...v1.15.1
 [1.15.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.14.0...v1.15.0

@@ -85,13 +85,23 @@ Pass through the user flags. The orchestrator should:
 
 ## Outputs
 
-Expected outputs are:
+The orchestrator MUST persist a contributor report to disk at
+`.claude/docs-check/report-<YYYY-MM-DD>.md` (today's date). Returning
+findings only inline in the chat response is a skill failure — the file
+is the contract for future contributors and audit trails.
 
-- a concise contributor report under `.claude/docs-check/`
+The report contains:
+
+- a concise summary
 - a clear split between:
   - actual compatibility problems
   - documented new capabilities
   - local repo recommendations that are not schema failures
+
+The plugin's 22 Iron Laws (injected at runtime via `inject-rules.sh`
+under `SubagentStart` and `SessionStart`) constrain Ruby/Rails/Grape
+code shipped to end users; they do not forbid this contributor report
+write. The orchestrator agent has `Write` access by intention.
 
 ## Epistemic Posture
 

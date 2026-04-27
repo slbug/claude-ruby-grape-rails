@@ -353,9 +353,9 @@ enforcement:
     script: "hooks/scripts/iron-law-verifier.sh"
 
   behavioral:
-    description: "Injected into subagent context, enforced via agent instructions"
+    description: "Injected into main session and subagent contexts via SessionStart + SubagentStart hooks"
     all_laws: true
-    injection_script: "hooks/scripts/inject-iron-laws.sh"
+    injection_script: "hooks/scripts/inject-rules.sh"
 
   review_time:
     description: "Checked during /rb:review by specialist agents"
@@ -372,17 +372,14 @@ generation_targets:
     section: "Full human-readable registry"
     format: "markdown_projection"
 
-  - file: "plugins/ruby-grape-rails/skills/init/references/injectable-template.md"
-    section: "CLAUDE.md injection template"
-    marker: "<!-- IRON_LAWS_START -->"
-
   - file: "plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md"
     section: "Tutorial Iron Laws section"
     marker: "<!-- IRON_LAWS_START -->"
 
-  - file: "hooks/scripts/inject-iron-laws.sh"
+  - file: "plugins/ruby-grape-rails/hooks/scripts/inject-rules.sh"
     format: "shell_json_output"
     template: "subagent_text format"
+    delivery: "SessionStart (main session) + SubagentStart (per-subagent)"
 
   - file: "agents/iron-law-judge.md"
     section: "Iron Laws Overview"

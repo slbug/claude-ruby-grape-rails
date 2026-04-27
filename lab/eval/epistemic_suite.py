@@ -4,10 +4,10 @@ Measures 6 metrics (4 regex + 2 LLM-judge) against a set of scenarios in
 ``lab/eval/fixtures/epistemic/``. Each scenario is a single user prompt.
 
 The system prompt for every model call is captured at runtime by executing
-``plugins/ruby-grape-rails/hooks/scripts/inject-iron-laws.sh`` and extracting
+``plugins/ruby-grape-rails/hooks/scripts/inject-rules.sh`` and extracting
 ``.hookSpecificOutput.additionalContext`` — i.e. the exact text that reaches
-subagents via ``SubagentStart`` in production. Two suite invocations capture
-two states:
+both the main session (via ``SessionStart``) and subagents (via
+``SubagentStart``) in production. Two suite invocations capture two states:
 
 - pre-regeneration (1.13.2 injector output — Iron Laws + 1 preference)
 - post-regeneration (1.13.3 injector output — Iron Laws + 4 preferences)
@@ -58,6 +58,7 @@ import argparse
 import atexit
 import json
 import logging
+import os
 import re
 import subprocess
 import sys
@@ -92,7 +93,7 @@ INJECTOR_SCRIPT: Path = (
     / "ruby-grape-rails"
     / "hooks"
     / "scripts"
-    / "inject-iron-laws.sh"
+    / "inject-rules.sh"
 )
 
 # Module-level settings path for claude --bare invocations. Resolved once
@@ -115,7 +116,7 @@ _HAIKU_REQUEST_TIMEOUT_SECONDS: float = 120.0
 _HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 
 # Shared system prompt for every fixture call in the current run. Captured
-# once at the top of ``main()`` from ``inject-iron-laws.sh`` so the eval
+# once at the top of ``main()`` from ``inject-rules.sh`` so the eval
 # exercises the real shipped signal, not a paraphrase.
 _runtime_system_prompt: str = ""
 
@@ -250,35 +251,54 @@ class MetricReport:
 
 
 def capture_runtime_system_prompt() -> str:
-    """Execute ``inject-iron-laws.sh`` and return ``additionalContext``.
+    """Execute ``inject-rules.sh`` and return ``additionalContext``.
 
-    The script prints a SubagentStart JSON payload to stdout. We extract
-    ``.hookSpecificOutput.additionalContext`` — the exact text that reaches
-    every subagent invocation in production. Guarantees the eval measures
-    the real shipped signal, no paraphrase or mirror.
+    The script reads ``hook_event_name`` from its stdin payload and emits a
+    matching ``hookSpecificOutput.hookEventName`` plus the
+    ``additionalContext`` body that reaches both the main session
+    (``SessionStart``) and subagents (``SubagentStart``) in production. We
+    pipe a minimal ``SubagentStart`` payload to exercise the same code
+    path the production hook executes and extract
+    ``.hookSpecificOutput.additionalContext`` from its stdout.
     """
+    hook_input = json.dumps({"hook_event_name": "SubagentStart"})
+    # Override end-user opt-out so eval is reproducible regardless of
+    # caller shell rc (RUBY_PLUGIN_DISABLE_RULES_INJECTION=1 would
+    # silence the injector and break json.loads downstream).
+    scrubbed_env = {**os.environ, "RUBY_PLUGIN_DISABLE_RULES_INJECTION": "0"}
     result = subprocess.run(
         ["bash", str(INJECTOR_SCRIPT)],
+        input=hook_input,
         capture_output=True,
         text=True,
         timeout=10,
         check=False,
+        env=scrubbed_env,
     )
     if result.returncode != 0:
         raise RuntimeError(
-            f"inject-iron-laws.sh failed (rc={result.returncode}): "
+            f"inject-rules.sh failed (rc={result.returncode}): "
             f"{result.stderr.strip()[:200]}"
         )
+    stdout_text = result.stdout.strip()
+    if not stdout_text:
+        # Fail-open paths in inject-rules.sh exit 0 with empty stdout:
+        # missing jq, opt-out env, or unrecognised hook_event_name.
+        raise RuntimeError(
+            "inject-rules.sh emitted empty stdout — verify `jq` is on "
+            "PATH and `RUBY_PLUGIN_DISABLE_RULES_INJECTION` is not set "
+            "in the caller environment"
+        )
     try:
-        payload = json.loads(result.stdout)
+        payload = json.loads(stdout_text)
     except json.JSONDecodeError as exc:
         raise RuntimeError(
-            f"inject-iron-laws.sh produced non-JSON output: {exc}"
+            f"inject-rules.sh produced non-JSON output: {exc}"
         ) from exc
     context = payload.get("hookSpecificOutput", {}).get("additionalContext", "")
     if not context:
         raise RuntimeError(
-            "inject-iron-laws.sh payload missing hookSpecificOutput.additionalContext"
+            "inject-rules.sh payload missing hookSpecificOutput.additionalContext"
         )
     return str(context)
 
@@ -1238,7 +1258,7 @@ def main() -> int:
             return 2
         # Compare system-prompt hashes BEFORE scoring — if injector output hasn't
         # changed since baseline, there is nothing to measure (user likely forgot
-        # to regenerate inject-iron-laws.sh).
+        # to regenerate inject-rules.sh).
         try:
             baseline_data = json.loads(baseline_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
@@ -1252,7 +1272,7 @@ def main() -> int:
         if baseline_hash == current_hash:
             print(
                 f"ERROR: system_prompt_hash={current_hash} matches baseline — "
-                f"inject-iron-laws.sh has not changed since baseline capture. "
+                f"inject-rules.sh has not changed since baseline capture. "
                 f"Nothing to measure. Did you forget to regenerate the injector?",
                 file=sys.stderr,
             )

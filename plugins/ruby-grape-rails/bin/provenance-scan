@@ -1,0 +1,181 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Provenance scan — walk a project's .claude/ subtree for *.provenance.md
+# sidecars, classify each via the 4-state trust algorithm
+# (clean / weak / conflicted / missing), and emit a Markdown report plus
+# stdout summary. Pure deterministic — no LLM, no network, no DB.
+#
+# Schema canonical reference:
+#   plugins/ruby-grape-rails/references/output-verification/trust-states.md
+#   plugins/ruby-grape-rails/references/output-verification/provenance-template.md
+
+require 'date'
+require 'optparse'
+require 'pathname'
+require 'yaml'
+
+ROOTS = %w[.claude/research .claude/reviews .claude/audit].freeze
+PLANS_ROOT = '.claude/plans'
+PLAN_SUBDIRS = %w[research reviews].freeze
+STATES = %w[clean weak conflicted missing].freeze
+# Per-file display priority — most urgent surfaces first regardless of
+# alphabetical state name. Distribution counts use STATES order.
+STATE_PRIORITY = { 'conflicted' => 0, 'missing' => 1, 'weak' => 2, 'clean' => 3 }.freeze
+ALLOWED_KINDS = %w[primary secondary tool-output].freeze
+SIDECAR_GLOB = '**/*.provenance.md'
+
+# Line-aware `---` frontmatter extractor. Mirrors lab/eval/frontmatter.py
+# semantics: only `---` on its own line counts as a delimiter, so `---`
+# inside a YAML value cannot mis-split the block.
+def extract_frontmatter_block(content)
+  lines = content.lines(chomp: true)
+  return nil if lines.empty? || lines.first.strip != '---'
+
+  closing = lines[1..].index { |line| line.strip == '---' }
+  return nil if closing.nil?
+
+  lines[1..closing].join("\n")
+end
+
+# Validate the source list per schema. Returns true when every source has
+# a known kind and a non-empty list of String supports; false otherwise.
+def sources_valid?(sources)
+  sources.all? do |source|
+    next false unless source.is_a?(Hash)
+    next false unless ALLOWED_KINDS.include?(source['kind'])
+    next false unless source.key?('supports')
+
+    supports = source['supports']
+    supports.is_a?(Array) && !supports.empty? && supports.all? { it.is_a?(String) }
+  end
+end
+
+# Returns one of {clean, weak, conflicted, missing}. Anything not matching
+# the canonical schema collapses to `missing` so callers treat malformed
+# sidecars as needs-migration. YAML parse errors are surfaced via stderr
+# with line/column for locator-friendly diagnostics, then return `missing`
+# so the caller stays deterministic.
+def compute_trust_state(sidecar)
+  return 'missing' unless sidecar.file?
+
+  block = extract_frontmatter_block(sidecar.read(mode: 'r:UTF-8', invalid: :replace, undef: :replace))
+  return 'missing' if block.nil?
+
+  meta = parse_frontmatter_yaml(block, sidecar)
+  return 'missing' if meta.nil?
+  return 'missing' unless meta.is_a?(Hash)
+  return 'missing' unless meta.key?('claims') && meta.key?('sources') && meta.key?('conflicts')
+
+  claims = meta['claims']
+  sources = meta['sources']
+  conflicts = meta['conflicts']
+
+  return 'missing' unless claims.is_a?(Array) && !claims.empty?
+  return 'missing' unless sources.is_a?(Array) && !sources.empty?
+  return 'missing' unless conflicts.is_a?(Array)
+  return 'missing' unless claims.all? { it.is_a?(Hash) && it['id'].is_a?(String) }
+  return 'missing' unless sources_valid?(sources)
+
+  return 'conflicted' unless conflicts.empty?
+
+  classify_clean_vs_weak(claims, sources)
+end
+
+def parse_frontmatter_yaml(block, sidecar)
+  YAML.safe_load(block, permitted_classes: [], permitted_symbols: [], aliases: false)
+rescue Psych::SyntaxError => e
+  warn "compute_trust_state: malformed YAML at #{sidecar}:#{e.line}:#{e.column}: #{e.class.name}"
+  nil
+end
+
+def classify_clean_vs_weak(claims, sources)
+  return 'weak' if sources.all? { it['kind'] == 'tool-output' }
+
+  support_counts = claims.to_h { |claim| [claim['id'], 0] }
+  sources.each do |source|
+    Array(source['supports']).uniq.each do |cid|
+      support_counts[cid] += 1 if support_counts.key?(cid)
+    end
+  end
+  return 'weak' if support_counts.values.any? { it < 2 }
+
+  'clean'
+end
+
+def collect_sidecars(repo_root)
+  paths = []
+  ROOTS.each do |root|
+    target = repo_root / root
+    paths.concat(target.glob(SIDECAR_GLOB)) if target.directory?
+  end
+  plans = repo_root / PLANS_ROOT
+  return paths unless plans.directory?
+
+  plans.children.select(&:directory?).each do |plan_dir|
+    PLAN_SUBDIRS.each do |sub|
+      sub_dir = plan_dir / sub
+      paths.concat(sub_dir.glob(SIDECAR_GLOB)) if sub_dir.directory?
+    end
+  end
+  paths
+end
+
+def render_report(per_file, states, today)
+  lines = ["# Provenance scan — #{today}", '', '## Distribution', '']
+  STATES.each { |state| lines << "- #{state}: #{states.fetch(state, 0)}" }
+  lines.concat(['', '## Per-file', ''])
+  if per_file.empty?
+    lines << '_No `*.provenance.md` sidecars found under scanned roots._'
+  else
+    per_file.sort_by { |rel, state| [STATE_PRIORITY.fetch(state, 99), rel.to_s] }.each do |rel, state|
+      lines << "- `#{rel}` — #{state}"
+    end
+  end
+  "#{lines.join("\n")}\n"
+end
+
+def parse_options(argv)
+  options = { root: Pathname.pwd }
+  parser = OptionParser.new do |opts|
+    opts.banner = 'Usage: provenance-scan [--root <path>]'
+    opts.on('--root PATH', String, 'Project root to scan (defaults to cwd)') do |path|
+      options[:root] = Pathname.new(path).expand_path
+    end
+    opts.on('-h', '--help', 'Show this help') do
+      puts opts
+      exit 0
+    end
+  end
+  parser.parse!(argv)
+  options
+end
+
+def main(argv)
+  options = parse_options(argv)
+  repo_root = options[:root]
+  unless repo_root.directory?
+    warn "provenance-scan: root not a directory: #{repo_root}"
+    return 1
+  end
+
+  sidecars = collect_sidecars(repo_root)
+  states = Hash.new(0)
+  per_file = sidecars.map do |sidecar|
+    state = compute_trust_state(sidecar)
+    states[state] += 1
+    [sidecar.relative_path_from(repo_root), state]
+  end
+
+  today = Date.today.iso8601
+  report_dir = repo_root / '.claude' / 'provenance-scan'
+  report_dir.mkpath
+  report_path = report_dir / "report-#{today}.md"
+  report_path.write(render_report(per_file, states, today))
+
+  puts "Scanned #{sidecars.size} sidecar(s). Report: #{report_path}"
+  STATES.each { |state| puts "  #{state}: #{states.fetch(state, 0)}" }
+  0
+end
+
+exit main(ARGV) if $PROGRAM_NAME == __FILE__

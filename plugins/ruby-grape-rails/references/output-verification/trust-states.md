@@ -19,15 +19,21 @@ on the result.
 Computed via `lab.eval.output_checks.compute_trust_state(path)` — never
 authored by hand, never persisted.
 
-Today the only live consumer is the eval reporter
-(`make eval-output` prints the distribution). The workflow skills below
-are the intended future consumers; none of them read trust state yet:
+Live consumers:
 
-- `/rb:plan --existing`: warns + suggests `/rb:research` on `weak` / `missing`
-- `/rb:triage`: surfaces `conflicted` prominently; flags `missing` as hints
-- `/rb:work`: logs consumed state to `progress.md`; warns on `weak`+
-- `/rb:review`: cross-checks; escalates severity on `conflicted`
-- Compound + strategy cards inherit their source's trust state
+- Eval reporter — `make eval-output` prints the distribution.
+- `/rb:plan --existing` — warns + suggests `/rb:research` on `weak` /
+  `missing`; halts on `conflicted`. See plan SKILL "Trust States".
+- `/rb:triage` — surfaces `conflicted` prominently; flags `missing` as
+  hints. See triage SKILL "Trust States".
+- `/rb:work` — logs consumed state to `progress.md`; warns on `weak` and
+  `missing`; halts on `conflicted`. See work SKILL "Trust States".
+- `/rb:review` — cross-checks sidecar trust against findings; escalates
+  severity on `conflicted`. See review SKILL "Trust States".
+- End-user `/rb:provenance-scan` — audits sidecar distribution and writes
+  a dated report under `.claude/provenance-scan/`.
+
+Compound + strategy cards inherit their source's trust state.
 
 ## Computation
 

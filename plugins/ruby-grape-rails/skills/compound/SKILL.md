@@ -40,7 +40,7 @@ START ──▶ VALIDATE AGAINST SCHEMA ──▶ USE RESOLUTION TEMPLATE ──
 
 ## Document Structure
 
-Solution documents use YAML frontmatter defined in `../compound-docs/references/schema.md` and follow the template in `../compound-docs/references/resolution-template.md`.
+Solution documents use YAML frontmatter defined in `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/schema.md` and follow the template in `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/resolution-template.md`.
 
 ### Required Frontmatter Fields
 
@@ -209,9 +209,9 @@ Use both: Compound first for the instance, Learn to generalize.
 ## References
 
 - `${CLAUDE_SKILL_DIR}/references/compound-workflow.md` — Detailed capture workflow
-- `../compound-docs/SKILL.md` — Knowledge-base conventions and search expectations
-- `../compound-docs/references/schema.md` — Solution frontmatter schema
-- `../compound-docs/references/resolution-template.md` — Canonical solution template
+- `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/SKILL.md` — Knowledge-base conventions and search expectations
+- `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/schema.md` — Solution frontmatter schema
+- `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/resolution-template.md` — Canonical solution template
 
 ## Decision Menu
 

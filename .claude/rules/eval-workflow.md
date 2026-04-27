@@ -58,8 +58,9 @@ Minimum runtime: python3 3.14+ for `lab/eval/`.
 Measures the behavioral effect of changes to `preferences.yml` / `iron-laws.yml`
 by comparing model responses across two injector states: **before** and
 **after** a regeneration. The system prompt for every fixture call is
-captured at run time from `plugins/ruby-grape-rails/hooks/scripts/inject-iron-laws.sh`
-— i.e. the real SubagentStart signal, no mirror.
+captured at run time from `plugins/ruby-grape-rails/hooks/scripts/inject-rules.sh`
+(the shared `SessionStart` + `SubagentStart` injector) — i.e. the real
+shipped signal, no mirror.
 
 ### PR Workflow
 
@@ -113,7 +114,7 @@ between your previous baseline and this PR.
 
    Suite refuses to run (exit 2) when:
    - Baseline is missing (nothing to compare against)
-   - Current injector hash matches baseline hash (inject-iron-laws.sh
+   - Current injector hash matches baseline hash (inject-rules.sh
      unchanged since baseline — you likely forgot to regenerate)
 
    On success, prints per-metric baseline / current / delta drift.

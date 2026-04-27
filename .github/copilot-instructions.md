@@ -25,7 +25,10 @@ The plugin ships specialist agents, skills, hooks, and eval tooling:
   reader for verify-output telemetry with `--redact` mode that emits
   intermediate input for the `/rb:compression-report` skill — NOT a
   final paste-anywhere artifact; the skill drafts the markdown report
-  users review and share).
+  users review and share), `provenance-scan` (Ruby, end-user provenance-
+  sidecar auditor — walks `.claude/{research,reviews,audit,plans/*}` and
+  classifies each `*.provenance.md` via the 4-state algorithm; writes a
+  dated Markdown report; surfaced via `/rb:provenance-scan`).
 - **Plugin-owned Ruby library** (`plugins/ruby-grape-rails/lib/*.rb`):
   end-user runtime modules required by `bin/` CLIs and hook scripts.
   Ruby ≥ 3.4. Stdlib only (no Bundler gems). PyYAML is contributor-only;
@@ -82,7 +85,7 @@ even when the unmodified file is not part of the PR.
 
 - **Skill rename / removal / description change** → also check
   `plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md`,
-  `plugins/ruby-grape-rails/skills/init/references/template.md`,
+  `plugins/ruby-grape-rails/skills/init/references/injectable-template.md`,
   `lab/eval/evals/<skill>.json`, `lab/eval/triggers/<skill>.json`,
   `lab/eval/triggers/_hard_corpus.json`, `lab/eval/triggers/_confusable_pairs.json`,
   `lab/eval/triggers/_semantic_pairs.json`, `README.md`, `CHANGELOG.md`,
@@ -96,16 +99,20 @@ even when the unmodified file is not part of the PR.
 - **`plugins/ruby-grape-rails/references/iron-laws.yml`** edited →
   required regeneration via `scripts/generate-iron-law-outputs.sh all`.
   Verify these regenerated artifacts are in the diff and match source:
-  `README.md` (Iron Laws section), `plugins/ruby-grape-rails/skills/init/references/template.md`,
+  `README.md` (Iron Laws section),
+  `plugins/ruby-grape-rails/skills/iron-laws/references/canonical-registry.md`,
   `plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md`,
   `plugins/ruby-grape-rails/agents/iron-law-judge.md`,
-  `plugins/ruby-grape-rails/hooks/scripts/inject-iron-laws.sh`
+  `plugins/ruby-grape-rails/hooks/scripts/inject-rules.sh`
   (header `Source versions: iron-laws=<v>`). A `iron-laws.yml` change
-  with no regenerated outputs in the diff is a drift defect.
+  with no regenerated outputs in the diff is a drift defect. The init
+  injectable template (`skills/init/references/injectable-template.md`)
+  is no longer a regeneration target — Iron Laws + Preferences are
+  delivered via runtime hook (`SessionStart` + `SubagentStart`), not
+  inline in CLAUDE.md.
 - **`plugins/ruby-grape-rails/references/preferences.yml`** edited →
-  required regeneration as above; verify the `PREFERENCES_START/END`
-  block in `init/references/template.md` and the `Advisory Preferences`
-  block in `inject-iron-laws.sh` match source. Also flag if
+  required regeneration as above; verify the `Advisory Preferences`
+  section of `inject-rules.sh` matches source. Also flag if
   `lab/eval/baselines/epistemic/*/pre-posture.json` is committed
   (baselines are gitignored snapshots).
 - **Plugin version bump** in any of `package.json`,
