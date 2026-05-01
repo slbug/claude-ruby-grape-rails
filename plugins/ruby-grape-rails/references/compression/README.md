@@ -19,9 +19,13 @@ only one who should choose whether to record it.
   `brakeman`, `reek`, `rails db:(migrate|rollback|schema:load|seed)`,
   and `(rake|rails) (ci|test|spec|verify|lint|brakeman|...)`. The
   `rake_excluded` list overrides every trigger family — it covers
-  `(rake|rails) (routes|db:drop|db:create|assets:|stats|notes)` and
-  `--version` invocations across the whole verify-tool family. When
-  the env var is unset (the default), the hook exits 0 immediately.
+  `(rake|rails) (routes|db:drop|db:create|assets:|stats|notes)`,
+  `--version` invocations across the whole verify-tool family, and
+  any command piped into `| tail` / `| head` (operator pre-trim
+  produces a slice of the real output that line-oriented collapsers
+  cannot meaningfully reduce — recording 0% ratios from those samples
+  inflates the underpowered-class denominator). When the env var is
+  unset (the default), the hook exits 0 immediately.
 - For each match (env var enabled): appends a JSONL stats entry to
   `${CLAUDE_PLUGIN_DATA}/compression.jsonl` and preserves the
   captured Bash output (stdout + stderr on success events, or the

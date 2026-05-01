@@ -119,10 +119,14 @@ module VerifyCompression
   # the whole payload is one logical line. Each line over
   # `threshold_bytes` keeps `keep_head` and `keep_tail` bytes from
   # each end and replaces the middle with the rendered `template`.
-  # Byteslice operates on bytes, not codepoints — multibyte tails
-  # may end mid-character but the compressed output is consumer-only
-  # (downstream stats + raw_log archive); the raw file under
-  # verify-raw/ is the authoritative copy.
+  #
+  # Byteslice operates on bytes, so the boundary may land mid-codepoint
+  # for multibyte input. `scrub('')` strips trailing/leading invalid
+  # byte sequences before the slices reach downstream regex passes
+  # (`match?`, `scan` would otherwise raise `ArgumentError: invalid
+  # byte sequence in UTF-8` and drop the telemetry entry). The
+  # reported elided count is computed from actual surviving head/tail
+  # sizes so it stays truthful when scrub trims partial codepoints.
   def collapse_megastring(lines, cfg, template)
     threshold = cfg['threshold_bytes']
     keep_head = cfg['keep_head']
@@ -132,9 +136,9 @@ module VerifyCompression
     lines.map do |line|
       next line if line.bytesize <= threshold
 
-      elided = line.bytesize - keep_head - keep_tail
-      head = line.byteslice(0, keep_head)
-      tail = line.byteslice(line.bytesize - keep_tail, keep_tail)
+      head = line.byteslice(0, keep_head).scrub('')
+      tail = line.byteslice(line.bytesize - keep_tail, keep_tail).scrub('')
+      elided = line.bytesize - head.bytesize - tail.bytesize
       "#{head}#{render_collapse(template, elided)}#{tail}"
     end
   end
