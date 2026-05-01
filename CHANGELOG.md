@@ -7,6 +7,28 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.1] - 2026-05-01
+
+### Added
+
+- `duration_ms` field in `compression.jsonl` telemetry entries
+  (`compress-verify-output.rb`). Captures the CC 2.1.119+
+  PostToolUse wall-clock duration so downstream analysis can
+  correlate compression ratio with verify runtime per command class.
+- Single-line megastring middle-collapse pass in `VerifyCompression`.
+  Lines exceeding `megastring.threshold_bytes` (default 2048) keep
+  `keep_head` + `keep_tail` bytes from each end and elide the middle
+  via the `collapse.megastring` template. Targets inline rspec
+  expectation blobs (`to eq { ... }`, `to match (...)`) that
+  line-oriented collapsers cannot reduce.
+
+### Changed
+
+- Compression triggers exclude commands containing `| tail` or
+  `| head` (`triggers.yml`). Operator-pre-trimmed verify output is no
+  longer recorded as a 0% sample inflating the underpowered-class
+  denominator in compression-report.
+
 ## [1.16.0] - 2026-04-26
 
 ### Added
@@ -2127,7 +2149,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.0...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.1...HEAD
+[1.16.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.0...v1.16.1
 [1.16.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.2...v1.16.0
 [1.15.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.1...v1.15.2
 [1.15.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.0...v1.15.1
