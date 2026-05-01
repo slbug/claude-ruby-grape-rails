@@ -108,7 +108,8 @@ begin
     'compressed_bytes' => result.compressed_bytes,
     'ratio' => result.ratio,
     'violations' => result.preservation_violations,
-    'raw_log' => raw_log
+    'raw_log' => raw_log,
+    'duration_ms' => data['duration_ms']
   }
   VerifyCompression.append_jsonl(File.join(data_dir, 'compression.jsonl'), entry)
 rescue StandardError, LoadError, SystemCallError

@@ -34,3 +34,8 @@ verify_commands:
 rake_excluded:
   - "^(\\S+=\\S*\\s+)*(bundle exec )?(?:(?:\\./)?bin/)?(rake|rails) (routes|db:drop|db:create|assets:|stats|notes)\\b"
   - "^(\\S+=\\S*\\s+)*(bundle exec )?(?:(?:\\./)?bin/)?(rake|rails|rspec|rubocop|standardrb|brakeman|reek) --version\\b"
+  # Operator pre-trims output with `| tail -N` / `| head -N`. Captured
+  # text is already a slice of the real verify output; line-oriented
+  # collapsers cannot recover compression from it and the recorded 0.0
+  # ratio inflates the underpowered-class denominator.
+  - "\\|\\s*(tail|head)\\b"

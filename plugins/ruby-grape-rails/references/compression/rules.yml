@@ -40,6 +40,21 @@ collapse:
   # Generic K-line block dedup (K=2..5). `{size}` is the block
   # length; `{count}` is the number of dropped repetitions.
   repeated_blocks: "  [+{count}× repeated {size}-line block]"
+  # Single-line megastring middle-collapse. `{count}` is the byte
+  # length of the elided middle (raw_bytes - keep_head - keep_tail).
+  megastring: " ...[+{count} bytes elided]... "
+
+# Single-line megastring middle-collapse settings. Lines whose byte
+# length exceeds `threshold_bytes` keep `keep_head` and `keep_tail`
+# bytes from each end and replace the middle with the
+# `collapse.megastring` template. Targets inline rspec expectation
+# blobs (`to eq { ... }`, `to match (...)`) and other large single-line
+# payloads that line-oriented collapsers cannot reduce. Disabled
+# implicitly when `keep_head + keep_tail >= threshold_bytes`.
+megastring:
+  threshold_bytes: 2048
+  keep_head: 500
+  keep_tail: 500
 
 # Captured Bash output (stdout + stderr from PostToolUse, or the
 # top-level `error` blob from PostToolUseFailure) is preserved next
