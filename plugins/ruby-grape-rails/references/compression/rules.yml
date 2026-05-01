@@ -41,7 +41,11 @@ collapse:
   # length; `{count}` is the number of dropped repetitions.
   repeated_blocks: "  [+{count}× repeated {size}-line block]"
   # Single-line megastring middle-collapse. `{count}` is the byte
-  # length of the elided middle (raw_bytes - keep_head - keep_tail).
+  # length of the elided middle, computed from the surviving head/tail
+  # after `String#scrub('')` strips any partial multibyte codepoint at
+  # the byteslice boundary (raw_bytes - kept_head_bytes - kept_tail_bytes).
+  # Equals `raw_bytes - keep_head - keep_tail` when the boundary is
+  # already aligned; slightly larger when scrub trims a partial codepoint.
   megastring: " ...[+{count} bytes elided]... "
 
 # Single-line megastring middle-collapse settings. Lines whose byte
