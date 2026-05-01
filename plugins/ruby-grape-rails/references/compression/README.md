@@ -19,9 +19,13 @@ only one who should choose whether to record it.
   `brakeman`, `reek`, `rails db:(migrate|rollback|schema:load|seed)`,
   and `(rake|rails) (ci|test|spec|verify|lint|brakeman|...)`. The
   `rake_excluded` list overrides every trigger family — it covers
-  `(rake|rails) (routes|db:drop|db:create|assets:|stats|notes)` and
-  `--version` invocations across the whole verify-tool family. When
-  the env var is unset (the default), the hook exits 0 immediately.
+  `(rake|rails) (routes|db:drop|db:create|assets:|stats|notes)`,
+  `--version` invocations across the whole verify-tool family, and
+  any command piped into `| tail` / `| head` (operator pre-trim
+  produces a slice of the real output that line-oriented collapsers
+  cannot meaningfully reduce — recording 0% ratios from those samples
+  inflates the underpowered-class denominator). When the env var is
+  unset (the default), the hook exits 0 immediately.
 - For each match (env var enabled): appends a JSONL stats entry to
   `${CLAUDE_PLUGIN_DATA}/compression.jsonl` and preserves the
   captured Bash output (stdout + stderr on success events, or the
@@ -45,6 +49,39 @@ only one who should choose whether to record it.
   artifact: the skill drafts a markdown report from the redacted
   aggregate plus selective raw-log Reads, and the user reviews the
   markdown before filing it as a GitHub issue.
+
+## Megastring middle-collapse
+
+Line-oriented collapsers (stack frames, deprecation runs, repeated
+warnings, K-line block dedup) cannot reduce a single logical line that
+encodes a large payload — the canonical case is an inline rspec
+expectation diff like `expected: { ... } got: { ... }` where the whole
+JSON dump is one line with no newlines. The megastring pass handles
+exactly that shape: every line whose byte length exceeds
+`megastring.threshold_bytes` is rewritten to keep `keep_head` bytes
+from the start, the rendered `collapse.megastring` template, then
+`keep_tail` bytes from the end. The middle bytes are elided.
+
+Tunables in `rules.yml`:
+
+- `megastring.threshold_bytes` (default 2048) — minimum line length to
+  trigger the collapse. Lines at or below this length pass through
+  untouched. Raise to be more conservative on long-but-legitimate
+  output (build banners, schema dumps); lower to chase smaller inline
+  blobs.
+- `megastring.keep_head` (default 500) — bytes preserved from the
+  start of the line. Should be large enough to keep the leading
+  identifier (`expected:`, test description, file path) intact.
+- `megastring.keep_tail` (default 500) — bytes preserved from the
+  end of the line. Useful for terminating syntax (`}`, `)`, `got:`).
+
+The pass disables itself when `keep_head + keep_tail >=
+threshold_bytes` (no room for elision). Boundaries are byte-aligned;
+multibyte UTF-8 split points are scrubbed (`String#scrub('')`) so
+downstream regex passes never see invalid byte sequences. The
+reported elided byte count reflects the actual head/tail surviving
+sizes, so per-line accounting stays truthful when scrub trims a
+partial codepoint at the boundary.
 
 ## Why no replacement (yet)
 

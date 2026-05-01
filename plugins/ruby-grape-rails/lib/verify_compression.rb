@@ -43,7 +43,14 @@ module VerifyCompression
     'deprecation_warnings' => '  [+{count} similar deprecations]',
     'gem_loading' => 'Loaded {count} gems',
     'repeated_warnings' => '  [+{count} repeated]',
-    'repeated_blocks' => '  [+{count}× repeated {size}-line block]'
+    'repeated_blocks' => '  [+{count}× repeated {size}-line block]',
+    'megastring' => ' ...[+{count} bytes elided]... '
+  }.freeze
+
+  DEFAULT_MEGASTRING = {
+    'threshold_bytes' => 2048,
+    'keep_head' => 500,
+    'keep_tail' => 500
   }.freeze
 
   module_function
@@ -51,7 +58,9 @@ module VerifyCompression
   def compress(raw, rules_path: RULES_PATH)
     rules = load_rules(rules_path)
     collapse = build_collapse(rules)
+    megastring = build_megastring(rules)
     lines = raw.split("\n", -1)
+    lines = collapse_megastring(lines, megastring, collapse['megastring'])
     lines = collapse_stack(lines, collapse['stack_beyond_5'])
     lines = collapse_gem_loading(lines, collapse['gem_loading'])
     lines = collapse_deprecations(lines, collapse['deprecation_warnings'])
@@ -90,8 +99,48 @@ module VerifyCompression
     end
   end
 
+  def build_megastring(rules)
+    file_cfg = rules['megastring']
+    return DEFAULT_MEGASTRING.dup unless file_cfg.is_a?(Hash)
+
+    DEFAULT_MEGASTRING.each_with_object({}) do |(key, default), out|
+      val = file_cfg[key]
+      out[key] = val.is_a?(Integer) && val.positive? ? val : default
+    end
+  end
+
   def render_collapse(template, count)
     template.gsub('{count}', count.to_s)
+  end
+
+  # Single-line megastring middle-collapse. Targets inline expectation
+  # blobs (rspec `to eq { ... }` JSON dumps, large `match`/`include`
+  # arguments) that line-oriented collapsers cannot reduce because
+  # the whole payload is one logical line. Each line over
+  # `threshold_bytes` keeps `keep_head` and `keep_tail` bytes from
+  # each end and replaces the middle with the rendered `template`.
+  #
+  # Byteslice operates on bytes, so the boundary may land mid-codepoint
+  # for multibyte input. `scrub('')` strips trailing/leading invalid
+  # byte sequences before the slices reach downstream regex passes
+  # (`match?`, `scan` would otherwise raise `ArgumentError: invalid
+  # byte sequence in UTF-8` and drop the telemetry entry). The
+  # reported elided count is computed from actual surviving head/tail
+  # sizes so it stays truthful when scrub trims partial codepoints.
+  def collapse_megastring(lines, cfg, template)
+    threshold = cfg['threshold_bytes']
+    keep_head = cfg['keep_head']
+    keep_tail = cfg['keep_tail']
+    return lines if keep_head + keep_tail >= threshold
+
+    lines.map do |line|
+      next line if line.bytesize <= threshold
+
+      head = line.byteslice(0, keep_head).scrub('')
+      tail = line.byteslice(line.bytesize - keep_tail, keep_tail).scrub('')
+      elided = line.bytesize - head.bytesize - tail.bytesize
+      "#{head}#{render_collapse(template, elided)}#{tail}"
+    end
   end
 
   def collapse_stack(lines, template)

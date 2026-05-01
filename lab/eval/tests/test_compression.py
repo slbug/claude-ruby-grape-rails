@@ -198,6 +198,51 @@ class CompressDeprecationCollapseTests(unittest.TestCase):
         self.assertEqual(text.count(dep), 2)
 
 
+class CompressMegastringCollapseTests(unittest.TestCase):
+    def test_compress_collapses_long_single_line(self) -> None:
+        # A single line over `megastring.threshold_bytes` (default 2048)
+        # keeps `keep_head` (default 500) bytes from the start, the rendered
+        # collapse marker, then `keep_tail` (default 500) bytes from the end.
+        # rules.yml ships defaults; this test asserts shipped behavior.
+        head_marker = "HEAD-START"
+        tail_marker = "TAIL-END"
+        # 5000 bytes of filler between markers, total ~ 5018 bytes.
+        raw = head_marker + ("X" * 5000) + tail_marker
+        text = _emit(raw)
+        self.assertIn(head_marker, text)
+        self.assertIn(tail_marker, text)
+        self.assertIn("bytes elided", text)
+        # Compressed must be smaller than raw.
+        self.assertLess(len(text.encode("utf-8")), len(raw.encode("utf-8")))
+
+    def test_compress_megastring_multibyte_does_not_crash(self) -> None:
+        # 3-byte UTF-8 codepoint repeated past threshold. The byteslice
+        # boundary (default keep_head=500) lands mid-codepoint at byte 500
+        # (500 / 3 = 166 remainder 2). `scrub('')` must drop the partial
+        # head/tail bytes so downstream regex passes (`match?`, `scan`)
+        # never see invalid UTF-8 and never raise ArgumentError.
+        raw = "中" * 2000  # 6000 bytes, 2000 chars
+        # Compressor must return without raising; subprocess uses
+        # text=True / encoding=utf-8 by default and would surface a decode
+        # error on stdout if the output were not valid UTF-8.
+        text = _emit(raw)
+        # Output must be valid UTF-8 (round-trip via encode/decode).
+        text.encode("utf-8").decode("utf-8")
+        self.assertIn("bytes elided", text)
+        # Head and tail kept as valid `中` runs (no garbled half-codepoints).
+        self.assertTrue(text.startswith("中"))
+        self.assertTrue(text.endswith("中"))
+
+    def test_compress_below_threshold_unchanged(self) -> None:
+        # A short line stays untouched — megastring collapse only fires
+        # past `threshold_bytes`. Default 2048; 100 chars is well under.
+        raw = "rspec passed in 0.42s"
+        text = _emit(raw)
+        # Stripping the trailing newline `--emit` does not append.
+        self.assertEqual(text.strip("\n"), raw)
+        self.assertNotIn("bytes elided", text)
+
+
 class JsonlLogSafetyTests(unittest.TestCase):
     """`compress-verify --log` must not follow symlinks or write to non-files."""
 
