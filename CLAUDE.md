@@ -36,7 +36,7 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 | `/rb:brief` | Understanding | Plan file | Interactive walkthrough (ephemeral) |
 | `/rb:work` | Execution | Plan file | Updated checkboxes, `.claude/plans/{slug}/progress.md` |
 | `/rb:verify` | Verification | `[--quick\|--full]` (mode flag; resolves from current branch state, NOT plan path) | Verification results |
-| `/rb:review` | Quality | Changed files | `.claude/reviews/{review-slug}.md` + `.claude/reviews/{agent-slug}/...` |
+| `/rb:review` | Quality | Changed files | `.claude/reviews/{review-slug}-{datesuffix}.md` + `.claude/reviews/{agent-slug}/...` |
 | `/rb:compound` | Knowledge | Solved problem | `.claude/solutions/{category}/{fix}.md` |
 | `/rb:full` | All | Feature description | Complete cycle with compounding |
 
@@ -44,21 +44,15 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 
 Each plan owns artifacts in `.claude/plans/{slug}/` (plan.md, research/,
 summaries/, progress.md, scratchpad.md). Other `.claude/` namespaces:
-`.claude/audit/` (reports + summaries), `.claude/reviews/`,
+`.claude/audit/` (reports + summaries),
+`.claude/reviews/{review-slug}-{datesuffix}.md` (consolidated),
+`.claude/reviews/{agent-slug}/...` (per-reviewer),
+`.claude/reviews/{review-slug}/RUN-CURRENT.json` + `RUN-HISTORY.jsonl`
+(run manifest for cross-session resume —
+see `plugins/ruby-grape-rails/references/run-manifest.md`),
 `.claude/investigations/{agent}/{slug}-{datesuffix}.md`
 (e.g. `.claude/investigations/deep-bug-investigator/`),
 `.claude/skill-metrics/`, `.claude/solutions/{category}/`.
-
-### Context Supervisor Pattern
-
-After main-session fanout to specialist agents, the skill body invokes
-`context-supervisor` (haiku) as a leaf compression worker. Inputs are
-explicit current-run artifact paths (no broad globs). Output is a
-consolidated summary the skill body reads before final synthesis.
-
-Skills using this pattern: `/rb:plan` (compresses research/ →
-summaries/consolidated.md), `/rb:review` (consolidates per-reviewer
-artifacts → consolidated review).
 
 ## Structure
 
@@ -75,7 +69,7 @@ claude-ruby-grape-rails/
 │   └── ruby-grape-rails/
 │       ├── .claude-plugin/
 │       │   └── plugin.json
-│       ├── agents/                  # 20 specialist agents
+│       ├── agents/                  # 19 specialist agents
 │       ├── bin/                     # Plugin executables (added to Bash tool PATH)
 │       ├── hooks/
 │       │   └── hooks.json

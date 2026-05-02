@@ -1,0 +1,182 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# manifest-update — atomic JSON manifest writer for spawn-fanout run
+# manifests (.claude/<namespace>/<slug>/RUN-CURRENT.json).
+#
+# Policy: fail closed. Any path outside the allowed pattern, any
+# invalid JSON, any IO error → exit non-zero BEFORE touching the
+# target file. The atomic-write primitive (mktemp + fsync + rename +
+# dir fsync) lives here in tested Ruby so main-session shell never
+# improvises `mv` / `cp` commands against arbitrary paths.
+#
+# Subcommands:
+#   init    <path> <json>   Create manifest at <path> with JSON literal.
+#                           Fails if file exists.
+#   patch   <path>          Deep-merge JSON read from stdin into existing
+#                           manifest. Auto-stamps updated_at (UTC ISO8601).
+#   archive <path>          Append current manifest as one line to the
+#                           RUN-HISTORY.jsonl sibling, then unlink
+#                           RUN-CURRENT.json.
+#   status  <path>          Print one-line summary. Read-only.
+
+require 'json'
+require 'time'
+
+ALLOWED_PATH_RE = %r{/\.claude/.+/RUN-CURRENT\.json\z}
+
+def die(msg)
+  warn "manifest-update: #{msg}"
+  exit 1
+end
+
+def validate_path(path)
+  abs = File.expand_path(path)
+  die "path must end at .claude/<ns>/<slug>/RUN-CURRENT.json: #{path}" unless abs =~ ALLOWED_PATH_RE
+  die "path is a symlink, refusing: #{path}" if File.symlink?(abs)
+  parent = File.dirname(abs)
+  die "parent dir is a symlink, refusing: #{parent}" if File.symlink?(parent)
+  abs
+end
+
+def read_json(path)
+  JSON.parse(File.read(path))
+rescue Errno::ENOENT
+  die "manifest does not exist: #{path}"
+rescue JSON::ParserError => e
+  die "manifest is not valid JSON: #{path} (#{e.message})"
+end
+
+def deep_merge(base, patch)
+  return patch unless base.is_a?(Hash) && patch.is_a?(Hash)
+
+  base.merge(patch) do |_, a, b|
+    a.is_a?(Hash) && b.is_a?(Hash) ? deep_merge(a, b) : b
+  end
+end
+
+def fsync_dir(dir)
+  fd = IO.sysopen(dir, IO::RDONLY)
+  IO.new(fd).fsync
+rescue StandardError
+  # Best-effort; some filesystems / kernels do not support directory fsync.
+end
+
+def atomic_write(path, content)
+  dir = File.dirname(path)
+  Dir.mkdir(dir) unless Dir.exist?(dir)
+  tmp = "#{path}.tmp.#{Process.pid}.#{Time.now.to_f}"
+  begin
+    File.open(tmp, File::WRONLY | File::CREAT | File::EXCL, 0o644) do |f|
+      f.write(content)
+      f.fsync
+    end
+    File.rename(tmp, path)
+    fsync_dir(dir)
+    tmp = nil
+  ensure
+    File.unlink(tmp) if tmp && File.exist?(tmp)
+  end
+end
+
+def cmd_init(path, json_arg)
+  abs = validate_path(path)
+  die "manifest already exists: #{abs}" if File.exist?(abs)
+  begin
+    data = JSON.parse(json_arg)
+  rescue JSON::ParserError => e
+    die "init JSON invalid: #{e.message}"
+  end
+  die 'init JSON must be a JSON object' unless data.is_a?(Hash)
+  now = Time.now.utc.iso8601
+  data['started_at'] ||= now
+  data['updated_at'] = now
+  atomic_write(abs, JSON.pretty_generate(data) + "\n")
+  puts "init: #{abs}"
+end
+
+def cmd_patch(path)
+  abs = validate_path(path)
+  current = read_json(abs)
+  raw = $stdin.read
+  die 'patch JSON empty (stdin)' if raw.strip.empty?
+  begin
+    patch = JSON.parse(raw)
+  rescue JSON::ParserError => e
+    die "patch JSON invalid: #{e.message}"
+  end
+  die 'patch JSON must be a JSON object' unless patch.is_a?(Hash)
+  merged = deep_merge(current, patch)
+  merged['updated_at'] = Time.now.utc.iso8601
+  atomic_write(abs, JSON.pretty_generate(merged) + "\n")
+  puts "patch: #{abs}"
+end
+
+def cmd_archive(path)
+  abs = validate_path(path)
+  current = read_json(abs)
+  history_path = File.join(File.dirname(abs), 'RUN-HISTORY.jsonl')
+  die "history path is a symlink: #{history_path}" if File.symlink?(history_path)
+  File.open(history_path, File::WRONLY | File::APPEND | File::CREAT, 0o644) do |f|
+    f.write(JSON.generate(current) + "\n")
+    f.fsync
+  end
+  File.unlink(abs)
+  puts "archive: #{abs} -> #{history_path}"
+end
+
+def cmd_status(path)
+  abs = validate_path(path)
+  data = read_json(abs)
+  agents = data['agents'].is_a?(Hash) ? data['agents'].size : 0
+  puts "slug=#{data['slug']} datesuffix=#{data['datesuffix']} " \
+       "status=#{data['status']} updated_at=#{data['updated_at']} agents=#{agents}"
+end
+
+USAGE = <<~USAGE
+  Usage:
+    manifest-update init    <manifest-path> <initial-json>
+    manifest-update patch   <manifest-path>          # patch from stdin
+    manifest-update archive <manifest-path>
+    manifest-update status  <manifest-path>
+USAGE
+
+cmd, *args = ARGV
+
+begin
+  case cmd
+  when 'init'
+    if args.size == 2
+      cmd_init(args[0], args[1])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'patch'
+    if args.size == 1
+      cmd_patch(args[0])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'archive'
+    if args.size == 1
+      cmd_archive(args[0])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'status'
+    if args.size == 1
+      cmd_status(args[0])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  else
+    warn USAGE
+    exit 2
+  end
+rescue StandardError => e
+  die "#{e.class}: #{e.message}"
+end

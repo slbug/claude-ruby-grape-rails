@@ -4,7 +4,7 @@ description: Reviews Ruby/Rails/Grape changes for correctness, maintainability, 
 disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
-maxTurns: 25
+maxTurns: 40
 omitClaudeMd: true
 skills:
   - ruby-idioms

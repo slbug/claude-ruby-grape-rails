@@ -3,9 +3,9 @@
 # Structure mirrors iron-laws.yml minus `detector_id` (no code-pattern check
 # for preferences). Severity capped at `medium` / `low`.
 
-version: "1.0.0"
-last_updated: "2026-04-19"
-total_preferences: 4
+version: "1.1.0"
+last_updated: "2026-05-02"
+total_preferences: 5
 
 categories:
   - id: research
@@ -16,6 +16,10 @@ categories:
     name: "Behavioral"
     description: "Runtime epistemic posture"
     preference_count: 3
+  - id: tooling
+    name: "Tooling"
+    description: "Tool-call discipline for context + budget efficiency"
+    preference_count: 1
 
 preferences:
   - id: 1
@@ -65,3 +69,15 @@ preferences:
     init_text: "PREFER positive success targets over long prohibition chains in task instructions"
     subagent_text: "Preference: PREFER positive success targets over prohibition chains in task instructions and success criteria."
     reference_files: ["research/epistemic-posture.md"]
+
+  - id: 5
+    category: tooling
+    title: "Batch Tool Calls; Avoid Improvised Scripts"
+    rule: "PREFER batched tool calls over per-item iteration. Use Read/Grep/Glob for files; batch `git diff` / `git log` / `git blame` by path group; batch gem inspection by reading Gemfile.lock once instead of looping `bundle info`; exclude high-noise paths via pathspec (cassettes, fixtures, schema dumps, lockfiles, generated files). Avoid multi-line bash or python one-liners that loop, `cat`, or `find -exec` to dump large output into context. Per-file calls allowed when the file is genuinely the unit of investigation."
+    rationale: "Per-item shell loops (`for f in $FILES; do git diff -- $f; done`) burn turn budget and produce repetitive, low-signal output. Improvised scripts that pipe whole-file contents through shell chains stream large unbounded text into context, slowing every downstream step. Batched path-group calls and tool-native operations (Read/Grep/Glob) are bounded, idempotent, and reviewable. Pathspec exclusion of high-noise content keeps signal density high."
+    severity: medium
+    applies_to: ["*"]
+    summary_text: "Batch tool calls by path group; avoid loop/cat/dump scripts"
+    init_text: "PREFER batched tool calls over per-item loops; use Read/Grep/Glob over `cat`/`find -exec`; exclude high-noise paths via pathspec"
+    subagent_text: "Preference: PREFER batched tool calls (`git diff` / `grep` / gem inspection) by path group over per-item loops. Exclude high-noise paths via pathspec. Use Read/Grep/Glob over `cat`/`find -exec`. Avoid multi-line bash that loops or dumps large output into context. Per-file allowed when the file is the unit of investigation."
+    reference_files: ["research/tool-batching.md"]

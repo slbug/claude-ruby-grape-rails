@@ -10,7 +10,7 @@ set -o pipefail
 # leaves the receiver without injected context — fail-open by
 # design, no guardrail semantics.
 # GENERATED FROM iron-laws.yml + preferences.yml — DO NOT EDIT
-# Source versions: iron-laws=1.0.0 preferences=1.0.0
+# Source versions: iron-laws=1.0.0 preferences=1.1.0
 
 # End-user opt-out: skip injection entirely. Useful when the plugin
 # is installed at user scope but the active project is not Ruby/Rails/
@@ -66,11 +66,12 @@ Iron Law 20: ALWAYS use turbo_frame_tag for partial updates
 Iron Law 21: VERIFY BEFORE CLAIMING DONE — never say 'should work' — run tests and show results
 Iron Law 22: SURGICAL CHANGES ONLY — every changed line must trace to the user's request. Don't improve adjacent code.
 
-Advisory Preferences — 4 Total:
+Advisory Preferences — 5 Total:
 Preference: PREFER Context7 MCP (`mcp__*context7*__query-docs` / `resolve-library-id`) over WebFetch for library/gem docs — fallback to WebFetch only if Context7 tools unavailable
 Preference: CHALLENGE false user premises before executing. If request contradicts repo evidence, surface the conflict before proceeding.
 Preference: AVOID unsupported agreement, apology cascades, and hedge chains. Acknowledge mistakes once, continue. Direct language for HIGH-confidence findings.
 Preference: PREFER positive success targets over prohibition chains in task instructions and success criteria.
+Preference: PREFER batched tool calls (`git diff` / `grep` / gem inspection) by path group over per-item loops. Exclude high-noise paths via pathspec. Use Read/Grep/Glob over `cat`/`find -exec`. Avoid multi-line bash that loops or dumps large output into context. Per-file allowed when the file is the unit of investigation.
 RULES_BODY_EOF
 )
 

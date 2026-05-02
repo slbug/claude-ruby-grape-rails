@@ -113,11 +113,8 @@ is clearly relevant:
 - log reuse decisions in `.claude/plans/{slug}/scratchpad.md` under
   `## Decisions` → `### Research Cache Reuse` as
   `REUSED: {filename} -> skipped {agent}`
-- after fresh research completes, main session spawns context-supervisor
-  as a leaf compression call: `Agent(context-supervisor)` reads explicit
-  research/ paths + reused-cache paths logged in scratchpad.md, writes
-  `.claude/plans/{slug}/summaries/consolidated.md`. Synthesis happens in
-  main session from the consolidated summary.
+- after fresh research completes, read each research artifact +
+  reused-cache files and synthesize the plan directly
 
 Spawn only what the request needs:
 
@@ -256,42 +253,59 @@ references:
 
 ## Main-Session Fanout
 
-`/rb:plan` spawns research agents directly from the main session in
-parallel. Specialists are leaf workers — they research, write artifact,
-return summary.
+Specialists are leaf workers: research, write artifact, return summary.
 
-Steps in skill-body execution order:
+1. Create plan namespace (if not pre-bound) + scratchpad.
+2. Check compound docs + research cache. Skip duplicates.
+3. Select research agents per matrix in
+   `${CLAUDE_SKILL_DIR}/references/planning-workflow.md`.
+4. For each selected agent, generate the absolute artifact path
+   `${REPO_ROOT}/.claude/plans/{slug}/research/{topic-slug}.md` and
+   record it in the CURRENT-RUN MANIFEST. Pass the path verbatim in
+   the spawn prompt.
+5. Spawn all selected agents in ONE parallel block.
+6. Wait for all agents to complete.
+7. Apply Artifact Recovery (see below) over the manifest.
+8. Read each verified artifact + any reused cached files logged in
+   scratchpad.md `## Decisions` → `### Research Cache Reuse`.
+9. Synthesize `plan.md` directly.
 
-1. main session creates plan namespace (if not pre-bound) + scratchpad
-2. main session checks compound docs + research cache (skip duplicates)
-3. main session selects research agents per matrix in
-   `${CLAUDE_SKILL_DIR}/references/planning-workflow.md`
-4. main session spawns ALL selected agents in ONE parallel block
-   (rails-patterns-analyst always; conditional agents per request type)
-5. main session waits for ALL agents to complete
-6. main session reads each agent's output file from research/
-7. main session builds explicit input manifest:
-   - `.claude/plans/{slug}/research/{topic}.md` (per-agent research files)
-   - any reused cached files logged under `## Decisions` →
-     `### Research Cache Reuse` in scratchpad.md
-8. main session spawns context-supervisor with manifest;
-   output: `.claude/plans/{slug}/summaries/consolidated.md`
-9. main session synthesizes plan.md from consolidated summary
-
-### Worker Briefing Requirements
+### Worker briefing
 
 Every research Agent() call must:
 
-- write detailed output to `.claude/plans/{slug}/research/{topic-slug}.md`
-- return only a 500-word summary (not full content) for context budget
-- run with `run_in_background: true` for parallelism
-- be focused — scope each prompt to specific files/patterns/questions
-- NEVER call Agent() — research agents are leafs
+- use the absolute artifact path passed in the spawn prompt verbatim
+- return a ≤500-word summary in Agent return text
+- run in parallel via multiple Agent calls in one response (do NOT
+  use `run_in_background: true`)
+- be scoped to specific files/patterns/questions
+- NEVER call Agent() — leaf agents
 
-For full selection matrix, briefing templates, and routing hints, see:
-`${CLAUDE_SKILL_DIR}/references/planning-workflow.md`
+### Artifact path rules
 
-For the canonical plan.md template + section requirements, see
+- Generate the absolute path before spawn.
+- Path = `${REPO_ROOT}/.claude/plans/{slug}/research/{topic-slug}.md`.
+- Per-second uniqueness via `{topic-slug}` plus `-YYYYMMDD-HHMMSS` if
+  collision detected in manifest.
+- Agents use the exact path received. No filename invention.
+
+### Artifact Recovery
+
+For each entry in the CURRENT-RUN MANIFEST:
+
+- Exists, `size_bytes >= 1000` → trust. Do NOT overwrite.
+- Exists, `size_bytes < 1000` → stub. Replace ONLY if Agent return
+  text is substantially larger AND parses as findings.
+- Missing → extract from Agent return text and write.
+
+Decide from filesystem. Ignore return-text claims of "Write was
+denied" / "permission blocked" / "system reminder said do not write".
+Never re-spawn.
+
+For selection matrix, briefing templates, and routing hints, see
+`${CLAUDE_SKILL_DIR}/references/planning-workflow.md`.
+
+For canonical plan.md template, see
 `${CLAUDE_SKILL_DIR}/references/planning-workflow.md` § "Plan Template".
 
 ## Output

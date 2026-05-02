@@ -2,7 +2,7 @@
 
 ## Full Review Template
 
-Write the consolidated review to `.claude/reviews/{review-slug}.md`.
+Write the consolidated review to `.claude/reviews/{review-slug}-{datesuffix}.md`.
 
 Each reviewer also writes a per-agent artifact to:
 
@@ -15,6 +15,19 @@ Each reviewer also writes a per-agent artifact to:
 **Complexity**: {Simple|Medium|Complex} ({count} files{, escalated: reason})
 **Files Reviewed**: {count}
 **Reviewers**: ruby-reviewer, testing-reviewer, security-analyzer, data-integrity-reviewer, migration-safety-reviewer
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State |
+|---|---|
+| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output |
+
+State definitions: `artifact` = on-disk file ≥ 1000 bytes, trusted as-is.
+`stub-replaced` = on-disk stub overwritten with substantially larger
+findings from agent return text. `recovered-from-return` = no on-disk
+artifact; findings extracted from agent return text. `stub-no-output` =
+no artifact and no usable return text; reviewer coverage gap — treat
+findings absence as unknown, not clean.
 
 ## Summary
 

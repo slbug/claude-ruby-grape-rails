@@ -21,13 +21,19 @@ Reviews catch issues before they reach production. Each specialist focuses on th
 
 ## Collecting Changed Files
 
-Resolve the base ref via `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` and
-collect the changed file list using `git merge-base` and
-`git diff --name-only --diff-filter=ACMR`. Pass the resulting
-`$CHANGED_FILES` to every spawned reviewer so each scopes to branch
-changes only. Reviewers must NEVER scan unchanged files.
+Resolve the base ref via `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref`,
+compute `$MERGE_BASE`, then capture in ONE shell session:
 
-For exact shell commands, see
+- `$CHANGED_FILES` (file list, `--name-only --diff-filter=ACMR`)
+- `$DIFF_STAT` (`git diff --stat`)
+
+Pass `$CHANGED_FILES`, `$BASE_REF`, `$MERGE_BASE`, and `$DIFF_STAT` to
+every spawned reviewer. Reviewers scope analysis to `$CHANGED_FILES`
+and NEVER scan unchanged files.
+
+Reviewers own diff strategy.
+
+For exact shell commands + reviewer diff discipline, see
 `${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Diff Collection".
 
 ## Main-Session Fanout
@@ -36,30 +42,62 @@ For exact shell commands, see
 parallel. Subagents are leaf workers — they return findings; they do not
 spawn further agents.
 
+**MUST spawn in foreground.** Never pass `run_in_background: true` on
+any Agent call. Use parallel via multiple Agent tool calls in a single
+message.
+
 ### Fanout Pattern
 
-Steps in skill-body execution order:
+1. Classify complexity (tier + critical-path escalation).
+2. Select core + conditional reviewers per matrix below.
+3. Derive `review-slug`. Resolve `base_ref`, `base_sha`, `branch`,
+   `branch_head_sha`.
+4. **Resume check** (see Run Manifest below). Read
+   `${REPO_ROOT}/.claude/reviews/{review-slug}/RUN-CURRENT.json` if
+   present. Apply staleness rules. On stale → archive + fresh. On
+   fresh `in-flight` → prompt user (default fresh). On resume →
+   reuse `datesuffix` + agent paths from manifest, mark already-complete
+   agents to skip.
+5. On fresh run: generate `datesuffix = YYYYMMDD-HHMMSS`. For each
+   selected reviewer, generate the absolute artifact path
+   `${REPO_ROOT}/.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`.
+   On same-second collision, append `-{nonce}`.
+6. Build manifest, write atomically to `RUN-CURRENT.json`
+   (`status: in-flight`, all agents `pending`).
+7. Spawn all NON-skipped reviewers in ONE parallel block. Each spawn
+   prompt MUST include the absolute artifact path from manifest.
+   Mark each spawned agent's `status: in-flight` in manifest before
+   spawn (atomic write).
+8. Wait for all reviewers to complete.
+9. Apply Artifact Recovery (see below) over the manifest. Update each
+   agent's `status` to its recovery outcome (atomic write).
+10. Read each verified artifact. Write the consolidated review to
+    `${REPO_ROOT}/.claude/reviews/{review-slug}-{datesuffix}.md`. The
+    `{datesuffix}` matches the manifest so consolidated + per-reviewer
+    artifacts share a run timestamp.
+11. Mark manifest `status: complete` (atomic write).
+12. Present verdict to the user.
 
-1. main session classifies complexity (tier + critical-path escalation)
-2. main session selects core + conditional reviewers per matrix below
-3. main session derives review-slug + datesuffix; builds explicit
-   per-reviewer artifact paths (this run only)
-4. main session spawns ALL selected reviewers in ONE parallel block
-   (Agent calls for ruby-reviewer, security-analyzer, testing-reviewer,
-   verification-runner, plus conditional agents per matrix)
-5. main session waits for ALL reviewers to complete
-6. main session builds CURRENT-RUN MANIFEST: list of just-written
-   artifact paths (one per spawned reviewer; none from prior runs).
-   Path format: `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
-7. main session spawns context-supervisor with explicit input paths;
-   output: `.claude/reviews/{review-slug}.md` (consolidated)
-8. main session reads consolidated.md, synthesizes verdict, presents to user
+### Artifact path rules
 
-### Compression input rule
+- Generate the absolute path before spawn.
+- Pass the path to the agent verbatim in the spawn prompt.
+- Agents use the exact path received. No filename invention,
+  truncation, or extension change.
+- Path is per-second-unique. Always points at a non-existing target.
+- Verify artifacts via the manifest. Never glob.
 
-`Agent(context-supervisor)` receives explicit current-run artifact paths.
-Do NOT pass globs like `.claude/reviews/{agent-slug}/*` — that pulls
-stale artifacts from prior runs.
+### Run Manifest
+
+- Path: `${REPO_ROOT}/.claude/reviews/{review-slug}/RUN-CURRENT.json`.
+- Schema + staleness + write protocol: `${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
+- All writes go through `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update`
+  (`init`, `patch`, `archive`, `status`). NEVER call raw `mv`, `cp`,
+  or `jq -i` against manifest paths.
+- Main session owns reads + writes. Agents NEVER touch the manifest.
+- Stale → `archive`, fresh run, no prompt.
+- Fresh + in-flight → prompt user, default fresh.
+- Fresh + complete → `archive`, fresh run.
 
 ## Complexity Classification
 
@@ -117,7 +155,14 @@ Every Agent() call must include in its prompt:
 - Task: review the file list for the requested scope
 - `$CHANGED_FILES` (the diff manifest from main session)
 - `$BASE_REF` (from resolve-base-ref output)
-- Artifact path: `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
+- **Absolute artifact path** generated by main session:
+  `${REPO_ROOT}/.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`.
+  `{datesuffix}` MUST include seconds: `YYYYMMDD-HHMMSS` (e.g.,
+  `20260502-104122`). Main session generates the path; worker MUST use
+  the exact path passed to it — do NOT invent or modify the filename.
+- Path is per-second-unique. On same-second collision, main session
+  appends `-{nonce}` before spawn. Path always points at a
+  non-existing target.
 - Required output: write artifact (always — even on PASS) and return summary
 - Findings format: file:line, Severity (Critical/Warning/Info),
   Confidence (HIGH/MEDIUM/LOW), description, current code, suggested code
@@ -154,7 +199,7 @@ When used:
 
 1. write the draft consolidated review
 2. run `output-verifier` against the draft
-3. save the result to `.claude/reviews/{review-slug}.provenance.md`
+3. save the result to `.claude/reviews/{review-slug}-{datesuffix}.provenance.md`
 4. remove or soften unsupported external claims before presenting the final review
 
 Use the shared provenance contract:
@@ -170,9 +215,11 @@ anti-patterns live in
 Every `/rb:review` run produces two artifact layers:
 
 - Per-reviewer artifacts: `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
-- Consolidated review: `.claude/reviews/{review-slug}.md`
+- Consolidated review: `.claude/reviews/{review-slug}-{datesuffix}.md`
 - Optional provenance sidecar when `output-verifier` is used:
-  `.claude/reviews/{review-slug}.provenance.md`
+  `.claude/reviews/{review-slug}-{datesuffix}.provenance.md`
+- Run manifest (resume pointer): `.claude/reviews/{review-slug}/RUN-CURRENT.json`
+- Manifest archive: `.claude/reviews/{review-slug}/RUN-HISTORY.jsonl`
 
 Rules:
 
@@ -181,34 +228,53 @@ Rules:
 - Review artifacts never live under `.claude/plans/...`
 - If review is part of a plan, reference the consolidated review from the plan or progress log instead of nesting the report inside the plan namespace
 
-### Post-fanout Compression
+### Synthesis
 
-After ALL reviewers return, main session spawns context-supervisor with
-the current-run manifest. The spawn prompt MUST be self-contained — agent
-body content is NOT reliably injected to subagents, so compression rules
-go in the calling prompt:
+Read each artifact from the CURRENT-RUN MANIFEST (post-recovery) and
+write the consolidated review:
 
-- Inputs: exact list of just-written
-  `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` paths
-- Output: `.claude/reviews/{review-slug}.md`
-- Preserve blockers / must-fix items VERBATIM
+- Header MUST include a `## Reviewer Coverage` section with one row per
+  spawned reviewer and its recovery state: `artifact` (size ≥ 1000),
+  `stub-replaced`, `recovered-from-return`, or `stub-no-output`. Surface
+  coverage gaps; do not silently absorb missing reviewers into "no
+  findings".
+- Preserve blockers / must-fix items VERBATIM.
 - Preserve decision options + rationale, unresolved disagreements,
-  file paths, and concrete evidence
-- Compress repeated low-severity points aggressively
-- Dedupe overlapping findings; merge across agents; cite all sources
-- Keep highest confidence among duplicates
-- Sort: Critical → Warning → Info; HIGH → MEDIUM → LOW within severity
-- Preserve "Pre-existing Issues" + "Positive Findings" sections
-- Stop after writing. Do NOT call Agent().
+  file paths, and concrete evidence.
+- Dedupe overlapping findings across agents; cite all sources.
+- Keep highest confidence among duplicates.
+- Sort: Critical → Warning → Info; HIGH → MEDIUM → LOW within severity.
+- Preserve "Pre-existing Issues" + "Positive Findings" sections.
+- Output: `${REPO_ROOT}/.claude/reviews/{review-slug}-{datesuffix}.md`.
 
 ### Artifact Recovery
 
-If a reviewer's Write fails (CC platform bug), main session extracts
-findings from the Agent() return text and writes the artifact itself.
-Do NOT re-spawn — the work is done, only the file write failed.
+For each entry in the CURRENT-RUN MANIFEST, stat the expected path:
 
-For full recovery procedure, see
-`${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Artifact Recovery".
+- Exists, `size_bytes >= 1000` → trust it. Do NOT overwrite.
+- Exists, `size_bytes < 1000` → stub. Replace ONLY if the Agent
+  return text is substantially larger AND parses as findings.
+  Add header line: `recovery: stub replaced from inline return`.
+- Missing, Agent return text usable → write findings extracted from return text.
+  Add header line: `recovery: recovered from inline return — Write failed`.
+- Missing, Agent return text empty/unusable → write a stub at the expected
+  path with a heading `# {agent-slug} — recovery stub` and a single body
+  line: `Run produced no artifact and no usable return text. Reviewer
+  coverage gap.`
+  Add header line: `recovery: stub written — agent produced nothing`.
+
+**NEVER copy or symlink prior-run artifacts to the current-run path.** Each
+run owns a per-second-unique path. If the current run has no output, write
+a stub — do not pull bytes from `{agent-slug}/{review-slug}-*.md` siblings.
+
+Decide from the filesystem. Ignore Agent return text claims like
+"Write was denied" / "permission blocked" / "system reminder said
+do not write".
+
+Never re-spawn.
+
+Full procedure: `${CLAUDE_SKILL_DIR}/references/review-playbook.md`
+§ "Artifact Recovery".
 
 ## Confidence Levels
 
@@ -233,7 +299,7 @@ see `${CLAUDE_SKILL_DIR}/references/review-playbook.md`.
 Write artifacts to:
 
 - `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` for each reviewer
-- `.claude/reviews/{review-slug}.md` for the synthesized output
+- `.claude/reviews/{review-slug}-{datesuffix}.md` for the synthesized output
 
 `review-slug` must be filesystem-safe:
 

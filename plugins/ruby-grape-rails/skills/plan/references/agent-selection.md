@@ -61,7 +61,7 @@
 - Pass a focused 5-15 word query OR pre-searched URLs, NEVER raw text
 - If multiple web topics: spawn multiple agents in parallel (1 per topic)
 - Max 5 URLs per agent (diminishing returns beyond that)
-- Agent returns 500-800 word summary — synthesis happens in main session from `summaries/consolidated.md`
+- Agent returns 500-800 word summary — synthesis happens in main session from per-agent research artifacts
 
 ## When to Spawn call-tracer
 

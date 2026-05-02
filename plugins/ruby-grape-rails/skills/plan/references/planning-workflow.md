@@ -109,8 +109,9 @@ agents' job -- let them handle pattern discovery.
 - To understand an existing gem's API, use Read/Grep on
   `Gemfile.lock` or gem source instead
 
-**CRITICAL**: Spawn ALL applicable agents in ONE Tool Use block
-(parallel) with `run_in_background: true`. Minimum 1 agent spawned.
+**CRITICAL**: Spawn ALL applicable agents via multiple Agent tool
+calls in ONE Tool Use block (foreground parallel — do NOT use
+`run_in_background: true`). Minimum 1 agent spawned.
 
 **Agent prompts must be FOCUSED.** Scope each prompt to the
 relevant directories, files, and patterns. Do NOT give vague
@@ -162,44 +163,25 @@ whether fresh research already exists:
   `rails-patterns-analyst`, `call-tracer`, or
   schema/security/job specialists based only on cached research.
 
-## Waiting for Agents (main session)
+## Waiting for Agents
 
-Main session is notified as each background agent completes. Main session
-reads each agent's output file to collect results. Do NOT proceed to plan
-generation until every agent has completed.
+Wait for every agent to complete before plan generation.
 
-After all research agents return, main session builds an explicit input manifest and spawns the compression worker. Spawn prompt is self-contained (agent body not reliably injected to subagents):
+Apply Artifact Recovery (per-agent path in CURRENT-RUN MANIFEST):
 
-```text
-Agent(context-supervisor):
-  Task: compress the listed research artifacts to summaries/consolidated.md.
+- Exists, `size_bytes >= 1000` → trust. Do NOT overwrite.
+- Exists, `size_bytes < 1000` → stub. Replace ONLY if Agent return
+  text is substantially larger AND parses as findings.
+- Missing → extract findings from Agent return text and write.
 
-  Inputs (explicit list, no globs):
-    - .claude/plans/{slug}/research/{topic}.md (one per spawned agent)
-    - any reused files recorded under
-      ## Decisions → ### Research Cache Reuse in scratchpad.md
+Decide from filesystem. Ignore return-text claims of "Write was
+denied" / "permission blocked". Never re-spawn.
 
-  Output: .claude/plans/{slug}/summaries/consolidated.md
+Read each verified artifact + any reused cached files in scratchpad.md
+`## Decisions` → `### Research Cache Reuse`. Synthesize plan directly.
 
-  Rules (inline; do NOT rely on agent body):
-    - Preserve key decisions + rationale VERBATIM
-    - Preserve concrete file paths and package ownership
-    - Preserve risks, unknowns, contested choices
-    - Include short "Reused context" section listing absorbed cached files
-    - Compress repeated low-severity points aggressively
-
-  Stop after writing. Do NOT call Agent().
-```
-
-If `context-supervisor` Write fails (CC platform bug), extract the
-compression result from Agent() return text and write the file from main
-session. Do NOT re-spawn — the work is done, only the file write failed.
-
-Read `summaries/consolidated.md` first. Only open raw research files
-when the compressed summary leaves an important question unresolved.
-
-If a research agent fails, do the research yourself with Read/Grep
-from main session instead of re-spawning.
+If a research agent fails AND its file is missing AND return text is
+unusable, do the research yourself with Read/Grep from main session.
 
 ## Infrastructure Knowledge Persistence
 
@@ -357,8 +339,8 @@ plan with deeper research instead of creating a new one.
    selection rules as main flow), NOT Explore agents. Each agent
    MUST write detailed output to
    `.claude/plans/{slug}/research/{topic-slug}.md` and return ONLY a
-   500-word summary. Spawn all in ONE Tool Use block with
-   `run_in_background: true`
+   500-word summary. Spawn via multiple Agent tool calls in ONE Tool
+   Use block (foreground parallel — do NOT use `run_in_background: true`)
 4. **Wait for ALL agents** -- You'll be notified as each completes.
    Read each agent's output file. Do NOT proceed until all complete
 5. **Enhance plan** -- Add implementation detail, resolve spikes,
@@ -504,7 +486,7 @@ Use the Set A list documented earlier in this file for all
 **Estimated Effort**: {N} tasks, {N} hours
 
 ## Research Findings
-{summary of agent findings — derived from summaries/consolidated.md}
+{summary of agent findings — synthesized directly from per-agent research artifacts}
 
 ## Design Decisions
 {key choices with rationale}

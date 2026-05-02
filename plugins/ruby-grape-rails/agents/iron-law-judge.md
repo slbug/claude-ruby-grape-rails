@@ -4,7 +4,7 @@ description: Checks Ruby/Rails/Grape code for project Iron Law violations using 
 disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
-maxTurns: 25
+maxTurns: 40
 omitClaudeMd: true
 skills:
   - iron-laws

@@ -7,6 +7,51 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.4] - 2026-05-02
+
+### Added
+
+- `bin/manifest-update` (Ruby) — atomic manifest writer with
+  path-allowlist gate, symlink refusal, mktemp + fsync + POSIX
+  rename + dir fsync. Subcommands: `init`, `patch` (deep-merge from
+  stdin), `archive`, `status`. All manifest mutations go through
+  this binary; raw `mv` / `cp` / `jq -i` against manifest paths is
+  forbidden.
+- `references/run-manifest.md` — cross-session resume schema for
+  spawn-fanout workflows; JSON manifest at
+  `.claude/{namespace}/{slug}/RUN-CURRENT.json`; staleness via
+  TTL + HEAD + base + branch.
+- `references/research/tool-batching.md` — BAD/GOOD examples for
+  batched git/gem/find usage.
+- Tool-batching preference in `preferences.yml` (new `tooling`
+  category); injected via `inject-rules.sh`.
+- Foreground-only dispatch rule for plugin agents in
+  `agent-development.md` + `skill-development.md`.
+- Recommended recursive `Write(**/.claude/<ns>/**)` allowlist in
+  `init/SKILL.md` + `README.md`.
+- Reviewer Coverage section in consolidated review template.
+
+### Changed
+
+- Review consolidated path: `{review-slug}-{datesuffix}.md` (was
+  `{review-slug}.md`). Provenance sidecar matches.
+- Artifact recovery: trust on-disk ≥ 1000 bytes; never copy
+  prior-run artifacts; new `stub-no-output` state.
+- `/rb:review` skill body: resume check + manifest writes through
+  fanout/recovery/synthesis; passes `$DIFF_STAT` to each reviewer.
+- Agent maxTurns: `ruby-reviewer` 40, `rails-architect` 40,
+  `testing-reviewer` 60, `iron-law-judge` 40,
+  `data-integrity-reviewer` 60.
+- `/rb:plan` + `/rb:review`: main session synthesizes directly
+  (compression worker dropped).
+- `/rb:brainstorm`, `/rb:plan`: dropped `run_in_background: true`.
+
+### Removed
+
+- `agents/context-supervisor.md` (orchestrator-cleanup follow-up).
+- Context Supervisor Pattern sections in `CLAUDE.md` + `README.md`.
+- Agent count: 20 → 19. Mechanical/Extraction tier: 3 → 2.
+
 ## [1.16.3] - 2026-05-02
 
 ### Fixed
@@ -2265,7 +2310,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.3...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.4...HEAD
+[1.16.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.3...v1.16.4
 [1.16.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.2...v1.16.3
 [1.16.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.1...v1.16.2
 [1.16.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.0...v1.16.1

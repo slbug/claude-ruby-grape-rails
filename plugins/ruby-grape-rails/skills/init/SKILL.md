@@ -140,6 +140,34 @@ Include based on detected stack and installed tools:
 
 See `${CLAUDE_SKILL_DIR}/references/conditional-sections.md` for full content of each section.
 
+## Recommended Permission Allowlist
+
+Prompt the user to run `/update-config` to add these recursive Write
+rules to `.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Write(**/.claude/plans/**)",
+      "Write(**/.claude/reviews/**)",
+      "Write(**/.claude/audit/**)",
+      "Write(**/.claude/research/**)",
+      "Write(**/.claude/solutions/**)",
+      "Write(**/.claude/skill-metrics/**)",
+      "Write(**/.claude/investigations/**)",
+      "Bash(mkdir -p **/.claude/**)"
+    ]
+  }
+}
+```
+
+Use recursive `**/.claude/<ns>/**` globs. Shallow `Write(.claude/<ns>/*)`
+does not match nested artifact paths.
+
+Tell the user: `Run /update-config to add the recommended Write
+permission allowlist for plugin artifact namespaces.`
+
 ## CLAUDE.md sizing
 
 Keep root `CLAUDE.md` under ~200 lines. Heavy repo-level context inflates

@@ -45,7 +45,7 @@ Each phase reads from the previous phase's output. Plans become checkboxes. Chec
 
 | Feature | What It Does |
 |---------|-------------|
-| 20 specialist agents | ActiveRecord, Hotwire, security, Sidekiq, deployment, provenance experts |
+| 19 specialist agents | ActiveRecord, Hotwire, security, Sidekiq, deployment, provenance experts |
 | 53 skills | Commands for every phase of development |
 | 22 Iron Laws | Non-negotiable rules enforced automatically |
 | Auto-loaded references | Context-aware docs loaded when you edit relevant files |

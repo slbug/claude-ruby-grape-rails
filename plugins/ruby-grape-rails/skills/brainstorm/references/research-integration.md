@@ -4,7 +4,8 @@
 
 ### Step 1: Diverge (Generate Diverse Approaches)
 
-Spawn 2 agents in ONE Tool Use block with `run_in_background: true`:
+Spawn 2 agents via two Agent tool calls in ONE Tool Use block
+(foreground parallel, NOT `run_in_background: true`):
 
 1. **`rails-patterns-analyst`**: "How does this codebase handle {topics}?"
    - Writes findings to `.claude/plans/{slug}/research/codebase-scan.md`

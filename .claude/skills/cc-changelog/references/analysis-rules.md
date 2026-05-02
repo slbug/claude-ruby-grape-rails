@@ -20,7 +20,7 @@ When analyzing CC changelog entries, map them to specific plugin components:
 
 | CC Change Pattern | Plugin Files to Check |
 |-------------------|-----------------------|
-| New frontmatter fields | All 20 agents in `plugins/ruby-grape-rails/agents/*.md` |
+| New frontmatter fields | All 19 agents in `plugins/ruby-grape-rails/agents/*.md` |
 | `model:` value changes | Agents using specific model values |
 | `effort:` level changes | All agents with effort levels |
 | `tools:` / `disallowedTools:` | Review agents (read-only enforcement) |

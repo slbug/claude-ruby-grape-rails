@@ -59,7 +59,7 @@ workers.
 | PLANNING | `/rb:plan` | `.claude/ACTIVE_PLAN` (pre-bound) | `PLAN_DIR/plan.md` |
 | WORKING | `/rb:work` | `${PLAN_DIR}/plan.md` (explicit path) | updated checkboxes; marker cleared |
 | VERIFYING | `/rb:verify --full` | current branch state | verification report |
-| REVIEWING | `/rb:review` | git diff | `.claude/reviews/{review-slug}.md` |
+| REVIEWING | `/rb:review` | git diff | `.claude/reviews/{review-slug}-{datesuffix}.md` |
 | COMPOUNDING | `/rb:compound ${PLAN_DIR}/plan.md` | plan path | `.claude/solutions/{category}/{fix}.md` |
 | COMPLETED | skill body | all phases passed | final `progress.md` State write |
 | HALTED_REVIEW_CRITICAL | skill body | `Critical: > 0` parsed | halt cycle; user decides next |
@@ -122,7 +122,7 @@ EOF
 
 ## Critical-Review Gate
 
-After /rb:review writes .claude/reviews/{review-slug}.md, /rb:full
+After /rb:review writes .claude/reviews/{review-slug}-{datesuffix}.md, /rb:full
 parses the consolidated review's `## Summary` block:
 
 ```text
@@ -282,8 +282,8 @@ A `/rb:full` cycle is COMPLETED when ALL of:
 | `${PLAN_DIR}/progress.md` | State machine ledger; updated every transition |
 | `${PLAN_DIR}/scratchpad.md` | Decisions / hypotheses / blockers (durable workflow memory) |
 | `${PLAN_DIR}/plan.md` | source of truth for WORKING phase |
-| `${PLAN_DIR}/summaries/consolidated.md` | research compression output (PLANNING phase) |
-| `.claude/reviews/{review-slug}.md` | REVIEWING-phase consolidated artifact |
+| `${PLAN_DIR}/research/{topic}.md` | per-agent research artifacts (PLANNING phase) |
+| `.claude/reviews/{review-slug}-{datesuffix}.md` | REVIEWING-phase consolidated artifact |
 | `.claude/solutions/{category}/{fix}.md` | COMPOUNDING-phase capture |
 | `plan-stop-reminder.sh` hook | reads `**State**:` line; skips reminder during autonomous run |
 | `precompact-rules.sh` hook | reads marker for compaction context |

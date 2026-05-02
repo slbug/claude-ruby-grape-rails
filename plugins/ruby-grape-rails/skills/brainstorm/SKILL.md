@@ -114,8 +114,8 @@ Present Decision Point.
 
 See `references/research-integration.md` for the full pattern.
 
-**First cycle: MAX 2 agents.** Spawn both in ONE Tool Use block with
-`run_in_background: true`:
+**First cycle: MAX 2 agents.** Spawn both via two Agent tool calls in
+ONE Tool Use block (foreground parallel, NOT `run_in_background: true`):
 
 1. **`rails-patterns-analyst`**: "How does this codebase handle {topics}?"
    Writes findings to `.claude/plans/{slug}/research/codebase-scan.md`

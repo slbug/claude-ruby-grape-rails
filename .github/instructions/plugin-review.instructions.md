@@ -24,7 +24,7 @@ excludeAgent: "coding-agent"
 - NO agent declares or invokes `Agent` — orchestration lives in skill bodies
   (main session). See `.claude/rules/agent-development.md` § "Subagents Are
   Leaf Workers" for full doctrine.
-- Agents with intentionally narrow tool sets (context-supervisor, web-researcher,
+- Agents with intentionally narrow tool sets (web-researcher,
   output-verifier, ruby-gem-researcher) use `tools:` allowlists — this is
   correct
 - `omitClaudeMd: true` is correct for specialist agents that do not need
@@ -114,6 +114,16 @@ excludeAgent: "coding-agent"
   Markdown report under `.claude/provenance-scan/`. Stdlib only;
   pure deterministic — no LLM, no network. Surfaced via
   `/rb:provenance-scan` user-invocable skill
+- `manifest-update` (Ruby) — atomic JSON manifest writer for
+  spawn-fanout RUN-CURRENT.json files. Subcommands: `init`, `patch`
+  (deep-merge from stdin, auto-stamps `updated_at`), `archive`
+  (append to RUN-HISTORY.jsonl + unlink RUN-CURRENT.json), `status`
+  (read-only summary). Path allowlist:
+  `<...>/.claude/<ns>/<slug>/RUN-CURRENT.json` only. Symlink refusal
+  on target + parent dir. Atomic write via `mktemp` + `fsync` + Ruby
+  `File.rename` (POSIX `rename(2)`) + directory `fsync`. Fail-closed
+  on path / JSON / IO errors. Stdlib only. Skill bodies that mutate
+  manifest call this — never raw `mv` / `cp` / `jq -i`
 
 When adding a binary, also add it to this "Currently shipped
 binaries" section above, ensure `chmod +x` is committed, and (if it
@@ -228,12 +238,45 @@ NOT flag the fallback chain as over-engineered.
 - Advisory fail-open (empty stdout, exit 0) in `bin/` and advisory hooks
 - Partial coverage in plugin `settings.json` (only `agent` and
   `subagentStatusLine` are documented as supported)
+- Skill or agent files referencing `references/research/tool-batching.md`
+  (canonical examples doc for the tool-batching preference)
+- Run manifest paths under `.claude/{namespace}/{slug}/RUN-CURRENT.json`
+  and `RUN-HISTORY.jsonl` (cross-session resume contract — see
+  `plugins/ruby-grape-rails/references/run-manifest.md`)
 
 ## Do FLAG
 
-- `permissionMode: bypassPermissions` on new agents — flag as YELLOW unless agent has documented contributor-only privilege need
-- Shipped skill bodies (`plugins/ruby-grape-rails/.../SKILL.md`) referencing
-  contributor doctrine paths (`.claude/rules/*-development.md`,
+- `permissionMode: bypassPermissions` on new agents — flag as YELLOW
+  unless agent has documented contributor-only privilege need
+- Shipped skill bodies (`plugins/ruby-grape-rails/.../SKILL.md`)
+  referencing contributor doctrine paths (`.claude/rules/*-development.md`,
   `.github/instructions/*.instructions.md`) — flag as BLOCKER
 - Agent frontmatter declaring `Agent` in `tools:` list — flag as BLOCKER
-- Agent body containing `Agent(...)` or `subagent_type:` calls — flag as BLOCKER
+- Agent body containing `Agent(...)` or `subagent_type:` calls — flag as
+  BLOCKER
+- Agent or skill bodies that restate tool-batching discipline (preferred
+  batched git diff / grep / bundle info, exclude noise via pathspec,
+  prefer Read/Grep/Glob over `cat`/`find -exec`) — preference injection
+  delivers the rule; restatement is duplication. Pointers to
+  `references/research/tool-batching.md` for examples are fine.
+- Per-item shell loops in agent or skill bodies (e.g.
+  `for f in $FILES; do git diff -- "$f"; done`) — replace with batched
+  path-group call.
+- Consolidated review references using `{review-slug}.md` without the
+  `-{datesuffix}` segment — stale path; per-run uniqueness is required
+  to avoid subagent Write collisions on existing files.
+- Per-reviewer artifacts referenced without the `{datesuffix}` segment.
+- Recovery procedures that copy or symlink prior-run artifacts to the
+  current-run path (must write a stub when current run produced
+  nothing; see `references/run-manifest.md`).
+- Subagent bodies that read or write `RUN-CURRENT.json` /
+  `RUN-HISTORY.jsonl` — manifest is main-session-owned only.
+- Consolidated review template missing the `## Reviewer Coverage`
+  section (per-agent recovery state must be surfaced).
+- `run_in_background: true` on any `Agent(...)` call in shipped
+  skill bodies, fanout templates, or example snippets — flag as
+  BLOCKER. Plugin agents dispatch foreground only.
+- Raw `mv`, `cp`, `jq -i`, or improvised shell against any
+  `RUN-CURRENT.json` path in shipped skill bodies, hook scripts, or
+  examples — flag as BLOCKER. All manifest mutations MUST go through
+  `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update`.
