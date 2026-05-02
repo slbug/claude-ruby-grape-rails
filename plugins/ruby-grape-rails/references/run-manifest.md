@@ -31,26 +31,37 @@ Namespaces (path fragment under `.claude/`):
   "status": "in-flight",
   "agents": {
     "ruby-reviewer": {
-      "path": ".claude/reviews/ruby-reviewer/feat-add-passport-20260502-153000.md",
+      "path": "/abs/repo/.claude/reviews/ruby-reviewer/feat-add-passport-20260502-153000.md",
       "status": "complete"
     },
     "iron-law-judge": {
-      "path": ".claude/reviews/iron-law-judge/feat-add-passport-20260502-153000.md",
+      "path": "/abs/repo/.claude/reviews/iron-law-judge/feat-add-passport-20260502-153000.md",
       "status": "in-flight"
     }
   },
-  "consolidated_path": ".claude/reviews/feat-add-passport-20260502-153000.md"
+  "consolidated_path": "/abs/repo/.claude/reviews/feat-add-passport-20260502-153000.md"
 }
 ```
 
-Required fields: `skill`, `slug`, `datesuffix`, `branch`,
-`branch_head_sha`, `base_ref`, `base_sha`, `started_at`, `updated_at`,
-`status`, `agents`.
+Required fields (all skills): `skill`, `slug`, `datesuffix`,
+`started_at`, `updated_at`, `status`, `agents`.
+
+Required fields (review only — git-pinned skills): `branch`,
+`branch_head_sha`, `base_ref`, `base_sha`. Optional for plan +
+brainstorm (TTL-only staleness).
+
+`base_sha` = output of `git merge-base HEAD "$BASE_REF"` at run start.
+Stored to detect rebase drift on resume.
 
 `status` enum: `in-flight` | `complete` | `archived`.
 
 Per-agent `status` enum: `pending` | `in-flight` | `complete` |
 `stub-replaced` | `recovered-from-return` | `stub-no-output`.
+
+`agents.*.path` and `consolidated_path` MUST be absolute paths
+(matches what main session passes to spawn prompts). Helper accepts
+both forms for `prepare-respawn` backward-compatibility, but new
+manifests use absolute.
 
 ## Lifecycle
 
@@ -64,7 +75,7 @@ Main session:
    `status: pending`.
 4. Run
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <path>
-   --base="$BASE_SHA" --initial-json="$INITIAL_JSON"`. Helper archives
+   --base="$MERGE_BASE" --initial-json="$INITIAL_JSON"`. Helper archives
    any prior manifest (stale, complete, or in-flight) and inits the
    fresh one in a single call.
 
@@ -123,14 +134,18 @@ Stale = ANY applicable rule triggers:
 3. Base drift: current `base_sha` ≠ manifest `base_sha` (review only).
 4. Branch switch: current branch ≠ manifest `branch` (review only).
 
-Decision matrix:
+Decision matrix (single-call `prepare-run` semantics):
 
 | State | Action |
 |---|---|
-| stale | archive to `RUN-HISTORY.jsonl`, fresh run, no prompt |
-| fresh + `complete` | archive, fresh run |
-| fresh + `in-flight` | prompt user, default fresh |
-| absent | fresh run |
+| absent | init fresh |
+| stale | archive to `RUN-HISTORY.jsonl`, init fresh |
+| fresh + `complete` | archive, init fresh |
+| fresh + `in-flight` | archive, init fresh (one-workflow-per-branch constraint) |
+
+Callers that want to surface in-flight state to the user before
+starting a new run can invoke `resume-check` (read-only inspector)
+first, prompt, then call `prepare-run` to commit.
 
 ## Atomic Write
 
@@ -145,7 +160,7 @@ Subcommands:
 # Archive any existing manifest + init fresh from JSON. Single call
 # replaces verdict + case dispatch. Default for spawn-fanout skills.
 ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <path> \
-  --base="$BASE_SHA" --initial-json='<initial-json>'
+  --base="$MERGE_BASE" --initial-json='<initial-json>'
 
 # Create manifest (fails if exists). JSON literal as second arg.
 ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update init <path> '<initial-json>'
@@ -212,7 +227,7 @@ provided JSON. No bash branches.
 ```bash
 MANIFEST="${REPO_ROOT}/.claude/${NAMESPACE}/${SLUG}/RUN-CURRENT.json"
 "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" prepare-run "$MANIFEST" \
-  --base="$BASE_SHA" --initial-json="$INITIAL_JSON"
+  --base="$MERGE_BASE" --initial-json="$INITIAL_JSON"
 ```
 
 `resume-check` (read-only inspector) is still available for callers

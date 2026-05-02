@@ -58,7 +58,7 @@ message.
    branch_head_sha, base_ref, base_sha, status=`in-flight`, agents map
    with each agent `status=pending` and absolute `path`). Run
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <manifest-path>
-   --base="$BASE_SHA" --initial-json="$INITIAL_JSON"`. Helper archives
+   --base="$MERGE_BASE" --initial-json="$INITIAL_JSON"`. Helper archives
    any prior manifest and inits the fresh one.
 5. Run
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <manifest-path>`.

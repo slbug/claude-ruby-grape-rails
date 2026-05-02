@@ -225,7 +225,7 @@ Rules:
 
 Single helper call at fanout entry:
 `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <path>
---base="$BASE_SHA" --initial-json="$INITIAL_JSON"`. Helper archives
+--base="$MERGE_BASE" --initial-json="$INITIAL_JSON"`. Helper archives
 any prior manifest (stale, complete, or in-flight) and inits the
 fresh one.
 
