@@ -30,11 +30,14 @@ The plugin ships specialist agents, skills, hooks, and eval tooling:
   classifies each `*.provenance.md` via the 4-state algorithm; writes a
   dated Markdown report; surfaced via `/rb:provenance-scan`),
   `manifest-update` (Ruby, atomic JSON manifest writer for spawn-fanout
-  RUN-CURRENT.json files — `prepare-run` / `init` / `patch` /
-  `prepare-respawn` / `archive` / `resume-check` / `status` subcommands;
-  path-allowlist gate, symlink refusal, fsync + POSIX rename; main
-  session calls this instead of improvising `mv` / `cp` / `jq -i` /
-  `rm`).
+  RUN-CURRENT.json files — `prepare-run` (structured args:
+  `--skill --slug --agents [--base-ref]`; helper computes path /
+  datesuffix / agent paths / consolidated path / git pins),
+  `field` (dotted-key field extraction), `spawn-paths` (tab-separated
+  agent slug + absolute path per line), `init` / `patch` / `prepare-respawn` /
+  `archive` / `resume-check` / `status` subcommands; path-allowlist
+  gate, symlink refusal, fsync + POSIX rename; main session calls
+  this instead of improvising `mv` / `cp` / `jq -i` / `rm`).
 - **Plugin-owned Ruby library** (`plugins/ruby-grape-rails/lib/*.rb`):
   end-user runtime modules required by `bin/` CLIs and hook scripts.
   Ruby ≥ 3.4. Stdlib only (no Bundler gems). PyYAML is contributor-only;

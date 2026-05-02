@@ -20,7 +20,9 @@
 #                           RUN-CURRENT.json.
 #   status  <path>          Print one-line summary. Read-only.
 
+require 'fileutils'
 require 'json'
+require 'shellwords'
 require 'time'
 require_relative '../lib/repo_root'
 
@@ -121,7 +123,7 @@ end
 
 def atomic_write(path, content)
   dir = File.dirname(path)
-  Dir.mkdir(dir) unless Dir.exist?(dir)
+  FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
   tmp = "#{path}.tmp.#{Process.pid}.#{Time.now.to_f}"
   begin
     File.open(tmp, File::WRONLY | File::CREAT | File::EXCL, 0o644) do |f|
@@ -291,25 +293,141 @@ def archive_existing(abs)
   File.unlink(abs)
 end
 
-def cmd_prepare_run(path, args)
-  abs = validate_path(path)
-  opts = parse_resume_args(args)
-  die '--initial-json required' unless opts[:initial_json]
+# Per-skill conventions: namespace, agent path, consolidated path.
+# All path lambdas receive (repo_root, slug, datesuffix, agent_slug?) and
+# return absolute paths. Helper computes everything internally; skill
+# bodies pass only --skill, --slug, --agents (and --base-ref for review).
+SKILL_CONVENTIONS = {
+  'rb:review' => {
+    namespace: ->(slug) { "reviews/#{slug}" },
+    agent_path: lambda do |repo_root, slug, datesuffix, agent_slug|
+      File.join(repo_root, '.claude', 'reviews', agent_slug,
+                "#{slug}-#{datesuffix}.md")
+    end,
+    consolidated_path: lambda do |repo_root, slug, datesuffix|
+      File.join(repo_root, '.claude', 'reviews', "#{slug}-#{datesuffix}.md")
+    end
+  },
+  'rb:plan' => {
+    namespace: ->(slug) { "plans/#{slug}/research-fanout" },
+    agent_path: lambda do |repo_root, slug, _datesuffix, agent_slug|
+      File.join(repo_root, '.claude', 'plans', slug, 'research',
+                "#{agent_slug}.md")
+    end,
+    consolidated_path: lambda do |repo_root, slug, _datesuffix|
+      File.join(repo_root, '.claude', 'plans', slug, 'plan.md')
+    end
+  },
+  'rb:brainstorm' => {
+    namespace: ->(slug) { "plans/#{slug}/brainstorm-fanout" },
+    agent_path: lambda do |repo_root, slug, _datesuffix, agent_slug|
+      File.join(repo_root, '.claude', 'plans', slug, 'research',
+                "#{agent_slug}.md")
+    end,
+    consolidated_path: lambda do |repo_root, slug, _datesuffix|
+      File.join(repo_root, '.claude', 'plans', slug, 'interview.md')
+    end
+  }
+}.freeze
 
-  archive_existing(abs)
-
-  begin
-    data = JSON.parse(opts[:initial_json])
-  rescue JSON::ParserError => e
-    die "initial JSON invalid: #{e.message}"
+def parse_prepare_run_args(args)
+  opts = {}
+  args.each do |a|
+    case a
+    when /\A--skill=(.+)\z/    then opts[:skill] = Regexp.last_match(1)
+    when /\A--slug=(.+)\z/     then opts[:slug] = Regexp.last_match(1)
+    when /\A--agents=(.+)\z/   then opts[:agents] = Regexp.last_match(1)
+    when /\A--base-ref=(.+)\z/ then opts[:base_ref] = Regexp.last_match(1)
+    else die "prepare-run: unknown arg: #{a}"
+    end
   end
-  die 'initial JSON must be a JSON object' unless data.is_a?(Hash)
+  opts
+end
+
+def slug_pattern_check(slug, name)
+  die "#{name} invalid: must match [a-z0-9._-]+" unless slug =~ /\A[a-z0-9._-]+\z/
+end
+
+def cmd_prepare_run(args)
+  opts = parse_prepare_run_args(args)
+  skill = opts[:skill] || die('--skill required')
+  slug = opts[:slug] || die('--slug required')
+  agents_csv = opts[:agents] || die('--agents required (csv of agent slugs)')
+  conv = SKILL_CONVENTIONS[skill] || die("unknown skill: #{skill}")
+  slug_pattern_check(slug, '--slug')
+
+  agent_slugs = agents_csv.split(',').map(&:strip).reject(&:empty?)
+  die '--agents empty' if agent_slugs.empty?
+  agent_slugs.each { |a| slug_pattern_check(a, "agent slug '#{a}'") }
+
+  repo_root = RubyGrapeRails::RepoRoot.canonical(
+    RubyGrapeRails::RepoRoot.find(Dir.pwd)
+  )
+  datesuffix = Time.now.utc.strftime('%Y%m%d-%H%M%S')
+  namespace = conv[:namespace].call(slug)
+  manifest_path = File.join(repo_root, '.claude', namespace, 'RUN-CURRENT.json')
+
+  validate_path(manifest_path)
+  archive_existing(manifest_path)
+
+  agents_map = agent_slugs.each_with_object({}) do |agent_slug, h|
+    path = conv[:agent_path].call(repo_root, slug, datesuffix, agent_slug)
+    h[agent_slug] = { 'path' => path, 'status' => 'pending' }
+  end
+
+  data = {
+    'skill' => skill,
+    'slug' => slug,
+    'datesuffix' => datesuffix,
+    'status' => 'in-flight',
+    'agents' => agents_map,
+    'consolidated_path' => conv[:consolidated_path].call(repo_root, slug, datesuffix)
+  }
+
+  if opts[:base_ref]
+    data['base_ref'] = opts[:base_ref]
+    base_sha = `git merge-base HEAD #{opts[:base_ref].shellescape} 2>/dev/null`.strip
+    data['base_sha'] = base_sha unless base_sha.empty?
+    head = git_head
+    data['branch_head_sha'] = head if head
+    branch = git_branch
+    data['branch'] = branch if branch
+  end
 
   now = Time.now.utc.iso8601
-  data['started_at'] ||= now
+  data['started_at'] = now
   data['updated_at'] = now
-  atomic_write(abs, JSON.pretty_generate(data) + "\n")
-  puts "prepare-run: #{abs}"
+  atomic_write(manifest_path, JSON.pretty_generate(data) + "\n")
+
+  puts manifest_path
+end
+
+def cmd_field(path, key)
+  abs = validate_path(path)
+  data = read_json(abs)
+  value = key.split('.').inject(data) do |memo, k|
+    break nil unless memo.is_a?(Hash)
+
+    memo[k]
+  end
+  die "field not found: #{key}" if value.nil?
+  puts(value.is_a?(String) ? value : JSON.generate(value))
+end
+
+def cmd_spawn_paths(path)
+  abs = validate_path(path)
+  data = read_json(abs)
+  agents = data['agents']
+  die 'agents missing or invalid' unless agents.is_a?(Hash)
+
+  agents.each do |slug, info|
+    next unless info.is_a?(Hash)
+
+    p = info['path']
+    next unless p.is_a?(String) && !p.empty?
+
+    puts "#{slug}\t#{p}"
+  end
 end
 
 # Refusal predicate: only unlink files that are
@@ -361,16 +479,20 @@ end
 
 USAGE = <<~USAGE
   Usage:
+    manifest-update prepare-run --skill=NAME --slug=SLUG --agents=A,B,C [--base-ref=REF]
+                                # archives any prior + inits fresh manifest from
+                                # structured args. Helper computes path / datesuffix /
+                                # agent paths / consolidated path / git pins.
+                                # Outputs absolute manifest path on stdout.
     manifest-update init             <manifest-path> <initial-json>
     manifest-update patch            <manifest-path>          # patch from stdin
     manifest-update archive          <manifest-path>
     manifest-update status           <manifest-path>
     manifest-update prepare-respawn  <manifest-path>          # unlink stale stubs
+    manifest-update field            <manifest-path> <key>    # extract field (dotted)
+    manifest-update spawn-paths      <manifest-path>          # tab-separated agent_slug<TAB>path
     manifest-update resume-check     <manifest-path> [--head=SHA] [--base=SHA] [--branch=NAME] [--ttl-hours=N]
                                                               # prints absent | stale | fresh-complete | fresh-in-flight
-    manifest-update prepare-run      <manifest-path> --initial-json=JSON [--base=SHA] [--ttl-hours=N]
-                                                              # full resume decision: archives stale/complete/in-flight,
-                                                              # inits with provided JSON. Single call replaces verdict+case.
 USAGE
 
 cmd, *args = ARGV
@@ -420,8 +542,17 @@ begin
        exit 2)
     end
   when 'prepare-run'
-    if args.size >= 1
-      cmd_prepare_run(args[0], args[1..])
+    cmd_prepare_run(args)
+  when 'field'
+    if args.size == 2
+      cmd_field(args[0], args[1])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'spawn-paths'
+    if args.size == 1
+      cmd_spawn_paths(args[0])
     else
       (warn USAGE
        exit 2)

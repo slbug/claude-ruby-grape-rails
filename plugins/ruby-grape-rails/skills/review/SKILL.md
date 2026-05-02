@@ -49,32 +49,34 @@ message.
 ### Fanout Pattern
 
 1. Classify complexity (tier + critical-path escalation).
-2. Select core + conditional reviewers per matrix below.
-3. Derive `review-slug`. Resolve `base_ref`, `base_sha`, `branch`,
-   `branch_head_sha`. Generate `datesuffix = YYYYMMDD-HHMMSS`. For
-   each selected reviewer, build the absolute artifact path
-   `${REPO_ROOT}/.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`.
-4. Build initial manifest JSON (skill, slug, datesuffix, branch,
-   branch_head_sha, base_ref, base_sha, status=`in-flight`, agents map
-   with each agent `status=pending` and absolute `path`). Run
-   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <manifest-path>
-   --base="$MERGE_BASE" --initial-json="$INITIAL_JSON"`. Helper archives
-   any prior manifest and inits the fresh one.
-5. Run
-   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <manifest-path>`.
-   Helper unlinks any stale stub (size < 1000 bytes) at manifest-tracked
-   agent paths and protects real artifacts.
-6. Patch each agent's `status: in-flight` via
-   `echo '<json>' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <manifest-path>`.
-7. Spawn all reviewers in ONE parallel block. Each spawn prompt MUST
-   include the absolute artifact path from manifest.
-8. Wait for all reviewers to complete.
-9. Apply Artifact Recovery (see below). Patch each agent's recovery
+2. Select core + conditional reviewers per matrix below. Derive
+   `review-slug`. Resolve `BASE_REF` via
+   `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref`.
+3. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run --skill=rb:review
+   --slug="$REVIEW_SLUG" --base-ref="$BASE_REF" --agents=<csv-of-reviewer-slugs>`.
+   Captures stdout as `$MANIFEST` (absolute manifest path). Helper
+   archives any prior manifest, computes datesuffix, agent paths,
+   consolidated path, git pins; writes fresh manifest atomically.
+4. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn "$MANIFEST"`.
+   Helper unlinks any stale stub (< 1000 bytes) at manifest-tracked
+   agent paths.
+5. For each agent, patch `status: in-flight` via
+   `printf '{"agents":{"%s":{"status":"in-flight"}}}\n' "$slug" |
+   "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch "$MANIFEST"`.
+6. Spawn all reviewers in ONE parallel block. Read agent paths via
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update spawn-paths "$MANIFEST"`
+   (tab-separated `agent_slug<TAB>absolute_path`). Pass each absolute
+   path verbatim in the spawn prompt.
+7. Wait for all reviewers to complete.
+8. Apply Artifact Recovery (see below). Patch each agent's recovery
    `status` into the manifest.
-10. Read each verified artifact. Write the consolidated review to
-    `${REPO_ROOT}/.claude/reviews/{review-slug}-{datesuffix}.md`.
-11. Patch manifest `status: complete`.
-12. Present verdict to the user.
+9. Read each verified artifact. Read consolidated path via
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
+   Write the consolidated review to that path.
+10. Patch manifest `status: complete`.
+11. Present verdict to the user.
 
 ### Artifact path rules
 

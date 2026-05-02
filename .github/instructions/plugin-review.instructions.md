@@ -116,14 +116,21 @@ excludeAgent: "coding-agent"
   `/rb:provenance-scan` user-invocable skill
 - `manifest-update` (Ruby) — atomic JSON manifest writer for
   spawn-fanout RUN-CURRENT.json files. Subcommands: `prepare-run`
-  (archive any prior + init fresh in one call), `init` (fail if
-  exists), `patch` (deep-merge from stdin, auto-stamps `updated_at`),
+  (structured args: `--skill --slug --agents [--base-ref]`; helper
+  computes manifest path, datesuffix, agent paths, consolidated path,
+  git pins; outputs absolute manifest path on stdout; archives any
+  prior in one call), `field` (extract dotted key from manifest),
+  `spawn-paths` (tab-separated agent slug + absolute path per line
+  for skill-body iteration), `init` (fail if exists), `patch`
+  (deep-merge from stdin, auto-stamps `updated_at`),
   `prepare-respawn` (unlink stale stubs at manifest-tracked agent
   paths only; size < 1000 bytes; respawnable statuses), `archive`
   (append to RUN-HISTORY.jsonl + unlink RUN-CURRENT.json),
   `resume-check` (read-only verdict: absent / stale /
   fresh-complete / fresh-in-flight), `status` (read-only summary).
-  Path allowlist: `<...>/.claude/<ns>/<slug>/RUN-CURRENT.json` only.
+  Path allowlist: `<repo>/.claude/<namespace-fragment>/RUN-CURRENT.json`
+  where `<namespace-fragment>` matches a per-skill template (e.g.
+  `reviews/<review-slug>`, `plans/<plan-slug>/research-fanout`).
   Containment check via repo-root resolution. Symlink refusal on
   target + parent dir. Atomic write via `mktemp` + `fsync` + Ruby
   `File.rename` (POSIX `rename(2)`) + directory `fsync`. Fail-closed

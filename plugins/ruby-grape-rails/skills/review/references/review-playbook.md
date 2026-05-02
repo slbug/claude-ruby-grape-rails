@@ -224,10 +224,21 @@ Rules:
 ## Resume Protocol
 
 Single helper call at fanout entry:
-`${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <path>
---base="$MERGE_BASE" --initial-json="$INITIAL_JSON"`. Helper archives
-any prior manifest (stale, complete, or in-flight) and inits the
-fresh one.
+
+```bash
+MANIFEST=$("${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" prepare-run \
+  --skill=rb:review --slug="$REVIEW_SLUG" \
+  --base-ref="$BASE_REF" \
+  --agents="$AGENTS_CSV")
+```
+
+`$AGENTS_CSV` is the comma-separated list of reviewer slugs computed
+by the skill body from the Reviewer Selection Matrix above. Not a
+fixed default.
+
+Helper computes manifest path, datesuffix, agent paths, consolidated
+path, git pins. Archives any prior manifest. Outputs absolute
+manifest path on stdout.
 
 Schema + per-skill staleness rules:
 `${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.

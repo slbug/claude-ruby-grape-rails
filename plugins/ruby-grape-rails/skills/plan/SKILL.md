@@ -257,32 +257,28 @@ Specialists are leaf workers: research, write artifact, return summary.
 
 1. Create plan namespace (if not pre-bound) + scratchpad.
 2. Check compound docs + research cache. Skip duplicates.
-3. Select research agents per matrix in
-   `${CLAUDE_SKILL_DIR}/references/planning-workflow.md`.
-4. Generate `datesuffix = YYYYMMDD-HHMMSS`. For each selected agent,
-   build the absolute path
-   `${REPO_ROOT}/.claude/plans/{plan-slug}/research/{topic-slug}.md`.
-5. Build initial manifest JSON (skill, slug, datesuffix, status=
-   `in-flight`, agents map with each `status=pending` + absolute
-   `path`). Run
-   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <manifest-path>
-   --initial-json="$INITIAL_JSON"`. Helper archives any prior manifest
-   and inits fresh in a single call.
-6. Run
-   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <manifest-path>`.
-   Helper unlinks any stale stub (size < 1000 bytes) at
-   manifest-tracked agent paths and protects real artifacts.
-7. Patch each agent `status: in-flight` via
-   `echo '<json>' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <manifest-path>`.
-8. Spawn all agents in ONE parallel block. Pass agent path verbatim
-   in spawn prompt.
-9. Wait for all agents to complete.
-10. Apply Artifact Recovery (see below). Patch each agent's recovery
-    `status` into the manifest.
-11. Read each verified artifact + any reused cached files logged in
+3. Select research topics per matrix in
+   `${CLAUDE_SKILL_DIR}/references/planning-workflow.md`. Topic slug
+   becomes the manifest entry key + research filename stem.
+4. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run --skill=rb:plan
+   --slug="$PLAN_SLUG" --agents=<csv-of-topic-slugs>`. No
+   `--base-ref` (TTL-only staleness). Captures stdout as `$MANIFEST`.
+5. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn "$MANIFEST"`.
+6. Patch each entry `status: in-flight` via stdin `patch`.
+7. Spawn all agents in ONE parallel block. Read paths via
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update spawn-paths "$MANIFEST"`.
+   Pass absolute path verbatim in spawn prompt.
+8. Wait for all agents to complete.
+9. Apply Artifact Recovery (see below). Patch each entry's recovery
+   `status` into the manifest.
+10. Read each verified artifact + any reused cached files logged in
     scratchpad.md `## Decisions` → `### Research Cache Reuse`.
-12. Synthesize `plan.md` directly.
-13. Patch manifest `status: complete`.
+11. Read consolidated path via
+    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
+    Synthesize `plan.md` at that path.
+12. Patch manifest `status: complete`.
 
 ## Worker Briefing
 

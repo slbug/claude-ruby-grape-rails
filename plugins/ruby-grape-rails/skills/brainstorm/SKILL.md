@@ -114,27 +114,26 @@ Present Decision Point.
 
 See `references/research-integration.md` for the full pattern.
 
-**First cycle: MAX 2 agents.** Manifest path:
-`${REPO_ROOT}/.claude/plans/{plan-slug}/brainstorm-fanout/RUN-CURRENT.json`.
+**First cycle: MAX 2 agents.** Topic slugs: `codebase-scan`,
+`web-research`.
 
-1. Build initial manifest JSON (skill=`rb:brainstorm`, slug,
-   datesuffix, status=`in-flight`, agents map with absolute `path`
-   for each agent + `status=pending`). Run
-   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <manifest-path>
-   --initial-json="$INITIAL_JSON"`.
+1. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run --skill=rb:brainstorm
+   --slug="$PLAN_SLUG" --agents=codebase-scan,web-research`. Captures
+   stdout as `$MANIFEST`.
 2. Run
-   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <manifest-path>`.
-3. Patch each agent `status: in-flight` via stdin to
-   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <manifest-path>`.
-4. Spawn both via two Agent tool calls in ONE Tool Use block
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn "$MANIFEST"`.
+3. Patch each entry `status: in-flight` via stdin `patch`.
+4. Read paths via `manifest-update spawn-paths "$MANIFEST"`.
+5. Spawn both via two Agent tool calls in ONE Tool Use block
    (foreground parallel, NOT `run_in_background: true`):
-   - **`rails-patterns-analyst`**: "How does this codebase handle
-     {topics}?" Writes findings to
-     `.claude/plans/{plan-slug}/research/codebase-scan.md`.
-   - **`web-researcher`**: "Ruby/Rails approaches to {topics}".
-     Returns summary.
-5. Apply Artifact Recovery and patch each agent's recovery `status`.
-6. Patch manifest `status: complete` after evaluation.
+   - **`rails-patterns-analyst`** for `codebase-scan` topic:
+     "How does this codebase handle {topics}?"
+   - **`web-researcher`** for `web-research` topic:
+     "Ruby/Rails approaches to {topics}".
+   Pass each absolute path verbatim in the spawn prompt.
+6. Apply Artifact Recovery and patch each entry's recovery `status`.
+7. Patch manifest `status: complete` after evaluation.
 
 Schema + helper subcommands:
 `${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.

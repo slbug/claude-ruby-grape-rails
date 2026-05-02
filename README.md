@@ -398,10 +398,13 @@ When you run `/rb:plan Add real-time notifications`:
 When you run `/rb:review`:
 
 ```
-1. `/rb:review` skill body collects your git diff from main session
+1. `/rb:review` skill body collects git diff + reviewer list
    │
-2. `manifest-update prepare-run` archives any prior manifest +
-   inits a fresh `.claude/reviews/{review-slug}/RUN-CURRENT.json`
+2. `manifest-update prepare-run --skill=rb:review --slug=<slug>
+    --base-ref=<ref> --agents=<csv>` archives any prior manifest +
+   inits a fresh `.claude/reviews/<slug>/RUN-CURRENT.json`
+   (helper computes datesuffix, agent paths, consolidated path,
+   git pins)
    │
 3. Spawns 4 EXISTING specialist agents in parallel:
    ├── ruby-reviewer        → Idioms, patterns, error handling

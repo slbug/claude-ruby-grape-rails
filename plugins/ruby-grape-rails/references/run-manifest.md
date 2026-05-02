@@ -4,16 +4,25 @@ Cross-session resume contract for parallel-fanout workflows.
 
 ## Path Convention
 
-- Active manifest: `.claude/{namespace}/{slug}/RUN-CURRENT.json`
-- Archive log: `.claude/{namespace}/{slug}/RUN-HISTORY.jsonl` (append-only)
+- Active manifest: `.claude/{namespace}/RUN-CURRENT.json`
+- Archive log: `.claude/{namespace}/RUN-HISTORY.jsonl` (append-only)
 
-Namespaces (path fragment under `.claude/`):
+`{namespace}` is the per-skill path fragment under `.claude/`. It
+already includes the skill-specific slug (review-slug for reviews,
+plan-slug for plan/brainstorm), so the manifest path has no
+additional `{slug}` segment.
 
-| Skill | Namespace | Slug source |
-|---|---|---|
-| `/rb:review` | `reviews/{review-slug}` | `{review-slug}` |
-| `/rb:plan` (fanout) | `plans/{plan-slug}/research-fanout` | `research-fanout` |
-| `/rb:brainstorm` | `plans/{plan-slug}/brainstorm-fanout` | `brainstorm-fanout` |
+| Skill | `{namespace}` |
+|---|---|
+| `/rb:review` | `reviews/{review-slug}` |
+| `/rb:plan` (fanout) | `plans/{plan-slug}/research-fanout` |
+| `/rb:brainstorm` | `plans/{plan-slug}/brainstorm-fanout` |
+
+Resolved manifest paths:
+
+- `/rb:review`: `.claude/reviews/{review-slug}/RUN-CURRENT.json`
+- `/rb:plan`: `.claude/plans/{plan-slug}/research-fanout/RUN-CURRENT.json`
+- `/rb:brainstorm`: `.claude/plans/{plan-slug}/brainstorm-fanout/RUN-CURRENT.json`
 
 ## Schema
 
@@ -44,52 +53,65 @@ Namespaces (path fragment under `.claude/`):
 ```
 
 Required fields (all skills): `skill`, `slug`, `datesuffix`,
-`started_at`, `updated_at`, `status`, `agents`.
+`status`, `agents`, `consolidated_path`, `started_at`, `updated_at`.
 
 Required fields (review only — git-pinned skills): `branch`,
-`branch_head_sha`, `base_ref`, `base_sha`. Optional for plan +
+`branch_head_sha`, `base_ref`, `base_sha`. Omitted for plan +
 brainstorm (TTL-only staleness).
 
 `base_sha` = output of `git merge-base HEAD "$BASE_REF"` at run start.
 Stored to detect rebase drift on resume.
 
-`status` enum: `in-flight` | `complete` | `archived`.
+`status` enum: `in-flight` | `complete`.
 
 Per-agent `status` enum: `pending` | `in-flight` | `complete` |
 `stub-replaced` | `recovered-from-return` | `stub-no-output`.
 
-`agents.*.path` and `consolidated_path` MUST be absolute paths
-(matches what main session passes to spawn prompts). Helper accepts
-both forms for `prepare-respawn` backward-compatibility, but new
-manifests use absolute.
+`agents.*.path` and `consolidated_path` are absolute paths populated
+by `bin/manifest-update prepare-run` (helper computes from skill +
+slug + datesuffix per skill convention).
 
 ## Lifecycle
 
 ### Run start
 
-Main session:
+Main session calls `prepare-run` once with structured args. Helper
+computes everything: manifest path, datesuffix, agent paths,
+consolidated path, git pins. Outputs absolute manifest path.
 
-1. Resolve `base_ref`, `base_sha`, `branch`, `branch_head_sha`.
-2. Generate `datesuffix = date -u +%Y%m%d-%H%M%S`.
-3. Build initial manifest JSON with `status: in-flight`, all agent
-   `status: pending`.
-4. Run
-   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <path>
-   --base="$MERGE_BASE" --initial-json="$INITIAL_JSON"`. Helper archives
-   any prior manifest (stale, complete, or in-flight) and inits the
-   fresh one in a single call.
+```bash
+MANIFEST=$("${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" prepare-run \
+  --skill=rb:review --slug="$SLUG" \
+  --base-ref="$BASE_REF" \
+  --agents="$AGENTS_CSV")
+```
+
+`$AGENTS_CSV` is computed by the calling skill at runtime from its
+selection logic (e.g. `/rb:review` derives it from the Reviewer
+Selection Matrix in `skills/review/SKILL.md`). It is NOT a fixed
+default in the helper — every spawn-fanout skill computes its own
+list per its own rules.
+
+Plan/brainstorm omit `--base-ref` (TTL-only). For plan, agent slugs
+are research topic identifiers (helper uses them as filename stems
+under `.claude/plans/<slug>/research/<topic>.md`).
+
+### Read agent paths
+
+Skill body iterates `manifest-update spawn-paths "$MANIFEST"` to get
+`<agent-slug>\t<absolute-path>` pairs. Pass the absolute path verbatim
+in the agent spawn prompt.
 
 ### Per-agent spawn
 
 Before spawning each agent, mark its status in-flight:
 
 ```bash
-echo '{"agents":{"<agent-slug>":{"status":"in-flight"}}}' \
-  | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <path>
+printf '{"agents":{"%s":{"status":"in-flight"}}}\n' "$AGENT_SLUG" \
+  | "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch "$MANIFEST"
 ```
 
-Helper auto-stamps `updated_at`. Pass the agent's `path` from
-manifest verbatim into the spawn prompt.
+Helper auto-stamps `updated_at`.
 
 ### Post-recovery
 
@@ -98,8 +120,8 @@ After Artifact Recovery decides each agent's outcome, patch its
 or `stub-no-output`:
 
 ```bash
-echo '{"agents":{"<agent-slug>":{"status":"<state>"}}}' \
-  | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <path>
+printf '{"agents":{"%s":{"status":"%s"}}}\n' "$AGENT_SLUG" "$STATE" \
+  | "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch "$MANIFEST"
 ```
 
 ### Run complete
@@ -108,14 +130,11 @@ After consolidated artifact is written:
 
 ```bash
 echo '{"status":"complete"}' \
-  | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <path>
+  | "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch "$MANIFEST"
 ```
 
 The completed manifest stays at `RUN-CURRENT.json` until the next run
-starts. Next-run start archives it via
-`${CLAUDE_PLUGIN_ROOT}/bin/manifest-update archive <path>` (regardless
-of staleness verdict — completed manifests are archived too) and
-clears the active slot.
+starts. Next-run `prepare-run` archives it automatically.
 
 ## Staleness
 
@@ -157,36 +176,44 @@ or per-agent artifact paths.
 Subcommands:
 
 ```bash
-# Archive any existing manifest + init fresh from JSON. Single call
-# replaces verdict + case dispatch. Default for spawn-fanout skills.
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <path> \
-  --base="$MERGE_BASE" --initial-json='<initial-json>'
+# Archive any existing manifest + init fresh. Helper computes path,
+# datesuffix, agent paths, consolidated path, and (for review) git
+# pins. Outputs absolute manifest path on stdout.
+"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" prepare-run \
+  --skill=rb:review --slug=SLUG --agents=A,B,C [--base-ref=REF]
 
-# Create manifest (fails if exists). JSON literal as second arg.
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update init <path> '<initial-json>'
+# Read field (dotted path supported, e.g. agents.ruby-reviewer.path).
+"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" field <manifest> <key>
+
+# Tab-separated agent_slug<TAB>absolute_path per line.
+"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" spawn-paths <manifest>
 
 # Deep-merge JSON from stdin. Auto-stamps updated_at.
-echo '<patch-json>' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <path>
+printf '<patch-json>\n' | "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch <manifest>
 
 # Unlink stale stubs at manifest-tracked agent paths before re-spawn.
 # Only unlinks files < 1000 bytes (real artifacts protected with warning).
-# Only touches paths listed in manifest.agents.*.path.
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <path>
+"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" prepare-respawn <manifest>
 
 # Append current state to RUN-HISTORY.jsonl, unlink RUN-CURRENT.json.
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update archive <path>
+"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" archive <manifest>
 
 # Read-only verdict (absent | stale | fresh-complete | fresh-in-flight).
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update resume-check <path> [--base=SHA]
+"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" resume-check <manifest>
 
 # One-line summary (read-only).
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update status <path>
+"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" status <manifest>
+
+# Init manifest from raw JSON literal (low-level; fails if exists).
+"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" init <manifest> '<json>'
 ```
 
 Helper enforces:
 
-- Path allowlist: `<...>/.claude/<ns>/<slug>/RUN-CURRENT.json` only.
-  Any other path → exit 1 before touching disk.
+- Path allowlist: helper accepts only paths matching
+  `<repo>/.claude/<namespace-fragment>/RUN-CURRENT.json` where
+  `<namespace-fragment>` matches one of the per-skill namespace
+  templates above. Any other path → exit 1 before touching disk.
 - Symlink refusal on target and parent dir.
 - JSON validation on input AND merged result.
 - Atomic rename via Ruby `File.rename` (POSIX `rename(2)`), preceded
@@ -220,18 +247,25 @@ Helper enforces:
 
 ## Resume Protocol (main session)
 
-Single helper call. `prepare-run` archives any existing manifest
-(stale, complete, or in-flight) and inits a fresh one with the
-provided JSON. No bash branches.
+Single `prepare-run` call. Helper computes manifest path, archives
+any prior manifest, inits fresh, outputs the path on stdout. Skill
+body uses output for subsequent `field` / `spawn-paths` / `patch` /
+`prepare-respawn` calls.
 
 ```bash
-MANIFEST="${REPO_ROOT}/.claude/${NAMESPACE}/${SLUG}/RUN-CURRENT.json"
-"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" prepare-run "$MANIFEST" \
-  --base="$MERGE_BASE" --initial-json="$INITIAL_JSON"
+MANIFEST=$("${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" prepare-run \
+  --skill=<rb:review|rb:plan|rb:brainstorm> --slug="$SLUG" \
+  [--base-ref="$BASE_REF"] \
+  --agents="$AGENTS_CSV")
 ```
 
-`resume-check` (read-only inspector) is still available for callers
-that want to surface in-flight state to the user before deciding.
+The skill that invokes `prepare-run` selects its own agent slugs and
+constructs `$AGENTS_CSV` at runtime. Helper does not know or
+prescribe which agents to spawn.
+
+`resume-check` (read-only inspector) is available for callers that
+want to surface in-flight state to the user before invoking
+`prepare-run`.
 
 ## Implementation Notes
 
