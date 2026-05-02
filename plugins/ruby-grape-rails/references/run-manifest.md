@@ -24,6 +24,27 @@ Resolved manifest paths:
 - `/rb:plan`: `.claude/plans/{plan-slug}/research-fanout/RUN-CURRENT.json`
 - `/rb:brainstorm`: `.claude/plans/{plan-slug}/brainstorm-fanout/RUN-CURRENT.json`
 
+Per-agent artifact paths (computed by helper):
+
+| Skill | Agent path template | Naming |
+|---|---|---|
+| `/rb:review` | `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` | per-second-unique snapshot |
+| `/rb:plan` | `.claude/plans/{plan-slug}/research/{agent-slug}.md` | stable canonical (no datesuffix; iterative across days) |
+| `/rb:brainstorm` | `.claude/plans/{plan-slug}/research/{agent-slug}.md` | stable canonical |
+
+Consolidated artifact paths (computed by helper, exposed as
+`consolidated_path` field):
+
+| Skill | Consolidated path |
+|---|---|
+| `/rb:review` | `.claude/reviews/{review-slug}-{datesuffix}.md` |
+| `/rb:plan` | `.claude/plans/{plan-slug}/plan.md` |
+| `/rb:brainstorm` | `.claude/plans/{plan-slug}/interview.md` |
+
+`{agent-slug}` is the manifest entry key — for review it equals the
+subagent_type (e.g. `ruby-reviewer`); for plan/brainstorm it equals
+the research topic identifier (e.g. `active-record-patterns`).
+
 ## Schema
 
 ```json

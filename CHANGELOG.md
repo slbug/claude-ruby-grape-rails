@@ -13,23 +13,26 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `bin/manifest-update` (Ruby) — atomic manifest writer with
   path-allowlist gate, symlink refusal, mktemp + fsync + POSIX
-  rename + dir fsync. Subcommands: `prepare-run` (archive prior +
-  init fresh in one call), `init` (fail if exists), `patch`
-  (deep-merge from stdin), `prepare-respawn` (unlink stale stubs at
-  manifest-tracked agent paths only), `resume-check` (per-skill TTL
-  defaults + HEAD/base/branch pin evaluation), `archive`, `status`.
-  Reuses `lib/repo_root.rb` (new shared module). All manifest
-  mutations and stale-stub unlinks go through this binary; raw
-  `mv` / `cp` / `jq -i` / `rm` against manifest or per-agent
-  artifact paths is forbidden.
+  rename + dir fsync. Subcommands: `prepare-run` (structured args:
+  `--skill --slug --agents [--base-ref]`; helper computes manifest
+  path, datesuffix, agent paths, consolidated path, git pins;
+  archives any prior; outputs absolute manifest path), `field`
+  (dotted-key extraction), `spawn-paths` (tab-separated agent slug +
+  absolute path per line), `patch` (deep-merge from stdin),
+  `prepare-respawn` (unlink stale stubs at manifest-tracked agent
+  paths only), `resume-check` (read-only verdict), `archive`,
+  `status`, `init` (low-level). Reuses `lib/repo_root.rb` (new shared
+  module). All manifest mutations and stale-stub unlinks go through
+  this binary; raw `mv` / `cp` / `jq -i` / `rm` against manifest or
+  per-agent artifact paths is forbidden.
 - `lib/repo_root.rb` — shared `RubyGrapeRails::RepoRoot` module
   (find / canonical / git_toplevel) extracted from
   `bin/extract-permissions` and `bin/detect-stack`. Stdlib only.
 - `references/run-manifest.md` — cross-session resume schema for
   spawn-fanout workflows; JSON manifest at
-  `.claude/{namespace}/{slug}/RUN-CURRENT.json`; per-skill staleness
-  rules (review: TTL + HEAD + base + branch; plan + brainstorm: TTL
-  only, 168h default).
+  `.claude/{namespace}/RUN-CURRENT.json` (namespace per-skill);
+  per-skill staleness rules (review: TTL + HEAD + base + branch;
+  plan + brainstorm: TTL only, 168h default).
 - `references/research/tool-batching.md` — BAD/GOOD examples for
   batched git/gem/find usage.
 - Tool-batching preference in `preferences.yml` (new `tooling`

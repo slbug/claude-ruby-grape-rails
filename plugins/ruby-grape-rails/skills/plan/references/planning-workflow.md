@@ -184,7 +184,7 @@ Apply Artifact Recovery for each agent in the run manifest at
   `status: stub-no-output`.
 
 Status patch via
-`echo '<json>' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <path>`.
+`printf '%s\n' '<json>' | "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch "$MANIFEST"`.
 
 NEVER copy or symlink prior-run artifacts. Decide from filesystem;
 ignore return-text denial claims. Never re-spawn.
@@ -353,11 +353,14 @@ plan with deeper research instead of creating a new one.
 2. **Search compound docs** -- Find known issues in planned areas
    (`grep -rl "KEYWORD" .claude/solutions/`)
 3. **Spawn research agents** -- Use SPECIALIST agents (same
-   selection rules as main flow), NOT Explore agents. Each agent
-   MUST write detailed output to
-   `.claude/plans/{slug}/research/{topic-slug}.md` and return ONLY a
-   500-word summary. Spawn via multiple Agent tool calls in ONE Tool
-   Use block (foreground parallel — do NOT use `run_in_background: true`)
+   selection rules as main flow), NOT Explore agents. Run
+   `manifest-update prepare-run --skill=rb:plan --slug="$PLAN_SLUG"
+   --agents=<csv-of-topic-slugs>`; pass each absolute path read from
+   `manifest-update spawn-paths "$MANIFEST"` verbatim in the spawn
+   prompt. Each agent writes its detailed output to that path and
+   returns ONLY a 500-word summary. Spawn via multiple Agent tool
+   calls in ONE Tool Use block (foreground parallel — do NOT use
+   `run_in_background: true`)
 4. **Wait for ALL agents** -- You'll be notified as each completes.
    Read each agent's output file. Do NOT proceed until all complete
 5. **Enhance plan** -- Add implementation detail, resolve spikes,
@@ -453,7 +456,7 @@ Context:
   2. [question]
 
 Output:
-- Write detailed findings to .claude/plans/{slug}/research/{topic-slug}.md
+- Write detailed findings to <absolute-path-from-manifest-update-spawn-paths>
 - Return ONLY a 500-word summary in Agent() result text
 
 Stop after returning. Do NOT call Agent() — this is a leaf research.

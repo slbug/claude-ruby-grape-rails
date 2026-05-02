@@ -293,10 +293,13 @@ Every research Agent() call must:
 
 ## Artifact Path Rules
 
-- Generate the absolute path before spawn.
-- Path = `${REPO_ROOT}/.claude/plans/{plan-slug}/research/{topic-slug}.md`.
-- Per-second uniqueness via `{topic-slug}` plus `-YYYYMMDD-HHMMSS` if
-  collision detected in manifest.
+- Helper computes absolute paths from `--skill=rb:plan` + `--slug` +
+  `--agents`. Path convention: `.claude/plans/{plan-slug}/research/{topic-slug}.md`
+  (research files keyed by topic slug, no datesuffix — research is
+  iterative across days; helper protects existing artifacts via
+  `prepare-respawn` size check).
+- Skill body reads paths via `manifest-update spawn-paths "$MANIFEST"`.
+- Pass each path verbatim in the spawn prompt.
 - Agents use the exact path received. No filename invention.
 
 ## Artifact Recovery
@@ -328,7 +331,9 @@ For canonical plan.md template, see
 
 ## Output
 
-Write the plan to `.claude/plans/{slug}/plan.md`.
+Write the plan to the path read via
+`${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`
+(resolves to `.claude/plans/{plan-slug}/plan.md` per skill convention).
 
 Create the planning namespace at the start of planning, not only at
 plan-write time:
