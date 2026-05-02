@@ -75,7 +75,11 @@ else
   exit 1
 fi
 
-# Output eval-safe assignments
-echo "REMOTE=${REMOTE}"
-echo "DEFAULT_BRANCH=${DEFAULT_BRANCH}"
-echo "BASE_REF=${BASE_REF}"
+# Output eval-safe assignments. Use printf '%q' to shell-quote each
+# value so branch/remote names containing legal-but-dangerous shell
+# metacharacters (e.g., `;`, `$`, backtick — all permitted by
+# git check-ref-format) cannot inject commands when callers run
+# `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"`.
+printf 'REMOTE=%q\n' "$REMOTE"
+printf 'DEFAULT_BRANCH=%q\n' "$DEFAULT_BRANCH"
+printf 'BASE_REF=%q\n' "$BASE_REF"
