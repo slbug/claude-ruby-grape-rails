@@ -70,12 +70,21 @@ def read_only_tools_coherent(content: str, **_: Any) -> tuple[bool, str]:
     return False, "Read tool present without disallowing write-capable tools"
 
 
-def omit_claudemd_coherent(content: str, **_: Any) -> tuple[bool, str]:
+def omit_claudemd_coherent(content: str, skill_path: str = "", **_: Any) -> tuple[bool, str]:
     fm = parse_frontmatter(content)
     tools = _coerce_tool_list(fm.get("tools", []))
     disallowed = _coerce_tool_list(fm.get("disallowedTools", []))
     omit_claudemd = fm.get("omitClaudeMd")
     write_like_tools = {"Write", "Edit", "NotebookEdit"}
+
+    # Contributor agents (.claude/agents/**) MAY omit the field per
+    # `agent-development.md` § omitClaudeMd Scope. They run in contributor
+    # sessions and benefit from contributor CLAUDE.md context.
+    is_contributor_agent = "/.claude/agents/" in skill_path.replace("\\", "/")
+    if is_contributor_agent:
+        if omit_claudemd is True:
+            return True, "contributor agent omits CLAUDE.md (allowed)"
+        return True, "contributor agent keeps CLAUDE.md context (allowed)"
 
     # Denylist-only agents: must set omitClaudeMd: true (specialists don't
     # need contributor CLAUDE.md context). The previous "orchestrator"
