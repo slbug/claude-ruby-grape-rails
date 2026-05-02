@@ -205,7 +205,8 @@ For each reviewer in the manifest, stat the expected path:
 | State | Action | Manifest agent status |
 |---|---|---|
 | Exists, `size_bytes >= 1000` | Trust. Do NOT overwrite. | `complete` |
-| Exists, `size_bytes < 1000` | Stub. Replace ONLY if Agent return text is substantially larger AND parses as findings (severity tags, `file:line` refs). Add header `recovery: stub replaced from inline return`. | `stub-replaced` |
+| Exists, `size_bytes < 1000`, return text substantially larger AND parses as findings (severity tags, `file:line` refs) | Replace stub with extracted findings. Add header `recovery: stub replaced from inline return`. | `stub-replaced` |
+| Exists, `size_bytes < 1000`, return text empty/unusable | Keep stub. Add header `recovery: stub kept — return text unusable`. Treat as coverage gap. | `stub-no-output` |
 | Missing, return text usable | Extract findings from return text and write. Add header `recovery: recovered from inline return — Write failed`. | `recovered-from-return` |
 | Missing, return text empty/unusable | Write stub with heading `# {agent-slug} — recovery stub` and body `Run produced no artifact and no usable return text. Reviewer coverage gap.` Add header `recovery: stub written — agent produced nothing`. | `stub-no-output` |
 

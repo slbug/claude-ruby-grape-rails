@@ -249,8 +249,10 @@ consolidated review:
 For each manifest entry, stat the expected path:
 
 - Exists, `size_bytes >= 1000` → trust. Do NOT overwrite.
-- Exists, `size_bytes < 1000` → stub. Replace ONLY if Agent return
-  text is substantially larger AND parses as findings.
+- Exists, `size_bytes < 1000`, return text substantially larger AND
+  parses as findings → replace stub with extracted findings.
+- Exists, `size_bytes < 1000`, return text empty/unusable → keep
+  stub, treat as coverage gap (`stub-no-output`).
 - Missing, return text usable → extract findings from return text and write.
 - Missing, return text empty/unusable → write a stub with heading
   `# {agent-slug} — recovery stub` and body `Run produced no

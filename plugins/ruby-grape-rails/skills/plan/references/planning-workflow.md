@@ -172,9 +172,10 @@ Apply Artifact Recovery for each agent in the run manifest at
 
 - Exists, `size_bytes >= 1000` → trust. Do NOT overwrite. Patch
   `status: complete` into manifest.
-- Exists, `size_bytes < 1000` → stub. Replace ONLY if Agent return
-  text is substantially larger AND parses as findings. Patch
-  `status: stub-replaced`.
+- Exists, `size_bytes < 1000`, return text substantially larger AND
+  parses as findings → replace stub. Patch `status: stub-replaced`.
+- Exists, `size_bytes < 1000`, return text empty/unusable → keep
+  stub, treat as coverage gap. Patch `status: stub-no-output`.
 - Missing, return text usable → extract findings from return text and
   write. Patch `status: recovered-from-return`.
 - Missing, return text empty/unusable → write a stub with heading

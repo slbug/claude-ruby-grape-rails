@@ -22,11 +22,13 @@ Each reviewer also writes a per-agent artifact to:
 |---|---|
 | {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output |
 
-State definitions: `artifact` = on-disk file ≥ 1000 bytes, trusted as-is.
-`stub-replaced` = on-disk stub overwritten with substantially larger
-findings from agent return text. `recovered-from-return` = no on-disk
-artifact; findings extracted from agent return text. `stub-no-output` =
-no artifact and no usable return text; reviewer coverage gap — treat
+State definitions: `artifact` = on-disk file ≥ 1000 bytes, trusted
+as-is. `stub-replaced` = on-disk stub (< 1000 bytes) overwritten with
+substantially larger findings from agent return text.
+`recovered-from-return` = no on-disk artifact; findings extracted
+from agent return text. `stub-no-output` = no usable reviewer output
+(either no on-disk artifact + no usable return text, or a tiny stub
+file with no replaceable return text); reviewer coverage gap — treat
 findings absence as unknown, not clean.
 
 ## Summary
