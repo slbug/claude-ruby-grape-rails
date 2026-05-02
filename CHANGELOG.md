@@ -7,6 +7,21 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.3] - 2026-05-02
+
+### Fixed
+
+- `verification-runner` agent: removed `background: true`. Background-launched
+  agents cannot surface interactive Write permission prompts — agent
+  silently failed to write its review artifact and returned findings
+  inline. Now runs foreground like every other Write-capable reviewer.
+
+### Changed
+
+- `rails-architect`, `rails-patterns-analyst`, `ruby-runtime-advisor`:
+  bumped `maxTurns` 15 → 25 for parity with other Write-capable
+  reviewers. Multi-file review work was hitting the 15-turn cap mid-Write.
+
 ## [1.16.2] - 2026-05-02
 
 ### Changed
@@ -2250,7 +2265,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.2...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.3...HEAD
+[1.16.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.2...v1.16.3
 [1.16.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.1...v1.16.2
 [1.16.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.0...v1.16.1
 [1.16.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.2...v1.16.0

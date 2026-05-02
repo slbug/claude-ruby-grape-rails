@@ -4,7 +4,7 @@ description: Advises on Rails and Grape interaction architecture, user-facing wo
 disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
-maxTurns: 15
+maxTurns: 25
 omitClaudeMd: true
 skills:
   - rails-contexts

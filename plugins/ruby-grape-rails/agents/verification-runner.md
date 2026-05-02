@@ -5,7 +5,6 @@ disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: haiku
 effort: low
 maxTurns: 20
-background: true
 omitClaudeMd: true
 skills:
   - testing
