@@ -14,9 +14,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `bin/manifest-update` (Ruby) — atomic manifest writer with
   path-allowlist gate, symlink refusal, mktemp + fsync + POSIX
   rename + dir fsync. Subcommands: `init`, `patch` (deep-merge from
-  stdin), `archive`, `status`. All manifest mutations go through
-  this binary; raw `mv` / `cp` / `jq -i` against manifest paths is
-  forbidden.
+  stdin), `prepare-respawn` (unlink stale stubs at manifest-tracked
+  agent paths only), `archive`, `status`. All manifest mutations and
+  stale-stub unlinks go through this binary; raw `mv` / `cp` /
+  `jq -i` / `rm` against manifest paths is forbidden.
 - `references/run-manifest.md` — cross-session resume schema for
   spawn-fanout workflows; JSON manifest at
   `.claude/{namespace}/{slug}/RUN-CURRENT.json`; per-skill staleness
