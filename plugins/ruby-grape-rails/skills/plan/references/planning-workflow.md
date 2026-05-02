@@ -431,16 +431,27 @@ fi
 
 ## Spawning Strategy
 
+Topic slug = research filename stem (manifest entry key passed via
+`--agents=`). Subagent type = which specialist to invoke for that
+topic. They are NOT the same identifier — skill body maps
+topic-slug → subagent_type at spawn time.
+
 ```text
 Phase 1: Research (parallel block)
-├─ rails-patterns-analyst    (always)
-├─ active-record-schema-designer (if DB changes)
-├─ security-analyzer         (if auth/data sensitive)
-└─ sidekiq-specialist        (if jobs)
+  topic-slug                         subagent_type            condition
+  rails-patterns-research            rails-patterns-analyst   always
+  active-record-schema-research      active-record-schema-designer  DB changes
+  security-research                  security-analyzer        auth/data sensitive
+  sidekiq-research                   sidekiq-specialist       jobs
 
 Phase 2: Architecture (if needed)
-└─ rails-architect           (if service layer / cross-cutting)
+  architecture-research              rails-architect          service layer / cross-cutting
 ```
+
+Topic-slug naming: short kebab-case noun describing the research
+question (`active-record-schema-research`, not `ar`). Stable across
+runs — `prepare-respawn` keeps existing artifacts (size ≥ 1000)
+intact.
 
 ## Agent Briefing Template
 

@@ -220,7 +220,10 @@ printf '<patch-json>\n' | "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch <man
 "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" archive <manifest>
 
 # Read-only verdict (absent | stale | fresh-complete | fresh-in-flight).
-"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" resume-check <manifest>
+# Optional flags override auto-detected git state (HEAD/branch) or
+# per-skill TTL default. --base only used for review (git-pinned).
+"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" resume-check <manifest> \
+  [--head=SHA] [--base=SHA] [--branch=NAME] [--ttl-hours=N]
 
 # One-line summary (read-only).
 "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" status <manifest>

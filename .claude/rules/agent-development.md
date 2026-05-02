@@ -55,11 +55,13 @@ message; never the background flag.
 
 ## Memory
 
-Use `memory: project` only for pattern-analyst agents that benefit from
-cross-session learning. Note: `memory` auto-enables Read, Write, Edit —
-only add to agents that already have Write access. After the orchestrator
-cleanup, no agent ships with `memory: project`; the field is a future
-extension hook, not an active mechanism.
+Use `memory: project` only for pattern-analyst agents that benefit
+from cross-session learning. CC auto-enables Read, Write, Edit when
+`memory` is declared — never use this as a backdoor to expand a
+denylist agent's tool surface. Add `memory` only to agents whose
+tool declarations already permit Write/Edit explicitly. After the
+orchestrator cleanup no agent ships with `memory: project`; the
+field is a future extension hook, not an active mechanism.
 
 ## omitClaudeMd Scope
 

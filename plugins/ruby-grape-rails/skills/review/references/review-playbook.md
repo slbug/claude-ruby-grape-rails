@@ -246,13 +246,20 @@ Schema + per-skill staleness rules:
 
 ## Consolidated Review Format
 
-Write the synthesized review to `.claude/reviews/{review-slug}-{datesuffix}.md`:
+Write the synthesized review to the path read via
+`manifest-update field "$MANIFEST" consolidated_path`:
 
-```markdown
+````markdown
 # Review: {track}
 **Date**: {timestamp}
 **Complexity**: {Simple|Medium|Complex} ({N} files{, escalated: reason})
 **Files Changed**: {list}
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State |
+|---|---|
+| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output |
 
 ## Summary
 - Critical: {N}
@@ -297,28 +304,32 @@ Write the synthesized review to `.claude/reviews/{review-slug}-{datesuffix}.md`:
 ## Positive Findings
 
 - {what was done well}
-
-```
+````
 
 ## Severity Levels
 
 ### Critical
 
 Must fix before merge:
+
 - Security vulnerabilities
 - Data loss risks
 - Production outages
 - Iron Law violations in critical paths
 
 ### Warning
+
 Should fix before merge:
+
 - Performance issues
 - Maintainability problems
 - Test coverage gaps
 - Potential bugs
 
 ### Info
+
 Nice to have:
+
 - Style suggestions
 - Refactoring opportunities
 - Documentation improvements

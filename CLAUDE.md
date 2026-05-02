@@ -42,13 +42,15 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 
 ### Artifact Directories
 
-Each plan owns `.claude/plans/{slug}/` (plan.md, research/, summaries/,
-progress.md, scratchpad.md). Other namespaces: `.claude/audit/`,
+Plan: `.claude/plans/{slug}/` (plan.md, research/, summaries/,
+progress.md, scratchpad.md). Review:
 `.claude/reviews/{review-slug}-{datesuffix}.md` + `{agent-slug}/...` +
-`{review-slug}/RUN-CURRENT.json` + `RUN-HISTORY.jsonl` (run manifest:
-`plugins/ruby-grape-rails/references/run-manifest.md`),
+`{review-slug}/{RUN-CURRENT.json,RUN-HISTORY.jsonl}` (run manifest —
+`references/run-manifest.md`). Other: `.claude/audit/`,
+`.claude/research/{topic-slug}.md`,
 `.claude/investigations/{agent}/{slug}-{datesuffix}.md`,
-`.claude/skill-metrics/`, `.claude/solutions/{category}/`.
+`.claude/skill-metrics/`, `.claude/solutions/{category}/`,
+`.claude/provenance-scan/`.
 
 ## Structure
 
@@ -69,6 +71,8 @@ claude-ruby-grape-rails/
 │       ├── bin/                     # Plugin executables (added to Bash tool PATH)
 │       ├── hooks/
 │       │   └── hooks.json
+│       ├── lib/                     # Shared Ruby modules (stdlib only)
+│       ├── references/              # Shipped reference docs
 │       └── skills/                  # 53 skills
 ├── lab/
 │   └── eval/                        # Contributor-only deterministic eval tooling
@@ -94,7 +98,7 @@ Iron Laws are maintained in `plugins/ruby-grape-rails/references/iron-laws.yml`.
 When `iron-laws.yml` changes:
 
 ```bash
-bash scripts/generate-iron-law-outputs.sh
+bash scripts/generate-iron-law-outputs.sh all
 ```
 
 ### Workflow Skills

@@ -2,18 +2,24 @@
 
 ## When to Spawn Which Agents
 
+Agent identifiers below are subagent_type names (frontmatter `name`
+field). For the operational selection matrix used by `/rb:plan`
+fanout, see `planning-workflow.md` § "Agent Selection Matrix" +
+"Spawning Strategy" — that is canonical for the prepare-run
+`--agents=` mapping. This table is the higher-level guideline.
+
 | Feature Type | Agents to Spawn |
 |--------------|-----------------|
-| CRUD feature | patterns-analyst, active record |
-| Interactive UI | patterns-analyst, hotwire |
-| External integration | patterns-analyst, concurrency (+ gem-researcher ONLY if new lib) |
-| Background processing | patterns-analyst, sidekiq |
-| Data-heavy | patterns-analyst, active record (+ gem-researcher ONLY if new lib) |
-| Real-time | patterns-analyst, hotwire |
-| Auth/permissions | patterns-analyst, security-analyzer |
-| Refactoring | patterns-analyst, call-tracer |
-| Review fix (simple) | patterns-analyst only |
-| Review fix (complex) | patterns-analyst + relevant specialists |
+| CRUD feature | rails-patterns-analyst, active-record-schema-designer |
+| Interactive UI | rails-patterns-analyst, rails-architect |
+| External integration | rails-patterns-analyst, ruby-runtime-advisor (+ ruby-gem-researcher ONLY if new lib) |
+| Background processing | rails-patterns-analyst, sidekiq-specialist |
+| Data-heavy | rails-patterns-analyst, active-record-schema-designer (+ ruby-gem-researcher ONLY if new lib) |
+| Real-time | rails-patterns-analyst, rails-architect |
+| Auth/permissions | rails-patterns-analyst, security-analyzer |
+| Refactoring | rails-patterns-analyst, call-tracer |
+| Review fix (simple) | rails-patterns-analyst only |
+| Review fix (complex) | rails-patterns-analyst + relevant specialists |
 | Full new feature | ALL relevant agents |
 
 ## When to Spawn ruby-gem-researcher

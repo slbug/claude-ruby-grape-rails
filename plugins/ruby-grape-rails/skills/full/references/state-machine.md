@@ -221,20 +221,13 @@ Each phase transition appends to `## Phase History`:
 
 ## State Writer
 
-To update the State field after each phase:
+Main-session only. `/rb:full` skill body owns every State write.
 
-```bash
-# Idempotent State update (preserves rest of progress.md)
-sed -i.bak -E "s/^- \*\*State\*\*: .+$/- **State**: ${NEW_STATE}/" "${PLAN_DIR}/progress.md"
-rm -f "${PLAN_DIR}/progress.md.bak"
-
-# Append transition entry
-printf '\n- %s: %s → %s (%s)\n' "$(date -Iseconds)" "${OLD_STATE}" "${NEW_STATE}" "${NOTE}" \
-  >> "${PLAN_DIR}/progress.md"
-```
-
-Use `Edit` tool with exact `**State**: <old>` → `**State**: <new>`
-match in plugin-shipped agent contexts where `sed -i` is unavailable.
+- Use Edit tool. Match `- **State**: <OLD_STATE>`. Replace with
+  `- **State**: <NEW_STATE>`.
+- Use Edit tool again to append transition entry at end:
+  `- <ISO-8601-timestamp>: <OLD_STATE> → <NEW_STATE> (<note>)`.
+- NEVER use raw shell (`sed -i`, `rm`, `>>`, `>`).
 
 ## Verification Gate
 

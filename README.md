@@ -609,7 +609,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 
 | Command                  | Description                                                |
 | ------------------------ | ---------------------------------------------------------- |
-| `/rb:intro`              | Interactive plugin tutorial (6 sections, ~5 min)           |
+| `/rb:intro`              | Interactive plugin tutorial (8 sections, ~5 min)           |
 | `/rb:init`               | Initialize plugin in a project (auto-activation rules)     |
 | `/rb:quick <task>`       | Fast implementation, skip ceremony                         |
 | `/rb:investigate <bug>`  | Systematic bug debugging (4 parallel investigation tracks) |
@@ -717,7 +717,7 @@ This plugin draws inspiration from two excellent Claude Code plugin ecosystems:
 
 - **[Elixir/Phoenix Plugin](https://github.com/oliver-kriska/claude-elixir-phoenix)** by Oliver Kriska —
   The primary architectural inspiration. Adopted the agentic workflow philosophy, filesystem-as-state-machine pattern,
-  context supervisor compression, and the "Iron Laws" concept for non-negotiable rules.
+  and the "Iron Laws" concept for non-negotiable rules.
 
 - **[Compound Engineering Plugin](https://github.com/EveryInc/compound-engineering-plugin)** by Every Inc —
   Contributed ideas around parallel specialist review orchestration, structured investigation tracks, and solution compounding.

@@ -164,6 +164,13 @@ the calling CLI / hook.
   path as a parameter; callers (`hooks/scripts/compress-verify-output.rb`,
   `lab/eval/bin/match-trigger`) pass `references/compression/triggers.yml`.
   Handles `rake_excluded` precedence over `rake_verify_only`
+- `repo_root.rb` — shared `RubyGrapeRails::RepoRoot` module. Exposes
+  `find(start_dir)` (precedence: ascended `.git` dir → `.claude/settings*`
+  → `git rev-parse --show-toplevel` → `Gemfile` → start_dir),
+  `canonical(path)` (realpath with expand_path fallback),
+  `git_toplevel(path)` (Open3-based git rev-parse). Stdlib only.
+  Required by `bin/manifest-update`, `bin/extract-permissions`,
+  `bin/detect-stack`
 
 Notes:
 
@@ -253,7 +260,7 @@ NOT flag the fallback chain as over-engineered.
   `subagentStatusLine` are documented as supported)
 - Skill or agent files referencing `references/research/tool-batching.md`
   (canonical examples doc for the tool-batching preference)
-- Run manifest paths under `.claude/{namespace}/{slug}/RUN-CURRENT.json`
+- Run manifest paths under `.claude/{namespace}/RUN-CURRENT.json`
   and `RUN-HISTORY.jsonl` (cross-session resume contract — see
   `plugins/ruby-grape-rails/references/run-manifest.md`)
 

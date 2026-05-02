@@ -149,15 +149,21 @@ rules to `.claude/settings.json`:
 {
   "permissions": {
     "allow": [
+      "Bash(bundle *)",
+      "Bash(rails *)",
+      "Bash(rake *)",
+      "Bash(mkdir -p **/.claude/**)",
+      "Bash(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update *)",
+      "Read(*)",
+      "Grep(*)",
+      "Glob(*)",
       "Write(**/.claude/plans/**)",
       "Write(**/.claude/reviews/**)",
       "Write(**/.claude/audit/**)",
       "Write(**/.claude/research/**)",
       "Write(**/.claude/solutions/**)",
       "Write(**/.claude/skill-metrics/**)",
-      "Write(**/.claude/investigations/**)",
-      "Bash(mkdir -p **/.claude/**)",
-      "Bash(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update *)"
+      "Write(**/.claude/investigations/**)"
     ]
   }
 }

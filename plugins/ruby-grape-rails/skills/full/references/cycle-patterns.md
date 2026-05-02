@@ -2,20 +2,9 @@
 
 ## State Persistence
 
-### Progress File Schema
-
-```markdown
-# Progress: {feature}
-
-## Metadata
-- **Feature**: {feature description}
-- **Slug**: {slug}
-- **State**: WORKING
-- **Cycle**: 2/10
-- **Started**: 2024-01-15 10:30:00
-- **Last Update**: 2024-01-15 11:45:00
-
-## Files
+Canonical `progress.md` schema lives in `state-machine.md` §
+"Initial Progress Schema" + "State Writer". Use that as source of
+truth. Files map:
 
 | Type | Path |
 |------|------|
@@ -23,58 +12,22 @@
 | Progress | .claude/plans/{slug}/progress.md |
 | Review | .claude/reviews/{review-slug}-{datesuffix}.md |
 
-## Phase Progress
-
-| Phase | Status | Tasks | Completed |
-|-------|--------|-------|-----------|
-| 1. Schema | COMPLETED | 3 | 3 |
-| 2. Context | IN_PROGRESS | 4 | 2 |
-| 3. Hotwire/Turbo | PENDING | 5 | 0 |
-| 4. Tests | PENDING | 4 | 0 |
-
-## Current Task
-
-**Phase**: 2
-**Task**: 3/4
-**Description**: Implement MagicToken#verify
-**Attempt**: 2/3
-
-## Session Log
-
-### 11:45:00 - Task Failed
-- Task: Implement MagicToken#verify
-- Error: Test assertion failed
-- Retry: 1/3
-
-### 11:42:00 - Task Completed
-- Task: Implement MagicToken#create
-- Files: app/models/magic_token.rb
-- Verification: PASS
-
-### 11:35:00 - Task Completed
-- Task: Generate Auth service
-- Files: app/services/auth_service.rb, app/models/magic_token.rb
-- Verification: PASS
-```
-
 ## Recovery Patterns
 
 ### Context Window Reset
 
 When context window fills, Claude loses memory. Recovery:
 
-1. **Read progress file** to restore state
-2. **Read plan file** to find current task
-3. **Continue from checkpoint**
+1. Read `progress.md` to find current `**State**:`.
+2. Read `plan.md` to find first unchecked task.
+3. Continue from that task.
 
 ```
 # Recovery prompt (auto-generated)
 Resume feature development:
 - Progress file: .claude/plans/{slug}/progress.md
-- Current state: WORKING
-- Current phase: 2
-- Current task: 3/4
-- Last error: {error from progress file}
+- Current state: <named state from progress.md, e.g. WORKING>
+- Last error: {error from progress.md Phase History}
 
 Continue with /rb:work .claude/plans/{slug}/plan.md
 ```

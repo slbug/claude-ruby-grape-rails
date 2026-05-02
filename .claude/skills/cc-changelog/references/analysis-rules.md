@@ -59,6 +59,8 @@ When analyzing CC changelog entries, map them to specific plugin components:
 | New tools added | Agent `tools:` / `disallowedTools:` lists |
 | Tool deprecation | Agent tool references, skill instructions |
 | `SendMessage` / `TaskCreate` / etc. | Skill bodies using these tools |
+| Atomic file write / `rename(2)` semantics | `plugins/ruby-grape-rails/bin/manifest-update` (atomic write helper, `SKILL_CONVENTIONS`, `ALLOWED_PATH_RE`) |
+| Subagent Write to existing file | `plugins/ruby-grape-rails/bin/manifest-update`, `references/run-manifest.md` (per-run unique path strategy) |
 
 ### Compaction and Memory
 

@@ -25,8 +25,11 @@ skills/{name}/
   passed to subagents. Use relative `.claude/...` in contract docs,
   templates, user-facing references describing where artifacts live.
 - Spawn-fanout skills: use run manifest at
-  `.claude/{namespace}/{slug}/RUN-CURRENT.json` for cross-session
-  resume. Per-run artifact paths use `{slug}-{datesuffix}.md`. See
+  `.claude/{namespace}/RUN-CURRENT.json` (where `{namespace}` already
+  includes the per-skill slug fragment, e.g. `reviews/{review-slug}`,
+  `plans/{plan-slug}/research-fanout`). Per-run artifact paths use
+  `{slug}-{datesuffix}.md` (review) or stable `{topic-slug}.md`
+  (plan/brainstorm). See
   `plugins/ruby-grape-rails/references/run-manifest.md` for schema,
   staleness rules, and write protocol.
 - Agent dispatch: foreground only. Skill bodies MUST NOT pass

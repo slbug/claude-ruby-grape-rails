@@ -182,16 +182,24 @@ even when the unmodified file is not part of the PR.
   without restoring an equivalent guard is a determinism-policy
   regression.
 - **`plugins/ruby-grape-rails/references/run-manifest.md`** edited →
-  also check `plugins/ruby-grape-rails/skills/review/SKILL.md`,
+  also check `plugins/ruby-grape-rails/bin/manifest-update`
+  (encodes the schema in `SKILL_CONVENTIONS` + `ALLOWED_PATH_RE`),
+  `plugins/ruby-grape-rails/skills/review/SKILL.md`,
   `plugins/ruby-grape-rails/skills/review/references/review-playbook.md`,
   `plugins/ruby-grape-rails/skills/review/references/review-template.md`,
+  `plugins/ruby-grape-rails/skills/plan/SKILL.md`,
+  `plugins/ruby-grape-rails/skills/plan/references/planning-workflow.md`,
+  `plugins/ruby-grape-rails/skills/brainstorm/SKILL.md`,
   `README.md` (How Review Works section + Artifact Layout),
   `CLAUDE.md` (Artifact Directories), `.claude/rules/skill-development.md`,
   `.claude/rules/agent-development.md`. Manifest schema, staleness
-  rules, and atomic-write protocol must stay aligned across these
-  surfaces. Per-run artifact paths use `{slug}-{datesuffix}.md`; a
-  shipped reference to `{slug}.md` (without datesuffix) for review
-  consolidated artifacts is a drift defect.
+  rules, atomic-write protocol, and per-skill conventions must stay
+  aligned across these surfaces. Per-run artifact paths use
+  `{slug}-{datesuffix}.md` (review) or stable `{topic-slug}.md`
+  (plan/brainstorm); a shipped reference to `{slug}.md` (without
+  datesuffix) for review consolidated artifacts is a drift defect.
+  A schema change without matching `bin/manifest-update`
+  `SKILL_CONVENTIONS` update is a silent contract break.
 - **`plugins/ruby-grape-rails/references/research/tool-batching.md`**
   edited → verify links from `.claude/rules/agent-development.md` §
   "Bash Discipline" and
