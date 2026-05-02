@@ -59,7 +59,7 @@ Task format: `- [ ] [Pn-Tm][annotation] Description`
 
 ### Fallback: Keyword Matching (Legacy Plans)
 
-If no `[annotation]` annotation, fall back to keywords:
+If the task has no `[annotation]`, fall back to keywords:
 
 | Keywords (priority order) | Agent |
 |---------------------------|-------|
