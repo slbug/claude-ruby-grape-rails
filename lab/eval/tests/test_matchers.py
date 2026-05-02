@@ -229,29 +229,29 @@ omitClaudeMd: true
         self.assertTrue(passed)
         self.assertIn("omits CLAUDE.md", evidence)
 
-    def test_omit_claudemd_coherent_rejects_true_for_write_capable_agents(self) -> None:
+    def test_omit_claudemd_coherent_accepts_true_for_write_capable_allowlist_agents(self) -> None:
         content = """---
 name: sample-agent
-description: Coordinate the workflow and write output files.
+description: Specialist that writes its own artifact under .claude/.
 tools: Read, Write, Grep, Glob
 omitClaudeMd: true
 ---
 """
         passed, evidence = agent_matchers.omit_claudemd_coherent(content)
-        self.assertFalse(passed)
-        self.assertIn("should not set omitClaudeMd", evidence)
+        self.assertTrue(passed)
+        self.assertIn("specialist allowlist agent omits CLAUDE.md", evidence)
 
-    def test_omit_claudemd_coherent_rejects_true_for_edit_capable_agents(self) -> None:
+    def test_omit_claudemd_coherent_accepts_true_for_edit_capable_allowlist_agents(self) -> None:
         content = """---
 name: sample-agent
-description: Make direct code edits when needed.
+description: Specialist that edits artifacts.
 tools: Read, Edit, Grep, Glob
 omitClaudeMd: true
 ---
 """
         passed, evidence = agent_matchers.omit_claudemd_coherent(content)
-        self.assertFalse(passed)
-        self.assertIn("should not set omitClaudeMd", evidence)
+        self.assertTrue(passed)
+        self.assertIn("specialist allowlist agent omits CLAUDE.md", evidence)
 
 
     # --- denylist-only agent matcher tests (v1.8.1) ---

@@ -33,8 +33,8 @@ For exact shell commands, see
 ## Main-Session Fanout
 
 `/rb:review` spawns specialist agents directly from the main session in
-parallel. There is NO wrapper agent. Subagents are leaf workers — they
-return findings, they do not spawn further agents.
+parallel. Subagents are leaf workers — they return findings; they do not
+spawn further agents.
 
 ### Fanout Pattern
 

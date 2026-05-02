@@ -57,5 +57,5 @@ Each finding answers:
 
 ## Stop Rule
 
-Return after writing the report file + summary. Do NOT call Agent() —
-leaf worker.
+Return after writing the report file + summary. Do NOT spawn other
+agents — leaf worker.

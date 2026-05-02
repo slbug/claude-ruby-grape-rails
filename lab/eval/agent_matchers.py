@@ -85,10 +85,12 @@ def omit_claudemd_coherent(content: str, **_: Any) -> tuple[bool, str]:
             return True, "specialist agent omits CLAUDE.md"
         return False, "denylist-only agent must set omitClaudeMd: true"
 
-    # Allowlist agents: write-capable agents should keep CLAUDE.md
+    # Allowlist agents (with Write/Edit): doctrine permits omitClaudeMd: true
+    # for shipped specialists writing only their own artifacts under .claude/.
+    # No contributor CLAUDE.md context needed regardless of tool model.
     if write_like_tools.intersection(tools):
         if omit_claudemd is True:
-            return False, "write-capable allowlist agent should not set omitClaudeMd"
+            return True, "specialist allowlist agent omits CLAUDE.md"
         return True, "write-capable agent keeps CLAUDE.md context"
 
     # Allowlist read-only agents: should set omitClaudeMd

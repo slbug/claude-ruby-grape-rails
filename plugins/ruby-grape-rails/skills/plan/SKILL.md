@@ -257,8 +257,8 @@ references:
 ## Main-Session Fanout
 
 `/rb:plan` spawns research agents directly from the main session in
-parallel. There is NO wrapper orchestrator agent. Specialists are leaf
-workers — they research, write artifact, return summary.
+parallel. Specialists are leaf workers — they research, write artifact,
+return summary.
 
 Steps in skill-body execution order:
 
