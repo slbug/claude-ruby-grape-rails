@@ -38,9 +38,18 @@ Add or update a short policy comment near the top of the hook when behavior chan
 
 `active-plan-lib.sh` / `active-plan-marker.sh` manage `.claude/ACTIVE_PLAN` marker file:
 
-- **Set by:** `/rb:plan` (after creating plan)
-- **Cleared by:** `/rb:work` (when all tasks complete)
-- **Read by:** `precompact-rules.sh`, `check-scratchpad.sh`, `log-progress.sh`
-- `/rb:full` orchestrates the lifecycle via plan/work phases
+- **Set by:** `/rb:plan` after creating standalone plan, OR `/rb:full` before
+  invoking `/rb:plan` to pre-bind the plan namespace
+- **Cleared by:** `/rb:work` (when all tasks complete). `/rb:full` skill body
+  tracks PLAN_DIR locally for its own progress.md State writes; later phases
+  (`/rb:verify`, `/rb:review`, `/rb:compound`) do not require the marker —
+  they resolve from current state / argument flags.
+- **Read by:** session resume detection, `precompact-rules.sh`,
+  `check-scratchpad.sh` (verified: calls `get_active_plan` at line 39),
+  `log-progress.sh`, `postcompact-verify.sh`, `stop-failure-log.sh`,
+  `/rb:plan` strict pre-bind detection (direct file read, not via
+  `get_active_plan` fallbacks).
+- `/rb:full` orchestrates the lifecycle via plan/work phases from the
+  skill body in the main session.
 
 Marker lifecycle is enforced at the skill level, not via hooks.

@@ -46,12 +46,7 @@ If it is missing or empty, stop and tell the contributor to run
 
 ### 3. Compute Windowed Aggregates with the Canonical Script
 
-Use:
-
-```bash
-python3 ${CLAUDE_SKILL_DIR}/../session-scan/references/compute-metrics.py \
-  --trends .claude/session-metrics/metrics.jsonl
-```
+Use: run `python3 ${CLAUDE_SKILL_DIR}/../session-scan/references/compute-metrics.py --trends .claude/session-metrics/metrics.jsonl` to compute trends from the metrics ledger.
 
 Only add `--project "$PROJECT_FILTER"` or `--provider "$PROVIDER_FILTER"` when
 the contributor requested those filters.

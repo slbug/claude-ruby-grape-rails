@@ -1,9 +1,28 @@
 """Agent-specific structural matchers."""
 
 
+import re
+from pathlib import PurePosixPath
 from typing import Any
 
-from .matchers import parse_frontmatter
+from .frontmatter import get_body, parse_frontmatter
+
+
+# Case-sensitive: CC tool name is exactly `Agent`. Tolerate whitespace
+# between `Agent` and `(` to catch `Agent (`, `Agent\t(`, etc.
+_AGENT_CALL = re.compile(r"\bAgent\s*\(")
+
+
+def _is_contributor_agent_path(skill_path: str) -> bool:
+    """Detect contributor agent paths (`.claude/agents/**`) regardless of
+    absolute/relative form, leading `./`, or platform separators."""
+    if not skill_path:
+        return False
+    parts = PurePosixPath(skill_path.replace("\\", "/")).parts
+    return any(
+        parts[i] == ".claude" and parts[i + 1] == "agents"
+        for i in range(len(parts) - 1)
+    )
 
 
 def tools_present(content: str, min_count: int = 1, **_: Any) -> tuple[bool, str]:
@@ -70,26 +89,37 @@ def read_only_tools_coherent(content: str, **_: Any) -> tuple[bool, str]:
     return False, "Read tool present without disallowing write-capable tools"
 
 
-def omit_claudemd_coherent(content: str, **_: Any) -> tuple[bool, str]:
+def omit_claudemd_coherent(content: str, skill_path: str = "", **_: Any) -> tuple[bool, str]:
     fm = parse_frontmatter(content)
     tools = _coerce_tool_list(fm.get("tools", []))
     disallowed = _coerce_tool_list(fm.get("disallowedTools", []))
     omit_claudemd = fm.get("omitClaudeMd")
     write_like_tools = {"Write", "Edit", "NotebookEdit"}
 
-    # Denylist-only agents: omitClaudeMd is acceptable (specialists don't need
-    # contributor context regardless of Write access)
+    # Contributor agents (.claude/agents/**) MAY omit the field per
+    # `agent-development.md` § omitClaudeMd Scope. They run in contributor
+    # sessions and benefit from contributor CLAUDE.md context.
+    if _is_contributor_agent_path(skill_path):
+        if omit_claudemd is True:
+            return True, "contributor agent omits CLAUDE.md (allowed)"
+        return True, "contributor agent keeps CLAUDE.md context (allowed)"
+
+    # Denylist-only agents: must set omitClaudeMd: true (specialists don't
+    # need contributor CLAUDE.md context). The previous "orchestrator"
+    # exception is removed — no shipped wrapper-orchestrator agents remain.
     if not tools and disallowed:
         if omit_claudemd is True:
             return True, "specialist agent omits CLAUDE.md"
-        # Denylist-only without omitClaudeMd is also acceptable (orchestrators)
-        return True, "denylist-only agent without omitClaudeMd (acceptable)"
+        return False, "denylist-only agent must set omitClaudeMd: true"
 
-    # Allowlist agents: write-capable agents should keep CLAUDE.md
+    # Allowlist agents (with Write/Edit): doctrine requires omitClaudeMd: true
+    # for shipped specialists. Mirrors denylist branch — every shipped
+    # specialist agent omits contributor CLAUDE.md context regardless of
+    # tool model. See `agent-development.md` § "omitClaudeMd Scope".
     if write_like_tools.intersection(tools):
         if omit_claudemd is True:
-            return False, "write-capable allowlist agent should not set omitClaudeMd"
-        return True, "write-capable agent keeps CLAUDE.md context"
+            return True, "specialist allowlist agent omits CLAUDE.md"
+        return False, "shipped allowlist agent must set omitClaudeMd: true"
 
     # Allowlist read-only agents: should set omitClaudeMd
     if omit_claudemd is True:
@@ -99,6 +129,23 @@ def omit_claudemd_coherent(content: str, **_: Any) -> tuple[bool, str]:
     return False, f"read-only agent {agent_name!r} missing omitClaudeMd: true"
 
 
+def no_nested_agent(content: str, **_: Any) -> tuple[bool, str]:
+    """Agents must not declare or invoke Agent. Denylist-only agents must
+    additionally list Agent in disallowedTools so the harness blocks it
+    even if a future body forgets the rule (defense in depth)."""
+    fm = parse_frontmatter(content)
+    body = get_body(content)
+    tool_list = _coerce_tool_list(fm.get("tools", []))
+    disallowed = _coerce_tool_list(fm.get("disallowedTools", []))
+    if "Agent" in tool_list:
+        return False, "agent declares Agent in tools (forbidden — agents are leaf workers)"
+    if _AGENT_CALL.search(body) or "subagent_type:" in body:
+        return False, "agent body contains Agent(...) or subagent_type: call (forbidden — agents are leaf workers)"
+    if not tool_list and disallowed and "Agent" not in disallowed:
+        return False, "denylist-only agent must list Agent in disallowedTools (defense in depth)"
+    return True, "agent does not declare or invoke Agent"
+
+
 MATCHERS = {
     "tools_present": tools_present,
     "disallowed_tools_present": disallowed_tools_present,
@@ -106,4 +153,5 @@ MATCHERS = {
     "effort_present": effort_present,
     "read_only_tools_coherent": read_only_tools_coherent,
     "omit_claudemd_coherent": omit_claudemd_coherent,
+    "no_nested_agent": no_nested_agent,
 }

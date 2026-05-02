@@ -12,9 +12,17 @@ set -o pipefail
 # 3. Fallback: most recent planning-phase plan (research exists, plan.md absent)
 #
 # Marker file lifecycle:
-# - Written by: /rb:plan (after creating plan)
-# - Cleared by: /rb:work (when all tasks complete)
-# - Read by: session resume detection, precompact-rules.sh, log-progress.sh
+# - Written by: /rb:plan after creating standalone plan, OR /rb:full
+#   before invoking /rb:plan to pre-bind the plan namespace
+# - Cleared by: /rb:work (when all tasks complete). /rb:full skill body
+#   tracks PLAN_DIR locally for its own progress.md State writes; later
+#   phases (/rb:verify, /rb:review, /rb:compound) do not require the
+#   marker — they resolve from current state / argument flags.
+# - Read by: session resume detection, precompact-rules.sh,
+#   check-scratchpad.sh (calls get_active_plan at line 39),
+#   log-progress.sh, postcompact-verify.sh, stop-failure-log.sh,
+#   /rb:plan strict pre-bind detection (direct file read, not via
+#   get_active_plan fallbacks).
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"

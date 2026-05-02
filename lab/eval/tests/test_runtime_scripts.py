@@ -1078,6 +1078,10 @@ class RuntimeScriptTests(unittest.TestCase):
             self.assertIn(expected, result.stderr)
 
     def test_block_dangerous_ops_blocks_ruby_script_file_wrapper(self) -> None:
+        # `dir=REPO_ROOT` is intentional: block-dangerous-ops.sh's wrapper
+        # inspection only triggers on paths inside REPO_ROOT
+        # (block-dangerous-ops.sh:705-709 `is_path_within_root` check).
+        # `TemporaryDirectory` cleans up; no leak after run.
         with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmpdir:
             tmp = Path(tmpdir)
             script = tmp / "drop.rb"
@@ -1089,6 +1093,7 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("destructive Rails database command", result.stderr)
 
     def test_block_dangerous_ops_blocks_python_script_file_wrapper(self) -> None:
+        # `dir=REPO_ROOT` is intentional: see ruby variant above.
         with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmpdir:
             tmp = Path(tmpdir)
             script = tmp / "drop.py"

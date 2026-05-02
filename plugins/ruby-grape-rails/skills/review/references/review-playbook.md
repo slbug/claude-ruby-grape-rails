@@ -134,3 +134,150 @@ file-type-specific checklists without bloating the main routing surface.
 | `ary.map { |x| x.name }` | Redundant block param | `ary.map(&:name)` or `ary.map { it.name }` |
 | `user && user.name` | Manual nil-guard | `user&.name` |
 | `DateTime.now` | Wrong default in Rails apps | `Time.current` or `Time.now` |
+
+## Diff Collection
+
+`/rb:review` skill body uses these commands to resolve base ref and
+collect changed file list:
+
+```bash
+eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"
+MERGE_BASE=$(git merge-base HEAD "$BASE_REF")
+CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$MERGE_BASE"...HEAD)
+```
+
+Pass `$CHANGED_FILES` to every spawned reviewer Agent() call. Reviewers
+scope all reads/grep/analysis to this file list — they must NEVER scan
+unchanged files.
+
+## Worker Briefing Template
+
+Every reviewer `Agent(subagent_type:)` call from `/rb:review` skill body
+includes this prompt template:
+
+```text
+Task: review {file list} for {scope}.
+
+Scope: $CHANGED_FILES (from main session diff collection)
+Base ref: $BASE_REF (from resolve-base-ref)
+Artifact path: .claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md
+
+Required output:
+1. Write artifact to the exact path above
+   (always — even if findings are empty, write PASS with files reviewed)
+2. Return summary in Agent return text (used as artifact-recovery fallback)
+
+Findings format:
+- file:line — Title
+- Severity: Critical | Warning | Info
+- Confidence: HIGH | MEDIUM | LOW
+- Description, current code, suggested code, why it matters
+
+Stop after returning. Do NOT call Agent() — this is a leaf review.
+```
+
+## Artifact Recovery
+
+After all spawned reviewers complete, `/rb:review` skill body MUST verify
+each expected current-run artifact path exists:
+
+1. For every reviewer in the spawn manifest, check
+   `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` exists.
+2. If missing, extract findings from the Agent return text and write
+   the artifact yourself from main session.
+3. Do NOT re-spawn the reviewer — the work is done; only the file write
+   failed (known CC platform behavior with Write permissions in
+   spawned agents).
+4. If the return text is empty/unusable, note the gap in the
+   consolidated review and continue.
+
+Compression must run only on the verified manifest (post-recovery).
+
+## Consolidated Review Format
+
+Write the synthesized review to `.claude/reviews/{review-slug}.md`:
+
+```markdown
+# Review: {track}
+**Date**: {timestamp}
+**Complexity**: {Simple|Medium|Complex} ({N} files{, escalated: reason})
+**Files Changed**: {list}
+
+## Summary
+- Critical: {N}
+- Warnings: {N}
+- Info: {N}
+- Clean: {Y/N}
+
+## Critical Issues
+
+### 1. {Issue Title}
+**File**: `path/to/file.rb:{line}`
+**Severity**: Critical | **Confidence**: HIGH
+**Category**: {security/performance/correctness}
+
+{description of issue}
+
+**Current**:
+```ruby
+{bad code}
+```
+
+**Suggested**:
+
+```ruby
+{good code}
+```
+
+**Why it matters**: {explanation}
+
+## Warnings
+
+### 2. {Issue Title}
+
+**Severity**: Warning | **Confidence**: MEDIUM
+
+...
+
+## Pre-existing Issues (unchanged code)
+
+- {issue} (not introduced by this change)
+
+## Positive Findings
+
+- {what was done well}
+
+```
+
+## Severity Levels
+
+### Critical
+
+Must fix before merge:
+- Security vulnerabilities
+- Data loss risks
+- Production outages
+- Iron Law violations in critical paths
+
+### Warning
+Should fix before merge:
+- Performance issues
+- Maintainability problems
+- Test coverage gaps
+- Potential bugs
+
+### Info
+Nice to have:
+- Style suggestions
+- Refactoring opportunities
+- Documentation improvements
+
+## Deduplication Strategy
+
+When multiple agents find the same issue:
+
+1. Merge into single finding
+2. Cite all agents who found it
+3. Use most specific description
+4. Keep highest severity
+5. List all affected lines

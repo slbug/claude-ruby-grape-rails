@@ -1,47 +1,53 @@
 ---
 paths:
   - plugins/ruby-grape-rails/agents/**
+  - .claude/agents/**
 ---
 
 # Agent Development
 
 ## Model Selection
 
-- **sonnet** (default): near-opus quality at lower cost; use for most specialists and secondary orchestrators
-- **opus**: primary workflow orchestrators and security-critical agents only
+- **sonnet** (default): near-opus quality at lower cost; use for most specialists
+- **opus**: security-critical agents only (e.g., security-analyzer)
 - **haiku**: mechanical tasks — compression, verification, dependency analysis
 
 ## Tool Access
 
 Prefer denylist-only over `tools:` allowlists (follows built-in agent pattern).
 
-- All denylist specialists block: `Agent, EnterWorktree, ExitWorktree, Skill`
+- All denylist agents block: `Agent, EnterWorktree, ExitWorktree, Skill`
 - **Artifact-writing agents**: add `Edit, NotebookEdit` to disallowedTools
 - **Conversation-only agents**: add `Write` to the above
-- `parallel-reviewer` keeps `Agent` (spawns sub-reviewers) but blocks the rest
-- `tools:` allowlists only for intentionally narrow agents (web-researcher, output-verifier, ruby-gem-researcher)
+- `tools:` allowlists only for intentionally narrow agents (context-supervisor, web-researcher, output-verifier, ruby-gem-researcher)
+- NO agent declares or invokes `Agent` — see "Subagents Are Leaf Workers" below
 
-## omitClaudeMd
+## Subagents Are Leaf Workers
 
-Set `omitClaudeMd: true` for shipped specialist agents that do not need
-contributor-only CLAUDE.md guidance at runtime. Iron Laws still arrive
-through `SubagentStart`. The criterion is whether the agent needs repo
-conventions, not whether it has Write access.
+- NEVER declare `Agent` in subagent `tools:` allowlist
+- NEVER write `Agent(subagent_type:)` calls inside subagent bodies
+- Orchestration belongs in skill bodies (main-session fanout)
+- Specialist agents stay terminal: read, analyze, write artifact, return summary
+- `context-supervisor` and similar compression agents are leaf workers
+  callable from any skill body post-fanout
 
 ## Memory
 
-Use `memory: project` for agents that benefit from cross-session learning
-(orchestrators, pattern analysts). Note: `memory` auto-enables Read, Write,
-Edit — only add to agents that already have Write access.
+Use `memory: project` only for pattern-analyst agents that benefit from
+cross-session learning. Note: `memory` auto-enables Read, Write, Edit —
+only add to agents that already have Write access. After the orchestrator
+cleanup, no agent ships with `memory: project`; the field is a future
+extension hook, not an active mechanism.
+
+## omitClaudeMd Scope
+
+- Shipped specialist agents (`plugins/ruby-grape-rails/agents/**`): SET
+  `omitClaudeMd: true`. They do not need contributor CLAUDE.md context.
+- Contributor agents (`.claude/agents/**`): MAY omit the field. They run
+  in contributor sessions and benefit from contributor CLAUDE.md / repo
+  conventions context.
 
 ## Size Limits
 
-- Target: 300 lines; hard limit: 365 (specialist) / 535 (orchestrator)
+- Target: 300 lines; hard limit: 365
 - Description: <= 250 characters (agent descriptions are shorter than skill descriptions)
-
-## Why Orchestrators Exceed Targets
-
-Marketplace agents cannot reliably Read `references/*.md` (permission
-prompt in installed plugins). Subagent prompts must be inline (~80 lines
-x 4 agents = 320 lines minimum). Only trim purely informational,
-non-execution-critical content.

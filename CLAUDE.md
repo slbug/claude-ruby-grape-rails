@@ -35,7 +35,7 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 | `/rb:plan --existing` | Enhancement | Plan file | Enhanced plan with research |
 | `/rb:brief` | Understanding | Plan file | Interactive walkthrough (ephemeral) |
 | `/rb:work` | Execution | Plan file | Updated checkboxes, `.claude/plans/{slug}/progress.md` |
-| `/rb:verify` | Verification | Plan namespace | Verification results |
+| `/rb:verify` | Verification | `[--quick\|--full]` (mode flag; resolves from current branch state, NOT plan path) | Verification results |
 | `/rb:review` | Quality | Changed files | `.claude/reviews/{review-slug}.md` + `.claude/reviews/{agent-slug}/...` |
 | `/rb:compound` | Knowledge | Solved problem | `.claude/solutions/{category}/{fix}.md` |
 | `/rb:full` | All | Feature description | Complete cycle with compounding |
@@ -51,10 +51,14 @@ summaries/, progress.md, scratchpad.md). Other `.claude/` namespaces:
 
 ### Context Supervisor Pattern
 
-Orchestrators spawn a `context-supervisor` (haiku) to compress worker output
-into `summaries/consolidated.md` before synthesis, preventing context
-exhaustion. Used by: planning-orchestrator, parallel-reviewer, audit skill,
-docs-validation-orchestrator.
+After main-session fanout to specialist agents, the skill body invokes
+`context-supervisor` (haiku) as a leaf compression worker. Inputs are
+explicit current-run artifact paths (no broad globs). Output is a
+consolidated summary the skill body reads before final synthesis.
+
+Skills using this pattern: `/rb:plan` (compresses research/ →
+summaries/consolidated.md), `/rb:review` (consolidates per-reviewer
+artifacts → consolidated review).
 
 ## Structure
 
@@ -71,7 +75,7 @@ claude-ruby-grape-rails/
 │   └── ruby-grape-rails/
 │       ├── .claude-plugin/
 │       │   └── plugin.json
-│       ├── agents/                  # 23 specialist agents
+│       ├── agents/                  # 20 specialist agents
 │       ├── bin/                     # Plugin executables (added to Bash tool PATH)
 │       ├── hooks/
 │       │   └── hooks.json
@@ -131,7 +135,7 @@ Solution docs use YAML frontmatter (see `plugins/ruby-grape-rails/skills/compoun
 - [ ] `omitClaudeMd: true` for specialist agents that don't need contributor context
 - [ ] Skills preloaded
 - [ ] Description at or under 250 chars
-- [ ] Under target (300 lines), hard limit only if justified by inline subagent prompts
+- [ ] Under target (300 lines); move long templates and examples to references/
 
 ### New skill
 

@@ -100,9 +100,10 @@ for non-MCP tools. Per the Anthropic Claude Code hooks docs:
   to `Bash`.
 
 Net effect: an in-place "compress what the model receives" cannot be
-implemented inside `PostToolUse`. The repo's own hook-development rule
-already states this ("PostToolUse stdout is verbose-mode only — use
-`exit 2` + stderr to feed messages to Claude").
+implemented inside `PostToolUse`. CC's `PostToolUse` event design
+constrains this: stdout is verbose-mode only; messages reach Claude via
+`exit 2` + stderr. (No alternative payload field replaces tool output
+for `Bash`.)
 
 A real replacement mechanism (PreToolUse rewrite, additionalContext
 layer-add, or pre-compaction) is deferred until telemetry quantifies

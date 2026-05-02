@@ -20,13 +20,13 @@ When analyzing CC changelog entries, map them to specific plugin components:
 
 | CC Change Pattern | Plugin Files to Check |
 |-------------------|-----------------------|
-| New frontmatter fields | All 23 agents in `plugins/ruby-grape-rails/agents/*.md` |
+| New frontmatter fields | All 20 agents in `plugins/ruby-grape-rails/agents/*.md` |
 | `model:` value changes | Agents using specific model values |
 | `effort:` level changes | All agents with effort levels |
 | `tools:` / `disallowedTools:` | Review agents (read-only enforcement) |
 | `omitClaudeMd:` behavior | Agents with `omitClaudeMd: true` |
 | `skills:` preloading | Agents with preloaded skills |
-| `isolation:` / `background:` | Orchestrator agents |
+| `isolation:` / `background:` | Long-running specialist agents (e.g., deep-bug-investigator) |
 | `maxTurns:` behavior | All agents with maxTurns set |
 
 ### Skill System
@@ -58,7 +58,7 @@ When analyzing CC changelog entries, map them to specific plugin components:
 | Tool parameter changes | Hooks checking tool inputs |
 | New tools added | Agent `tools:` / `disallowedTools:` lists |
 | Tool deprecation | Agent tool references, skill instructions |
-| `SendMessage` / `TaskCreate` / etc. | Orchestrator agents using these tools |
+| `SendMessage` / `TaskCreate` / etc. | Skill bodies using these tools |
 
 ### Compaction and Memory
 
@@ -66,7 +66,7 @@ When analyzing CC changelog entries, map them to specific plugin components:
 |-------------------|-----------------------|
 | Compaction behavior | `PreCompact` / `PostCompact` hooks |
 | Context window changes | Agent token budgets, skill sizes |
-| Memory system changes | Agents with `memory: project` |
+| Memory system changes | Pattern-analyst agents (none currently — future extension hook) |
 
 ## Impact Classification Rules
 

@@ -52,6 +52,7 @@ def default_eval(agent_path: str) -> EvalDefinition:
                         {"type": "disallowed_tools_present", "desc": "Has disallowed tools"},
                         {"type": "read_only_tools_coherent", "desc": "Tool restrictions coherent"},
                         {"type": "omit_claudemd_coherent", "desc": "CLAUDE.md loading is scoped correctly"},
+                        {"type": "no_nested_agent", "desc": "Agent body does not declare or invoke Agent (leaf worker)"},
                         {"type": "no_dangerous_patterns", "desc": "No catastrophic patterns"},
                     ],
                 },

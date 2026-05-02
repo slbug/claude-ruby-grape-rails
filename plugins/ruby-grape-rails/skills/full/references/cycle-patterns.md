@@ -128,16 +128,6 @@ Phase 3: Hotwire/Turbo         ████████████  (starts whe
 Phase 4: Tests                 ████████████  (starts with Phase 2)
 ```
 
-### Incremental Review
-
-Don't wait until end for review:
-
-```
-Phase 1 complete → Quick review
-Phase 2 complete → Quick review
-All phases complete → Full review
-```
-
 ## Failure Modes
 
 ### Recoverable Failures
@@ -204,17 +194,41 @@ Execution:
 3. Sync at integration points
 ```
 
-## Integration with CI/CD
+## Integration
 
-On completion, optionally trigger:
+For phase transitions and gating rules see
+`${CLAUDE_SKILL_DIR}/references/state-machine.md`. `/rb:full` does not
+run git lifecycle commands directly; users own staging, commits,
+branches, and release artifacts.
 
-```bash
-# Create PR
-gh pr create --title "feat: {feature}" --body "$(cat .claude/reviews/{slug}.md)"
+## Checkpoint Template
 
-# Run CI
-gh workflow run ci.yml
+```markdown
+## Checkpoint: {timestamp}
+**Phase**: {current phase}
+**Status**: {in-progress/blocked/complete}
 
-# Notify
-echo "Feature complete: {feature}" | slack-notify
+### Completed
+- {what was done}
+
+### Blockers
+- {what is blocked}
+
+### Context
+- {key decisions or findings}
+
+### Next Phase
+- {what comes next}
+```
+
+## Blocker Template
+
+```markdown
+## Blocker: {id}
+**Phase**: {phase}
+**Description**: {what's blocked}
+**Attempts**: {what was tried}
+**Options**:
+- A: {option}
+- B: {option}
 ```
