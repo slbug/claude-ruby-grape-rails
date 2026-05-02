@@ -7,15 +7,22 @@
 Spawn 2 agents via two Agent tool calls in ONE Tool Use block
 (foreground parallel, NOT `run_in_background: true`):
 
-1. **`rails-patterns-analyst`**: "How does this codebase handle {topics}?"
-   - Writes findings to `.claude/plans/{slug}/research/codebase-scan.md`
+Both agents receive their absolute artifact path from
+`manifest-update spawn-paths "$MANIFEST"`. Paths resolve to
+`.claude/plans/{plan-slug}/research/<topic-slug>.md` per the brainstorm
+namespace convention.
+
+1. **`rails-patterns-analyst`** (topic `codebase-scan`): "How does
+   this codebase handle {topics}?"
+   - Writes findings to the absolute path passed in the spawn prompt
    - Focus: existing patterns, conventions, relevant modules
 
-2. **`web-researcher`**: "Ruby/Rails approaches to {topics}"
+2. **`web-researcher`** (topic `web-research`): "Ruby/Rails
+   approaches to {topics}"
    - Returns 500-word summary in Agent return text (Write tool
      disallowed in agent frontmatter)
-   - Main session materializes the `web-research` manifest path via
-     Artifact Recovery (`recovered-from-return`)
+   - Main session materializes the manifest path via Artifact
+     Recovery (`recovered-from-return`)
    - Focus: proven patterns, trade-offs, library options
 
 **Iron Law: MAX 2 agents in first research cycle.** Keep it fast (~2-3 min).
