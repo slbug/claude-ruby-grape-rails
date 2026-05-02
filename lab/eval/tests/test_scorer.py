@@ -76,13 +76,13 @@ class ScorerTests(unittest.TestCase):
         )
         self.assertTrue(omit_assertion.passed)
 
-    def test_default_agent_eval_rejects_omit_claudemd_for_write_capable_agents(self) -> None:
+    def test_default_agent_eval_accepts_omit_claudemd_for_write_capable_specialist_agents(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             agent_path = Path(tmpdir) / "sample-agent.md"
             agent_path.write_text(
                 "---\n"
                 "name: sample-agent\n"
-                "description: Coordinate the workflow and write summaries for the parent agent.\n"
+                "description: Specialist that writes its own artifact under .claude/ for the calling skill body.\n"
                 "tools: Read, Write, Grep, Glob\n"
                 "disallowedTools: Edit, NotebookEdit\n"
                 "effort: medium\n"
@@ -99,7 +99,7 @@ class ScorerTests(unittest.TestCase):
             for assertion in result.dimensions["safety"].assertions
             if assertion.check_type == "omit_claudemd_coherent"
         )
-        self.assertFalse(omit_assertion.passed)
+        self.assertTrue(omit_assertion.passed)
 
     def test_trigger_scoring_and_overlap(self) -> None:
         trigger_results = score_all()
