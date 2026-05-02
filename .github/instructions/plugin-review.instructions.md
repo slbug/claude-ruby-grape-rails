@@ -116,14 +116,17 @@ excludeAgent: "coding-agent"
   `/rb:provenance-scan` user-invocable skill
 - `manifest-update` (Ruby) — atomic JSON manifest writer for
   spawn-fanout RUN-CURRENT.json files. Subcommands: `init`, `patch`
-  (deep-merge from stdin, auto-stamps `updated_at`), `archive`
-  (append to RUN-HISTORY.jsonl + unlink RUN-CURRENT.json), `status`
-  (read-only summary). Path allowlist:
+  (deep-merge from stdin, auto-stamps `updated_at`), `prepare-respawn`
+  (unlink stale stubs at manifest-tracked agent paths only; size <
+  1000 bytes; respawnable statuses), `archive` (append to
+  RUN-HISTORY.jsonl + unlink RUN-CURRENT.json), `status` (read-only
+  summary). Path allowlist:
   `<...>/.claude/<ns>/<slug>/RUN-CURRENT.json` only. Symlink refusal
   on target + parent dir. Atomic write via `mktemp` + `fsync` + Ruby
   `File.rename` (POSIX `rename(2)`) + directory `fsync`. Fail-closed
   on path / JSON / IO errors. Stdlib only. Skill bodies that mutate
-  manifest call this — never raw `mv` / `cp` / `jq -i`
+  manifest or unlink stale stubs call this — never raw `mv` / `cp` /
+  `jq -i` / `rm`
 
 When adding a binary, also add it to this "Currently shipped
 binaries" section above, ensure `chmod +x` is committed, and (if it
@@ -276,7 +279,8 @@ NOT flag the fallback chain as over-engineered.
 - `run_in_background: true` on any `Agent(...)` call in shipped
   skill bodies, fanout templates, or example snippets — flag as
   BLOCKER. Plugin agents dispatch foreground only.
-- Raw `mv`, `cp`, `jq -i`, or improvised shell against any
-  `RUN-CURRENT.json` path in shipped skill bodies, hook scripts, or
-  examples — flag as BLOCKER. All manifest mutations MUST go through
+- Raw `mv`, `cp`, `jq -i`, `rm`, or improvised shell against any
+  `RUN-CURRENT.json` path or per-agent artifact path in shipped skill
+  bodies, hook scripts, or examples — flag as BLOCKER. All manifest
+  mutations and stale-stub unlinks MUST go through
   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update`.

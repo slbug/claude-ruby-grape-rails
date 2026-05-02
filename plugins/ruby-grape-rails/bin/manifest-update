@@ -133,12 +133,54 @@ def cmd_status(path)
        "status=#{data['status']} updated_at=#{data['updated_at']} agents=#{agents}"
 end
 
+# Refusal predicate: only unlink files that are
+# (a) listed in the manifest's agents map (path traceable to manifest), and
+# (b) under the manifest's parent .claude/<ns>/<slug>/ tree (or its
+#     {agent-slug}/ siblings — review per-agent layout), and
+# (c) below STUB_BYTES_THRESHOLD (real artifacts protected).
+STUB_BYTES_THRESHOLD = 1000
+
+RESPAWNABLE_AGENT_STATES = %w[pending in-flight stub-no-output].freeze
+
+def cmd_prepare_respawn(path)
+  abs = validate_path(path)
+  data = read_json(abs)
+  agents = data['agents'].is_a?(Hash) ? data['agents'] : {}
+  manifest_dir = File.dirname(abs)
+  repo_root = manifest_dir.sub(%r{/\.claude/.+\z}, '')
+  unlinked = []
+  agents.each do |slug, info|
+    next unless info.is_a?(Hash)
+    next unless RESPAWNABLE_AGENT_STATES.include?(info['status'])
+
+    agent_path = info['path']
+    next unless agent_path.is_a?(String) && !agent_path.empty?
+
+    abs_agent = agent_path.start_with?('/') ? agent_path : File.join(repo_root, agent_path)
+    abs_agent = File.expand_path(abs_agent)
+    next unless abs_agent =~ %r{/\.claude/.+\.md\z}
+    next if File.symlink?(abs_agent)
+    next unless File.exist?(abs_agent)
+
+    size = File.size(abs_agent)
+    if size >= STUB_BYTES_THRESHOLD
+      warn "manifest-update: protected real artifact (#{size}B) at #{abs_agent} for #{slug}; not unlinking"
+      next
+    end
+    File.unlink(abs_agent)
+    unlinked << "#{slug}:#{abs_agent}"
+  end
+  puts "prepare-respawn: unlinked=#{unlinked.size}"
+  unlinked.each { |entry| puts "  #{entry}" }
+end
+
 USAGE = <<~USAGE
   Usage:
-    manifest-update init    <manifest-path> <initial-json>
-    manifest-update patch   <manifest-path>          # patch from stdin
-    manifest-update archive <manifest-path>
-    manifest-update status  <manifest-path>
+    manifest-update init             <manifest-path> <initial-json>
+    manifest-update patch            <manifest-path>          # patch from stdin
+    manifest-update archive          <manifest-path>
+    manifest-update status           <manifest-path>
+    manifest-update prepare-respawn  <manifest-path>          # unlink stale stubs
 USAGE
 
 cmd, *args = ARGV
@@ -169,6 +211,13 @@ begin
   when 'status'
     if args.size == 1
       cmd_status(args[0])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'prepare-respawn'
+    if args.size == 1
+      cmd_prepare_respawn(args[0])
     else
       (warn USAGE
        exit 2)

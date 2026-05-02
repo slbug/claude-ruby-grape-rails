@@ -64,19 +64,24 @@ message.
    On same-second collision, append `-{nonce}`.
 6. Build manifest, write atomically to `RUN-CURRENT.json`
    (`status: in-flight`, all agents `pending`).
-7. Spawn all NON-skipped reviewers in ONE parallel block. Each spawn
+7. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <manifest-path>`.
+   Helper unlinks any stale stub (size < 1000 bytes) at manifest-tracked
+   agent paths and protects real artifacts. Path must point at a
+   non-existing target before spawn.
+8. Spawn all NON-skipped reviewers in ONE parallel block. Each spawn
    prompt MUST include the absolute artifact path from manifest.
    Mark each spawned agent's `status: in-flight` in manifest before
    spawn (atomic write).
-8. Wait for all reviewers to complete.
-9. Apply Artifact Recovery (see below) over the manifest. Update each
-   agent's `status` to its recovery outcome (atomic write).
-10. Read each verified artifact. Write the consolidated review to
+9. Wait for all reviewers to complete.
+10. Apply Artifact Recovery (see below) over the manifest. Update each
+    agent's `status` to its recovery outcome (atomic write).
+11. Read each verified artifact. Write the consolidated review to
     `${REPO_ROOT}/.claude/reviews/{review-slug}-{datesuffix}.md`. The
     `{datesuffix}` matches the manifest so consolidated + per-reviewer
     artifacts share a run timestamp.
-11. Mark manifest `status: complete` (atomic write).
-12. Present verdict to the user.
+12. Mark manifest `status: complete` (atomic write).
+13. Present verdict to the user.
 
 ### Artifact path rules
 

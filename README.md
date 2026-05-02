@@ -82,11 +82,14 @@ checks.
 │                                    rails-contexts   sidekiq         │
 │                                    testing   deploy   runtime       │
 │                                                                     │
-│  Mechanical / Extraction (haiku) Hooks                              │
-│    verification-runner             auto-format · ruby-syntax-check  │
-│    web-researcher                  iron-law-verify · security-scan  │
-│                                    debug-stmt-detect · error-critic │
-│                                    progress-tracking · db/prod/git  │
+│  Mechanical / Extraction (haiku)                                    │
+│    verification-runner                                              │
+│    web-researcher                                                   │
+│                                                                     │
+│  Hooks (plugin-wide, not tied to specific agents)                   │
+│    auto-format · ruby-syntax-check · iron-law-verify                │
+│    security-scan · debug-stmt-detect · error-critic                 │
+│    progress-tracking · db/prod/git                                  │
 │                                                                     │
 │  ───────────────────────────────────────────────────────────        │
 │  22 Iron Laws · Runtime Tooling · plan→work→verify→review→compound  │

@@ -271,19 +271,24 @@ Specialists are leaf workers: research, write artifact, return summary.
    `${REPO_ROOT}/.claude/plans/{plan-slug}/research/{topic-slug}.md`.
 6. Init manifest via
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update init <manifest-path> '<json>'`.
-7. Mark each agent `status: in-flight` in manifest before spawn (atomic
+7. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <manifest-path>`.
+   Helper unlinks any stale stub (size < 1000 bytes) at manifest-tracked
+   agent paths and protects real artifacts. Path must point at a
+   non-existing target before spawn.
+8. Mark each agent `status: in-flight` in manifest before spawn (atomic
    `manifest-update patch` from stdin).
-8. Spawn all NON-skipped agents in ONE parallel block. Pass agent
+9. Spawn all NON-skipped agents in ONE parallel block. Pass agent
    path verbatim in spawn prompt.
-9. Wait for all agents to complete.
-10. Apply Artifact Recovery (see below) and patch each agent's recovery
+10. Wait for all agents to complete.
+11. Apply Artifact Recovery (see below) and patch each agent's recovery
     state into the manifest.
-11. Read each verified artifact + any reused cached files logged in
+12. Read each verified artifact + any reused cached files logged in
     scratchpad.md `## Decisions` → `### Research Cache Reuse`.
-12. Synthesize `plan.md` directly.
-13. Mark manifest `status: complete`.
+13. Synthesize `plan.md` directly.
+14. Mark manifest `status: complete`.
 
-### Worker briefing
+## Worker Briefing
 
 Every research Agent() call must:
 
@@ -294,7 +299,7 @@ Every research Agent() call must:
 - be scoped to specific files/patterns/questions
 - NEVER call Agent() — leaf agents
 
-### Artifact path rules
+## Artifact Path Rules
 
 - Generate the absolute path before spawn.
 - Path = `${REPO_ROOT}/.claude/plans/{plan-slug}/research/{topic-slug}.md`.
@@ -302,7 +307,7 @@ Every research Agent() call must:
   collision detected in manifest.
 - Agents use the exact path received. No filename invention.
 
-### Artifact Recovery
+## Artifact Recovery
 
 For each manifest entry, stat the expected path:
 

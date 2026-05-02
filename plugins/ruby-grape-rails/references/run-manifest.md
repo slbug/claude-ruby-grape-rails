@@ -7,13 +7,13 @@ Cross-session resume contract for parallel-fanout workflows.
 - Active manifest: `.claude/{namespace}/{slug}/RUN-CURRENT.json`
 - Archive log: `.claude/{namespace}/{slug}/RUN-HISTORY.jsonl` (append-only)
 
-Namespaces:
+Namespaces (path fragment under `.claude/`):
 
 | Skill | Namespace | Slug source |
 |---|---|---|
-| `/rb:review` | `reviews` | `{review-slug}` |
-| `/rb:plan` (fanout) | `plans/{plan-slug}` | `research-fanout` |
-| `/rb:full` | `plans/{plan-slug}` | `full-cycle` |
+| `/rb:review` | `reviews/{review-slug}` | `{review-slug}` |
+| `/rb:plan` (fanout) | `plans/{plan-slug}/research-fanout` | `research-fanout` |
+| `/rb:brainstorm` | `plans/{plan-slug}/brainstorm-fanout` | `brainstorm-fanout` |
 
 ## Schema
 
@@ -150,6 +150,11 @@ ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update init   <path> '<initial-json>'
 # Deep-merge JSON from stdin. Auto-stamps updated_at.
 echo '<patch-json>' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <path>
 
+# Unlink stale stubs at manifest-tracked agent paths before re-spawn.
+# Only unlinks files < 1000 bytes (real artifacts protected with warning).
+# Only touches paths listed in manifest.agents.*.path.
+${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <path>
+
 # Append current state to RUN-HISTORY.jsonl, unlink RUN-CURRENT.json.
 ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update archive <path>
 
@@ -166,6 +171,10 @@ Helper enforces:
 - Atomic rename via Ruby `File.rename` (POSIX `rename(2)`), preceded
   by `fsync` of the temp file and followed by directory `fsync`.
 - Tmp-file cleanup on failure (`ensure` block).
+- `prepare-respawn` only unlinks files (a) listed in
+  `manifest.agents.*.path`, (b) under `.claude/`, (c) below 1000 bytes,
+  and (d) only when agent status is `pending` / `in-flight` /
+  `stub-no-output`. Real artifacts are skipped with a warning.
 - Fail-closed: any error exits non-zero before disk mutation.
 
 ## Agent Boundary
