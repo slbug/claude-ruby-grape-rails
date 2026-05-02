@@ -199,36 +199,20 @@ Helper enforces:
 
 ## Resume Protocol (main session)
 
-Reads via `jq`. Writes via `bin/manifest-update`.
+Single helper call. `prepare-run` archives any existing manifest
+(stale, complete, or in-flight) and inits a fresh one with the
+provided JSON. No bash branches.
 
 ```bash
 MANIFEST="${REPO_ROOT}/.claude/${NAMESPACE}/${SLUG}/RUN-CURRENT.json"
-
-if [[ -f "$MANIFEST" ]]; then
-  STATUS=$(jq -r '.status' "$MANIFEST")
-  UPDATED=$(jq -r '.updated_at' "$MANIFEST")
-  HEAD_PIN=$(jq -r '.branch_head_sha' "$MANIFEST")
-  BASE_PIN=$(jq -r '.base_sha' "$MANIFEST")
-  BRANCH_PIN=$(jq -r '.branch' "$MANIFEST")
-
-  CUR_HEAD=$(git rev-parse HEAD)
-  CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-  UPDATED_EPOCH=$(ruby -rtime -e 'puts Time.parse(ARGV[0]).to_i' "$UPDATED" 2>/dev/null || echo 0)
-  AGE_S=$(( $(date -u +%s) - UPDATED_EPOCH ))
-  TTL_S=$(( ${RUN_MANIFEST_TTL_HOURS:-24} * 3600 ))
-
-  if [[ "$CUR_HEAD" != "$HEAD_PIN" || "$CUR_BRANCH" != "$BRANCH_PIN" \
-        || "$BASE_SHA" != "$BASE_PIN" || $AGE_S -gt $TTL_S ]]; then
-    "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" archive "$MANIFEST"
-  elif [[ "$STATUS" == "in-flight" ]]; then
-    # Prompt user; default fresh
-    :
-  fi
-fi
+"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" prepare-run "$MANIFEST" \
+  --base="$BASE_SHA" --initial-json="$INITIAL_JSON"
 ```
+
+`resume-check` (read-only inspector) is still available for callers
+that want to surface in-flight state to the user before deciding.
 
 ## Implementation Notes
 
-- `jq` required for reads.
 - `RUN-HISTORY.jsonl` git-ignored by default; project may add explicit gitignore exception.
 - Concurrent CC sessions on same branch race on `RUN-CURRENT.json`. No cross-process lock. Constraint: one workflow per branch at a time.

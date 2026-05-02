@@ -15,9 +15,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   path-allowlist gate, symlink refusal, mktemp + fsync + POSIX
   rename + dir fsync. Subcommands: `init`, `patch` (deep-merge from
   stdin), `prepare-respawn` (unlink stale stubs at manifest-tracked
-  agent paths only), `archive`, `status`. All manifest mutations and
-  stale-stub unlinks go through this binary; raw `mv` / `cp` /
-  `jq -i` / `rm` against manifest paths is forbidden.
+  agent paths only), `resume-check` (per-skill TTL defaults +
+  HEAD/base/branch pin evaluation; emits `absent` / `stale` /
+  `fresh-complete` / `fresh-in-flight`), `archive`, `status`. All
+  manifest mutations, stale-stub unlinks, and resume-decision logic
+  go through this binary; raw `mv` / `cp` / `jq -i` / `rm` against
+  manifest paths is forbidden.
 - `references/run-manifest.md` — cross-session resume schema for
   spawn-fanout workflows; JSON manifest at
   `.claude/{namespace}/{slug}/RUN-CURRENT.json`; per-skill staleness

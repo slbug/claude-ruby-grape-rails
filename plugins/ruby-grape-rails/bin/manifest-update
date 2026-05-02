@@ -22,6 +22,7 @@
 
 require 'json'
 require 'time'
+require_relative '../lib/repo_root'
 
 ALLOWED_PATH_RE = %r{/\.claude/.+/RUN-CURRENT\.json\z}
 
@@ -30,12 +31,68 @@ def die(msg)
   exit 1
 end
 
+def containment_root
+  # Reuse canonical resolution from RubyGrapeRails::RepoRoot (.git → .claude
+  # settings → git toplevel → Gemfile → start_dir). Same precedence as
+  # bin/extract-permissions and bin/detect-stack. Use realpath so
+  # containment comparison matches even on macOS where /tmp resolves to
+  # /private/tmp.
+  RubyGrapeRails::RepoRoot.canonical(RubyGrapeRails::RepoRoot.find(Dir.pwd))
+end
+
+def canonical_abs(abs)
+  parent = File.dirname(abs)
+  resolved_parent = File.realpath(parent)
+  File.join(resolved_parent, File.basename(abs))
+rescue StandardError
+  abs
+end
+
+# Atomic lstat-based predicates (single syscall; matches
+# extract-permissions / verify_compression patterns elsewhere in the plugin).
+def regular_non_symlink_file?(path)
+  stat = File.lstat(path)
+  stat.file? && !stat.symlink?
+rescue Errno::ENOENT, Errno::ENOTDIR
+  false
+end
+
+def directory_non_symlink?(path)
+  stat = File.lstat(path)
+  stat.directory? && !stat.symlink?
+rescue Errno::ENOENT, Errno::ENOTDIR
+  false
+end
+
+def lstat_kind(path)
+  st = File.lstat(path)
+  return 'symlink' if st.symlink?
+  return 'directory' if st.directory?
+  return 'regular file' if st.file?
+  return 'fifo' if st.pipe?
+  return 'socket' if st.socket?
+  return 'character device' if st.chardev?
+  return 'block device' if st.blockdev?
+
+  'unknown'
+rescue Errno::ENOENT, Errno::ENOTDIR
+  'absent'
+end
+
 def validate_path(path)
   abs = File.expand_path(path)
   die "path must end at .claude/<ns>/<slug>/RUN-CURRENT.json: #{path}" unless abs =~ ALLOWED_PATH_RE
-  die "path is a symlink, refusing: #{path}" if File.symlink?(abs)
+  kind = lstat_kind(abs)
+  die "target is a #{kind}, refusing (must be absent or regular file): #{abs}" \
+    if !%w[absent].include?(kind) && !regular_non_symlink_file?(abs)
   parent = File.dirname(abs)
-  die "parent dir is a symlink, refusing: #{parent}" if File.symlink?(parent)
+  parent_kind = lstat_kind(parent)
+  die "parent is a #{parent_kind}, refusing: #{parent}" if parent_kind != 'absent' && !directory_non_symlink?(parent)
+  root = containment_root
+  resolved = canonical_abs(abs)
+  unless resolved.start_with?(root + '/') || abs.start_with?(root + '/')
+    die "path outside containment root (#{root}): #{abs}"
+  end
   abs
 end
 
@@ -133,6 +190,128 @@ def cmd_status(path)
        "status=#{data['status']} updated_at=#{data['updated_at']} agents=#{agents}"
 end
 
+# Per-skill default TTL in hours.
+TTL_DEFAULTS = {
+  'rb:review' => 24,
+  'rb:plan' => 168,
+  'rb:brainstorm' => 168
+}.freeze
+TTL_FALLBACK = 24
+
+# Skills that pin HEAD / base / branch (review = snapshot semantics).
+SKILLS_WITH_GIT_PINS = %w[rb:review].freeze
+
+def parse_resume_args(args)
+  opts = {}
+  args.each do |a|
+    case a
+    when /\A--head=(.+)\z/    then opts[:head] = Regexp.last_match(1)
+    when /\A--base=(.+)\z/    then opts[:base] = Regexp.last_match(1)
+    when /\A--branch=(.+)\z/  then opts[:branch] = Regexp.last_match(1)
+    when /\A--ttl-hours=(\d+)\z/ then opts[:ttl_hours] = Integer(Regexp.last_match(1))
+    when /\A--initial-json=(.+)\z/m then opts[:initial_json] = Regexp.last_match(1)
+    else die "unknown arg: #{a}"
+    end
+  end
+  opts
+end
+
+def git_head
+  out = `git rev-parse HEAD 2>/dev/null`.strip
+  out.empty? ? nil : out
+end
+
+def git_branch
+  out = `git rev-parse --abbrev-ref HEAD 2>/dev/null`.strip
+  out.empty? ? nil : out
+end
+
+def cmd_resume_check(path, args)
+  abs = validate_path(path)
+  unless File.exist?(abs)
+    puts 'absent'
+    return
+  end
+
+  data = read_json(abs)
+  opts = parse_resume_args(args)
+  skill = data['skill'].to_s
+  default_ttl = TTL_DEFAULTS[skill] || TTL_FALLBACK
+  ttl_hours = opts[:ttl_hours] || Integer(ENV['RUN_MANIFEST_TTL_HOURS'] || default_ttl)
+  ttl_seconds = ttl_hours * 3600
+
+  reasons = []
+
+  updated_at = data['updated_at']
+  age_seconds =
+    begin
+      Time.now.to_i - Time.parse(updated_at).to_i
+    rescue StandardError
+      ttl_seconds + 1 # treat unparseable timestamp as stale
+    end
+  reasons << "age=#{age_seconds}s>ttl=#{ttl_seconds}s" if age_seconds > ttl_seconds
+
+  if SKILLS_WITH_GIT_PINS.include?(skill)
+    head = opts[:head] || git_head
+    branch = opts[:branch] || git_branch
+    if head && data['branch_head_sha'] && head != data['branch_head_sha']
+      reasons << "head-drift(manifest=#{data['branch_head_sha']},current=#{head})"
+    end
+    if opts[:base] && data['base_sha'] && opts[:base] != data['base_sha']
+      reasons << "base-drift(manifest=#{data['base_sha']},current=#{opts[:base]})"
+    end
+    if branch && data['branch'] && branch != data['branch']
+      reasons << "branch-switch(manifest=#{data['branch']},current=#{branch})"
+    end
+  end
+
+  if reasons.any?
+    warn "resume-check stale: #{reasons.join(', ')}"
+    puts 'stale'
+    return
+  end
+
+  case data['status']
+  when 'complete'  then puts 'fresh-complete'
+  when 'in-flight' then puts 'fresh-in-flight'
+  else                  puts "fresh-#{data['status']}"
+  end
+end
+
+def archive_existing(abs)
+  return unless File.exist?(abs)
+
+  current = read_json(abs)
+  history_path = File.join(File.dirname(abs), 'RUN-HISTORY.jsonl')
+  die "history path is a symlink: #{history_path}" if File.symlink?(history_path)
+  File.open(history_path, File::WRONLY | File::APPEND | File::CREAT, 0o644) do |f|
+    f.write(JSON.generate(current) + "\n")
+    f.fsync
+  end
+  File.unlink(abs)
+end
+
+def cmd_prepare_run(path, args)
+  abs = validate_path(path)
+  opts = parse_resume_args(args)
+  die '--initial-json required' unless opts[:initial_json]
+
+  archive_existing(abs)
+
+  begin
+    data = JSON.parse(opts[:initial_json])
+  rescue JSON::ParserError => e
+    die "initial JSON invalid: #{e.message}"
+  end
+  die 'initial JSON must be a JSON object' unless data.is_a?(Hash)
+
+  now = Time.now.utc.iso8601
+  data['started_at'] ||= now
+  data['updated_at'] = now
+  atomic_write(abs, JSON.pretty_generate(data) + "\n")
+  puts "prepare-run: #{abs}"
+end
+
 # Refusal predicate: only unlink files that are
 # (a) listed in the manifest's agents map (path traceable to manifest), and
 # (b) under the manifest's parent .claude/<ns>/<slug>/ tree (or its
@@ -159,8 +338,14 @@ def cmd_prepare_respawn(path)
     abs_agent = agent_path.start_with?('/') ? agent_path : File.join(repo_root, agent_path)
     abs_agent = File.expand_path(abs_agent)
     next unless abs_agent =~ %r{/\.claude/.+\.md\z}
+    next unless abs_agent.start_with?(containment_root + '/')
     next if File.symlink?(abs_agent)
     next unless File.exist?(abs_agent)
+
+    unless File.file?(abs_agent)
+      warn "manifest-update: refusing non-regular path #{abs_agent} for #{slug}"
+      next
+    end
 
     size = File.size(abs_agent)
     if size >= STUB_BYTES_THRESHOLD
@@ -181,6 +366,11 @@ USAGE = <<~USAGE
     manifest-update archive          <manifest-path>
     manifest-update status           <manifest-path>
     manifest-update prepare-respawn  <manifest-path>          # unlink stale stubs
+    manifest-update resume-check     <manifest-path> [--head=SHA] [--base=SHA] [--branch=NAME] [--ttl-hours=N]
+                                                              # prints absent | stale | fresh-complete | fresh-in-flight
+    manifest-update prepare-run      <manifest-path> --initial-json=JSON [--base=SHA] [--ttl-hours=N]
+                                                              # full resume decision: archives stale/complete/in-flight,
+                                                              # inits with provided JSON. Single call replaces verdict+case.
 USAGE
 
 cmd, *args = ARGV
@@ -218,6 +408,20 @@ begin
   when 'prepare-respawn'
     if args.size == 1
       cmd_prepare_respawn(args[0])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'resume-check'
+    if args.size >= 1
+      cmd_resume_check(args[0], args[1..])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'prepare-run'
+    if args.size >= 1
+      cmd_prepare_run(args[0], args[1..])
     else
       (warn USAGE
        exit 2)

@@ -51,37 +51,30 @@ message.
 1. Classify complexity (tier + critical-path escalation).
 2. Select core + conditional reviewers per matrix below.
 3. Derive `review-slug`. Resolve `base_ref`, `base_sha`, `branch`,
-   `branch_head_sha`.
-4. **Resume check** (see Run Manifest below). Read
-   `${REPO_ROOT}/.claude/reviews/{review-slug}/RUN-CURRENT.json` if
-   present. Apply staleness rules. On stale → archive + fresh. On
-   fresh `in-flight` → prompt user (default fresh). On resume →
-   reuse `datesuffix` + agent paths from manifest, mark already-complete
-   agents to skip.
-5. On fresh run: generate `datesuffix = YYYYMMDD-HHMMSS`. For each
-   selected reviewer, generate the absolute artifact path
+   `branch_head_sha`. Generate `datesuffix = YYYYMMDD-HHMMSS`. For
+   each selected reviewer, build the absolute artifact path
    `${REPO_ROOT}/.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`.
-   On same-second collision, append `-{nonce}`.
-6. Build manifest, write atomically to `RUN-CURRENT.json`
-   (`status: in-flight`, all agents `pending`).
-7. Run
+4. Build initial manifest JSON (skill, slug, datesuffix, branch,
+   branch_head_sha, base_ref, base_sha, status=`in-flight`, agents map
+   with each agent `status=pending` and absolute `path`). Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <manifest-path>
+   --base="$BASE_SHA" --initial-json="$INITIAL_JSON"`. Helper archives
+   any prior manifest and inits the fresh one.
+5. Run
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <manifest-path>`.
    Helper unlinks any stale stub (size < 1000 bytes) at manifest-tracked
-   agent paths and protects real artifacts. Path must point at a
-   non-existing target before spawn.
-8. Spawn all NON-skipped reviewers in ONE parallel block. Each spawn
-   prompt MUST include the absolute artifact path from manifest.
-   Mark each spawned agent's `status: in-flight` in manifest before
-   spawn (atomic write).
-9. Wait for all reviewers to complete.
-10. Apply Artifact Recovery (see below) over the manifest. Update each
-    agent's `status` to its recovery outcome (atomic write).
-11. Read each verified artifact. Write the consolidated review to
-    `${REPO_ROOT}/.claude/reviews/{review-slug}-{datesuffix}.md`. The
-    `{datesuffix}` matches the manifest so consolidated + per-reviewer
-    artifacts share a run timestamp.
-12. Mark manifest `status: complete` (atomic write).
-13. Present verdict to the user.
+   agent paths and protects real artifacts.
+6. Patch each agent's `status: in-flight` via
+   `echo '<json>' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <manifest-path>`.
+7. Spawn all reviewers in ONE parallel block. Each spawn prompt MUST
+   include the absolute artifact path from manifest.
+8. Wait for all reviewers to complete.
+9. Apply Artifact Recovery (see below). Patch each agent's recovery
+   `status` into the manifest.
+10. Read each verified artifact. Write the consolidated review to
+    `${REPO_ROOT}/.claude/reviews/{review-slug}-{datesuffix}.md`.
+11. Patch manifest `status: complete`.
+12. Present verdict to the user.
 
 ### Artifact path rules
 
