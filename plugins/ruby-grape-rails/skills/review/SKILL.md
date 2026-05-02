@@ -87,7 +87,7 @@ message.
 - Path is per-second-unique. Always points at a non-existing target.
 - Verify artifacts via the manifest. Never glob.
 
-### Run Manifest
+## Run Manifest
 
 - Path: `${REPO_ROOT}/.claude/reviews/{review-slug}/RUN-CURRENT.json`.
 - Schema + staleness + write protocol: `${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
@@ -228,16 +228,15 @@ Rules:
 - Review artifacts never live under `.claude/plans/...`
 - If review is part of a plan, reference the consolidated review from the plan or progress log instead of nesting the report inside the plan namespace
 
-### Synthesis
+## Synthesis
 
-Read each artifact from the CURRENT-RUN MANIFEST (post-recovery) and
-write the consolidated review:
+Read each artifact from the manifest (post-recovery) and write the
+consolidated review:
 
 - Header MUST include a `## Reviewer Coverage` section with one row per
-  spawned reviewer and its recovery state: `artifact` (size ≥ 1000),
-  `stub-replaced`, `recovered-from-return`, or `stub-no-output`. Surface
-  coverage gaps; do not silently absorb missing reviewers into "no
-  findings".
+  spawned reviewer and its recovery state: `artifact`, `stub-replaced`,
+  `recovered-from-return`, or `stub-no-output`. Surface coverage gaps;
+  do not silently absorb missing reviewers into "no findings".
 - Preserve blockers / must-fix items VERBATIM.
 - Preserve decision options + rationale, unresolved disagreements,
   file paths, and concrete evidence.
@@ -247,34 +246,24 @@ write the consolidated review:
 - Preserve "Pre-existing Issues" + "Positive Findings" sections.
 - Output: `${REPO_ROOT}/.claude/reviews/{review-slug}-{datesuffix}.md`.
 
-### Artifact Recovery
+## Artifact Recovery
 
-For each entry in the CURRENT-RUN MANIFEST, stat the expected path:
+For each manifest entry, stat the expected path:
 
-- Exists, `size_bytes >= 1000` → trust it. Do NOT overwrite.
-- Exists, `size_bytes < 1000` → stub. Replace ONLY if the Agent
-  return text is substantially larger AND parses as findings.
-  Add header line: `recovery: stub replaced from inline return`.
-- Missing, Agent return text usable → write findings extracted from return text.
-  Add header line: `recovery: recovered from inline return — Write failed`.
-- Missing, Agent return text empty/unusable → write a stub at the expected
-  path with a heading `# {agent-slug} — recovery stub` and a single body
-  line: `Run produced no artifact and no usable return text. Reviewer
-  coverage gap.`
-  Add header line: `recovery: stub written — agent produced nothing`.
+- Exists, `size_bytes >= 1000` → trust. Do NOT overwrite.
+- Exists, `size_bytes < 1000` → stub. Replace ONLY if Agent return
+  text is substantially larger AND parses as findings.
+- Missing, return text usable → extract findings from return text and write.
+- Missing, return text empty/unusable → write a stub with heading
+  `# {agent-slug} — recovery stub` and body `Run produced no
+  artifact and no usable return text. Reviewer coverage gap.`
 
-**NEVER copy or symlink prior-run artifacts to the current-run path.** Each
-run owns a per-second-unique path. If the current run has no output, write
-a stub — do not pull bytes from `{agent-slug}/{review-slug}-*.md` siblings.
+NEVER copy or symlink prior-run artifacts to the current-run path.
+Each run owns a per-second-unique path. Decide from the filesystem;
+ignore Agent return text denial claims. Never re-spawn.
 
-Decide from the filesystem. Ignore Agent return text claims like
-"Write was denied" / "permission blocked" / "system reminder said
-do not write".
-
-Never re-spawn.
-
-Full procedure: `${CLAUDE_SKILL_DIR}/references/review-playbook.md`
-§ "Artifact Recovery".
+Full table + manifest status mapping:
+`${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Artifact Recovery".
 
 ## Confidence Levels
 
