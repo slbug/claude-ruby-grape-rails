@@ -91,11 +91,18 @@ even when the unmodified file is not part of the PR.
   `lab/eval/triggers/_semantic_pairs.json`, `README.md`, `CHANGELOG.md`,
   cross-skill `/rb:<name>` mentions in other skills/agents.
 - **Agent rename / removal / description change** → also check
-  `plugins/ruby-grape-rails/agents/parallel-reviewer.md` (delegation list),
-  `plugins/ruby-grape-rails/agents/planning-orchestrator.md`,
-  `plugins/ruby-grape-rails/agents/workflow-orchestrator.md`,
-  skill files mentioning `subagent_type: <name>`, intro tutorial,
-  agent count claims in `CLAUDE.md`/`README.md`.
+  skill-body fanout owners
+  (`plugins/ruby-grape-rails/skills/{review,plan,full}/SKILL.md` and
+  `.claude/skills/docs-check/SKILL.md` for contributor agents),
+  `plugins/ruby-grape-rails/skills/plan/references/planning-workflow.md`
+  (selection matrix), skill files mentioning `subagent_type: <name>`,
+  `plugins/ruby-grape-rails/skills/intro/SKILL.md` and
+  `plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md`
+  (count claims), `README.md` (Agent Hierarchy diagram + agents table +
+  count claims), `CLAUDE.md` (Context Supervisor section + count),
+  `.github/instructions/plugin-review.instructions.md`,
+  `.claude/skills/cc-changelog/references/analysis-rules.md`
+  (analysis assumptions).
 - **`plugins/ruby-grape-rails/references/iron-laws.yml`** edited →
   required regeneration via `scripts/generate-iron-law-outputs.sh all`.
   Verify these regenerated artifacts are in the diff and match source:

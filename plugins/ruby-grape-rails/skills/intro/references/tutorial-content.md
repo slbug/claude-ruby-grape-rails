@@ -45,7 +45,7 @@ Each phase reads from the previous phase's output. Plans become checkboxes. Chec
 
 | Feature | What It Does |
 |---------|-------------|
-| 23 specialist agents | ActiveRecord, Hotwire, security, Sidekiq, deployment, provenance experts |
+| 20 specialist agents | ActiveRecord, Hotwire, security, Sidekiq, deployment, provenance experts |
 | 53 skills | Commands for every phase of development |
 | 22 Iron Laws | Non-negotiable rules enforced automatically |
 | Auto-loaded references | Context-aware docs loaded when you edit relevant files |
@@ -86,7 +86,7 @@ Not everything needs the full cycle:
 | Command | When to Use | Time |
 |---------|------------|------|
 | `/rb:quick` | Bug fixes, small features (<100 lines) | ~2 min |
-| `/rb:full` | New features, autonomous plan-work-verify-review | ~10 min |
+| `/rb:full` | New features, autonomous plan→work→verify→review→compound | ~10 min |
 | `/rb:investigate` | Debugging — checks obvious things first | ~3 min |
 
 ### Decision Guide
@@ -335,7 +335,7 @@ The plugin works best when all layers are active: `/rb:init` for persistent rule
 | Command | Purpose |
 |---------|---------|
 | `/rb:quick <task>` | Fast implementation, skip ceremony |
-| `/rb:full <feature>` | Autonomous plan-work-review cycle |
+| `/rb:full <feature>` | Autonomous plan→work→verify→review→compound cycle |
 | `/rb:investigate <bug>` | Structured bug investigation |
 | `/rb:verify` | Run all quality checks |
 | `/rb:permissions` | Tune Claude Bash permissions from real session evidence |

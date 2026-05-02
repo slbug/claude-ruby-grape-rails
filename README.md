@@ -2,7 +2,7 @@
 
 **Claude Code is great. But it doesn't know that `default_scope` will bite you later, that `t.float` will corrupt your money fields, or that your Sidekiq job isn't idempotent.**
 
-This plugin does. It coordinates **23 specialist agents** and **53 skills** that plan, implement,
+This plugin does. It coordinates **20 specialist agents** and **53 skills** that plan, implement,
 review, and verify your Ruby/Rails/Grape code in parallel -- each with domain
 expertise, fresh context, and enforced [Iron Laws](#iron-laws-non-negotiable-rules)
 that catch the bugs your tests won't. It is now stack-aware enough to handle
@@ -48,42 +48,45 @@ checks.
 │  💎 Ruby/Rails/Grape Plugin for Claude Code                         │
 │                                                                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
-│  │    23    │    53    │   100+   │    14    │    22    │           │
+│  │    20    │    53    │   100+   │    14    │    22    │           │
 │  │  Agents  │  Skills  │   Refs   │  Events  │Iron Laws │           │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘           │
 │                                                                     │
 │  AGENTS                          COMMANDS                           │
 │  ─────────────────────           ──────────────────────────         │
-│  Orchestrators (opus)            Workflow                           │
-│    workflow-orchestrator           /rb:plan    /rb:work             │
-│    planning-orchestrator           /rb:review  /rb:full             │
-│    parallel-reviewer               /rb:compound /rb:quick           │
-│    context-supervisor              /rb:brief   /rb:triage           │
+│  Reviewers (mostly sonnet)       Workflow                           │
+│    ruby-reviewer                   /rb:plan    /rb:work             │
+│    testing-reviewer                /rb:review  /rb:full             │
+│    security-analyzer (opus)        /rb:compound /rb:quick           │
+│    iron-law-judge                  /rb:brief   /rb:triage           │
+│    data-integrity-reviewer                                          │
+│    migration-safety-reviewer                                        │
+│    output-verifier                                                  │
 │                                                                     │
-│  Reviewers (sonnet)              Investigation & Debug              │
-│    ruby-reviewer                   /rb:investigate /rb:trace        │
-│    testing-reviewer                /rb:n1-check   /rb:perf          │
-│    security-analyzer               /rb:constraint-debug             │
-│    iron-law-judge                  /rb:state-audit                  │
+│  Architecture (sonnet)           Investigation & Debug              │
+│    rails-architect                 /rb:investigate /rb:trace        │
+│    active-record-schema-designer   /rb:n1-check   /rb:perf          │
+│    rails-patterns-analyst          /rb:constraint-debug             │
+│    ruby-runtime-advisor            /rb:state-audit                  │
 │                                                                     │
-│  Architecture (sonnet)           Analysis & Review                  │
-│    rails-architect                 /rb:audit    /rb:verify          │
-│    active-record-schema-designer   /rb:techdebt /rb:boundaries      │
-│    rails-patterns-analyst          /rb:pr-review /rb:challenge      │
-│    ruby-runtime-advisor            /rb:research  /rb:document       │
+│  Investigation (sonnet)          Analysis & Review                  │
+│    deep-bug-investigator           /rb:audit    /rb:verify          │
+│    call-tracer                     /rb:techdebt /rb:boundaries      │
+│    dependency-analyzer             /rb:pr-review /rb:challenge      │
+│                                    /rb:research  /rb:document       │
 │                                                                     │
-│  Investigation (sonnet/haiku)    Knowledge (auto-loaded)            │
-│    deep-bug-investigator           hotwire-patterns                 │
-│                                    active-record-patterns           │
-│    call-tracer                     ruby-idioms      security        │
-│    dependency-analyzer             rails-contexts   sidekiq         │
-│    verification-runner             testing   deploy   runtime       │
+│  Domain (sonnet)                 Knowledge (auto-loaded)            │
+│    sidekiq-specialist              hotwire-patterns                 │
+│    deployment-validator            active-record-patterns           │
+│    ruby-gem-researcher             ruby-idioms      security        │
+│                                    rails-contexts   sidekiq         │
+│                                    testing   deploy   runtime       │
 │                                                                     │
-│  Domain (sonnet)                 Hooks                              │
-│    sidekiq-specialist              auto-format · ruby-syntax-check  │
-│    deployment-validator            iron-law-verify · security-scan  │
-│    ruby-gem-researcher             debug-stmt-detect · error-critic │
-│    web-researcher                  progress-tracking · db/prod/git  │
+│  Mechanical / Extraction (haiku) Hooks                              │
+│    context-supervisor              auto-format · ruby-syntax-check  │
+│    verification-runner             iron-law-verify · security-scan  │
+│    web-researcher                  debug-stmt-detect · error-critic │
+│                                    progress-tracking · db/prod/git  │
 │                                                                     │
 │  ───────────────────────────────────────────────────────────        │
 │  22 Iron Laws · Runtime Tooling · plan→work→verify→review→compound  │
@@ -299,51 +302,63 @@ Implementation state stays under one plan namespace; review artifacts stay consi
 
 ### Agent Hierarchy
 
-The plugin uses 23 agents organized into 3 tiers:
+The plugin uses 20 leaf agents organized by responsibility. Skill bodies
+(main session) spawn agents in parallel. Models vary by risk: `opus` for
+security-critical (1 agent), `sonnet` for judgment-heavy specialists
+(16 agents), `haiku` for mechanical extraction/compression (3 agents).
 
 ```
-                    ┌──────────────────────────────┐
-                    │  Orchestrators (opus model)  │
-                    │  Coordinate phases, spawn    │
-                    │  specialists, manage flow    │
-                    └──────────┬───────────────────┘
-                               │
-         ┌─────────────────────┼──────────────────────┐
-         │                     │                      │
-         ▼                     ▼                      ▼
-┌───────────────┐  ┌───────────────────┐  ┌────────────────────┐
-│ workflow-     │  │ planning-         │  │ parallel-          │
-│ orchestrator  │  │ orchestrator      │  │ reviewer           │
-│ (full cycle)  │  │ (research phase)  │  │ (review phase)     │
-└───────────────┘  └───────────────────┘  └────────────────────┘
-                               │                      │
-                    ┌──────────┼──────────┐    ┌──────┼──────┐
-                    ▼          ▼          ▼    ▼      ▼      ▼
-             ┌──────────┐ ┌────────┐ ┌──────┐ ... 4 specialist
-             │ rails    │ │ active │ │ web  │     review agents
-             │ architect│ │ record │ │ rsch │
-             └──────────┘ └────────┘ └──────┘
-                               │
-                    ┌──────────┴──────────┐
-                    ▼                     ▼
-             ┌────────────┐      ┌──────────────┐
-             │  context-  │      │ Orchestrator  │
-             │ supervisor │ ───► │ reads ONLY    │
-             │  (haiku)   │      │ the summary   │
-             └────────────┘      └──────────────┘
+                ┌──────────────────────────────────────┐
+                │  Specialists (mixed — 17 agents)     │
+                │  Domain experts; called from skill   │
+                │  bodies (main session) in parallel.  │
+                │  security-analyzer is opus; rest     │
+                │  sonnet.                              │
+                └────────────────┬─────────────────────┘
+                                 │
+       ┌──────────────────┬──────┴───────┬──────────────────────┐
+       ▼                  ▼              ▼                      ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
+│  Reviewers   │  │ Architecture │  │ Investigation│  │   Domain         │
+│              │  │              │  │              │  │                  │
+│ ruby-        │  │ rails-       │  │ deep-bug-    │  │ sidekiq-         │
+│   reviewer   │  │   architect  │  │   investigator│ │   specialist     │
+│ security-    │  │ active-      │  │ call-tracer  │  │ deployment-      │
+│   analyzer   │  │   record-    │  │ dependency-  │  │   validator      │
+│   (opus)     │  │   schema-    │  │   analyzer   │  │ ruby-gem-        │
+│ testing-     │  │   designer   │  │              │  │   researcher     │
+│   reviewer   │  │ rails-       │  │              │  │                  │
+│ iron-law-    │  │   patterns-  │  │              │  │                  │
+│   judge      │  │   analyst    │  │              │  │                  │
+│ data-        │  │ ruby-runtime-│  │              │  │                  │
+│   integrity- │  │   advisor    │  │              │  │                  │
+│   reviewer   │  │              │  │              │  │                  │
+│ migration-   │  │              │  │              │  │                  │
+│   safety-    │  │              │  │              │  │                  │
+│   reviewer   │  │              │  │              │  │                  │
+│ output-      │  │              │  │              │  │                  │
+│   verifier   │  │              │  │              │  │                  │
+└──────────────┘  └──────────────┘  └──────────────┘  └──────────────────┘
+
+       ┌─────────────────────────────────────────────┐
+       │  Mechanical / Extraction (haiku — 3)        │
+       │  context-supervisor — compression           │
+       │  verification-runner — verification         │
+       │  web-researcher — web/source extraction     │
+       │  Called from skill bodies as leaf workers.  │
+       └─────────────────────────────────────────────┘
 ```
 
-**Orchestrators** (opus) -- Primary workflow coordinators, security-critical analysis.
-**Specialists** (sonnet) -- Domain experts, secondary orchestrators, judgment-heavy tasks. Sonnet 4.6 achieves near-opus quality at sonnet pricing.
-**Lightweight** (haiku) -- Mechanical tasks: verification, compression, dependency analysis.
+**Specialists** (mostly sonnet, security-analyzer opus) -- Domain experts, judgment-heavy tasks.
+**Mechanical / Extraction** (haiku) -- Compression, verification, web-research extraction (matches dashboard tier name).
 
 ### The Context Supervisor Pattern
 
-When an orchestrator spawns 4-8 research agents, their combined output can exceed 50k tokens -- flooding the parent's context window. The **context-supervisor** solves this using a compression pattern:
+When a skill body spawns 4-8 research agents, their combined output can exceed 50k tokens -- flooding the parent's context window. The **context-supervisor** solves this using a compression pattern:
 
 ```
 ┌────────────────────────────────────────────────────┐
-│  Orchestrator (thin coordinator, ~10k context)     │
+│  Skill body (main session, fanout coordinator)     │
 │  Only reads: summaries/consolidated.md             │
 └──────────────────┬─────────────────────────────────┘
                    │ spawns AFTER workers finish
@@ -374,16 +389,16 @@ The supervisor also **deduplicates** -- if two agents flag the same issue
 (e.g., both the security analyzer and code reviewer find a missing
 authorization check), it merges them into one finding with both sources cited.
 
-**Used by:** planning-orchestrator (research synthesis), parallel-reviewer (review deduplication), audit skill (cross-category analysis).
+**Used by:** `/rb:plan` skill body (research synthesis), `/rb:review` skill body (review deduplication).
 
 ### How Planning Works
 
 When you run `/rb:plan Add real-time notifications`:
 
 ```
-1. planning-orchestrator analyzes your request
+1. `/rb:plan` skill body analyzes your request from main session
    │
-2. Spawns specialists IN PARALLEL based on feature needs:
+2. Spawns specialists IN PARALLEL via `Agent(subagent_type:)` calls:
    ├── rails-patterns-analyst    (always -- scans your codebase)
    ├── rails-architect           (if service/context changes needed)
    ├── active-record-schema-designer (if database changes needed)
@@ -396,7 +411,7 @@ When you run `/rb:plan Add real-time notifications`:
    │
 4. context-supervisor compresses all research into one summary
    │
-5. Orchestrator reads the summary + synthesizes the plan
+5. Skill body reads the summary + synthesizes the plan
    │
 6. Output: `.claude/plans/{slug}/plan.md` with [P1-T1] checkboxes
 ```
@@ -406,9 +421,9 @@ When you run `/rb:plan Add real-time notifications`:
 When you run `/rb:review`:
 
 ```
-1. parallel-reviewer collects your git diff
+1. `/rb:review` skill body collects your git diff from main session
    │
-2. Delegates to 4 EXISTING specialist agents:
+2. Spawns 4 EXISTING specialist agents in parallel:
    ├── ruby-reviewer        → Idioms, patterns, error handling
    ├── security-analyzer    → SQL injection, XSS, auth gaps
    ├── testing-reviewer     → Test coverage, factory patterns
@@ -514,7 +529,7 @@ For hands-off development:
 /rb:full Add user profile avatars with S3 upload
 ```
 
-Runs the complete cycle: plan (with research), work, verify, review. After review fixes, re-verifies before cycling back. Captures learnings on completion.
+Runs the complete cycle: plan (with research), work, verify, review. Halts on Critical findings; user decides next step.
 
 ## Workflow Tips
 
@@ -635,13 +650,10 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | `/rb:audit`          | Full project health audit with 5 parallel agents  |
 | `/rb:challenge`      | Rigorous review mode ("grill me")                 |
 
-## Agents (23)
+## Agents (20)
 
 | Agent                             | Model  | Memory  | Role                                         |
 | --------------------------------- | ------ | ------- | -------------------------------------------- |
-| **workflow-orchestrator**         | opus   | project | Full cycle coordination (plan, work, review) |
-| **planning-orchestrator**         | opus   | project | Parallel research agent coordination         |
-| **parallel-reviewer**             | opus   | --      | 4-agent parallel code review                 |
 | **deep-bug-investigator**         | sonnet | --      | 4-track structured bug investigation         |
 | **call-tracer**                   | sonnet | --      | Parallel call tree tracing                   |
 | **security-analyzer**             | opus   | --      | OWASP vulnerability scanning                 |
@@ -663,9 +675,9 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | **data-integrity-reviewer**       | sonnet | --      | Data consistency and constraint validation   |
 | **migration-safety-reviewer**     | sonnet | --      | Migration safety and rollback review         |
 
-Agents with `project` memory leverage Claude Code's built-in memory system
-to retain context across sessions. Orchestrators remember architectural
-decisions; pattern analysts skip redundant discovery.
+After the orchestrator cleanup, no shipped agent uses `memory: project`.
+The field remains supported as a future extension for pattern-analyst
+agents that need cross-session continuity.
 
 ## Reference Skills (Auto-Loaded)
 

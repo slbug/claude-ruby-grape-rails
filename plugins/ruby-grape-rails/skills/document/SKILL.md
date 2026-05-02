@@ -1,6 +1,6 @@
 ---
 name: rb:document
-description: "Use when generating documentation for implemented features — YARD/RDoc, README updates, ADRs. Use after implementing new modules or features to ensure proper documentation coverage. Run after /rb:review passes or whenever the user asks to document their code."
+description: "Use when generating documentation for implemented features — YARD/RDoc, README updates, ADRs. Use after implementing new modules or features to ensure proper documentation coverage. Run after /rb:review passes."
 when_to_use: "Triggers: \"document\", \"YARD\", \"RDoc\", \"README\", \"ADR\", \"write docs\"."
 argument-hint: "[plan-file OR feature-name]"
 effort: low

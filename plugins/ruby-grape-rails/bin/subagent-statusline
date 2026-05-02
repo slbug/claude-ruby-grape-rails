@@ -5,7 +5,7 @@
 #
 #   {emoji} {name}  {dot} {elapsed}  {tokens}  {cwd_tail}
 #
-# Emoji maps the agent name prefix to a role (reviewer, orchestrator,
+# Emoji maps the agent name prefix to a role (reviewer, planner,
 # investigator, researcher, verifier, etc.). Status dot reflects the
 # task.status field. Elapsed is derived from task.startTime (epoch seconds
 # or ISO 8601 timestamp). Tokens are humanized. cwd_tail is the last path
@@ -31,7 +31,6 @@ printf '%s' "$INPUT" | jq -e . >/dev/null 2>&1 || exit 0
 printf '%s' "$INPUT" | jq -c '
   def emoji(name):
     if   name | test("review";              "i") then "🔍"
-    elif name | test("orchestrat";          "i") then "🧭"
     elif name | test("investigat";          "i") then "🐛"
     elif name | test("analy";               "i") then "🔬"
     elif name | test("research";            "i") then "📚"

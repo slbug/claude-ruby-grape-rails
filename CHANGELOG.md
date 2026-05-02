@@ -7,6 +7,107 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.2] - 2026-05-02
+
+### Changed
+
+- `/rb:review` now runs main-session fanout: skill body spawns
+  specialist reviewers directly. Reviewers run with fresh context
+  (independent / unbiased findings). Compression input narrowed to
+  exact current-run artifact paths (no stale cross-contamination).
+  Skill body contains NO bash fenced blocks per repo policy; shell
+  detail moves to `references/review-playbook.md`.
+- `/rb:plan` now runs main-session fanout for research agents.
+  `context-supervisor` is invoked as a leaf compression worker after
+  fanout returns. New strict slug pre-bind detection: when
+  `.claude/ACTIVE_PLAN` exists with explicit guards (file resolves to
+  valid namespace, `progress.md` State INITIALIZING|DISCOVERING,
+  `plan.md` absent), `/rb:plan` reuses the pre-bound namespace.
+  Detection reads the marker file directly, bypassing
+  `active-plan-marker.sh get` fallbacks. Bash detail moved to
+  `references/planning-workflow.md`.
+- `/rb:full` skill body absorbs the workflow state machine
+  (INITIALIZING → ... → COMPLETED) and writes `**State**:` to
+  `progress.md` at each transition. Skill body tracks `PLAN_DIR`
+  locally as INTERNAL state for its own State writes only — NOT passed
+  as CLI arg to `/rb:verify` or `/rb:review` (their interfaces don't
+  accept it). Adds autonomous-mode skip in `plan-stop-reminder.sh`
+  (previously dead — `**State**:` field had no writer).
+  `full/SKILL.md` shrinks to ≤100 lines (NO bash fenced blocks); detail
+  moves to new `references/state-machine.md`.
+- `/docs-check` skill body absorbs `docs-validation-orchestrator`
+  Phase 3 worker dispatch (main-session fanout). Workers are named
+  contributor leaf agent `docs-surface-validator` (NEW), one parallel
+  call per surface in scope. Standard contributor permission scope (NO
+  `bypassPermissions`); user grants Write permission via standard CC
+  permission flow on first run. Skill body contains NO bash fenced
+  blocks per repo policy.
+- `.claude/rules/agent-development.md` doctrine update: subagents are
+  leaf workers, never declare or invoke `Agent` tool. Dead doctrine
+  removed (Why-Orchestrators-Exceed section, 535 hard-limit, opus
+  primary-orchestrator tier, parallel-reviewer Agent exemption).
+  `context-supervisor` added to narrow-allowlist exception list.
+- `CLAUDE.md` Context Supervisor Pattern section corrected (audit
+  skill no longer falsely listed; describes skill-body invocation).
+  Inline-subagent-prompts checklist item replaced with references-
+  preferred guidance.
+- `README.md` Agent Hierarchy redrawn (no orchestrator tier; 20
+  agents organized by domain; correct model classification — 1 opus,
+  16 sonnet, 3 haiku; haiku tier renamed "Mechanical / Extraction"
+  to cover compression, verification, and web-research extraction).
+  Agent count updated 23 → 20 across intro, dashboard, hierarchy
+  diagram, agent table.
+- `.github/copilot-instructions.md` cross-file checklist updated to
+  reference skill-body fanout owners (including `/docs-check`).
+- `.github/instructions/plugin-review.instructions.md` doctrine
+  cleanup: no agent declares Agent tool; opus tier scope narrowed to
+  security-critical; large-skill acceptability narrowed to
+  routing-critical only; orchestrator memory:project guidance dropped.
+- `.claude/skills/cc-changelog/references/analysis-rules.md` count
+  and orchestrator-agent assumptions updated.
+- `agents/context-supervisor.md` description: "for the parent
+  orchestrator" → "for the calling skill body post-fanout".
+- `references/compression/README.md` lines 66-68: removed
+  contributor-doctrine cross-reference ("the repo's own hook-development
+  rule"); replaced with inline summary of `PostToolUse` stdout +
+  `additionalContext` semantics.
+- `hooks/scripts/active-plan-lib.sh` marker-lifecycle comment updated
+  to reflect `/rb:full` pre-binding and Option A local PLAN_DIR.
+- Plan-task annotation set canonicalized in
+  `skills/plan/references/planning-workflow.md`: `[direct]`,
+  `[active record]`, `[hotwire]`, `[sidekiq]`, `[concurrency]`,
+  `[security]`, `[test]` (Set A). `skills/plan/SKILL.md:15` updated to
+  match. `skills/work/SKILL.md` § Routing Hints reframed as prose-only
+  Set B labels (NOT plan-task annotations).
+  `skills/work/references/execution-guide.md` terminology normalized
+  `[agent]` → `[annotation]` in task-format examples.
+
+### Removed
+
+- `parallel-reviewer`, `planning-orchestrator`, `workflow-orchestrator`
+  shipped agents (broken wrapper-orchestrator pattern; CC blocks
+  subagent → subagent recursion at runtime). `parallel-reviewer` was
+  actively invoked by `/rb:review` and silently fell through to single-
+  agent review; `planning-orchestrator` and `workflow-orchestrator` were
+  dead code (never invoked from shipped skill bodies).
+  Internal-mechanism change only — user-facing `/rb:*` commands and
+  artifact paths unchanged. Treat as MINOR per repo SemVer policy unless
+  external automation references the deleted agent names.
+- `references/agent-playbooks/{planning,workflow}-orchestrator-playbook.md`
+  (content absorbed into skill references). The
+  `agent-playbooks/dependency-analysis-playbook.md` remains, used by
+  `dependency-analyzer`.
+- `.claude/agents/docs-validation-orchestrator.md` contributor agent
+  (same broken pattern; logic absorbed into `/docs-check` skill body
+  plus new named leaf agent `.claude/agents/docs-surface-validator.md`).
+
+### Fixed
+
+- `plan-stop-reminder.sh` autonomous-mode skip now functional during
+  `/rb:full` runs. Previously dead because no writer of `**State**:`
+  field existed; `/rb:full` skill body now writes it during phase
+  transitions.
+
 ## [1.16.1] - 2026-05-01
 
 ### Added
@@ -2149,7 +2250,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.1...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.2...HEAD
+[1.16.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.1...v1.16.2
 [1.16.1]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.0...v1.16.1
 [1.16.0]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.2...v1.16.0
 [1.15.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.15.1...v1.15.2

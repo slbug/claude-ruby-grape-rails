@@ -59,8 +59,8 @@ esac
 CONTENT=$(printf '%s' "$INPUT" | jq -r '.tool_input.content // empty' 2>/dev/null) || exit 0
 [[ -n "$CONTENT" ]] || exit 0
 
-# Skip in /rb:full autonomous mode — workflow-orchestrator creates
-# progress.md with **State**: field during INITIALIZING.
+# Skip in /rb:full autonomous mode — /rb:full skill body writes
+# progress.md with **State**: field during INITIALIZING phase.
 PLAN_DIR="${FILE_PATH%/*}"
 if [[ -f "${PLAN_DIR}/progress.md" && ! -L "${PLAN_DIR}/progress.md" ]] && grep -q '\*\*State\*\*:' "${PLAN_DIR}/progress.md" 2>/dev/null; then
   exit 0

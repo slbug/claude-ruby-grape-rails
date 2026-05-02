@@ -21,15 +21,17 @@ excludeAgent: "coding-agent"
 - Artifact-writing agents: `disallowedTools: Edit, NotebookEdit, Agent,
   EnterWorktree, ExitWorktree, Skill`
 - Conversation-only agents add `Write` to the above
-- `parallel-reviewer` keeps `Agent` (spawns sub-reviewers) — this is correct
-- Agents with intentionally narrow tool sets (web-researcher,
+- NO agent declares or invokes `Agent` — orchestration lives in skill bodies
+  (main session). See `.claude/rules/agent-development.md` § "Subagents Are
+  Leaf Workers" for full doctrine.
+- Agents with intentionally narrow tool sets (context-supervisor, web-researcher,
   output-verifier, ruby-gem-researcher) use `tools:` allowlists — this is
   correct
 - `omitClaudeMd: true` is correct for specialist agents that do not need
   contributor CLAUDE.md context
 - Do NOT flag `permissionMode` as missing — Claude Code ignores it on
   plugin agents
-- Model tiers: opus for primary orchestrators, sonnet for most specialists,
+- Model tiers: opus for security-critical agents, sonnet for most specialists,
   haiku for mechanical tasks. `opusplan` is a session-level `/model` alias
   only (the subagent frontmatter table at
   <https://docs.claude.com/en/docs/claude-code/sub-agents> does NOT list
@@ -53,8 +55,8 @@ excludeAgent: "coding-agent"
 - `${CLAUDE_SKILL_DIR}` is a valid runtime variable, not an error
 - Iron Laws sections contain numbered non-negotiable rules — do not suggest
   making them optional or softer
-- Large orchestrator/workflow skills (300+ lines) are acceptable when they
-  must embed subagent prompts inline
+- Large workflow skills may be acceptable only when routing-critical;
+  prefer references/ for long templates and examples
 
 ## Hook Conventions (plugins/**/hooks/)
 
@@ -219,11 +221,19 @@ NOT flag the fallback chain as over-engineered.
 
 ## Do NOT Flag
 
-- Large file sizes on orchestrators or workflow skills (intentional)
+- Large file sizes on workflow skills (intentional when routing-critical)
 - Missing `tools:` field on agents (denylist-only pattern)
 - `omitClaudeMd: true` on specialist agents (intentional context savings)
 - Colon-namespaced skill names like `rb:plan` (known compatibility item)
-- `memory: project` on orchestrator agents (intentional cross-session learning)
 - Advisory fail-open (empty stdout, exit 0) in `bin/` and advisory hooks
 - Partial coverage in plugin `settings.json` (only `agent` and
   `subagentStatusLine` are documented as supported)
+
+## Do FLAG
+
+- `permissionMode: bypassPermissions` on new agents — flag as YELLOW unless agent has documented contributor-only privilege need
+- Shipped skill bodies (`plugins/ruby-grape-rails/.../SKILL.md`) referencing
+  contributor doctrine paths (`.claude/rules/*-development.md`,
+  `.github/instructions/*.instructions.md`) — flag as BLOCKER
+- Agent frontmatter declaring `Agent` in `tools:` list — flag as BLOCKER
+- Agent body containing `Agent(...)` or `subagent_type:` calls — flag as BLOCKER

@@ -12,7 +12,7 @@ Plan a feature by spawning Ruby specialists, then write a structured plan with c
 ## What Makes /rb:plan Different
 
 1. It routes research through Ruby/Rails/Grape specialists.
-2. It plans with `[rails]`, `[grape]`, `[ar]`, `[sequel]`, `[sidekiq]`, `[security]`, `[perf]`, `[ruby]` task hints.
+2. It plans with `[direct]`, `[active record]`, `[hotwire]`, `[sidekiq]`, `[concurrency]`, `[security]`, `[test]` task annotations (canonical Set A; consumed by `/rb:work`).
 3. In mixed stacks, it identifies the owning package and ORM before planning changes.
 4. It bakes in verification gates for Zeitwerk, formatter, tests, and optional Brakeman.
 5. It understands Rails controllers, service objects, Active Record, Sequel, Grape APIs, Redis, and Sidekiq jobs.
@@ -34,6 +34,32 @@ Plan a feature by spawning Ruby specialists, then write a structured plan with c
 ```
 
 Each phase has entry/exit criteria. Do not skip phases.
+
+## Slug Pre-Bind Detection (`/rb:full` integration)
+
+Before deriving a fresh slug, check for an EXPLICIT pre-set marker. Read
+`.claude/ACTIVE_PLAN` directly — do NOT call `active-plan-marker.sh get`,
+because that script falls back to disk globs (newest plan with unchecked
+tasks, newest planning-phase dir) which can return an unrelated namespace.
+
+Apply 4 strict guards before reusing a pre-bound namespace:
+
+1. `.claude/ACTIVE_PLAN` exists and is not a symlink
+2. The path it points to is an existing non-symlink directory
+3. That directory contains a non-symlink `progress.md` whose `**State**:`
+   line equals `INITIALIZING` or `DISCOVERING`
+4. That directory does NOT yet contain `plan.md` (pre-plan phase)
+
+All 4 must pass — otherwise derive a fresh slug, create namespace, and
+set the marker AFTER `plan.md` write (existing standalone behavior).
+
+This protocol allows `/rb:full` to pre-bind the namespace before invoking
+`/rb:plan`. When `/rb:plan` runs standalone (no marker, or marker fails
+the strict guards), behavior is unchanged: derive fresh slug.
+
+For the exact shell-guard sequence, see
+`${CLAUDE_SKILL_DIR}/references/planning-workflow.md` §
+"Slug Pre-Bind Detection (strict guards)".
 
 ## Interview Detection (from /rb:brainstorm)
 
@@ -87,10 +113,11 @@ is clearly relevant:
 - log reuse decisions in `.claude/plans/{slug}/scratchpad.md` under
   `## Decisions` → `### Research Cache Reuse` as
   `REUSED: {filename} -> skipped {agent}`
-- after fresh research completes, compress both new and reused inputs
-  with `context-supervisor` into
-  `.claude/plans/{slug}/summaries/consolidated.md` before synthesizing
-  the final plan
+- after fresh research completes, main session spawns context-supervisor
+  as a leaf compression call: `Agent(context-supervisor)` reads explicit
+  research/ paths + reused-cache paths logged in scratchpad.md, writes
+  `.claude/plans/{slug}/summaries/consolidated.md`. Synthesis happens in
+  main session from the consolidated summary.
 
 Spawn only what the request needs:
 
@@ -227,72 +254,45 @@ references:
 6. `security` - Brakeman, SQL injection, XSS prevention
 7. `testing` - RSpec/Minitest patterns, factories, VCR
 
-## Agent Spawning with Progress Tracking
+## Main-Session Fanout
 
-When spawning multiple agents:
+`/rb:plan` spawns research agents directly from the main session in
+parallel. There is NO wrapper orchestrator agent. Specialists are leaf
+workers — they research, write artifact, return summary.
 
-```
-Spawn Order:
-1. rails-patterns-analyst (async) - analyze existing patterns
-2. security-analyzer (async) - identify risks
-3. sidekiq-specialist (async) - job design
-4. active-record-schema-designer (async) - schema changes
+Steps in skill-body execution order:
 
-Wait for all, then synthesize findings.
-```
+1. main session creates plan namespace (if not pre-bound) + scratchpad
+2. main session checks compound docs + research cache (skip duplicates)
+3. main session selects research agents per matrix in
+   `${CLAUDE_SKILL_DIR}/references/planning-workflow.md`
+4. main session spawns ALL selected agents in ONE parallel block
+   (rails-patterns-analyst always; conditional agents per request type)
+5. main session waits for ALL agents to complete
+6. main session reads each agent's output file from research/
+7. main session builds explicit input manifest:
+   - `.claude/plans/{slug}/research/{topic}.md` (per-agent research files)
+   - any reused cached files logged under `## Decisions` →
+     `### Research Cache Reuse` in scratchpad.md
+8. main session spawns context-supervisor with manifest;
+   output: `.claude/plans/{slug}/summaries/consolidated.md`
+9. main session synthesizes plan.md from consolidated summary
 
-Track progress:
+### Worker Briefing Requirements
 
-- Use todo lists with status markers
-- Update as agents complete
-- Note any blocking findings
+Every research Agent() call must:
 
-## Plan Structure Template
+- write detailed output to `.claude/plans/{slug}/research/{topic-slug}.md`
+- return only a 500-word summary (not full content) for context budget
+- run with `run_in_background: true` for parallelism
+- be focused — scope each prompt to specific files/patterns/questions
+- NEVER call Agent() — research agents are leafs
 
-```markdown
-# Plan: {Feature Name}
+For full selection matrix, briefing templates, and routing hints, see:
+`${CLAUDE_SKILL_DIR}/references/planning-workflow.md`
 
-## Overview
-- Goal: {one sentence}
-- Scope: {what's in/out}
-- Risk Level: {low/medium/high}
-
-## Research Findings
-{summary of agent findings}
-
-## Design Decisions
-{architecture choices, trade-offs}
-
-## Tasks
-
-Strong success criteria let you loop independently. Weak criteria
-("make it work") require constant clarification. Every checkbox must
-include a verification criterion:
-
-### Phase 1: Setup & Migration
-- [ ] {task with [rails] hint} → verify: {how to confirm it worked}
-- [ ] {task with [ar] hint} → verify: {migration applies cleanly}
-
-### Phase 2: Implementation
-- [ ] {task with [ruby] hint} → verify: {specific test passes}
-- [ ] {task with [sidekiq] hint} → verify: {job runs idempotently}
-
-### Phase 3: Verification
-- [ ] Run zeitwerk:check if full Rails app
-- [ ] Run configured formatter/linter
-- [ ] Run tests
-- [ ] Run brakeman if configured
-
-## Risks & Mitigations
-| Risk | Likelihood | Mitigation |
-|------|------------|------------|
-| {risk} | {L/M/H} | {strategy} |
-
-## Checkpoint
-- Created: {timestamp}
-- Last Updated: {timestamp}
-- Status: {planning/ready/in-progress}
-```
+For the canonical plan.md template + section requirements, see
+`${CLAUDE_SKILL_DIR}/references/planning-workflow.md` § "Plan Template".
 
 ## Output
 
@@ -321,9 +321,12 @@ exists. Use the canonical structure from
 - `## Open Questions`
   - unresolved issues that still block the plan
 
-**After creating the plan, set the active plan marker:**
+**After creating the plan, conditionally set the active plan marker:**
 
-Run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/active-plan-marker.sh set .claude/plans/{slug}`.
+If `.claude/ACTIVE_PLAN` already exists and resolves to the current
+plan namespace (set by `/rb:full` pre-bind), skip the marker write —
+it is already correct. Otherwise (standalone `/rb:plan` invocation),
+run `${CLAUDE_PLUGIN_ROOT}/hooks/scripts/active-plan-marker.sh set .claude/plans/{slug}`.
 
 This marker allows `/rb:work` to auto-detect which plan to resume, enables session resume detection, and tracks the current active plan for context-aware operations.
 

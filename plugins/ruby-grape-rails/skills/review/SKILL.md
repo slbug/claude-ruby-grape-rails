@@ -21,42 +21,45 @@ Reviews catch issues before they reach production. Each specialist focuses on th
 
 ## Collecting Changed Files
 
-Resolve the base ref before spawning reviewers:
+Resolve the base ref via `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` and
+collect the changed file list using `git merge-base` and
+`git diff --name-only --diff-filter=ACMR`. Pass the resulting
+`$CHANGED_FILES` to every spawned reviewer so each scopes to branch
+changes only. Reviewers must NEVER scan unchanged files.
 
-```bash
-eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"
-MERGE_BASE=$(git merge-base HEAD "$BASE_REF")
-git diff --name-only --diff-filter=ACMR "$MERGE_BASE"...HEAD
-```
+For exact shell commands, see
+`${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Diff Collection".
 
-Pass the resulting file list when dispatching `parallel-reviewer` so all
-sub-reviewers scope to branch changes only.
+## Main-Session Fanout
 
-## Review State Machine
+`/rb:review` spawns specialist agents directly from the main session in
+parallel. There is NO wrapper agent. Subagents are leaf workers — they
+return findings, they do not spawn further agents.
 
-```
-START ──▶ COLLECT CHANGES ──▶ SELECT AGENTS ──▶ SPAWN PARALLEL
-                                              │
-                                              ▼
-                                    ┌─────────────────┐
-                                    │  WAIT FOR ALL   │
-                                    │  COMPLETION     │
-                                    └────────┬────────┘
-                                             │
-                                             ▼
-                                    ┌─────────────────┐
-                                    │  SYNTHESIZE     │
-                                    │  FINDINGS       │
-                                    └────────┬────────┘
-                                             │
-                    ┌────────────────────────┼────────────────────────┐
-                    ▼                        ▼                        ▼
-              [CLEAN]                  [WARNINGS]               [CRITICAL]
-                    │                        │                        │
-                    ▼                        ▼                        ▼
-           Suggest compound          Suggest triage          Require triage
-           or learn                   or plan                 or plan
-```
+### Fanout Pattern
+
+Steps in skill-body execution order:
+
+1. main session classifies complexity (tier + critical-path escalation)
+2. main session selects core + conditional reviewers per matrix below
+3. main session derives review-slug + datesuffix; builds explicit
+   per-reviewer artifact paths (this run only)
+4. main session spawns ALL selected reviewers in ONE parallel block
+   (Agent calls for ruby-reviewer, security-analyzer, testing-reviewer,
+   verification-runner, plus conditional agents per matrix)
+5. main session waits for ALL reviewers to complete
+6. main session builds CURRENT-RUN MANIFEST: list of just-written
+   artifact paths (one per spawned reviewer; none from prior runs).
+   Path format: `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
+7. main session spawns context-supervisor with explicit input paths;
+   output: `.claude/reviews/{review-slug}.md` (consolidated)
+8. main session reads consolidated.md, synthesizes verdict, presents to user
+
+### Compression input rule
+
+`Agent(context-supervisor)` receives explicit current-run artifact paths.
+Do NOT pass globs like `.claude/reviews/{agent-slug}/*` — that pulls
+stale artifacts from prior runs.
 
 ## Complexity Classification
 
@@ -69,20 +72,12 @@ critical-path files force escalation regardless of count.
 | **Medium** | 4-10 | Core + conditional by file type | 4-8 |
 | **Complex** | 11+ | All relevant reviewers, detailed output | 8-11 |
 
-**Auto-escalate to Complex** when any changed file matches:
-
-- `**/auth/**`, `**/authentication/**`, `**/authorization/**`
-- `**/payment/**`, `**/billing/**`, `**/checkout/**`
-- `db/migrate/**`
-- `config/routes*`, `config/initializers/devise*`
-- `**/middleware/**`
-
 Log the classification in the consolidated review header:
 `**Complexity**: Simple (2 files) | Medium (7 files) | Complex (15 files, escalated: db/migrate)`
 
-## Default Review Tracks
+## Reviewer Selection Matrix
 
-Based on complexity tier and what changed, spawn appropriate reviewers:
+Spawn from main session in single parallel block based on tier + file patterns:
 
 ### Core Reviewers (Always — all tiers)
 
@@ -100,6 +95,36 @@ Based on complexity tier and what changed, spawn appropriate reviewers:
 - `ruby-runtime-advisor` - When performance, memory, or hot paths changed
 - `data-integrity-reviewer` - When models, constraints, or transactions changed
 - `migration-safety-reviewer` - When migrations add columns or modify tables
+
+### Auto-escalation Triggers
+
+When ANY changed file matches a pattern below, force Complex tier and add
+the matching specialist to the spawn list (in addition to base tier):
+
+| File pattern matched | Add specialist |
+|---|---|
+| `**/auth/**`, `**/authentication/**`, `**/authorization/**` | `iron-law-judge` (security-analyzer always already core) |
+| `**/payment/**`, `**/billing/**`, `**/checkout/**` | `iron-law-judge` + `data-integrity-reviewer` |
+| `db/migrate/**` | `migration-safety-reviewer` + `data-integrity-reviewer` |
+| `config/routes*` | `rails-architect` |
+| `config/initializers/devise*` | `iron-law-judge` (security-analyzer already core) |
+| `**/middleware/**` | `rails-architect` (security-analyzer already core) |
+
+### Worker Briefing Requirements
+
+Every Agent() call must include in its prompt:
+
+- Task: review the file list for the requested scope
+- `$CHANGED_FILES` (the diff manifest from main session)
+- `$BASE_REF` (from resolve-base-ref output)
+- Artifact path: `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
+- Required output: write artifact (always — even on PASS) and return summary
+- Findings format: file:line, Severity (Critical/Warning/Info),
+  Confidence (HIGH/MEDIUM/LOW), description, current code, suggested code
+- Constraint: stop after returning; do NOT call Agent() — leaf review
+
+For full briefing template (verbatim text to use in prompts), see
+`${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Worker Briefing Template".
 
 ## Iron Laws
 
@@ -156,6 +181,35 @@ Rules:
 - Review artifacts never live under `.claude/plans/...`
 - If review is part of a plan, reference the consolidated review from the plan or progress log instead of nesting the report inside the plan namespace
 
+### Post-fanout Compression
+
+After ALL reviewers return, main session spawns context-supervisor with
+the current-run manifest. The spawn prompt MUST be self-contained — agent
+body content is NOT reliably injected to subagents, so compression rules
+go in the calling prompt:
+
+- Inputs: exact list of just-written
+  `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` paths
+- Output: `.claude/reviews/{review-slug}.md`
+- Preserve blockers / must-fix items VERBATIM
+- Preserve decision options + rationale, unresolved disagreements,
+  file paths, and concrete evidence
+- Compress repeated low-severity points aggressively
+- Dedupe overlapping findings; merge across agents; cite all sources
+- Keep highest confidence among duplicates
+- Sort: Critical → Warning → Info; HIGH → MEDIUM → LOW within severity
+- Preserve "Pre-existing Issues" + "Positive Findings" sections
+- Stop after writing. Do NOT call Agent().
+
+### Artifact Recovery
+
+If a reviewer's Write fails (CC platform bug), main session extracts
+findings from the Agent() return text and writes the artifact itself.
+Do NOT re-spawn — the work is done, only the file write failed.
+
+For full recovery procedure, see
+`${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Artifact Recovery".
+
 ## Confidence Levels
 
 Every finding MUST include a confidence label. This tells the user which
@@ -171,93 +225,8 @@ When consolidating findings from multiple agents, keep the highest confidence
 level among duplicates. Sort findings by confidence (HIGH first) within each
 severity level.
 
-## Consolidated Review Format
-
-Write the synthesized review to `.claude/reviews/{review-slug}.md`:
-
-```markdown
-# Review: {track}
-**Date**: {timestamp}
-**Complexity**: {Simple|Medium|Complex} ({N} files{, escalated: reason})
-**Files Changed**: {list}
-
-## Summary
-- Critical: {N}
-- Warnings: {N}
-- Info: {N}
-- Clean: {Y/N}
-
-## Critical Issues
-
-### 1. {Issue Title}
-**File**: `path/to/file.rb:{line}`
-**Severity**: Critical | **Confidence**: HIGH
-**Category**: {security/performance/correctness}
-
-{description of issue}
-
-**Current**:
-```ruby
-{bad code}
-```
-
-**Suggested**:
-
-```ruby
-{good code}
-```
-
-**Why it matters**: {explanation}
-
-## Warnings
-
-### 2. {Issue Title}
-
-**Severity**: Warning | **Confidence**: MEDIUM
-
-...
-
-## Pre-existing Issues (unchanged code)
-
-- {issue} (not introduced by this change)
-
-## Positive Findings
-
-- {what was done well}
-
-```
-
-## Severity Levels
-
-### Critical
-Must fix before merge:
-- Security vulnerabilities
-- Data loss risks
-- Production outages
-- Iron Law violations in critical paths
-
-### Warning
-Should fix before merge:
-- Performance issues
-- Maintainability problems
-- Test coverage gaps
-- Potential bugs
-
-### Info
-Nice to have:
-- Style suggestions
-- Refactoring opportunities
-- Documentation improvements
-
-## Deduplication Strategy
-
-When multiple agents find the same issue:
-
-1. Merge into single finding
-2. Cite all agents who found it
-3. Use most specific description
-4. Keep highest severity
-5. List all affected lines
+For consolidated review format / severity definitions / deduplication strategy,
+see `${CLAUDE_SKILL_DIR}/references/review-playbook.md`.
 
 ## Review Output Location
 
@@ -280,16 +249,19 @@ Use the current branch name only after slugifying it. If the branch name is not 
 Based on findings severity:
 
 ### Clean Review (0 critical, 0-2 warnings)
+
 - Suggest `/rb:compound` - for knowledge synthesis
 - Suggest `/rb:learn` - for pattern extraction
 - User can proceed with confidence
 
 ### Warning Review (0 critical, 3+ warnings)
+
 - Suggest `/rb:triage` - to prioritize fixes
 - Suggest `/rb:plan` - if fixes need planning
 - User decides which warnings to address
 
 ### Critical Review (1+ critical)
+
 - Require `/rb:triage` - address critical issues first
 - Suggest `/rb:plan` - if significant rework needed
 - Do not proceed without fixes
@@ -305,17 +277,8 @@ Based on findings severity:
 
 ## Integration with Workflow
 
-Review happens after `/rb:work` and before commit:
-
-```
-
-/rb:plan ──▶ /rb:work ──▶ /rb:review ──▶ /rb:triage (if issues)
-                                              │
-                                              ▼
-                                         COMMIT/PR
-
-```
-
+Review happens after `/rb:work` and before commit. Standard order:
+`/rb:plan → /rb:work → /rb:review → /rb:triage` (if issues) → commit/PR.
 Reviews can also be triggered standalone for existing code audits.
 
 ## Trust States

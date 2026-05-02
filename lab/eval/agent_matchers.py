@@ -3,7 +3,7 @@
 
 from typing import Any
 
-from .matchers import parse_frontmatter
+from .frontmatter import get_body, parse_frontmatter
 
 
 def tools_present(content: str, min_count: int = 1, **_: Any) -> tuple[bool, str]:
@@ -77,13 +77,13 @@ def omit_claudemd_coherent(content: str, **_: Any) -> tuple[bool, str]:
     omit_claudemd = fm.get("omitClaudeMd")
     write_like_tools = {"Write", "Edit", "NotebookEdit"}
 
-    # Denylist-only agents: omitClaudeMd is acceptable (specialists don't need
-    # contributor context regardless of Write access)
+    # Denylist-only agents: must set omitClaudeMd: true (specialists don't
+    # need contributor CLAUDE.md context). The previous "orchestrator"
+    # exception is removed — no shipped wrapper-orchestrator agents remain.
     if not tools and disallowed:
         if omit_claudemd is True:
             return True, "specialist agent omits CLAUDE.md"
-        # Denylist-only without omitClaudeMd is also acceptable (orchestrators)
-        return True, "denylist-only agent without omitClaudeMd (acceptable)"
+        return False, "denylist-only agent must set omitClaudeMd: true"
 
     # Allowlist agents: write-capable agents should keep CLAUDE.md
     if write_like_tools.intersection(tools):
@@ -99,6 +99,18 @@ def omit_claudemd_coherent(content: str, **_: Any) -> tuple[bool, str]:
     return False, f"read-only agent {agent_name!r} missing omitClaudeMd: true"
 
 
+def no_nested_agent(content: str, **_: Any) -> tuple[bool, str]:
+    """Agents must not declare Agent in tools or call Agent(...) in body."""
+    fm = parse_frontmatter(content)
+    body = get_body(content)
+    tool_list = _coerce_tool_list(fm.get("tools", []))
+    if "Agent" in tool_list:
+        return False, "agent declares Agent in tools (forbidden — agents are leaf workers)"
+    if "Agent(" in body or "subagent_type:" in body:
+        return False, "agent body contains Agent(...) or subagent_type: call (forbidden — agents are leaf workers)"
+    return True, "agent does not declare or invoke Agent"
+
+
 MATCHERS = {
     "tools_present": tools_present,
     "disallowed_tools_present": disallowed_tools_present,
@@ -106,4 +118,5 @@ MATCHERS = {
     "effort_present": effort_present,
     "read_only_tools_coherent": read_only_tools_coherent,
     "omit_claudemd_coherent": omit_claudemd_coherent,
+    "no_nested_agent": no_nested_agent,
 }

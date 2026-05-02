@@ -87,20 +87,25 @@ When starting work:
 
 8. **Load relevant context** - files, dependencies, tests
 
-## Routing Hints
+## Domain Routing Hints (prose-only)
 
-Task hints indicate which domain expertise to apply:
+These labels describe domain expertise to apply while working — they are
+NOT plan-task checkbox annotations. Canonical annotations parsed by
+`/rb:work` (Set A — `[direct]`, `[active record]`, `[hotwire]`,
+`[sidekiq]`, `[concurrency]`, `[security]`, `[test]`) are documented in
+`${CLAUDE_PLUGIN_ROOT}/skills/plan/references/planning-workflow.md`.
+
+To prevent same-bracket-name collision with parsed annotations, the
+narrative labels below intentionally exclude `[hotwire]`, `[sidekiq]`,
+`[security]`, and `[test]` (those are Set A canonicals). Use these
+non-colliding labels for domain prose only:
 
 - `[rails]` controller/view/service wiring, routing, helpers
 - `[grape]` API params, versioning, endpoint behavior, serializers
 - `[ar]` schema, query, migration, locking, transaction work
 - `[sequel]` datasets, Sequel models, Sequel migrations, DB.transaction work
-- `[sidekiq]` jobs, queueing, retries, enqueue-after-commit
-- `[security]` authn/authz, parameter shaping, unsafe rendering, secrets
 - `[perf]` query plans, caching, Redis, hot paths, N+1 prevention
 - `[ruby]` plain Ruby refactors, library code, gems
-- `[hotwire]` Turbo Streams, Stimulus controllers, frames
-- `[test]` specs, factories, test data, coverage
 
 ## Task Execution Protocol
 

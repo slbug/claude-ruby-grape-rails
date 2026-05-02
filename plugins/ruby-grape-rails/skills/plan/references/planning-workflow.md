@@ -162,26 +162,44 @@ whether fresh research already exists:
   `rails-patterns-analyst`, `call-tracer`, or
   schema/security/job specialists based only on cached research.
 
-## Waiting for Agents
+## Waiting for Agents (main session)
 
-You'll be notified as each background agent completes. Read each
-agent's output file to collect results. Do NOT proceed to plan
+Main session is notified as each background agent completes. Main session
+reads each agent's output file to collect results. Do NOT proceed to plan
 generation until every agent has completed.
 
-Then run `context-supervisor` over:
+After all research agents return, main session builds an explicit input manifest and spawns the compression worker. Spawn prompt is self-contained (agent body not reliably injected to subagents):
 
-- `.claude/plans/{slug}/research/`
-- any reused files recorded in `scratchpad.md`
+```text
+Agent(context-supervisor):
+  Task: compress the listed research artifacts to summaries/consolidated.md.
 
-Write the compressed result to:
+  Inputs (explicit list, no globs):
+    - .claude/plans/{slug}/research/{topic}.md (one per spawned agent)
+    - any reused files recorded under
+      ## Decisions → ### Research Cache Reuse in scratchpad.md
 
-- `.claude/plans/{slug}/summaries/consolidated.md`
+  Output: .claude/plans/{slug}/summaries/consolidated.md
+
+  Rules (inline; do NOT rely on agent body):
+    - Preserve key decisions + rationale VERBATIM
+    - Preserve concrete file paths and package ownership
+    - Preserve risks, unknowns, contested choices
+    - Include short "Reused context" section listing absorbed cached files
+    - Compress repeated low-severity points aggressively
+
+  Stop after writing. Do NOT call Agent().
+```
+
+If `context-supervisor` Write fails (CC platform bug), extract the
+compression result from Agent() return text and write the file from main
+session. Do NOT re-spawn — the work is done, only the file write failed.
 
 Read `summaries/consolidated.md` first. Only open raw research files
 when the compressed summary leaves an important question unresolved.
 
-If an agent fails, do the research yourself with Read/Grep
-instead of re-spawning.
+If a research agent fails, do the research yourself with Read/Grep
+from main session instead of re-spawning.
 
 ## Infrastructure Knowledge Persistence
 
@@ -285,8 +303,8 @@ description, plan file path). Use the canonical structure from
 - `## Hypotheses`
 - `## Open Questions`
 
-**Do NOT read any reference files.** The plan template is inlined
-in the planning-orchestrator agent.
+**The plan template lives in this file** (see "Plan Template" section below).
+Inline it from here when synthesizing the plan.
 
 ## Self-Check (Deep Plans Only)
 
@@ -365,3 +383,155 @@ plan with deeper research instead of creating a new one.
   prior history. Use specialist agents that write to files and
   return short summaries. Never use Explore agents (they return
   full output inline and exhaust context)
+
+## Slug Pre-Bind Detection (strict guards)
+
+Bash sequence used by `/rb:plan` skill body for pre-bind detection.
+Reads `.claude/ACTIVE_PLAN` directly. Does NOT call
+`active-plan-marker.sh get`.
+
+```bash
+ACTIVE_FILE="$(pwd)/.claude/ACTIVE_PLAN"
+
+if [[ -f "$ACTIVE_FILE" && ! -L "$ACTIVE_FILE" ]]; then
+  IFS= read -r MARKED_DIR < "$ACTIVE_FILE"
+  case "$MARKED_DIR" in
+    /*) ;;
+    *)  MARKED_DIR="$(pwd)/${MARKED_DIR#./}" ;;
+  esac
+
+  # ALL FOUR guards must pass to reuse the pre-bound namespace:
+  if [[ -d "$MARKED_DIR" \
+        && ! -L "$MARKED_DIR" \
+        && -f "$MARKED_DIR/progress.md" \
+        && ! -L "$MARKED_DIR/progress.md" \
+        && ! -f "$MARKED_DIR/plan.md" \
+        ]] && grep -qE '^- \*\*State\*\*: (INITIALIZING|DISCOVERING)$' \
+                  "$MARKED_DIR/progress.md"; then
+    SLUG_DIR="$MARKED_DIR"   # reuse pre-bound namespace
+  fi
+fi
+# Otherwise: derive fresh slug, create namespace, set marker AFTER plan.md write.
+```
+
+## Agent Selection Matrix
+
+| Request Contains | Spawn Agent |
+|---|---|
+| Rails UI/feature | `rails-patterns-analyst` + `rails-architect` |
+| Database changes | `active-record-schema-designer` |
+| Background jobs | `sidekiq-specialist` |
+| Auth/payments/admin | `security-analyzer` |
+| New gem/library | `ruby-gem-researcher` |
+| Cross-cutting change | `call-tracer` |
+| Complex workflow | `rails-architect` |
+| API changes | `rails-patterns-analyst` + `security-analyzer` |
+
+## Spawning Strategy
+
+```text
+Phase 1: Research (parallel block)
+├─ rails-patterns-analyst    (always)
+├─ active-record-schema-designer (if DB changes)
+├─ security-analyzer         (if auth/data sensitive)
+└─ sidekiq-specialist        (if jobs)
+
+Phase 2: Architecture (if needed)
+└─ rails-architect           (if service layer / cross-cutting)
+```
+
+## Agent Briefing Template
+
+```text
+Task: Analyze [aspect] for [feature]
+
+Context:
+- Feature: [description]
+- Files involved: [list]
+- Constraints: [list]
+- Questions to answer:
+  1. [question]
+  2. [question]
+
+Output:
+- Write detailed findings to .claude/plans/{slug}/research/{topic-slug}.md
+- Return ONLY a 500-word summary in Agent() result text
+
+Stop after returning. Do NOT call Agent() — this is a leaf research.
+```
+
+## Progress Tracking Template
+
+```markdown
+## Agent Coordination
+
+### Spawned
+- [x] rails-patterns-analyst (completed)
+- [x] active-record-schema-designer (completed)
+- [▶] security-analyzer (in progress)
+- [ ] sidekiq-specialist (pending)
+
+### Findings Summary
+- Patterns: [key findings]
+- Schema: [key findings]
+- Security: [awaiting]
+- Jobs: [pending]
+```
+
+## Plan-Task Annotations Cross-Reference
+
+Set A annotations (`[direct]`, `[active record]`, `[hotwire]`, `[sidekiq]`,
+`[concurrency]`, `[security]`, `[test]`) are already canonicalized earlier
+in this file under "Key requirements" (the `[Pn-Tm][annotation]` task
+format checklist). That earlier section is the canonical source — do
+NOT duplicate the list here.
+
+NOTE: `work/SKILL.md` uses shorter domain labels (`[grape]`, `[ar]`,
+`[sequel]`, `[perf]`, `[ruby]`) only as descriptive narrative — those
+are NOT plan-task annotations and must not appear in plan checkboxes.
+Use the Set A list documented earlier in this file for all
+`[Pn-Tm][annotation]` entries.
+
+## Plan Template (inline this when writing plan.md)
+
+```markdown
+# Plan: {Feature Name}
+
+## Overview
+**Goal**: {one sentence}
+**Scope**: {boundaries}
+**Risk Level**: {low/medium/high}
+**Estimated Effort**: {N} tasks, {N} hours
+
+## Research Findings
+{summary of agent findings — derived from summaries/consolidated.md}
+
+## Design Decisions
+{key choices with rationale}
+
+## Tasks
+
+### Phase 1: Foundation
+- [ ] [P1-T1][active record] {task} → verify: {how}
+
+### Phase 2: Implementation
+- [ ] [P2-T1][direct] {task} → verify: {how}
+
+### Phase 3: Verification
+- [ ] [P3-T1][test] Run zeitwerk:check → verify: clean output
+- [ ] [P3-T2][test] Run formatter/linter → verify: zero issues
+- [ ] [P3-T3][test] Run test suite → verify: all green
+- [ ] [P3-T4][security] Run brakeman → verify: no new findings
+
+## Risks & Mitigations
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| {risk} | {L/M/H} | {L/M/H} | {strategy} |
+```
+
+## Common Planning Pitfalls
+
+- **over-planning**: too many tasks, too much implementation detail
+- **under-planning**: missing verification or risk coverage
+- **wrong agents**: missing security/jobs/schema specialists
+- **ignoring context**: not reading existing code before decomposing work

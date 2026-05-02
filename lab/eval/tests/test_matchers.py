@@ -321,16 +321,56 @@ omitClaudeMd: true
         self.assertTrue(passed)
         self.assertIn("specialist", evidence)
 
-    def test_omit_claudemd_accepts_denylist_only_without_omit(self) -> None:
+    def test_omit_claudemd_rejects_denylist_only_without_omit(self) -> None:
         content = """---
 name: sample-agent
-description: Orchestrate review workflow.
+description: Specialist review workflow.
 disallowedTools: Edit, NotebookEdit
 ---
 """
         passed, evidence = agent_matchers.omit_claudemd_coherent(content)
+        self.assertFalse(passed)
+        self.assertIn("must set omitClaudeMd: true", evidence)
+
+    def test_no_nested_agent_passes_leaf(self) -> None:
+        content = """---
+name: leaf-agent
+description: Leaf specialist.
+disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
+omitClaudeMd: true
+---
+# Leaf
+Read files. Write artifact. Stop.
+"""
+        passed, evidence = agent_matchers.no_nested_agent(content)
         self.assertTrue(passed)
-        self.assertIn("acceptable", evidence)
+        self.assertIn("does not declare or invoke", evidence)
+
+    def test_no_nested_agent_rejects_agent_in_tools(self) -> None:
+        content = """---
+name: bad-agent
+description: Wrapper.
+tools: Read, Write, Agent
+---
+# Bad
+"""
+        passed, evidence = agent_matchers.no_nested_agent(content)
+        self.assertFalse(passed)
+        self.assertIn("declares Agent in tools", evidence)
+
+    def test_no_nested_agent_rejects_agent_call_in_body(self) -> None:
+        content = """---
+name: bad-agent
+description: Wrapper.
+disallowedTools: Edit, NotebookEdit
+omitClaudeMd: true
+---
+# Bad
+This agent calls Agent(subagent_type: "ruby-reviewer") which is forbidden.
+"""
+        passed, evidence = agent_matchers.no_nested_agent(content)
+        self.assertFalse(passed)
+        self.assertIn("Agent(...)", evidence)
 
     # --- no_bash_blocks regression tests (v1.8.0) ---
 

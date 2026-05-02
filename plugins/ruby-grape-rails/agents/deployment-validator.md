@@ -21,7 +21,7 @@ Review for:
 
 ## CRITICAL: Save Findings File First
 
-Your orchestrator reads findings from the exact file path given in the prompt
+Your calling skill body reads findings from the exact file path given in the prompt
 (e.g., `.claude/reviews/deployment-validator/{review-slug}-{datesuffix}.md`). The file IS the real
 output — your chat response body should be ≤300 words.
 

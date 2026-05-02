@@ -37,12 +37,12 @@ With `--from P2-T3`: Skip directly to that task.
 
 ### Primary: Parse Agent Annotation
 
-Task format: `- [ ] [Pn-Tm][agent] Description`
+Task format: `- [ ] [Pn-Tm][annotation] Description`
 
 ```markdown
 - [ ] [P2-T2][active record] Add validations to user model
                  ^^^^            
-            Parse this annotation -> spawn active-record-schema-designer
+            Parse this annotation -> route to active-record-schema-designer guidance
 ```
 
 ### Routing Table
@@ -59,7 +59,7 @@ Task format: `- [ ] [Pn-Tm][agent] Description`
 
 ### Fallback: Keyword Matching (Legacy Plans)
 
-If no `[agent]` annotation, fall back to keywords:
+If no `[annotation]` annotation, fall back to keywords:
 
 | Keywords (priority order) | Agent |
 |---------------------------|-------|

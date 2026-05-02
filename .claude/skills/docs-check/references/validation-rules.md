@@ -30,6 +30,17 @@ Authoritative cached docs:
 - `plugins-reference.md` for plugin-shipped agent support
 - `sub-agents.md` for tool syntax and agent behavior details
 
+### Agent / Skill Boundary Rule
+
+- **Agent frontmatter** (`plugins/**/agents/*.md`, `.claude/agents/*.md`):
+  `tools:` MUST NOT include `Agent`. Body MUST NOT contain `Agent(...)` /
+  `subagent_type:` calls. Flag as BLOCKER if found.
+- **Skill bodies and skill references**
+  (`plugins/**/skills/*/SKILL.md`, `plugins/**/skills/*/references/*.md`,
+  `.claude/skills/*/SKILL.md`): MAY contain `Agent(...)` calls when
+  describing main-session fanout. Allowed.
+- Rationale source: `sub-agents.md` (cached docs).
+
 Current plugin-agent frontmatter supported by docs:
 
 - `name`
@@ -81,6 +92,7 @@ Current skill frontmatter supported by docs:
 
 - `name`
 - `description`
+- `when_to_use`
 - `argument-hint`
 - `disable-model-invocation`
 - `user-invocable`
@@ -113,14 +125,17 @@ Authoritative cached docs:
 
 Current documented hook events include:
 
+- `Setup`
 - `SessionStart`
 - `SessionEnd`
 - `UserPromptSubmit`
+- `UserPromptExpansion`
 - `PreToolUse`
 - `PermissionRequest`
 - `PermissionDenied`
 - `PostToolUse`
 - `PostToolUseFailure`
+- `PostToolBatch`
 - `Notification`
 - `SubagentStart`
 - `SubagentStop`
@@ -144,6 +159,7 @@ Current documented hook types:
 
 - `command`
 - `http`
+- `mcp_tool`
 - `prompt`
 - `agent`
 
