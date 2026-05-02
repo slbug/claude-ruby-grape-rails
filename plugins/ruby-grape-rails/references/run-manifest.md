@@ -256,7 +256,11 @@ Helper enforces:
   `manifest.agents.*.path`, (b) under `.claude/`, (c) below 1000 bytes,
   and (d) only when agent status is `pending` / `in-flight` /
   `stub-no-output`. Real artifacts are skipped with a warning.
-- Fail-closed: any error exits non-zero before disk mutation.
+- Fail-closed on the target manifest: any error during write leaves
+  the target manifest path unchanged (no partial writes; either
+  prior content or new content, never half-written). Transient
+  `mktemp` + `mkdir_p` artifacts may remain on disk if cleanup is
+  interrupted; they do not corrupt the manifest.
 
 ## Agent Boundary
 
