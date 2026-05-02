@@ -42,16 +42,12 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 
 ### Artifact Directories
 
-Each plan owns artifacts in `.claude/plans/{slug}/` (plan.md, research/,
-summaries/, progress.md, scratchpad.md). Other `.claude/` namespaces:
-`.claude/audit/` (reports + summaries),
-`.claude/reviews/{review-slug}-{datesuffix}.md` (consolidated),
-`.claude/reviews/{agent-slug}/...` (per-reviewer),
-`.claude/reviews/{review-slug}/RUN-CURRENT.json` + `RUN-HISTORY.jsonl`
-(run manifest for cross-session resume —
-see `plugins/ruby-grape-rails/references/run-manifest.md`),
-`.claude/investigations/{agent}/{slug}-{datesuffix}.md`
-(e.g. `.claude/investigations/deep-bug-investigator/`),
+Each plan owns `.claude/plans/{slug}/` (plan.md, research/, summaries/,
+progress.md, scratchpad.md). Other namespaces: `.claude/audit/`,
+`.claude/reviews/{review-slug}-{datesuffix}.md` + `{agent-slug}/...` +
+`{review-slug}/RUN-CURRENT.json` + `RUN-HISTORY.jsonl` (run manifest:
+`plugins/ruby-grape-rails/references/run-manifest.md`),
+`.claude/investigations/{agent}/{slug}-{datesuffix}.md`,
 `.claude/skill-metrics/`, `.claude/solutions/{category}/`.
 
 ## Structure
