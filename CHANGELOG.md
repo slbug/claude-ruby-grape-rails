@@ -13,14 +13,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `bin/manifest-update` (Ruby) — atomic manifest writer with
   path-allowlist gate, symlink refusal, mktemp + fsync + POSIX
-  rename + dir fsync. Subcommands: `init`, `patch` (deep-merge from
-  stdin), `prepare-respawn` (unlink stale stubs at manifest-tracked
-  agent paths only), `resume-check` (per-skill TTL defaults +
-  HEAD/base/branch pin evaluation; emits `absent` / `stale` /
-  `fresh-complete` / `fresh-in-flight`), `archive`, `status`. All
-  manifest mutations, stale-stub unlinks, and resume-decision logic
-  go through this binary; raw `mv` / `cp` / `jq -i` / `rm` against
-  manifest paths is forbidden.
+  rename + dir fsync. Subcommands: `prepare-run` (archive prior +
+  init fresh in one call), `init` (fail if exists), `patch`
+  (deep-merge from stdin), `prepare-respawn` (unlink stale stubs at
+  manifest-tracked agent paths only), `resume-check` (per-skill TTL
+  defaults + HEAD/base/branch pin evaluation), `archive`, `status`.
+  Reuses `lib/repo_root.rb` (new shared module). All manifest
+  mutations and stale-stub unlinks go through this binary; raw
+  `mv` / `cp` / `jq -i` / `rm` against manifest or per-agent
+  artifact paths is forbidden.
+- `lib/repo_root.rb` — shared `RubyGrapeRails::RepoRoot` module
+  (find / canonical / git_toplevel) extracted from
+  `bin/extract-permissions` and `bin/detect-stack`. Stdlib only.
 - `references/run-manifest.md` — cross-session resume schema for
   spawn-fanout workflows; JSON manifest at
   `.claude/{namespace}/{slug}/RUN-CURRENT.json`; per-skill staleness

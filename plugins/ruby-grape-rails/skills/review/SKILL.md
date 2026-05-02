@@ -88,14 +88,14 @@ message.
 ## Run Manifest
 
 - Path: `${REPO_ROOT}/.claude/reviews/{review-slug}/RUN-CURRENT.json`.
-- Schema + staleness + write protocol: `${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
-- All writes go through `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update`
-  (`init`, `patch`, `archive`, `status`). NEVER call raw `mv`, `cp`,
-  or `jq -i` against manifest paths.
+- Schema + write protocol: `${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
+- All mutations go through `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update`
+  (`prepare-run`, `init`, `patch`, `prepare-respawn`, `archive`,
+  `resume-check`, `status`). NEVER call raw `mv`, `cp`, `rm`, or
+  `jq -i` against manifest or per-agent artifact paths.
 - Main session owns reads + writes. Agents NEVER touch the manifest.
-- Stale → `archive`, fresh run, no prompt.
-- Fresh + in-flight → prompt user, default fresh.
-- Fresh + complete → `archive`, fresh run.
+- `prepare-run` archives any prior manifest (stale, complete, or
+  in-flight) and inits the fresh one in a single call.
 
 ## Complexity Classification
 

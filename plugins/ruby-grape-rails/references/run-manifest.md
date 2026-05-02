@@ -60,16 +60,13 @@ Main session:
 
 1. Resolve `base_ref`, `base_sha`, `branch`, `branch_head_sha`.
 2. Generate `datesuffix = date -u +%Y%m%d-%H%M%S`.
-3. Read existing `RUN-CURRENT.json` if present.
-4. If present and stale (see Staleness): archive to `RUN-HISTORY.jsonl`,
-   delete `RUN-CURRENT.json`.
-5. If present and fresh: prompt user — "found in-flight run from
-   `{updated_at}`, resume or start fresh?". Default = **fresh**.
-6. On resume: reuse `datesuffix` + `agents` map; skip already-complete agents.
-7. On fresh: build new manifest, set `status: in-flight`,
-   `started_at = updated_at = now`, all agent `status: pending`.
-8. Write `RUN-CURRENT.json` via
-   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update init <path> '<json>'`.
+3. Build initial manifest JSON with `status: in-flight`, all agent
+   `status: pending`.
+4. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <path>
+   --base="$BASE_SHA" --initial-json="$INITIAL_JSON"`. Helper archives
+   any prior manifest (stale, complete, or in-flight) and inits the
+   fresh one in a single call.
 
 ### Per-agent spawn
 
@@ -137,15 +134,21 @@ Decision matrix:
 
 ## Atomic Write
 
-All manifest mutations go through `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update`.
-Skill bodies and main session NEVER call raw `mv`, `jq -i`, or `cp` against
-manifest paths.
+All manifest mutations and stale-stub unlinks go through
+`${CLAUDE_PLUGIN_ROOT}/bin/manifest-update`. Skill bodies and main
+session NEVER call raw `mv`, `cp`, `rm`, or `jq -i` against manifest
+or per-agent artifact paths.
 
 Subcommands:
 
 ```bash
+# Archive any existing manifest + init fresh from JSON. Single call
+# replaces verdict + case dispatch. Default for spawn-fanout skills.
+${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <path> \
+  --base="$BASE_SHA" --initial-json='<initial-json>'
+
 # Create manifest (fails if exists). JSON literal as second arg.
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update init   <path> '<initial-json>'
+${CLAUDE_PLUGIN_ROOT}/bin/manifest-update init <path> '<initial-json>'
 
 # Deep-merge JSON from stdin. Auto-stamps updated_at.
 echo '<patch-json>' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <path>
@@ -157,6 +160,9 @@ ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <path>
 
 # Append current state to RUN-HISTORY.jsonl, unlink RUN-CURRENT.json.
 ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update archive <path>
+
+# Read-only verdict (absent | stale | fresh-complete | fresh-in-flight).
+${CLAUDE_PLUGIN_ROOT}/bin/manifest-update resume-check <path> [--base=SHA]
 
 # One-line summary (read-only).
 ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update status <path>

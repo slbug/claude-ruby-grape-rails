@@ -33,7 +33,9 @@ This is a security restriction — plugin agents follow your session permission 
 
 1. Add permissions to your project's `.claude/settings.json`:
    - Command rules: `Bash(bundle *)`, `Bash(rails *)`, `Bash(rake *)`,
-     `Bash(mkdir -p **/.claude/**)`, `Read(*)`, `Grep(*)`, `Glob(*)`
+     `Bash(mkdir -p **/.claude/**)`,
+     `Bash(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update *)`,
+     `Read(*)`, `Grep(*)`, `Glob(*)`
    - Recursive Write rules for plugin artifact namespaces:
      `Write(**/.claude/plans/**)`, `Write(**/.claude/reviews/**)`,
      `Write(**/.claude/audit/**)`, `Write(**/.claude/research/**)`,

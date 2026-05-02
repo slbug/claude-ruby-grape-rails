@@ -259,34 +259,30 @@ Specialists are leaf workers: research, write artifact, return summary.
 2. Check compound docs + research cache. Skip duplicates.
 3. Select research agents per matrix in
    `${CLAUDE_SKILL_DIR}/references/planning-workflow.md`.
-4. **Resume check.** Read manifest at
-   `${REPO_ROOT}/.claude/plans/{plan-slug}/research-fanout/RUN-CURRENT.json`
-   if present. Apply staleness rules per
-   `${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md` (TTL-only for
-   plan, 168h default). On stale → archive + fresh. On fresh
-   `in-flight` → prompt user (default fresh). On resume → reuse
-   `datesuffix` + agent paths, skip already-complete agents.
-5. On fresh run: generate `datesuffix = YYYYMMDD-HHMMSS`. For each
-   selected agent, build the absolute path
+4. Generate `datesuffix = YYYYMMDD-HHMMSS`. For each selected agent,
+   build the absolute path
    `${REPO_ROOT}/.claude/plans/{plan-slug}/research/{topic-slug}.md`.
-6. Init manifest via
-   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update init <manifest-path> '<json>'`.
-7. Run
+5. Build initial manifest JSON (skill, slug, datesuffix, status=
+   `in-flight`, agents map with each `status=pending` + absolute
+   `path`). Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <manifest-path>
+   --initial-json="$INITIAL_JSON"`. Helper archives any prior manifest
+   and inits fresh in a single call.
+6. Run
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <manifest-path>`.
-   Helper unlinks any stale stub (size < 1000 bytes) at manifest-tracked
-   agent paths and protects real artifacts. Path must point at a
-   non-existing target before spawn.
-8. Mark each agent `status: in-flight` in manifest before spawn (atomic
-   `manifest-update patch` from stdin).
-9. Spawn all NON-skipped agents in ONE parallel block. Pass agent
-   path verbatim in spawn prompt.
-10. Wait for all agents to complete.
-11. Apply Artifact Recovery (see below) and patch each agent's recovery
-    state into the manifest.
-12. Read each verified artifact + any reused cached files logged in
+   Helper unlinks any stale stub (size < 1000 bytes) at
+   manifest-tracked agent paths and protects real artifacts.
+7. Patch each agent `status: in-flight` via
+   `echo '<json>' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <manifest-path>`.
+8. Spawn all agents in ONE parallel block. Pass agent path verbatim
+   in spawn prompt.
+9. Wait for all agents to complete.
+10. Apply Artifact Recovery (see below). Patch each agent's recovery
+    `status` into the manifest.
+11. Read each verified artifact + any reused cached files logged in
     scratchpad.md `## Decisions` → `### Research Cache Reuse`.
-13. Synthesize `plan.md` directly.
-14. Mark manifest `status: complete`.
+12. Synthesize `plan.md` directly.
+13. Patch manifest `status: complete`.
 
 ## Worker Briefing
 

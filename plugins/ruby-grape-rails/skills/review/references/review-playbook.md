@@ -222,36 +222,14 @@ Rules:
 
 ## Resume Protocol
 
-Run-manifest schema + atomic-write protocol live in
-`${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`. Skill body wires
-it into the fanout flow.
+Single helper call at fanout entry:
+`${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run <path>
+--base="$BASE_SHA" --initial-json="$INITIAL_JSON"`. Helper archives
+any prior manifest (stale, complete, or in-flight) and inits the
+fresh one.
 
-Resume decision tree (executed at fanout step 4):
-
-```text
-read RUN-CURRENT.json
-├── absent          → fresh run
-├── stale (TTL/HEAD/base/branch drift)
-│                   → archive to RUN-HISTORY.jsonl, fresh run
-├── fresh + status: complete
-│                   → archive, fresh run (legitimate re-review snapshot)
-└── fresh + status: in-flight
-                    → prompt user "found in-flight run from {updated_at},
-                      resume or fresh?". Default = fresh.
-                      On resume:
-                        - reuse datesuffix + agent paths from manifest
-                        - skip agents with status: complete | stub-replaced
-                          | recovered-from-return
-                        - re-spawn agents with status: pending | in-flight
-                          | stub-no-output
-```
-
-Stale rules (ANY triggers stale):
-
-- TTL: `now - updated_at > 24h` (override via `RUN_MANIFEST_TTL_HOURS`)
-- HEAD drift: `git rev-parse HEAD` ≠ manifest `branch_head_sha`
-- Base drift: current `base_sha` ≠ manifest `base_sha`
-- Branch switch: current branch ≠ manifest `branch`
+Schema + per-skill staleness rules:
+`${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
 
 ## Consolidated Review Format
 

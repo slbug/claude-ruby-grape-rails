@@ -167,6 +167,7 @@ rules for the tools they need.
           "Bash(rails *)",
           "Bash(rake *)",
           "Bash(mkdir -p **/.claude/**)",
+          "Bash(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update *)",
           "Grep(*)",
           "Read(*)",
           "Glob(*)",
@@ -399,10 +400,8 @@ When you run `/rb:review`:
 ```
 1. `/rb:review` skill body collects your git diff from main session
    │
-2. Resume check: reads `.claude/reviews/{review-slug}/RUN-CURRENT.json`
-   - stale (TTL/HEAD/base/branch drift) → archive, fresh run
-   - in-flight + fresh → prompt user (default fresh)
-   - otherwise → fresh run with new datesuffix
+2. `manifest-update prepare-run` archives any prior manifest +
+   inits a fresh `.claude/reviews/{review-slug}/RUN-CURRENT.json`
    │
 3. Spawns 4 EXISTING specialist agents in parallel:
    ├── ruby-reviewer        → Idioms, patterns, error handling

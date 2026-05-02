@@ -156,7 +156,8 @@ rules to `.claude/settings.json`:
       "Write(**/.claude/solutions/**)",
       "Write(**/.claude/skill-metrics/**)",
       "Write(**/.claude/investigations/**)",
-      "Bash(mkdir -p **/.claude/**)"
+      "Bash(mkdir -p **/.claude/**)",
+      "Bash(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update *)"
     ]
   }
 }

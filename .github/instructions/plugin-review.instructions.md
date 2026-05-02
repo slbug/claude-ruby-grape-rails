@@ -115,18 +115,21 @@ excludeAgent: "coding-agent"
   pure deterministic — no LLM, no network. Surfaced via
   `/rb:provenance-scan` user-invocable skill
 - `manifest-update` (Ruby) — atomic JSON manifest writer for
-  spawn-fanout RUN-CURRENT.json files. Subcommands: `init`, `patch`
-  (deep-merge from stdin, auto-stamps `updated_at`), `prepare-respawn`
-  (unlink stale stubs at manifest-tracked agent paths only; size <
-  1000 bytes; respawnable statuses), `archive` (append to
-  RUN-HISTORY.jsonl + unlink RUN-CURRENT.json), `status` (read-only
-  summary). Path allowlist:
-  `<...>/.claude/<ns>/<slug>/RUN-CURRENT.json` only. Symlink refusal
-  on target + parent dir. Atomic write via `mktemp` + `fsync` + Ruby
+  spawn-fanout RUN-CURRENT.json files. Subcommands: `prepare-run`
+  (archive any prior + init fresh in one call), `init` (fail if
+  exists), `patch` (deep-merge from stdin, auto-stamps `updated_at`),
+  `prepare-respawn` (unlink stale stubs at manifest-tracked agent
+  paths only; size < 1000 bytes; respawnable statuses), `archive`
+  (append to RUN-HISTORY.jsonl + unlink RUN-CURRENT.json),
+  `resume-check` (read-only verdict: absent / stale /
+  fresh-complete / fresh-in-flight), `status` (read-only summary).
+  Path allowlist: `<...>/.claude/<ns>/<slug>/RUN-CURRENT.json` only.
+  Containment check via repo-root resolution. Symlink refusal on
+  target + parent dir. Atomic write via `mktemp` + `fsync` + Ruby
   `File.rename` (POSIX `rename(2)`) + directory `fsync`. Fail-closed
-  on path / JSON / IO errors. Stdlib only. Skill bodies that mutate
-  manifest or unlink stale stubs call this — never raw `mv` / `cp` /
-  `jq -i` / `rm`
+  on path / JSON / IO errors. Stdlib only. Reuses
+  `lib/repo_root.rb`. Skill bodies that mutate manifest or unlink
+  stale stubs call this — never raw `mv` / `cp` / `jq -i` / `rm`
 
 When adding a binary, also add it to this "Currently shipped
 binaries" section above, ensure `chmod +x` is committed, and (if it
