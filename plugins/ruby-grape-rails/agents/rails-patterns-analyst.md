@@ -4,7 +4,7 @@ description: Analyzes a Ruby/Rails/Grape codebase for existing controller, endpo
 disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
-maxTurns: 15
+maxTurns: 25
 omitClaudeMd: true
 skills:
   - rails-contexts
