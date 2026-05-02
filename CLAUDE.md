@@ -44,9 +44,10 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 
 Plan: `.claude/plans/{slug}/` (plan.md, research/, summaries/,
 progress.md, scratchpad.md). Review:
-`.claude/reviews/{review-slug}-{datesuffix}.md` + `{agent-slug}/...` +
-`{review-slug}/{RUN-CURRENT.json,RUN-HISTORY.jsonl}` (run manifest —
-`references/run-manifest.md`). Other: `.claude/audit/`,
+`.claude/reviews/{review-slug}-{datesuffix}.md`,
+`.claude/reviews/{agent-slug}/...`, plus
+`.claude/reviews/{review-slug}/` (RUN-CURRENT.json + RUN-HISTORY.jsonl;
+see `references/run-manifest.md`). Other: `.claude/audit/`,
 `.claude/research/{topic-slug}.md`,
 `.claude/investigations/{agent}/{slug}-{datesuffix}.md`,
 `.claude/skill-metrics/`, `.claude/solutions/{category}/`,
@@ -56,26 +57,19 @@ progress.md, scratchpad.md). Review:
 
 ```
 claude-ruby-grape-rails/
-├── .claude-plugin/
-│   └── marketplace.json
+├── .claude-plugin/marketplace.json
 ├── .claude/                         # Contributor tooling (NOT distributed)
-│   ├── agents/
-│   ├── rules/                       # Auto-loaded context rules
-│   └── skills/
+│   ├── agents/   ├── rules/   └── skills/
 ├── scripts/
-├── plugins/
-│   └── ruby-grape-rails/
-│       ├── .claude-plugin/
-│       │   └── plugin.json
-│       ├── agents/                  # 19 specialist agents
-│       ├── bin/                     # Plugin executables (added to Bash tool PATH)
-│       ├── hooks/
-│       │   └── hooks.json
-│       ├── lib/                     # Shared Ruby modules (stdlib only)
-│       ├── references/              # Shipped reference docs
-│       └── skills/                  # 53 skills
-├── lab/
-│   └── eval/                        # Contributor-only deterministic eval tooling
+├── plugins/ruby-grape-rails/
+│   ├── .claude-plugin/plugin.json
+│   ├── agents/                      # 19 specialist agents
+│   ├── bin/                         # Plugin executables (added to Bash PATH)
+│   ├── hooks/hooks.json
+│   ├── lib/                         # Shared Ruby modules (stdlib only)
+│   ├── references/                  # Shipped reference docs
+│   └── skills/                      # 53 skills
+├── lab/eval/                        # Contributor-only deterministic eval tooling
 ├── CLAUDE.md
 └── README.md
 ```

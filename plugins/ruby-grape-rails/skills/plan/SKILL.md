@@ -118,7 +118,12 @@ is clearly relevant:
 
 Spawn only what the request needs:
 
-### Core Research Agents
+### Common Research Agents
+
+Quick reference. Canonical matrix (selection rules + conditional
+specialists like `ruby-runtime-advisor`, `web-researcher`) lives in
+`${CLAUDE_SKILL_DIR}/references/planning-workflow.md` § "Agent
+Selection Matrix" + "Spawning Strategy".
 
 - `rails-patterns-analyst` - Rails conventions and patterns
 - `active-record-schema-designer` - Database schema and AR patterns
@@ -127,6 +132,8 @@ Spawn only what the request needs:
 - `ruby-gem-researcher` - Gem evaluation and alternatives
 - `call-tracer` - Code flow analysis and dependency tracing
 - `rails-architect` - High-level architecture decisions
+- `ruby-runtime-advisor` - Performance, memory, hot paths
+- `web-researcher` - Unfamiliar libraries / community patterns
 
 ### Research Checklist
 
@@ -166,7 +173,7 @@ When planning Hotwire features, sketch the wireframe:
 4. **Idempotency**: Can this operation run multiple times safely?
 5. **Rollback Strategy**: How to undo if something goes wrong?
 
-## Ruby Planning Laws
+## Iron Laws
 
 1. Never auto-start `/rb:work` after writing the plan.
 2. Prefer the existing stack before adding a gem.

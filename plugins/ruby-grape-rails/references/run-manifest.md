@@ -45,6 +45,10 @@ Consolidated artifact paths (computed by helper, exposed as
 subagent_type (e.g. `ruby-reviewer`); for plan/brainstorm it equals
 the research topic identifier (e.g. `active-record-patterns`).
 
+Slug charset: `{slug}`, `{review-slug}`, `{plan-slug}`, and
+`{agent-slug}` MUST match `[a-z0-9._-]+`. Helper rejects mixed-case,
+spaces, slashes, or other characters with hard exit.
+
 ## Schema
 
 ```json

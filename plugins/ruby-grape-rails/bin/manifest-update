@@ -22,6 +22,7 @@
 
 require 'fileutils'
 require 'json'
+require 'optparse'
 require 'shellwords'
 require 'time'
 require_relative '../lib/repo_root'
@@ -205,17 +206,17 @@ SKILLS_WITH_GIT_PINS = %w[rb:review].freeze
 
 def parse_resume_args(args)
   opts = {}
-  args.each do |a|
-    case a
-    when /\A--head=(.+)\z/    then opts[:head] = Regexp.last_match(1)
-    when /\A--base=(.+)\z/    then opts[:base] = Regexp.last_match(1)
-    when /\A--branch=(.+)\z/  then opts[:branch] = Regexp.last_match(1)
-    when /\A--ttl-hours=(\d+)\z/ then opts[:ttl_hours] = Integer(Regexp.last_match(1))
-    when /\A--initial-json=(.+)\z/m then opts[:initial_json] = Regexp.last_match(1)
-    else die "unknown arg: #{a}"
-    end
+  parser = OptionParser.new do |o|
+    o.banner = 'Usage: manifest-update resume-check <manifest> [options]'
+    o.on('--head=SHA', String, 'Override auto-detected git HEAD') { |v| opts[:head] = v }
+    o.on('--base=SHA', String, 'Base commit SHA (review only)')   { |v| opts[:base] = v }
+    o.on('--branch=NAME', String, 'Override auto-detected branch') { |v| opts[:branch] = v }
+    o.on('--ttl-hours=N', Integer, 'Override per-skill TTL default') { |v| opts[:ttl_hours] = v }
   end
+  parser.parse!(args.dup)
   opts
+rescue OptionParser::ParseError => e
+  die "resume-check: #{e.message}"
 end
 
 def git_head
@@ -332,16 +333,17 @@ SKILL_CONVENTIONS = {
 
 def parse_prepare_run_args(args)
   opts = {}
-  args.each do |a|
-    case a
-    when /\A--skill=(.+)\z/    then opts[:skill] = Regexp.last_match(1)
-    when /\A--slug=(.+)\z/     then opts[:slug] = Regexp.last_match(1)
-    when /\A--agents=(.+)\z/   then opts[:agents] = Regexp.last_match(1)
-    when /\A--base-ref=(.+)\z/ then opts[:base_ref] = Regexp.last_match(1)
-    else die "prepare-run: unknown arg: #{a}"
-    end
+  parser = OptionParser.new do |o|
+    o.banner = 'Usage: manifest-update prepare-run [options]'
+    o.on('--skill=NAME', String, 'Skill identifier (rb:review|rb:plan|rb:brainstorm)') { |v| opts[:skill] = v }
+    o.on('--slug=SLUG', String, 'Run slug (review-slug or plan-slug)') { |v| opts[:slug] = v }
+    o.on('--agents=CSV', String, 'Comma-separated agent slugs') { |v| opts[:agents] = v }
+    o.on('--base-ref=REF', String, 'Base ref (review only; enables git pins)') { |v| opts[:base_ref] = v }
   end
+  parser.parse!(args.dup)
   opts
+rescue OptionParser::ParseError => e
+  die "prepare-run: #{e.message}"
 end
 
 def slug_pattern_check(slug, name)
@@ -421,10 +423,16 @@ def cmd_spawn_paths(path)
   die 'agents missing or invalid' unless agents.is_a?(Hash)
 
   agents.each do |slug, info|
-    next unless info.is_a?(Hash)
+    unless info.is_a?(Hash)
+      warn "manifest-update: spawn-paths skipping '#{slug}' — entry is not a Hash"
+      next
+    end
 
     p = info['path']
-    next unless p.is_a?(String) && !p.empty?
+    unless p.is_a?(String) && !p.empty?
+      warn "manifest-update: spawn-paths skipping '#{slug}' — missing/empty path field"
+      next
+    end
 
     puts "#{slug}\t#{p}"
   end

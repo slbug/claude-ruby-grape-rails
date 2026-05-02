@@ -24,7 +24,13 @@ Detection rules:
 2. **Prefer exact `*_VERSION` values** from that script when writing the managed-block header.
 3. Use plain `detected` only as a last resort when a direct gem is present but no resolved lockfile version is available.
 4. **Never** use broad substring regexes like `/rails \(([^)]+)\)/` against raw `Gemfile.lock`; they can falsely match gems such as `rubocop-rails`.
-5. Read `DETECTED_ORMS`, `PACKAGE_LAYOUT`, `PACKAGE_LOCATIONS`, `HAS_PACKWERK`, and `PACKAGE_QUERY_NEEDED` from the detector before deciding what ORM/package guidance to inject.
+5. Read these detector keys before deciding what ORM/package
+   guidance to inject:
+   - ORM: `DETECTED_ORMS`, `PRIMARY_ORM`
+   - Rails shape: `RAILS_COMPONENTS`, `FULL_RAILS_APP`
+   - Ruby: `INTERPRETER_RUBY_VERSION`
+   - Packages: `PACKAGE_LAYOUT`, `PACKAGE_LOCATIONS`, `HAS_PACKWERK`,
+     `PACKAGE_QUERY_NEEDED`
 6. If `PACKAGE_QUERY_NEEDED=true`, ask the user: `No Packwerk detected. Do you have something similar implemented? Provide modules/packages location and their stack/ORM.`
 7. **Do not** reimplement stack detection inline in chat or ad-hoc Ruby snippets. `detect-stack` is the source of truth.
 8. If `${CLAUDE_PLUGIN_ROOT}/bin/detect-stack` is missing or fails, STOP and explain that plugin stack detection is unavailable instead of inventing a fallback parser.

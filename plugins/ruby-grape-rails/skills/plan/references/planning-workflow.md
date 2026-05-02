@@ -168,7 +168,7 @@ whether fresh research already exists:
 Wait for every agent to complete before plan generation.
 
 Apply Artifact Recovery for each agent in the run manifest at
-`${REPO_ROOT}/.claude/plans/{plan-slug}/research-fanout/RUN-CURRENT.json`:
+`.claude/plans/{plan-slug}/research-fanout/RUN-CURRENT.json`:
 
 - Exists, `size_bytes >= 1000` → trust. Do NOT overwrite. Patch
   `status: complete` into manifest.
