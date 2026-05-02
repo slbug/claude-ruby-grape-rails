@@ -1,10 +1,16 @@
 """Agent-specific structural matchers."""
 
 
+import re
 from pathlib import PurePosixPath
 from typing import Any
 
 from .frontmatter import get_body, parse_frontmatter
+
+
+# Case-sensitive: CC tool name is exactly `Agent`. Tolerate whitespace
+# between `Agent` and `(` to catch `Agent (`, `Agent\t(`, etc.
+_AGENT_CALL = re.compile(r"\bAgent\s*\(")
 
 
 def _is_contributor_agent_path(skill_path: str) -> bool:
@@ -124,14 +130,19 @@ def omit_claudemd_coherent(content: str, skill_path: str = "", **_: Any) -> tupl
 
 
 def no_nested_agent(content: str, **_: Any) -> tuple[bool, str]:
-    """Agents must not declare Agent in tools or call Agent(...) in body."""
+    """Agents must not declare or invoke Agent. Denylist-only agents must
+    additionally list Agent in disallowedTools so the harness blocks it
+    even if a future body forgets the rule (defense in depth)."""
     fm = parse_frontmatter(content)
     body = get_body(content)
     tool_list = _coerce_tool_list(fm.get("tools", []))
+    disallowed = _coerce_tool_list(fm.get("disallowedTools", []))
     if "Agent" in tool_list:
         return False, "agent declares Agent in tools (forbidden — agents are leaf workers)"
-    if "Agent(" in body or "subagent_type:" in body:
+    if _AGENT_CALL.search(body) or "subagent_type:" in body:
         return False, "agent body contains Agent(...) or subagent_type: call (forbidden — agents are leaf workers)"
+    if not tool_list and disallowed and "Agent" not in disallowed:
+        return False, "denylist-only agent must list Agent in disallowedTools (defense in depth)"
     return True, "agent does not declare or invoke Agent"
 
 

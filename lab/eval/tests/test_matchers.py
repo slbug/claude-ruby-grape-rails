@@ -362,7 +362,7 @@ tools: Read, Write, Agent
         content = """---
 name: bad-agent
 description: Wrapper.
-disallowedTools: Edit, NotebookEdit
+disallowedTools: Edit, NotebookEdit, Agent
 omitClaudeMd: true
 ---
 # Bad
@@ -371,6 +371,47 @@ This agent calls Agent(subagent_type: "ruby-reviewer") which is forbidden.
         passed, evidence = agent_matchers.no_nested_agent(content)
         self.assertFalse(passed)
         self.assertIn("Agent(...)", evidence)
+
+    def test_no_nested_agent_rejects_agent_call_with_whitespace(self) -> None:
+        content = """---
+name: bad-agent
+description: Wrapper with whitespace before paren.
+disallowedTools: Edit, NotebookEdit, Agent
+omitClaudeMd: true
+---
+# Bad
+Agent (subagent_type: "ruby-reviewer")
+"""
+        passed, evidence = agent_matchers.no_nested_agent(content)
+        self.assertFalse(passed)
+        self.assertIn("Agent(...)", evidence)
+
+    def test_no_nested_agent_accepts_lowercase_agent_prose(self) -> None:
+        content = """---
+name: leaf-agent
+description: Leaf with prose.
+disallowedTools: Edit, NotebookEdit, Agent
+omitClaudeMd: true
+---
+# Leaf
+The agent (this one) reads files. The calling skill body invokes it.
+"""
+        passed, evidence = agent_matchers.no_nested_agent(content)
+        self.assertTrue(passed)
+        self.assertIn("does not declare or invoke", evidence)
+
+    def test_no_nested_agent_rejects_denylist_missing_agent_in_disallowed(self) -> None:
+        content = """---
+name: leaf-agent
+description: Denylist-only without Agent in disallowedTools.
+disallowedTools: Edit, NotebookEdit
+omitClaudeMd: true
+---
+# Leaf
+"""
+        passed, evidence = agent_matchers.no_nested_agent(content)
+        self.assertFalse(passed)
+        self.assertIn("must list Agent in disallowedTools", evidence)
 
     # --- contributor-agent path detection (omit_claudemd_coherent) ---
 
