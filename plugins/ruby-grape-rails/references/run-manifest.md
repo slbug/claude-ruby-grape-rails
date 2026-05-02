@@ -239,9 +239,14 @@ printf '<patch-json>\n' | "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch <man
 Helper enforces:
 
 - Path allowlist: helper accepts only paths matching
-  `<repo>/.claude/<namespace-fragment>/RUN-CURRENT.json` where
-  `<namespace-fragment>` matches one of the per-skill namespace
-  templates above. Any other path → exit 1 before touching disk.
+  `.../.claude/<any-namespace>/RUN-CURRENT.json` (suffix regex). Any
+  other path → exit 1 before touching disk. `prepare-run`
+  additionally validates `<any-namespace>` against the per-skill
+  namespace templates above (since `--skill` is provided). Lower-level
+  subcommands (`init` / `patch` / `archive` / `field` / `spawn-paths`
+  / `prepare-respawn` / `status` / `resume-check`) accept any
+  namespace under `.claude/` matching the suffix pattern — they
+  operate on a manifest the caller already produced via `prepare-run`.
 - Symlink refusal on target and parent dir.
 - JSON validation on input AND merged result.
 - Atomic rename via Ruby `File.rename` (POSIX `rename(2)`), preceded

@@ -128,9 +128,11 @@ excludeAgent: "coding-agent"
   (append to RUN-HISTORY.jsonl + unlink RUN-CURRENT.json),
   `resume-check` (read-only verdict: absent / stale /
   fresh-complete / fresh-in-flight), `status` (read-only summary).
-  Path allowlist: `<repo>/.claude/<namespace-fragment>/RUN-CURRENT.json`
-  where `<namespace-fragment>` matches a per-skill template (e.g.
-  `reviews/<review-slug>`, `plans/<plan-slug>/research-fanout`).
+  Path allowlist: suffix regex
+  `.../.claude/<any-namespace>/RUN-CURRENT.json`. `prepare-run` also
+  validates `<any-namespace>` against per-skill templates (e.g.
+  `reviews/<review-slug>`, `plans/<plan-slug>/research-fanout`)
+  via `--skill`. Lower-level subcommands accept any matching path.
   Containment check via repo-root resolution. Symlink refusal on
   target + parent dir. Atomic write via `mktemp` + `fsync` + Ruby
   `File.rename` (POSIX `rename(2)`) + directory `fsync`. Fail-closed

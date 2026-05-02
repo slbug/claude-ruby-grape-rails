@@ -12,7 +12,10 @@ Spawn 2 agents via two Agent tool calls in ONE Tool Use block
    - Focus: existing patterns, conventions, relevant modules
 
 2. **`web-researcher`**: "Ruby/Rails approaches to {topics}"
-   - Returns 500-word summary of community patterns and approaches
+   - Returns 500-word summary in Agent return text (Write tool
+     disallowed in agent frontmatter)
+   - Main session materializes the `web-research` manifest path via
+     Artifact Recovery (`recovered-from-return`)
    - Focus: proven patterns, trade-offs, library options
 
 **Iron Law: MAX 2 agents in first research cycle.** Keep it fast (~2-3 min).

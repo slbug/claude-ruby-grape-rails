@@ -117,7 +117,12 @@ end
 
 def fsync_dir(dir)
   fd = IO.sysopen(dir, IO::RDONLY)
-  IO.new(fd).fsync
+  io = IO.new(fd)
+  begin
+    io.fsync
+  ensure
+    io.close
+  end
 rescue StandardError
   # Best-effort; some filesystems / kernels do not support directory fsync.
 end

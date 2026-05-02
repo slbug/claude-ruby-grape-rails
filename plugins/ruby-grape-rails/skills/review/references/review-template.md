@@ -14,7 +14,7 @@ Each reviewer also writes a per-agent artifact to:
 **Date**: {date}
 **Complexity**: {Simple|Medium|Complex} ({count} files{, escalated: reason})
 **Files Reviewed**: {count}
-**Reviewers**: ruby-reviewer, testing-reviewer, security-analyzer, data-integrity-reviewer, migration-safety-reviewer
+**Reviewers**: {comma-separated list of spawned reviewer slugs from manifest `agents` map}
 
 ## Reviewer Coverage
 
