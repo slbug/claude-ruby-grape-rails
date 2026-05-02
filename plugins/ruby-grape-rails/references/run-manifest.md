@@ -111,12 +111,20 @@ clears the active slot.
 
 ## Staleness
 
-Stale = ANY of:
+Per-skill rules:
 
-1. TTL: `now - updated_at > 24h` (override `RUN_MANIFEST_TTL_HOURS`, min 1h).
-2. HEAD drift: `git rev-parse HEAD` ≠ manifest `branch_head_sha`.
-3. Base drift: current `base_sha` ≠ manifest `base_sha`.
-4. Branch switch: current branch ≠ manifest `branch`.
+| Skill | TTL default | HEAD pin | Base pin | Branch pin |
+|---|---|---|---|---|
+| `/rb:review` | 24h | yes | yes | yes |
+| `/rb:plan` | 168h (7d) | no | no | no |
+| `/rb:brainstorm` | 168h (7d) | no | no | no |
+
+Stale = ANY applicable rule triggers:
+
+1. TTL: `now - updated_at > <skill TTL>` (override `RUN_MANIFEST_TTL_HOURS`, min 1h).
+2. HEAD drift: `git rev-parse HEAD` ≠ manifest `branch_head_sha` (review only).
+3. Base drift: current `base_sha` ≠ manifest `base_sha` (review only).
+4. Branch switch: current branch ≠ manifest `branch` (review only).
 
 Decision matrix:
 
@@ -169,15 +177,16 @@ Helper enforces:
 
 ## Applicability
 
-| Skill | Status | Staleness rules |
-|---|---|---|
-| `/rb:review` | Active | TTL + HEAD + base + branch |
-| `/rb:plan` (research fanout) | Deferred | Stable canonical paths + multi-day iterative work; needs TTL-only policy |
-| `/rb:full` | Deferred | Inherits review + plan |
-| `/rb:work` | N/A | Single-author |
-| `/rb:verify` | N/A | Subprocess, no agent fanout |
-| `/rb:compound` | N/A | Single-author |
-| `/rb:brainstorm` | N/A | Single-agent |
+| Skill | Status | Namespace | Staleness rules |
+|---|---|---|---|
+| `/rb:review` | Active | `reviews/{review-slug}` | TTL + HEAD + base + branch |
+| `/rb:plan` (research fanout) | Active | `plans/{plan-slug}/research-fanout` | TTL only (research iterates across days) |
+| `/rb:brainstorm` | Active | `plans/{plan-slug}/brainstorm-fanout` | TTL only |
+| `/rb:full` | N/A | — | Orchestrator; reads phase manifests, owns none |
+| `/rb:work` | N/A | — | Tracks via plan `progress.md`, not manifest |
+| `/rb:verify` | N/A | — | Subprocess, no agent fanout |
+| `/rb:compound` | N/A | — | Single-author |
+| `/rb:investigate`, `/rb:trace` | N/A | — | Single-agent dispatch |
 
 ## Resume Protocol (main session)
 
@@ -195,7 +204,8 @@ if [[ -f "$MANIFEST" ]]; then
 
   CUR_HEAD=$(git rev-parse HEAD)
   CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-  AGE_S=$(( $(date -u +%s) - $(date -u -d "$UPDATED" +%s 2>/dev/null || echo 0) ))
+  UPDATED_EPOCH=$(ruby -rtime -e 'puts Time.parse(ARGV[0]).to_i' "$UPDATED" 2>/dev/null || echo 0)
+  AGE_S=$(( $(date -u +%s) - UPDATED_EPOCH ))
   TTL_S=$(( ${RUN_MANIFEST_TTL_HOURS:-24} * 3600 ))
 
   if [[ "$CUR_HEAD" != "$HEAD_PIN" || "$CUR_BRANCH" != "$BRANCH_PIN" \

@@ -21,7 +21,7 @@
 |------|------|
 | Plan | .claude/plans/{slug}/plan.md |
 | Progress | .claude/plans/{slug}/progress.md |
-| Review | .claude/reviews/{slug}.md |
+| Review | .claude/reviews/{review-slug}-{datesuffix}.md |
 
 ## Phase Progress
 

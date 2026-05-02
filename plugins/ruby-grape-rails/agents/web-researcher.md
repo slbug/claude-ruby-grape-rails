@@ -6,7 +6,6 @@ disallowedTools: Write, Edit, NotebookEdit, Bash
 model: haiku
 effort: low
 maxTurns: 10
-background: true
 omitClaudeMd: true
 ---
 

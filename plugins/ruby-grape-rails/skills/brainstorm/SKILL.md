@@ -115,12 +115,18 @@ Present Decision Point.
 See `references/research-integration.md` for the full pattern.
 
 **First cycle: MAX 2 agents.** Spawn both via two Agent tool calls in
-ONE Tool Use block (foreground parallel, NOT `run_in_background: true`):
+ONE Tool Use block (foreground parallel, NOT `run_in_background: true`).
+Track via run manifest at
+`.claude/plans/{plan-slug}/brainstorm-fanout/RUN-CURRENT.json` per
+`${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md` (TTL-only staleness).
 
 1. **`rails-patterns-analyst`**: "How does this codebase handle {topics}?"
-   Writes findings to `.claude/plans/{slug}/research/codebase-scan.md`
+   Writes findings to `.claude/plans/{plan-slug}/research/codebase-scan.md`
 2. **`web-researcher`**: "Ruby/Rails approaches to {topics}"
    Returns summary
+
+Apply Artifact Recovery + manifest status patches per the run-manifest
+contract.
 
 **Evaluate** (in main context):
 

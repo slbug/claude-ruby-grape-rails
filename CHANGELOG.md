@@ -19,8 +19,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   forbidden.
 - `references/run-manifest.md` — cross-session resume schema for
   spawn-fanout workflows; JSON manifest at
-  `.claude/{namespace}/{slug}/RUN-CURRENT.json`; staleness via
-  TTL + HEAD + base + branch.
+  `.claude/{namespace}/{slug}/RUN-CURRENT.json`; per-skill staleness
+  rules (review: TTL + HEAD + base + branch; plan + brainstorm: TTL
+  only, 168h default).
 - `references/research/tool-batching.md` — BAD/GOOD examples for
   batched git/gem/find usage.
 - Tool-batching preference in `preferences.yml` (new `tooling`
@@ -45,6 +46,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `/rb:plan` + `/rb:review`: main session synthesizes directly
   (compression worker dropped).
 - `/rb:brainstorm`, `/rb:plan`: dropped `run_in_background: true`.
+- `/rb:plan` + `/rb:brainstorm` now wired to run-manifest contract
+  (TTL-only freshness, 168h default).
+- `/rb:full` `cycle-patterns.md` review path updated to datesuffix form.
+- `agents/web-researcher.md`: dropped `background: true` frontmatter
+  (conflicts with foreground-only dispatch rule).
 
 ### Removed
 

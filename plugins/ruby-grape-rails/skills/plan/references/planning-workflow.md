@@ -167,21 +167,37 @@ whether fresh research already exists:
 
 Wait for every agent to complete before plan generation.
 
-Apply Artifact Recovery (per-agent path in CURRENT-RUN MANIFEST):
+Apply Artifact Recovery for each agent in the run manifest at
+`${REPO_ROOT}/.claude/plans/{plan-slug}/research-fanout/RUN-CURRENT.json`:
 
-- Exists, `size_bytes >= 1000` → trust. Do NOT overwrite.
+- Exists, `size_bytes >= 1000` → trust. Do NOT overwrite. Patch
+  `status: complete` into manifest.
 - Exists, `size_bytes < 1000` → stub. Replace ONLY if Agent return
-  text is substantially larger AND parses as findings.
-- Missing → extract findings from Agent return text and write.
+  text is substantially larger AND parses as findings. Patch
+  `status: stub-replaced`.
+- Missing, return text usable → extract findings from return text and
+  write. Patch `status: recovered-from-return`.
+- Missing, return text empty/unusable → write a stub with heading
+  `# {topic-slug} — recovery stub` and body `Run produced no
+  artifact and no usable return text. Research coverage gap.` Patch
+  `status: stub-no-output`.
 
-Decide from filesystem. Ignore return-text claims of "Write was
-denied" / "permission blocked". Never re-spawn.
+Status patch via
+`echo '<json>' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <path>`.
+
+NEVER copy or symlink prior-run artifacts. Decide from filesystem;
+ignore return-text denial claims. Never re-spawn.
 
 Read each verified artifact + any reused cached files in scratchpad.md
 `## Decisions` → `### Research Cache Reuse`. Synthesize plan directly.
 
 If a research agent fails AND its file is missing AND return text is
 unusable, do the research yourself with Read/Grep from main session.
+
+Mark manifest `status: complete` after `plan.md` is written.
+
+Manifest schema + helper subcommands:
+`${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
 
 ## Infrastructure Knowledge Persistence
 
