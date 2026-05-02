@@ -197,9 +197,9 @@ Execution:
 ## Integration
 
 For phase transitions and gating rules see
-`${CLAUDE_SKILL_DIR}/state-machine.md`. `/rb:full` does not run git
-lifecycle commands directly; users own staging, commits, branches, and
-release artifacts.
+`${CLAUDE_SKILL_DIR}/references/state-machine.md`. `/rb:full` does not
+run git lifecycle commands directly; users own staging, commits,
+branches, and release artifacts.
 
 ## Checkpoint Template
 

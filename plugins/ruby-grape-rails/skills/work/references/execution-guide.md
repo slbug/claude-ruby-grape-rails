@@ -35,7 +35,7 @@ With `--from P2-T3`: Skip directly to that task.
 
 ## Task Routing
 
-### Primary: Parse Agent Annotation
+### Primary: Parse Task Annotation
 
 Task format: `- [ ] [Pn-Tm][annotation] Description`
 

@@ -1,9 +1,22 @@
 """Agent-specific structural matchers."""
 
 
+from pathlib import PurePosixPath
 from typing import Any
 
 from .frontmatter import get_body, parse_frontmatter
+
+
+def _is_contributor_agent_path(skill_path: str) -> bool:
+    """Detect contributor agent paths (`.claude/agents/**`) regardless of
+    absolute/relative form, leading `./`, or platform separators."""
+    if not skill_path:
+        return False
+    parts = PurePosixPath(skill_path.replace("\\", "/")).parts
+    return any(
+        parts[i] == ".claude" and parts[i + 1] == "agents"
+        for i in range(len(parts) - 1)
+    )
 
 
 def tools_present(content: str, min_count: int = 1, **_: Any) -> tuple[bool, str]:
@@ -80,8 +93,7 @@ def omit_claudemd_coherent(content: str, skill_path: str = "", **_: Any) -> tupl
     # Contributor agents (.claude/agents/**) MAY omit the field per
     # `agent-development.md` § omitClaudeMd Scope. They run in contributor
     # sessions and benefit from contributor CLAUDE.md context.
-    is_contributor_agent = "/.claude/agents/" in skill_path.replace("\\", "/")
-    if is_contributor_agent:
+    if _is_contributor_agent_path(skill_path):
         if omit_claudemd is True:
             return True, "contributor agent omits CLAUDE.md (allowed)"
         return True, "contributor agent keeps CLAUDE.md context (allowed)"

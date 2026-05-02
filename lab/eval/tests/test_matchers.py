@@ -372,6 +372,78 @@ This agent calls Agent(subagent_type: "ruby-reviewer") which is forbidden.
         self.assertFalse(passed)
         self.assertIn("Agent(...)", evidence)
 
+    # --- contributor-agent path detection (omit_claudemd_coherent) ---
+
+    def test_omit_claudemd_contributor_path_absolute(self) -> None:
+        content = """---
+name: contrib-agent
+description: Contributor agent without omitClaudeMd.
+disallowedTools: Edit, NotebookEdit
+---
+"""
+        passed, evidence = agent_matchers.omit_claudemd_coherent(
+            content,
+            skill_path="/Users/anyone/repo/.claude/agents/contrib-agent.md",
+        )
+        self.assertTrue(passed)
+        self.assertIn("contributor agent", evidence)
+
+    def test_omit_claudemd_contributor_path_bare_relative(self) -> None:
+        content = """---
+name: contrib-agent
+description: Contributor agent without omitClaudeMd.
+disallowedTools: Edit, NotebookEdit
+---
+"""
+        passed, evidence = agent_matchers.omit_claudemd_coherent(
+            content,
+            skill_path=".claude/agents/contrib-agent.md",
+        )
+        self.assertTrue(passed)
+        self.assertIn("contributor agent", evidence)
+
+    def test_omit_claudemd_contributor_path_dot_slash_relative(self) -> None:
+        content = """---
+name: contrib-agent
+description: Contributor agent without omitClaudeMd.
+disallowedTools: Edit, NotebookEdit
+---
+"""
+        passed, evidence = agent_matchers.omit_claudemd_coherent(
+            content,
+            skill_path="./.claude/agents/contrib-agent.md",
+        )
+        self.assertTrue(passed)
+        self.assertIn("contributor agent", evidence)
+
+    def test_omit_claudemd_contributor_path_windows_separators(self) -> None:
+        content = """---
+name: contrib-agent
+description: Contributor agent without omitClaudeMd.
+disallowedTools: Edit, NotebookEdit
+---
+"""
+        passed, evidence = agent_matchers.omit_claudemd_coherent(
+            content,
+            skill_path=r"C:\repo\.claude\agents\contrib-agent.md",
+        )
+        self.assertTrue(passed)
+        self.assertIn("contributor agent", evidence)
+
+    def test_omit_claudemd_shipped_path_still_strict(self) -> None:
+        content = """---
+name: shipped-agent
+description: Denylist-only specialist without omitClaudeMd.
+disallowedTools: Edit, NotebookEdit
+---
+"""
+        passed, evidence = agent_matchers.omit_claudemd_coherent(
+            content,
+            skill_path="plugins/ruby-grape-rails/agents/shipped-agent.md",
+        )
+        self.assertFalse(passed)
+        self.assertIn("denylist-only agent must set omitClaudeMd", evidence)
+
     # --- no_bash_blocks regression tests (v1.8.0) ---
 
     def test_no_bash_blocks_passes_clean_skill(self) -> None:
