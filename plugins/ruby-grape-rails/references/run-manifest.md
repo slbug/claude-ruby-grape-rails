@@ -105,7 +105,7 @@ computes everything: manifest path, datesuffix, agent paths,
 consolidated path, git pins. Outputs absolute manifest path.
 
 ```bash
-MANIFEST=$("${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" prepare-run \
+MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
   --skill=rb:review --slug="$SLUG" \
   --base-ref="$BASE_REF" \
   --agents="$AGENTS_CSV")
@@ -133,7 +133,7 @@ Before spawning each agent, mark its status in-flight:
 
 ```bash
 printf '{"agents":{"%s":{"status":"in-flight"}}}\n' "$AGENT_SLUG" \
-  | "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch "$MANIFEST"
+  | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"
 ```
 
 Helper auto-stamps `updated_at`.
@@ -146,7 +146,7 @@ or `stub-no-output`:
 
 ```bash
 printf '{"agents":{"%s":{"status":"%s"}}}\n' "$AGENT_SLUG" "$STATE" \
-  | "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch "$MANIFEST"
+  | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"
 ```
 
 ### Run complete
@@ -155,7 +155,7 @@ After consolidated artifact is written:
 
 ```bash
 echo '{"status":"complete"}' \
-  | "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch "$MANIFEST"
+  | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"
 ```
 
 The completed manifest stays at `RUN-CURRENT.json` until the next run
@@ -204,36 +204,36 @@ Subcommands:
 # Archive any existing manifest + init fresh. Helper computes path,
 # datesuffix, agent paths, consolidated path, and (for review) git
 # pins. Outputs absolute manifest path on stdout.
-"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" prepare-run \
+${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
   --skill=rb:review --slug=SLUG --agents=A,B,C [--base-ref=REF]
 
 # Read field (dotted path supported, e.g. agents.ruby-reviewer.path).
-"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" field <manifest> <key>
+${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field <manifest> <key>
 
 # Tab-separated agent_slug<TAB>absolute_path per line.
-"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" spawn-paths <manifest>
+${CLAUDE_PLUGIN_ROOT}/bin/manifest-update spawn-paths <manifest>
 
 # Deep-merge JSON from stdin. Auto-stamps updated_at.
-printf '<patch-json>\n' | "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch <manifest>
+printf '<patch-json>\n' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <manifest>
 
 # Unlink stale stubs at manifest-tracked agent paths before re-spawn.
 # Only unlinks files < 1000 bytes (real artifacts protected with warning).
-"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" prepare-respawn <manifest>
+${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <manifest>
 
 # Append current state to RUN-HISTORY.jsonl, unlink RUN-CURRENT.json.
-"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" archive <manifest>
+${CLAUDE_PLUGIN_ROOT}/bin/manifest-update archive <manifest>
 
 # Read-only verdict (absent | stale | fresh-complete | fresh-in-flight).
 # Optional flags override auto-detected git state (HEAD/branch) or
 # per-skill TTL default. --base only used for review (git-pinned).
-"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" resume-check <manifest> \
+${CLAUDE_PLUGIN_ROOT}/bin/manifest-update resume-check <manifest> \
   [--head=SHA] [--base=SHA] [--branch=NAME] [--ttl-hours=N]
 
 # One-line summary (read-only).
-"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" status <manifest>
+${CLAUDE_PLUGIN_ROOT}/bin/manifest-update status <manifest>
 
 # Init manifest from raw JSON literal (low-level; fails if exists).
-"${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" init <manifest> '<json>'
+${CLAUDE_PLUGIN_ROOT}/bin/manifest-update init <manifest> '<json>'
 ```
 
 Helper enforces:
@@ -290,7 +290,7 @@ body uses output for subsequent `field` / `spawn-paths` / `patch` /
 `prepare-respawn` calls.
 
 ```bash
-MANIFEST=$("${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" prepare-run \
+MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
   --skill=<rb:review|rb:plan|rb:brainstorm> --slug="$SLUG" \
   [--base-ref="$BASE_REF"] \
   --agents="$AGENTS_CSV")

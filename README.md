@@ -167,7 +167,7 @@ rules for the tools they need.
           "Bash(rails *)",
           "Bash(rake *)",
           "Bash(mkdir -p **/.claude/**)",
-          "Bash(manifest-update *)",
+          "Bash(*/bin/manifest-update *)",
           "Grep(*)",
           "Read(*)",
           "Glob(*)",

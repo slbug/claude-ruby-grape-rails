@@ -184,7 +184,7 @@ Apply Artifact Recovery for each agent in the run manifest at
   `status: stub-no-output`.
 
 Status patch via
-`printf '%s\n' '<json>' | "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch "$MANIFEST"`.
+`printf '%s\n' '<json>' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"`.
 
 NEVER copy or symlink prior-run artifacts. Decide from filesystem;
 ignore return-text denial claims. Never re-spawn.

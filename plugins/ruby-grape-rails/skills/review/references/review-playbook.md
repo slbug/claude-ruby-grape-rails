@@ -227,7 +227,7 @@ Rules:
 Single helper call at fanout entry:
 
 ```bash
-MANIFEST=$("${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" prepare-run \
+MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
   --skill=rb:review --slug="$REVIEW_SLUG" \
   --base-ref="$BASE_REF" \
   --agents="$AGENTS_CSV")

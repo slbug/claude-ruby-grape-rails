@@ -64,7 +64,7 @@ message.
    agent paths.
 5. For each agent, patch `status: in-flight` via
    `printf '{"agents":{"%s":{"status":"in-flight"}}}\n' "$AGENT_SLUG" |
-   "${CLAUDE_PLUGIN_ROOT}/bin/manifest-update" patch "$MANIFEST"`.
+   ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"`.
 6. Spawn all reviewers in ONE parallel block. Read agent paths via
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update spawn-paths "$MANIFEST"`
    (tab-separated `agent_slug<TAB>absolute_path`). Pass each absolute
