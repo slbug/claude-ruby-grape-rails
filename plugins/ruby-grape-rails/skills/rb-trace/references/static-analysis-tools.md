@@ -89,19 +89,15 @@ end
 
 ### Finding All Callers
 
-```bash
-# Find who calls a specific method using grep/ripgrep
-rg "UserService\.update\|\.update_user" app/ --type ruby
+Use whichever search tool is available (`Grep` tool, `ugrep`, `rg`,
+or shell `grep`) — agent picks per the tool-batching preference.
+Targets:
 
-# With context (show surrounding lines)
-rg -B 2 -A 2 "UserService\.update" app/ --type ruby
-
-# Find method definitions
-grep -rn "def update_user" app/ --include="*.rb"
-
-# Find all calls in a file
-rg "User\." app/services/order_service.rb --type ruby
-```
+- Callers: pattern `UserService\.update|\.update_user` over `app/` Ruby files.
+- Caller context: same pattern, request 2 lines before/after.
+- Method definitions: pattern `def update_user` over `app/` Ruby files.
+- Callers in a single file: pattern `User\.` in
+  `app/services/order_service.rb`.
 
 ### Custom RuboCop Cop for Call Tracing
 
@@ -156,16 +152,13 @@ end
 
 ### Rails-Specific Tools
 
-```bash
-# Find all controller actions that call a service
-rg "UserService\." app/controllers --type ruby -l
+Three search passes over Ruby files:
 
-# Find all Sidekiq jobs that call a method
-rg "UserService\.update" app/jobs --type ruby
-
-# Trace through Grape APIs
-rg "UserService\." app/api --type ruby
-```
+- **Controller actions calling a service**: pattern `UserService\.`
+  over `app/controllers` (file-list mode, `-l`-equivalent).
+- **Sidekiq jobs calling a method**: pattern `UserService\.update`
+  over `app/jobs`.
+- **Grape APIs**: pattern `UserService\.` over `app/api`.
 
 ## Argument Extraction Patterns
 
@@ -186,11 +179,10 @@ UserService.update(user, attrs)
 
 ### Strong Parameters Tracing
 
-```ruby
-# Find what parameters are allowed
-grep -rn "def user_params" app/controllers --include="*.rb"
+Search pattern `def user_params` over `app/controllers` Ruby files
+to find allowed parameters. Typical pattern:
 
-# Typical pattern:
+```ruby
 def user_params
   params.require(:user).permit(:name, :email, :role)
 end
@@ -290,36 +282,28 @@ bin/importmap pin @hotwired/turbo
 
 ### Find All Database Calls in a Service
 
-```bash
-# Find ActiveRecord calls
-rg "User\.(find|where|create|update|destroy)" app/services --type ruby
+Targets:
 
-# With context
-rg -B 2 -A 2 "User\." app/services/order_service.rb --type ruby
-```
+- ActiveRecord calls: pattern `User\.(find|where|create|update|destroy)`
+  over `app/services` Ruby files.
+- Caller context (`User\.` in `app/services/order_service.rb`): request
+  2 lines before/after.
 
 ### Trace Data Flow
 
-```bash
-# Step 1: Find where data enters
-rg "params\[" app/controllers/users_controller.rb --type ruby
+Three-step search:
 
-# Step 2: Find transformations
-grep -rn "def sanitize\|def format\|def clean" app/controllers --include="*.rb"
-
-# Step 3: Find where it's used
-rg "UserService\.create\|User\.create" app/ --type ruby
-```
+1. Where data enters: pattern `params\[` in
+   `app/controllers/users_controller.rb`.
+2. Transformations: pattern `def sanitize|def format|def clean` over
+   `app/controllers` Ruby files.
+3. Usage: pattern `UserService\.create|User\.create` over `app/` Ruby files.
 
 ### Check Circular Dependencies
 
-```bash
-# Use bundler to check gem dependencies
-bundle viz --format png
-
-# For internal code, use grep
-rg "require.*services" app/services --type ruby | sort | uniq -c
-```
+- Gem dependencies: `bundle viz --format png`
+- Internal code: search pattern `require.*services` over
+  `app/services` Ruby files; aggregate counts via `sort | uniq -c`.
 
 ## Modern Ruby 3.4+ Tracing
 
@@ -358,23 +342,17 @@ calls.each { |c| puts "#{c.file}:#{c.line}: #{c.receiver}##{c.method}" }
 # Ensure Rails is loaded
 bundle exec rails runner "puts UserService.instance_methods(false)"
 
-# Check if method is private
-grep -n "private\|def update" app/services/user_service.rb
+# Check if method is private — search pattern `private|def update`
+# in `app/services/user_service.rb`.
 ```
 
 ### Too Many Results
 
-```bash
-# Filter by directory
-rg "User\." app/services --type ruby | grep -v "spec\|test"
-
-# Focus on specific pattern
-rg "UserService\.(update|create)" app/ --type ruby
-```
+- Filter by directory: search pattern `User\.` over `app/services`
+  Ruby files, exclude `spec`/`test` paths.
+- Focus pattern: `UserService\.(update|create)` over `app/` Ruby files.
 
 ### Private Method Calls
 
-```bash
-# Grep for send calls (calling private methods)
-rg "\.send\(:update\|\.public_send" app/ --type ruby
-```
+Search pattern `\.send\(:update|\.public_send` over `app/` Ruby
+files (catches indirect dispatch into private methods).

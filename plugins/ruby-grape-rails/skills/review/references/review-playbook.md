@@ -205,7 +205,7 @@ For each reviewer in the manifest, stat the expected path:
 
 | State | Action | Manifest agent status |
 |---|---|---|
-| Exists, `size_bytes >= 1000` | Trust. Do NOT overwrite. | `complete` |
+| Exists, `size_bytes >= 1000` | Trust. Do NOT overwrite. | `artifact` |
 | Exists, `size_bytes < 1000`, return text substantially larger AND parses as findings (severity tags, `file:line` refs) | Replace stub with extracted findings. Add header `recovery: stub replaced from inline return`. | `stub-replaced` |
 | Exists, `size_bytes < 1000`, return text empty/unusable | Keep stub. Add header `recovery: stub kept — return text unusable`. Treat as coverage gap. | `stub-no-output` |
 | Missing, return text usable | Extract findings from return text and write. Add header `recovery: recovered from inline return — Write failed`. | `recovered-from-return` |
@@ -218,8 +218,10 @@ Rules:
   Each run owns a per-second-unique path. If current run produced
   nothing, write a stub — never pull bytes from sibling runs.
 - Never re-spawn.
-- After each agent's recovery decision, update its `status` in
-  `RUN-CURRENT.json` (atomic write).
+- After each agent's recovery decision, patch its `status` via
+  `printf '{"agents":{"%s":{"status":"%s"}}}\n' "$AGENT_SLUG" "$STATE" |
+  ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"`. NEVER
+  edit `RUN-CURRENT.json` directly.
 - Synthesis runs on the verified manifest.
 
 ## Resume Protocol

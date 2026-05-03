@@ -5,11 +5,14 @@ snippets.
 
 ## Unused Methods Detection
 
-```bash
-rg -n '^\s*def\s+' app lib
-rg -n '\.process_order\b|process_order\(' app lib spec test
-rg -n 'define_method|method_missing|public_send|send\(' app lib
-```
+Three search passes (use whichever tool is available):
+
+1. All defined methods: pattern `^\s*def\s+` over `app` `lib`.
+2. References for a candidate method (e.g. `process_order`):
+   pattern `\.process_order\b|process_order\(` over `app` `lib`
+   `spec` `test`.
+3. Indirect dispatch that may hide callers: pattern
+   `define_method|method_missing|public_send|send\(` over `app` `lib`.
 
 ## Circular Dependency Detection
 

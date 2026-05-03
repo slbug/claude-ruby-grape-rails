@@ -106,8 +106,8 @@ agents' job -- let them handle pattern discovery.
 
 - ONLY spawn when evaluating a gem NOT already in Gemfile
 - Do NOT spawn for: review blockers, refactoring, existing gems
-- To understand an existing gem's API, use Read/Grep on
-  `Gemfile.lock` or gem source instead
+- To understand an existing gem's API, read or search
+  `Gemfile.lock` or gem source directly instead
 
 **CRITICAL**: Spawn ALL applicable agents via multiple Agent tool
 calls in ONE Tool Use block (foreground parallel — do NOT use

@@ -54,7 +54,7 @@ Iron Law 8: Jobs MUST be idempotent — safe to retry
 Iron Law 9: Args use JSON-safe types only — no symbols, no Ruby objects, no procs
 Iron Law 10: NEVER store ORM objects in args — store IDs, not records
 Iron Law 11: ALWAYS enqueue jobs after commit using the active ORM or transaction hook
-Iron Law 12: NO eval with user input — code injection vulnerability
+Iron Law 12: NO Ruby `eval`/`instance_eval`/`class_eval` with user input — code injection vulnerability. Shell `eval` of trusted helper output is out of scope.
 Iron Law 13: AUTHORIZE in EVERY controller action — do not trust before_action alone
 Iron Law 14: NEVER use html_safe or raw with untrusted content — XSS vulnerability
 Iron Law 15: NO SQL string concatenation — always use parameterized queries

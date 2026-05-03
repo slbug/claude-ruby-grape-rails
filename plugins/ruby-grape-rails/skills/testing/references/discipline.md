@@ -4,13 +4,10 @@ Practical rules for writing tests in this repo. Not framework docs.
 
 ## Before writing a new test
 
-1. **Grep for existing coverage.**
-
-```bash
-grep -rnE 'describe .*<ClassUnderTest>|def test_<behavior>' spec/ test/
-```
-
-If found: extend it. Don't spawn a parallel spec for the same class.
+1. **Search for existing coverage.** Pattern
+   `describe .*<ClassUnderTest>|def test_<behavior>` over `spec/`
+   and `test/`. If found: extend it. Don't spawn a parallel spec
+   for the same class.
 
 2. **State RSpec vs Minitest explicitly** in the test file. No mixing.
    - RSpec: `describe`, `it`, `expect(x).to eq y`, `let`, `context`

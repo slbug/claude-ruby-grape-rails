@@ -46,9 +46,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `references/research/tool-batching.md` — BAD/GOOD examples for
   batched git/gem/find usage.
 - Tool-batching preference in `preferences.yml` (new `tooling`
-  category): "ALWAYS use `Grep` tool over shell `grep`/`rg`/`ag`,
-  `Glob` tool over `find`/`ls`, `Read` over `cat`/`head`/`tail`";
-  injected via `inject-rules.sh`.
+  category): prefer `Grep`/`Glob` tools when available; otherwise
+  use `ugrep`/`bfs` (CC-embedded on native macOS/Linux 2.1.117+) over
+  shell `grep -rn`/`find`. Use `Read` over `cat`/`head`/`tail`. Batch
+  `git diff`/`git log` by path group. Injected via `inject-rules.sh`.
 - Foreground-only dispatch rule for plugin agents in
   `agent-development.md` + `skill-development.md`.
 - Recommended permission allowlist in `init/SKILL.md` + `README.md`:

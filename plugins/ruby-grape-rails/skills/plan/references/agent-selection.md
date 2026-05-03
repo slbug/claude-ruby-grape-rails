@@ -31,7 +31,7 @@ fanout, see `planning-workflow.md` § "Agent Selection Matrix" +
 
 **Do NOT spawn when:**
 
-- Gem is already in Gemfile (use Read/Grep on gem source instead)
+- Gem is already in Gemfile (read or search the gem source directly instead)
 - Fixing review blockers (gems already chosen)
 - Refactoring existing code
 - Understanding API of an existing dependency

@@ -67,7 +67,7 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 
 ### Security (4 laws)
 
-12. **No Eval** — NO eval with user input — code injection vulnerability
+12. **No Ruby Eval** — NO Ruby `eval`/`instance_eval`/`class_eval` with user input — code injection vulnerability. Shell `eval` of trusted helper output is out of scope.
 13. **Explicit Authorization** — AUTHORIZE in EVERY controller action — do not trust before_action alone
 14. **No Unsafe HTML** — NEVER use html_safe or raw with untrusted content — XSS vulnerability
 15. **No SQL Concatenation** — NO SQL string concatenation — always use parameterized queries

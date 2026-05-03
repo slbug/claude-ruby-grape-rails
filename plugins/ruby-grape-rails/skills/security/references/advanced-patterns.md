@@ -163,14 +163,13 @@ Sidekiq::Cron::Job.create(
 
 ### Audit Script
 
-```bash
-# Find potential hardcoded secrets in code
-grep -rn "sk_live\|sk_test\|aws_secret\|password.*=" app/ config/ --include="*.rb"
-grep -rn "api_key\|secret_key\|private_key" app/ config/ --include="*.rb"
+Two passes over `app/` and `config/` Ruby files:
 
-# Check for secrets in .env files
-grep -v '^#' .env | grep -v '^$'
-```
+- Pattern 1: `sk_live|sk_test|aws_secret|password.*=`
+- Pattern 2: `api_key|secret_key|private_key`
+
+For `.env` inspection: filter out comments (`^#`) and blank lines
+(`^$`).
 
 ## Supply Chain Security
 

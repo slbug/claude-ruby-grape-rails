@@ -18,20 +18,18 @@ For each service in `app/services/` or domain module:
 
 ### Commands
 
-```bash
-# Class count per service directory
-for dir in app/services/*/; do
-  echo "$(basename "$dir"): $(find "$dir" -type f -name '*.rb' | wc -l) classes"
-done
+Metrics:
 
-# Public method count
-rg "^  def [a-z]" app/services --type ruby | wc -l
+- **Class count per service directory**: count Ruby files per
+  subdirectory under `app/services/`.
+- **Public method count**: count matches of pattern
+  `^  def [a-z]` over `app/services` Ruby files.
+- **Model count**: count Ruby files at `app/models/` depth 1.
+- **Dependency analysis from `Gemfile.lock`**:
 
-# Model count
-find app/models -maxdepth 1 -type f -name '*.rb' 2>/dev/null | wc -l
-
-# Dependency analysis from Gemfile.lock (works without bundle viz)
-ruby -e 'require "bundler"; puts Bundler::LockfileParser.new(Bundler.read_file("Gemfile.lock")).dependencies.keys.sort'
+```ruby
+require 'bundler'
+puts Bundler::LockfileParser.new(Bundler.read_file('Gemfile.lock')).dependencies.keys.sort
 ```
 
 ## Coupling Analysis
@@ -40,12 +38,9 @@ ruby -e 'require "bundler"; puts Bundler::LockfileParser.new(Bundler.read_file("
 
 How many other services does this service depend on?
 
-```bash
-# For each service, count outgoing dependencies
-# Check which services call which
-rg "UserService\." app/services --type ruby | wc -l
-rg "OrderService\." app/services --type ruby | wc -l
-```
+For each service, count outgoing dependencies. Search `app/services`
+Ruby files; count matches of patterns like `UserService\.`,
+`OrderService\.`, etc., per outgoing target service.
 
 | Fan-Out | Assessment |
 |---------|------------|
@@ -76,18 +71,14 @@ How many services depend on this service?
 
 ### Assessment
 
-```bash
-# Check for generic names
-ls app/services/ | grep -iE "utils|helpers|services|common|shared|misc"
+Two checks:
 
-# Large API surface
-for file in app/services/*.rb; do
-  funcs=$(rg "^  def [a-z]" "$file" --type ruby | wc -l)
-  if [ "$funcs" -gt 30 ]; then
-    echo "WARNING: $(basename $file) has $funcs public methods"
-  fi
-done
-```
+- **Generic names**: list `app/services/` entries; flag those
+  matching pattern `utils|helpers|services|common|shared|misc`
+  (case-insensitive).
+- **Large API surface**: per `.rb` file under `app/services/`,
+  count matches of pattern `^  def [a-z]`. Flag any file with > 30
+  public methods.
 
 ## Boundary Violations
 
@@ -102,16 +93,15 @@ done
 
 ### Detection
 
-```bash
-# Direct ActiveRecord calls in controllers/views
-rg "Model\.\(all\|where\|find\|create\)" app/controllers app/views --type ruby | head -20
+Three searches over Ruby files:
 
-# Cross-service model usage
-rg "User\.\|User::" app/services/order_service.rb --type ruby
-
-# Views calling business logic
-rg "Service\." app/views --type ruby
-```
+- **Direct ActiveRecord calls in controllers/views**: pattern
+  `Model\.(all|where|find|create)` over `app/controllers` and
+  `app/views`.
+- **Cross-service model usage**: pattern `User\.|User::` in
+  `app/services/order_service.rb`.
+- **Views calling business logic**: pattern `Service\.` over
+  `app/views`.
 
 ## Ruby/Rails-Specific Patterns
 
@@ -289,14 +279,16 @@ end
 
 ### Check Dependency Graph
 
-```bash
-# Gem dependency summary from Gemfile.lock
-ruby -e 'require "bundler"; puts Bundler::LockfileParser.new(Bundler.read_file("Gemfile.lock")).dependencies.keys.sort'
+- **Gem dependency summary** from `Gemfile.lock`:
 
-# For internal dependencies, use grep
-rg "require.*services/" app --type ruby
-rg "include.*Concern" app/models --type ruby
-```
+  ```ruby
+  require 'bundler'
+  puts Bundler::LockfileParser.new(Bundler.read_file('Gemfile.lock')).dependencies.keys.sort
+  ```
+
+- **Internal dependencies** (search Ruby files):
+  - pattern `require.*services/` over `app`
+  - pattern `include.*Concern` over `app/models`
 
 ## Refactoring Checklist
 

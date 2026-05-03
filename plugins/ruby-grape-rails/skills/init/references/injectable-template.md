@@ -21,9 +21,10 @@ These rules govern ALL `/rb:*` command execution. Violations invalidate the sess
 
 ### Repository Searches
 
-- Prefer built-in `Grep` / `Glob` first for repository searches
-- If you need shell search, prefer `ag` or `rg`
-- For Ruby type filters, use `ag --ruby` or `rg --type ruby`; never `rb`
+- Use whichever search tool is available (`Grep`/`Glob` tools, or
+  `ugrep`/`bfs`/`ag`/`rg` via Bash) per the tool-batching preference
+- Ruby type filter is `ruby`, never `rb`
+  (`ugrep --include='*.rb'` / `rg --type ruby` / `ag --ruby`)
 
 ### Parsing Command Output
 

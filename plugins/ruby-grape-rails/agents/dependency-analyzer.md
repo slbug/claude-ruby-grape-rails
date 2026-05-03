@@ -45,13 +45,14 @@ Deeper commands and longer examples live in
 
 ### Dead Code Candidates
 
-Use fast repo-native commands first:
+Three search passes (use whichever tool is available — `Grep` /
+`ugrep` / `rg`):
 
-```bash
-rg -n '^\s*def\s+' app lib
-rg -n 'process_order|\.process_order\b' app lib spec test
-rg -n 'define_method|method_missing|public_send|send\(' app lib
-```
+1. All defined methods: pattern `^\s*def\s+` over `app` `lib`.
+2. References for the candidate (e.g. `process_order`): pattern
+   `process_order|\.process_order\b` over `app` `lib` `spec` `test`.
+3. Indirect dispatch that may hide callers: pattern
+   `define_method|method_missing|public_send|send\(` over `app` `lib`.
 
 Treat these as blockers to confident removal:
 
@@ -62,11 +63,8 @@ Treat these as blockers to confident removal:
 
 ### Circular Requires / Load Order
 
-```bash
-rg -n 'require(_relative)? ' app lib
-```
-
-Call out cycles that create:
+Search for `require` / `require_relative` statements over `app` and
+`lib`. Call out cycles that create:
 
 - boot-order fragility
 - Zeitwerk naming fights

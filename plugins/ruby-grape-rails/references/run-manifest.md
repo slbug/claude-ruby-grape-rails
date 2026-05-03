@@ -89,7 +89,7 @@ Stored to detect rebase drift on resume.
 
 `status` enum: `in-flight` | `complete`.
 
-Per-agent `status` enum: `pending` | `in-flight` | `complete` |
+Per-agent `status` enum: `pending` | `in-flight` | `artifact` |
 `stub-replaced` | `recovered-from-return` | `stub-no-output`.
 
 `agents.*.path` and `consolidated_path` are absolute paths populated
@@ -141,7 +141,7 @@ Helper auto-stamps `updated_at`.
 ### Post-recovery
 
 After Artifact Recovery decides each agent's outcome, patch its
-`status` to one of `complete`, `stub-replaced`, `recovered-from-return`,
+`status` to one of `artifact`, `stub-replaced`, `recovered-from-return`,
 or `stub-no-output`:
 
 ```bash

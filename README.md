@@ -574,7 +574,7 @@ The plugin enforces **22 Iron Laws** that prevent common, costly mistakes:
 |----------|-------|------|
 | Active Record | 7 | Use decimal for money, never float; Use parameterized queries, never SQL interpolation; Use includes/preload to prevent N+1 queries; In Active Record code, use after_commit when enqueueing jobs; Wrap multi-step operations in transactions; Never bypass validations in normal code; Never use default_scope |
 | Sidekiq | 4 | Jobs must be idempotent (safe to retry); Job args must be JSON-safe only; Never pass ORM objects to jobs — pass IDs; Always enqueue jobs after commit using the active ORM |
-| Security | 4 | Never use eval with user input; Authorize explicitly in every action; Never use html_safe/raw on untrusted content; Never concatenate SQL strings |
+| Security | 4 | Never use Ruby eval with user input; Authorize explicitly in every action; Never use html_safe/raw on untrusted content; Never concatenate SQL strings |
 | Ruby | 3 | Always pair method_missing with respond_to_missing?; Always supervise background processes; Only rescue StandardError, never Exception |
 | Hotwire/Turbo | 2 | Pre-compute all data before Turbo Stream broadcast; Use turbo_frame_tag for partial page updates |
 | Verification & Discipline | 2 | Always run tests and show results before claiming done; Only change what the user asked for — no drive-by improvements |
