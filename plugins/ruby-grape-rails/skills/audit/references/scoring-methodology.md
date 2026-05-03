@@ -25,10 +25,9 @@ How health scores are calculated for each category.
 | No circular dependencies | 15 | -10 per cycle |
 | Folder structure follows conventions | 15 | -5 per deviation |
 
-**Commands used:**
+**Commands used** — analyze architecture and dependencies:
 
 ```bash
-# Analyze architecture and dependencies
 bundle exec rubocop --only Metrics/ClassLength,Metrics/ModuleLength
 bundle exec flay lib/ --mass 50
 find app -name "*.rb" -type f | wc -l
@@ -47,16 +46,11 @@ find app -name "*.rb" -type f | wc -l
 
 **Commands used:**
 
-```bash
-# Detect N+1 patterns
-grep -B5 -A5 "\.map\|\.each" app/ -r --include="*.rb" | grep -E "User\.find|Order\.where"
-
-# Check for eager loading usage
-grep -r "\.includes\|\.preload\|\.eager_load" app/ --include="*.rb"
-
-# Check Hotwire/Turbo stream usage in views
-grep -r "turbo_stream\|turbo_frame" app/views/ --include="*.erb" --include="*.haml"
-```
+| Goal | Command |
+|---|---|
+| Detect N+1 patterns | `grep -B5 -A5 "\.map\|\.each" app/ -r --include="*.rb"` piped through `grep -E "User\.find\|Order\.where"` |
+| Check eager-loading usage | `grep -r "\.includes\|\.preload\|\.eager_load" app/ --include="*.rb"` |
+| Check Hotwire/Turbo stream usage in views | `grep -r "turbo_stream\|turbo_frame" app/views/ --include="*.erb" --include="*.haml"` |
 
 ### Security (100 points)
 
@@ -71,19 +65,12 @@ grep -r "turbo_stream\|turbo_frame" app/views/ --include="*.erb" --include="*.ha
 
 **Commands used:**
 
-```bash
-# Run Brakeman security scanner
-bundle exec brakeman --exit-on-warn 2>&1 || true
-
-# Check for dangerous constantize calls
-grep -r "\.constantize\|constantize" app/ --include="*.rb"
-
-# Check for raw HTML output
-grep -r "\.html_safe\|raw(" app/ --include="*.rb" --include="*.erb"
-
-# Check controller authorization patterns
-grep -r "before_action\|before_action" app/controllers/ -A5 | grep -v "authorize\|authenticate"
-```
+| Goal | Command |
+|---|---|
+| Run Brakeman security scanner | `bundle exec brakeman --exit-on-warn 2>&1 \|\| true` |
+| Detect dangerous `constantize` calls | `grep -r "\.constantize\|constantize" app/ --include="*.rb"` |
+| Detect raw HTML output | `grep -r "\.html_safe\|raw(" app/ --include="*.rb" --include="*.erb"` |
+| Check controller authorization patterns | `grep -r "before_action" app/controllers/ -A5 \| grep -v "authorize\|authenticate"` |
 
 ### Test Quality (100 points)
 
@@ -98,19 +85,12 @@ grep -r "before_action\|before_action" app/controllers/ -A5 | grep -v "authorize
 
 **Commands used:**
 
-```bash
-# Run test suite
-bundle exec rspec 2>&1 | tail -30
-
-# Check for sleep in tests (flaky pattern)
-grep -r "sleep " spec/ test/ --include="*.rb"
-
-# Check factory usage
-grep -r "FactoryBot\|create\|build" spec/ --include="*.rb" | head -20
-
-# Check for database cleaner configuration
-grep -r "DatabaseCleaner" spec/ test/ --include="*.rb"
-```
+| Goal | Command |
+|---|---|
+| Run test suite (tail summary) | `bundle exec rspec 2>&1 \| tail -30` |
+| Detect `sleep` in tests (flaky pattern) | `grep -r "sleep " spec/ test/ --include="*.rb"` |
+| Check factory usage | `grep -r "FactoryBot\|create\|build" spec/ --include="*.rb" \| head -20` |
+| Check database-cleaner configuration | `grep -r "DatabaseCleaner" spec/ test/ --include="*.rb"` |
 
 ### Dependencies (100 points)
 
@@ -122,13 +102,10 @@ grep -r "DatabaseCleaner" spec/ test/ --include="*.rb"
 | No unused dependencies | 10 | -3 per unused |
 | Version pinning appropriate | 10 | -5 if all loose |
 
-**Commands used:**
+**Commands used** — gem-vulnerability check + outdated gem list:
 
 ```bash
-# Check for gem vulnerabilities
 bundle exec bundle-audit 2>&1
-
-# List outdated gems
 bundle exec bundle outdated 2>&1
 ```
 

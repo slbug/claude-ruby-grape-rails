@@ -2,10 +2,7 @@
 
 Built-in authentication replaces Devise for new apps:
 
-```bash
-# Generate authentication
-bin/rails generate authentication
-```
+Generate the authentication scaffold: `bin/rails generate authentication`.
 
 This creates:
 

@@ -115,18 +115,22 @@ Rails.application.config.ssl_options = {
 
 ## Security Audit Tools
 
+Static analysis with Brakeman:
+
 ```bash
-# Static analysis with brakeman
 gem install brakeman
 brakeman -o brakeman_report.html
+```
 
-# Dependency audit with bundle-audit
+Dependency audit with bundle-audit:
+
+```bash
 gem install bundler-audit
 bundle-audit check --update
-
-# Add to CI in your app repo
-# Example workflow file: .github/workflows/security.yml
 ```
+
+Wire both into CI in your app repo (e.g.
+`.github/workflows/security.yml`).
 
 ## Security Checklist
 

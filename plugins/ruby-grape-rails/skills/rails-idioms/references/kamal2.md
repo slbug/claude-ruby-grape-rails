@@ -31,10 +31,11 @@ accessories:
       - config/postgres:/etc/postgresql
 ```
 
-```bash
-# Deploy commands
-kamal setup      # First time setup
-kamal deploy     # Deploy new version
-kamal rollback   # Rollback to previous
-kamal logs       # View logs
-```
+Deploy commands:
+
+| Goal | Command |
+|---|---|
+| First-time setup | `kamal setup` |
+| Deploy new version | `kamal deploy` |
+| Rollback to previous | `kamal rollback` |
+| View logs | `kamal logs` |

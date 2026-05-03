@@ -273,16 +273,11 @@ end
 
 ### Check Redis Key Stats
 
-```bash
-# List keys by prefix
-redis-cli --scan --pattern "*:user:*" | wc -l
-
-# Find keys without TTL
-redis-cli --scan | while read key; do ttl=$(redis-cli ttl "$key"); if [ "$ttl" -lt 0 ]; then echo "$key (TTL: $ttl)"; fi; done
-
-# Memory usage by prefix
-redis-cli --bigkeys
-```
+| Goal | Command |
+|---|---|
+| Count keys by prefix | `redis-cli --scan --pattern "*:user:*" \| wc -l` |
+| Find keys without TTL | `redis-cli --scan \| while read key; do ttl=$(redis-cli ttl "$key"); if [ "$ttl" -lt 0 ]; then echo "$key (TTL: $ttl)"; fi; done` |
+| Memory usage by prefix (largest keys) | `redis-cli --bigkeys` |
 
 ### Monitor CurrentAttributes
 

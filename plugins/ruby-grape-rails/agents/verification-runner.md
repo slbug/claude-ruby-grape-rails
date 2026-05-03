@@ -21,8 +21,9 @@ output — your chat response body should be ≤300 words.
 **Turn budget rules:**
 
 1. One `Write` per artifact path.
-2. Cap analysis at ~18 turns. `Write` by turn ~26.
-3. Stop when findings stabilize.
+2. Complete analysis by turn ~26.
+3. Then `Write` once.
+4. After `Write`: return summary, no new analysis.
 4. If the prompt does NOT include an output path, default to
    `.claude/reviews/verification-runner/{review-slug}-{datesuffix}.md`.
 

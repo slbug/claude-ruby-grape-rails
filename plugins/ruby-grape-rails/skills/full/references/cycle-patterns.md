@@ -34,26 +34,21 @@ Continue with /rb:work .claude/plans/{slug}/plan.md
 
 ### Session Restart
 
-If session ends unexpectedly:
+If session ends unexpectedly: locate most recent progress, read its
+state, resume via `/rb:work`:
 
 ```bash
-# Find most recent progress
 ls -t .claude/plans/*/progress.md | head -1
-
-# Check state
 grep "State:" .claude/plans/*/progress.md | head -1
-
-# Resume
 /rb:work .claude/plans/{slug}/plan.md
 ```
 
 ### Blocker Recovery
 
-When human resolves a blocker:
+When human resolves a blocker, mark it resolved in the progress
+file, then resume from the unblocked task:
 
 ```bash
-# Mark blocker resolved in progress file
-# Then resume
 /rb:work .claude/plans/{slug}/plan.md --from {task-id}
 ```
 

@@ -2,22 +2,12 @@
 
 ## Quick Debug Commands
 
-```bash
-# Safer rebuild sequence when cache corruption is suspected
-bundle exec rails tmp:cache:clear
-bundle install
-bundle exec rake assets:precompile
-
-# Check what methods a class/module has
-bundle exec rails runner "puts User.methods.grep(/find/).inspect"
-
-# Interactive debugging with rails console
-bundle exec rails console
-# then: reload!
-
-# Run single test with output
-bundle exec rspec spec/models/user_spec.rb:42 -fd
-```
+| Goal | Command |
+|---|---|
+| Safer rebuild sequence (cache-corruption suspected) | `bundle exec rails tmp:cache:clear && bundle install && bundle exec rake assets:precompile` |
+| List methods matching a pattern on a class | `bundle exec rails runner "puts User.methods.grep(/find/).inspect"` |
+| Interactive debugging | `bundle exec rails console` (then `reload!` to refresh code) |
+| Run single test with output | `bundle exec rspec spec/models/user_spec.rb:42 -fd` |
 
 ## Common Fixes
 

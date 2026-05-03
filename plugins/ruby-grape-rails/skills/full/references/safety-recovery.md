@@ -13,13 +13,12 @@ When resuming an interrupted workflow:
    - Ensure completed tasks match checkboxes in plan
 4. **Continue from first unchecked task**
 
-Example resume:
+Example resume — invokes `/rb:full --resume magic-link-auth`, which
+reads `.claude/plans/magic-link-auth/plan.md`, finds the first
+unchecked task (e.g. `P2-T3`), and resumes from there:
 
 ```bash
 /rb:full --resume magic-link-auth
-# Reads .claude/plans/magic-link-auth/plan.md
-# Finds first unchecked task: P2-T3
-# Resumes from P2-T3
 ```
 
 Or resume from specific task:
@@ -63,41 +62,37 @@ Optional checkpoints for human review:
 
 ## Rollback Points
 
-Git commits after each phase enable rollback:
+Git commits after each phase enable rollback. To recover, find the
+last good commit via `git log --oneline`, then reset to it:
 
 ```bash
-# If something goes wrong
-git log --oneline  # Find last good commit
+git log --oneline
 git reset --hard {commit}
 ```
 
 ## Task-Level Checkpoints
 
-Each completed task creates a git commit:
+Each completed task creates a git commit. Recovery operations:
 
-```bash
-# View task history
-git log --oneline --grep="wip(${SLUG})"
-
-# Rollback specific task
-git revert HEAD  # Reverts last task
-git revert HEAD~2  # Reverts task before last
-
-# Or reset to before task
-git reset --hard HEAD~1  # Reset last task
-```
+| Goal | Command |
+|---|---|
+| View task history | `git log --oneline --grep="wip(${SLUG})"` |
+| Revert last task (preserve history) | `git revert HEAD` |
+| Revert task before last | `git revert HEAD~2` |
+| Reset before last task (destructive) | `git reset --hard HEAD~1` |
 
 ## State Recovery
 
 Plan checkboxes ARE the state. If progress file is missing,
 the plan still contains all state needed to resume:
 
+Check current progress from plan checkboxes, then resume from the
+first unchecked task via `/rb:work`:
+
 ```bash
-# Check current progress from plan checkboxes
 COMPLETED=$(grep -c '\[x\]' .claude/plans/${SLUG}/plan.md)
 TOTAL=$(grep -c '\[.*\] \[P' .claude/plans/${SLUG}/plan.md)
 echo "Progress: $COMPLETED / $TOTAL tasks complete"
 
-# Resume from first unchecked task
 /rb:work .claude/plans/${SLUG}/plan.md
 ```

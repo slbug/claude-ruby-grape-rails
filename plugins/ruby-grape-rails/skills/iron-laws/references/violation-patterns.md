@@ -189,45 +189,24 @@ rescue StandardError => e
 
 **Fix**: Wrap partial update content in `turbo_frame_tag`.
 
-## Grep Patterns
+## Detection Patterns
 
-```bash
-# Law 1: Money as float
-grep -r "t\.float.*\(price\|amount\|cost\|balance\)" db/migrate/
-
-# Laws 2, 15: SQL interpolation
-grep -r "where.*#{" app/
-grep -r "order.*#{" app/
-grep -r "find_by_sql" app/
-
-# Law 14: html_safe
-grep -r "\.html_safe" app/
-grep -r "raw(" app/
-
-# Law 6: Validation bypass
-grep -r "update_columns\|update_column\|save.*validate.*false" app/
-
-# Law 7: default_scope
-grep -r "default_scope" app/models/
-
-# Law 10: Sidekiq with objects
-grep -r "perform_later.*current_user\|perform_async.*current_user" app/
-
-# Laws 4, 11: after_save with jobs
-grep -r "after_save.*:\|after_save do" app/models/ | grep -v "after_commit"
-
-# Law 12: eval
-grep -r "eval(" app/ | grep -v "# eval"
-
-# Law 16: method_missing
-grep -r "def method_missing" app/ | xargs grep -L "respond_to_missing"
-
-# Law 18: Bare rescue
-grep -r "rescue\s*$\|rescue\s*=>" app/ | grep -v "StandardError"
-
-# Law 19: DB in turbo streams
-grep -r "\.where\|\.find\|\.find_by" app/views/*.turbo_stream.*
-```
+| Law(s) | Pattern | Search path |
+|---|---|---|
+| 1 | `t\.float.*(price\|amount\|cost\|balance)` | `db/migrate/` |
+| 2, 15 | `where.*#{` | `app/` |
+| 2, 15 | `order.*#{` | `app/` |
+| 2, 15 | `find_by_sql` | `app/` |
+| 14 | `\.html_safe` | `app/` |
+| 14 | `raw(` | `app/` |
+| 6 | `update_columns\|update_column\|save.*validate.*false` | `app/` |
+| 7 | `default_scope` | `app/models/` |
+| 10 | `perform_later.*current_user\|perform_async.*current_user` | `app/` |
+| 4, 11 | `after_save.*:\|after_save do` (excluding `after_commit`) | `app/models/` |
+| 12 | `eval(` (excluding lines containing `# eval`) | `app/` |
+| 16 | `def method_missing` files lacking `respond_to_missing` | `app/` |
+| 18 | bare `rescue` (matching `rescue$` or `rescue =>`, excluding `StandardError`) | `app/` |
+| 19 | `\.where\|\.find\|\.find_by` | `app/views/*.turbo_stream.*` |
 
 ## Confidence Levels
 

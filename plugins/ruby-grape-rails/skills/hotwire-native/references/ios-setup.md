@@ -1,13 +1,11 @@
 # iOS
 
+Set up via Xcode project + CocoaPods. Initialize the Podfile, add
+`pod 'HotwireNative', '~> 1.2'` to it, then install:
+
 ```bash
-# Using Xcode project
 cd ios
 pod init
-
-# Add to Podfile
-pod 'HotwireNative', '~> 1.2'
-
 pod install
 ```
 

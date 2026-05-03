@@ -28,11 +28,11 @@ config.active_job.queue_adapter = :solid_queue
 config.solid_queue.connects_to = { database: { writing: :queue } }
 ```
 
-```bash
-# Generate migrations
-bin/rails solid_queue:install
+Generate migrations + run worker (separate process recommended in
+production):
 
-# Run in production (separate process recommended)
+```bash
+bin/rails solid_queue:install
 bin/jobs
 ```
 
@@ -46,19 +46,19 @@ bin/jobs
 | Complexity | One less service | Requires Redis |
 | Best for | Most apps | High-throughput, complex workflows |
 
-```ruby
-# Use Solid Queue when:
-# - Throughput < 1,000 jobs/sec
-# - You want fewer moving parts
-# - You already use PostgreSQL/MySQL
-# - Basic job retry/monitoring is sufficient
+**Use Solid Queue when:**
 
-# Use Sidekiq when:
-# - High throughput needed
-# - Complex job workflows
-# - Rich job metrics required
-# - Already invested in Redis infrastructure
-```
+- Throughput < 1,000 jobs/sec
+- You want fewer moving parts
+- You already use PostgreSQL/MySQL
+- Basic job retry/monitoring is sufficient
+
+**Use Sidekiq when:**
+
+- High throughput needed
+- Complex job workflows
+- Rich job metrics required
+- Already invested in Redis infrastructure
 
 ### Solid Cache
 
@@ -87,10 +87,7 @@ config.solid_cache.ttl = 1.week
 config.solid_cache.max_entries = 10_000_000
 ```
 
-```bash
-# Generate migrations
-bin/rails solid_cache:install
-```
+Generate migrations: `bin/rails solid_cache:install`.
 
 #### Solid Cache Patterns
 
@@ -136,10 +133,7 @@ production:
       writing: cable
 ```
 
-```bash
-# Generate migrations
-bin/rails solid_cable:install
-```
+Generate migrations: `bin/rails solid_cable:install`.
 
 #### Solid Cable Limitations
 

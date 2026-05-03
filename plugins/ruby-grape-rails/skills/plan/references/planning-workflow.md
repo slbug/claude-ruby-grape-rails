@@ -401,7 +401,6 @@ if [[ -f "$ACTIVE_FILE" && ! -L "$ACTIVE_FILE" ]]; then
     *)  MARKED_DIR="$(pwd)/${MARKED_DIR#./}" ;;
   esac
 
-  # ALL FOUR guards must pass to reuse the pre-bound namespace:
   if [[ -d "$MARKED_DIR" \
         && ! -L "$MARKED_DIR" \
         && -f "$MARKED_DIR/progress.md" \
@@ -409,11 +408,15 @@ if [[ -f "$ACTIVE_FILE" && ! -L "$ACTIVE_FILE" ]]; then
         && ! -f "$MARKED_DIR/plan.md" \
         ]] && grep -qE '^- \*\*State\*\*: (INITIALIZING|DISCOVERING)$' \
                   "$MARKED_DIR/progress.md"; then
-    SLUG_DIR="$MARKED_DIR"   # reuse pre-bound namespace
+    SLUG_DIR="$MARKED_DIR"
   fi
 fi
-# Otherwise: derive fresh slug, create namespace, set marker AFTER plan.md write.
 ```
+
+Reuse rule: ALL FOUR guards above must pass to reuse the pre-bound
+namespace. The pre-bound `SLUG_DIR` is set when the conditional
+matches. Otherwise: derive a fresh slug, create namespace, set the
+marker AFTER `plan.md` write.
 
 ## Agent Selection Matrix
 

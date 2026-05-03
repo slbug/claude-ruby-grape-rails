@@ -134,11 +134,10 @@ end
 
 ### Credentials (Rails 6+)
 
-```bash
-# Edit encrypted credentials
-EDITOR=vim bin/rails credentials:edit
+Edit encrypted credentials (default or production-specific):
 
-# Or for production-specific
+```bash
+EDITOR=vim bin/rails credentials:edit
 EDITOR=vim bin/rails credentials:edit --environment production
 ```
 

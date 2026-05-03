@@ -99,6 +99,10 @@ So /rb:full invokes:
 
 Bash example:
 
+Steps: derive `${SLUG}` from feature description, create plan
+namespace, write initial `progress.md` (schema below), pre-bind the
+active-plan marker BEFORE invoking `/rb:plan`.
+
 ```bash
 SLUG=$(printf '%s' "$FEATURE_DESCRIPTION" | tr '[:upper:] ' '[:lower:]-' | tr -cd '[:alnum:]-' | tr -s '-')
 PLAN_DIR=".claude/plans/${SLUG}"
@@ -106,7 +110,6 @@ PLAN_DIR=".claude/plans/${SLUG}"
 mkdir -p "${PLAN_DIR}/research"
 : > "${PLAN_DIR}/scratchpad.md"
 
-# Write initial progress.md (see Initial Progress Schema below)
 cat > "${PLAN_DIR}/progress.md" <<EOF
 # Progress: ${SLUG}
 
@@ -116,7 +119,6 @@ cat > "${PLAN_DIR}/progress.md" <<EOF
 ## Phase History
 EOF
 
-# Pre-bind active-plan marker BEFORE invoking /rb:plan
 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/active-plan-marker.sh" set "${PLAN_DIR}"
 ```
 

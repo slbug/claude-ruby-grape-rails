@@ -99,11 +99,10 @@ end
 
 ### Rails Credentials (Recommended)
 
-```bash
-# Edit encrypted credentials
-EDITOR=vim bin/rails credentials:edit
+Edit encrypted credentials (default or production-specific):
 
-# Or for production-specific
+```bash
+EDITOR=vim bin/rails credentials:edit
 EDITOR=vim bin/rails credentials:edit --environment production
 ```
 
@@ -175,14 +174,14 @@ For `.env` inspection: filter out comments (`^#`) and blank lines
 
 ### Dependency Auditing
 
+Check for known vulnerabilities:
+
 ```bash
-# Check for known vulnerabilities
 gem install bundler-audit
 bundle-audit check --update
-
-# Add to CI
-bundle-audit check || exit 1
 ```
+
+Add to CI: `bundle-audit check || exit 1`
 
 ### Gemfile Security
 
@@ -211,10 +210,7 @@ Before adding new dependency:
 - [ ] Review permissions/capabilities needed
 - [ ] Check transitive dependencies
 
-```bash
-# Check what a gem brings in
-bundle viz --format png
-```
+Inspect dependency graph for a gem: `bundle viz --format png`.
 
 ### Minimal Dependencies
 

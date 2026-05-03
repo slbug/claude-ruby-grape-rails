@@ -285,10 +285,10 @@ Don't commit after every task. Instead:
 
 ### Branch Strategy (for /rb:full)
 
+Create the branch, run phases, then open a PR on completion:
+
 ```bash
 git checkout -b feature/{feature-slug}
-# ... phases execute ...
-# On completion, ready for PR
 ```
 
 ## Error Recovery

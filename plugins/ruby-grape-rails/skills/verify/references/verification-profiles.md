@@ -5,10 +5,11 @@ local feedback loops.
 
 ## Quick Check (CI)
 
+Drop into a workflow step in your app repo (e.g.
+`.github/workflows/ruby.yml`):
+
 ```bash
 #!/bin/bash
-# Example workflow step in your app repo: .github/workflows/ruby.yml or similar
-
 set -e
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
@@ -260,10 +261,10 @@ fi
 
 ## Full Verification
 
+Pre-commit or release check:
+
 ```bash
 #!/bin/bash
-# Pre-commit or release check
-
 set -e
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
@@ -532,8 +533,9 @@ echo "✅ All checks passed!"
 
 ## Fast Feedback (Development)
 
+While iterating on code, skip heavy checks:
+
 ```bash
-# While iterating on code - skip heavy checks
 bundle exec standardrb --fix && \
   bundle exec rspec spec/models/user_spec.rb
 ```

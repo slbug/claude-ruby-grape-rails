@@ -194,9 +194,10 @@ namespace :release do
 end
 ```
 
+`bin/release.sh`:
+
 ```bash
 #!/bin/sh
-# bin/release.sh
 set -e
 
 echo "Running migrations..."
