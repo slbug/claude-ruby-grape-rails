@@ -170,7 +170,7 @@ Apply Artifact Recovery for each agent in the run manifest at
 `.claude/plans/{plan-slug}/research-fanout/RUN-CURRENT.json`:
 
 - Exists, `size_bytes >= 1000` → trust. Do NOT overwrite. Patch
-  `status: complete` into manifest.
+  `status: artifact` into manifest.
 - Exists, `size_bytes < 1000`, return text substantially larger AND
   parses as findings → replace stub. Patch `status: stub-replaced`.
 - Exists, `size_bytes < 1000`, return text empty/unusable → keep
