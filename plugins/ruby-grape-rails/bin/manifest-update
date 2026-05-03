@@ -25,6 +25,7 @@ require 'json'
 require 'optparse'
 require 'shellwords'
 require 'time'
+require_relative '../lib/path_safety'
 require_relative '../lib/repo_root'
 
 ALLOWED_PATH_RE = %r{/\.claude/.+/RUN-CURRENT\.json\z}
@@ -41,14 +42,6 @@ def containment_root
   # containment comparison matches even on macOS where /tmp resolves to
   # /private/tmp.
   RubyGrapeRails::RepoRoot.canonical(RubyGrapeRails::RepoRoot.find(Dir.pwd))
-end
-
-def canonical_abs(abs)
-  parent = File.dirname(abs)
-  resolved_parent = File.realpath(parent)
-  File.join(resolved_parent, File.basename(abs))
-rescue StandardError
-  abs
 end
 
 # Atomic lstat-based predicates (single syscall; matches
@@ -85,17 +78,19 @@ end
 def validate_path(path)
   abs = File.expand_path(path)
   die "path must end at .claude/<ns>/<slug>/RUN-CURRENT.json: #{path}" unless abs =~ ALLOWED_PATH_RE
+  root = containment_root
+  begin
+    RubyGrapeRails::PathSafety.reject_symlink_ancestors!(abs, stop_at: root)
+  rescue RubyGrapeRails::PathSafety::SymlinkAncestorError => e
+    die "ancestor check failed: #{e.message}"
+  end
   kind = lstat_kind(abs)
   die "target is a #{kind}, refusing (must be absent or regular file): #{abs}" \
     if !%w[absent].include?(kind) && !regular_non_symlink_file?(abs)
   parent = File.dirname(abs)
   parent_kind = lstat_kind(parent)
   die "parent is a #{parent_kind}, refusing: #{parent}" if parent_kind != 'absent' && !directory_non_symlink?(parent)
-  root = containment_root
-  resolved = canonical_abs(abs)
-  unless resolved.start_with?(root + '/') || abs.start_with?(root + '/')
-    die "path outside containment root (#{root}): #{abs}"
-  end
+  die "path outside containment root (#{root}): #{abs}" unless RubyGrapeRails::PathSafety.path_within_root?(abs, root)
   abs
 end
 
