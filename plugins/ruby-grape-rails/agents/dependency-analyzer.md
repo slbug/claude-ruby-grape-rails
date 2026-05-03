@@ -45,8 +45,7 @@ Deeper commands and longer examples live in
 
 ### Dead Code Candidates
 
-Three search passes (use whichever tool is available — `Grep` /
-`ugrep` / `rg`):
+Three search passes:
 
 1. All defined methods: pattern `^\s*def\s+` over `app` `lib`.
 2. References for the candidate (e.g. `process_order`): pattern

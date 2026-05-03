@@ -89,8 +89,6 @@ end
 
 ### Finding All Callers
 
-Use whichever search tool is available (`Grep` tool, `ugrep`, `rg`,
-or shell `grep`) — agent picks per the tool-batching preference.
 Targets:
 
 - Callers: pattern `UserService\.update|\.update_user` over `app/` Ruby files.

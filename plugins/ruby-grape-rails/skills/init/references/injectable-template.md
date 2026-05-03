@@ -19,13 +19,6 @@ These rules govern ALL `/rb:*` command execution. Violations invalidate the sess
 
 ## TOOLING PREFERENCES
 
-### Repository Searches
-
-- Use whichever search tool is available (`Grep`/`Glob` tools, or
-  `ugrep`/`bfs`/`ag`/`rg` via Bash) per the tool-batching preference
-- Ruby type filter is `ruby`, never `rb`
-  (`ugrep --include='*.rb'` / `rg --type ruby` / `ag --ruby`)
-
 ### Parsing Command Output
 
 When parsing JSON, YAML, text, or command output during `/rb:*` workflows:

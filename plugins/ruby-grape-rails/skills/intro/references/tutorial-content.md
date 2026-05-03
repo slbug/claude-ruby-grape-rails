@@ -270,9 +270,8 @@ If you're finding the plugin inconsistent, running `/rb:init` is the single bigg
 ### Layer 5: `/rb:review` + Iron Law Judge (On-Demand)
 
 The `iron-law-judge` agent does **pattern-based violation
-detection** — it scans your changed files for known anti-patterns
-using whichever search tool is available in the session. Runs only
-when you invoke `/rb:review`.
+detection** — it scans your changed files for known anti-patterns.
+Runs only when you invoke `/rb:review`.
 
 What it catches with automated detection (regex patterns from
 `agents/iron-law-judge.md`):
