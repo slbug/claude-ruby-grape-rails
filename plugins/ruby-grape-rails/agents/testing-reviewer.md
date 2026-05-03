@@ -24,7 +24,7 @@ Review for:
 
 Escalate severe gaps when public behavior changed without tests.
 
-## CRITICAL: Save Findings File First
+## Findings File Is Primary Output
 
 Your calling skill body reads findings from the exact file path given in the prompt
 (e.g., `.claude/reviews/testing-reviewer/{review-slug}-{datesuffix}.md`). The file IS the real

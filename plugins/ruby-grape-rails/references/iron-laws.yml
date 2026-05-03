@@ -16,7 +16,7 @@
 #   detector_id: which programmatic detector checks this (null if behavioral only)
 #   reference_files: markdown files with detailed examples
 
-version: "1.1.0"
+version: "1.2.0"
 last_updated: "2026-05-03"
 total_laws: 22
 
@@ -59,7 +59,7 @@ laws:
     init_text: "NEVER use float for money — use decimal or integer cents"
     subagent_text: "Iron Law 1: NEVER use float for money — use decimal or integer cents"
     detector_id: "float_for_money"
-    reference_files: ["active-record/money-columns.md"]
+    reference_files: []
 
   - id: 2
     category: active_record
@@ -72,7 +72,7 @@ laws:
     init_text: "ALWAYS use parameterized queries — never interpolate user input"
     subagent_text: "Iron Law 2: ALWAYS use parameterized queries — never SQL string interpolation"
     detector_id: "sql_interpolation"
-    reference_files: ["active-record/query-safety.md"]
+    reference_files: []
 
   - id: 3
     category: active_record
@@ -85,7 +85,7 @@ laws:
     init_text: "USE includes/preload for associations — avoids N+1 queries"
     subagent_text: "Iron Law 3: USE includes/preload for associations — never N+1 queries"
     detector_id: null
-    reference_files: ["active-record/n-plus-one.md"]
+    reference_files: ["skills/ar-n1-check/references/preload-patterns.md"]
 
   - id: 4
     category: active_record
@@ -98,7 +98,7 @@ laws:
     init_text: "IN Active Record code, use after_commit not after_save when enqueueing jobs"
     subagent_text: "Iron Law 4: IN Active Record code, use after_commit not after_save when enqueueing jobs"
     detector_id: null
-    reference_files: ["active-record/callbacks.md"]
+    reference_files: ["skills/rails-idioms/references/callbacks.md"]
 
   - id: 5
     category: active_record
@@ -111,7 +111,7 @@ laws:
     init_text: "WRAP multi-step operations in transactions"
     subagent_text: "Iron Law 5: WRAP multi-step operations in ActiveRecord::Base.transaction"
     detector_id: null
-    reference_files: ["active-record/transactions.md"]
+    reference_files: ["skills/active-record-patterns/references/transactions.md"]
 
   - id: 6
     category: active_record
@@ -124,7 +124,7 @@ laws:
     init_text: "NO update_columns or save(validate: false) in normal flows"
     subagent_text: "Iron Law 6: NO update_columns or save(validate: false) in normal flows"
     detector_id: "validation_bypass"
-    reference_files: ["active-record/validation-bypass.md"]
+    reference_files: ["skills/active-record-patterns/references/validations.md"]
 
   - id: 7
     category: active_record
@@ -137,7 +137,7 @@ laws:
     init_text: "NO default_scope — use explicit scopes only"
     subagent_text: "Iron Law 7: NO default_scope — use explicit named scopes only"
     detector_id: "default_scope"
-    reference_files: ["active-record/scopes.md"]
+    reference_files: []
 
   # Sidekiq (4 laws)
   - id: 8
@@ -151,7 +151,7 @@ laws:
     init_text: "Jobs MUST be idempotent — safe to retry"
     subagent_text: "Iron Law 8: Jobs MUST be idempotent — safe to retry"
     detector_id: null
-    reference_files: ["sidekiq/idempotency.md"]
+    reference_files: ["skills/sidekiq/references/idempotency-patterns.md"]
 
   - id: 9
     category: sidekiq
@@ -164,7 +164,7 @@ laws:
     init_text: "Args use JSON-safe types only — no symbols, no Ruby objects"
     subagent_text: "Iron Law 9: Args use JSON-safe types only — no symbols, no Ruby objects, no procs"
     detector_id: null
-    reference_files: ["sidekiq/job-arguments.md"]
+    reference_files: ["skills/sidekiq/references/job-patterns.md"]
 
   - id: 10
     category: sidekiq
@@ -177,7 +177,7 @@ laws:
     init_text: "NEVER store ORM objects in args — store IDs"
     subagent_text: "Iron Law 10: NEVER store ORM objects in args — store IDs, not records"
     detector_id: "orm_objects_in_jobs"
-    reference_files: ["sidekiq/job-arguments.md"]
+    reference_files: ["skills/sidekiq/references/job-patterns.md"]
 
   - id: 11
     category: sidekiq
@@ -192,7 +192,7 @@ laws:
     init_text: "ALWAYS enqueue jobs after commit using the active ORM or transaction hook"
     subagent_text: "Iron Law 11: ALWAYS enqueue jobs after commit using the active ORM or transaction hook"
     detector_id: null
-    reference_files: ["sidekiq/enqueuing.md"]
+    reference_files: []
 
   # Security (4 laws)
   - id: 12
@@ -206,7 +206,7 @@ laws:
     init_text: "NO Ruby `eval`/`instance_eval`/`class_eval` with user input — code injection vulnerability"
     subagent_text: "Iron Law 12: NO Ruby `eval`/`instance_eval`/`class_eval` with user input — code injection vulnerability. Shell `eval` of trusted helper output is out of scope."
     detector_id: null
-    reference_files: ["security/code-injection.md"]
+    reference_files: []
 
   - id: 13
     category: security
@@ -219,7 +219,7 @@ laws:
     init_text: "AUTHORIZE in EVERY controller action"
     subagent_text: "Iron Law 13: AUTHORIZE in EVERY controller action — do not trust before_action alone"
     detector_id: null
-    reference_files: ["security/authorization.md"]
+    reference_files: ["skills/security/references/authorization.md"]
 
   - id: 14
     category: security
@@ -232,7 +232,7 @@ laws:
     init_text: "NEVER use html_safe or raw with untrusted content"
     subagent_text: "Iron Law 14: NEVER use html_safe or raw with untrusted content — XSS vulnerability"
     detector_id: "unsafe_html"
-    reference_files: ["security/xss-prevention.md"]
+    reference_files: []
 
   - id: 15
     category: security
@@ -245,7 +245,7 @@ laws:
     init_text: "NO SQL string concatenation — always use parameterized queries"
     subagent_text: "Iron Law 15: NO SQL string concatenation — always use parameterized queries"
     detector_id: "sql_interpolation"
-    reference_files: ["security/sql-injection.md"]
+    reference_files: []
 
   # Ruby (3 laws)
   - id: 16
@@ -259,7 +259,7 @@ laws:
     init_text: "NO method_missing without respond_to_missing?"
     subagent_text: "Iron Law 16: NO method_missing without respond_to_missing? — breaks introspection"
     detector_id: null
-    reference_files: ["ruby/metaprogramming.md"]
+    reference_files: []
 
   - id: 17
     category: ruby
@@ -272,7 +272,7 @@ laws:
     init_text: "SUPERVISE ALL BACKGROUND PROCESSES"
     subagent_text: "Iron Law 17: SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers"
     detector_id: null
-    reference_files: ["ruby/process-management.md"]
+    reference_files: []
 
   - id: 18
     category: ruby
@@ -285,7 +285,7 @@ laws:
     init_text: "DON'T RESCUE Exception — only rescue StandardError"
     subagent_text: "Iron Law 18: DON'T RESCUE Exception — only rescue StandardError or specific classes"
     detector_id: null
-    reference_files: ["ruby/error-handling.md"]
+    reference_files: ["skills/ruby-idioms/references/error-handling.md"]
 
   # Hotwire/Turbo (2 laws)
   - id: 19
@@ -299,7 +299,7 @@ laws:
     init_text: "NEVER query DB in Turbo Stream responses"
     subagent_text: "Iron Law 19: NEVER query DB in Turbo Stream responses — pre-compute everything"
     detector_id: null
-    reference_files: ["hotwire/turbo-streams.md"]
+    reference_files: []
 
   - id: 20
     category: hotwire
@@ -312,7 +312,7 @@ laws:
     init_text: "ALWAYS use turbo_frame_tag for partial updates"
     subagent_text: "Iron Law 20: ALWAYS use turbo_frame_tag for partial updates"
     detector_id: null
-    reference_files: ["hotwire/turbo-frames.md"]
+    reference_files: []
 
   # Verification & Discipline (2 laws)
   - id: 21
@@ -328,7 +328,7 @@ laws:
     init_text: "VERIFY BEFORE CLAIMING DONE — run tests and show results"
     subagent_text: "Iron Law 21: VERIFY BEFORE CLAIMING DONE — never say 'should work' — run tests and show results"
     detector_id: null
-    reference_files: ["verification/testing.md"]
+    reference_files: ["skills/testing/references/discipline.md"]
 
   - id: 22
     category: verification
@@ -368,11 +368,11 @@ generation_targets:
     section: "Iron Laws summary"
     marker: "<!-- IRON_LAWS_START -->"
 
-  - file: "plugins/ruby-grape-rails/skills/iron-laws/references/canonical-registry.md"
+  - file: "skills/iron-laws/references/canonical-registry.md"
     section: "Full human-readable registry"
     format: "markdown_projection"
 
-  - file: "plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md"
+  - file: "skills/intro/references/tutorial-content.md"
     section: "Tutorial Iron Laws section"
     marker: "<!-- IRON_LAWS_START -->"
 

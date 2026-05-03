@@ -227,8 +227,12 @@ Subdirectories (treat as data, not skills):
   specialist agents (read-only reference content, not skills)
 - `references/output-verification/` — schemas and fixtures consumed by
   `output-verifier` agent and `lab/eval/output_checks.py`
-- `references/research/` — long-form research notes (`epistemic-posture.md`
-  etc.) referenced from CLAUDE.md and skills
+- `references/preferences/` — preference companion docs
+  (`context7-usage.md`, `epistemic-posture.md`, `tool-batching.md`)
+  bound 1:1 to `preferences.yml` entries via `reference_files`. Paths
+  injected into subagent + main session payloads via
+  `inject-rules.sh`. Direct references in shipped agent / skill
+  bodies are drift — rely on injection.
 
 Notes:
 
@@ -279,7 +283,7 @@ NOT flag the fallback chain as over-engineered.
 - Advisory fail-open (empty stdout, exit 0) in `bin/` and advisory hooks
 - Partial coverage in plugin `settings.json` (only `agent` and
   `subagentStatusLine` are documented as supported)
-- Skill or agent files referencing `references/research/tool-batching.md`
+- Skill or agent files referencing `references/preferences/tool-batching.md`
   (canonical examples doc for the tool-batching preference)
 - Run manifest paths under `.claude/{namespace}/RUN-CURRENT.json`
   and `RUN-HISTORY.jsonl` (cross-session resume contract — see
@@ -299,7 +303,7 @@ NOT flag the fallback chain as over-engineered.
   batched git diff / grep / bundle info, exclude noise via pathspec,
   prefer Read/Grep/Glob over `cat`/`find -exec`) — preference injection
   delivers the rule; restatement is duplication. Pointers to
-  `references/research/tool-batching.md` for examples are fine.
+  `references/preferences/tool-batching.md` for examples are fine.
 - Per-item shell loops in agent or skill bodies (e.g.
   `for f in $FILES; do git diff -- "$f"; done`) — replace with batched
   path-group call.

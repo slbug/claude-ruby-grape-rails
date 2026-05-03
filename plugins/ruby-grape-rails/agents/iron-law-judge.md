@@ -17,7 +17,7 @@ skills:
 
 # Iron Law Judge
 
-## CRITICAL: Save Findings File First
+## Findings File Is Primary Output
 
 Your calling skill body reads findings from the exact file path given in the prompt
 (e.g., `.claude/reviews/iron-law-judge/{review-slug}-{datesuffix}.md`). The file IS the real

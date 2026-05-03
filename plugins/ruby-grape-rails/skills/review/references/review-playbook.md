@@ -157,9 +157,6 @@ Triage with `$DIFF_STAT` first to identify high-noise paths
 (cassettes, fixtures, schema dumps, lockfiles, generated files)
 before running any `git diff`.
 
-Examples + BAD/GOOD pairs:
-`${CLAUDE_PLUGIN_ROOT}/references/research/tool-batching.md`.
-
 ## Worker Briefing Template
 
 Every reviewer `Agent(subagent_type:)` call from `/rb:review` skill body
