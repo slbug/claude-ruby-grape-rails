@@ -85,11 +85,11 @@ preferences:
   - id: 6
     category: tooling
     title: "Bash Bodies Execute, Not Narrate"
-    rule: "Bash command bodies are for execution, not commentary. Do NOT include `#` thinking/hypothesis/checklist lines inside Bash command strings — they execute as no-ops, burn the agent's tool-call budget on non-execution, and obscure what the command actually does. Record reasoning, hypotheses, and checklists in the artifact file via `Write`, or in chat-response thinking, never inside `Bash` command input."
-    rationale: "Observed: agents (testing-reviewer, iron-law-judge) emit Bash commands with multi-line `# Check ...` prefixes used as thinking-out-loud surface. Each such call still counts as one Bash dispatch and contributes nothing to execution. Reasoning belongs in the artifact (durable, reviewable) or in agent thinking (private), not in command strings."
+    rule: "Bash command bodies are for execution, not commentary. Do NOT include `#` thinking/hypothesis/checklist lines inside Bash command strings — they execute as no-ops, burn the tool-call budget on non-execution, and obscure what the command actually does. Record reasoning, hypotheses, and checklists in artifacts (durable) or in thinking (private), never inside Bash command input."
+    rationale: "Observed: agents (testing-reviewer, iron-law-judge) emit Bash commands with multi-line `# Check ...` prefixes used as thinking-out-loud surface. Each such call still counts as one Bash dispatch and contributes nothing to execution. Reasoning belongs in artifacts (durable, reviewable) or in thinking (private), not in command strings."
     severity: medium
     applies_to: ["*"]
-    summary_text: "No `#` commentary lines inside Bash commands; reasoning belongs in artifact or thinking"
-    init_text: "Bash command bodies execute, not narrate. Do NOT include `#` thinking/checklist lines inside Bash commands — record reasoning in the artifact file or thinking instead."
-    subagent_text: "Preference: Bash command bodies execute, not narrate. Do NOT include `#` thinking/hypothesis/checklist lines inside Bash command strings. Record reasoning in your `Write` artifact (durable) or in agent thinking (private), never in Bash command input."
+    summary_text: "No `#` commentary lines inside Bash commands; reasoning belongs in artifacts or thinking"
+    init_text: "Bash command bodies execute, not narrate. Do NOT include `#` thinking/checklist lines inside Bash commands — record reasoning in artifacts or thinking instead."
+    subagent_text: "Preference: Bash command bodies execute, not narrate. Do NOT include `#` thinking/hypothesis/checklist lines inside Bash command strings. Record reasoning in artifacts (durable) or in thinking (private), never in Bash command input."
     reference_files: ["research/tool-batching.md"]

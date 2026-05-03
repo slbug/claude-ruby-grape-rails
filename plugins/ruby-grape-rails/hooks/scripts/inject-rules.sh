@@ -72,7 +72,7 @@ Preference: CHALLENGE false user premises before executing. If request contradic
 Preference: AVOID unsupported agreement, apology cascades, and hedge chains. Acknowledge mistakes once, continue. Direct language for HIGH-confidence findings.
 Preference: PREFER positive success targets over prohibition chains in task instructions and success criteria.
 Preference: prefer the `Grep` / `Glob` tools when available; otherwise use `ugrep` / `bfs` (CC-embedded, native macOS/Linux 2.1.117+) over shell `grep -rn` / `find`. Use `Read` over `cat`/`head`/`tail`. Batch `git diff` / `git log` / gem inspection by path group, never per-item loops. Exclude high-noise paths (cassettes, fixtures, lockfiles) via pathspec. Per-file allowed when the file is the unit of investigation.
-Preference: Bash command bodies execute, not narrate. Do NOT include `#` thinking/hypothesis/checklist lines inside Bash command strings. Record reasoning in your `Write` artifact (durable) or in agent thinking (private), never in Bash command input.
+Preference: Bash command bodies execute, not narrate. Do NOT include `#` thinking/hypothesis/checklist lines inside Bash command strings. Record reasoning in artifacts (durable) or in thinking (private), never in Bash command input.
 RULES_BODY_EOF
 )
 

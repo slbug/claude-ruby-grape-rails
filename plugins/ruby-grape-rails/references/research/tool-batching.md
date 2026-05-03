@@ -137,3 +137,24 @@ Multi-line bash that runs once at the workflow boundary (e.g.
 `resolve-base-ref`, `git diff --stat`, manifest assembly) is allowed.
 Discipline targets per-item agent loops, not workflow-boundary
 composition.
+
+## Bash bodies execute, not narrate
+
+BAD — `#` commentary inside Bash command body:
+
+```bash
+# Check if user_params has the new attribute
+# Verify spec exists for it
+ugrep -n "def user_params" app/controllers
+```
+
+GOOD — record reasoning in the artifact or thinking, not the command:
+
+```bash
+ugrep -n "def user_params" app/controllers
+```
+
+Reasoning belongs in artifacts (durable, reviewable) or in
+agent/session thinking (private). Each `#`-only line in a Bash
+command body still counts as one Bash dispatch and contributes
+nothing to execution — pure tool-budget waste.
