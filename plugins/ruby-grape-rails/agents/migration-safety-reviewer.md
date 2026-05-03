@@ -26,14 +26,11 @@ Your calling skill body reads findings from the exact file path given in the pro
 (e.g., `.claude/reviews/migration-safety-reviewer/{review-slug}-{datesuffix}.md`). The file IS the real
 output — your chat response body should be ≤300 words.
 
-**Turn budget rules** (ceilings, not targets — finish earlier when
-scope is covered):
+**Turn budget rules:**
 
-1. Cap analysis-without-writing at ~12 turns.
-2. Hard deadline for first `Write`: turn ~18. A partial file is
-   better than no file when turns run out.
-3. Stop early once findings stabilize. Remaining turns are for
-   refinement + `Write` overwrite, not for filling budget.
+1. One `Write` per artifact path. Final turn only.
+2. Cap analysis at ~12 turns. `Write` by turn ~18.
+3. Stop when findings stabilize.
 4. If the prompt does NOT include an output path, default to
    `.claude/reviews/migration-safety-reviewer/{review-slug}-{datesuffix}.md`.
 

@@ -155,6 +155,7 @@ ugrep -n "def user_params" app/controllers
 ```
 
 Reasoning belongs in artifacts (durable, reviewable) or in
-agent/session thinking (private). Each `#`-only line in a Bash
-command body still counts as one Bash dispatch and contributes
-nothing to execution — pure tool-budget waste.
+agent/session thinking (private). A multi-line Bash body is a
+single tool dispatch, but `#`-only lines inflate input tokens,
+obscure the dispatched command in agent transcripts, and serve
+no execution purpose.
