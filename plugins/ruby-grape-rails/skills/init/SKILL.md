@@ -159,7 +159,7 @@ rules to `.claude/settings.json`:
       "Bash(rails *)",
       "Bash(rake *)",
       "Bash(mkdir -p **/.claude/**)",
-      "Bash(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update *)",
+      "Bash(manifest-update *)",
       "Read(*)",
       "Grep(*)",
       "Glob(*)",

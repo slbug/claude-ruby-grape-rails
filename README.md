@@ -167,7 +167,7 @@ rules for the tools they need.
           "Bash(rails *)",
           "Bash(rake *)",
           "Bash(mkdir -p **/.claude/**)",
-          "Bash(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update *)",
+          "Bash(manifest-update *)",
           "Grep(*)",
           "Read(*)",
           "Glob(*)",
