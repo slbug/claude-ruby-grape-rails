@@ -7,40 +7,55 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [1.16.4] - 2026-05-02
+## [1.16.4] - 2026-05-03
 
 ### Added
 
 - `bin/manifest-update` (Ruby) — atomic manifest writer with
-  path-allowlist gate, symlink refusal, mktemp + fsync + POSIX
-  rename + dir fsync. Subcommands: `prepare-run` (structured args:
-  `--skill --slug --agents [--base-ref]`; helper computes manifest
-  path, datesuffix, agent paths, consolidated path, git pins;
-  archives any prior; outputs absolute manifest path), `field`
-  (dotted-key extraction), `spawn-paths` (tab-separated agent slug +
-  absolute path per line), `patch` (deep-merge from stdin),
-  `prepare-respawn` (unlink stale stubs at manifest-tracked agent
-  paths only), `resume-check` (read-only verdict), `archive`,
-  `status`, `init` (low-level). Reuses `lib/repo_root.rb` (new shared
-  module). All manifest mutations and stale-stub unlinks go through
-  this binary; raw `mv` / `cp` / `jq -i` / `rm` against manifest or
-  per-agent artifact paths is forbidden.
+  path-allowlist gate, symlink-ancestor refusal, mktemp + fsync +
+  POSIX rename + dir fsync. Subcommands: `prepare-run` (structured
+  args: `--skill --slug --agents [--base-ref]`; helper computes
+  manifest path, datesuffix, agent paths, consolidated path, git
+  pins; archives any prior; outputs absolute manifest path),
+  `field` (dotted-key extraction), `spawn-paths` (tab-separated
+  agent slug + absolute path per line), `patch` (deep-merge from
+  stdin), `prepare-respawn` (rotate manifest-tracked agent files to
+  `<agent-slug>.stale-<rename-ts>.md`; refuses unless canonical-path
+  match + containment + no symlinked ancestor + agent status
+  `pending`/`in-flight`/`stub-no-output`), `resume-check` (read-only
+  verdict), `archive`, `status`, `init` (low-level). All manifest
+  mutations and stale-stub rotations go through this binary; raw
+  `mv` / `cp` / `jq -i` / `rm` against manifest or per-agent artifact
+  paths is forbidden.
 - `lib/repo_root.rb` — shared `RubyGrapeRails::RepoRoot` module
   (find / canonical / git_toplevel) extracted from
   `bin/extract-permissions` and `bin/detect-stack`. Stdlib only.
+- `lib/path_safety.rb` — shared `RubyGrapeRails::PathSafety` module
+  (`reject_symlink_ancestors!`, `canonical_existing_or_deepest`,
+  `path_within_root?`). Used by `bin/manifest-update` to refuse
+  paths that traverse a symlinked ancestor. Stdlib only.
 - `references/run-manifest.md` — cross-session resume schema for
   spawn-fanout workflows; JSON manifest at
   `.claude/{namespace}/RUN-CURRENT.json` (namespace per-skill);
   per-skill staleness rules (review: TTL + HEAD + base + branch;
   plan + brainstorm: TTL only, 168h default).
+- `references/agent-resume.md` — protocol for resuming agents that
+  paused at their `maxTurns` cap via `SendMessage`. Linked from
+  `/rb:review`, `/rb:plan`, `/rb:brainstorm`, `/rb:investigate`
+  recovery sections.
 - `references/research/tool-batching.md` — BAD/GOOD examples for
   batched git/gem/find usage.
 - Tool-batching preference in `preferences.yml` (new `tooling`
-  category); injected via `inject-rules.sh`.
+  category): "ALWAYS use `Grep` tool over shell `grep`/`rg`/`ag`,
+  `Glob` tool over `find`/`ls`, `Read` over `cat`/`head`/`tail`";
+  injected via `inject-rules.sh`.
 - Foreground-only dispatch rule for plugin agents in
   `agent-development.md` + `skill-development.md`.
-- Recommended recursive `Write(**/.claude/<ns>/**)` allowlist in
-  `init/SKILL.md` + `README.md`.
+- Recommended permission allowlist in `init/SKILL.md` + `README.md`:
+  recursive `Write(**/.claude/<ns>/**)` rules + `Bash(*/bin/manifest-update *)`.
+- `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` env-var recommendation in
+  `README.md`, `init/SKILL.md`, `intro/SKILL.md`. Required for
+  `SendMessage` availability in spawn-fanout recovery.
 - Reviewer Coverage section in consolidated review template.
 
 ### Changed
@@ -51,9 +66,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   prior-run artifacts; new `stub-no-output` state.
 - `/rb:review` skill body: resume check + manifest writes through
   fanout/recovery/synthesis; passes `$DIFF_STAT` to each reviewer.
-- Agent maxTurns: `ruby-reviewer` 40, `rails-architect` 40,
+- Agent `maxTurns`: `ruby-reviewer` 40, `rails-architect` 40,
   `testing-reviewer` 60, `iron-law-judge` 40,
-  `data-integrity-reviewer` 60.
+  `data-integrity-reviewer` 60, `verification-runner` 35,
+  `security-analyzer` 35, `ruby-runtime-advisor` 35.
 - `/rb:plan` + `/rb:review`: main session synthesizes directly
   (compression worker dropped).
 - `/rb:brainstorm`, `/rb:plan`: dropped `run_in_background: true`.
@@ -62,6 +78,28 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `/rb:full` `cycle-patterns.md` review path updated to datesuffix form.
 - `agents/web-researcher.md`: dropped `background: true` frontmatter
   (conflicts with foreground-only dispatch rule).
+- Manifest-update invocations in skill bodies + reference docs
+  unquoted (`${CLAUDE_PLUGIN_ROOT}/bin/manifest-update args` instead
+  of quoted form) for permission-pattern matchability.
+- `/rb:review`, `/rb:plan`, `/rb:brainstorm` recovery sections:
+  CHECK pause signature first (per `agent-resume.md`), state machine
+  second.
+
+### Fixed
+
+- Symlink-ancestor traversal in `bin/manifest-update`
+  (`validate_path`, `prepare-respawn`): caller-controlled
+  `.claude/<ns>/...` path could traverse a symlinked ancestor and
+  cause writes / unlinks outside the repo containment root. Now
+  rejected via lexical ancestor walk.
+- Cross-namespace data-loss vector in `prepare-respawn`: tampered
+  manifest pointing at unrelated `.md` paths now refused via
+  canonical-path equality check (computed from manifest's
+  `skill`/`slug`/`datesuffix`/agent-slug per `SKILL_CONVENTIONS`).
+- Replaced `Bash(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update *)` with
+  `Bash(*/bin/manifest-update *)` in recommended permission
+  allowlists. Env-var substitution does not apply to permission
+  patterns per CC docs.
 
 ### Removed
 

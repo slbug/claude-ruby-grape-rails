@@ -450,8 +450,9 @@ Phase 2: Architecture (if needed)
 
 Topic-slug naming: short kebab-case noun describing the research
 question (`active-record-schema-research`, not `ar`). Stable across
-runs — `prepare-respawn` keeps existing artifacts (size ≥ 1000)
-intact.
+runs — `prepare-respawn` rotates the prior file at the canonical path
+to a `.stale-<ts>.md` sibling so the next run's agent can `Write`
+fresh.
 
 ## Agent Briefing Template
 

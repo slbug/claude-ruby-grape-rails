@@ -123,9 +123,11 @@ excludeAgent: "coding-agent"
   `spawn-paths` (tab-separated agent slug + absolute path per line
   for skill-body iteration), `init` (fail if exists), `patch`
   (deep-merge from stdin, auto-stamps `updated_at`),
-  `prepare-respawn` (unlink stale stubs at manifest-tracked agent
-  paths only; size < 1000 bytes; respawnable statuses), `archive`
-  (append to RUN-HISTORY.jsonl + unlink RUN-CURRENT.json),
+  `prepare-respawn` (rotate manifest-tracked agent files to
+  `<agent-slug>.stale-<rename-ts>.md`; refuses unless canonical-path
+  match + containment + no symlinked ancestor; agent status
+  `pending` / `in-flight` / `stub-no-output`), `archive` (append to
+  RUN-HISTORY.jsonl + remove RUN-CURRENT.json),
   `resume-check` (read-only verdict: absent / stale /
   fresh-complete / fresh-in-flight), `status` (read-only summary).
   Path allowlist: suffix regex
@@ -137,8 +139,9 @@ excludeAgent: "coding-agent"
   target + parent dir. Atomic write via `mktemp` + `fsync` + Ruby
   `File.rename` (POSIX `rename(2)`) + directory `fsync`. Fail-closed
   on path / JSON / IO errors. Stdlib only. Reuses
-  `lib/repo_root.rb`. Skill bodies that mutate manifest or unlink
-  stale stubs call this — never raw `mv` / `cp` / `jq -i` / `rm`
+  `lib/repo_root.rb` + `lib/path_safety.rb`. Skill bodies that mutate
+  manifest or rotate stale stubs call this — never raw `mv` / `cp` /
+  `jq -i` / `rm`
 
 When adding a binary, also add it to this "Currently shipped
 binaries" section above, ensure `chmod +x` is committed, and (if it
@@ -301,5 +304,5 @@ NOT flag the fallback chain as over-engineered.
 - Raw `mv`, `cp`, `jq -i`, `rm`, or improvised shell against any
   `RUN-CURRENT.json` path or per-agent artifact path in shipped skill
   bodies, hook scripts, or examples — flag as BLOCKER. All manifest
-  mutations and stale-stub unlinks MUST go through
+  mutations and stale-stub rotations MUST go through
   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update`.

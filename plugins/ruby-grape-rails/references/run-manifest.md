@@ -220,7 +220,8 @@ printf '<patch-json>\n' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <manif
 # Each existing file renamed to <agent-slug>.stale-<rename-ts>.md.
 ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <manifest>
 
-# Append current state to RUN-HISTORY.jsonl, unlink RUN-CURRENT.json.
+# Append current state to RUN-HISTORY.jsonl. Removes RUN-CURRENT.json
+# after history append + fsync.
 ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update archive <manifest>
 
 # Read-only verdict (absent | stale | fresh-complete | fresh-in-flight).
