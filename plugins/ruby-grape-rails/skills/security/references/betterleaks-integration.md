@@ -4,21 +4,12 @@ Betterleaks is a secrets scanner that detects API keys, passwords, tokens, and o
 
 ## Installation
 
-```bash
-# macOS
-brew install betterleaks
-
-# Fedora Linux
-sudo dnf install betterleaks
-
-# Docker
-docker pull ghcr.io/betterleaks/betterleaks:latest
-
-# From source
-git clone https://github.com/betterleaks/betterleaks
-cd betterleaks
-make betterleaks
-```
+| Platform | Command |
+|---|---|
+| macOS | `brew install betterleaks` |
+| Fedora Linux | `sudo dnf install betterleaks` |
+| Docker | `docker pull ghcr.io/betterleaks/betterleaks:latest` |
+| From source | `git clone https://github.com/betterleaks/betterleaks && cd betterleaks && make betterleaks` |
 
 ## Plugin Integration
 

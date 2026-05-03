@@ -7,63 +7,59 @@ disable-model-invocation: true
 
 # Session Trends
 
-Summarize `metrics.jsonl` over time windows.
+## Audience: Agents, Not Humans
 
-This skill is for monitoring and prioritization. It should not be treated as
-causal proof that a plugin change helped or hurt.
+Imperative-only. Output is monitoring + prioritization signal — NOT
+causal proof of plugin impact.
 
 ## Requirements
 
-Requires `.claude/session-metrics/metrics.jsonl` from `/session-scan`.
+`.claude/session-metrics/metrics.jsonl` (from `/session-scan`).
 
 ## Usage
 
-```text
-/session-trends
-/session-trends --window 30d
-/session-trends --project myapp
-/session-trends --provider claude-code
-/session-trends --compare .claude/session-analysis/insights-2026-03-20.md
-```
+| Command | Behavior |
+|---|---|
+| `/session-trends` | default 7-day window |
+| `/session-trends --window 30d` | broader window |
+| `/session-trends --project myapp` | substring on `project_path` |
+| `/session-trends --provider claude-code` | exact provider |
+| `/session-trends --compare .claude/session-analysis/insights-2026-03-20.md` | comparison reference |
 
 ## Workflow
 
 ### 1. Parse Arguments
 
-Supported flags:
-
-- `--window 7d|30d|all`
-- `--project NAME`
-- `--provider NAME`
-- `--compare PATH`
+| Flag | Values |
+|---|---|
+| `--window` | `7d` / `30d` / `all` |
+| `--project` | NAME |
+| `--provider` | NAME |
+| `--compare` | PATH |
 
 ### 2. Read the Metrics Ledger
 
-Read `.claude/session-metrics/metrics.jsonl`.
+Read `.claude/session-metrics/metrics.jsonl`. Missing or empty → stop;
+tell contributor to run `/session-scan` first.
 
-If it is missing or empty, stop and tell the contributor to run
-`/session-scan` first.
+### 3. Compute Windowed Aggregates
 
-### 3. Compute Windowed Aggregates with the Canonical Script
+Run `python3 ${CLAUDE_SKILL_DIR}/../session-scan/references/compute-metrics.py --trends .claude/session-metrics/metrics.jsonl`.
 
-Use: run `python3 ${CLAUDE_SKILL_DIR}/../session-scan/references/compute-metrics.py --trends .claude/session-metrics/metrics.jsonl` to compute trends from the metrics ledger.
-
-Only add `--project "$PROJECT_FILTER"` or `--provider "$PROVIDER_FILTER"` when
-the contributor requested those filters.
+Add `--project "$PROJECT_FILTER"` or `--provider "$PROVIDER_FILTER"`
+only when the contributor requested those filters.
 
 ### 4. Read Comparison Notes Separately
 
-If `--compare PATH` is provided, read that file separately and compare it
-cautiously against the computed aggregates.
-
-Do not rely on `MEMORY.md` as a required baseline.
+`--compare PATH` provided → read separately, compare cautiously against
+computed aggregates. Do NOT rely on `MEMORY.md` as a required baseline.
 
 ### 5. Present a Readable Report
 
 Show:
 
 - top-level `time_series_signal`
-- distinct dates represented in the ledger
+- distinct dates represented in ledger
 - total sessions in each window
 - average friction
 - average opportunity
@@ -72,34 +68,33 @@ Show:
 - plugin adoption rate
 - provider distribution
 
-If a provider filter was not used and the ledger mixes providers, say so
-explicitly before interpreting the trends.
+Provider filter not used + ledger mixes providers → state explicitly
+before interpreting trends.
 
-If the ledger is brand new or has fewer than 10 sessions:
+Brand-new ledger or fewer than 10 sessions:
 
-- say explicitly that there is little or no time-series signal yet
-- note when `7d`, `30d`, and `all` are effectively the same dataset
-- treat the output as an early snapshot, not a trend
+- state explicitly: little or no time-series signal yet
+- note when `7d`, `30d`, `all` are effectively the same dataset
+- treat output as early snapshot, NOT a trend
 
 ### 6. Suggest Next Actions Carefully
 
-Examples:
-
-- rising friction -> run `/session-deep-dive` on recent high-friction sessions
-- growing missed opportunities -> inspect whether docs or workflow guidance is stale
-- mixed-provider ledger -> re-run with `--provider`
+| Trend | Suggestion |
+|---|---|
+| rising friction | `/session-deep-dive` on recent high-friction sessions |
+| growing missed opportunities | inspect whether docs / workflow guidance is stale |
+| mixed-provider ledger | re-run with `--provider` |
 
 ## Iron Laws
 
-1. Treat trend output as observational.
+1. Trend output is observational.
 2. Prefer provider-scoped comparisons over mixed-provider windows.
-3. Do not depend on missing local artifacts.
-4. Keep the raw ledger read-only.
+3. Do NOT depend on missing local artifacts.
+4. Keep raw ledger read-only.
 
 ## Epistemic Posture
 
-Trend findings use direct language. A real drift pattern gets a direct
-statement with the ledger evidence; do not soften into "trends might
-be shifting". Mixed-provider windows get an explicit caveat, not a
-hedge that obscures the signal. Apology cascades and hedge chains
-inflate trend reports without signal — avoid them.
+Direct language for trend findings. Real drift pattern → direct
+statement with ledger evidence. Do NOT soften into "trends might be
+shifting". Mixed-provider windows → explicit caveat, NOT a hedge that
+obscures the signal. No apology cascades, no hedge chains.

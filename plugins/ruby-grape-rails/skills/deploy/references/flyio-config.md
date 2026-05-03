@@ -51,42 +51,21 @@ primary_region = "iad"
 
 ## Commands
 
-```bash
-# Create app
-fly launch
-
-# Set secrets
-fly secrets set SECRET_KEY_BASE=$(rails secret)
-fly secrets set RAILS_MASTER_KEY=$(cat config/master.key)
-fly secrets set DATABASE_URL="postgres://..."
-fly secrets set REDIS_URL="redis://..."
-
-# Create Postgres
-fly postgres create --name my-app-db
-fly postgres attach my-app-db
-
-# Create Redis (Upstash)
-fly redis create
-
-# Deploy
-fly deploy
-
-# SSH into running instance
-fly ssh console --pty -C "bundle exec rails console"
-
-# View logs
-fly logs
-
-# Scale
-fly scale count 3
-fly scale vm shared-cpu-2x
-
-# Run migrations manually
-fly ssh console -C "bundle exec rails db:migrate"
-
-# Console access
-fly ssh console -C "bundle exec rails console"
-```
+| Goal | Command |
+|---|---|
+| Create app | `fly launch` |
+| Set secrets | `fly secrets set SECRET_KEY_BASE=$(rails secret)` |
+| Set Rails master key | `fly secrets set RAILS_MASTER_KEY=$(cat config/master.key)` |
+| Set DB URL | `fly secrets set DATABASE_URL="postgres://..."` |
+| Set Redis URL | `fly secrets set REDIS_URL="redis://..."` |
+| Create Postgres | `fly postgres create --name my-app-db && fly postgres attach my-app-db` |
+| Create Redis (Upstash) | `fly redis create` |
+| Deploy | `fly deploy` |
+| Rails console (running instance) | `fly ssh console --pty -C "bundle exec rails console"` |
+| View logs | `fly logs` |
+| Scale instance count | `fly scale count 3` |
+| Scale VM size | `fly scale vm shared-cpu-2x` |
+| Run migrations manually | `fly ssh console -C "bundle exec rails db:migrate"` |
 
 ## Rails Production Configuration
 

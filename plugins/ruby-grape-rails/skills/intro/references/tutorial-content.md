@@ -173,16 +173,11 @@ Iron Laws are non-negotiable rules that every agent enforces. If your code viola
 
 When runtime tooling is connected to your running Rails app:
 
-```bash
-# Get docs for your exact dependency versions
-mcp__tidewave__get_docs "ActiveRecord::QueryMethods"
-
-# Execute code in your running app
-mcp__tidewave__project_eval "User.count"
-
-# Query your dev database directly
-mcp__tidewave__execute_sql_query "SELECT count(*) FROM users"
-```
+| Goal | Tool call |
+|---|---|
+| Get docs for your exact dependency versions | `mcp__tidewave__get_docs "ActiveRecord::QueryMethods"` |
+| Execute code in your running app | `mcp__tidewave__project_eval "User.count"` |
+| Query your dev database directly | `mcp__tidewave__execute_sql_query "SELECT count(*) FROM users"` |
 
 The plugin automatically prefers runtime tooling tools over alternatives when available.
 

@@ -9,63 +9,66 @@ argument-hint: "[--quick|--focus=agents|skills|hooks|config]"
 
 # Plugin Documentation Compatibility Check
 
-Validate `plugins/ruby-grape-rails/` against the current cached Claude Code
-docs. This workflow is for contributor maintenance, not user-facing plugin use.
+## Audience: Agents, Not Humans
 
-## What This Skill Is For
+Imperative-only. Validate `plugins/ruby-grape-rails/` against current
+cached Claude Code docs. Contributor maintenance — NOT user-facing.
 
-Use `/docs-check` when you need to answer questions like:
+## When to Use
 
-- "Did Claude docs change in a way that breaks our plugin?"
-- "Is this warning a real compatibility issue or just stale local guidance?"
-- "What new Claude feature is now documented and relevant to this repo?"
-
-Do not use `/docs-check` as a style linter for naming, line counts, or repo
-preferences unrelated to docs compatibility.
+| Question | Answer this skill gives |
+|---|---|
+| Did Claude docs change in a way that breaks our plugin? | yes |
+| Is this warning a real compatibility issue or stale local guidance? | yes |
+| What new Claude feature is now documented and relevant? | yes |
+| Is naming style / line count / repo preference unrelated to docs? | NO — out of scope |
 
 ## Usage
 
-- `/docs-check`
-- `/docs-check --quick`
-- `/docs-check --focus=agents`
-- `/docs-check --focus=skills`
-- `/docs-check --focus=hooks`
-- `/docs-check --focus=config`
+| Command | Scope |
+|---|---|
+| `/docs-check` | all surfaces |
+| `/docs-check --quick` | skip docs fetch, structural drift only |
+| `/docs-check --focus=agents` | agents only |
+| `/docs-check --focus=skills` | skills only |
+| `/docs-check --focus=hooks` | hooks only |
+| `/docs-check --focus=config` | plugin manifest + marketplace only |
 
 ## Execution Flow
 
-### 1. Run the deterministic baseline first
+### 1. Run Deterministic Baseline
 
-Always start by running `claude plugin validate plugins/ruby-grape-rails`
-to catch structural schema issues without any docs interpretation.
+Run `claude plugin validate plugins/ruby-grape-rails` to catch
+structural schema issues without docs interpretation.
 
-### 2. Refresh cached docs unless `--quick`
+### 2. Refresh Cached Docs (Unless `--quick`)
 
-From repo root, run `bash ./scripts/fetch-claude-docs.sh` to refresh the
-cached docs. The `--quick` flag skips fetching and limits the run to
-structural drift checks against the existing cache.
+From repo root: `bash ./scripts/fetch-claude-docs.sh`.
 
-### 3. Inventory plugin surfaces (main session)
+`--quick` skips fetching; limits run to structural drift checks against
+existing cache.
 
-Identify which plugin surfaces are in scope per `--focus` flag:
+### 3. Inventory Plugin Surfaces
 
-- `agents`: `plugins/ruby-grape-rails/agents/*.md`
-- `skills`: `plugins/ruby-grape-rails/skills/*/SKILL.md`
-- `hooks`: `plugins/ruby-grape-rails/hooks/hooks.json`
-- `config`:
-  - `plugins/ruby-grape-rails/.claude-plugin/plugin.json`
-  - `.claude-plugin/marketplace.json`
+Identify in-scope surfaces per `--focus`:
 
-Without `--focus`, validate all surfaces.
+| Surface | Paths |
+|---|---|
+| `agents` | `plugins/ruby-grape-rails/agents/*.md` |
+| `skills` | `plugins/ruby-grape-rails/skills/*/SKILL.md` |
+| `hooks` | `plugins/ruby-grape-rails/hooks/hooks.json` |
+| `config` | `plugins/ruby-grape-rails/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` |
 
-### 4. Gather authoritative inputs (main session)
+Without `--focus`: validate all surfaces.
+
+### 4. Gather Authoritative Inputs
 
 Read:
 
 - `.claude/skills/docs-check/references/validation-rules.md`
 - `.claude/skills/docs-check/references/doc-pages.md`
 
-Map each validation question to the smallest cached-doc set:
+Map each validation question to smallest cached-doc set:
 
 | Surface | Cached docs |
 |---|---|
@@ -76,13 +79,13 @@ Map each validation question to the smallest cached-doc set:
 
 Do NOT paste full cached pages into worker prompts.
 
-### 5. Spawn workers (main session, parallel)
+### 5. Spawn Workers (Parallel)
 
-Spawn one `Agent(docs-surface-validator)` per surface in scope, in a single
-parallel block. Each call passes the surface name + cached doc paths +
-plugin file paths via prompt input. The agent definition itself
+Spawn one `Agent(docs-surface-validator)` per surface in scope, in a
+single parallel block. Pass surface name + cached doc paths + plugin
+file paths via prompt input. Agent body
 (`.claude/agents/docs-surface-validator.md`) carries the validation
-protocol; the call site only supplies inputs.
+protocol; call site supplies inputs only.
 
 Per-call prompt input shape:
 
@@ -100,69 +103,62 @@ Plugin files:
 Write findings to .claude/docs-check/reports/{surface}-report.md
 ```
 
-The named agent's body owns the rest (BLOCKER/WARNING/INFO/PASS
-classification, "do not paste large docs" rule, "stop after returning")
-so the call site stays minimal.
+Agent body owns BLOCKER/WARNING/INFO/PASS classification, "no large
+docs paste" rule, "stop after returning". Call site stays minimal.
 
-### 6. Structural baseline (always)
+### 6. Structural Baseline (Always)
 
-Always keep these results in view while synthesizing:
+Keep these results in view while synthesizing:
 
 - `claude plugin validate plugins/ruby-grape-rails` (deterministic)
 - basic file existence / JSON / markdown sanity checks
 
-Do not let stale local rules override deterministic validator output.
+Stale local rules MUST NOT override deterministic validator output.
 
-### 7. Synthesize (main session)
+### 7. Synthesize
 
 If multiple workers ran:
 
-- verify each expected per-surface report exists at
-  `.claude/docs-check/reports/{component_type}-report.md`
-- if a worker report is MISSING (write denied, agent crashed, no return):
-  synthesize the finding from the worker's Agent return text and write
-  the per-surface report yourself from main session. Note "recovered
-  from worker return text" in the per-surface artifact.
-- read all per-surface reports
-- compress repeated evidence
-- preserve exact doc-backed incompatibilities
-- keep adoption ideas separate from breakage findings
+1. Verify each per-surface report exists at `.claude/docs-check/reports/{component_type}-report.md`.
+2. If a worker report is MISSING (write denied, agent crashed, no
+   return) → synthesize from worker's Agent return text and write the
+   per-surface report from main session. Note "recovered from worker
+   return text" in the per-surface artifact.
+3. Read all per-surface reports.
+4. Compress repeated evidence.
+5. Preserve exact doc-backed incompatibilities.
+6. Keep adoption ideas separate from breakage findings.
 
-Write the final contributor report to disk at
-`.claude/docs-check/report-{YYYY-MM-DD}.md` (today's date). The skill
-body owns this final write — workers never write it. Returning findings
-only inline is a skill failure — the file is the contract for future
-contributors and audit trails.
+Write final contributor report at `.claude/docs-check/report-{YYYY-MM-DD}.md`.
+Skill body owns this final write — workers never write it. Returning
+findings only inline is a skill failure.
 
-The report contains: summary, blockers, warnings, infos, follow-up
-actions. If a dated existing report disagrees with current cached docs
-or current `claude plugin validate` output, mark the older report as
-stale instead of copying its warning forward.
+Report contains: summary, blockers, warnings, infos, follow-up actions.
+If a dated existing report disagrees with current cached docs / current
+`claude plugin validate` output → mark older report as stale instead of
+copying its warning forward.
 
 ## Iron Laws
 
 1. Current cached docs are the source of truth for Claude feature support.
-2. `claude plugin validate` remains the deterministic baseline.
-3. Prefer targeted cached-doc snippets over pasting full pages into prompts.
+2. `claude plugin validate` is the deterministic baseline.
+3. Prefer targeted cached-doc snippets over full pages in prompts.
 4. Distinguish docs incompatibility from local repo recommendations.
-5. Treat dated reports under `.claude/docs-check/` as historical snapshots; a
-   stale warning in an old report is not current guidance if the cached docs
-   and current validator disagree.
+5. Treat dated reports under `.claude/docs-check/` as historical snapshots — stale warning in old report is not current guidance if cached docs and current validator disagree.
 
 ## Outputs
 
-Main session MUST persist a contributor report to disk at
-`.claude/docs-check/report-<YYYY-MM-DD>.md` (today's date). Returning
-findings only inline in the chat response is a skill failure — the file
-is the contract for future contributors and audit trails.
+Persist contributor report at `.claude/docs-check/report-{YYYY-MM-DD}.md`.
+Returning findings only inline is a skill failure — file is the contract
+for future contributors and audit trails.
 
-The report contains:
+Report contents:
 
-- a concise summary
-- a clear split between:
+- concise summary
+- split between:
   - actual compatibility problems
   - documented new capabilities
-  - local repo recommendations that are not schema failures
+  - local repo recommendations (not schema failures)
 
 The plugin's 22 Iron Laws (injected at runtime via `inject-rules.sh`
 under `SubagentStart` and `SessionStart`) constrain Ruby/Rails/Grape
@@ -171,12 +167,11 @@ write.
 
 ## Epistemic Posture
 
-Drift findings use direct language. If docs + plugin are incompatible,
-state the mismatch plainly with the exact cached-doc section and the
-exact plugin file/line — not "seems stale" or "might be outdated".
-Apology cascades and hedge chains inflate the report without signal.
-Separate deterministic validator output from subjective repo
-recommendations; don't let softer phrasing blur the two.
+Direct language for drift findings. Docs + plugin incompatible →
+state mismatch with exact cached-doc section + exact plugin file:line.
+Not "seems stale" or "might be outdated". No apology cascades. Separate
+deterministic validator output from subjective repo recommendations;
+softer phrasing MUST NOT blur the two.
 
 ## References
 

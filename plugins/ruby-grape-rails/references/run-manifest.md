@@ -200,42 +200,17 @@ or per-agent artifact paths.
 
 Subcommands:
 
-```bash
-# Archive any existing manifest + init fresh. Helper computes path,
-# datesuffix, agent paths, consolidated path, and (for review) git
-# pins. Outputs absolute manifest path on stdout.
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
-  --skill=rb:review --slug=SLUG --agents=A,B,C [--base-ref=REF]
-
-# Read field (dotted path supported, e.g. agents.ruby-reviewer.path).
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field <manifest> <key>
-
-# Tab-separated agent_slug<TAB>absolute_path per line.
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update spawn-paths <manifest>
-
-# Deep-merge JSON from stdin. Auto-stamps updated_at.
-printf '<patch-json>\n' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <manifest>
-
-# Rotate existing files at manifest-tracked agent paths before re-spawn.
-# Each existing file renamed to <agent-slug>.stale-<rename-ts>.md.
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <manifest>
-
-# Append current state to RUN-HISTORY.jsonl. Removes RUN-CURRENT.json
-# after history append + fsync.
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update archive <manifest>
-
-# Read-only verdict (absent | stale | fresh-complete | fresh-in-flight).
-# Optional flags override auto-detected git state (HEAD/branch) or
-# per-skill TTL default. --base only used for review (git-pinned).
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update resume-check <manifest> \
-  [--head=SHA] [--base=SHA] [--branch=NAME] [--ttl-hours=N]
-
-# One-line summary (read-only).
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update status <manifest>
-
-# Init manifest from raw JSON literal (low-level; fails if exists).
-${CLAUDE_PLUGIN_ROOT}/bin/manifest-update init <manifest> '<json>'
-```
+| Subcommand | Purpose |
+|---|---|
+| `prepare-run --skill=NAME --slug=SLUG --agents=A,B,C [--base-ref=REF]` | Archives any existing manifest + inits fresh. Computes manifest path, datesuffix, agent paths, consolidated path, and (review only) git pins. Outputs absolute manifest path on stdout |
+| `field <manifest> <key>` | Reads field. Dotted path supported (e.g. `agents.ruby-reviewer.path`) |
+| `spawn-paths <manifest>` | Tab-separated `agent_slug<TAB>absolute_path` per line |
+| `patch <manifest>` (stdin: JSON) | Deep-merges JSON from stdin. Auto-stamps `updated_at` |
+| `prepare-respawn <manifest>` | Rotates existing files at manifest-tracked agent paths to `<agent-slug>.stale-<rename-ts>.md` |
+| `archive <manifest>` | Appends current state to `RUN-HISTORY.jsonl`. Removes `RUN-CURRENT.json` after history append + fsync |
+| `resume-check <manifest> [--head=SHA] [--base=SHA] [--branch=NAME] [--ttl-hours=N]` | Read-only verdict (`absent` \| `stale` \| `fresh-complete` \| `fresh-in-flight`). Optional flags override auto-detected git state or per-skill TTL default. `--base` only used for review (git-pinned) |
+| `status <manifest>` | One-line summary (read-only) |
+| `init <manifest> '<json>'` | Init manifest from raw JSON literal. Low-level; fails if file exists |
 
 Helper enforces:
 

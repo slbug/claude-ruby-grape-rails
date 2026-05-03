@@ -242,36 +242,39 @@ end
 
 ## Flay for Duplication Detection
 
+Install + run:
+
 ```bash
-# Install flay
 gem install flay
-
-# Run on your codebase
 flay app/
+```
 
-# Output:
-# app/services/user_service.rb:15
-# app/services/admin/user_service.rb:20
-# Similar code found in :update (mass = 156)
+Sample output:
+
+```text
+app/services/user_service.rb:15
+app/services/admin/user_service.rb:20
+Similar code found in :update (mass = 156)
 ```
 
 ## Dependency Graph Analysis
 
 ### Using bundler-leak
 
+Check for memory-leak vulnerabilities + outdated gems with known
+issues:
+
 ```bash
-# Check for memory leak vulnerabilities in gems
 gem install bundler-leak
 bundle leak check
-
-# Check for outdated gems with known issues
 bundle audit
 ```
 
 ### Using import_map for JS Dependencies
 
+Pin JavaScript dependencies in Rails 8+:
+
 ```bash
-# Pin JavaScript dependencies in Rails 8+
 bin/importmap pin stimulus
 bin/importmap pin @hotwired/turbo
 ```
@@ -336,13 +339,11 @@ calls.each { |c| puts "#{c.file}:#{c.line}: #{c.receiver}##{c.method}" }
 
 ### "Method not found"
 
-```bash
-# Ensure Rails is loaded
-bundle exec rails runner "puts UserService.instance_methods(false)"
+Verify Rails loads via
+`bundle exec rails runner "puts UserService.instance_methods(false)"`.
 
-# Check if method is private — search pattern `private|def update`
-# in `app/services/user_service.rb`.
-```
+Check if method is private — search pattern `private|def update` in
+`app/services/user_service.rb`.
 
 ### Too Many Results
 

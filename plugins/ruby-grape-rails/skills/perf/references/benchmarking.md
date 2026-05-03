@@ -226,13 +226,10 @@ end
 
 ### rbspy (Production Profiling)
 
-```bash
-# Profile running Ruby process
-sudo rbspy record --pid $PID
-
-# Profile specific duration
-sudo rbspy record --duration 10 --pid $PID
-```
+| Goal | Command |
+|---|---|
+| Profile running Ruby process | `sudo rbspy record --pid $PID` |
+| Profile for specific duration | `sudo rbspy record --duration 10 --pid $PID` |
 
 ## Flame Graph Interpretation
 

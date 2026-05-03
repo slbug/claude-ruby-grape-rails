@@ -25,12 +25,11 @@ output — your chat response body should be ≤300 words.
 
 **Turn budget rules:**
 
-1. First ~10 turns: Read/Grep analysis
-2. By turn ~15: call `Write` with whatever findings you have — do NOT wait
-   until the end. A partial file is better than no file when turns run out.
-3. Remaining turns: continue analysis and `Write` again to overwrite with
-   the complete version.
-4. If the prompt does NOT include an output path, default to
+1. One `Write` per artifact path.
+2. Complete analysis by turn ~30.
+3. Then `Write` once.
+4. After `Write`: return summary, no new analysis.
+5. If the prompt does NOT include an output path, default to
    `.claude/reviews/iron-law-judge/{review-slug}-{datesuffix}.md`.
 
 You have `Write` for your own report ONLY. `Edit` and `NotebookEdit` are
@@ -114,40 +113,21 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 | 19 | DB queries in turbo_stream templates |
 | 20 | Missing `turbo_frame_tag` for partial updates |
 
-## Grep Detection Patterns
+## Detection Patterns
 
-```bash
-# Law 1
-grep -r "t\.float.*\(price\|amount\|cost\)" db/migrate/
-
-# Laws 2, 15
-grep -r "where.*#{" app/
-grep -r "order.*#{" app/
-
-# Law 14
-grep -r "\.html_safe\|raw(" app/
-
-# Law 6
-grep -r "update_columns\|save.*validate.*false" app/
-
-# Law 7
-grep -r "default_scope" app/models/
-
-# Law 10
-grep -r "perform_later.*current_user" app/
-
-# Laws 4, 11
-grep -r "after_save" app/models/ | grep -v "after_commit"
-
-# Law 12
-grep -r "eval(" app/
-
-# Law 16
-grep -rlZ "def method_missing" app/ | while IFS= read -r -d '' f; do grep -L "respond_to_missing" "$f"; done
-
-# Law 18
-grep -rE "rescue[[:space:]]*$|rescue[[:space:]]*=>" app/ | grep -v "StandardError"
-```
+| Law(s) | Pattern | Search path |
+|---|---|---|
+| 1 | `t\.float.*(price\|amount\|cost)` | `db/migrate/` |
+| 2, 15 | `where.*#{` | `app/` |
+| 2, 15 | `order.*#{` | `app/` |
+| 14 | `\.html_safe\|raw(` | `app/` |
+| 6 | `update_columns\|save.*validate.*false` | `app/` |
+| 7 | `default_scope` | `app/models/` |
+| 10 | `perform_later.*current_user` | `app/` |
+| 4, 11 | `after_save` (excluding `after_commit`) | `app/models/` |
+| 12 | `eval(` | `app/` |
+| 16 | `def method_missing` files lacking `respond_to_missing` | `app/` |
+| 18 | bare `rescue` (matching `rescue$` or `rescue =>`, excluding `StandardError`) | `app/` |
 
 ## Confidence Levels
 

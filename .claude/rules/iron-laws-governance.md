@@ -4,38 +4,38 @@ paths: "**/iron-laws.yml"
 
 # Iron Laws Governance
 
+## Audience: Agents, Not Humans
+
+Imperative-only. Match existing schema, regenerate downstream
+artifacts, attach incident provenance.
+
 ## When to Add a New Iron Law
 
-Add a new Iron Law **only** when:
+All three MUST hold:
 
-1. A real, reproducible incident has occurred **at least twice** (same root
-   cause, different times or different codebases).
-2. Existing laws do not already cover the failure mode.
-3. A deterministic detector or review-time check can be written, OR the
-   behavioral trigger is strong enough that every contributor agrees the
-   rule is non-negotiable.
+1. Reproducible incident occurred **at least twice** (same root cause, different times or codebases).
+2. Existing laws do not cover the failure mode.
+3. Deterministic detector / review-time check exists, OR rule is non-negotiable enough that every contributor agrees.
 
-Do **not** add a law because:
+Do NOT add when:
 
-- Another plugin or framework has a similar rule (symmetry is not evidence).
-- A single dramatic incident happened once.
-- A pattern feels dangerous but nobody has reproduced damage from it.
-- A contributor prefers a style — preferences belong in `preferences.yml`,
-  not `iron-laws.yml`.
+| Trigger | Wrong because |
+|---|---|
+| another plugin has a similar rule | symmetry is not evidence |
+| single dramatic incident | one-shot ≠ pattern |
+| feels dangerous, no reproduced damage | not provenance |
+| contributor style preference | belongs in `preferences.yml` |
 
-## When to Remove or Demote a Law
+## When to Remove or Demote
 
-- Remove if the underlying failure mode becomes impossible (e.g., API
-  removed upstream).
-- Demote to `preferences.yml` (advisory) if incidents stop recurring for
-  two release cycles and the rule starts generating false positives.
+| Action | Trigger |
+|---|---|
+| Remove | underlying failure mode impossible (API removed upstream) |
+| Demote to `preferences.yml` | incidents stop recurring for two release cycles AND rule generates false positives |
 
 ## Update Procedure
 
-1. Edit `plugins/ruby-grape-rails/references/iron-laws.yml` with the new
-   or changed law.
+1. Edit `plugins/ruby-grape-rails/references/iron-laws.yml`.
 2. Run `bash scripts/generate-iron-law-outputs.sh all`.
 3. Confirm drift check + lint pass.
-4. Include incident references (issue/PR/ticket) in the commit or
-   CHANGELOG entry so the "repeated real incident" provenance is
-   traceable.
+4. Include incident references (issue / PR / ticket) in the commit or CHANGELOG entry — provenance is traceable.

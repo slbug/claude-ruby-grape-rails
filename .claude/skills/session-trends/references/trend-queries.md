@@ -1,55 +1,50 @@
 # Trend Queries Reference
 
-Common questions you can answer from `metrics.jsonl`, plus the caveats that
-keep those answers honest.
+## Audience: Agents, Not Humans
+
+Imperative-only.
 
 ## First Rule
 
-Before interpreting a trend, ask:
+Before interpreting a trend, verify:
 
-1. am I mixing providers?
-2. is the sample size large enough?
-3. is this transcript-derived metric being treated too strongly?
+| Check | Action |
+|---|---|
+| mixing providers? | segment with `--provider` |
+| sample size large enough? | < 10 sessions → early snapshot, not trend |
+| transcript-derived metric treated too strongly? | downgrade confidence |
 
-If the ledger has fewer than 10 sessions, treat the report as an early snapshot
-instead of a genuine time-series trend.
+`time_series_signal == none` → do NOT narrate `7d` vs `30d` vs `all` as
+meaningful trend.
 
-Also check:
-
-- `time_series_signal`
-- `distinct_dates`
-
-If `time_series_signal` is `none`, do not narrate `7d` vs `30d` vs `all` as if
-they show a meaningful trend.
+Also check `distinct_dates`.
 
 ## Adoption and Usage
 
 ### "Is plugin adoption increasing?"
 
-Look at `plugin_adoption_rate` across windows, preferably with a provider
+Look at `plugin_adoption_rate` across windows, preferably with provider
 filter.
 
-This rate now reflects only shipped plugin commands:
+Rate reflects only shipped plugin commands:
 
 - `/rb:*`
 - `/ruby-grape-rails:*`
 
-Contributor-only analyzer commands like `/docs-check` and `/session-scan` are
+Contributor-only analyzer commands (`/docs-check`, `/session-scan`) are
 intentionally ignored.
 
-Interpretation:
+| Pattern | Interpretation |
+|---|---|
+| `7d > 30d > all` | recent adoption growth |
+| `7d < all` | recent usage lagging |
 
-- `7d > 30d > all` suggests recent adoption growth
-- `7d < all` suggests recent usage is lagging
-
-Action:
-
-- inspect which fingerprints have low command usage
-- confirm with manual transcript review before making product claims
+Action: inspect which fingerprints have low command usage. Confirm with
+manual transcript review before making product claims.
 
 ### "Which commands are most used?"
 
-Use a quick extraction from the ledger:
+Quick extraction from ledger:
 
 ```bash
 rg -o '"rb_commands_used":\[[^]]*\]' .claude/session-metrics/metrics.jsonl | sort | uniq -c | sort -rn
@@ -59,7 +54,7 @@ rg -o '"rb_commands_used":\[[^]]*\]' .claude/session-metrics/metrics.jsonl | sor
 
 ### "Which session types look hardest?"
 
-Use a grouped average:
+Grouped average:
 
 ```bash
 python3 -c "
@@ -74,13 +69,13 @@ for key, values in sorted(data.items(), key=lambda item: -sum(item[1]) / len(ite
 "
 ```
 
-Use this to choose transcripts for review, not to declare one workflow
+Use to choose transcripts for review, NOT to declare one workflow
 objectively worse.
 
 ### "Are our fixes working?"
 
-Trend decreases in friction or Tier 2 eligibility are encouraging, but they are
-still observational. Corroborate with:
+Trend decreases in friction or Tier 2 eligibility are encouraging but
+observational. Corroborate with:
 
 - `lab/eval`
 - docs-check results
@@ -106,14 +101,14 @@ for key, value in missed.most_common():
 "
 ```
 
-Treat this as a lead list for transcript inspection, not an automatic roadmap.
+Lead list for transcript inspection, NOT automatic roadmap.
 
 ## Tooling and Domains
 
 ### "Is runtime tooling being used?"
 
-Check `tidewave_pct` and the corresponding plugin signals, but remember this is
-still transcript-derived tool detection.
+Check `tidewave_pct` + corresponding plugin signals. Transcript-derived
+tool detection — confidence stays observational.
 
 ### "What files are hotspots?"
 
@@ -135,7 +130,8 @@ for key, value in files.most_common(20):
 
 ## Session Chaining
 
-Do not use `session_chain` for real conclusions yet.
+Do NOT use `session_chain` for real conclusions yet.
 
-Current ledger entries only record that chaining is not implemented. If chaining
-becomes important, it needs a real linker instead of placeholder values.
+Current ledger entries only record that chaining is not implemented.
+Real linker required when chaining matters — placeholder values are not
+a substitute.

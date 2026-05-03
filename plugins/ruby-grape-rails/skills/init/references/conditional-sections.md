@@ -75,13 +75,11 @@ These sections are included in CLAUDE.md based on detected project dependencies.
 ```markdown
 **Betterleaks (Secrets Scanning)**:
 
-When reading logs or files that may contain PII/credentials, ALWAYS use:
+When reading logs or files that may contain PII/credentials, ALWAYS
+pipe through `betterleaks stdin --redact=100` instead of `cat`:
 
 ```bash
-# Instead of: cat production.log
 betterleaks stdin --redact=100 < production.log
-
-# Instead of: cat .env
 betterleaks stdin --redact=100 < .env
 ```
 
@@ -122,19 +120,19 @@ Install: `brew install betterleaks`
 Use the Ruby detection script (avoids fragile shell pipelines):
 
 ```bash
-# Detect stack dependencies
 ${CLAUDE_PLUGIN_ROOT}/bin/detect-stack
-
-# Prefer exact *_VERSION outputs from the script when composing the header.
-# Only fall back to "detected" when the direct gem is present but no resolved
-# version is available from Gemfile.lock.
-# Read DETECTED_ORMS / PACKAGE_LAYOUT / PACKAGE_LOCATIONS too.
-# If PACKAGE_QUERY_NEEDED=true, ask the user for module/package locations and stack details.
-
-# detect-stack is the only supported stack detector.
-# Do not recreate its logic inline. If it is missing or fails, stop and
-# treat that as a plugin/detection issue rather than guessing.
-
-# Betterleaks detection
 command -v betterleaks &>/dev/null && echo "betterleaks"
 ```
+
+Compose the header from `detect-stack` output:
+
+- Prefer exact `*_VERSION` outputs from the script. Only fall back
+  to `detected` when the direct gem is present but no resolved
+  version is available from `Gemfile.lock`.
+- Read `DETECTED_ORMS` / `PACKAGE_LAYOUT` / `PACKAGE_LOCATIONS`.
+- If `PACKAGE_QUERY_NEEDED=true`, ask the user for module/package
+  locations and stack details.
+
+`detect-stack` is the only supported stack detector. Do NOT
+recreate its logic inline. If it is missing or fails, stop and
+surface that as a plugin/detection issue rather than guessing.

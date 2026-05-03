@@ -6,6 +6,14 @@ paths:
 
 # Agent Development
 
+## Audience: Agents, Not Humans
+
+Agent body markdown loads into the spawned subagent's context at
+runtime. Imperative instructions only — no tutorial-style
+narration, no reasoning preludes, no `#` thinking lines inside
+Bash command bodies (preference #6). Use markdown tables for
+command/option lists.
+
 ## Model Selection
 
 - **sonnet** (default): near-opus quality at lower cost; use for most specialists

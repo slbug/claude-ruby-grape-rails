@@ -6,128 +6,100 @@ effort: medium
 
 # Plugin Development Workflow
 
-This repo contains both:
+## Audience: Agents, Not Humans
 
-- shipped user-facing plugin code under `plugins/ruby-grape-rails/`
-- contributor-only tooling under `.claude/`
+Imperative-only. Tables for command/option lists.
 
-Keep those surfaces separate in both implementation and validation.
+## Surface Boundary
 
-Contributor tooling in this repo assumes a Unix-like environment:
+Two surfaces, kept separate in implementation + validation:
 
-- supported: macOS, Linux, WSL
-- not currently supported: native Windows
+| Surface | Path |
+|---|---|
+| shipped plugin | `plugins/ruby-grape-rails/` |
+| contributor-only tooling | `.claude/` |
 
-Session-derived analytics under `.claude/skills/session-*` and
-`.claude/skills/skill-monitor/` are heuristic. Treat them as exploratory input,
-not as release-grade proof.
+Supported environments: macOS, Linux, WSL. Native Windows: NOT supported.
+
+Session analytics under `.claude/skills/session-*` and
+`.claude/skills/skill-monitor/`: exploratory only, NOT release-grade.
 
 ## Scope Check
 
-Before editing, decide which surface you are changing:
+Before editing, identify the surface:
 
-- shipped plugin:
-  - skills
-  - agents
-  - hooks
-  - `bin/` executables
-  - plugin `settings.json`
-  - plugin metadata
-  - README / user-facing docs
-- contributor tooling:
-  - `.claude/skills/`
-  - `.claude/agents/`
-  - local planning/audit notes, if present
+| Layer | Files |
+|---|---|
+| shipped plugin | skills, agents, hooks, `bin/`, plugin `settings.json`, plugin metadata, README, user-facing docs |
+| contributor tooling | `.claude/skills/`, `.claude/agents/`, local planning/audit notes |
 
-Do not treat contributor-only changes as shipped plugin features.
+Do NOT treat contributor-only changes as shipped plugin features.
 
 ## Validation Matrix
 
-Run the checks that match the files you touched:
+Run checks matching the files touched:
 
-- Markdown docs / skills / agents:
-  - `npx markdownlint <touched-files>`
-- Shell hooks:
-  - `bash -n plugins/ruby-grape-rails/hooks/scripts/<file>.sh`
-  - `shellcheck -x plugins/ruby-grape-rails/hooks/scripts/<file>.sh`
-- `bin/` executables:
-  - `bash -n plugins/ruby-grape-rails/bin/<name>`
-  - `shellcheck plugins/ruby-grape-rails/bin/<name>`
-  - mock-test via crafted stdin when the executable reads hook-style JSON
-- Ruby scripts:
-  - `ruby -c <file>`
-- Shipped plugin shape:
-  - `claude plugin validate plugins/ruby-grape-rails`
-- Contributor eval tooling:
-  - `make eval`
-  - `make eval-all`
-  - `make eval-ci-deterministic`
-  - `make eval-output`
-  - `make security-injection`
-  - `make eval-tests`
-  - `make eval-overlap`
-  - `make eval-hard-corpus`
+| Files touched | Run |
+|---|---|
+| Markdown docs / skills / agents | `npx markdownlint <touched-files>` |
+| Shell hooks | `bash -n plugins/ruby-grape-rails/hooks/scripts/<file>.sh`, `shellcheck -x plugins/ruby-grape-rails/hooks/scripts/<file>.sh` |
+| `bin/` executables | `bash -n plugins/ruby-grape-rails/bin/<name>`, `shellcheck plugins/ruby-grape-rails/bin/<name>`, mock-test via crafted stdin when the executable reads hook-style JSON |
+| Ruby scripts | `ruby -c <file>` |
+| Shipped plugin shape | `claude plugin validate plugins/ruby-grape-rails` |
+| Contributor eval tooling | `make eval`, `make eval-all`, `make eval-ci-deterministic`, `make eval-output`, `make security-injection`, `make eval-tests`, `make eval-overlap`, `make eval-hard-corpus` |
 
-If multiple shipped surfaces changed, run the plugin validator plus the
-file-type-specific checks.
+Multiple shipped surfaces touched → run plugin validator + file-type-specific checks.
 
-Before trusting contributor analytics conclusions, prefer this order:
+Trust order before contributor-analytics conclusions:
 
 1. `claude plugin validate plugins/ruby-grape-rails`
 2. `make eval` or `make eval-all`
-3. `make eval-output` for deterministic research/review artifact fixtures
-4. `/docs-check` when Claude docs or plugin schema assumptions may have changed
-5. session-derived analytics only as corroborating evidence
+3. `make eval-output` (deterministic research/review artifact fixtures)
+4. `/docs-check` when Claude docs / plugin schema assumptions may have changed
+5. session-derived analytics — corroborating evidence only
 
 When `lab/eval/` changes, also run:
 
-- use `python3` 3.14+ for the eval tooling
+- `python3` 3.14+ (eval tooling floor)
 - `python3 -m compileall lab/eval`
 - `bash scripts/run-eval-tests.sh`
 - `python3 -m lab.eval.artifact_scorer --all`
-- `python3 -m pytest lab/eval/tests -v` when `pytest` is installed
+- `python3 -m pytest lab/eval/tests -v` when `pytest` installed
 
-For research/review artifact changes, also consult:
-
-- `${CLAUDE_SKILL_DIR}/references/output-verification-checklist.md`
-
-`CLAUDE_SKILL_DIR` is a Claude skill-runtime helper variable that resolves to
-this skill directory. When reading the file standalone outside Claude, replace
-it with `.claude/skills/plugin-dev-workflow`.
+For research/review artifact changes, consult
+`${CLAUDE_SKILL_DIR}/references/output-verification-checklist.md`.
 
 ## Release Discipline
 
-When a change is user-visible:
+User-visible change steps:
 
-1. update `CHANGELOG.md`
-2. keep version metadata aligned across:
+1. Update `CHANGELOG.md`.
+2. Align version metadata across:
    - `package.json`
    - `.claude-plugin/marketplace.json`
    - `plugins/ruby-grape-rails/.claude-plugin/plugin.json`
-3. update `README.md` / `CLAUDE.md` when counts, commands, or behavior changed
+3. Update `README.md` / `CLAUDE.md` when counts, commands, or behavior changed.
 
-Rules:
+Routing:
 
-- if the current version is already treated as released, new notes go under
-  `Unreleased`
-- if preparing the next release, move that work into the target version section
+| State | Section |
+|---|---|
+| current version already released | new notes go under `Unreleased` |
+| preparing next release | move work into target version section |
 
 ## Audit / Roadmap Maintenance
 
-When contributor workflow direction or local planning/audit notes change:
+Contributor workflow direction or local planning/audit notes change:
 
-- update local planning/audit notes, if present
-- keep recommendations grounded in current Ruby implementation and current
-  repo state
+- update local planning/audit notes
+- keep recommendations grounded in current Ruby implementation + repo state
 
 ## Practical Defaults
 
 - prefer small, verifiable patches over broad churn
-- prefer CLI tools first, then Ruby, then ad-hoc Python only as a last resort
-- use `rm -f` only for `mktemp` outputs or exact fixed plugin-owned paths
-- use `rm -rf` only for validated `mktemp -d` outputs; prefer `rmdir` for
-  expected-empty lock dirs
-- for variable-based cleanup, require both path validation and `${var:?}`
+- prefer CLI tools first, then Ruby, then ad-hoc Python only as last resort
+- `rm -f` only for `mktemp` outputs or exact fixed plugin-owned paths
+- `rm -rf` only for validated `mktemp -d` outputs; prefer `rmdir` for expected-empty lock dirs
+- variable-based cleanup → require both path validation + `${var:?}`
 - keep shipped docs aligned with real implementation
-- do not promote ignored local artifacts into tracked files unless they are
-  genuinely reusable
+- do NOT promote ignored local artifacts into tracked files unless genuinely reusable

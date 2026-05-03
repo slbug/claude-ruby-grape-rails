@@ -5,6 +5,21 @@ excludeAgent: "coding-agent"
 
 # Markdown File Review Rules
 
+## Audience: Agents, Not Humans
+
+Markdown in this repo loads into agent context at runtime. Flag
+prose that violates the imperative-only rule:
+
+- Tutorial narration ("first do X, then Y, this teaches…") → flag
+- Reasoning preludes before commands → flag
+- `#` thinking/checklist lines inside Bash command bodies
+  (preference #6) → flag, suggest markdown table or prose lead-in
+- Long explanatory paragraphs where a table fits → flag
+
+Exception files (human-facing, narrative OK): `README.md`,
+`CHANGELOG.md`, files under `scripts/` (executable code), files
+under `lab/eval/` (test fixtures).
+
 ## Skill and Agent Frontmatter
 
 Files under `plugins/**/skills/` and `plugins/**/agents/` use YAML

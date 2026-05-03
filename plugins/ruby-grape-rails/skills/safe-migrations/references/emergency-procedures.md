@@ -2,31 +2,22 @@
 
 ## Canceling a Running Migration
 
-```bash
-# Find the migration process
-ps aux | grep migrate
-
-# Kill it (last resort)
-kill -9 <pid>
-
-# Check migration status
-rails db:migrate:status
-
-# If stuck, manually update schema_migrations
-rails dbconsole
-# DELETE FROM schema_migrations WHERE version = '20240101120000';
-```
+| Goal | Command |
+|---|---|
+| Find the migration process | `ps aux \| grep migrate` |
+| Kill it (last resort) | `kill -9 <pid>` |
+| Check migration status | `rails db:migrate:status` |
+| If stuck, manually drop the row | `rails dbconsole` then `DELETE FROM schema_migrations WHERE version = '20240101120000';` |
 
 ## Rolling Back Production
 
 **Never rollback on production without extreme caution!** Instead, fix forward with new migrations.
 
-If absolutely necessary:
+If absolutely necessary, roll back one step or a specific
+migration:
 
 ```bash
 RAILS_ENV=production rails db:rollback STEP=1
-
-# Or specific migration
 RAILS_ENV=production rails db:migrate:down VERSION=20240101120000
 ```
 

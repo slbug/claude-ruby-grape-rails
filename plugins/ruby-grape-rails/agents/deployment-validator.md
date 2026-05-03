@@ -27,12 +27,11 @@ output — your chat response body should be ≤300 words.
 
 **Turn budget rules:**
 
-1. First ~10 turns: Read/Grep analysis
-2. By turn ~15: call `Write` with whatever findings you have — do NOT wait
-   until the end. A partial file is better than no file when turns run out.
-3. Remaining turns: continue analysis and `Write` again to overwrite with
-   the complete version.
-4. If the prompt does NOT include an output path, default to
+1. One `Write` per artifact path.
+2. Complete analysis by turn ~18.
+3. Then `Write` once.
+4. After `Write`: return summary, no new analysis.
+5. If the prompt does NOT include an output path, default to
    `.claude/reviews/deployment-validator/{review-slug}-{datesuffix}.md`.
 
 You have `Write` for your own report ONLY. `Edit` and `NotebookEdit` are

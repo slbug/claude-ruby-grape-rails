@@ -7,113 +7,108 @@ disable-model-invocation: true
 
 # Skill Monitor
 
-Summarize transcript-derived skill-use signals from `.claude/session-metrics/`.
+## Audience: Agents, Not Humans
 
-This workflow is exploratory. It helps contributors decide where to inspect
-transcripts or prompts next. It does not prove a skill is good or bad on its
-own.
+Imperative-only. Exploratory — does NOT prove a skill is good or bad
+on its own.
 
 ## Requirements
 
-Requires `.claude/session-metrics/metrics.jsonl` from `/session-scan`.
+`.claude/session-metrics/metrics.jsonl` (from `/session-scan`).
 
-## Before You Trust the Dashboard
+## Trust Order
 
-Prefer this order:
+Before trusting the dashboard:
 
 1. `claude plugin validate plugins/ruby-grape-rails`
 2. `make eval` or `make eval-all`
-3. `/docs-check` if Claude docs drift is suspected
-4. `/skill-monitor` as corroborating observational input
+3. `/docs-check` if Claude docs drift suspected
+4. `/skill-monitor` — corroborating observational input
 
 ## Usage
 
-```text
-/skill-monitor
-/skill-monitor --skill review
-/skill-monitor --improve
-/skill-monitor --window 30d
-/skill-monitor --provider claude-code
-```
+| Command | Behavior |
+|---|---|
+| `/skill-monitor` | dashboard for all skills |
+| `/skill-monitor --skill review` | scoped to one skill |
+| `/skill-monitor --improve` | delegates to `skill-effectiveness-analyzer` |
+| `/skill-monitor --window 30d` | broader window |
+| `/skill-monitor --provider claude-code` | exact provider |
 
 ## Workflow
 
 ### 1. Parse Arguments
 
-Supported flags:
-
-- `--skill NAME`
-- `--improve`
-- `--window 7d|30d|all`
-- `--provider NAME`
+| Flag | Values |
+|---|---|
+| `--skill` | NAME |
+| `--improve` | (no value, triggers analyzer mode) |
+| `--window` | `7d` / `30d` / `all` |
+| `--provider` | NAME |
 
 ### 2. Load Metrics
 
-Read `.claude/session-metrics/metrics.jsonl` and extract
+Read `.claude/session-metrics/metrics.jsonl`. Extract
 `skill_effectiveness`.
 
-If the ledger has no `skill_effectiveness` data, tell the contributor to rescan
-with the current scorer.
+No `skill_effectiveness` data → tell contributor to rescan with current
+scorer.
 
-If `--provider` is present, restrict the dashboard to that provider.
+`--provider` present → restrict dashboard to that provider.
 
 ### 3. Compute Observational Aggregates
 
-Useful aggregates include:
+Useful aggregates:
 
 - total invocations
 - sessions used in
 - weighted action rate
-- weighted average post-errors
-- weighted average post-corrections
+- weighted avg post-errors
+- weighted avg post-corrections
 - dominant outcomes
 
-If you compute a baseline comparison, present it as heuristic context, not as a
-causal effect estimate.
+Baseline comparison computed → present as heuristic context, NOT causal
+effect estimate.
 
 ### 4. Display the Dashboard
 
-The dashboard should show:
+Show:
 
-- window and provider scope
+- window + provider scope
 - sample sizes
 - per-skill aggregates
 - low-confidence warnings for thin samples
 
-Flagged skills are review candidates, not proven regressions.
+Flagged skills are review candidates, NOT proven regressions.
 
 ### 5. Improvement Mode
 
-If `--improve` is requested, delegate to `skill-effectiveness-analyzer`.
+`--improve` requested → delegate to `skill-effectiveness-analyzer`.
 
-The analyzer must:
+Analyzer requirements:
 
 - use the improvement template
 - cite session evidence
 - list confounders
-- look for corroboration in:
-  - `lab/eval`
-  - docs-check
-  - previous session-analysis reports
+- look for corroboration in `lab/eval`, docs-check, previous session-analysis reports
 
 ### 6. Write Output
 
-Write dashboard snapshots under `.claude/skill-metrics/` without modifying
+Write dashboard snapshots under `.claude/skill-metrics/`. Do NOT modify
 historical snapshots.
 
 ## Iron Laws
 
-1. Treat all dashboard conclusions as observational.
-2. Low-sample and mixed-provider results must be labeled clearly.
+1. All dashboard conclusions are observational.
+2. Low-sample + mixed-provider results MUST be labeled clearly.
 3. Corroborate strong claims with deterministic or manual evidence.
-4. Never modify `metrics.jsonl` from this skill.
+4. NEVER modify `metrics.jsonl` from this skill.
 
 ## Epistemic Posture
 
-Observational findings carry explicit confidence. Direct language for
-HIGH-confidence observations (deterministic signals, large-N agreement
-across providers). LOW-confidence observations must be labeled as such
-— don't promote noise into confident findings through polite phrasing.
-Hedge qualifiers belong on genuinely-uncertain claims, not scattered
-across the whole report. Acknowledge any contradiction with contributor
-expectations directly.
+Explicit confidence on observational findings. Direct language for
+HIGH-confidence (deterministic signals, large-N agreement across
+providers). LOW-confidence MUST be labeled — do NOT promote noise into
+confident findings via polite phrasing. Hedge qualifiers belong on
+genuinely-uncertain claims, NOT scattered across the report. State
+contradictions with contributor expectations directly.

@@ -200,9 +200,6 @@ production:
       writing: cable
 ```
 
-```bash
-# Generate migrations
-bin/rails solid_cable:install
-```
+Generate migrations: `bin/rails solid_cable:install`.
 
 Works identically to Redis - no code changes needed.

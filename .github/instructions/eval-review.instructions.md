@@ -5,6 +5,10 @@ excludeAgent: "coding-agent"
 
 # Eval Framework Review Rules
 
+## Audience: Agents, Not Humans
+
+Imperative-only.
+
 ## Eval Definitions (lab/eval/evals/*.json)
 
 - Each JSON defines dimensions: completeness, accuracy, conciseness,

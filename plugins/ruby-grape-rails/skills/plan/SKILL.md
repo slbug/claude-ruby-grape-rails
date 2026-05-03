@@ -278,8 +278,9 @@ Specialists are leaf workers: research, write artifact, return summary.
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update spawn-paths "$MANIFEST"`.
    Pass absolute path verbatim in spawn prompt.
 8. Wait for all agents to complete.
-9. Apply Artifact Recovery (see below). Patch each entry's recovery
-   `status` into the manifest.
+9. Apply Artifact Recovery (see below). Patch each entry's `status`
+   field with its recovery-state value (`artifact` |
+   `stub-replaced` | `recovered-from-return` | `stub-no-output`).
 10. Read each verified artifact + any reused cached files logged in
     scratchpad.md `## Decisions` → `### Research Cache Reuse`.
 11. Read consolidated path via

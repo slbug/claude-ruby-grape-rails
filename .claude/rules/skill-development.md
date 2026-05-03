@@ -1,9 +1,18 @@
 ---
 paths:
   - plugins/ruby-grape-rails/skills/**
+  - .claude/skills/**
 ---
 
 # Skill Development
+
+## Audience: Agents, Not Humans
+
+Skill bodies + `references/*.md` load into agent context when the
+skill is invoked. Imperative instructions only — no tutorial
+narration, no reasoning preludes, no `#` thinking lines inside
+Bash command bodies (preference #6). Use markdown tables for
+command/option lists.
 
 ## Structure
 

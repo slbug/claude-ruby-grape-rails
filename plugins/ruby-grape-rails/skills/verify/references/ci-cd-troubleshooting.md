@@ -77,7 +77,6 @@ restore_stash() {
 }
 trap restore_stash EXIT
 
-# Run checks
 if ! bundle exec standardrb --format quiet; then
   echo "❌ Linting failed. Run: bundle exec standardrb --fix"
   exit 1
@@ -97,27 +96,24 @@ exit 0
 
 ## Environment-Specific Verification
 
-### Development
+### Development — quick sanity check
 
 ```bash
-# Quick sanity check
 bundle exec standardrb --fix && bundle exec rspec spec/models/
 ```
 
-### Staging
+### Staging — full verification before deploy
 
 ```bash
-# Full verification before deploy
 bundle exec rails zeitwerk:check && \
   bundle exec standardrb && \
   bundle exec brakeman && \
   bundle exec rspec
 ```
 
-### Production Release
+### Production Release — complete verification with documentation
 
 ```bash
-# Complete verification with documentation
 bundle exec rails zeitwerk:check
 bundle exec standardrb
 bundle exec brakeman -o security-report.html
@@ -155,11 +151,10 @@ module UserService
 
 ### RuboCop: Too many violations
 
-```bash
-# Run auto-fix first
-bundle exec rubocop --autocorrect-all
+Run auto-fix first, then review remaining violations:
 
-# Then review remaining
+```bash
+bundle exec rubocop --autocorrect-all
 bundle exec rubocop --format simple
 ```
 
@@ -182,10 +177,9 @@ bundle exec rubocop --format simple
 
 ### Tests: Database issues
 
-```bash
-# Reset test database
-RAILS_ENV=test bundle exec rails db:drop db:create db:schema:load
+Reset the test database, then run a specific failing test with backtrace:
 
-# Run specific failing test with debug
+```bash
+RAILS_ENV=test bundle exec rails db:drop db:create db:schema:load
 bundle exec rspec spec/models/user_spec.rb:45 --backtrace
 ```

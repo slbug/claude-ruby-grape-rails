@@ -10,10 +10,7 @@ FROM ruby:3.4
 CMD ["./bin/thrust", "./bin/rails", "server"]
 ```
 
-```bash
-# Or run directly
-bundle exec thrust rails server
-```
+Or run directly: `bundle exec thrust rails server`.
 
 ### Thruster Features
 

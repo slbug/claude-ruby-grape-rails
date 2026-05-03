@@ -5,6 +5,22 @@ excludeAgent: "coding-agent"
 
 # Plugin File Review Rules
 
+## Audience: Agents, Not Humans
+
+Plugin docs (`agents/`, `skills/`, `references/`) load into agent
+context at runtime. Flag prose that violates the imperative-only
+rule:
+
+- Tutorial narration ("first do X, then Y") → flag, suggest
+  imperative rewrite
+- Reasoning preludes before commands → flag
+- `#` thinking/checklist lines inside Bash command bodies (preference
+  #6) → flag, suggest markdown table or prose lead-in
+- Long explanatory paragraphs where a table fits → flag
+
+Exception files (human-facing, narrative OK): `README.md`,
+`CHANGELOG.md`, `scripts/`, `lab/eval/`.
+
 ## Agent Conventions (plugins/**/agents/*.md)
 
 - Agents use YAML frontmatter. Common: name, description, model,

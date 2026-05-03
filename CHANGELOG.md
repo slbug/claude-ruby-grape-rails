@@ -7,6 +7,51 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.5] - 2026-05-03
+
+### Added
+
+- Preference #6 (`tooling`, "Bash Bodies Execute, Not Narrate"):
+  forbids `#` thinking/checklist lines inside Bash command bodies.
+  Wired into `inject-rules.sh` for both `SessionStart` and
+  `SubagentStart`.
+- `references/research/tool-batching.md`: new "Bash bodies execute,
+  not narrate" section (BAD/GOOD pair).
+- `lab/eval/tests/test_runtime_scripts.py` `InjectRulesTests`:
+  pinned assertions for all 6 preferences + Iron Law 12 +
+  Ruby-eval scope phrase. Catches generation drift.
+
+### Changed
+
+- Agent turn-budget rules rewritten as imperatives — complete
+  analysis by ~75% of `maxTurns`, single `Write`, then summary
+  (subagents cannot overwrite). Per-agent analysis deadlines:
+  `data-integrity-reviewer` 45, `testing-reviewer` 45,
+  `ruby-reviewer` 30, `iron-law-judge` 30,
+  `deep-bug-investigator` 30, `security-analyzer` 26,
+  `verification-runner` 26, `deployment-validator` 18,
+  `migration-safety-reviewer` 18, `sidekiq-specialist` 18.
+- Tool-name prose ("Read/Grep analysis") removed from agent bodies
+  per `agent-development.md` "Bash Discipline" rule.
+- `review/SKILL.md`, `plan/SKILL.md`, `brainstorm/SKILL.md`: replaced
+  ambiguous "Patch each agent's recovery `status`" with explicit
+  "Patch each agent's `status` field with its recovery-state value
+  (`artifact` | `stub-replaced` | `recovered-from-return` |
+  `stub-no-output`)".
+- `preferences.yml` metadata: `version` 1.1.0 → 1.2.0,
+  `last_updated` 2026-05-02 → 2026-05-03, `total_preferences`
+  5 → 6, `tooling` category `preference_count` 1 → 2.
+
+### Fixed
+
+- Schema drift in `/rb:review` + `/rb:plan` + `/rb:brainstorm` skill
+  bodies: ambiguous "recovery `status`" phrasing caused main-session
+  manifest patches to emit an undocumented `recovery` field
+  alongside `status`. Verified in ludwig session
+  `040c3082-ad98-4ed6-aa38-218e93acfbc4` —
+  `printf '{"agents":{"%s":{"status":"artifact","recovery":"artifact"}}}'`.
+  Wording fix removes the parse path that produces the extra field.
+
 ## [1.16.4] - 2026-05-03
 
 ### Added
@@ -2367,7 +2412,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.4...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.5...HEAD
+[1.16.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.4...v1.16.5
 [1.16.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.3...v1.16.4
 [1.16.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.2...v1.16.3
 [1.16.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.1...v1.16.2

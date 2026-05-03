@@ -70,8 +70,9 @@ message.
    (tab-separated `agent_slug<TAB>absolute_path`). Pass each absolute
    path verbatim in the spawn prompt.
 7. Wait for all reviewers to complete.
-8. Apply Artifact Recovery (see below). Patch each agent's recovery
-   `status` into the manifest.
+8. Apply Artifact Recovery (see below). Patch each agent's `status`
+   field with its recovery-state value (`artifact` |
+   `stub-replaced` | `recovered-from-return` | `stub-no-output`).
 9. Read each verified artifact. Read consolidated path via
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
    Write the consolidated review to that path.

@@ -10,17 +10,17 @@ effort: low
 
 # Claude Code Changelog Assistant
 
-Tracks Claude Code releases against the plugin. Fetches the CC changelog,
-extracts entries newer than last check, and analyzes impact on plugin
-components (agents, skills, hooks, config).
+## Audience: Agents, Not Humans
+
+Imperative-only. Tables for category and shape lists.
 
 ## Usage
 
-```text
-/cc-changelog                  # Check for new CC versions, analyze impact
-/cc-changelog --all            # Re-analyze all versions (ignore last check)
-/cc-changelog --set=2.1.85     # Reset last checked version (then re-run)
-```
+| Command | Purpose |
+|---|---|
+| `/cc-changelog` | check for new CC versions, analyze impact |
+| `/cc-changelog --all` | re-analyze all versions (ignore last check) |
+| `/cc-changelog --set=2.1.85` | reset last checked version, then re-run |
 
 ## Execution Flow
 
@@ -28,34 +28,31 @@ components (agents, skills, hooks, config).
 
 Run `bash scripts/fetch-cc-changelog.sh` (or `--all` for full re-fetch).
 
-If output starts with `STATUS: UP_TO_DATE` — report "No new CC versions" and
-stop.
+| Output prefix | Action |
+|---|---|
+| `STATUS: UP_TO_DATE` | report "No new CC versions" and stop |
+| `STATUS: NEW_VERSIONS` | continue with content below the header |
 
-If `STATUS: NEW_VERSIONS` — continue with the changelog content below the
-header.
-
-For `--all`: run `bash scripts/fetch-cc-changelog.sh --all`
-For `--set=X`: run `bash scripts/fetch-cc-changelog.sh --set=X`, then re-run
-without flag.
+`--all` flag → `bash scripts/fetch-cc-changelog.sh --all`.
+`--set=X` flag → `bash scripts/fetch-cc-changelog.sh --set=X`, then re-run without flag.
 
 ### Step 2: Analyze Impact
 
-Read the new changelog entries. For EACH entry, classify into one of:
+Read new changelog entries. Classify each into one category:
 
 | Category | Meaning | Action |
 |----------|---------|--------|
-| **BREAKING** | May break existing plugin functionality | Immediate fix required |
-| **OPPORTUNITY** | New CC feature the plugin could use | Add to backlog/plan |
-| **RELEVANT FIX** | CC fixed a bug we worked around | Check if workaround removable |
-| **DEPRECATION** | CC removing something we use | Plan migration |
-| **INFO** | Good to know, no action needed | Log only |
+| **BREAKING** | may break existing plugin functionality | immediate fix required |
+| **OPPORTUNITY** | new CC feature plugin could use | add to backlog/plan |
+| **RELEVANT FIX** | CC fixed a bug we worked around | check if workaround removable |
+| **DEPRECATION** | CC removing something we use | plan migration |
+| **INFO** | good to know, no action needed | log only |
 
-Cross-reference against plugin components using rules in
-`${CLAUDE_SKILL_DIR}/references/analysis-rules.md`.
+Cross-reference plugin components via `${CLAUDE_SKILL_DIR}/references/analysis-rules.md`.
 
 ### Step 3: Generate Report
 
-Output a structured report:
+Output structured report:
 
 ```markdown
 ## CC Changelog Analysis: v{last_checked} → v{latest}
@@ -86,24 +83,22 @@ After user reviews the report, ask:
 
 > "Update last checked version to {latest}? [Yes/No]"
 
-If yes: run `bash scripts/fetch-cc-changelog.sh --set={latest}`
+If yes: run `bash scripts/fetch-cc-changelog.sh --set={latest}`.
 
-If BREAKING or DEPRECATION items found, offer to create a plan.
+If BREAKING or DEPRECATION found, offer to create a plan.
 
 ## Iron Laws
 
-1. **ALWAYS fetch before analyzing** — never analyze stale cache
-2. **NEVER auto-update state** — user must confirm after reviewing report
-3. **ALWAYS cross-reference plugin files** — don't just summarize, map impact
-4. **BREAKING changes are BLOCKERS** — surface first, prominently
-5. **Track the audit version** — state file is the source of truth
+1. ALWAYS fetch before analyzing — never analyze stale cache.
+2. NEVER auto-update state — user confirms after reviewing report.
+3. ALWAYS cross-reference plugin files — map impact, not just summarize.
+4. BREAKING changes are BLOCKERS — surface first, prominently.
+5. State file is the source of truth for audit version.
 
 ## Epistemic Posture
 
-Breaking-change analysis is direct, not diplomatic. If a CC version
-removes or renames a plugin API the repo uses, label the impact at
-BLOCKER severity without softening — no "may affect" when the plugin
-clearly calls the removed API. Deprecations labeled as `deprecated` in
-the CC changelog are also direct flags, not "consider migrating
-eventually". Apology cascades and hedge chains have no place in a
-changelog-impact report.
+Direct language for breaking-change analysis. CC version that removes
+or renames a plugin API the repo uses → label BLOCKER without
+softening. Deprecations labeled `deprecated` in the CC changelog →
+direct flag, not "consider migrating eventually". No apology cascades,
+no hedge chains.

@@ -206,14 +206,12 @@ strategy:
 
 ## Seed-Based Flaky Test Debugging
 
-RSpec runs tests in random order by default. When tests fail
-intermittently, re-run with the specific seed:
+RSpec runs tests in random order by default. The failed run prints
+the seed (e.g. `Randomized with seed 401472`); reproduce the exact
+order with `--seed`:
 
 ```bash
-# Failed run shows seed
-bundle exec rspec  # "Randomized with seed 401472"
-
-# Reproduce exact order
+bundle exec rspec
 bundle exec rspec --seed 401472
 ```
 
@@ -238,17 +236,15 @@ bundle exec rspec --next-failure                 # Run until failure
 
 ## Filtering Verbose Test Output
 
-When E2E test output (Capybara, Playwright) is too
-noisy, filter for signal:
+When E2E test output (Capybara, Playwright) is too noisy, filter
+for signal. Filter to pass/fail keywords for summary; tail
+progress output for Capybara feature runs:
 
 ```bash
-# Filter for summary only
 bundle exec rspec spec/features/user_flow_spec.rb --format documentation 2>&1 | \
   grep -E '(example|Finished|failure|✓|✗|success|Failed|Error|PASS|FAIL|examples)'
 
-# Capybara feature tests: filter results
-bundle exec rspec spec/features --format progress 2>&1 | \
-  tail -20
+bundle exec rspec spec/features --format progress 2>&1 | tail -20
 ```
 
 **Rule**: When running E2E tests, always pipe through a filter

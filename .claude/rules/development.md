@@ -1,5 +1,9 @@
 # Development Workflow
 
+## Audience: Agents, Not Humans
+
+Imperative-only. Tables for command/option lists.
+
 ## Setup
 
 - `npm ci` — install dependencies with committed lockfile

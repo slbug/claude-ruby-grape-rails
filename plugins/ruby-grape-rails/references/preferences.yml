@@ -3,9 +3,9 @@
 # Structure mirrors iron-laws.yml minus `detector_id` (no code-pattern check
 # for preferences). Severity capped at `medium` / `low`.
 
-version: "1.1.0"
-last_updated: "2026-05-02"
-total_preferences: 5
+version: "1.2.0"
+last_updated: "2026-05-03"
+total_preferences: 6
 
 categories:
   - id: research
@@ -19,7 +19,7 @@ categories:
   - id: tooling
     name: "Tooling"
     description: "Tool-call discipline for context + budget efficiency"
-    preference_count: 1
+    preference_count: 2
 
 preferences:
   - id: 1
@@ -80,4 +80,16 @@ preferences:
     summary_text: "Prefer `Grep`/`Glob` tools or `ugrep`/`bfs` over shell `grep -rn`/`find`/`cat`; batch by path group"
     init_text: "Prefer `Grep`/`Glob` tools when available; otherwise use `ugrep` / `bfs` over shell `grep -rn`/`find`. Use `Read` over `cat`/`head`/`tail`. Batch `git diff`/`git log` by path group. Exclude high-noise paths via pathspec."
     subagent_text: "Preference: prefer the `Grep` / `Glob` tools when available; otherwise use `ugrep` / `bfs` (CC-embedded, native macOS/Linux 2.1.117+) over shell `grep -rn` / `find`. Use `Read` over `cat`/`head`/`tail`. Batch `git diff` / `git log` / gem inspection by path group, never per-item loops. Exclude high-noise paths (cassettes, fixtures, lockfiles) via pathspec. Per-file allowed when the file is the unit of investigation."
+    reference_files: ["research/tool-batching.md"]
+
+  - id: 6
+    category: tooling
+    title: "Bash Bodies Execute, Not Narrate"
+    rule: "Bash command bodies are for execution, not commentary. Do NOT include `#` thinking/hypothesis/checklist lines inside Bash command strings — they consume input tokens, obscure the dispatched command in agent transcripts, and serve no execution purpose. Record reasoning, hypotheses, and checklists in artifacts (durable) or in thinking (private), never inside Bash command input."
+    rationale: "Observed: agents (testing-reviewer, iron-law-judge) emit Bash commands with multi-line `# Check ...` prefixes used as thinking-out-loud surface. A multi-line Bash body is a single tool dispatch, but the `#`-only lines inflate input tokens and blur the dispatched command in transcripts. Reasoning belongs in artifacts (durable, reviewable) or in thinking (private), not in command strings."
+    severity: medium
+    applies_to: ["*"]
+    summary_text: "No `#` commentary lines inside Bash commands; reasoning belongs in artifacts or thinking"
+    init_text: "Bash command bodies execute, not narrate. Do NOT include `#` thinking/checklist lines inside Bash commands — record reasoning in artifacts or thinking instead."
+    subagent_text: "Preference: Bash command bodies execute, not narrate. Do NOT include `#` thinking/hypothesis/checklist lines inside Bash command strings. Record reasoning in artifacts (durable) or in thinking (private), never in Bash command input."
     reference_files: ["research/tool-batching.md"]

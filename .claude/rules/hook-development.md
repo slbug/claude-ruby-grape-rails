@@ -5,6 +5,15 @@ paths:
 
 # Hook Development
 
+## Audience: Agents, Not Humans
+
+Hook scripts are code. Comments inside hook scripts (`.sh` / `.rb`
+under `hooks/scripts/`) follow normal code-comment conventions —
+this rule does NOT apply to executable hook source. Markdown
+authored ABOUT hooks (skill refs explaining hook behavior) follows
+the agent-readable rule: imperative, no narration, no `#` thinking
+lines inside Bash blocks of skill docs (preference #6).
+
 ## Hook Failure Policy
 
 - **Advisory hooks** (detect-runtime, check-resume, log-progress): warn or skip on degraded state, say so clearly

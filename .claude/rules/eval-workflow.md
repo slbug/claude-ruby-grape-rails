@@ -1,5 +1,9 @@
 # Contributor Eval Workflow
 
+## Audience: Agents, Not Humans
+
+Imperative-only. Tables for command/option lists.
+
 Minimum runtime: python3 3.14+ for `lab/eval/`.
 
 ## Eval Entrypoints
@@ -8,7 +12,7 @@ Minimum runtime: python3 3.14+ for `lab/eval/`.
 |---------|-------------|
 | `make eval` / `npm run eval` | Lint + injection check + tracked changed surfaces |
 | `make eval-all` / `npm run eval:all` | Full eval snapshot |
-| `make eval-ci-deterministic` / `npm run eval:ci:deterministic` | Full deterministic CI gate. Runs `eval-output` + `check-refs` + `eval-compression` + `run_eval.sh --ci` (lint, injection guard, skill/agent/trigger scoring, ablation, hygiene + context-budget advisory). Used by GitHub CI. Must NOT transitively invoke any LLM provider |
+| `make eval-ci-deterministic` / `npm run eval:ci:deterministic` | Full deterministic CI gate. Runs `eval-output` + `check-refs` + `eval-compression` + `run_eval.sh --ci` (lint, injection guard, skill/agent/trigger scoring, ablation, hygiene + context-budget advisory). Used by GitHub CI. MUST NOT transitively invoke any LLM provider |
 | `make check-refs` / `npm run check:refs` | Validate skill/agent cross-references resolve on disk |
 | `make eval-output` / `npm run eval:output` | Deterministic research/review artifact checks |
 | `make eval-compression` / `npm run eval:compression` | Deterministic fixture eval for the verify-output compressor (Ruby CLI). Pass thresholds: ≥40% mean bytes reduction, 0 preservation violations, ≤15% diff |
@@ -30,13 +34,13 @@ Minimum runtime: python3 3.14+ for `lab/eval/`.
 
 ## Notes
 
-- `eval-output` is part of `eval-ci-deterministic` and can also be invoked standalone
-- `--include-untracked` makes results non-comparable; not part of `eval-ci-deterministic`
+- `eval-output` is part of `eval-ci-deterministic`; can also be invoked standalone
+- `--include-untracked` makes results non-comparable; NOT part of `eval-ci-deterministic`
 - `check-dynamic-injection.sh` expects git metadata for tracked-file scans
-- For long contributor eval runs (`make eval-all`, `make eval-behavioral-fresh`),
-  set `ENABLE_PROMPT_CACHING_1H=1` to opt into the 1-hour cache TTL and reduce
-  per-call cost. Complements `FORCE_PROMPT_CACHING_5M=1` when you need the
-  default shorter TTL on specific subruns. (CC 2.1.108+.)
+- Long contributor eval runs (`make eval-all`, `make eval-behavioral-fresh`):
+  set `ENABLE_PROMPT_CACHING_1H=1` for 1-hour cache TTL (reduces per-call
+  cost). Complements `FORCE_PROMPT_CACHING_5M=1` for default shorter TTL
+  on specific subruns. (CC 2.1.108+.)
 
 ## Current Scope
 
@@ -55,28 +59,27 @@ Minimum runtime: python3 3.14+ for `lab/eval/`.
 
 ## Epistemic Posture Eval (`make eval-epistemic`)
 
-Measures the behavioral effect of changes to `preferences.yml` / `iron-laws.yml`
-by comparing model responses across two injector states: **before** and
-**after** a regeneration. The system prompt for every fixture call is
-captured at run time from `plugins/ruby-grape-rails/hooks/scripts/inject-rules.sh`
-(the shared `SessionStart` + `SubagentStart` injector) — i.e. the real
-shipped signal, no mirror.
+Measures behavioral effect of `preferences.yml` / `iron-laws.yml`
+changes by comparing model responses across two injector states:
+**before** + **after** regeneration. System prompt for every fixture
+call is captured at run time from
+`plugins/ruby-grape-rails/hooks/scripts/inject-rules.sh` (shared
+`SessionStart` + `SubagentStart` injector — real shipped signal, no
+mirror).
 
 ### PR Workflow
 
-Every PR that touches `preferences.yml` / `iron-laws.yml` must start with a
-fresh baseline capture. Baselines are gitignored local snapshots and may
-persist on disk across PRs — if you start a new PR without re-capturing,
-your post-change delta will include changes from `main` that landed
-between your previous baseline and this PR.
+PRs touching `preferences.yml` / `iron-laws.yml` MUST start with a
+fresh baseline capture. Baselines are gitignored local snapshots and
+may persist on disk across PRs — start a new PR without re-capturing
+→ post-change delta includes changes from `main` between previous
+baseline and this PR.
 
 1. **Start PR from fresh main.** Pull latest.
 
-2. **Capture baseline** against current injector state, per provider you
-   plan to measure:
+2. **Capture baseline** against current injector state, per provider you plan to measure. Delete stale baselines from previous PR first; capture per provider:
 
    ```bash
-   # delete any stale baseline from a previous PR first
    rm -f lab/eval/baselines/epistemic/*/pre-posture.json
 
    python3 -m lab.eval.epistemic_suite --baseline-only --provider ollama --workers 6 --summary --pretty
@@ -84,27 +87,24 @@ between your previous baseline and this PR.
    python3 -m lab.eval.epistemic_suite --baseline-only --provider haiku  --workers 6 --summary --pretty
    ```
 
-   Outputs auto-resolve to
-   `lab/eval/baselines/epistemic/{namespace}/pre-posture.json`. Baselines
-   are gitignored (local snapshot, same convention as `make eval-baseline`).
+   Outputs auto-resolve to `lab/eval/baselines/epistemic/{namespace}/pre-posture.json`. Baselines are gitignored (local snapshot, same convention as `make eval-baseline`).
 
-3. **Make your `preferences.yml` / `iron-laws.yml` edits.**
+3. **Make `preferences.yml` / `iron-laws.yml` edits.**
 
-4. **Regenerate** — `bash scripts/generate-iron-law-outputs.sh all`. The
-   presence gate at `scripts/check-epistemic-baseline-drift.py` blocks
-   regeneration under three conditions: the active provider's baseline
-   is missing, `python3` is not on PATH, or `python3` is older than
-   3.14 (repo floor for `lab/eval/` tooling). Baseline freshness
-   (timestamp + hash) is printed so you can judge whether it's from
-   this PR or a leftover. Hash-mismatch between baseline and current
+4. **Regenerate** — `bash scripts/generate-iron-law-outputs.sh all`. Presence gate at `scripts/check-epistemic-baseline-drift.py` blocks regeneration when:
+   - active provider's baseline missing
+   - `python3` not on PATH
+   - `python3` older than 3.14 (repo floor for `lab/eval/`)
+
+   Baseline freshness (timestamp + hash) printed → judge whether from
+   this PR or leftover. Hash-mismatch between baseline and current
    injector is expected during iteration (edit → regen → edit → regen)
-   — the gate does not block on mismatch. Skip the gate entirely with
-   `EPISTEMIC_BASELINE_CHECK=0` when no epistemic measurement is
-   planned (initial generation, CI without eval, contributor without
-   python3 3.14+ installed, etc.).
+   — gate does NOT block on mismatch. Skip the gate entirely with
+   `EPISTEMIC_BASELINE_CHECK=0` when no epistemic measurement is planned
+   (initial generation, CI without eval, contributor without python3
+   3.14+ installed).
 
-5. **Iterate.** Edit source, regen, edit, regen. Baseline stays as
-   fixed reference. Each regen produces a new current state.
+5. **Iterate.** Edit source, regen, edit, regen. Baseline stays as fixed reference. Each regen produces new current state.
 
 6. **Run post-change measurement:**
 
@@ -112,25 +112,23 @@ between your previous baseline and this PR.
    python3 -m lab.eval.epistemic_suite --provider ollama --workers 6 --summary --pretty
    ```
 
-   Suite refuses to run (exit 2) when:
-   - Baseline is missing (nothing to compare against)
-   - Current injector hash matches baseline hash (inject-rules.sh
-     unchanged since baseline — you likely forgot to regenerate)
+   Suite refuses (exit 2) when:
+   - baseline missing (nothing to compare against)
+   - current injector hash matches baseline hash (`inject-rules.sh` unchanged since baseline — likely forgot to regenerate)
 
-   On success, prints per-metric baseline / current / delta drift.
+   On success: prints per-metric baseline / current / delta drift.
 
 ### Env vars
 
 - `RUBY_PLUGIN_EVAL_PROVIDER` — `ollama` (default) / `apfel` / `haiku`.
 - `RUBY_PLUGIN_EVAL_OLLAMA_MODEL` — model tag (default
   `gemma4:26b-a4b-it-q8_0`, ~28GB, MoE with 4B active tokens).
-  The namespace is derived from the tag (`gemma4:26b-a4b-it-q8_0` →
-  `gemma4-26b-a4b-it-q8_0`) so each model keeps its own baseline
-  directory. The two LLM-judge metrics benefit from a larger instruct
-  model that follows the AGREE/FLAG/DISAGREE format reliably.
+  Namespace derived from tag (`gemma4:26b-a4b-it-q8_0` →
+  `gemma4-26b-a4b-it-q8_0`) → each model keeps its own baseline
+  directory. Two LLM-judge metrics benefit from larger instruct model
+  that follows the AGREE/FLAG/DISAGREE format reliably.
 
-  **Low-RAM fallback.** If ~28GB of free RAM isn't available for the
-  model, switch to the smaller tag before running anything:
+  **Low-RAM fallback.** ~28GB free RAM unavailable → switch to smaller tag before running anything:
 
   ```bash
   export RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest
@@ -139,59 +137,44 @@ between your previous baseline and this PR.
   RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest make eval-behavioral-fresh
   ```
 
-  Under the low-RAM fallback: regex metrics (`apology_density`,
-  `hedge_cascade_rate`, `finding_recall`, `false_positive_rate`) are
-  unaffected; the two LLM-judge metrics become noisier because the
-  smaller model is weaker at the format-constrained classification.
-  Baselines captured under the low-RAM model live at a different
-  namespace (`lab/eval/baselines/epistemic/gemma4/`) so they do not
-  mix with the 26b baselines.
-- `EPISTEMIC_BASELINE_CHECK=0` — opt out of the drift gate in
-  `generate-iron-law-outputs.sh` (initial generation, legitimate baseline
-  loss, provider switch).
+  Under low-RAM fallback:
+
+  | Metric class | Effect |
+  |---|---|
+  | regex (`apology_density`, `hedge_cascade_rate`, `finding_recall`, `false_positive_rate`) | unaffected |
+  | LLM-judge | noisier — smaller model is weaker at format-constrained classification |
+
+  Baselines under low-RAM model live at different namespace (`lab/eval/baselines/epistemic/gemma4/`) — do NOT mix with 26b baselines.
+- `EPISTEMIC_BASELINE_CHECK=0` — opt out of the drift gate in `generate-iron-law-outputs.sh` (initial generation, legitimate baseline loss, provider switch).
 - `OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_KV_CACHE_TYPE=q8_0`,
   `OLLAMA_NUM_PARALLEL=4`, `OLLAMA_MAX_LOADED_MODELS=1` — auto-set by
-  `_ensure_ollama_server` when the suite starts the server itself.
-  Without `OLLAMA_NUM_PARALLEL > 1`, the ollama daemon serializes
-  requests so `--workers > 1` queues at the server instead of running
-  in parallel. These env vars must be set BEFORE `ollama serve`
-  starts — if ollama is already running (Ollama.app, external
-  `ollama serve`), the suite emits a warning and no env-var change
-  applies. Stop the external server (`killall ollama`, quit Ollama.app)
-  to let the suite autostart with the eval-tuned env. Override
-  individual values if VRAM is tight: e.g.
+  `_ensure_ollama_server` when suite starts the server itself. Without
+  `OLLAMA_NUM_PARALLEL > 1`, ollama daemon serializes requests →
+  `--workers > 1` queues at server instead of running in parallel. Env
+  vars MUST be set BEFORE `ollama serve` starts — ollama already
+  running (Ollama.app, external `ollama serve`) → suite emits warning,
+  no env-var change applies. Stop external server (`killall ollama`,
+  quit Ollama.app) → suite autostarts with eval-tuned env. Override
+  individual values when VRAM tight:
   `OLLAMA_NUM_PARALLEL=1 make eval-epistemic`.
-- `ENABLE_PROMPT_CACHING_1H=1` / `FORCE_PROMPT_CACHING_5M=1` — Haiku-only
-  cost controls (CC 2.1.108+).
+- `ENABLE_PROMPT_CACHING_1H=1` / `FORCE_PROMPT_CACHING_5M=1` — Haiku-only cost controls (CC 2.1.108+).
 
 ### Metrics
 
-- **Regex** (no LLM call): `apology_density`, `hedge_cascade_rate`,
-  `finding_recall`, `false_positive_rate`.
-- **LLM-judge** (provider call per scenario): `unsupported_agreement_rate`,
-  `direct_contradiction_rate`. Roughly 2 calls per run per judge-metric
-  scenario.
+| Class | Metrics | Cost |
+|---|---|---|
+| Regex | `apology_density`, `hedge_cascade_rate`, `finding_recall`, `false_positive_rate` | no LLM call |
+| LLM-judge | `unsupported_agreement_rate`, `direct_contradiction_rate` | provider call per scenario; ~2 calls per run per judge-metric scenario |
 
 ### Provider notes
 
-- **Apfel:** kept in the provider set for future expansion of Apple
-  Foundation Model capabilities (larger context, stronger on-device
-  reasoning). Currently of limited practical use for epistemic eval:
-  - 4096-token context window overflows on several fixtures (baseline
-    errors on a rotating subset each run — fixtures + system prompt
-    ~3.6-4k tokens combined).
-  - Apple FM 4B is too weak to serve as a reliable LLM-judge
-    (observed `unsupported_agreement_rate=1.0` on baseline fixtures
-    where haiku scored 0.0).
+- **Apfel:** kept in provider set for future expansion of Apple Foundation Model capabilities (larger context, stronger on-device reasoning). Currently of limited practical use for epistemic eval:
+  - 4096-token context window overflows on several fixtures (baseline errors on a rotating subset each run — fixtures + system prompt ~3.6-4k tokens combined).
+  - Apple FM 4B is too weak to serve as a reliable LLM-judge (observed `unsupported_agreement_rate=1.0` on baseline fixtures where haiku scored 0.0).
   - Weak model over-literalizes posture preferences: observed
     "Acknowledge mistakes once" turning into a full `### Apology`
-    heading + paragraph in delta runs, increasing apology_density
-    vs baseline (opposite of intended posture effect).
-  - **Apfel is NOT a gate input.** Gate providers are ollama and
-    haiku only. Apfel results are captured for reference / future
-    expansion but do not block merge.
-- **Haiku:** cloud Claude, cheap per run. Use prompt caching env vars
-  for repeated runs. Most reliable LLM-judge of the three providers.
-- **Ollama:** fully local. First run starts `ollama serve` automatically;
-  model gets pulled on first use if missing. Gemma4 26b+ MoE with
-  `reasoning_effort` control is the recommended local judge.
+    heading + paragraph in delta runs, increasing apology_density vs
+    baseline (opposite of intended posture effect).
+  - **Apfel is NOT a gate input.** Gate providers are ollama and haiku only. Apfel results captured for reference / future expansion but do NOT block merge.
+- **Haiku:** cloud Claude, cheap per run. Use prompt caching env vars for repeated runs. Most reliable LLM-judge of the three providers.
+- **Ollama:** fully local. First run starts `ollama serve` automatically; model gets pulled on first use if missing. Gemma4 26b+ MoE with `reasoning_effort` control is the recommended local judge.

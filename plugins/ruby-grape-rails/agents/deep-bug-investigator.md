@@ -39,14 +39,11 @@ words.
 
 **Turn budget rules:**
 
-1. First ~15 turns: reproduce, gather evidence (Read / Grep / Bash:
-   rspec / runner / psql / redis-cli).
-2. By turn ~25: call `Write` with whatever findings you have so far — do
-   NOT wait until the end. A partial file is better than no file when
-   turns run out.
-3. Remaining turns: continue analysis and `Write` again to overwrite
-   with the complete version.
-4. If the prompt does NOT include an output path, default to
+1. One `Write` per artifact path.
+2. Complete reproduce + evidence-gathering by turn ~30.
+3. Then `Write` once.
+4. After `Write`: return summary, no new evidence-gathering.
+5. If the prompt does NOT include an output path, default to
    `.claude/investigations/deep-bug-investigator/{slug}-{datesuffix}.md`.
 
 You have `Write` for your own report ONLY. `Edit` and `NotebookEdit`
