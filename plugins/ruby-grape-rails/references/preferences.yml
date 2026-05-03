@@ -3,7 +3,7 @@
 # Structure mirrors iron-laws.yml minus `detector_id` (no code-pattern check
 # for preferences). Severity capped at `medium` / `low`.
 
-version: "1.2.0"
+version: "1.3.0"
 last_updated: "2026-05-03"
 total_preferences: 6
 
@@ -32,7 +32,7 @@ preferences:
     summary_text: "Prefer Context7 MCP over WebFetch for library docs"
     init_text: "PREFER Context7 MCP over WebFetch for library/gem/framework docs when `mcp__*context7*__*` tools are available"
     subagent_text: "Preference: PREFER Context7 MCP (`mcp__*context7*__query-docs` / `resolve-library-id`) over WebFetch for library/gem docs — fallback to WebFetch only if Context7 tools unavailable"
-    reference_files: ["research/context7-usage.md"]
+    reference_files: ["references/preferences/context7-usage.md"]
 
   - id: 2
     category: behavioral
@@ -44,7 +44,7 @@ preferences:
     summary_text: "Challenge false premises before executing"
     init_text: "CHALLENGE false user premises before executing — surface conflicts with repo evidence directly"
     subagent_text: "Preference: CHALLENGE false user premises before executing. If request contradicts repo evidence, surface the conflict before proceeding."
-    reference_files: ["research/epistemic-posture.md"]
+    reference_files: ["references/preferences/epistemic-posture.md"]
 
   - id: 3
     category: behavioral
@@ -56,7 +56,7 @@ preferences:
     summary_text: "No apology loops, no hedge cascades, direct HIGH-confidence language"
     init_text: "AVOID apology cascades and hedge chains — acknowledge mistakes once, state the correction, continue"
     subagent_text: "Preference: AVOID unsupported agreement, apology cascades, and hedge chains. Acknowledge mistakes once, continue. Direct language for HIGH-confidence findings."
-    reference_files: ["research/epistemic-posture.md"]
+    reference_files: ["references/preferences/epistemic-posture.md"]
 
   - id: 4
     category: behavioral
@@ -68,7 +68,7 @@ preferences:
     summary_text: "Positive success targets over prohibition chains"
     init_text: "PREFER positive success targets over long prohibition chains in task instructions"
     subagent_text: "Preference: PREFER positive success targets over prohibition chains in task instructions and success criteria."
-    reference_files: ["research/epistemic-posture.md"]
+    reference_files: ["references/preferences/epistemic-posture.md"]
 
   - id: 5
     category: tooling
@@ -80,7 +80,7 @@ preferences:
     summary_text: "Prefer `Grep`/`Glob` tools or `ugrep`/`bfs` over shell `grep -rn`/`find`/`cat`; batch by path group"
     init_text: "Prefer `Grep`/`Glob` tools when available; otherwise use `ugrep` / `bfs` over shell `grep -rn`/`find`. Use `Read` over `cat`/`head`/`tail`. Batch `git diff`/`git log` by path group. Exclude high-noise paths via pathspec."
     subagent_text: "Preference: prefer the `Grep` / `Glob` tools when available; otherwise use `ugrep` / `bfs` (CC-embedded, native macOS/Linux 2.1.117+) over shell `grep -rn` / `find`. Use `Read` over `cat`/`head`/`tail`. Batch `git diff` / `git log` / gem inspection by path group, never per-item loops. Exclude high-noise paths (cassettes, fixtures, lockfiles) via pathspec. Per-file allowed when the file is the unit of investigation."
-    reference_files: ["research/tool-batching.md"]
+    reference_files: ["references/preferences/tool-batching.md"]
 
   - id: 6
     category: tooling
@@ -92,4 +92,4 @@ preferences:
     summary_text: "No `#` commentary lines inside Bash commands; reasoning belongs in artifacts or thinking"
     init_text: "Bash command bodies execute, not narrate. Do NOT include `#` thinking/checklist lines inside Bash commands — record reasoning in artifacts or thinking instead."
     subagent_text: "Preference: Bash command bodies execute, not narrate. Do NOT include `#` thinking/hypothesis/checklist lines inside Bash command strings. Record reasoning in artifacts (durable) or in thinking (private), never in Bash command input."
-    reference_files: ["research/tool-batching.md"]
+    reference_files: ["references/preferences/tool-batching.md"]

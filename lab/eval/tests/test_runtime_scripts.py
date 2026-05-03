@@ -4884,6 +4884,19 @@ class InjectRulesTests(unittest.TestCase):
         self.assertIn("positive success targets", ctx)
         self.assertIn("`ugrep`", ctx)
         self.assertIn("Bash command bodies execute, not narrate", ctx)
+        # Pin reference_files See: lines per preference (paths injected)
+        self.assertIn(
+            "See: `${CLAUDE_PLUGIN_ROOT}/references/preferences/context7-usage.md`",
+            ctx,
+        )
+        self.assertIn(
+            "See: `${CLAUDE_PLUGIN_ROOT}/references/preferences/epistemic-posture.md`",
+            ctx,
+        )
+        self.assertIn(
+            "See: `${CLAUDE_PLUGIN_ROOT}/references/preferences/tool-batching.md`",
+            ctx,
+        )
 
     def test_subagent_start_event_emits_matching_payload(self) -> None:
         result = self._run(

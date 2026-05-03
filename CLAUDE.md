@@ -185,7 +185,7 @@ When adding/removing/renaming commands/skills/agents, update
 ### Epistemic posture
 
 Apply the contract from
-`plugins/ruby-grape-rails/references/research/epistemic-posture.md`:
+`plugins/ruby-grape-rails/references/preferences/epistemic-posture.md`:
 
 - Challenge false premises that contradict repo evidence — do NOT
   accept contributor framing without verification

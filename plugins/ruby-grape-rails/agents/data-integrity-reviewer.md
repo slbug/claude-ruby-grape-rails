@@ -20,7 +20,7 @@ Check for:
 4. **Data validation gaps** - model validates but DB doesn't enforce
 5. **Rollback safety** - data changes that can't be undone
 
-## CRITICAL: Save Findings File First
+## Findings File Is Primary Output
 
 Your calling skill body reads findings from the exact file path given in the prompt
 (e.g., `.claude/reviews/data-integrity-reviewer/{review-slug}-{datesuffix}.md`). The file IS the real

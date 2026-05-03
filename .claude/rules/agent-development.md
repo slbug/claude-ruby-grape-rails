@@ -49,10 +49,21 @@ Prefer denylist-only over `tools:` allowlists (follows built-in agent pattern).
 ## Bash Discipline
 
 Tool-batching discipline is registered in `preferences.yml` and
-injected via `inject-rules.sh`. Authoring rule: do NOT restate the
-discipline in agent bodies. Agent bodies focus on domain analysis
-and findings format. Examples + BAD/GOOD pairs:
-`plugins/ruby-grape-rails/references/research/tool-batching.md`.
+injected via `inject-rules.sh` (preference text + `reference_files`
+path). Authoring rule: do NOT restate the discipline in agent bodies.
+Agent bodies focus on domain analysis and findings format. Examples +
+BAD/GOOD pairs at
+`plugins/ruby-grape-rails/references/preferences/tool-batching.md`
+are delivered to agents via the injected `See:` line.
+
+## Turn Budget Semantics
+
+"Turn" in agent body rules means **model invocation**
+(`stop_reason=tool_use` or `stop_reason=end_turn`), NOT raw
+assistant-message lines in the jsonl. Parallel tool_use blocks within
+one model response count as one turn. The `Complete analysis by turn
+~M` rule is satisfied when the agent's M-th model invocation has
+completed.
 
 ## Foreground Dispatch
 

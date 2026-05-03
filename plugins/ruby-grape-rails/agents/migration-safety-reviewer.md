@@ -20,7 +20,7 @@ Check database migrations for:
 4. **Rollback safety** - can the migration be safely rolled back?
 5. **Data migration in schema migrations** - anti-pattern
 
-## CRITICAL: Save Findings File First
+## Findings File Is Primary Output
 
 Your calling skill body reads findings from the exact file path given in the prompt
 (e.g., `.claude/reviews/migration-safety-reviewer/{review-slug}-{datesuffix}.md`). The file IS the real

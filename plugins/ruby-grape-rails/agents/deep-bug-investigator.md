@@ -29,7 +29,7 @@ skills:
 - `psql` queries
 - `redis-cli` inspection
 
-## CRITICAL: Save Findings File First
+## Findings File Is Primary Output
 
 Your calling skill body reads findings from the exact file path given in the
 prompt (e.g.,

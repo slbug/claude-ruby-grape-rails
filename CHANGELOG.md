@@ -7,6 +7,64 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.6] - 2026-05-03
+
+### Added
+
+- `inject-rules.sh` payload now emits a `See:` line per preference
+  and per Iron Law that has `reference_files` set. 15 paths total
+  injected into `SessionStart` (main) + `SubagentStart` (subagent)
+  contexts (9 Iron Laws + 6 preferences) so agents can open the
+  companion docs via `${CLAUDE_PLUGIN_ROOT}/<path>` without
+  guessing the root.
+- Turn-budget rule on `rails-architect.md` (deadline 30) and
+  `ruby-runtime-advisor.md` (deadline 26) for parity with the 10
+  reviewer agents already covered.
+- "Turn Budget Semantics" section in
+  `.claude/rules/agent-development.md` clarifying that "turn" =
+  model invocation (`stop_reason` set), NOT raw assistant-message
+  jsonl line.
+- `lab/eval/tests/test_runtime_scripts.py` `InjectRulesTests`:
+  pinned 3 preferences `See:` line assertions (`context7-usage.md`,
+  `epistemic-posture.md`, `tool-batching.md`) with
+  `${CLAUDE_PLUGIN_ROOT}` prefix.
+
+### Changed
+
+- `plugins/ruby-grape-rails/references/research/` renamed to
+  `references/preferences/` — contents (`context7-usage.md`,
+  `epistemic-posture.md`, `tool-batching.md`) are 1:1 preference
+  companion docs, never research output. `preferences.yml`
+  `reference_files` paths + cross-references in CLAUDE.md,
+  `.claude/rules/agent-development.md`,
+  `.github/copilot-instructions.md`,
+  `.github/instructions/plugin-review.instructions.md` updated.
+- Reviewer-agent header `## CRITICAL: Save Findings File First`
+  renamed to `## Findings File Is Primary Output` across all 12
+  agents (10 reviewers + `rails-architect` +
+  `ruby-runtime-advisor`). Old header implied "first action"; body
+  says "complete analysis BY turn ~M, then Write" — mismatch
+  resolved.
+- `iron-laws.yml` `version` 1.1.0 → 1.2.0. Per-law
+  `reference_files` entries audited per existence on disk; 9 paths
+  corrected to point at real `skills/<name>/references/<doc>.md`
+  files (Laws 3, 4, 5, 8, 9, 10, 13, 18, 21); 13 entries pointing
+  at non-existent files removed (Laws 1, 2, 6, 7, 11, 12, 14, 15,
+  16, 17, 19, 20, 22). Schema field remains optional for future
+  expansion.
+- `preferences.yml` `version` 1.2.0 → 1.3.0; `reference_files`
+  paths now plugin-root-relative (`references/preferences/...`).
+- Generator (`scripts/generate-iron-law-content.rb`) emits
+  `${CLAUDE_PLUGIN_ROOT}/<r>` for each `reference_files` entry
+  (paths in YAML are plugin-root-relative).
+
+### Fixed
+
+- Direct `references/research/tool-batching.md` references in
+  `agents/call-tracer.md` + `skills/review/references/review-playbook.md`
+  removed — injection delivers the path via the `See:` line;
+  restating it in agent / skill bodies is duplication.
+
 ## [1.16.5] - 2026-05-03
 
 ### Added
@@ -2412,7 +2470,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.5...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.6...HEAD
+[1.16.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.5...v1.16.6
 [1.16.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.4...v1.16.5
 [1.16.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.3...v1.16.4
 [1.16.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.2...v1.16.3

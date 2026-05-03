@@ -197,13 +197,14 @@ is not part of the PR.
   datesuffix) for review consolidated artifacts → drift defect. Schema
   change without matching `bin/manifest-update` `SKILL_CONVENTIONS`
   update → silent contract break.
-- **`plugins/ruby-grape-rails/references/research/tool-batching.md`**
-  edited → verify links from `.claude/rules/agent-development.md` §
-  "Bash Discipline" and
-  `plugins/ruby-grape-rails/skills/review/references/review-playbook.md`
-  § "Diff strategy" still resolve. Tool-batching preference rule itself
-  lives in `references/preferences.yml`; rule edits trigger preferences
-  regeneration as above.
+- **`plugins/ruby-grape-rails/references/preferences/tool-batching.md`**
+  edited → verify link from `.claude/rules/agent-development.md` §
+  "Bash Discipline" still resolves. The path is also injected into
+  every subagent + main session via `inject-rules.sh` `See:` line
+  derived from `preferences.yml` `reference_files`. Tool-batching
+  preference rule itself lives in `references/preferences.yml`; rule
+  edits trigger preferences regeneration as above. Direct references
+  in shipped agent or skill bodies are forbidden — rely on injection.
 
 ### How to surface drift findings
 
