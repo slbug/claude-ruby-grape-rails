@@ -16,8 +16,8 @@
 #   detector_id: which programmatic detector checks this (null if behavioral only)
 #   reference_files: markdown files with detailed examples
 
-version: "1.0.0"
-last_updated: "2026-04-10"
+version: "1.1.0"
+last_updated: "2026-05-03"
 total_laws: 22
 
 categories:

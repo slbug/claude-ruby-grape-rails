@@ -10,7 +10,7 @@ set -o pipefail
 # leaves the receiver without injected context — fail-open by
 # design, no guardrail semantics.
 # GENERATED FROM iron-laws.yml + preferences.yml — DO NOT EDIT
-# Source versions: iron-laws=1.0.0 preferences=1.1.0
+# Source versions: iron-laws=1.1.0 preferences=1.1.0
 
 # End-user opt-out: skip injection entirely. Useful when the plugin
 # is installed at user scope but the active project is not Ruby/Rails/

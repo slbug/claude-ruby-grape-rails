@@ -66,7 +66,7 @@ spaces, slashes, or other characters with hard exit.
   "agents": {
     "ruby-reviewer": {
       "path": "/abs/repo/.claude/reviews/ruby-reviewer/feat-add-passport-20260502-153000.md",
-      "status": "complete"
+      "status": "artifact"
     },
     "iron-law-judge": {
       "path": "/abs/repo/.claude/reviews/iron-law-judge/feat-add-passport-20260502-153000.md",
