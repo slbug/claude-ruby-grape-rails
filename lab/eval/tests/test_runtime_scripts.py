@@ -4869,13 +4869,14 @@ class InjectRulesTests(unittest.TestCase):
         spec = body["hookSpecificOutput"]
         self.assertEqual(spec["hookEventName"], expected_event)
         ctx = spec["additionalContext"]
-        self.assertIn("Iron Laws (NON-NEGOTIABLE)", ctx)
+        # Pin generated header counts so a stale count regression fails CI
+        self.assertIn("Iron Laws (NON-NEGOTIABLE) — 22 Total", ctx)
+        self.assertIn("Advisory Preferences — 6 Total", ctx)
         self.assertIn("Iron Law 1:", ctx)
         self.assertIn("Iron Law 12:", ctx)
         # Pin Iron Law 12 Ruby-scoped wording (was "No Eval", now "No Ruby Eval")
         self.assertIn("NO Ruby `eval`", ctx)
         self.assertIn("Iron Law 22:", ctx)
-        self.assertIn("Advisory Preferences", ctx)
         # Pin each preference's distinguishing phrase to catch generation drift
         self.assertIn("Context7 MCP", ctx)
         self.assertIn("CHALLENGE false user premises", ctx)

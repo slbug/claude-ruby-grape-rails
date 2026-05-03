@@ -39,7 +39,7 @@ words.
 
 **Turn budget rules:**
 
-1. One `Write` per artifact path. Final turn only.
+1. One `Write` per artifact path.
 2. Cap reproduce + evidence-gathering at ~20 turns. `Write` by
    turn ~30.
 3. Stop when root cause is established.

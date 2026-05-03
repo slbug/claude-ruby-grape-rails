@@ -33,8 +33,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `deployment-validator` 12/18, `migration-safety-reviewer` 12/18,
   `sidekiq-specialist` 12/18.
 - Tool-name prose ("Read/Grep analysis") removed from agent bodies
-  per `agent-development.md` "Bash Discipline" rule. Replaced with
-  semantic descriptions ("file inspection + pattern search").
+  per `agent-development.md` "Bash Discipline" rule.
 - `review/SKILL.md`, `plan/SKILL.md`, `brainstorm/SKILL.md`: replaced
   ambiguous "Patch each agent's recovery `status`" with explicit
   "Patch each agent's `status` field with its recovery-state value
