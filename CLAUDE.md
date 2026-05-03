@@ -76,6 +76,26 @@ claude-ruby-grape-rails/
 
 ## Conventions
 
+### Audience: Agents, Not Humans
+
+ALL prose docs in this repo (except README.md, CHANGELOG.md, and
+executable code under `scripts/` / `lab/eval/`) load into some
+agent's context at runtime: shipped plugin docs into Claude
+sub-/main-sessions; `.claude/rules/` + `.claude/skills/` into
+contributor-session Claude; `.github/copilot-instructions.md` +
+`.github/instructions/*` into Copilot. Write imperative
+instructions, not explanatory guides.
+
+Rules for all agent-readable docs:
+
+- No tutorial-style narration ("first do X, then Y, this teaches…")
+- No reasoning preludes — state the action
+- No `#` thinking/checklist lines inside Bash command bodies
+  (preference #6)
+- Use markdown tables for option/command lists
+- Use semantic verbs; avoid step-by-step explanations of obvious
+  mechanics
+
 ### Agents
 
 See `.claude/rules/agent-development.md` (auto-loads when editing agent files).

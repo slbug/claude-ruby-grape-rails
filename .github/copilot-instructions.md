@@ -4,6 +4,25 @@ This is a **Claude Code plugin** for Ruby/Rails/Grape development, not a Ruby
 application. Do not suggest Ruby app patterns (controllers, models, routes) for
 plugin files.
 
+## Audience: Agents, Not Humans
+
+ALL prose in this repo (except `README.md`, `CHANGELOG.md`, and
+executable code under `scripts/` / `lab/eval/`) loads into some
+agent's context at runtime: shipped plugin docs into Claude
+sub-/main-sessions; `.claude/rules/` + `.claude/skills/` into
+contributor-session Claude; `.github/copilot-instructions.md` +
+`.github/instructions/*` into Copilot. Authoring rule:
+
+- Write imperative instructions, not explanatory guides
+- No tutorial narration ("first do X, then Y, this teaches…")
+- No reasoning preludes — state the action
+- No `#` thinking/checklist lines inside Bash command bodies
+  (preference #6); use markdown tables / prose around bash blocks
+  to label commands instead
+- Use markdown tables for option/command lists
+
+When reviewing PRs, flag prose that violates this rule.
+
 ## Architecture
 
 The plugin ships specialist agents, skills, hooks, and eval tooling:
