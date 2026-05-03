@@ -23,15 +23,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Agent turn-budget rules rewritten as imperatives — single `Write`
-  on final turn (subagents cannot overwrite); cap analysis;
-  stop when stable. Per-agent caps scaled at 50%/75% of
-  `maxTurns`: `data-integrity-reviewer` 30/45,
-  `testing-reviewer` 30/45, `ruby-reviewer` 20/30,
-  `iron-law-judge` 20/30, `deep-bug-investigator` 20/30,
-  `security-analyzer` 18/26, `verification-runner` 18/26,
-  `deployment-validator` 12/18, `migration-safety-reviewer` 12/18,
-  `sidekiq-specialist` 12/18.
+- Agent turn-budget rules rewritten as imperatives — complete
+  analysis by ~75% of `maxTurns`, single `Write`, then summary
+  (subagents cannot overwrite). Per-agent analysis deadlines:
+  `data-integrity-reviewer` 45, `testing-reviewer` 45,
+  `ruby-reviewer` 30, `iron-law-judge` 30,
+  `deep-bug-investigator` 30, `security-analyzer` 26,
+  `verification-runner` 26, `deployment-validator` 18,
+  `migration-safety-reviewer` 18, `sidekiq-specialist` 18.
 - Tool-name prose ("Read/Grep analysis") removed from agent bodies
   per `agent-development.md` "Bash Discipline" rule.
 - `review/SKILL.md`, `plan/SKILL.md`, `brainstorm/SKILL.md`: replaced

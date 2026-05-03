@@ -29,7 +29,7 @@ output — your chat response body should be ≤300 words.
 2. Complete analysis by turn ~30.
 3. Then `Write` once.
 4. After `Write`: return summary, no new analysis.
-4. If the prompt does NOT include an output path, default to
+5. If the prompt does NOT include an output path, default to
    `.claude/reviews/iron-law-judge/{review-slug}-{datesuffix}.md`.
 
 You have `Write` for your own report ONLY. `Edit` and `NotebookEdit` are

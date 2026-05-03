@@ -43,7 +43,7 @@ words.
 2. Complete reproduce + evidence-gathering by turn ~30.
 3. Then `Write` once.
 4. After `Write`: return summary, no new evidence-gathering.
-4. If the prompt does NOT include an output path, default to
+5. If the prompt does NOT include an output path, default to
    `.claude/investigations/deep-bug-investigator/{slug}-{datesuffix}.md`.
 
 You have `Write` for your own report ONLY. `Edit` and `NotebookEdit`
