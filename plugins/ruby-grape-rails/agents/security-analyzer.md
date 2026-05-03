@@ -4,7 +4,7 @@ description: Reviews Ruby/Rails/Grape changes for authorization gaps, SQL safety
 disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: opus
 effort: high
-maxTurns: 25
+maxTurns: 35
 omitClaudeMd: true
 skills:
   - security

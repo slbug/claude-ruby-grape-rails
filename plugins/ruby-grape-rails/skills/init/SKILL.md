@@ -181,6 +181,14 @@ does not match nested artifact paths.
 Tell the user: `Run /update-config to add the recommended Write
 permission allowlist for plugin artifact namespaces.`
 
+## Recommended Claude Code env vars
+
+Tell the user to set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in their
+shell environment. Required for spawn-fanout skills (`/rb:review`,
+`/rb:plan`, `/rb:brainstorm`, `/rb:investigate`) to resume agents that
+paused at their `maxTurns` cap. Without it, paused agents become
+coverage gaps with no recovery path.
+
 ## CLAUDE.md sizing
 
 Keep root `CLAUDE.md` under ~200 lines. Heavy repo-level context inflates

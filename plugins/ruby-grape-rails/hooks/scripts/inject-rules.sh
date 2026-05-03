@@ -71,7 +71,7 @@ Preference: PREFER Context7 MCP (`mcp__*context7*__query-docs` / `resolve-librar
 Preference: CHALLENGE false user premises before executing. If request contradicts repo evidence, surface the conflict before proceeding.
 Preference: AVOID unsupported agreement, apology cascades, and hedge chains. Acknowledge mistakes once, continue. Direct language for HIGH-confidence findings.
 Preference: PREFER positive success targets over prohibition chains in task instructions and success criteria.
-Preference: PREFER batched tool calls (`git diff` / `grep` / gem inspection) by path group over per-item loops. Exclude high-noise paths via pathspec. Use Read/Grep/Glob over `cat`/`find -exec`. Avoid multi-line bash that loops or dumps large output into context. Per-file allowed when the file is the unit of investigation.
+Preference: ALWAYS use the `Grep` tool over shell `grep`/`rg`/`ag`, the `Glob` tool over `find`/`ls`, and `Read` over `cat`/`head`/`tail`. Batch `git diff`/`git log`/gem inspection by path group, never per-item loops. Exclude high-noise paths (cassettes, fixtures, lockfiles) via pathspec. Per-file allowed when the file is the unit of investigation.
 RULES_BODY_EOF
 )
 

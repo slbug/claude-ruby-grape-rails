@@ -208,6 +208,12 @@ Per-shell environment toggles (no `settings.json` edit required):
 Set per-shell, per-command, or via [direnv](https://direnv.net/) `.envrc`
 for project-scoped values.
 
+### Recommended Claude Code env vars
+
+| Env var | Effect |
+|---------|--------|
+| `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | `=1` enables the `SendMessage` tool. Required for spawn-fanout skills (`/rb:review`, `/rb:plan`, `/rb:brainstorm`, `/rb:investigate`) to resume agents that paused at their `maxTurns` cap. Without it, paused agents become coverage gaps with no recovery path. |
+
 ## Getting Started
 
 New to the plugin? Run the interactive tutorial:

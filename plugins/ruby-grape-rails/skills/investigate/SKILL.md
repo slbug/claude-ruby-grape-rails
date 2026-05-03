@@ -44,4 +44,8 @@ pass an explicit output path in the prompt
 the agent writes its findings to that file and returns a ≤300-word chat
 summary. Read the file for the full report.
 
+If the agent's return text matches the pause signature in
+`${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`, follow that protocol
+to resume the agent before treating the artifact as missing.
+
 See also: `${CLAUDE_SKILL_DIR}/references/discipline.md`

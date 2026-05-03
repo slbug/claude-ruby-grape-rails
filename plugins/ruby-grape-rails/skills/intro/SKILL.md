@@ -45,6 +45,9 @@ This is a security restriction — plugin agents follow your session permission 
 2. Run `/update-config` to apply the recommended Write allowlist without hand-editing
 3. Run `/rb:permissions` to generate a narrower project allowlist from recent usage
 4. Use `--plugin-dir` for local development while iterating on the plugin itself
+5. Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in your shell. Enables
+   `SendMessage` so spawn-fanout skills can resume agents that paused
+   at `maxTurns`. Without it, paused agents become coverage gaps.
 
 See CLAUDE.md "Conventions → Agents" section for details.
 

@@ -4,7 +4,7 @@ description: Runs the strongest available Ruby/Rails/Grape verification stack, p
 disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: haiku
 effort: low
-maxTurns: 20
+maxTurns: 35
 omitClaudeMd: true
 skills:
   - testing

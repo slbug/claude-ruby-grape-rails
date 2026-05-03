@@ -4,7 +4,7 @@ description: Advises on Ruby runtime, threading, connection-pool, and background
 disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
-maxTurns: 25
+maxTurns: 35
 omitClaudeMd: true
 skills:
   - ruby-idioms

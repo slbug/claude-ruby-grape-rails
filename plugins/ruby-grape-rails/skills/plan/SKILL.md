@@ -311,7 +311,15 @@ Every research Agent() call must:
 
 ## Artifact Recovery
 
-For each manifest entry, stat the expected path:
+For each manifest entry:
+
+1. **CHECK pause signature first** per
+   `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`. If matched,
+   apply that protocol (resume via `SendMessage` if available, else
+   mark `stub-no-output`). The state machine below applies ONLY after
+   the resume attempt resolves or is skipped.
+
+2. **STAT the expected path.** Apply the state machine:
 
 - Exists, `size_bytes >= 1000` → trust. Do NOT overwrite.
 - Exists, `size_bytes < 1000`, return text substantially larger AND
