@@ -17,7 +17,7 @@ Interactive introduction to the Ruby/Rails/Grape plugin for new users.
 
 ## What You Get
 
-- **20 specialist agents**: ActiveRecord, Hotwire, security, Sidekiq, provenance experts
+- **19 specialist agents**: ActiveRecord, Hotwire, security, Sidekiq, provenance experts
 - **53 skills**: Commands for every phase of development
 - **22 Iron Laws**: Non-negotiable rules enforced automatically
 - **Auto-loaded references**: Context-aware docs loaded when editing relevant files
@@ -31,9 +31,23 @@ This is a security restriction — plugin agents follow your session permission 
 
 **Workarounds:**
 
-1. Add permissions to your project's `.claude/settings.json` for the commands agents need, such as `Bash(bundle *)`, `Bash(rails *)`, `Bash(rake *)`, `Read(*)`, `Grep(*)`, and `Glob(*)`
-2. Run `/rb:permissions` to generate a narrower project allowlist from recent usage
-3. Use `--plugin-dir` for local development while iterating on the plugin itself
+1. Add permissions to your project's `.claude/settings.json`:
+   - Command rules: `Bash(bundle *)`, `Bash(rails *)`, `Bash(rake *)`,
+     `Bash(mkdir -p **/.claude/**)`,
+     `Bash(*/bin/manifest-update *)`,
+     `Read(*)`, `Grep(*)`, `Glob(*)`
+   - Recursive Write rules for plugin artifact namespaces:
+     `Write(**/.claude/plans/**)`, `Write(**/.claude/reviews/**)`,
+     `Write(**/.claude/audit/**)`, `Write(**/.claude/research/**)`,
+     `Write(**/.claude/solutions/**)`,
+     `Write(**/.claude/skill-metrics/**)`,
+     `Write(**/.claude/investigations/**)`
+2. Run `/update-config` to apply the recommended Write allowlist without hand-editing
+3. Run `/rb:permissions` to generate a narrower project allowlist from recent usage
+4. Use `--plugin-dir` for local development while iterating on the plugin itself
+5. Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in your shell. Enables
+   `SendMessage` so spawn-fanout skills can resume agents that paused
+   at `maxTurns`. Without it, paused agents become coverage gaps.
 
 See CLAUDE.md "Conventions → Agents" section for details.
 

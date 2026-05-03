@@ -16,8 +16,8 @@
 #   detector_id: which programmatic detector checks this (null if behavioral only)
 #   reference_files: markdown files with detailed examples
 
-version: "1.0.0"
-last_updated: "2026-04-10"
+version: "1.1.0"
+last_updated: "2026-05-03"
 total_laws: 22
 
 categories:
@@ -197,14 +197,14 @@ laws:
   # Security (4 laws)
   - id: 12
     category: security
-    title: "No Eval"
-    rule: "NO eval with user input — code injection vulnerability"
-    rationale: "eval executes arbitrary code; user input in eval is remote code execution"
+    title: "No Ruby Eval"
+    rule: "NO Ruby `eval`/`instance_eval`/`class_eval` with user input — code injection vulnerability. Shell `eval` of trusted helper output is out of scope."
+    rationale: "Ruby `eval` executes arbitrary code; user input is remote code execution. Scope: Ruby `*.rb`. Shell `eval` of trusted helper output has different semantics, out of scope."
     severity: critical
     applies_to: ["*.rb"]
-    summary_text: "Never use eval with user input"
-    init_text: "NO eval with user input — code injection vulnerability"
-    subagent_text: "Iron Law 12: NO eval with user input — code injection vulnerability"
+    summary_text: "Never use Ruby eval with user input"
+    init_text: "NO Ruby `eval`/`instance_eval`/`class_eval` with user input — code injection vulnerability"
+    subagent_text: "Iron Law 12: NO Ruby `eval`/`instance_eval`/`class_eval` with user input — code injection vulnerability. Shell `eval` of trusted helper output is out of scope."
     detector_id: null
     reference_files: ["security/code-injection.md"]
 

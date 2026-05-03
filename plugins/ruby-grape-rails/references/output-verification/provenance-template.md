@@ -8,7 +8,7 @@ Preferred paths:
   - `.claude/research/{topic-slug}.provenance.md`
   - `.claude/plans/{slug}/research/{topic-slug}.provenance.md`
 - review:
-  - `.claude/reviews/{review-slug}.provenance.md`
+  - `.claude/reviews/{review-slug}-{datesuffix}.provenance.md`
 
 ```markdown
 ---

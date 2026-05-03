@@ -20,6 +20,21 @@ skills/{name}/
 - No `triggers:` field — use `description` for auto-loading
 - Description <= 1,536 characters (combined `description` + `when_to_use` truncates at 1,536; front-load key use case)
 - For plugin-wide executables in `bin/`, use explicit `${CLAUDE_PLUGIN_ROOT}/bin/<cmd>` when the skill also references `${CLAUDE_SKILL_DIR}` (bare names can be conflated with skill-local files)
+- Artifact paths: use `${REPO_ROOT}/.claude/...` only in imperative
+  spawn / write steps where main session constructs the absolute path
+  passed to subagents. Use relative `.claude/...` in contract docs,
+  templates, user-facing references describing where artifacts live.
+- Spawn-fanout skills: use run manifest at
+  `.claude/{namespace}/RUN-CURRENT.json` (where `{namespace}` already
+  includes the per-skill slug fragment, e.g. `reviews/{review-slug}`,
+  `plans/{plan-slug}/research-fanout`). Per-run artifact paths use
+  `{slug}-{datesuffix}.md` (review) or stable `{topic-slug}.md`
+  (plan/brainstorm). See
+  `plugins/ruby-grape-rails/references/run-manifest.md` for schema,
+  staleness rules, and write protocol.
+- Agent dispatch: foreground only. Skill bodies MUST NOT pass
+  `run_in_background: true` on any `Agent(...)` call. Parallel = many
+  Agent tool calls in a single message, NOT the background flag.
 
 ## Colon Naming
 

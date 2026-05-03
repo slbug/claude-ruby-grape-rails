@@ -54,12 +54,12 @@ workers.
 
 | State | Driver | Inputs | Outputs |
 |---|---|---|---|
-| INITIALIZING | skill body | `$ARGUMENTS` | `PLAN_DIR/{research,summaries,scratchpad.md}`, initial `progress.md` |
+| INITIALIZING | skill body | `$ARGUMENTS` | `PLAN_DIR/{research,scratchpad.md}`, initial `progress.md` |
 | DISCOVERING | `/rb:brainstorm` (optional) | feature description | `PLAN_DIR/interview.md` |
 | PLANNING | `/rb:plan` | `.claude/ACTIVE_PLAN` (pre-bound) | `PLAN_DIR/plan.md` |
 | WORKING | `/rb:work` | `${PLAN_DIR}/plan.md` (explicit path) | updated checkboxes; marker cleared |
 | VERIFYING | `/rb:verify --full` | current branch state | verification report |
-| REVIEWING | `/rb:review` | git diff | `.claude/reviews/{review-slug}.md` |
+| REVIEWING | `/rb:review` | git diff | `.claude/reviews/{review-slug}-{datesuffix}.md` |
 | COMPOUNDING | `/rb:compound ${PLAN_DIR}/plan.md` | plan path | `.claude/solutions/{category}/{fix}.md` |
 | COMPLETED | skill body | all phases passed | final `progress.md` State write |
 | HALTED_REVIEW_CRITICAL | skill body | `Critical: > 0` parsed | halt cycle; user decides next |
@@ -103,7 +103,7 @@ Bash example:
 SLUG=$(printf '%s' "$FEATURE_DESCRIPTION" | tr '[:upper:] ' '[:lower:]-' | tr -cd '[:alnum:]-' | tr -s '-')
 PLAN_DIR=".claude/plans/${SLUG}"
 
-mkdir -p "${PLAN_DIR}/research" "${PLAN_DIR}/summaries"
+mkdir -p "${PLAN_DIR}/research"
 : > "${PLAN_DIR}/scratchpad.md"
 
 # Write initial progress.md (see Initial Progress Schema below)
@@ -122,7 +122,7 @@ EOF
 
 ## Critical-Review Gate
 
-After /rb:review writes .claude/reviews/{review-slug}.md, /rb:full
+After /rb:review writes .claude/reviews/{review-slug}-{datesuffix}.md, /rb:full
 parses the consolidated review's `## Summary` block:
 
 ```text
@@ -184,7 +184,7 @@ else
 fi
 
 # 2. Create namespace
-mkdir -p "${PLAN_DIR}/research" "${PLAN_DIR}/summaries"
+mkdir -p "${PLAN_DIR}/research"
 : > "${PLAN_DIR}/scratchpad.md"
 
 # 3. Write initial progress.md (see Initial Progress Schema)
@@ -221,20 +221,13 @@ Each phase transition appends to `## Phase History`:
 
 ## State Writer
 
-To update the State field after each phase:
+Main-session only. `/rb:full` skill body owns every State write.
 
-```bash
-# Idempotent State update (preserves rest of progress.md)
-sed -i.bak -E "s/^- \*\*State\*\*: .+$/- **State**: ${NEW_STATE}/" "${PLAN_DIR}/progress.md"
-rm -f "${PLAN_DIR}/progress.md.bak"
-
-# Append transition entry
-printf '\n- %s: %s → %s (%s)\n' "$(date -Iseconds)" "${OLD_STATE}" "${NEW_STATE}" "${NOTE}" \
-  >> "${PLAN_DIR}/progress.md"
-```
-
-Use `Edit` tool with exact `**State**: <old>` → `**State**: <new>`
-match in plugin-shipped agent contexts where `sed -i` is unavailable.
+- Use Edit tool. Match `- **State**: <OLD_STATE>`. Replace with
+  `- **State**: <NEW_STATE>`.
+- Use Edit tool again to append transition entry at end:
+  `- <ISO-8601-timestamp>: <OLD_STATE> → <NEW_STATE> (<note>)`.
+- NEVER use raw shell (`sed -i`, `rm`, `>>`, `>`).
 
 ## Verification Gate
 
@@ -282,8 +275,8 @@ A `/rb:full` cycle is COMPLETED when ALL of:
 | `${PLAN_DIR}/progress.md` | State machine ledger; updated every transition |
 | `${PLAN_DIR}/scratchpad.md` | Decisions / hypotheses / blockers (durable workflow memory) |
 | `${PLAN_DIR}/plan.md` | source of truth for WORKING phase |
-| `${PLAN_DIR}/summaries/consolidated.md` | research compression output (PLANNING phase) |
-| `.claude/reviews/{review-slug}.md` | REVIEWING-phase consolidated artifact |
+| `${PLAN_DIR}/research/{topic}.md` | per-agent research artifacts (PLANNING phase) |
+| `.claude/reviews/{review-slug}-{datesuffix}.md` | REVIEWING-phase consolidated artifact |
 | `.claude/solutions/{category}/{fix}.md` | COMPOUNDING-phase capture |
 | `plan-stop-reminder.sh` hook | reads `**State**:` line; skips reminder during autonomous run |
 | `precompact-rules.sh` hook | reads marker for compaction context |

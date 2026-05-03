@@ -66,7 +66,7 @@ Review found {actual count} blockers ({actual count} warnings):
 
 How would you like to proceed?
 
-- `/rb:triage .claude/reviews/{review-slug}.md` — Select findings and create a fix plan
+- `/rb:triage .claude/reviews/{review-slug}-{datesuffix}.md` — Select findings and create a fix plan
   (best for complex or architectural issues)
 - `/rb:work` — Fix directly
   (best for simple, isolated fixes)

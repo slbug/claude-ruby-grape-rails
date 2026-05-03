@@ -113,15 +113,17 @@ is clearly relevant:
 - log reuse decisions in `.claude/plans/{slug}/scratchpad.md` under
   `## Decisions` → `### Research Cache Reuse` as
   `REUSED: {filename} -> skipped {agent}`
-- after fresh research completes, main session spawns context-supervisor
-  as a leaf compression call: `Agent(context-supervisor)` reads explicit
-  research/ paths + reused-cache paths logged in scratchpad.md, writes
-  `.claude/plans/{slug}/summaries/consolidated.md`. Synthesis happens in
-  main session from the consolidated summary.
+- after fresh research completes, read each research artifact +
+  reused-cache files and synthesize the plan directly
 
 Spawn only what the request needs:
 
-### Core Research Agents
+### Common Research Agents
+
+Quick reference. Canonical matrix (selection rules + conditional
+specialists like `ruby-runtime-advisor`, `web-researcher`) lives in
+`${CLAUDE_SKILL_DIR}/references/planning-workflow.md` § "Agent
+Selection Matrix" + "Spawning Strategy".
 
 - `rails-patterns-analyst` - Rails conventions and patterns
 - `active-record-schema-designer` - Database schema and AR patterns
@@ -130,6 +132,8 @@ Spawn only what the request needs:
 - `ruby-gem-researcher` - Gem evaluation and alternatives
 - `call-tracer` - Code flow analysis and dependency tracing
 - `rails-architect` - High-level architecture decisions
+- `ruby-runtime-advisor` - Performance, memory, hot paths
+- `web-researcher` - Unfamiliar libraries / community patterns
 
 ### Research Checklist
 
@@ -169,7 +173,7 @@ When planning Hotwire features, sketch the wireframe:
 4. **Idempotency**: Can this operation run multiple times safely?
 5. **Rollback Strategy**: How to undo if something goes wrong?
 
-## Ruby Planning Laws
+## Iron Laws
 
 1. Never auto-start `/rb:work` after writing the plan.
 2. Prefer the existing stack before adding a gem.
@@ -256,53 +260,100 @@ references:
 
 ## Main-Session Fanout
 
-`/rb:plan` spawns research agents directly from the main session in
-parallel. Specialists are leaf workers — they research, write artifact,
-return summary.
+Specialists are leaf workers: research, write artifact, return summary.
 
-Steps in skill-body execution order:
+1. Create plan namespace (if not pre-bound) + scratchpad.
+2. Check compound docs + research cache. Skip duplicates.
+3. Select research topics per matrix in
+   `${CLAUDE_SKILL_DIR}/references/planning-workflow.md`. Topic slug
+   becomes the manifest entry key + research filename stem.
+4. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run --skill=rb:plan
+   --slug="$PLAN_SLUG" --agents=<csv-of-topic-slugs>`. No
+   `--base-ref` (TTL-only staleness). Captures stdout as `$MANIFEST`.
+5. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn "$MANIFEST"`.
+6. Patch each entry `status: in-flight` via stdin `patch`.
+7. Spawn all agents in ONE parallel block. Read paths via
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update spawn-paths "$MANIFEST"`.
+   Pass absolute path verbatim in spawn prompt.
+8. Wait for all agents to complete.
+9. Apply Artifact Recovery (see below). Patch each entry's recovery
+   `status` into the manifest.
+10. Read each verified artifact + any reused cached files logged in
+    scratchpad.md `## Decisions` → `### Research Cache Reuse`.
+11. Read consolidated path via
+    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
+    Synthesize `plan.md` at that path.
+12. Patch manifest `status: complete`.
 
-1. main session creates plan namespace (if not pre-bound) + scratchpad
-2. main session checks compound docs + research cache (skip duplicates)
-3. main session selects research agents per matrix in
-   `${CLAUDE_SKILL_DIR}/references/planning-workflow.md`
-4. main session spawns ALL selected agents in ONE parallel block
-   (rails-patterns-analyst always; conditional agents per request type)
-5. main session waits for ALL agents to complete
-6. main session reads each agent's output file from research/
-7. main session builds explicit input manifest:
-   - `.claude/plans/{slug}/research/{topic}.md` (per-agent research files)
-   - any reused cached files logged under `## Decisions` →
-     `### Research Cache Reuse` in scratchpad.md
-8. main session spawns context-supervisor with manifest;
-   output: `.claude/plans/{slug}/summaries/consolidated.md`
-9. main session synthesizes plan.md from consolidated summary
-
-### Worker Briefing Requirements
+## Worker Briefing
 
 Every research Agent() call must:
 
-- write detailed output to `.claude/plans/{slug}/research/{topic-slug}.md`
-- return only a 500-word summary (not full content) for context budget
-- run with `run_in_background: true` for parallelism
-- be focused — scope each prompt to specific files/patterns/questions
-- NEVER call Agent() — research agents are leafs
+- use the absolute artifact path passed in the spawn prompt verbatim
+- return a ≤500-word summary in Agent return text
+- run in parallel via multiple Agent calls in one response (do NOT
+  use `run_in_background: true`)
+- be scoped to specific files/patterns/questions
+- NEVER call Agent() — leaf agents
 
-For full selection matrix, briefing templates, and routing hints, see:
-`${CLAUDE_SKILL_DIR}/references/planning-workflow.md`
+## Artifact Path Rules
 
-For the canonical plan.md template + section requirements, see
+- Helper computes absolute paths from `--skill=rb:plan` + `--slug` +
+  `--agents`. Path convention: `.claude/plans/{plan-slug}/research/{topic-slug}.md`
+  (research files keyed by topic slug, no datesuffix — research is
+  iterative across days; `prepare-respawn` rotates prior files to
+  `.stale-<ts>.md` siblings).
+- Skill body reads paths via `manifest-update spawn-paths "$MANIFEST"`.
+- Pass each path verbatim in the spawn prompt.
+- Agents use the exact path received. No filename invention.
+
+## Artifact Recovery
+
+For each manifest entry:
+
+1. **CHECK pause signature first** per
+   `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`. If matched,
+   apply that protocol (resume via `SendMessage` if available, else
+   mark `stub-no-output`). The state machine below applies ONLY after
+   the resume attempt resolves or is skipped.
+
+2. **STAT the expected path.** Apply the state machine:
+
+- Exists, `size_bytes >= 1000` → trust. Do NOT overwrite.
+- Exists, `size_bytes < 1000`, return text substantially larger AND
+  parses as findings → replace stub (`stub-replaced`).
+- Exists, `size_bytes < 1000`, return text empty/unusable → keep
+  stub, treat as coverage gap (`stub-no-output`).
+- Missing, return text usable → extract from return text and write.
+- Missing, return text empty/unusable → write a stub with heading
+  `# {topic-slug} — recovery stub` and body `Run produced no
+  artifact and no usable return text. Research coverage gap.`
+
+NEVER copy or symlink prior-run artifacts to the current-run path.
+Decide from filesystem; ignore Agent return-text denial claims.
+Never re-spawn.
+
+For selection matrix, briefing templates, and routing hints, see
+`${CLAUDE_SKILL_DIR}/references/planning-workflow.md`.
+
+For manifest schema + helper subcommands, see
+`${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
+
+For canonical plan.md template, see
 `${CLAUDE_SKILL_DIR}/references/planning-workflow.md` § "Plan Template".
 
 ## Output
 
-Write the plan to `.claude/plans/{slug}/plan.md`.
+Write the plan to the path read via
+`${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`
+(resolves to `.claude/plans/{plan-slug}/plan.md` per skill convention).
 
 Create the planning namespace at the start of planning, not only at
 plan-write time:
 
 - `.claude/plans/{slug}/research/`
-- `.claude/plans/{slug}/summaries/`
 - `.claude/plans/{slug}/scratchpad.md`
 
 Use the scratchpad to capture clarification answers, infrastructure

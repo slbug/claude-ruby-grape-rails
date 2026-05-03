@@ -1,7 +1,7 @@
 # Iron Laws Canonical Registry
 
-**Version**: 1.0.0
-**Last Updated**: 2026-04-10
+**Version**: 1.1.0
+**Last Updated**: 2026-05-03
 **Total Laws**: 22
 
 <!-- This file is a generated projection of iron-laws.yml — DO NOT EDIT DIRECTLY -->
@@ -50,8 +50,8 @@ For programmatic use, see [iron-laws.yml](../../../references/iron-laws.yml).
 
 ### Security (4 laws)
 
-12. **No Eval** — NO eval with user input — code injection vulnerability
-   *eval executes arbitrary code; user input in eval is remote code execution*
+12. **No Ruby Eval** — NO Ruby `eval`/`instance_eval`/`class_eval` with user input — code injection vulnerability. Shell `eval` of trusted helper output is out of scope.
+   *Ruby `eval` executes arbitrary code; user input is remote code execution. Scope: Ruby `*.rb`. Shell `eval` of trusted helper output has different semantics, out of scope.*
 
 13. **Explicit Authorization** — AUTHORIZE in EVERY controller action — do not trust before_action alone
    *before_action can be skipped; explicit authorization is harder to bypass*

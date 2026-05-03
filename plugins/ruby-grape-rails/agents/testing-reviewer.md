@@ -4,7 +4,7 @@ description: Reviews Ruby/Rails/Grape test code for spec quality, fixture/factor
 disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: sonnet
 effort: medium
-maxTurns: 25
+maxTurns: 60
 omitClaudeMd: true
 skills:
   - testing

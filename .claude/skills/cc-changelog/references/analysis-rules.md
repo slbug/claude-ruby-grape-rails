@@ -20,7 +20,7 @@ When analyzing CC changelog entries, map them to specific plugin components:
 
 | CC Change Pattern | Plugin Files to Check |
 |-------------------|-----------------------|
-| New frontmatter fields | All 20 agents in `plugins/ruby-grape-rails/agents/*.md` |
+| New frontmatter fields | All 19 agents in `plugins/ruby-grape-rails/agents/*.md` |
 | `model:` value changes | Agents using specific model values |
 | `effort:` level changes | All agents with effort levels |
 | `tools:` / `disallowedTools:` | Review agents (read-only enforcement) |
@@ -59,6 +59,8 @@ When analyzing CC changelog entries, map them to specific plugin components:
 | New tools added | Agent `tools:` / `disallowedTools:` lists |
 | Tool deprecation | Agent tool references, skill instructions |
 | `SendMessage` / `TaskCreate` / etc. | Skill bodies using these tools |
+| Atomic file write / `rename(2)` semantics | `plugins/ruby-grape-rails/bin/manifest-update` (atomic write helper, `SKILL_CONVENTIONS`, `ALLOWED_PATH_RE`) |
+| Subagent Write to existing file | `plugins/ruby-grape-rails/bin/manifest-update`, `references/run-manifest.md` (per-run unique path strategy) |
 
 ### Compaction and Memory
 

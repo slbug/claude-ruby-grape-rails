@@ -114,13 +114,33 @@ Present Decision Point.
 
 See `references/research-integration.md` for the full pattern.
 
-**First cycle: MAX 2 agents.** Spawn both in ONE Tool Use block with
-`run_in_background: true`:
+**First cycle: MAX 2 agents.** Topic slugs: `codebase-scan`,
+`web-research`.
 
-1. **`rails-patterns-analyst`**: "How does this codebase handle {topics}?"
-   Writes findings to `.claude/plans/{slug}/research/codebase-scan.md`
-2. **`web-researcher`**: "Ruby/Rails approaches to {topics}"
-   Returns summary
+1. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run --skill=rb:brainstorm
+   --slug="$PLAN_SLUG" --agents=codebase-scan,web-research`. Captures
+   stdout as `$MANIFEST`.
+2. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn "$MANIFEST"`.
+3. Patch each entry `status: in-flight` via stdin `patch`.
+4. Read paths via `manifest-update spawn-paths "$MANIFEST"`.
+5. Spawn both via two Agent tool calls in ONE Tool Use block
+   (foreground parallel, NOT `run_in_background: true`):
+   - **`rails-patterns-analyst`** for `codebase-scan` topic:
+     "How does this codebase handle {topics}?"
+   - **`web-researcher`** for `web-research` topic:
+     "Ruby/Rails approaches to {topics}".
+   Pass each absolute path verbatim in the spawn prompt.
+6. **CHECK pause signature first** per
+   `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`. If matched,
+   apply that protocol (resume via `SendMessage` if available, else
+   mark `stub-no-output`) BEFORE Artifact Recovery.
+7. Apply Artifact Recovery and patch each entry's recovery `status`.
+8. Patch manifest `status: complete` after evaluation.
+
+Schema + helper subcommands:
+`${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
 
 **Evaluate** (in main context):
 

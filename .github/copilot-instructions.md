@@ -28,7 +28,16 @@ The plugin ships specialist agents, skills, hooks, and eval tooling:
   users review and share), `provenance-scan` (Ruby, end-user provenance-
   sidecar auditor — walks `.claude/{research,reviews,audit,plans/*}` and
   classifies each `*.provenance.md` via the 4-state algorithm; writes a
-  dated Markdown report; surfaced via `/rb:provenance-scan`).
+  dated Markdown report; surfaced via `/rb:provenance-scan`),
+  `manifest-update` (Ruby, atomic JSON manifest writer for spawn-fanout
+  RUN-CURRENT.json files — `prepare-run` (structured args:
+  `--skill --slug --agents [--base-ref]`; helper computes path /
+  datesuffix / agent paths / consolidated path / git pins),
+  `field` (dotted-key field extraction), `spawn-paths` (tab-separated
+  agent slug + absolute path per line), `init` / `patch` / `prepare-respawn` /
+  `archive` / `resume-check` / `status` subcommands; path-allowlist
+  gate, symlink refusal, fsync + POSIX rename; main session calls
+  this instead of improvising `mv` / `cp` / `jq -i` / `rm`).
 - **Plugin-owned Ruby library** (`plugins/ruby-grape-rails/lib/*.rb`):
   end-user runtime modules required by `bin/` CLIs and hook scripts.
   Ruby ≥ 3.4. Stdlib only (no Bundler gems). PyYAML is contributor-only;
@@ -99,7 +108,7 @@ even when the unmodified file is not part of the PR.
   `plugins/ruby-grape-rails/skills/intro/SKILL.md` and
   `plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md`
   (count claims), `README.md` (Agent Hierarchy diagram + agents table +
-  count claims), `CLAUDE.md` (Context Supervisor section + count),
+  count claims), `CLAUDE.md` (count + structure tree),
   `.github/instructions/plugin-review.instructions.md`,
   `.claude/skills/cc-changelog/references/analysis-rules.md`
   (analysis assumptions).
@@ -172,6 +181,32 @@ even when the unmodified file is not part of the PR.
   comment without updating the test is a drift defect; removing it
   without restoring an equivalent guard is a determinism-policy
   regression.
+- **`plugins/ruby-grape-rails/references/run-manifest.md`** edited →
+  also check `plugins/ruby-grape-rails/bin/manifest-update`
+  (encodes the schema in `SKILL_CONVENTIONS` + `ALLOWED_PATH_RE`),
+  `plugins/ruby-grape-rails/skills/review/SKILL.md`,
+  `plugins/ruby-grape-rails/skills/review/references/review-playbook.md`,
+  `plugins/ruby-grape-rails/skills/review/references/review-template.md`,
+  `plugins/ruby-grape-rails/skills/plan/SKILL.md`,
+  `plugins/ruby-grape-rails/skills/plan/references/planning-workflow.md`,
+  `plugins/ruby-grape-rails/skills/brainstorm/SKILL.md`,
+  `README.md` (How Review Works section + Artifact Layout),
+  `CLAUDE.md` (Artifact Directories), `.claude/rules/skill-development.md`,
+  `.claude/rules/agent-development.md`. Manifest schema, staleness
+  rules, atomic-write protocol, and per-skill conventions must stay
+  aligned across these surfaces. Per-run artifact paths use
+  `{slug}-{datesuffix}.md` (review) or stable `{topic-slug}.md`
+  (plan/brainstorm); a shipped reference to `{slug}.md` (without
+  datesuffix) for review consolidated artifacts is a drift defect.
+  A schema change without matching `bin/manifest-update`
+  `SKILL_CONVENTIONS` update is a silent contract break.
+- **`plugins/ruby-grape-rails/references/research/tool-batching.md`**
+  edited → verify links from `.claude/rules/agent-development.md` §
+  "Bash Discipline" and
+  `plugins/ruby-grape-rails/skills/review/references/review-playbook.md`
+  § "Diff strategy" still resolve. The tool-batching preference rule
+  itself lives in `references/preferences.yml`; rule edits trigger
+  preferences regeneration as documented above.
 
 ### How to surface drift findings
 

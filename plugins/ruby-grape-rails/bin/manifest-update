@@ -1,0 +1,615 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# manifest-update — atomic JSON manifest writer for spawn-fanout run
+# manifests (.claude/<namespace>/<slug>/RUN-CURRENT.json).
+#
+# Policy: fail closed. Any path outside the allowed pattern, any
+# invalid JSON, any IO error → exit non-zero BEFORE touching the
+# target file. The atomic-write primitive (mktemp + fsync + rename +
+# dir fsync) lives here in tested Ruby so main-session shell never
+# improvises `mv` / `cp` commands against arbitrary paths.
+#
+# Subcommands:
+#   init    <path> <json>   Create manifest at <path> with JSON literal.
+#                           Fails if file exists.
+#   patch   <path>          Deep-merge JSON read from stdin into existing
+#                           manifest. Auto-stamps updated_at (UTC ISO8601).
+#   archive <path>          Append current manifest as one line to the
+#                           RUN-HISTORY.jsonl sibling, then unlink
+#                           RUN-CURRENT.json.
+#   status  <path>          Print one-line summary. Read-only.
+
+require 'fileutils'
+require 'json'
+require 'optparse'
+require 'shellwords'
+require 'time'
+require_relative '../lib/path_safety'
+require_relative '../lib/repo_root'
+
+ALLOWED_PATH_RE = %r{/\.claude/.+/RUN-CURRENT\.json\z}
+
+def die(msg)
+  warn "manifest-update: #{msg}"
+  exit 1
+end
+
+def containment_root
+  # Reuse canonical resolution from RubyGrapeRails::RepoRoot (.git → .claude
+  # settings → git toplevel → Gemfile → start_dir). Same precedence as
+  # bin/extract-permissions and bin/detect-stack. Use realpath so
+  # containment comparison matches even on macOS where /tmp resolves to
+  # /private/tmp.
+  RubyGrapeRails::RepoRoot.canonical(RubyGrapeRails::RepoRoot.find(Dir.pwd))
+end
+
+# Atomic lstat-based predicates (single syscall; matches
+# extract-permissions / verify_compression patterns elsewhere in the plugin).
+def regular_non_symlink_file?(path)
+  stat = File.lstat(path)
+  stat.file? && !stat.symlink?
+rescue Errno::ENOENT, Errno::ENOTDIR
+  false
+end
+
+def directory_non_symlink?(path)
+  stat = File.lstat(path)
+  stat.directory? && !stat.symlink?
+rescue Errno::ENOENT, Errno::ENOTDIR
+  false
+end
+
+def lstat_kind(path)
+  st = File.lstat(path)
+  return 'symlink' if st.symlink?
+  return 'directory' if st.directory?
+  return 'regular file' if st.file?
+  return 'fifo' if st.pipe?
+  return 'socket' if st.socket?
+  return 'character device' if st.chardev?
+  return 'block device' if st.blockdev?
+
+  'unknown'
+rescue Errno::ENOENT, Errno::ENOTDIR
+  'absent'
+end
+
+def validate_path(path)
+  abs = File.expand_path(path)
+  die "path must end at .claude/<ns>/<slug>/RUN-CURRENT.json: #{path}" unless abs =~ ALLOWED_PATH_RE
+  root = containment_root
+  begin
+    RubyGrapeRails::PathSafety.reject_symlink_ancestors!(abs, stop_at: root)
+  rescue RubyGrapeRails::PathSafety::SymlinkAncestorError => e
+    die "ancestor check failed: #{e.message}"
+  end
+  kind = lstat_kind(abs)
+  die "target is a #{kind}, refusing (must be absent or regular file): #{abs}" \
+    if !%w[absent].include?(kind) && !regular_non_symlink_file?(abs)
+  parent = File.dirname(abs)
+  parent_kind = lstat_kind(parent)
+  die "parent is a #{parent_kind}, refusing: #{parent}" if parent_kind != 'absent' && !directory_non_symlink?(parent)
+  die "path outside containment root (#{root}): #{abs}" unless RubyGrapeRails::PathSafety.path_within_root?(abs, root)
+  abs
+end
+
+def read_json(path)
+  JSON.parse(File.read(path))
+rescue Errno::ENOENT
+  die "manifest does not exist: #{path}"
+rescue JSON::ParserError => e
+  die "manifest is not valid JSON: #{path} (#{e.message})"
+end
+
+def deep_merge(base, patch)
+  return patch unless base.is_a?(Hash) && patch.is_a?(Hash)
+
+  base.merge(patch) do |_, a, b|
+    a.is_a?(Hash) && b.is_a?(Hash) ? deep_merge(a, b) : b
+  end
+end
+
+def fsync_dir(dir)
+  fd = IO.sysopen(dir, IO::RDONLY)
+  io = IO.new(fd)
+  begin
+    io.fsync
+  ensure
+    io.close
+  end
+rescue StandardError
+  # Best-effort; some filesystems / kernels do not support directory fsync.
+end
+
+def atomic_write(path, content)
+  dir = File.dirname(path)
+  FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
+  tmp = "#{path}.tmp.#{Process.pid}.#{Time.now.to_f}"
+  begin
+    File.open(tmp, File::WRONLY | File::CREAT | File::EXCL, 0o644) do |f|
+      f.write(content)
+      f.fsync
+    end
+    File.rename(tmp, path)
+    fsync_dir(dir)
+    tmp = nil
+  ensure
+    File.unlink(tmp) if tmp && File.exist?(tmp)
+  end
+end
+
+def cmd_init(path, json_arg)
+  abs = validate_path(path)
+  die "manifest already exists: #{abs}" if File.exist?(abs)
+  begin
+    data = JSON.parse(json_arg)
+  rescue JSON::ParserError => e
+    die "init JSON invalid: #{e.message}"
+  end
+  die 'init JSON must be a JSON object' unless data.is_a?(Hash)
+  now = Time.now.utc.iso8601
+  data['started_at'] ||= now
+  data['updated_at'] = now
+  atomic_write(abs, JSON.pretty_generate(data) + "\n")
+  puts "init: #{abs}"
+end
+
+def cmd_patch(path)
+  abs = validate_path(path)
+  current = read_json(abs)
+  raw = $stdin.read
+  die 'patch JSON empty (stdin)' if raw.strip.empty?
+  begin
+    patch = JSON.parse(raw)
+  rescue JSON::ParserError => e
+    die "patch JSON invalid: #{e.message}"
+  end
+  die 'patch JSON must be a JSON object' unless patch.is_a?(Hash)
+  merged = deep_merge(current, patch)
+  merged['updated_at'] = Time.now.utc.iso8601
+  atomic_write(abs, JSON.pretty_generate(merged) + "\n")
+  puts "patch: #{abs}"
+end
+
+def cmd_archive(path)
+  abs = validate_path(path)
+  current = read_json(abs)
+  history_path = File.join(File.dirname(abs), 'RUN-HISTORY.jsonl')
+  die "history path is a symlink: #{history_path}" if File.symlink?(history_path)
+  File.open(history_path, File::WRONLY | File::APPEND | File::CREAT, 0o644) do |f|
+    f.write(JSON.generate(current) + "\n")
+    f.fsync
+  end
+  File.unlink(abs)
+  puts "archive: #{abs} -> #{history_path}"
+end
+
+def cmd_status(path)
+  abs = validate_path(path)
+  data = read_json(abs)
+  agents = data['agents'].is_a?(Hash) ? data['agents'].size : 0
+  puts "slug=#{data['slug']} datesuffix=#{data['datesuffix']} " \
+       "status=#{data['status']} updated_at=#{data['updated_at']} agents=#{agents}"
+end
+
+# Per-skill default TTL in hours.
+TTL_DEFAULTS = {
+  'rb:review' => 24,
+  'rb:plan' => 168,
+  'rb:brainstorm' => 168
+}.freeze
+TTL_FALLBACK = 24
+
+# Skills that pin HEAD / base / branch (review = snapshot semantics).
+SKILLS_WITH_GIT_PINS = %w[rb:review].freeze
+
+def parse_resume_args(args)
+  opts = {}
+  parser = OptionParser.new do |o|
+    o.banner = 'Usage: manifest-update resume-check <manifest> [options]'
+    o.on('--head=SHA', String, 'Override auto-detected git HEAD') { |v| opts[:head] = v }
+    o.on('--base=SHA', String, 'Base commit SHA (review only)')   { |v| opts[:base] = v }
+    o.on('--branch=NAME', String, 'Override auto-detected branch') { |v| opts[:branch] = v }
+    o.on('--ttl-hours=N', Integer, 'Override per-skill TTL default') { |v| opts[:ttl_hours] = v }
+  end
+  parser.parse!(args.dup)
+  opts
+rescue OptionParser::ParseError => e
+  die "resume-check: #{e.message}"
+end
+
+def git_head
+  out = `git rev-parse HEAD 2>/dev/null`.strip
+  out.empty? ? nil : out
+end
+
+def git_branch
+  out = `git rev-parse --abbrev-ref HEAD 2>/dev/null`.strip
+  out.empty? ? nil : out
+end
+
+def cmd_resume_check(path, args)
+  abs = validate_path(path)
+  unless File.exist?(abs)
+    puts 'absent'
+    return
+  end
+
+  data = read_json(abs)
+  opts = parse_resume_args(args)
+  skill = data['skill'].to_s
+  default_ttl = TTL_DEFAULTS[skill] || TTL_FALLBACK
+  ttl_hours = opts[:ttl_hours] || Integer(ENV['RUN_MANIFEST_TTL_HOURS'] || default_ttl)
+  ttl_seconds = ttl_hours * 3600
+
+  reasons = []
+
+  updated_at = data['updated_at']
+  age_seconds =
+    begin
+      Time.now.to_i - Time.parse(updated_at).to_i
+    rescue StandardError
+      ttl_seconds + 1 # treat unparseable timestamp as stale
+    end
+  reasons << "age=#{age_seconds}s>ttl=#{ttl_seconds}s" if age_seconds > ttl_seconds
+
+  if SKILLS_WITH_GIT_PINS.include?(skill)
+    head = opts[:head] || git_head
+    branch = opts[:branch] || git_branch
+    if head && data['branch_head_sha'] && head != data['branch_head_sha']
+      reasons << "head-drift(manifest=#{data['branch_head_sha']},current=#{head})"
+    end
+    if opts[:base] && data['base_sha'] && opts[:base] != data['base_sha']
+      reasons << "base-drift(manifest=#{data['base_sha']},current=#{opts[:base]})"
+    end
+    if branch && data['branch'] && branch != data['branch']
+      reasons << "branch-switch(manifest=#{data['branch']},current=#{branch})"
+    end
+  end
+
+  if reasons.any?
+    warn "resume-check stale: #{reasons.join(', ')}"
+    puts 'stale'
+    return
+  end
+
+  case data['status']
+  when 'complete'  then puts 'fresh-complete'
+  when 'in-flight' then puts 'fresh-in-flight'
+  else                  puts "fresh-#{data['status']}"
+  end
+end
+
+def archive_existing(abs)
+  return unless File.exist?(abs)
+
+  current = read_json(abs)
+  history_path = File.join(File.dirname(abs), 'RUN-HISTORY.jsonl')
+  die "history path is a symlink: #{history_path}" if File.symlink?(history_path)
+  File.open(history_path, File::WRONLY | File::APPEND | File::CREAT, 0o644) do |f|
+    f.write(JSON.generate(current) + "\n")
+    f.fsync
+  end
+  File.unlink(abs)
+end
+
+# Per-skill conventions: namespace, agent path, consolidated path.
+# All path lambdas receive (repo_root, slug, datesuffix, agent_slug?) and
+# return absolute paths. Helper computes everything internally; skill
+# bodies pass only --skill, --slug, --agents (and --base-ref for review).
+SKILL_CONVENTIONS = {
+  'rb:review' => {
+    namespace: ->(slug) { "reviews/#{slug}" },
+    agent_path: lambda do |repo_root, slug, datesuffix, agent_slug|
+      File.join(repo_root, '.claude', 'reviews', agent_slug,
+                "#{slug}-#{datesuffix}.md")
+    end,
+    consolidated_path: lambda do |repo_root, slug, datesuffix|
+      File.join(repo_root, '.claude', 'reviews', "#{slug}-#{datesuffix}.md")
+    end
+  },
+  'rb:plan' => {
+    namespace: ->(slug) { "plans/#{slug}/research-fanout" },
+    agent_path: lambda do |repo_root, slug, _datesuffix, agent_slug|
+      File.join(repo_root, '.claude', 'plans', slug, 'research',
+                "#{agent_slug}.md")
+    end,
+    consolidated_path: lambda do |repo_root, slug, _datesuffix|
+      File.join(repo_root, '.claude', 'plans', slug, 'plan.md')
+    end
+  },
+  'rb:brainstorm' => {
+    namespace: ->(slug) { "plans/#{slug}/brainstorm-fanout" },
+    agent_path: lambda do |repo_root, slug, _datesuffix, agent_slug|
+      File.join(repo_root, '.claude', 'plans', slug, 'research',
+                "#{agent_slug}.md")
+    end,
+    consolidated_path: lambda do |repo_root, slug, _datesuffix|
+      File.join(repo_root, '.claude', 'plans', slug, 'interview.md')
+    end
+  }
+}.freeze
+
+def parse_prepare_run_args(args)
+  opts = {}
+  parser = OptionParser.new do |o|
+    o.banner = 'Usage: manifest-update prepare-run [options]'
+    o.on('--skill=NAME', String, 'Skill identifier (rb:review|rb:plan|rb:brainstorm)') { |v| opts[:skill] = v }
+    o.on('--slug=SLUG', String, 'Run slug (review-slug or plan-slug)') { |v| opts[:slug] = v }
+    o.on('--agents=CSV', String, 'Comma-separated agent slugs') { |v| opts[:agents] = v }
+    o.on('--base-ref=REF', String, 'Base ref (review only; enables git pins)') { |v| opts[:base_ref] = v }
+  end
+  parser.parse!(args.dup)
+  opts
+rescue OptionParser::ParseError => e
+  die "prepare-run: #{e.message}"
+end
+
+def slug_pattern_check(slug, name)
+  die "#{name} invalid: must match [a-z0-9._-]+" unless slug =~ /\A[a-z0-9._-]+\z/
+end
+
+def cmd_prepare_run(args)
+  opts = parse_prepare_run_args(args)
+  skill = opts[:skill] || die('--skill required')
+  slug = opts[:slug] || die('--slug required')
+  agents_csv = opts[:agents] || die('--agents required (csv of agent slugs)')
+  conv = SKILL_CONVENTIONS[skill] || die("unknown skill: #{skill}")
+  slug_pattern_check(slug, '--slug')
+
+  agent_slugs = agents_csv.split(',').map(&:strip).reject(&:empty?)
+  die '--agents empty' if agent_slugs.empty?
+  agent_slugs.each { |a| slug_pattern_check(a, "agent slug '#{a}'") }
+
+  repo_root = RubyGrapeRails::RepoRoot.canonical(
+    RubyGrapeRails::RepoRoot.find(Dir.pwd)
+  )
+  datesuffix = Time.now.utc.strftime('%Y%m%d-%H%M%S')
+  namespace = conv[:namespace].call(slug)
+  manifest_path = File.join(repo_root, '.claude', namespace, 'RUN-CURRENT.json')
+
+  validate_path(manifest_path)
+  archive_existing(manifest_path)
+
+  agents_map = agent_slugs.each_with_object({}) do |agent_slug, h|
+    path = conv[:agent_path].call(repo_root, slug, datesuffix, agent_slug)
+    h[agent_slug] = { 'path' => path, 'status' => 'pending' }
+  end
+
+  data = {
+    'skill' => skill,
+    'slug' => slug,
+    'datesuffix' => datesuffix,
+    'status' => 'in-flight',
+    'agents' => agents_map,
+    'consolidated_path' => conv[:consolidated_path].call(repo_root, slug, datesuffix)
+  }
+
+  if opts[:base_ref]
+    data['base_ref'] = opts[:base_ref]
+    base_sha = `git merge-base HEAD #{opts[:base_ref].shellescape} 2>/dev/null`.strip
+    data['base_sha'] = base_sha unless base_sha.empty?
+    head = git_head
+    data['branch_head_sha'] = head if head
+    branch = git_branch
+    data['branch'] = branch if branch
+  end
+
+  now = Time.now.utc.iso8601
+  data['started_at'] = now
+  data['updated_at'] = now
+  atomic_write(manifest_path, JSON.pretty_generate(data) + "\n")
+
+  puts manifest_path
+end
+
+def cmd_field(path, key)
+  abs = validate_path(path)
+  data = read_json(abs)
+  value = key.split('.').inject(data) do |memo, k|
+    break nil unless memo.is_a?(Hash)
+
+    memo[k]
+  end
+  die "field not found: #{key}" if value.nil?
+  puts(value.is_a?(String) ? value : JSON.generate(value))
+end
+
+def cmd_spawn_paths(path)
+  abs = validate_path(path)
+  data = read_json(abs)
+  agents = data['agents']
+  die 'agents missing or invalid' unless agents.is_a?(Hash)
+
+  agents.each do |slug, info|
+    unless info.is_a?(Hash)
+      warn "manifest-update: spawn-paths skipping '#{slug}' — entry is not a Hash"
+      next
+    end
+
+    p = info['path']
+    unless p.is_a?(String) && !p.empty?
+      warn "manifest-update: spawn-paths skipping '#{slug}' — missing/empty path field"
+      next
+    end
+
+    puts "#{slug}\t#{p}"
+  end
+end
+
+# Refusal predicate: only rotate (rename-aside) files that are
+# (a) listed in the manifest's agents map AND match the canonical path
+#     computed from the manifest's skill/slug/datesuffix/agent_slug,
+# (b) under the repo containment root,
+# (c) reachable through no symlinked ancestor (lexical guard).
+# Existing files at the canonical path are renamed to a sibling
+# `<agent-slug>.stale-<rename-ts>.md` so the freshly-spawned agent can
+# Write at the canonical path. Prior contents are preserved as a
+# timestamped sibling — no `unlink`, no data loss.
+RESPAWNABLE_AGENT_STATES = %w[pending in-flight stub-no-output].freeze
+
+def cmd_prepare_respawn(path)
+  abs = validate_path(path)
+  data = read_json(abs)
+  skill = data['skill']
+  slug = data['slug']
+  datesuffix = data['datesuffix']
+  conv = SKILL_CONVENTIONS[skill]
+  unless conv && slug.is_a?(String) && datesuffix.is_a?(String)
+    die "manifest missing skill/slug/datesuffix or unknown skill: #{skill.inspect}"
+  end
+
+  agents = data['agents'].is_a?(Hash) ? data['agents'] : {}
+  manifest_dir = File.dirname(abs)
+  repo_root = manifest_dir.sub(%r{/\.claude/.+\z}, '')
+  containment = containment_root
+  rename_ts = Time.now.utc.strftime('%Y%m%d-%H%M%S-%6N')
+  rotated = []
+
+  agents.each do |agent_slug, info|
+    next unless info.is_a?(Hash)
+    next unless RESPAWNABLE_AGENT_STATES.include?(info['status'])
+
+    agent_path = info['path']
+    next unless agent_path.is_a?(String) && !agent_path.empty?
+
+    abs_agent = File.expand_path(
+      agent_path.start_with?('/') ? agent_path : File.join(repo_root, agent_path)
+    )
+
+    expected = File.expand_path(
+      conv[:agent_path].call(repo_root, slug, datesuffix, agent_slug)
+    )
+
+    abs_canon = RubyGrapeRails::PathSafety.canonical_existing_or_deepest(abs_agent)
+    expected_canon = RubyGrapeRails::PathSafety.canonical_existing_or_deepest(expected)
+
+    if abs_canon != expected_canon
+      warn "manifest-update: refusing #{abs_agent} for #{agent_slug} — " \
+           'does not match canonical path for this manifest'
+      next
+    end
+
+    unless abs_canon.start_with?(containment + '/')
+      warn "manifest-update: refusing #{abs_canon} for #{agent_slug} — " \
+           "outside containment root #{containment}"
+      next
+    end
+
+    begin
+      RubyGrapeRails::PathSafety.reject_symlink_ancestors!(abs_canon, stop_at: containment)
+    rescue RubyGrapeRails::PathSafety::SymlinkAncestorError => e
+      warn "manifest-update: refusing #{abs_canon} for #{agent_slug} — #{e.message}"
+      next
+    end
+
+    next if File.symlink?(abs_canon)
+    next unless File.exist?(abs_canon)
+
+    unless File.file?(abs_canon)
+      warn "manifest-update: refusing non-regular path #{abs_canon} for #{agent_slug}"
+      next
+    end
+
+    target = abs_canon.sub(/\.md\z/, ".stale-#{rename_ts}.md")
+    if File.exist?(target)
+      warn "manifest-update: rename target collision, skipping #{agent_slug}: #{target}"
+      next
+    end
+
+    File.rename(abs_canon, target)
+    rotated << "#{agent_slug}: #{abs_canon} -> #{target}"
+  end
+
+  puts "prepare-respawn: rotated=#{rotated.size}"
+  rotated.each { |entry| puts "  #{entry}" }
+end
+
+USAGE = <<~USAGE
+  Usage:
+    manifest-update prepare-run --skill=NAME --slug=SLUG --agents=A,B,C [--base-ref=REF]
+                                # archives any prior + inits fresh manifest from
+                                # structured args. Helper computes path / datesuffix /
+                                # agent paths / consolidated path / git pins.
+                                # Outputs absolute manifest path on stdout.
+    manifest-update init             <manifest-path> <initial-json>
+    manifest-update patch            <manifest-path>          # patch from stdin
+    manifest-update archive          <manifest-path>
+    manifest-update status           <manifest-path>
+    manifest-update prepare-respawn  <manifest-path>          # rotate existing files to .stale-<ts>.md
+    manifest-update field            <manifest-path> <key>    # extract field (dotted)
+    manifest-update spawn-paths      <manifest-path>          # tab-separated agent_slug<TAB>path
+    manifest-update resume-check     <manifest-path> [--head=SHA] [--base=SHA] [--branch=NAME] [--ttl-hours=N]
+                                                              # prints absent | stale | fresh-complete | fresh-in-flight
+USAGE
+
+cmd, *args = ARGV
+
+begin
+  case cmd
+  when 'init'
+    if args.size == 2
+      cmd_init(args[0], args[1])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'patch'
+    if args.size == 1
+      cmd_patch(args[0])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'archive'
+    if args.size == 1
+      cmd_archive(args[0])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'status'
+    if args.size == 1
+      cmd_status(args[0])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'prepare-respawn'
+    if args.size == 1
+      cmd_prepare_respawn(args[0])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'resume-check'
+    if args.size >= 1
+      cmd_resume_check(args[0], args[1..])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'prepare-run'
+    cmd_prepare_run(args)
+  when 'field'
+    if args.size == 2
+      cmd_field(args[0], args[1])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  when 'spawn-paths'
+    if args.size == 1
+      cmd_spawn_paths(args[0])
+    else
+      (warn USAGE
+       exit 2)
+    end
+  else
+    warn USAGE
+    exit 2
+  end
+rescue StandardError => e
+  die "#{e.class}: #{e.message}"
+end

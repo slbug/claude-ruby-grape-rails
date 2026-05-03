@@ -2,7 +2,7 @@
 
 **Claude Code is great. But it doesn't know that `default_scope` will bite you later, that `t.float` will corrupt your money fields, or that your Sidekiq job isn't idempotent.**
 
-This plugin does. It coordinates **20 specialist agents** and **53 skills** that plan, implement,
+This plugin does. It coordinates **19 specialist agents** and **53 skills** that plan, implement,
 review, and verify your Ruby/Rails/Grape code in parallel -- each with domain
 expertise, fresh context, and enforced [Iron Laws](#iron-laws-non-negotiable-rules)
 that catch the bugs your tests won't. It is now stack-aware enough to handle
@@ -48,7 +48,7 @@ checks.
 │  💎 Ruby/Rails/Grape Plugin for Claude Code                         │
 │                                                                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
-│  │    20    │    53    │   100+   │    14    │    22    │           │
+│  │    19    │    53    │   100+   │    14    │    22    │           │
 │  │  Agents  │  Skills  │   Refs   │  Events  │Iron Laws │           │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘           │
 │                                                                     │
@@ -82,11 +82,14 @@ checks.
 │                                    rails-contexts   sidekiq         │
 │                                    testing   deploy   runtime       │
 │                                                                     │
-│  Mechanical / Extraction (haiku) Hooks                              │
-│    context-supervisor              auto-format · ruby-syntax-check  │
-│    verification-runner             iron-law-verify · security-scan  │
-│    web-researcher                  debug-stmt-detect · error-critic │
-│                                    progress-tracking · db/prod/git  │
+│  Mechanical / Extraction (haiku)                                    │
+│    verification-runner                                              │
+│    web-researcher                                                   │
+│                                                                     │
+│  Hooks (plugin-wide, not tied to specific agents)                   │
+│    auto-format · ruby-syntax-check · iron-law-verify                │
+│    security-scan · debug-stmt-detect · error-critic                 │
+│    progress-tracking · db/prod/git                                  │
 │                                                                     │
 │  ───────────────────────────────────────────────────────────        │
 │  22 Iron Laws · Runtime Tooling · plan→work→verify→review→compound  │
@@ -163,17 +166,33 @@ rules for the tools they need.
           "Bash(bundle *)",
           "Bash(rails *)",
           "Bash(rake *)",
+          "Bash(mkdir -p **/.claude/**)",
+          "Bash(*/bin/manifest-update *)",
           "Grep(*)",
           "Read(*)",
-          "Glob(*)"
+          "Glob(*)",
+          "Write(**/.claude/plans/**)",
+          "Write(**/.claude/reviews/**)",
+          "Write(**/.claude/audit/**)",
+          "Write(**/.claude/research/**)",
+          "Write(**/.claude/solutions/**)",
+          "Write(**/.claude/skill-metrics/**)",
+          "Write(**/.claude/investigations/**)"
        ]
      }
    }
    ```
 
+   Recursive `**/.claude/<ns>/**` globs are required: plugin skills
+   write artifacts under nested per-agent subdirs (e.g.,
+   `.claude/reviews/{agent-slug}/{slug}-{datesuffix}.md`). Shallow
+   `Write(.claude/<ns>/*)` globs do not match.
+
 2. Run `/rb:permissions` to scan recent prompts and propose safer
    `settings.json` allowlists instead of growing them blindly
-3. Use `--plugin-dir` for local development while iterating on the plugin itself
+3. Run `/update-config` to add the recommended Write rules above to
+   `settings.json` without hand-editing
+4. Use `--plugin-dir` for local development while iterating on the plugin itself
 
 ## Configuration
 
@@ -188,6 +207,12 @@ Per-shell environment toggles (no `settings.json` edit required):
 
 Set per-shell, per-command, or via [direnv](https://direnv.net/) `.envrc`
 for project-scoped values.
+
+### Recommended Claude Code env vars
+
+| Env var | Effect |
+|---------|--------|
+| `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | `=1` enables the `SendMessage` tool. Required for spawn-fanout skills (`/rb:review`, `/rb:plan`, `/rb:brainstorm`, `/rb:investigate`) to resume agents that paused at their `maxTurns` cap. Without it, paused agents become coverage gaps with no recovery path. |
 
 ## Getting Started
 
@@ -288,7 +313,6 @@ Every plan gets its own directory with its implementation-state artifacts:
 ├── plans/{slug}/          # Everything for ONE plan
 │   ├── plan.md            # The plan itself (checkboxes = state)
 │   ├── research/          # Research agent output
-│   ├── summaries/         # Compressed multi-agent output
 │   ├── progress.md        # Session progress log
 │   └── scratchpad.md      # Structured dead ends, decisions, hypotheses, handoffs
 ├── research/              # Reusable cross-plan topic research
@@ -302,10 +326,10 @@ Implementation state stays under one plan namespace; review artifacts stay consi
 
 ### Agent Hierarchy
 
-The plugin uses 20 leaf agents organized by responsibility. Skill bodies
+The plugin uses 19 leaf agents organized by responsibility. Skill bodies
 (main session) spawn agents in parallel. Models vary by risk: `opus` for
 security-critical (1 agent), `sonnet` for judgment-heavy specialists
-(16 agents), `haiku` for mechanical extraction/compression (3 agents).
+(16 agents), `haiku` for mechanical extraction (2 agents).
 
 ```
                 ┌──────────────────────────────────────┐
@@ -341,8 +365,7 @@ security-critical (1 agent), `sonnet` for judgment-heavy specialists
 └──────────────┘  └──────────────┘  └──────────────┘  └──────────────────┘
 
        ┌─────────────────────────────────────────────┐
-       │  Mechanical / Extraction (haiku — 3)        │
-       │  context-supervisor — compression           │
+       │  Mechanical / Extraction (haiku — 2)        │
        │  verification-runner — verification         │
        │  web-researcher — web/source extraction     │
        │  Called from skill bodies as leaf workers.  │
@@ -351,45 +374,6 @@ security-critical (1 agent), `sonnet` for judgment-heavy specialists
 
 **Specialists** (mostly sonnet, security-analyzer opus) -- Domain experts, judgment-heavy tasks.
 **Mechanical / Extraction** (haiku) -- Compression, verification, web-research extraction (matches dashboard tier name).
-
-### The Context Supervisor Pattern
-
-When a skill body spawns 4-8 research agents, their combined output can exceed 50k tokens -- flooding the parent's context window. The **context-supervisor** solves this using a compression pattern:
-
-```
-┌────────────────────────────────────────────────────┐
-│  Skill body (main session, fanout coordinator)     │
-│  Only reads: summaries/consolidated.md             │
-└──────────────────┬─────────────────────────────────┘
-                   │ spawns AFTER workers finish
-┌──────────────────▼─────────────────────────────────┐
-│  context-supervisor (haiku, fresh 200k context)    │
-│  Reads: all worker output files                    │
-│  Applies: compression strategy based on size       │
-│  Validates: every input file represented           │
-│  Writes: summaries/consolidated.md                 │
-└──────────────────┬─────────────────────────────────┘
-                   │ reads from
-      ┌─────────────┼─────────────┐
-      ▼             ▼             ▼
-   worker 1      worker 2      worker N
-   research/     research/     research/
-   patterns.md   security.md   active-record.md
-```
-
-**How compression works:**
-
-| Total Output    | Strategy   | Compression | What's Kept                    |
-| --------------- | ---------- | ----------- | ------------------------------ |
-| Under 8k tokens | Index      | ~100%       | Full content with file list    |
-| 8k - 30k tokens | Compress   | ~40%        | Key findings, decisions, risks |
-| Over 30k tokens | Aggressive | ~20%        | Only critical items            |
-
-The supervisor also **deduplicates** -- if two agents flag the same issue
-(e.g., both the security analyzer and code reviewer find a missing
-authorization check), it merges them into one finding with both sources cited.
-
-**Used by:** `/rb:plan` skill body (research synthesis), `/rb:review` skill body (review deduplication).
 
 ### How Planning Works
 
@@ -409,11 +393,9 @@ When you run `/rb:plan Add real-time notifications`:
    │
 3. Each agent writes to `.claude/plans/{slug}/research/{topic}.md`
    │
-4. context-supervisor compresses all research into one summary
+4. Skill body reads each research artifact + synthesizes the plan
    │
-5. Skill body reads the summary + synthesizes the plan
-   │
-6. Output: `.claude/plans/{slug}/plan.md` with [P1-T1] checkboxes
+5. Output: `.claude/plans/{slug}/plan.md` with [P1-T1] checkboxes
 ```
 
 ### How Review Works
@@ -421,19 +403,26 @@ When you run `/rb:plan Add real-time notifications`:
 When you run `/rb:review`:
 
 ```
-1. `/rb:review` skill body collects your git diff from main session
+1. `/rb:review` skill body collects git diff + reviewer list
    │
-2. Spawns 4 EXISTING specialist agents in parallel:
+2. `manifest-update prepare-run --skill=rb:review --slug=<slug>
+    --base-ref=<ref> --agents=<csv>` archives any prior manifest +
+   inits a fresh `.claude/reviews/<slug>/RUN-CURRENT.json`
+   (helper computes datesuffix, agent paths, consolidated path,
+   git pins)
+   │
+3. Spawns 4 EXISTING specialist agents in parallel:
    ├── ruby-reviewer        → Idioms, patterns, error handling
    ├── security-analyzer    → SQL injection, XSS, auth gaps
    ├── testing-reviewer     → Test coverage, factory patterns
    └── verification-runner  → zeitwerk:check, format, test
    │
-3. Each reviewer writes to `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
+4. Each reviewer writes to `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md`
    │
-4. context-supervisor deduplicates + consolidates
+5. Skill body reads each artifact + dedupes + writes consolidated review
    │
-5. Output: `.claude/reviews/{review-slug}.md`
+6. Output: `.claude/reviews/{review-slug}-{datesuffix}.md`
+   Manifest: `.claude/reviews/{review-slug}/RUN-CURRENT.json` (status: complete)
 ```
 
 ## Usage Guide
@@ -585,7 +574,7 @@ The plugin enforces **22 Iron Laws** that prevent common, costly mistakes:
 |----------|-------|------|
 | Active Record | 7 | Use decimal for money, never float; Use parameterized queries, never SQL interpolation; Use includes/preload to prevent N+1 queries; In Active Record code, use after_commit when enqueueing jobs; Wrap multi-step operations in transactions; Never bypass validations in normal code; Never use default_scope |
 | Sidekiq | 4 | Jobs must be idempotent (safe to retry); Job args must be JSON-safe only; Never pass ORM objects to jobs — pass IDs; Always enqueue jobs after commit using the active ORM |
-| Security | 4 | Never use eval with user input; Authorize explicitly in every action; Never use html_safe/raw on untrusted content; Never concatenate SQL strings |
+| Security | 4 | Never use Ruby eval with user input; Authorize explicitly in every action; Never use html_safe/raw on untrusted content; Never concatenate SQL strings |
 | Ruby | 3 | Always pair method_missing with respond_to_missing?; Always supervise background processes; Only rescue StandardError, never Exception |
 | Hotwire/Turbo | 2 | Pre-compute all data before Turbo Stream broadcast; Use turbo_frame_tag for partial page updates |
 | Verification & Discipline | 2 | Always run tests and show results before claiming done; Only change what the user asked for — no drive-by improvements |
@@ -625,7 +614,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 
 | Command                  | Description                                                |
 | ------------------------ | ---------------------------------------------------------- |
-| `/rb:intro`              | Interactive plugin tutorial (6 sections, ~5 min)           |
+| `/rb:intro`              | Interactive plugin tutorial (8 sections, ~5 min)           |
 | `/rb:init`               | Initialize plugin in a project (auto-activation rules)     |
 | `/rb:quick <task>`       | Fast implementation, skip ceremony                         |
 | `/rb:investigate <bug>`  | Systematic bug debugging (4 parallel investigation tracks) |
@@ -650,14 +639,13 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | `/rb:audit`          | Full project health audit with 5 parallel agents  |
 | `/rb:challenge`      | Rigorous review mode ("grill me")                 |
 
-## Agents (20)
+## Agents (19)
 
 | Agent                             | Model  | Memory  | Role                                         |
 | --------------------------------- | ------ | ------- | -------------------------------------------- |
 | **deep-bug-investigator**         | sonnet | --      | 4-track structured bug investigation         |
 | **call-tracer**                   | sonnet | --      | Parallel call tree tracing                   |
 | **security-analyzer**             | opus   | --      | OWASP vulnerability scanning                 |
-| **context-supervisor**            | haiku  | --      | Multi-agent output compression               |
 | **verification-runner**           | haiku  | --      | zeitwerk:check, format, test                 |
 | **output-verifier**               | sonnet | --      | Provenance checks for research/review claims |
 | **iron-law-judge**                | sonnet | --      | Pattern-based Iron Law detection             |
@@ -734,7 +722,7 @@ This plugin draws inspiration from two excellent Claude Code plugin ecosystems:
 
 - **[Elixir/Phoenix Plugin](https://github.com/oliver-kriska/claude-elixir-phoenix)** by Oliver Kriska —
   The primary architectural inspiration. Adopted the agentic workflow philosophy, filesystem-as-state-machine pattern,
-  context supervisor compression, and the "Iron Laws" concept for non-negotiable rules.
+  and the "Iron Laws" concept for non-negotiable rules.
 
 - **[Compound Engineering Plugin](https://github.com/EveryInc/compound-engineering-plugin)** by Every Inc —
   Contributed ideas around parallel specialist review orchestration, structured investigation tracks, and solution compounding.

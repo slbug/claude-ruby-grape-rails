@@ -45,7 +45,7 @@ Each phase reads from the previous phase's output. Plans become checkboxes. Chec
 
 | Feature | What It Does |
 |---------|-------------|
-| 20 specialist agents | ActiveRecord, Hotwire, security, Sidekiq, deployment, provenance experts |
+| 19 specialist agents | ActiveRecord, Hotwire, security, Sidekiq, deployment, provenance experts |
 | 53 skills | Commands for every phase of development |
 | 22 Iron Laws | Non-negotiable rules enforced automatically |
 | Auto-loaded references | Context-aware docs loaded when you edit relevant files |
@@ -162,7 +162,7 @@ Iron Laws are non-negotiable rules that every agent enforces. If your code viola
 | Command | What It Does |
 |---------|-------------|
 | `/rb:verify` | Prefer project-native verify wrappers when present; otherwise run full direct verification (format, tests, and Rails-specific checks when applicable) |
-| `/rb:permissions` | Analyze recent permission prompts and suggest safer Claude settings entries |
+| `/rb:permissions` | Analyze permission prompts and suggest safe settings entries |
 | `/rb:audit` | 5-agent project health audit with scores |
 | `/rb:n1-check` | Detect N+1 query patterns |
 | `/rb:state-audit` | Audit Hotwire/Turbo stream state for memory |
@@ -198,7 +198,7 @@ The plugin uses **layered enforcement** — some things run automatically, some 
 
 | Hook | Trigger | What It Does |
 |------|---------|-------------|
-| Dangerous ops block | Before Bash command | Blocks destructive DB commands like `rails db:drop`, `bin/rails db:reset`, `bundle exec rails db:purge`, `rake db:drop`, `bin/rake db:reset`, and `bundle exec rake db:purge`, plus equivalent `bundle exec bin/...` and env-prefixed forms; also blocks `git push --force` and `RAILS_ENV=prod` |
+| Dangerous ops block | Before Bash command | Blocks destructive DB commands like `rails db:drop`, `bin/rails db:reset`, `bundle exec rails db:purge`, `rake db:drop`, `bin/rake db:reset`, and `bundle exec rake db:purge`, plus equivalent `bundle exec bin/...` and env-prefixed forms; also blocks `git push --force`, Redis flushes (`FLUSHDB` / `FLUSHALL` via `redis-cli`), and `RAILS_ENV=prod` |
 | Format check | Every `.rb` edit | Auto-fixes with StandardRB (if configured) or RuboCop |
 | Iron Law verifier | Every `.rb` edit | Scans code content for Iron Law violations with line numbers |
 | Debug stmt warning | Ruby-ish app file edits | Warns about `puts`/`debugger`/`p` in production code, excluding `spec/`, `test/`, and repo script directories |
@@ -269,15 +269,23 @@ If you're finding the plugin inconsistent, running `/rb:init` is the single bigg
 
 ### Layer 5: `/rb:review` + Iron Law Judge (On-Demand)
 
-The `iron-law-judge` agent does **pattern-based violation detection** — it uses Grep to search your changed files for known anti-patterns. But it only runs when you invoke `/rb:review`.
+The `iron-law-judge` agent does **pattern-based violation
+detection** — it scans your changed files for known anti-patterns.
+Runs only when you invoke `/rb:review`.
 
-What it catches with automated detection:
+What it catches with automated detection (regex patterns from
+`agents/iron-law-judge.md`):
 
-- `constantize` in lib code
-- `t.float :price` in migrations
-- `raw(@variable)` (XSS risk)
-- Database queries in Hotwire controller without proper guards
-- Missing `lock` in ActiveRecord query fragments
+- `t.float :price` / `t.float :amount` in migrations (Law 1)
+- SQL string interpolation: `where("id = #{id}")` (Laws 2/15)
+- `.html_safe` / `raw(...)` on untrusted content (Law 14)
+- `update_columns` / `save(validate: false)` in normal flows (Law 6)
+- `default_scope` in models (Law 7)
+- `perform_later(current_user)` — ORM objects in job args (Law 10)
+- `after_save :enqueue_*` (should be `after_commit`) (Laws 4/11)
+- `eval(...)` (Law 12)
+- `def method_missing` without `respond_to_missing?` (Law 16)
+- bare `rescue` / `rescue Exception` (Law 18)
 
 ### Layer 6: Planning Sets Structure Early
 

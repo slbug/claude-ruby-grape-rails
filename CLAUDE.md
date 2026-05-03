@@ -36,52 +36,40 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 | `/rb:brief` | Understanding | Plan file | Interactive walkthrough (ephemeral) |
 | `/rb:work` | Execution | Plan file | Updated checkboxes, `.claude/plans/{slug}/progress.md` |
 | `/rb:verify` | Verification | `[--quick\|--full]` (mode flag; resolves from current branch state, NOT plan path) | Verification results |
-| `/rb:review` | Quality | Changed files | `.claude/reviews/{review-slug}.md` + `.claude/reviews/{agent-slug}/...` |
+| `/rb:review` | Quality | Changed files | `.claude/reviews/{review-slug}-{datesuffix}.md` + `.claude/reviews/{agent-slug}/...` |
 | `/rb:compound` | Knowledge | Solved problem | `.claude/solutions/{category}/{fix}.md` |
 | `/rb:full` | All | Feature description | Complete cycle with compounding |
 
 ### Artifact Directories
 
-Each plan owns artifacts in `.claude/plans/{slug}/` (plan.md, research/,
-summaries/, progress.md, scratchpad.md). Other `.claude/` namespaces:
-`.claude/audit/` (reports + summaries), `.claude/reviews/`,
-`.claude/investigations/{agent}/{slug}-{datesuffix}.md`
-(e.g. `.claude/investigations/deep-bug-investigator/`),
-`.claude/skill-metrics/`, `.claude/solutions/{category}/`.
-
-### Context Supervisor Pattern
-
-After main-session fanout to specialist agents, the skill body invokes
-`context-supervisor` (haiku) as a leaf compression worker. Inputs are
-explicit current-run artifact paths (no broad globs). Output is a
-consolidated summary the skill body reads before final synthesis.
-
-Skills using this pattern: `/rb:plan` (compresses research/ →
-summaries/consolidated.md), `/rb:review` (consolidates per-reviewer
-artifacts → consolidated review).
+Plan: `.claude/plans/{slug}/` (plan.md, research/, progress.md,
+scratchpad.md). Review:
+`.claude/reviews/{review-slug}-{datesuffix}.md`,
+`.claude/reviews/{agent-slug}/...`, plus
+`.claude/reviews/{review-slug}/` (RUN-CURRENT.json + RUN-HISTORY.jsonl;
+see `references/run-manifest.md`). Other: `.claude/audit/`,
+`.claude/research/{topic-slug}.md`,
+`.claude/investigations/{agent}/{slug}-{datesuffix}.md`,
+`.claude/skill-metrics/`, `.claude/solutions/{category}/`,
+`.claude/provenance-scan/`.
 
 ## Structure
 
 ```
 claude-ruby-grape-rails/
-├── .claude-plugin/
-│   └── marketplace.json
+├── .claude-plugin/marketplace.json
 ├── .claude/                         # Contributor tooling (NOT distributed)
-│   ├── agents/
-│   ├── rules/                       # Auto-loaded context rules
-│   └── skills/
+│   ├── agents/   ├── rules/   └── skills/
 ├── scripts/
-├── plugins/
-│   └── ruby-grape-rails/
-│       ├── .claude-plugin/
-│       │   └── plugin.json
-│       ├── agents/                  # 20 specialist agents
-│       ├── bin/                     # Plugin executables (added to Bash tool PATH)
-│       ├── hooks/
-│       │   └── hooks.json
-│       └── skills/                  # 53 skills
-├── lab/
-│   └── eval/                        # Contributor-only deterministic eval tooling
+├── plugins/ruby-grape-rails/
+│   ├── .claude-plugin/plugin.json
+│   ├── agents/                      # 19 specialist agents
+│   ├── bin/                         # Plugin executables (added to Bash PATH)
+│   ├── hooks/hooks.json
+│   ├── lib/                         # Shared Ruby modules (stdlib only)
+│   ├── references/                  # Shipped reference docs
+│   └── skills/                      # 53 skills
+├── lab/eval/                        # Contributor-only deterministic eval tooling
 ├── CLAUDE.md
 └── README.md
 ```
@@ -104,7 +92,7 @@ Iron Laws are maintained in `plugins/ruby-grape-rails/references/iron-laws.yml`.
 When `iron-laws.yml` changes:
 
 ```bash
-bash scripts/generate-iron-law-outputs.sh
+bash scripts/generate-iron-law-outputs.sh all
 ```
 
 ### Workflow Skills

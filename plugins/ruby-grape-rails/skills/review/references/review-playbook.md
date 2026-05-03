@@ -137,18 +137,28 @@ file-type-specific checklists without bloating the main routing surface.
 
 ## Diff Collection
 
-`/rb:review` skill body uses these commands to resolve base ref and
-collect changed file list:
+`/rb:review` skill body resolves the base ref and captures the file
+list + stat ONCE. Reviewers own the diff strategy from there.
 
 ```bash
 eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"
 MERGE_BASE=$(git merge-base HEAD "$BASE_REF")
 CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$MERGE_BASE"...HEAD)
+DIFF_STAT=$(git diff --stat "$MERGE_BASE"...HEAD)
 ```
 
-Pass `$CHANGED_FILES` to every spawned reviewer Agent() call. Reviewers
-scope all reads/grep/analysis to this file list — they must NEVER scan
-unchanged files.
+Pass `$CHANGED_FILES`, `$BASE_REF`, `$MERGE_BASE`, and `$DIFF_STAT` to
+every spawned reviewer Agent() call. Reviewers scope all
+reads/grep/analysis to `$CHANGED_FILES` and NEVER scan unchanged files.
+
+### Diff strategy (reviewer-owned)
+
+Triage with `$DIFF_STAT` first to identify high-noise paths
+(cassettes, fixtures, schema dumps, lockfiles, generated files)
+before running any `git diff`.
+
+Examples + BAD/GOOD pairs:
+`${CLAUDE_PLUGIN_ROOT}/references/research/tool-batching.md`.
 
 ## Worker Briefing Template
 
@@ -159,13 +169,26 @@ includes this prompt template:
 Task: review {file list} for {scope}.
 
 Scope: $CHANGED_FILES (from main session diff collection)
-Base ref: $BASE_REF (from resolve-base-ref)
-Artifact path: .claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md
+Base ref: $BASE_REF
+Merge base: $MERGE_BASE
+Diff stat (preview):
+$DIFF_STAT
+
+Artifact path (ABSOLUTE, computed by manifest-update prepare-run —
+use exactly as given by the spawning skill body):
+  <absolute-path-read-from-manifest-update-spawn-paths>
+
+Diff strategy: triage with $DIFF_STAT first to skip high-noise paths
+(cassettes, fixtures, schema dumps, lockfiles, generated files)
+before running any git diff.
 
 Required output:
-1. Write artifact to the exact path above
-   (always — even if findings are empty, write PASS with files reviewed)
-2. Return summary in Agent return text (used as artifact-recovery fallback)
+1. Write artifact to the EXACT absolute path above.
+   - Do NOT invent, modify, or shorten the filename.
+   - Path always points at a non-existing target.
+2. Return summary in Agent return text (used as artifact-recovery fallback).
+   - Always write the artifact (even if findings are empty — write PASS
+     with files reviewed).
 
 Findings format:
 - file:line — Title
@@ -178,30 +201,67 @@ Stop after returning. Do NOT call Agent() — this is a leaf review.
 
 ## Artifact Recovery
 
-After all spawned reviewers complete, `/rb:review` skill body MUST verify
-each expected current-run artifact path exists:
+For each reviewer in the manifest, stat the expected path:
 
-1. For every reviewer in the spawn manifest, check
-   `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` exists.
-2. If missing, extract findings from the Agent return text and write
-   the artifact yourself from main session.
-3. Do NOT re-spawn the reviewer — the work is done; only the file write
-   failed (known CC platform behavior with Write permissions in
-   spawned agents).
-4. If the return text is empty/unusable, note the gap in the
-   consolidated review and continue.
+| State | Action | Manifest agent status |
+|---|---|---|
+| Exists, `size_bytes >= 1000` | Trust. Do NOT overwrite. | `artifact` |
+| Exists, `size_bytes < 1000`, return text substantially larger AND parses as findings (severity tags, `file:line` refs) | Replace stub with extracted findings. Add header `recovery: stub replaced from inline return`. | `stub-replaced` |
+| Exists, `size_bytes < 1000`, return text empty/unusable | Keep stub. Add header `recovery: stub kept — return text unusable`. Treat as coverage gap. | `stub-no-output` |
+| Missing, return text usable | Extract findings from return text and write. Add header `recovery: recovered from inline return — Write failed`. | `recovered-from-return` |
+| Missing, return text empty/unusable | Write stub with heading `# {agent-slug} — recovery stub` and body `Run produced no artifact and no usable return text. Reviewer coverage gap.` Add header `recovery: stub written — agent produced nothing`. | `stub-no-output` |
 
-Compression must run only on the verified manifest (post-recovery).
+Rules:
+
+- Decide from the filesystem, not Agent return text claims.
+- NEVER copy or symlink prior-run artifacts to the current-run path.
+  Each run owns a per-second-unique path. If current run produced
+  nothing, write a stub — never pull bytes from sibling runs.
+- Never re-spawn.
+- After each agent's recovery decision, patch its `status` via
+  `printf '{"agents":{"%s":{"status":"%s"}}}\n' "$AGENT_SLUG" "$STATE" |
+  ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"`. NEVER
+  edit `RUN-CURRENT.json` directly.
+- Synthesis runs on the verified manifest.
+
+## Resume Protocol
+
+Single helper call at fanout entry:
+
+```bash
+MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
+  --skill=rb:review --slug="$REVIEW_SLUG" \
+  --base-ref="$BASE_REF" \
+  --agents="$AGENTS_CSV")
+```
+
+`$AGENTS_CSV` is the comma-separated list of reviewer slugs computed
+by the skill body from the Reviewer Selection Matrix above. Not a
+fixed default.
+
+Helper computes manifest path, datesuffix, agent paths, consolidated
+path, git pins. Archives any prior manifest. Outputs absolute
+manifest path on stdout.
+
+Schema + per-skill staleness rules:
+`${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
 
 ## Consolidated Review Format
 
-Write the synthesized review to `.claude/reviews/{review-slug}.md`:
+Write the synthesized review to the path read via
+`manifest-update field "$MANIFEST" consolidated_path`:
 
-```markdown
+````markdown
 # Review: {track}
 **Date**: {timestamp}
 **Complexity**: {Simple|Medium|Complex} ({N} files{, escalated: reason})
 **Files Changed**: {list}
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State |
+|---|---|
+| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output |
 
 ## Summary
 - Critical: {N}
@@ -246,28 +306,32 @@ Write the synthesized review to `.claude/reviews/{review-slug}.md`:
 ## Positive Findings
 
 - {what was done well}
-
-```
+````
 
 ## Severity Levels
 
 ### Critical
 
 Must fix before merge:
+
 - Security vulnerabilities
 - Data loss risks
 - Production outages
 - Iron Law violations in critical paths
 
 ### Warning
+
 Should fix before merge:
+
 - Performance issues
 - Maintainability problems
 - Test coverage gaps
 - Potential bugs
 
 ### Info
+
 Nice to have:
+
 - Style suggestions
 - Refactoring opportunities
 - Documentation improvements

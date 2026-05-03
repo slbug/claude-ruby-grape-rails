@@ -106,11 +106,12 @@ agents' job -- let them handle pattern discovery.
 
 - ONLY spawn when evaluating a gem NOT already in Gemfile
 - Do NOT spawn for: review blockers, refactoring, existing gems
-- To understand an existing gem's API, use Read/Grep on
-  `Gemfile.lock` or gem source instead
+- To understand an existing gem's API, read or search
+  `Gemfile.lock` or gem source directly instead
 
-**CRITICAL**: Spawn ALL applicable agents in ONE Tool Use block
-(parallel) with `run_in_background: true`. Minimum 1 agent spawned.
+**CRITICAL**: Spawn ALL applicable agents via multiple Agent tool
+calls in ONE Tool Use block (foreground parallel — do NOT use
+`run_in_background: true`). Minimum 1 agent spawned.
 
 **Agent prompts must be FOCUSED.** Scope each prompt to the
 relevant directories, files, and patterns. Do NOT give vague
@@ -123,7 +124,6 @@ whether fresh research already exists:
 
 1. Create the planning namespace early:
    - `.claude/plans/{slug}/research/`
-   - `.claude/plans/{slug}/summaries/`
    - `.claude/plans/{slug}/scratchpad.md`
 2. Glob both:
    - `.claude/research/*.md`
@@ -162,44 +162,42 @@ whether fresh research already exists:
   `rails-patterns-analyst`, `call-tracer`, or
   schema/security/job specialists based only on cached research.
 
-## Waiting for Agents (main session)
+## Waiting for Agents
 
-Main session is notified as each background agent completes. Main session
-reads each agent's output file to collect results. Do NOT proceed to plan
-generation until every agent has completed.
+Wait for every agent to complete before plan generation.
 
-After all research agents return, main session builds an explicit input manifest and spawns the compression worker. Spawn prompt is self-contained (agent body not reliably injected to subagents):
+Apply Artifact Recovery for each agent in the run manifest at
+`.claude/plans/{plan-slug}/research-fanout/RUN-CURRENT.json`:
 
-```text
-Agent(context-supervisor):
-  Task: compress the listed research artifacts to summaries/consolidated.md.
+- Exists, `size_bytes >= 1000` → trust. Do NOT overwrite. Patch
+  `status: complete` into manifest.
+- Exists, `size_bytes < 1000`, return text substantially larger AND
+  parses as findings → replace stub. Patch `status: stub-replaced`.
+- Exists, `size_bytes < 1000`, return text empty/unusable → keep
+  stub, treat as coverage gap. Patch `status: stub-no-output`.
+- Missing, return text usable → extract findings from return text and
+  write. Patch `status: recovered-from-return`.
+- Missing, return text empty/unusable → write a stub with heading
+  `# {topic-slug} — recovery stub` and body `Run produced no
+  artifact and no usable return text. Research coverage gap.` Patch
+  `status: stub-no-output`.
 
-  Inputs (explicit list, no globs):
-    - .claude/plans/{slug}/research/{topic}.md (one per spawned agent)
-    - any reused files recorded under
-      ## Decisions → ### Research Cache Reuse in scratchpad.md
+Status patch via
+`printf '%s\n' '<json>' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"`.
 
-  Output: .claude/plans/{slug}/summaries/consolidated.md
+NEVER copy or symlink prior-run artifacts. Decide from filesystem;
+ignore return-text denial claims. Never re-spawn.
 
-  Rules (inline; do NOT rely on agent body):
-    - Preserve key decisions + rationale VERBATIM
-    - Preserve concrete file paths and package ownership
-    - Preserve risks, unknowns, contested choices
-    - Include short "Reused context" section listing absorbed cached files
-    - Compress repeated low-severity points aggressively
+Read each verified artifact + any reused cached files in scratchpad.md
+`## Decisions` → `### Research Cache Reuse`. Synthesize plan directly.
 
-  Stop after writing. Do NOT call Agent().
-```
+If a research agent fails AND its file is missing AND return text is
+unusable, do the research yourself with Read/Grep from main session.
 
-If `context-supervisor` Write fails (CC platform bug), extract the
-compression result from Agent() return text and write the file from main
-session. Do NOT re-spawn — the work is done, only the file write failed.
+Mark manifest `status: complete` after `plan.md` is written.
 
-Read `summaries/consolidated.md` first. Only open raw research files
-when the compressed summary leaves an important question unresolved.
-
-If a research agent fails, do the research yourself with Read/Grep
-from main session instead of re-spawning.
+Manifest schema + helper subcommands:
+`${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
 
 ## Infrastructure Knowledge Persistence
 
@@ -354,11 +352,14 @@ plan with deeper research instead of creating a new one.
 2. **Search compound docs** -- Find known issues in planned areas
    (`grep -rl "KEYWORD" .claude/solutions/`)
 3. **Spawn research agents** -- Use SPECIALIST agents (same
-   selection rules as main flow), NOT Explore agents. Each agent
-   MUST write detailed output to
-   `.claude/plans/{slug}/research/{topic-slug}.md` and return ONLY a
-   500-word summary. Spawn all in ONE Tool Use block with
-   `run_in_background: true`
+   selection rules as main flow), NOT Explore agents. Run
+   `manifest-update prepare-run --skill=rb:plan --slug="$PLAN_SLUG"
+   --agents=<csv-of-topic-slugs>`; pass each absolute path read from
+   `manifest-update spawn-paths "$MANIFEST"` verbatim in the spawn
+   prompt. Each agent writes its detailed output to that path and
+   returns ONLY a 500-word summary. Spawn via multiple Agent tool
+   calls in ONE Tool Use block (foreground parallel — do NOT use
+   `run_in_background: true`)
 4. **Wait for ALL agents** -- You'll be notified as each completes.
    Read each agent's output file. Do NOT proceed until all complete
 5. **Enhance plan** -- Add implementation detail, resolve spikes,
@@ -429,16 +430,28 @@ fi
 
 ## Spawning Strategy
 
+Topic slug = research filename stem (manifest entry key passed via
+`--agents=`). Subagent type = which specialist to invoke for that
+topic. They are NOT the same identifier — skill body maps
+topic-slug → subagent_type at spawn time.
+
 ```text
 Phase 1: Research (parallel block)
-├─ rails-patterns-analyst    (always)
-├─ active-record-schema-designer (if DB changes)
-├─ security-analyzer         (if auth/data sensitive)
-└─ sidekiq-specialist        (if jobs)
+  topic-slug                         subagent_type            condition
+  rails-patterns-research            rails-patterns-analyst   always
+  active-record-schema-research      active-record-schema-designer  DB changes
+  security-research                  security-analyzer        auth/data sensitive
+  sidekiq-research                   sidekiq-specialist       jobs
 
 Phase 2: Architecture (if needed)
-└─ rails-architect           (if service layer / cross-cutting)
+  architecture-research              rails-architect          service layer / cross-cutting
 ```
+
+Topic-slug naming: short kebab-case noun describing the research
+question (`active-record-schema-research`, not `ar`). Stable across
+runs — `prepare-respawn` rotates the prior file at the canonical path
+to a `.stale-<ts>.md` sibling so the next run's agent can `Write`
+fresh.
 
 ## Agent Briefing Template
 
@@ -454,7 +467,7 @@ Context:
   2. [question]
 
 Output:
-- Write detailed findings to .claude/plans/{slug}/research/{topic-slug}.md
+- Write detailed findings to <absolute-path-from-manifest-update-spawn-paths>
 - Return ONLY a 500-word summary in Agent() result text
 
 Stop after returning. Do NOT call Agent() — this is a leaf research.
@@ -504,7 +517,7 @@ Use the Set A list documented earlier in this file for all
 **Estimated Effort**: {N} tasks, {N} hours
 
 ## Research Findings
-{summary of agent findings — derived from summaries/consolidated.md}
+{summary of agent findings — synthesized directly from per-agent research artifacts}
 
 ## Design Decisions
 {key choices with rationale}

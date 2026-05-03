@@ -19,7 +19,7 @@ Prefer denylist-only over `tools:` allowlists (follows built-in agent pattern).
 - All denylist agents block: `Agent, EnterWorktree, ExitWorktree, Skill`
 - **Artifact-writing agents**: add `Edit, NotebookEdit` to disallowedTools
 - **Conversation-only agents**: add `Write` to the above
-- `tools:` allowlists only for intentionally narrow agents (context-supervisor, web-researcher, output-verifier, ruby-gem-researcher)
+- `tools:` allowlists only for intentionally narrow agents (web-researcher, output-verifier, ruby-gem-researcher)
 - NO agent declares or invokes `Agent` — see "Subagents Are Leaf Workers" below
 
 ## Subagents Are Leaf Workers
@@ -28,16 +28,40 @@ Prefer denylist-only over `tools:` allowlists (follows built-in agent pattern).
 - NEVER write `Agent(subagent_type:)` calls inside subagent bodies
 - Orchestration belongs in skill bodies (main-session fanout)
 - Specialist agents stay terminal: read, analyze, write artifact, return summary
-- `context-supervisor` and similar compression agents are leaf workers
-  callable from any skill body post-fanout
+- Compression / extraction helper agents (when present) are leaf
+  workers callable from any skill body post-fanout
+
+## Run Manifest Boundary
+
+- Agents NEVER read or write `RUN-CURRENT.json` / `RUN-HISTORY.jsonl`
+- Main session owns manifest reads + writes
+- Agents receive their absolute artifact path via spawn prompt; write only to that path
+- Schema: `plugins/ruby-grape-rails/references/run-manifest.md`
+
+## Bash Discipline
+
+Tool-batching discipline is registered in `preferences.yml` and
+injected via `inject-rules.sh`. Authoring rule: do NOT restate the
+discipline in agent bodies. Agent bodies focus on domain analysis
+and findings format. Examples + BAD/GOOD pairs:
+`plugins/ruby-grape-rails/references/research/tool-batching.md`.
+
+## Foreground Dispatch
+
+Plugin agents are spawned foreground only. No skill body, fanout
+template, or example MAY pass `run_in_background: true` on an
+`Agent(...)` call. Parallel = multiple Agent tool calls in one
+message; never the background flag.
 
 ## Memory
 
-Use `memory: project` only for pattern-analyst agents that benefit from
-cross-session learning. Note: `memory` auto-enables Read, Write, Edit —
-only add to agents that already have Write access. After the orchestrator
-cleanup, no agent ships with `memory: project`; the field is a future
-extension hook, not an active mechanism.
+Use `memory: project` only for pattern-analyst agents that benefit
+from cross-session learning. CC auto-enables Read, Write, Edit when
+`memory` is declared — never use this as a backdoor to expand a
+denylist agent's tool surface. Add `memory` only to agents whose
+tool declarations already permit Write/Edit explicitly. After the
+orchestrator cleanup no agent ships with `memory: project`; the
+field is a future extension hook, not an active mechanism.
 
 ## omitClaudeMd Scope
 

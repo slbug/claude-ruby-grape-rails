@@ -24,7 +24,13 @@ Detection rules:
 2. **Prefer exact `*_VERSION` values** from that script when writing the managed-block header.
 3. Use plain `detected` only as a last resort when a direct gem is present but no resolved lockfile version is available.
 4. **Never** use broad substring regexes like `/rails \(([^)]+)\)/` against raw `Gemfile.lock`; they can falsely match gems such as `rubocop-rails`.
-5. Read `DETECTED_ORMS`, `PACKAGE_LAYOUT`, `PACKAGE_LOCATIONS`, `HAS_PACKWERK`, and `PACKAGE_QUERY_NEEDED` from the detector before deciding what ORM/package guidance to inject.
+5. Read these detector keys before deciding what ORM/package
+   guidance to inject:
+   - ORM: `DETECTED_ORMS`, `PRIMARY_ORM`
+   - Rails shape: `RAILS_COMPONENTS`, `FULL_RAILS_APP`
+   - Ruby: `INTERPRETER_RUBY_VERSION`
+   - Packages: `PACKAGE_LAYOUT`, `PACKAGE_LOCATIONS`, `HAS_PACKWERK`,
+     `PACKAGE_QUERY_NEEDED`
 6. If `PACKAGE_QUERY_NEEDED=true`, ask the user: `No Packwerk detected. Do you have something similar implemented? Provide modules/packages location and their stack/ORM.`
 7. **Do not** reimplement stack detection inline in chat or ad-hoc Ruby snippets. `detect-stack` is the source of truth.
 8. If `${CLAUDE_PLUGIN_ROOT}/bin/detect-stack` is missing or fails, STOP and explain that plugin stack detection is unavailable instead of inventing a fallback parser.
@@ -139,6 +145,49 @@ Include based on detected stack and installed tools:
 - `{BETTERLEAKS_SECTION}` — If Betterleaks installed (secrets scanning)
 
 See `${CLAUDE_SKILL_DIR}/references/conditional-sections.md` for full content of each section.
+
+## Recommended Permission Allowlist
+
+Prompt the user to run `/update-config` to add these recursive Write
+rules to `.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(bundle *)",
+      "Bash(rails *)",
+      "Bash(rake *)",
+      "Bash(mkdir -p **/.claude/**)",
+      "Bash(*/bin/manifest-update *)",
+      "Read(*)",
+      "Grep(*)",
+      "Glob(*)",
+      "Write(**/.claude/plans/**)",
+      "Write(**/.claude/reviews/**)",
+      "Write(**/.claude/audit/**)",
+      "Write(**/.claude/research/**)",
+      "Write(**/.claude/solutions/**)",
+      "Write(**/.claude/skill-metrics/**)",
+      "Write(**/.claude/investigations/**)"
+    ]
+  }
+}
+```
+
+Use recursive `**/.claude/<ns>/**` globs. Shallow `Write(.claude/<ns>/*)`
+does not match nested artifact paths.
+
+Tell the user: `Run /update-config to add the recommended Write
+permission allowlist for plugin artifact namespaces.`
+
+## Recommended Claude Code env vars
+
+Tell the user to set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in their
+shell environment. Required for spawn-fanout skills (`/rb:review`,
+`/rb:plan`, `/rb:brainstorm`, `/rb:investigate`) to resume agents that
+paused at their `maxTurns` cap. Without it, paused agents become
+coverage gaps with no recovery path.
 
 ## CLAUDE.md sizing
 

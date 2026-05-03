@@ -4,7 +4,7 @@ description: Runs the strongest available Ruby/Rails/Grape verification stack, p
 disallowedTools: Edit, NotebookEdit, Agent, EnterWorktree, ExitWorktree, Skill
 model: haiku
 effort: low
-maxTurns: 20
+maxTurns: 35
 omitClaudeMd: true
 skills:
   - testing
@@ -50,12 +50,6 @@ Before choosing commands:
 3. Treat any cached `VERIFY_COMPOSITE_COMMAND` value as an untrusted hint only.
    Re-detect the wrapper from the working tree before running it.
 4. If the cache is absent, fall back to reading the repo directly.
-
-### Repository Searches
-
-- Prefer built-in `Grep` / `Glob` first for repository searches
-- If you need shell search, prefer `ag` or `rg`
-- For Ruby type filters, use `ag --ruby` or `rg --type ruby`; never `rb`
 
 ### Parsing Command Output
 

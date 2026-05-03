@@ -24,7 +24,7 @@ excludeAgent: "coding-agent"
 - NO agent declares or invokes `Agent` — orchestration lives in skill bodies
   (main session). See `.claude/rules/agent-development.md` § "Subagents Are
   Leaf Workers" for full doctrine.
-- Agents with intentionally narrow tool sets (context-supervisor, web-researcher,
+- Agents with intentionally narrow tool sets (web-researcher,
   output-verifier, ruby-gem-researcher) use `tools:` allowlists — this is
   correct
 - `omitClaudeMd: true` is correct for specialist agents that do not need
@@ -114,6 +114,34 @@ excludeAgent: "coding-agent"
   Markdown report under `.claude/provenance-scan/`. Stdlib only;
   pure deterministic — no LLM, no network. Surfaced via
   `/rb:provenance-scan` user-invocable skill
+- `manifest-update` (Ruby) — atomic JSON manifest writer for
+  spawn-fanout RUN-CURRENT.json files. Subcommands: `prepare-run`
+  (structured args: `--skill --slug --agents [--base-ref]`; helper
+  computes manifest path, datesuffix, agent paths, consolidated path,
+  git pins; outputs absolute manifest path on stdout; archives any
+  prior in one call), `field` (extract dotted key from manifest),
+  `spawn-paths` (tab-separated agent slug + absolute path per line
+  for skill-body iteration), `init` (fail if exists), `patch`
+  (deep-merge from stdin, auto-stamps `updated_at`),
+  `prepare-respawn` (rotate manifest-tracked agent files to
+  `<agent-slug>.stale-<rename-ts>.md`; refuses unless canonical-path
+  match + containment + no symlinked ancestor; agent status
+  `pending` / `in-flight` / `stub-no-output`), `archive` (append to
+  RUN-HISTORY.jsonl + remove RUN-CURRENT.json),
+  `resume-check` (read-only verdict: absent / stale /
+  fresh-complete / fresh-in-flight), `status` (read-only summary).
+  Path allowlist: suffix regex
+  `.../.claude/<any-namespace>/RUN-CURRENT.json`. `prepare-run` also
+  validates `<any-namespace>` against per-skill templates (e.g.
+  `reviews/<review-slug>`, `plans/<plan-slug>/research-fanout`)
+  via `--skill`. Lower-level subcommands accept any matching path.
+  Containment check via repo-root resolution. Symlink refusal on
+  target + parent dir. Atomic write via exclusive temp file (`O_EXCL`) + `fsync` + Ruby
+  `File.rename` (POSIX `rename(2)`) + directory `fsync`. Fail-closed
+  on path / JSON / IO errors. Stdlib only. Reuses
+  `lib/repo_root.rb` + `lib/path_safety.rb`. Skill bodies that mutate
+  manifest or rotate stale stubs call this — never raw `mv` / `cp` /
+  `jq -i` / `rm`
 
 When adding a binary, also add it to this "Currently shipped
 binaries" section above, ensure `chmod +x` is committed, and (if it
@@ -141,6 +169,13 @@ the calling CLI / hook.
   path as a parameter; callers (`hooks/scripts/compress-verify-output.rb`,
   `lab/eval/bin/match-trigger`) pass `references/compression/triggers.yml`.
   Handles `rake_excluded` precedence over `rake_verify_only`
+- `repo_root.rb` — shared `RubyGrapeRails::RepoRoot` module. Exposes
+  `find(start_dir)` (precedence: ascended `.git` dir → `.claude/settings*`
+  → `git rev-parse --show-toplevel` → `Gemfile` → start_dir),
+  `canonical(path)` (realpath with expand_path fallback),
+  `git_toplevel(path)` (Open3-based git rev-parse). Stdlib only.
+  Required by `bin/manifest-update`, `bin/extract-permissions`,
+  `bin/detect-stack`
 
 Notes:
 
@@ -228,12 +263,46 @@ NOT flag the fallback chain as over-engineered.
 - Advisory fail-open (empty stdout, exit 0) in `bin/` and advisory hooks
 - Partial coverage in plugin `settings.json` (only `agent` and
   `subagentStatusLine` are documented as supported)
+- Skill or agent files referencing `references/research/tool-batching.md`
+  (canonical examples doc for the tool-batching preference)
+- Run manifest paths under `.claude/{namespace}/RUN-CURRENT.json`
+  and `RUN-HISTORY.jsonl` (cross-session resume contract — see
+  `plugins/ruby-grape-rails/references/run-manifest.md`)
 
 ## Do FLAG
 
-- `permissionMode: bypassPermissions` on new agents — flag as YELLOW unless agent has documented contributor-only privilege need
-- Shipped skill bodies (`plugins/ruby-grape-rails/.../SKILL.md`) referencing
-  contributor doctrine paths (`.claude/rules/*-development.md`,
+- `permissionMode: bypassPermissions` on new agents — flag as YELLOW
+  unless agent has documented contributor-only privilege need
+- Shipped skill bodies (`plugins/ruby-grape-rails/.../SKILL.md`)
+  referencing contributor doctrine paths (`.claude/rules/*-development.md`,
   `.github/instructions/*.instructions.md`) — flag as BLOCKER
 - Agent frontmatter declaring `Agent` in `tools:` list — flag as BLOCKER
-- Agent body containing `Agent(...)` or `subagent_type:` calls — flag as BLOCKER
+- Agent body containing `Agent(...)` or `subagent_type:` calls — flag as
+  BLOCKER
+- Agent or skill bodies that restate tool-batching discipline (preferred
+  batched git diff / grep / bundle info, exclude noise via pathspec,
+  prefer Read/Grep/Glob over `cat`/`find -exec`) — preference injection
+  delivers the rule; restatement is duplication. Pointers to
+  `references/research/tool-batching.md` for examples are fine.
+- Per-item shell loops in agent or skill bodies (e.g.
+  `for f in $FILES; do git diff -- "$f"; done`) — replace with batched
+  path-group call.
+- Consolidated review references using `{review-slug}.md` without the
+  `-{datesuffix}` segment — stale path; per-run uniqueness is required
+  to avoid subagent Write collisions on existing files.
+- Per-reviewer artifacts referenced without the `{datesuffix}` segment.
+- Recovery procedures that copy or symlink prior-run artifacts to the
+  current-run path (must write a stub when current run produced
+  nothing; see `references/run-manifest.md`).
+- Subagent bodies that read or write `RUN-CURRENT.json` /
+  `RUN-HISTORY.jsonl` — manifest is main-session-owned only.
+- Consolidated review template missing the `## Reviewer Coverage`
+  section (per-agent recovery state must be surfaced).
+- `run_in_background: true` on any `Agent(...)` call in shipped
+  skill bodies, fanout templates, or example snippets — flag as
+  BLOCKER. Plugin agents dispatch foreground only.
+- Raw `mv`, `cp`, `jq -i`, `rm`, or improvised shell against any
+  `RUN-CURRENT.json` path or per-agent artifact path in shipped skill
+  bodies, hook scripts, or examples — flag as BLOCKER. All manifest
+  mutations and stale-stub rotations MUST go through
+  `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update`.

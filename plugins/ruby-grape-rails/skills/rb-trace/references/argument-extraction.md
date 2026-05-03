@@ -172,17 +172,15 @@ ArgumentExtractor.extract_call_args(
 
 When AST parsing is overkill:
 
-```bash
-# Find all calls to a method
-rg "UserService\.update_user" app/ --type ruby -A 2
+Targets:
 
-# Find calls with specific arguments
-rg "UserService\.create_user.*admin" app/ --type ruby
-
-# Extract variable names passed to method
-grep -rn "UserService\.update_user" app/ --include="*.rb" | \
-  sed 's/.*update_user(\([^)]*\)).*/\1/'
-```
+- All callers: pattern `UserService\.update_user` over `app/` Ruby
+  files, with 2 lines after each match.
+- Calls with specific arguments: pattern
+  `UserService\.create_user.*admin` over `app/` Ruby files.
+- Variable names passed to method: pattern
+  `UserService\.update_user` over `app/` Ruby files; pipe through
+  `sed 's/.*update_user(\([^)]*\)).*/\1/'` to extract argument tuples.
 
 ## Pattern Recognition
 

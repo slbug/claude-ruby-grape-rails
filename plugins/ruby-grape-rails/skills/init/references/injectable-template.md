@@ -19,12 +19,6 @@ These rules govern ALL `/rb:*` command execution. Violations invalidate the sess
 
 ## TOOLING PREFERENCES
 
-### Repository Searches
-
-- Prefer built-in `Grep` / `Glob` first for repository searches
-- If you need shell search, prefer `ag` or `rg`
-- For Ruby type filters, use `ag --ruby` or `rg --type ruby`; never `rb`
-
 ### Parsing Command Output
 
 When parsing JSON, YAML, text, or command output during `/rb:*` workflows:

@@ -220,12 +220,9 @@ factory fields.
 
 When a plan says "create new module" or "extract to new module":
 
-1. FIRST check if the module/class already exists:
-
-   ```bash
-   grep -rn "class MyApp::ModuleName" app/
-   grep -rn "module MyApp::ModuleName" app/
-   ```
+1. FIRST check if the module/class already exists. Search
+   `app/` for patterns `class MyApp::ModuleName` and
+   `module MyApp::ModuleName`.
 
 2. If it exists, add to the existing module instead of creating a
 duplicate file (causes load errors from duplicate definitions)

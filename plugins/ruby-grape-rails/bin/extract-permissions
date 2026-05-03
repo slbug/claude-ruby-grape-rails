@@ -7,6 +7,7 @@ require 'open3'
 require 'pathname'
 require 'shellwords'
 require 'time'
+require_relative '../lib/repo_root'
 
 options = {
   days: 14,
@@ -17,7 +18,7 @@ options = {
 }
 
 OptionParser.new do |parser|
-  parser.banner = 'Usage: extract-permissions [--days N] [--json] [--limit N] [--include-global] [--dry-run]'
+  parser.banner = 'Usage: extract-permissions [--days N] [--json] [--limit N] [--include-global] [--repo-only] [--dry-run]'
 
   parser.on('--days N', Integer, 'Only scan sessions from the last N days') do |days|
     options[:days] = days
@@ -55,38 +56,7 @@ if options[:limit] <= 0
 end
 
 def find_repo_root(start_dir)
-  path = Pathname.new(start_dir).expand_path
-  git_root = begin
-    root, status = Open3.capture2e('git', '-C', path.to_s, 'rev-parse', '--show-toplevel')
-    normalized_root = root.strip
-    normalized_root unless !status.success? || normalized_root.empty?
-  rescue StandardError
-    nil
-  end
-  home_dir = Dir.home
-  settings_candidate = nil
-  gemfile_candidate = nil
-
-  path.ascend do |candidate|
-    claude_settings = (candidate / '.claude/settings.json').file? ||
-                      (candidate / '.claude/settings.local.json').file?
-    next if candidate.to_s == home_dir && claude_settings
-
-    next if git_root && candidate.to_s != git_root && !candidate.to_s.start_with?("#{git_root}/")
-
-    return candidate.to_s if (candidate / '.git').exist?
-
-    settings_candidate ||= candidate.to_s if claude_settings
-    gemfile_candidate ||= candidate.to_s if (candidate / 'Gemfile').file?
-
-    break if git_root && candidate.to_s == git_root
-  end
-
-  return settings_candidate if settings_candidate
-  return git_root if git_root
-  return gemfile_candidate if gemfile_candidate
-
-  start_dir
+  RubyGrapeRails::RepoRoot.find(start_dir)
 end
 
 def positive_env_int(name, default)
@@ -100,9 +70,7 @@ def positive_env_int(name, default)
 end
 
 def canonical_repo_root(repo_root)
-  Pathname.new(repo_root).expand_path.realpath.to_s
-rescue StandardError
-  Pathname.new(repo_root).expand_path.to_s
+  RubyGrapeRails::RepoRoot.canonical(repo_root)
 end
 
 def claude_project_slug(repo_root)
