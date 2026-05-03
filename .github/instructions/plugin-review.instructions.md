@@ -136,7 +136,7 @@ excludeAgent: "coding-agent"
   `reviews/<review-slug>`, `plans/<plan-slug>/research-fanout`)
   via `--skill`. Lower-level subcommands accept any matching path.
   Containment check via repo-root resolution. Symlink refusal on
-  target + parent dir. Atomic write via `mktemp` + `fsync` + Ruby
+  target + parent dir. Atomic write via exclusive temp file (`O_EXCL`) + `fsync` + Ruby
   `File.rename` (POSIX `rename(2)`) + directory `fsync`. Fail-closed
   on path / JSON / IO errors. Stdlib only. Reuses
   `lib/repo_root.rb` + `lib/path_safety.rb`. Skill bodies that mutate

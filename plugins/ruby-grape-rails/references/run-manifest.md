@@ -262,7 +262,7 @@ Helper enforces:
 - Fail-closed on the target manifest: any error during write leaves
   the target manifest path unchanged (no partial writes; either
   prior content or new content, never half-written). Transient
-  `mktemp` + `mkdir_p` artifacts may remain on disk if cleanup is
+  exclusive-temp + `mkdir_p` artifacts may remain on disk if cleanup is
   interrupted; they do not corrupt the manifest.
 
 ## Agent Boundary

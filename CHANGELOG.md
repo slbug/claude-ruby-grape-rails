@@ -12,8 +12,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - `bin/manifest-update` (Ruby) — atomic manifest writer with
-  path-allowlist gate, symlink-ancestor refusal, mktemp + fsync +
-  POSIX rename + dir fsync. Subcommands: `prepare-run` (structured
+  path-allowlist gate, symlink-ancestor refusal, atomic temp file
+  (`O_EXCL`) + fsync + POSIX rename + dir fsync. Subcommands:
+  `prepare-run` (structured
   args: `--skill --slug --agents [--base-ref]`; helper computes
   manifest path, datesuffix, agent paths, consolidated path, git
   pins; archives any prior; outputs absolute manifest path),

@@ -28,7 +28,7 @@ When signature detected:
 3. Wait for resumed agent return.
 
 4. Re-apply calling skill's Artifact Recovery state machine on
-   post-resume filesystem state. Final per-agent status: `complete` |
+   post-resume filesystem state. Final per-agent status: `artifact` |
    `stub-replaced` | `recovered-from-return` | `stub-no-output`.
 
 5. NEVER call `SendMessage` twice for the same agent in one run.
