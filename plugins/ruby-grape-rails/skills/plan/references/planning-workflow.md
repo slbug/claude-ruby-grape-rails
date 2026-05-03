@@ -124,7 +124,6 @@ whether fresh research already exists:
 
 1. Create the planning namespace early:
    - `.claude/plans/{slug}/research/`
-   - `.claude/plans/{slug}/summaries/`
    - `.claude/plans/{slug}/scratchpad.md`
 2. Glob both:
    - `.claude/research/*.md`

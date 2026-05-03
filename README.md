@@ -313,7 +313,6 @@ Every plan gets its own directory with its implementation-state artifacts:
 ├── plans/{slug}/          # Everything for ONE plan
 │   ├── plan.md            # The plan itself (checkboxes = state)
 │   ├── research/          # Research agent output
-│   ├── summaries/         # Compressed multi-agent output
 │   ├── progress.md        # Session progress log
 │   └── scratchpad.md      # Structured dead ends, decisions, hypotheses, handoffs
 ├── research/              # Reusable cross-plan topic research

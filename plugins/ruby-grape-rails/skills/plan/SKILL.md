@@ -354,7 +354,6 @@ Create the planning namespace at the start of planning, not only at
 plan-write time:
 
 - `.claude/plans/{slug}/research/`
-- `.claude/plans/{slug}/summaries/`
 - `.claude/plans/{slug}/scratchpad.md`
 
 Use the scratchpad to capture clarification answers, infrastructure

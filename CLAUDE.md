@@ -42,8 +42,8 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 
 ### Artifact Directories
 
-Plan: `.claude/plans/{slug}/` (plan.md, research/, summaries/,
-progress.md, scratchpad.md). Review:
+Plan: `.claude/plans/{slug}/` (plan.md, research/, progress.md,
+scratchpad.md). Review:
 `.claude/reviews/{review-slug}-{datesuffix}.md`,
 `.claude/reviews/{agent-slug}/...`, plus
 `.claude/reviews/{review-slug}/` (RUN-CURRENT.json + RUN-HISTORY.jsonl;

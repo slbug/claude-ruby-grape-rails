@@ -54,7 +54,7 @@ workers.
 
 | State | Driver | Inputs | Outputs |
 |---|---|---|---|
-| INITIALIZING | skill body | `$ARGUMENTS` | `PLAN_DIR/{research,summaries,scratchpad.md}`, initial `progress.md` |
+| INITIALIZING | skill body | `$ARGUMENTS` | `PLAN_DIR/{research,scratchpad.md}`, initial `progress.md` |
 | DISCOVERING | `/rb:brainstorm` (optional) | feature description | `PLAN_DIR/interview.md` |
 | PLANNING | `/rb:plan` | `.claude/ACTIVE_PLAN` (pre-bound) | `PLAN_DIR/plan.md` |
 | WORKING | `/rb:work` | `${PLAN_DIR}/plan.md` (explicit path) | updated checkboxes; marker cleared |
@@ -103,7 +103,7 @@ Bash example:
 SLUG=$(printf '%s' "$FEATURE_DESCRIPTION" | tr '[:upper:] ' '[:lower:]-' | tr -cd '[:alnum:]-' | tr -s '-')
 PLAN_DIR=".claude/plans/${SLUG}"
 
-mkdir -p "${PLAN_DIR}/research" "${PLAN_DIR}/summaries"
+mkdir -p "${PLAN_DIR}/research"
 : > "${PLAN_DIR}/scratchpad.md"
 
 # Write initial progress.md (see Initial Progress Schema below)
@@ -184,7 +184,7 @@ else
 fi
 
 # 2. Create namespace
-mkdir -p "${PLAN_DIR}/research" "${PLAN_DIR}/summaries"
+mkdir -p "${PLAN_DIR}/research"
 : > "${PLAN_DIR}/scratchpad.md"
 
 # 3. Write initial progress.md (see Initial Progress Schema)
