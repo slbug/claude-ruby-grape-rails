@@ -5,6 +5,11 @@ excludeAgent: "coding-agent"
 
 # Shell Script and Hook Review Rules
 
+## Audience: Agents, Not Humans
+
+Imperative-only. Hook script source code follows normal code-comment
+conventions — rule applies to markdown review checklist itself.
+
 ## Shell Hardening
 
 - All executable hook scripts must use `set -o nounset` and `set -o pipefail`

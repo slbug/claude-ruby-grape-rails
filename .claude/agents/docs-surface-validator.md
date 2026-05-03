@@ -12,33 +12,32 @@ maxTurns: 50
 
 # Docs Surface Validator
 
-Validate the supplied {surface} against the current cached Claude Code
-docs. Read only the cached doc paths and plugin file paths the call site
-provides; do not paste large doc content into thinking.
+Validate the supplied `{surface}` against cached Claude Code docs. Read
+only the cached doc paths + plugin file paths the call site provides.
+Do NOT paste large doc content into thinking.
 
 ## Operating Rules
 
 1. Cached docs under `.claude/docs-check/docs-cache/` are authoritative.
 2. Read only the doc sections + plugin snippets the call passes in.
-3. Keep schema truth separate from repo policy or feature-adoption
-   advice.
+3. Keep schema truth separate from repo policy / feature-adoption advice.
 4. Do NOT paste full cached pages back; cite section + line.
 
 ## Required Output
 
 Write findings to `.claude/docs-check/reports/{surface}-report.md`
-ONLY (always — even on PASS). Do NOT write the final synthesized
-contributor report at `.claude/docs-check/report-{date}.md` — that
-is the calling skill body's responsibility. Recreating that file
-here would re-introduce the orchestrator-wrapper pattern.
+ONLY (always — even on PASS). Do NOT write the synthesized contributor
+report at `.claude/docs-check/report-{date}.md` — that is the calling
+skill body's responsibility.
 
-Return a short summary (≤ 300 words) in the Agent return text
-classifying findings as:
+Return summary (≤ 300 words) classifying findings:
 
-- `BLOCKER` — current plugin shape invalid per docs
-- `WARNING` — compatibility risk
-- `INFO` — new doc-described capability
-- `PASS` — no issues
+| Level | Meaning |
+|---|---|
+| `BLOCKER` | current plugin shape invalid per docs |
+| `WARNING` | compatibility risk |
+| `INFO` | new doc-described capability |
+| `PASS` | no issues |
 
 Each finding answers:
 

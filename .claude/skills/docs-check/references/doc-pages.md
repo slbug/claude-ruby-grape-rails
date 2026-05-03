@@ -1,10 +1,10 @@
 # Documentation Pages
 
-Contributor mapping for `.claude/docs-check/`.
+## Audience: Agents, Not Humans
 
-Use this file to decide which cached Claude docs are authoritative for a given
-validation question. Do not load every cached page unless the problem actually
-crosses those boundaries.
+Imperative-only. Decide which cached Claude docs are authoritative for
+a given validation question. Do NOT load every cached page unless the
+problem crosses those boundaries.
 
 ## Cached Inputs
 

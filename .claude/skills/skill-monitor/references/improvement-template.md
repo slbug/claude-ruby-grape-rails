@@ -1,14 +1,16 @@
 # Skill Improvement Analysis Template
 
-Use this template for observational recommendations only.
+## Audience: Agents, Not Humans
+
+Imperative-only.
 
 ## Inputs
 
 1. aggregated dashboard metrics
 2. flagged skills
 3. session IDs
-4. any matching session-analysis reports
-5. corroborating deterministic signals, if available
+4. matching session-analysis reports
+5. corroborating deterministic signals (if available)
 
 ## Sections
 
@@ -16,10 +18,10 @@ Use this template for observational recommendations only.
 
 State:
 
-- how many skills were reviewed
-- how many were flagged
+- how many skills reviewed
+- how many flagged
 - overall confidence level
-- whether the conclusions are transcript-only or corroborated
+- whether conclusions are transcript-only or corroborated
 
 ### 2. Per-Skill Analysis
 
@@ -69,18 +71,18 @@ For each flagged skill:
 
 ### 3. Cross-Skill Patterns
 
-If multiple skills show the same issue, capture that once:
+Multiple skills show same issue → capture once:
 
 | Pattern | Skills | Evidence | Confidence | Fix direction |
 |---------|--------|----------|------------|---------------|
 
 ### 4. Positive Patterns
 
-List what appears to work so contributors do not regress it accidentally.
+List what appears to work — prevents accidental regression.
 
 ### 5. Priority Ranking
 
-Order recommendations by:
+Order by:
 
 - evidence quality
 - likely impact
@@ -88,14 +90,14 @@ Order recommendations by:
 
 ### 6. Tracking Plan
 
-The follow-up plan should prefer:
+Follow-up plan order:
 
 1. deterministic validation (`lab/eval`, docs-check, plugin validate)
 2. targeted transcript review
-3. only then a rescan to see whether observational signals moved
+3. rescan to see whether observational signals moved
 
 ## Anti-Patterns
 
-- do not recommend changes from one weak session alone
-- do not present observational data as causal proof
-- do not suggest new skills when the likely issue is stale guidance or bad routing
+- Do NOT recommend changes from one weak session alone.
+- Do NOT present observational data as causal proof.
+- Do NOT suggest new skills when likely issue is stale guidance or bad routing.

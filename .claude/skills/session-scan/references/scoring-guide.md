@@ -1,32 +1,25 @@
 # Scoring Guide
 
-Reference for the exploratory metrics produced by `compute-metrics.py`
-(invoked per session by `scan-sessions.py`).
+## Audience: Agents, Not Humans
 
-The scan pipeline is fully deterministic: it reads messages straight out
-of the local ccrider SQLite DB, runs regex-based extraction and
-aggregation, and writes a JSON line per session. No LLM is involved in
-scoring.
+Imperative-only. NO LLM in scoring — pipeline is deterministic:
+ccrider SQLite read → regex extraction + aggregation → one JSON line
+per session.
 
 ## Read This First
 
-These scores are useful for triage, not for proving causality.
-
-Good uses:
-
-- ranking sessions for deeper review
-- spotting repeated friction patterns
-- finding likely missed plugin-command opportunities
-
-Bad uses:
-
-- claiming a plugin change definitely improved outcomes
-- comparing mixed-provider datasets without segmentation
-- treating one metric as a release gate
+| Use | Status |
+|---|---|
+| ranking sessions for deeper review | OK |
+| spotting repeated friction patterns | OK |
+| finding likely missed plugin-command opportunities | OK |
+| claiming a plugin change definitely improved outcomes | NO |
+| comparing mixed-provider datasets without segmentation | NO |
+| treating one metric as a release gate | NO |
 
 ## Friction Score (0.0 - 1.0)
 
-Measures how much visible resistance occurred in a session.
+Measures visible resistance in a session.
 
 ### Formula
 
@@ -35,10 +28,7 @@ raw = sum(signal_value * weight)
 score = sigmoid(raw)
 ```
 
-Parameters:
-
-- `k = 3.0`
-- `midpoint = 1.5`
+Parameters: `k = 3.0`, `midpoint = 1.5`.
 
 ### Signals
 
@@ -60,13 +50,11 @@ Parameters:
 | `0.35-0.60` | high friction |
 | `0.60-1.00` | severe friction |
 
-Treat these as triage buckets, not calibrated truth.
+Triage buckets, NOT calibrated truth.
 
 ## Session Fingerprint
 
-Rule-based session classification.
-
-Current classes:
+Rule-based session classification. Current classes:
 
 - `bug-fix`
 - `feature`
@@ -75,22 +63,16 @@ Current classes:
 - `review`
 - `refactoring`
 
-Signals combine:
+Signals combined: intent keywords from early user messages, tool mix,
+edit volume, dependency-management commands, review tooling commands.
 
-- intent keywords from early user messages
-- tool mix
-- edit volume
-- dependency-management commands
-- review tooling commands
-
-Confidence is only relative to the other fingerprint scores in that same
-session.
+Confidence = relative to other fingerprint scores in same session.
 
 ## Plugin Opportunity Score (0.0 - 1.0)
 
-A rough signal for likely missed `/rb:` command use.
+Rough signal for likely missed `/rb:` command use.
 
-Current opportunity heuristics include:
+Heuristics:
 
 - repeated command retries
 - many tools with no planning
@@ -98,12 +80,11 @@ Current opportunity heuristics include:
 - repeated GitHub PR commands
 - many edits without a review pass
 
-This score tells you where to inspect transcripts, not which feature to build
-next without corroboration.
+Use to inspect transcripts. NOT a roadmap input without corroboration.
 
 ## Skill-Effectiveness Hints
 
-The scorer emits per-skill signals such as:
+Per-skill signals emitted:
 
 - invocation count
 - post-skill edits
@@ -113,42 +94,32 @@ The scorer emits per-skill signals such as:
 - post-skill corrections
 - dominant outcome
 
-Use these as observational hints. Always corroborate with:
-
-- `lab/eval`
-- manual transcript review
-- docs-check / plugin validation if the claim implies a product defect
+Observational hints. Always corroborate with `lab/eval`, manual
+transcript review, or docs-check / plugin validation if claim implies
+product defect.
 
 ## Tool Profile
 
-The current profile buckets are:
+Buckets:
 
-- `read_pct`: `Read` + `Glob`
-- `edit_pct`: `Edit` + `Write` + `NotebookEdit`
-  - legacy note: older transcripts may still surface `MultiEdit`; treat it as an
-    edit-family alias when analyzing historical data
-- `bash_pct`: `Bash`
-- `grep_pct`: `Grep`
-- `tidewave_pct`: MCP calls whose tool name starts with `mcp__tidewave`
-- `other_pct`: everything else, including:
-  - `Agent`
-  - `Task` legacy alias
-  - `Skill`
-  - `AskUserQuestion`
-  - `ExitPlanMode`
-  - `KillShell`
-  - `MCPSearch`
-  - other MCP tools
+| Bucket | Tools |
+|---|---|
+| `read_pct` | `Read` + `Glob` |
+| `edit_pct` | `Edit` + `Write` + `NotebookEdit` (legacy `MultiEdit` aliased to edit-family in historical data) |
+| `bash_pct` | `Bash` |
+| `grep_pct` | `Grep` |
+| `tidewave_pct` | MCP calls whose tool name starts with `mcp__tidewave` |
+| `other_pct` | `Agent`, legacy `Task`, `Skill`, `AskUserQuestion`, `ExitPlanMode`, `KillShell`, `MCPSearch`, other MCP tools |
 
 ## Provider Scope
 
-When comparing scans or trends:
+When comparing scans / trends:
 
-1. prefer a single provider at a time
-2. record the provider filter used
-3. do not compare mixed-provider windows as if they were homogeneous
+1. Prefer single provider at a time.
+2. Record provider filter used.
+3. Do NOT compare mixed-provider windows as homogeneous.
 
-## What This Guide Deliberately Avoids
+## What This Guide Avoids
 
 - fixed "healthy" adoption percentages
 - strong causal claims from transcript-derived behavior

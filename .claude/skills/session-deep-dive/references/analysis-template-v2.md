@@ -1,99 +1,84 @@
 # Session Analysis Template v2
 
-Analyze one contributor session transcript and produce a structured report.
+## Audience: Agents, Not Humans
 
-You have:
+Imperative-only.
 
-- the full transcript
+Inputs:
+
+- full transcript
 - pre-computed heuristic metrics from `/session-scan`
 
-Your job is to validate, refine, or contradict those heuristics with transcript
-evidence.
+Validate, refine, or contradict heuristics with transcript evidence.
 
 ## Ground Rules
 
-1. Do not overclaim from one session.
-2. Every finding must carry an evidence-strength tag.
-3. If a metric looks wrong, say so explicitly.
+1. Do NOT overclaim from one session.
+2. Every finding carries an evidence-strength tag.
+3. Wrong-looking metric → state it explicitly.
 
 ## Evidence Strength Tags
 
-- `STRONG`: direct evidence or repeated pattern
-- `MODERATE`: plausible pattern with limited evidence
-- `WEAK`: inference only
+| Tag | Meaning |
+|---|---|
+| `STRONG` | direct evidence or repeated pattern |
+| `MODERATE` | plausible pattern with limited evidence |
+| `WEAK` | inference only |
 
 ## Sections
 
 ### 1. Session Summary
 
-- What was the contributor trying to do?
-- Single task or multi-task?
-- Outcome:
-  - fully successful
-  - partially successful
-  - unresolved
-- Which Ruby-plugin surfaces were involved:
-  - skills
-  - agents
-  - hooks
-  - docs / release metadata
-- Does the reported fingerprint fit the session?
+- contributor's goal
+- single task or multi-task?
+- outcome: fully successful / partially successful / unresolved
+- Ruby-plugin surfaces involved: skills, agents, hooks, docs / release metadata
+- does the reported fingerprint fit the session?
 
 ### 2. Correction Tracking
 
-Enumerate explicit user corrections or redirections.
+Enumerate explicit user corrections / redirections:
 
 | # | User Said | What Went Wrong | Impact |
 |---|-----------|-----------------|--------|
-| 1 | "No, use the shipped hook file" | Scope drift into contributor-only code | 3 wasted tool calls |
+| 1 | "No, use the shipped hook file" | scope drift into contributor-only code | 3 wasted tool calls |
 
 ### 3. Workflow Preferences
 
-Identify contributor preferences visible in the session:
+Record contributor preferences visible in the session:
 
 - plan-first vs direct implementation
 - small patches vs broad rewrites
 - test/validation-first vs patch-first
 - terse vs detailed close-out
 - evidence-heavy review vs quick approval
-- prefers `Grep` / `Glob`, `ag` / `rg`, `jq`, and shell vs ad-hoc scripting
+- prefers `Grep` / `Glob`, `ag` / `rg`, `jq`, shell vs ad-hoc scripting
 
 Only record preferences with actual transcript support.
 
 ### 4. How the Work Happened
 
-- did the contributor stay on one problem or bounce between tasks?
-- was the workflow read-first, patch-first, or tool-first?
-- were subagents used effectively?
-- did runtime tooling appear?
-  - Tidewave
-  - browser or HTTP helpers
-  - DB query helpers
+- stayed on one problem or bounced between tasks?
+- workflow read-first, patch-first, or tool-first?
+- subagents used effectively?
+- runtime tooling appeared? (Tidewave, browser/HTTP helpers, DB query helpers)
 - what does the tool mix imply?
 
 ### 5. Friction Points
 
-For each meaningful friction point:
+Per friction point:
 
 | # | Type | Description | Evidence | Strength |
 |---|------|-------------|----------|----------|
 | 1 | error_loop | repeated hook-schema fix attempts | shell output + edits | STRONG |
 
-Suggested types:
-
-- `error_loop`
-- `approach_change`
-- `manual_repetition`
-- `scope_creep`
-- `missing_context`
-- `tool_confusion`
-- `manual_verification`
+Suggested types: `error_loop`, `approach_change`, `manual_repetition`, `scope_creep`, `missing_context`, `tool_confusion`, `manual_verification`.
 
 ### 6. Plugin Skill Assessment
 
 #### Used Commands
 
-If `/rb:*` commands were used:
+`/rb:*` commands used:
 
 | Command | Helped? | Issues? |
 |---------|---------|---------|
@@ -101,7 +86,7 @@ If `/rb:*` commands were used:
 
 #### Suggested Commands
 
-Only suggest a command if the transcript evidence is clear.
+Only suggest a command when transcript evidence is clear:
 
 | Friction Point | Suggested Command | Why | Strength |
 |----------------|-------------------|-----|----------|
@@ -110,12 +95,12 @@ Only suggest a command if the transcript evidence is clear.
 #### Hook and Workflow Assessment
 
 - did hook output help or create noise?
-- were checks ignored for a good reason or because they were weak?
-- did the workflow rely on stale contributor assumptions?
+- were checks ignored for good reason or because they were weak?
+- did workflow rely on stale contributor assumptions?
 
 ### 7. Improvement Opportunities
 
-For each real opportunity:
+Per real opportunity:
 
 ```text
 [STRENGTH] Category: description
@@ -125,22 +110,12 @@ Suggested change: specific file or workflow change
 Corroboration needed: what should be checked next
 ```
 
-Good categories:
-
-- missing automation
-- stale contributor guidance
-- docs-check false positive
-- workflow friction
-- evaluation blind spot
-- tool taxonomy drift
+Categories: missing automation, stale contributor guidance, docs-check
+false positive, workflow friction, evaluation blind spot, tool taxonomy
+drift.
 
 ### 8. Overall Assessment
 
-Rate the session:
+Rate the session: smooth / some friction / high friction / misleading signals.
 
-- smooth
-- some friction
-- high friction
-- misleading signals
-
-Then estimate whether the current plugin helped, hurt, or was mostly irrelevant.
+Estimate whether the current plugin helped, hurt, or was mostly irrelevant.

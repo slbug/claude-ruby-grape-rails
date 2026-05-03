@@ -1,21 +1,18 @@
 # Plugin Development Guide
 
-Development documentation for the Ruby/Rails/Grape Claude Code plugin.
+Ruby/Rails/Grape Claude Code plugin. Validated on macOS, Linux, WSL.
+Native Windows unsupported.
 
-Contributor tooling and shipped hook workflows are validated on macOS, Linux,
-and WSL. Native Windows is not currently supported.
+## Posture
 
-## Overview
+- Lean read-only specialist agents (`omitClaudeMd: true`)
+- Fast `SessionStart` with async refresh
+- Filesystem is the state machine — each phase reads previous
+  phase's output
+- Targeted post-edit routing via `rubyish-post-edit.sh` fan-out
+- Solutions feed back into future cycles
 
-This plugin provides **agentic workflow orchestration** with specialist agents and reference skills for Ruby/Rails/Grape development.
-
-Posture: lean read-only agents (`omitClaudeMd: true`), fast SessionStart
-with async refresh, structured workflow memory (scratchpads), and targeted
-post-edit routing via `rubyish-post-edit.sh` fan-out.
-
-## Workflow Architecture
-
-The plugin supports an optional **Brainstorm** discovery step before the core **Plan -> Work -> Verify -> Review -> Compound** lifecycle:
+## Workflow
 
 ```
 /rb:brainstorm (optional) -> /rb:plan -> /rb:work -> /rb:verify -> /rb:review -> /rb:compound
@@ -24,34 +21,34 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
                    .claude/plans/{slug}/  (namespace)  (namespace)  (namespace)  .claude/solutions/
 ```
 
-**Key principle**: Filesystem is the state machine. Each phase reads from previous phase's output. Solutions feed back into future cycles.
-
-### Workflow Commands
+### Commands
 
 | Command | Phase | Input | Output |
-|---------|-------|-------|--------|
-| `/rb:brainstorm` | Discovery | Topic or feature idea | `.claude/plans/{slug}/interview.md` |
+|---|---|---|---|
+| `/rb:brainstorm` | Discovery | Topic / feature idea | `.claude/plans/{slug}/interview.md` |
 | `/rb:plan` | Planning | Feature description | `.claude/plans/{slug}/plan.md` |
 | `/rb:plan --existing` | Enhancement | Plan file | Enhanced plan with research |
 | `/rb:brief` | Understanding | Plan file | Interactive walkthrough (ephemeral) |
-| `/rb:work` | Execution | Plan file | Updated checkboxes, `.claude/plans/{slug}/progress.md` |
-| `/rb:verify` | Verification | `[--quick\|--full]` (mode flag; resolves from current branch state, NOT plan path) | Verification results |
-| `/rb:review` | Quality | Changed files | `.claude/reviews/{review-slug}-{datesuffix}.md` + `.claude/reviews/{agent-slug}/...` |
+| `/rb:work` | Execution | Plan file | Updated checkboxes + `.claude/plans/{slug}/progress.md` |
+| `/rb:verify` | Verification | `[--quick\|--full]` (resolves from current branch state, NOT plan path) | Verification results |
+| `/rb:review` | Quality | Changed files | `.claude/reviews/{review-slug}-{datesuffix}.md` + per-agent artifacts |
 | `/rb:compound` | Knowledge | Solved problem | `.claude/solutions/{category}/{fix}.md` |
 | `/rb:full` | All | Feature description | Complete cycle with compounding |
 
 ### Artifact Directories
 
-Plan: `.claude/plans/{slug}/` (plan.md, research/, progress.md,
-scratchpad.md). Review:
-`.claude/reviews/{review-slug}-{datesuffix}.md`,
-`.claude/reviews/{agent-slug}/...`, plus
-`.claude/reviews/{review-slug}/` (RUN-CURRENT.json + RUN-HISTORY.jsonl;
-see `references/run-manifest.md`). Other: `.claude/audit/`,
-`.claude/research/{topic-slug}.md`,
-`.claude/investigations/{agent}/{slug}-{datesuffix}.md`,
-`.claude/skill-metrics/`, `.claude/solutions/{category}/`,
-`.claude/provenance-scan/`.
+| Namespace | Path |
+|---|---|
+| Plan | `.claude/plans/{slug}/{plan.md, research/, progress.md, scratchpad.md}` |
+| Review consolidated | `.claude/reviews/{review-slug}-{datesuffix}.md` |
+| Review per-agent | `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` |
+| Review manifest | `.claude/reviews/{review-slug}/RUN-CURRENT.json` + `RUN-HISTORY.jsonl` (schema: `references/run-manifest.md`) |
+| Audit | `.claude/audit/` |
+| Cross-plan research | `.claude/research/{topic-slug}.md` |
+| Investigations | `.claude/investigations/{agent}/{slug}-{datesuffix}.md` |
+| Skill metrics | `.claude/skill-metrics/` |
+| Solutions | `.claude/solutions/{category}/` |
+| Provenance scans | `.claude/provenance-scan/` |
 
 ## Structure
 
@@ -78,38 +75,41 @@ claude-ruby-grape-rails/
 
 ### Audience: Agents, Not Humans
 
-ALL prose docs in this repo (except README.md, CHANGELOG.md, and
-executable code under `scripts/` / `lab/eval/`) load into some
+ALL prose in this repo (except `README.md`, `CHANGELOG.md`, and
+executable code under `scripts/` / `lab/eval/`) loads into some
 agent's context at runtime: shipped plugin docs into Claude
 sub-/main-sessions; `.claude/rules/` + `.claude/skills/` into
 contributor-session Claude; `.github/copilot-instructions.md` +
-`.github/instructions/*` into Copilot. Write imperative
+`.github/instructions/*` into Copilot. Authoring rule: imperative
 instructions, not explanatory guides.
 
-Rules for all agent-readable docs:
-
-- No tutorial-style narration ("first do X, then Y, this teaches…")
-- No reasoning preludes — state the action
-- No `#` thinking/checklist lines inside Bash command bodies
-  (preference #6)
-- Use markdown tables for option/command lists
-- Use semantic verbs; avoid step-by-step explanations of obvious
-  mechanics
+| Rule | Action |
+|---|---|
+| Tutorial narration ("first do X, then Y, this teaches…") | reject |
+| Reasoning preludes before commands | state the action, drop the prelude |
+| `#` thinking/checklist lines inside Bash command bodies (preference #6) | use markdown table or prose lead-in instead |
+| Long explanatory paragraphs where a table fits | rewrite as table |
+| Step-by-step explanation of obvious mechanics | drop |
 
 ### Agents
 
-See `.claude/rules/agent-development.md` (auto-loads when editing agent files).
+See `.claude/rules/agent-development.md` (auto-loads when editing
+agent files).
 
 ### Skills
 
-See `.claude/rules/skill-development.md` (auto-loads when editing skill files).
+See `.claude/rules/skill-development.md` (auto-loads when editing
+skill files).
 
 ### Hooks
 
-See `.claude/rules/hook-development.md` (auto-loads when editing hook files).
+See `.claude/rules/hook-development.md` (auto-loads when editing
+hook files).
 
-Iron Laws are maintained in `plugins/ruby-grape-rails/references/iron-laws.yml`.
-When `iron-laws.yml` changes:
+### Iron Laws + Preferences
+
+Source of truth: `plugins/ruby-grape-rails/references/iron-laws.yml`
+and `preferences.yml`. After edits, regenerate downstream artifacts:
 
 ```bash
 bash scripts/generate-iron-law-outputs.sh all
@@ -117,21 +117,22 @@ bash scripts/generate-iron-law-outputs.sh all
 
 ### Workflow Skills
 
-Workflow skills (plan, work, review, compound, full) have special structure:
+Required structure for `plan`, `work`, `review`, `compound`, `full`:
 
-- Define clear input/output artifacts
-- Reference other workflow phases
-- Include integration diagram showing position in cycle
-- Document state transitions
+- Clear input/output artifacts
+- Cross-references to neighboring workflow phases
+- Integration diagram showing cycle position
+- State transitions
 
 ### Compound Knowledge Skills
 
-The compound system captures solved problems as searchable institutional knowledge:
+| Skill | Role |
+|---|---|
+| `compound-docs` | Schema + reference for solution documentation |
+| `compound` (`/rb:compound`) | Post-fix knowledge capture |
 
-- `compound-docs` -- Schema and reference for solution documentation
-- `compound` (`/rb:compound`) -- Post-fix knowledge capture skill
-
-Solution docs use YAML frontmatter (see `plugins/ruby-grape-rails/skills/compound-docs/references/schema.md`).
+Solution docs use YAML frontmatter — schema:
+`plugins/ruby-grape-rails/skills/compound-docs/references/schema.md`.
 
 ## Checklist
 
@@ -142,75 +143,79 @@ Solution docs use YAML frontmatter (see `plugins/ruby-grape-rails/skills/compoun
 - [ ] `tools:` allowlist only for agents with intentionally narrow tool sets
 - [ ] `omitClaudeMd: true` for specialist agents that don't need contributor context
 - [ ] Skills preloaded
-- [ ] Description at or under 250 chars
-- [ ] Under target (300 lines); move long templates and examples to references/
+- [ ] Description ≤ 250 chars
+- [ ] Body ≤ 300 lines (target); move long templates / examples to `references/`
 
 ### New skill
 
-- [ ] SKILL.md keeps only routing-critical guidance inline; bulky examples live in `references/`
+- [ ] `SKILL.md` keeps routing-critical guidance inline; bulky examples in `references/`
 - [ ] "Iron Laws" section
 - [ ] `references/` for details
 - [ ] No `triggers:` field
-- [ ] Description at or under 1,536 chars (combined with `when_to_use`; front-load key use case)
+- [ ] Description ≤ 1,536 chars (combined with `when_to_use`; front-load key use case)
 
 ### New workflow skill
 
 - [ ] Clear input/output artifacts
 - [ ] Integration diagram with cycle position
 - [ ] State transitions documented
-- [ ] References previous/next phases
+- [ ] Cross-references to previous + next phases
 
 ### Release
 
-- [ ] All markdown passes linting
-- [ ] Versions aligned in:
-  - `package.json`
-  - `.claude-plugin/marketplace.json`
-  - `plugins/ruby-grape-rails/.claude-plugin/plugin.json`
-- [ ] `CHANGELOG.md` updated with all changes under new version heading
-- [ ] README updated
-- [ ] `/rb:intro` tutorial content still accurate (commands, agents, features)
+- [ ] Markdown lint passes
+- [ ] Version aligned across `package.json`, `.claude-plugin/marketplace.json`, `plugins/ruby-grape-rails/.claude-plugin/plugin.json`
+- [ ] `CHANGELOG.md` updated under new version heading
+- [ ] `README.md` updated
+- [ ] `/rb:intro` tutorial content current (commands, agents, features)
 
-### Behavioral Reminders
+## Behavioral Rules
 
-**Learn From Mistakes**: After ANY correction from a contributor, ask:
-"Should I update CLAUDE.md so this doesn't happen again?" If yes, add a
-concise rule preventing the specific mistake. Keep rules actionable:
-"Do NOT X -- instead Y"
+### Learn from corrections
 
-**Intro Tutorial Maintenance**: When adding, removing, or renaming
-commands/skills/agents, check if
-`plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md`
-needs updating. The tutorial is new users' first impression -- stale
-command references erode trust.
+After contributor corrects an action: ask "should I update CLAUDE.md
+so this doesn't happen again?" If yes, add an actionable rule of
+the form `Do NOT X — instead Y`.
 
-**Epistemic Posture**: Apply the behavioral contract documented in
-`plugins/ruby-grape-rails/references/research/epistemic-posture.md`
-when working in this repo: challenge false premises directly instead of
-accepting contributor framing that contradicts repo evidence; avoid
-unsupported agreement, apology cascades, and hedge chains; acknowledge
-mistakes once, state the correction, continue; prefer positive success
-targets over prohibition chains; use direct language for HIGH-confidence
-findings. Iron Laws + preferences injector enforces this at
-`SessionStart` (main session) and `SubagentStart` (subagents) via the
-shared `inject-rules.sh`; this reminder keeps main-conversation
-contributor work aligned with the same posture even outside the hook
-delivery path.
+### Intro tutorial maintenance
 
-### Versioning
+When adding/removing/renaming commands/skills/agents, update
+`plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md`.
 
-The plugin uses [semantic versioning](https://semver.org/):
+### Epistemic posture
 
-- **MAJOR**: Breaking changes (workflow redesign, removed commands)
-- **MINOR**: New features (new hooks, skills, agents, commands)
-- **PATCH**: Bug fixes, doc updates, description improvements
+Apply the contract from
+`plugins/ruby-grape-rails/references/research/epistemic-posture.md`:
 
-**IMPORTANT**: Keep versions aligned across `package.json`,
-`.claude-plugin/marketplace.json`, and
-`plugins/ruby-grape-rails/.claude-plugin/plugin.json`. Keep `CHANGELOG.md`
-aligned with release state (categories: Added, Changed, Fixed, Removed).
-Use `[Unreleased]` for post-release changes; move into target version section
-when preparing the next release.
+- Challenge false premises that contradict repo evidence — do NOT
+  accept contributor framing without verification
+- Avoid unsupported agreement, apology cascades, hedge chains
+- Acknowledge mistakes once, state correction, continue
+- Prefer positive success targets over prohibition chains
+- Use direct language for HIGH-confidence findings
+
+The Iron Laws + preferences injector enforces this at
+`SessionStart` (main) and `SubagentStart` (subagents) via
+`inject-rules.sh`. This reminder keeps main-conversation
+contributor work aligned even outside the hook delivery path.
+
+## Versioning
+
+[Semantic versioning](https://semver.org/):
+
+| Bump | Trigger |
+|---|---|
+| MAJOR | Breaking changes (workflow redesign, removed commands) |
+| MINOR | New features (hooks, skills, agents, commands) |
+| PATCH | Bug fixes, doc updates, description improvements |
+
+Keep versions aligned across `package.json`,
+`.claude-plugin/marketplace.json`,
+`plugins/ruby-grape-rails/.claude-plugin/plugin.json`. Keep
+`CHANGELOG.md` aligned with release state (categories: Added,
+Changed, Fixed, Removed). Use `[Unreleased]` for post-release
+changes; move to the target version section when preparing the
+next release.
 
 @.claude/rules/development.md
 @.claude/rules/eval-workflow.md

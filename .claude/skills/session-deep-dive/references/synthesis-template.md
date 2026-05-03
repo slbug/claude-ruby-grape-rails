@@ -1,24 +1,25 @@
 # Cross-Session Synthesis Template
 
-Synthesize multiple session-analysis reports into a cautious, evidence-backed
-summary.
+## Audience: Agents, Not Humans
+
+Imperative-only.
 
 ## Inputs
 
 Use only real inputs that exist:
 
 1. per-session analysis reports
-2. previous synthesis reports, if present
-3. contributor-supplied notes via `--compare`, if present
-4. recent deterministic signals such as `lab/eval`, when relevant
+2. previous synthesis reports (if present)
+3. contributor-supplied notes via `--compare` (if present)
+4. recent deterministic signals (`lab/eval`) when relevant
 
-Do not depend on `MEMORY.md` or old local report artifacts that are not tracked.
+Do NOT depend on `MEMORY.md` or untracked old local report artifacts.
 
 ## Sections
 
 ### 1. Repeated Patterns
 
-Patterns that appear again in the new set.
+Patterns that appear again in the new set:
 
 | Pattern | Sessions | Evidence | Strength |
 |---------|----------|----------|----------|
@@ -26,49 +27,45 @@ Patterns that appear again in the new set.
 
 ### 2. New Patterns
 
-Patterns not seen in earlier synthesis notes or not previously tracked.
+Patterns not in earlier synthesis notes / not previously tracked:
 
 | Pattern | Sessions | Evidence | Strength |
 |---------|----------|----------|----------|
 
-Require either:
-
-- at least 2 sessions, or
-- 1 session with unusually strong direct evidence
+Required: ≥ 2 sessions OR 1 session with unusually strong direct evidence.
 
 ### 3. Resolved or Weakened Patterns
 
-Patterns previously reported that no longer appear or appear much less often.
+Patterns previously reported that no longer appear or appear less often:
 
 | Pattern | Previous Evidence | Current Evidence | Interpretation |
 |---------|-------------------|------------------|----------------|
 
 ### 4. Corroboration
 
-For each important cross-session claim, state whether it is corroborated by:
+Per important cross-session claim, state corroboration source:
 
 - `lab/eval`
 - docs-check findings
 - deterministic plugin validation
 - transcript evidence only
 
-Use this section to prevent observational claims from sounding stronger than
-they are.
+Prevents observational claims from sounding stronger than they are.
 
 ### 5. Recommendations
 
-Maximum 5 recommendations, ordered by evidence strength and likely impact.
+Maximum 5, ordered by evidence strength + likely impact:
 
 | # | Recommendation | Evidence | Confidence | Effort |
 |---|----------------|----------|------------|--------|
 
 ### 6. Follow-Up Notes
 
-If the contributor should update a tracked note, say which one. If no tracked
-note is appropriate, say so explicitly instead of inventing a memory file.
+Contributor should update a tracked note → name it. No tracked note
+appropriate → state so explicitly. Do NOT invent a memory file.
 
 ## Output Rules
 
-1. Every material claim must cite specific session reports.
+1. Every material claim cites specific session reports.
 2. Mark purely observational claims as such.
-3. Keep the report concise and action-oriented.
+3. Keep report concise + action-oriented.

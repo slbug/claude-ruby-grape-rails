@@ -1,47 +1,50 @@
 # Validation Rules
 
-Use this file as a contributor checklist, not as a frozen schema snapshot.
-When it conflicts with the cached docs in `.claude/docs-check/docs-cache/`, the
-cached docs win.
+## Audience: Agents, Not Humans
+
+Contributor checklist, not frozen schema snapshot. When this file
+conflicts with cached docs in `.claude/docs-check/docs-cache/`, cached
+docs win.
 
 ## First Principles
 
 1. Run `claude plugin validate plugins/ruby-grape-rails` first.
-2. Treat the cached docs as the authority for current Claude Code behavior.
+2. Cached docs are the authority for current Claude Code behavior.
 3. Separate schema truth from repo policy:
-   - schema truth: whether Claude Code documents a field, event, or hook type
-   - repo policy: whether this repo should adopt that capability
-4. Do not file findings about naming style, line counts, or other local taste as
-   docs-compatibility issues.
+
+   | Layer | Definition |
+   |---|---|
+   | schema truth | whether Claude Code documents a field, event, or hook type |
+   | repo policy | whether this repo should adopt that capability |
+
+4. Do NOT file naming style / line count / local taste as docs-compatibility issues.
 
 ## Docs-Check Output Levels
 
 | Level | Use for |
 |-------|---------|
-| `BLOCKER` | The plugin uses something current docs reject or no longer support |
-| `WARNING` | Docs still allow it, but the pattern is deprecated, version-gated, or misleading |
-| `INFO` | Docs now support something the repo may want to adopt |
-| `PASS` | Current repo behavior matches current docs |
+| `BLOCKER` | plugin uses something current docs reject or no longer support |
+| `WARNING` | docs allow it, but pattern is deprecated, version-gated, or misleading |
+| `INFO` | docs now support something repo may want to adopt |
+| `PASS` | current repo behavior matches current docs |
 
 ## Agent Validation
 
 Authoritative cached docs:
 
-- `plugins-reference.md` for plugin-shipped agent support
-- `sub-agents.md` for tool syntax and agent behavior details
+- `plugins-reference.md` — plugin-shipped agent support
+- `sub-agents.md` — tool syntax + agent behavior
 
 ### Agent / Skill Boundary Rule
 
-- **Agent frontmatter** (`plugins/**/agents/*.md`, `.claude/agents/*.md`):
-  `tools:` MUST NOT include `Agent`. Body MUST NOT contain `Agent(...)` /
-  `subagent_type:` calls. Flag as BLOCKER if found.
-- **Skill bodies and skill references**
-  (`plugins/**/skills/*/SKILL.md`, `plugins/**/skills/*/references/*.md`,
-  `.claude/skills/*/SKILL.md`): MAY contain `Agent(...)` calls when
-  describing main-session fanout. Allowed.
-- Rationale source: `sub-agents.md` (cached docs).
+| Surface | Rule |
+|---|---|
+| Agent frontmatter (`plugins/**/agents/*.md`, `.claude/agents/*.md`) | `tools:` MUST NOT include `Agent`. Body MUST NOT contain `Agent(...)` / `subagent_type:` calls. BLOCKER if found. |
+| Skill bodies + skill references (`plugins/**/skills/*/SKILL.md`, `plugins/**/skills/*/references/*.md`, `.claude/skills/*/SKILL.md`) | MAY contain `Agent(...)` calls when describing main-session fanout. Allowed. |
 
-Current plugin-agent frontmatter supported by docs:
+Source: `sub-agents.md` (cached docs).
+
+Currently-supported plugin-agent frontmatter:
 
 - `name`
 - `description`
@@ -55,40 +58,33 @@ Current plugin-agent frontmatter supported by docs:
 - `background`
 - `isolation`
 
-Important current constraints:
+Important constraints:
 
 - `isolation` only documents `worktree`
-- plugin-shipped agents do not support these frontmatter fields; if present,
-  Claude currently ignores them when loading agents from a plugin:
+- plugin-shipped agents do NOT support these fields (CC silently drops):
   - `hooks`
   - `mcpServers`
   - `permissionMode`
-- `Agent(...)` is the current syntax for restricting spawned subagents
-  - `Task(...)` may still appear as historical alias in docs, but contributor
-    guidance should prefer `Agent(...)`
-- `omitClaudeMd` is currently a repo policy choice, not a cached-docs
-  compatibility baseline, unless the cached docs start documenting it later
+- `Agent(...)` is current syntax for restricting spawned subagents
+  - `Task(...)` may appear as historical alias in docs; contributor guidance prefers `Agent(...)`
+- `omitClaudeMd` is repo policy (not cached-docs baseline) unless cached docs document it later
 
 Checks:
 
 1. Confirm plugin agents only use fields currently documented for plugin agents.
-2. Confirm `tools` / `disallowedTools` use currently documented tool names.
-   Note: shipped agents prefer denylist-only (no `tools:` field). A missing
-   `tools:` field is expected, not a gap — the agent inherits all tools minus
-   those in `disallowedTools`.
-3. Confirm any `skills:` references point to real shipped skills.
-4. Treat `omitClaudeMd` enforcement as repo policy unless cached docs explicitly
-   document it.
-5. Treat new documented fields as `INFO`, not as automatic repo defects.
+2. Confirm `tools` / `disallowedTools` use currently documented tool names. Missing `tools:` is expected (denylist-only) — agent inherits all tools minus `disallowedTools`.
+3. Confirm `skills:` references point to real shipped skills.
+4. `omitClaudeMd` enforcement is repo policy unless cached docs explicitly document it.
+5. New documented fields → `INFO`, not automatic repo defects.
 
 ## Skill Validation
 
 Authoritative cached docs:
 
 - `skills.md`
-- `hooks.md` and `hooks-guide.md` for skill-scoped hooks
+- `hooks.md` + `hooks-guide.md` (skill-scoped hooks)
 
-Current skill frontmatter supported by docs:
+Currently-supported skill frontmatter:
 
 - `name`
 - `description`
@@ -107,14 +103,11 @@ Current skill frontmatter supported by docs:
 
 Checks:
 
-1. Flag undocumented skill frontmatter as a docs issue.
-2. Do not flag documented fields such as `effort`, `paths`, or `shell`.
-3. Continue treating `triggers:` as invalid because skills docs do not support
-   it.
-4. When `paths:` is present, confirm the glob patterns are repo-relevant rather
-   than treating the field itself as suspicious.
-5. Treat skill descriptions over `250` characters as a `WARNING`, because the
-   cached docs explicitly say Claude truncates them in the skill listing.
+1. Flag undocumented skill frontmatter as docs issue.
+2. Do NOT flag documented fields (`effort`, `paths`, `shell`).
+3. Continue treating `triggers:` as invalid — skills docs do not support it.
+4. `paths:` present → confirm globs are repo-relevant; do NOT treat the field as suspicious.
+5. Skill descriptions over 250 characters → `WARNING` (cached docs say Claude truncates them in skill listing).
 
 ## Hook Validation
 
@@ -123,7 +116,7 @@ Authoritative cached docs:
 - `hooks.md`
 - `hooks-guide.md`
 
-Current documented hook events include:
+Documented hook events:
 
 - `Setup`
 - `SessionStart`
@@ -155,44 +148,31 @@ Current documented hook events include:
 - `Elicitation`
 - `ElicitationResult`
 
-Current documented hook types:
+Documented hook types: `command`, `http`, `mcp_tool`, `prompt`, `agent`.
 
-- `command`
-- `http`
-- `mcp_tool`
-- `prompt`
-- `agent`
+Important constraints:
 
-Important current constraints:
-
-- handler-level `if` filters are documented and useful
-- `if` is version-gated:
-  - requires Claude Code `v2.1.85+`
-  - only works on tool events:
-    - `PreToolUse`
-    - `PostToolUse`
-    - `PostToolUseFailure`
-    - `PermissionRequest`
-- `FileChanged` uses `matcher` for watched filenames, so do not lint it as a
-  normal tool matcher only
-- `async` is documented only for `type: "command"` hooks
-- async hooks cannot block or control Claude after they start, so control fields
-  such as `decision`, `permissionDecision`, or `continue` should not be treated
-  as meaningful on async handlers
+| Constraint | Detail |
+|---|---|
+| handler-level `if` filters | documented + useful |
+| `if` version gate | requires CC `v2.1.85+`, only works on tool events: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest` |
+| `FileChanged` matcher | matcher = watched filenames (NOT a tool matcher); do not lint as one |
+| `async` | documented only for `type: "command"` hooks |
+| async control | async hooks cannot block / control Claude after start; `decision`, `permissionDecision`, `continue` MUST NOT be treated as meaningful on async handlers |
 
 Checks:
 
-1. Confirm `hooks/hooks.json` only uses documented events and hook types.
-2. Flag undocumented events and hook types as `BLOCKER`.
-3. Treat `if` usage outside tool events as `WARNING` or `BLOCKER` depending on
-   whether it disables the handler.
-4. Treat async usage on non-`command` hooks as a docs issue.
-5. When a hook is async, do not file control-output behavior as supported unless
-   the cached docs explicitly say it is.
-6. Validate `${CLAUDE_PLUGIN_ROOT}` references against real repo paths.
-   - in this repo, those targets live under `plugins/ruby-grape-rails/...`
-   - inside the packaged plugin root, the same files appear as paths like
-     `hooks/hooks.json` or `.claude-plugin/plugin.json`
+1. Confirm `hooks/hooks.json` only uses documented events + types.
+2. Flag undocumented events / hook types as `BLOCKER`.
+3. `if` outside tool events → `WARNING` or `BLOCKER` (depending on whether handler is disabled).
+4. Async on non-`command` hooks → docs issue.
+5. Async hook + control output → not supported unless cached docs explicitly say.
+6. Validate `${CLAUDE_PLUGIN_ROOT}` references against real repo paths:
+
+   | Context | Path |
+   |---|---|
+   | this repo | `plugins/ruby-grape-rails/...` |
+   | packaged plugin root | `hooks/hooks.json`, `.claude-plugin/plugin.json` |
 
 ## Plugin Config Validation
 
@@ -202,43 +182,45 @@ Authoritative cached docs:
 - `plugin-marketplaces.md`
 - `plugins.md`
 - `mcp.md`
-- `settings.md` only when a finding depends on settings semantics
+- `settings.md` (only when finding depends on settings semantics)
 
 Checks for `.claude-plugin/plugin.json`:
 
-1. Confirm required manifest structure still matches current docs.
-2. Treat these as currently documented plugin capabilities when present:
+1. Confirm required manifest structure matches current docs.
+2. Currently-documented capabilities (when present):
    - `hooks`
    - `mcpServers`
    - `outputStyles`
    - `lspServers`
    - `userConfig`
    - `channels`
-3. When validating path behavior, remember:
-   - custom `commands`, `agents`, `skills`, and `outputStyles` replace defaults
-   - arrays can keep the default path and add extras
-4. When validating environment-variable guidance, distinguish:
-   - `${CLAUDE_PLUGIN_ROOT}` for bundled files
-   - `${CLAUDE_PLUGIN_DATA}` for persistent state that survives plugin updates
+3. Path behavior:
+   - custom `commands`, `agents`, `skills`, `outputStyles` REPLACE defaults
+   - arrays can keep default path + add extras
+4. Environment-variable distinction:
+
+   | Variable | Use |
+   |---|---|
+   | `${CLAUDE_PLUGIN_ROOT}` | bundled files |
+   | `${CLAUDE_PLUGIN_DATA}` | persistent state surviving plugin updates |
 
 Checks for `.claude-plugin/marketplace.json`:
 
-1. Confirm plugin entries still use documented source shapes.
-2. Flag broken relative paths or malformed source objects.
-3. Treat marketplace metadata gaps as repo policy issues unless current docs
-   make them invalid.
+1. Confirm plugin entries use documented source shapes.
+2. Flag broken relative paths / malformed source objects.
+3. Marketplace metadata gaps → repo policy issues unless current docs make them invalid.
 
 ## Recommended Validation Flow
 
 1. Run deterministic plugin validation.
-2. Identify the exact docs question:
+2. Identify the docs question:
    - agent schema
    - skill frontmatter
    - hooks
    - manifest / marketplace
-3. Read only the cached doc sections that answer that question.
-4. Compare only the relevant plugin file snippets.
-5. Classify each finding as:
+3. Read only the cached doc sections that answer the question.
+4. Compare only relevant plugin file snippets.
+5. Classify each finding:
    - docs incompatibility
    - repo recommendation
    - false alarm caused by stale local guidance

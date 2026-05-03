@@ -1,8 +1,10 @@
 # CC Changelog Analysis Rules
 
-## Plugin Component Mapping
+## Audience: Agents, Not Humans
 
-When analyzing CC changelog entries, map them to specific plugin components:
+Imperative-only. Map CC changelog entries to specific plugin components.
+
+## Plugin Component Mapping
 
 ### Hooks System
 
@@ -82,7 +84,7 @@ Flag as BREAKING when CC changelog says:
 - "Renamed" an API/tool/parameter we reference
 - Tool parameter schema changed (affects hook `if` patterns)
 
-**Verification**: grep the plugin for the affected term/pattern.
+Verification: grep the plugin for the affected term/pattern.
 
 ### OPPORTUNITY — New Feature We Could Use
 
@@ -94,7 +96,7 @@ Flag as OPPORTUNITY when:
 - New tool that agents could benefit from
 - Performance improvement that changes best practices
 
-**Prioritization**: Score 1-3 based on how many plugin components benefit.
+Prioritization: score 1-3 based on how many plugin components benefit.
 
 ### RELEVANT FIX — CC Fixed Something We Work Around
 
@@ -104,7 +106,7 @@ Flag as RELEVANT FIX when:
 - CC fixed a behavior our hooks explicitly handle
 - Error mentioned in compound solutions
 
-**Verification**: search CLAUDE.md and hooks for the bug pattern.
+Verification: search CLAUDE.md and hooks for the bug pattern.
 
 ### DEPRECATION — Migration Needed
 
@@ -114,12 +116,13 @@ Flag as DEPRECATION when:
 - CC will remove something in a future version
 - CC recommends migrating from X to Y (and we use X)
 
-**Urgency**: immediate if removal announced, low if just deprecated.
+Urgency: immediate if removal announced, low if just deprecated.
 
 ### INFO — Log Only
 
-Everything else: performance improvements, unrelated bug fixes, features for
-capabilities we don't use (e.g., PowerShell, Computer Use).
+Everything else: performance improvements, unrelated bug fixes,
+features for capabilities we don't use (e.g., PowerShell, Computer
+Use).
 
 ## Cross-Reference Checklist
 
@@ -128,4 +131,4 @@ For each BREAKING or DEPRECATION item, always:
 1. `grep -r "PATTERN" plugins/ruby-grape-rails/` — find all usages
 2. Check `hooks/hooks.json` — any hook referencing the feature
 3. Check CLAUDE.md — any instructions referencing this
-4. Check the current planning/deferred-items file — any deferred items affected
+4. Check current planning/deferred-items file — any deferred items affected
