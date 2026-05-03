@@ -438,51 +438,92 @@ def cmd_spawn_paths(path)
   end
 end
 
-# Refusal predicate: only unlink files that are
-# (a) listed in the manifest's agents map (path traceable to manifest), and
-# (b) under the manifest's parent .claude/<ns>/<slug>/ tree (or its
-#     {agent-slug}/ siblings — review per-agent layout), and
-# (c) below STUB_BYTES_THRESHOLD (real artifacts protected).
-STUB_BYTES_THRESHOLD = 1000
-
+# Refusal predicate: only rotate (rename-aside) files that are
+# (a) listed in the manifest's agents map AND match the canonical path
+#     computed from the manifest's skill/slug/datesuffix/agent_slug,
+# (b) under the repo containment root,
+# (c) reachable through no symlinked ancestor (lexical guard).
+# Existing files at the canonical path are renamed to a sibling
+# `<agent-slug>.stale-<rename-ts>.md` so the freshly-spawned agent can
+# Write at the canonical path. Prior contents are preserved as a
+# timestamped sibling — no `unlink`, no data loss.
 RESPAWNABLE_AGENT_STATES = %w[pending in-flight stub-no-output].freeze
 
 def cmd_prepare_respawn(path)
   abs = validate_path(path)
   data = read_json(abs)
+  skill = data['skill']
+  slug = data['slug']
+  datesuffix = data['datesuffix']
+  conv = SKILL_CONVENTIONS[skill]
+  unless conv && slug.is_a?(String) && datesuffix.is_a?(String)
+    die "manifest missing skill/slug/datesuffix or unknown skill: #{skill.inspect}"
+  end
+
   agents = data['agents'].is_a?(Hash) ? data['agents'] : {}
   manifest_dir = File.dirname(abs)
   repo_root = manifest_dir.sub(%r{/\.claude/.+\z}, '')
-  unlinked = []
-  agents.each do |slug, info|
+  containment = containment_root
+  rename_ts = Time.now.utc.strftime('%Y%m%d-%H%M%S-%6N')
+  rotated = []
+
+  agents.each do |agent_slug, info|
     next unless info.is_a?(Hash)
     next unless RESPAWNABLE_AGENT_STATES.include?(info['status'])
 
     agent_path = info['path']
     next unless agent_path.is_a?(String) && !agent_path.empty?
 
-    abs_agent = agent_path.start_with?('/') ? agent_path : File.join(repo_root, agent_path)
-    abs_agent = File.expand_path(abs_agent)
-    next unless abs_agent =~ %r{/\.claude/.+\.md\z}
-    next unless abs_agent.start_with?(containment_root + '/')
-    next if File.symlink?(abs_agent)
-    next unless File.exist?(abs_agent)
+    abs_agent = File.expand_path(
+      agent_path.start_with?('/') ? agent_path : File.join(repo_root, agent_path)
+    )
 
-    unless File.file?(abs_agent)
-      warn "manifest-update: refusing non-regular path #{abs_agent} for #{slug}"
+    expected = File.expand_path(
+      conv[:agent_path].call(repo_root, slug, datesuffix, agent_slug)
+    )
+
+    abs_canon = RubyGrapeRails::PathSafety.canonical_existing_or_deepest(abs_agent)
+    expected_canon = RubyGrapeRails::PathSafety.canonical_existing_or_deepest(expected)
+
+    if abs_canon != expected_canon
+      warn "manifest-update: refusing #{abs_agent} for #{agent_slug} — " \
+           'does not match canonical path for this manifest'
       next
     end
 
-    size = File.size(abs_agent)
-    if size >= STUB_BYTES_THRESHOLD
-      warn "manifest-update: protected real artifact (#{size}B) at #{abs_agent} for #{slug}; not unlinking"
+    unless abs_canon.start_with?(containment + '/')
+      warn "manifest-update: refusing #{abs_canon} for #{agent_slug} — " \
+           "outside containment root #{containment}"
       next
     end
-    File.unlink(abs_agent)
-    unlinked << "#{slug}:#{abs_agent}"
+
+    begin
+      RubyGrapeRails::PathSafety.reject_symlink_ancestors!(abs_canon, stop_at: containment)
+    rescue RubyGrapeRails::PathSafety::SymlinkAncestorError => e
+      warn "manifest-update: refusing #{abs_canon} for #{agent_slug} — #{e.message}"
+      next
+    end
+
+    next if File.symlink?(abs_canon)
+    next unless File.exist?(abs_canon)
+
+    unless File.file?(abs_canon)
+      warn "manifest-update: refusing non-regular path #{abs_canon} for #{agent_slug}"
+      next
+    end
+
+    target = abs_canon.sub(/\.md\z/, ".stale-#{rename_ts}.md")
+    if File.exist?(target)
+      warn "manifest-update: rename target collision, skipping #{agent_slug}: #{target}"
+      next
+    end
+
+    File.rename(abs_canon, target)
+    rotated << "#{agent_slug}: #{abs_canon} -> #{target}"
   end
-  puts "prepare-respawn: unlinked=#{unlinked.size}"
-  unlinked.each { |entry| puts "  #{entry}" }
+
+  puts "prepare-respawn: rotated=#{rotated.size}"
+  rotated.each { |entry| puts "  #{entry}" }
 end
 
 USAGE = <<~USAGE
@@ -496,7 +537,7 @@ USAGE = <<~USAGE
     manifest-update patch            <manifest-path>          # patch from stdin
     manifest-update archive          <manifest-path>
     manifest-update status           <manifest-path>
-    manifest-update prepare-respawn  <manifest-path>          # unlink stale stubs
+    manifest-update prepare-respawn  <manifest-path>          # rotate existing files to .stale-<ts>.md
     manifest-update field            <manifest-path> <key>    # extract field (dotted)
     manifest-update spawn-paths      <manifest-path>          # tab-separated agent_slug<TAB>path
     manifest-update resume-check     <manifest-path> [--head=SHA] [--base=SHA] [--branch=NAME] [--ttl-hours=N]

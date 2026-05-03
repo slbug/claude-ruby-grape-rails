@@ -303,8 +303,8 @@ Every research Agent() call must:
 - Helper computes absolute paths from `--skill=rb:plan` + `--slug` +
   `--agents`. Path convention: `.claude/plans/{plan-slug}/research/{topic-slug}.md`
   (research files keyed by topic slug, no datesuffix — research is
-  iterative across days; helper protects existing artifacts via
-  `prepare-respawn` size check).
+  iterative across days; `prepare-respawn` rotates prior files to
+  `.stale-<ts>.md` siblings).
 - Skill body reads paths via `manifest-update spawn-paths "$MANIFEST"`.
 - Pass each path verbatim in the spawn prompt.
 - Agents use the exact path received. No filename invention.

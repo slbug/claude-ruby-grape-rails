@@ -193,7 +193,7 @@ first, prompt, then call `prepare-run` to commit.
 
 ## Atomic Write
 
-All manifest mutations and stale-stub unlinks go through
+All manifest mutations and stale-stub rotations go through
 `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update`. Skill bodies and main
 session NEVER call raw `mv`, `cp`, `rm`, or `jq -i` against manifest
 or per-agent artifact paths.
@@ -216,8 +216,8 @@ ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update spawn-paths <manifest>
 # Deep-merge JSON from stdin. Auto-stamps updated_at.
 printf '<patch-json>\n' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch <manifest>
 
-# Unlink stale stubs at manifest-tracked agent paths before re-spawn.
-# Only unlinks files < 1000 bytes (real artifacts protected with warning).
+# Rotate existing files at manifest-tracked agent paths before re-spawn.
+# Each existing file renamed to <agent-slug>.stale-<rename-ts>.md.
 ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn <manifest>
 
 # Append current state to RUN-HISTORY.jsonl, unlink RUN-CURRENT.json.
@@ -252,10 +252,12 @@ Helper enforces:
 - Atomic rename via Ruby `File.rename` (POSIX `rename(2)`), preceded
   by `fsync` of the temp file and followed by directory `fsync`.
 - Tmp-file cleanup on failure (`ensure` block).
-- `prepare-respawn` only unlinks files (a) listed in
-  `manifest.agents.*.path`, (b) under `.claude/`, (c) below 1000 bytes,
-  and (d) only when agent status is `pending` / `in-flight` /
-  `stub-no-output`. Real artifacts are skipped with a warning.
+- `prepare-respawn` rotates files. Refuses unless (a) recorded
+  path's canonical resolution matches the canonical layout for the
+  manifest's `skill` / `slug` / `datesuffix` / agent-slug, (b)
+  canonical path under containment root, (c) no symlinked ancestor,
+  (d) agent status `pending` / `in-flight` / `stub-no-output`. Renames
+  to `<agent-slug>.stale-<rename-ts>.md`.
 - Fail-closed on the target manifest: any error during write leaves
   the target manifest path unchanged (no partial writes; either
   prior content or new content, never half-written). Transient

@@ -60,8 +60,8 @@ message.
    consolidated path, git pins; writes fresh manifest atomically.
 4. Run
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn "$MANIFEST"`.
-   Helper unlinks any stale stub (< 1000 bytes) at manifest-tracked
-   agent paths.
+   Rotates existing files at manifest-tracked agent paths to
+   `<agent-slug>.stale-<rename-ts>.md`.
 5. For each agent, patch `status: in-flight` via
    `printf '{"agents":{"%s":{"status":"in-flight"}}}\n' "$AGENT_SLUG" |
    ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"`.
