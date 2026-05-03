@@ -84,10 +84,17 @@ BAD — `cat | grep`:
 cat app/**/*.rb | grep -n "before_action"
 ```
 
-GOOD — Grep tool with a glob:
+GOOD — `Grep` tool with a glob (when the tool is available):
 
 ```text
 Grep(pattern: "before_action", glob: "app/**/*.rb")
+```
+
+GOOD — `ugrep` over `app/` when the `Grep` tool is unavailable
+(native CC 2.1.117+ macOS/Linux):
+
+```bash
+ugrep -n 'before_action' app/
 ```
 
 ## find
@@ -100,13 +107,13 @@ find . -name '*.erb'
 find . -name '*.haml'
 ```
 
-GOOD — single combined pass:
+GOOD — single combined `bfs` pass:
 
 ```bash
-find . \( -name '*.rb' -o -name '*.erb' -o -name '*.haml' \)
+bfs . -name '*.rb' -o -name '*.erb' -o -name '*.haml'
 ```
 
-GOOD — Glob tool when pattern allows.
+GOOD — `Glob` tool when available.
 
 ## Find-exec / xargs cat
 
@@ -116,13 +123,13 @@ BAD — dumps every match into stdout:
 find app -name '*.rb' -exec cat {} +
 ```
 
-GOOD — Grep tool to scope inspection. Read tool for full content of
-the few files that matter.
+GOOD — `ugrep` (or `Grep` tool) to scope inspection. `Read` tool for
+full content of the few files that matter.
 
 ## When > 5 shell calls
 
-Stop. Check whether wider batching, a Glob, a Grep, or fewer Reads
-replaces some of them.
+Stop. Check whether wider batching, `bfs`, `ugrep`, the `Glob` /
+`Grep` tools, or fewer `Read`s replaces some of them.
 
 ## Exception: skill-body composition
 
