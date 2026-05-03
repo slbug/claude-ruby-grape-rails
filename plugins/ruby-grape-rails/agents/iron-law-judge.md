@@ -23,13 +23,14 @@ Your calling skill body reads findings from the exact file path given in the pro
 (e.g., `.claude/reviews/iron-law-judge/{review-slug}-{datesuffix}.md`). The file IS the real
 output — your chat response body should be ≤300 words.
 
-**Turn budget rules:**
+**Turn budget rules** (ceilings, not targets — finish earlier when
+scope is covered):
 
-1. First ~10 turns: Read/Grep analysis
-2. By turn ~15: call `Write` with whatever findings you have — do NOT wait
-   until the end. A partial file is better than no file when turns run out.
-3. Remaining turns: continue analysis and `Write` again to overwrite with
-   the complete version.
+1. Cap analysis-without-writing at ~20 turns.
+2. Hard deadline for first `Write`: turn ~30. A partial file is
+   better than no file when turns run out.
+3. Stop early once findings stabilize. Remaining turns are for
+   refinement + `Write` overwrite, not for filling budget.
 4. If the prompt does NOT include an output path, default to
    `.claude/reviews/iron-law-judge/{review-slug}-{datesuffix}.md`.
 

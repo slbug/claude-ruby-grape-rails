@@ -7,6 +7,68 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.5] - 2026-05-03
+
+### Added
+
+- Preference #6 (`tooling`, `Bash Bodies Execute, Not Narrate`):
+  forbids `#` thinking/checklist lines inside Bash command bodies.
+  Reasoning belongs in the agent's `Write` artifact or thinking, not
+  in command strings. Reason: post-run analysis of `/rb:review`
+  fanout showed `testing-reviewer` (38) and `iron-law-judge` (10)
+  emitted Bash dispatches whose bodies were `#` commentary used as
+  thinking-out-loud surface — burning tool budget on no-op
+  execution.
+
+### Changed
+
+- Iron Law 12 wording (`iron-laws.yml`): retitled `No Eval` →
+  `No Ruby Eval`; rule explicitly scoped to Ruby `*.rb`. Shell
+  `eval` of trusted plugin-helper output is out of scope. `version`
+  bumped to `1.1.0`, `last_updated` to `2026-05-03`.
+- Preference #5 wording (`preferences.yml`): conditional on CC
+  build (Grep/Glob tools when available, else `ugrep` / `bfs` per
+  native CC 2.1.117+).
+- Per-agent `status` enum standardized on `artifact` (was `complete`):
+  `run-manifest.md`, `agent-resume.md`, `review-playbook.md`
+  state-machine table aligned. Run-level enum unchanged
+  (`in-flight | complete`).
+- `review/SKILL.md`, `plan/SKILL.md`, `brainstorm/SKILL.md`: replaced
+  ambiguous "Patch each agent's recovery `status`" with explicit
+  "Patch each agent's `status` field with its recovery-state value".
+  Reason: observed schema drift — main session emitted undocumented
+  `recovery` field after parsing the ambiguous wording as two
+  separate fields.
+- `review-playbook.md` recovery list: explicit
+  `manifest-update patch` requirement (no raw `RUN-CURRENT.json`
+  edits).
+- Agent turn-budget rules rewritten as ceilings, not targets — agent
+  may finish earlier when scope is covered. Reason: prior wording
+  ("First ~10 turns: analysis") read as a minimum spend, encouraging
+  budget-filling. Per-agent caps now scale at 50%/75% of `maxTurns`:
+  `data-integrity-reviewer` 30/45, `testing-reviewer` 30/45,
+  `ruby-reviewer` 20/30, `iron-law-judge` 20/30,
+  `deep-bug-investigator` 20/30, `security-analyzer` 18/26,
+  `verification-runner` 18/26, `deployment-validator` 12/18,
+  `migration-safety-reviewer` 12/18, `sidekiq-specialist` 12/18.
+- Tool-name prose ("Read/Grep analysis") removed from agent bodies
+  per `agent-development.md` "Bash Discipline" rule (tool-batching
+  discipline lives in injected preferences, not duplicated in agent
+  bodies). Replaced with semantic descriptions ("file inspection +
+  pattern search").
+- CHANGELOG `mktemp` overclaim corrected to "atomic temp file
+  (`O_EXCL`)" — actual mechanism uses deterministic
+  `path.tmp.<pid>.<time>` + `O_EXCL` open, not literal `mktemp(3)`.
+
+### Fixed
+
+- Schema drift in `/rb:review` skill body: ambiguous "recovery
+  `status`" phrasing caused main-session manifest patches to emit
+  an undocumented `recovery` field alongside `status`. Verified in
+  ludwig session `040c3082-ad98-4ed6-aa38-218e93acfbc4` —
+  `printf '{"agents":{"%s":{"status":"artifact","recovery":"artifact"}}}'`.
+  Wording fix removes the parse path that produces the extra field.
+
 ## [1.16.4] - 2026-05-03
 
 ### Added
@@ -2367,7 +2429,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.4...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.5...HEAD
+[1.16.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.4...v1.16.5
 [1.16.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.3...v1.16.4
 [1.16.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.2...v1.16.3
 [1.16.2]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.1...v1.16.2

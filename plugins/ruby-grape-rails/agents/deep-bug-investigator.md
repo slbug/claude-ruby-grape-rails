@@ -37,14 +37,15 @@ prompt (e.g.,
 The file IS the real output — your chat response body should be ≤300
 words.
 
-**Turn budget rules:**
+**Turn budget rules** (ceilings, not targets — finish earlier when
+root cause is established):
 
-1. First ~15 turns: reproduce, gather evidence (Read / Grep / Bash:
-   rspec / runner / psql / redis-cli).
-2. By turn ~25: call `Write` with whatever findings you have so far — do
-   NOT wait until the end. A partial file is better than no file when
-   turns run out.
-3. Remaining turns: continue analysis and `Write` again to overwrite
+1. Cap reproduce + evidence-gathering at ~20 turns (file inspection,
+   pattern search, runtime probes via rspec / runner / psql / redis-cli).
+2. Hard deadline for first `Write`: turn ~30. A partial file is
+   better than no file when turns run out.
+3. Stop early once root cause is established. Remaining turns are
+   for refinement + `Write` overwrite
    with the complete version.
 4. If the prompt does NOT include an output path, default to
    `.claude/investigations/deep-bug-investigator/{slug}-{datesuffix}.md`.

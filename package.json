@@ -1,6 +1,6 @@
 {
   "name": "ruby-grape-rails-plugin",
-  "version": "1.16.4",
+  "version": "1.16.5",
   "private": true,
   "description": "Specialist agents, Iron Laws, parallel code review, and plan→work→verify→review→compound workflow for Ruby, Rails, Grape, Sidekiq, Hotwire, Active Record, and Sequel projects.",
   "scripts": {

@@ -136,7 +136,9 @@ See `references/research-integration.md` for the full pattern.
    `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`. If matched,
    apply that protocol (resume via `SendMessage` if available, else
    mark `stub-no-output`) BEFORE Artifact Recovery.
-7. Apply Artifact Recovery and patch each entry's recovery `status`.
+7. Apply Artifact Recovery and patch each entry's `status` field
+   with its recovery-state value (`artifact` | `stub-replaced` |
+   `recovered-from-return` | `stub-no-output`).
 8. Patch manifest `status: complete` after evaluation.
 
 Schema + helper subcommands:
