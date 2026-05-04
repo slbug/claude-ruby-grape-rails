@@ -12,12 +12,12 @@ Skill body owns the complete cycle from main session.
 
 ## STEP 0: Read the cycle + state-machine references
 
-Open `${CLAUDE_SKILL_DIR}/references/cycle-patterns.md` and
-`${CLAUDE_SKILL_DIR}/references/state-machine.md` at the start of any
-`/rb:full` run. The summaries below are routing hints; the canonical
-state transitions, blocker handling, and recovery protocols live in
-those files. Each child skill (`/rb:plan`, `/rb:work`, `/rb:verify`,
-`/rb:review`, `/rb:compound`) also has its own STEP 0 playbook read.
+Read `${CLAUDE_SKILL_DIR}/references/cycle-patterns.md` and
+`${CLAUDE_SKILL_DIR}/references/state-machine.md`. Apply the state
+transitions, blocker handling, and recovery protocols as the
+canonical procedure. Each child skill (`/rb:plan`, `/rb:work`,
+`/rb:verify`, `/rb:review`, `/rb:compound`) runs its own STEP 0
+playbook read on entry.
 
 ## Cycle
 

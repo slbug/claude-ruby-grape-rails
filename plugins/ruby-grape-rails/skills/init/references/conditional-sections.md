@@ -1,11 +1,10 @@
 # Conditional Sections for Injectable Template
 
-Each placeholder in `injectable-template.md` renders only PROJECT-SPECIFIC
-detected or interview-collected items. Generic library defaults and
-already-injected Iron Laws / Preferences MUST NOT be written into
-`CLAUDE.md`. If detection + interview produce zero project-specific
-content for a section, render it as an empty string (omit the section
-entirely).
+Render each placeholder in `injectable-template.md` with PROJECT-SPECIFIC
+detected or interview-collected items only. Reject generic library
+defaults and already-injected Iron Laws / Preferences. Render empty
+string (omit section entirely) when detection + interview produce zero
+project-specific content.
 
 ## Render Procedure (per section)
 
@@ -141,7 +140,7 @@ belongs in `/rb:secrets` skill body, not in project `CLAUDE.md`.
 | `{PACKWERK_SECTION}` | Render per rules above; empty string if no project-specific content |
 | `{BETTERLEAKS_SECTION}` | Render per rules above; empty string if no project-specific content |
 | `{BETTERLEAKS_STATUS}` | `command -v betterleaks` result | available / missing |
-| `{PLUGIN_VERSION}` | `jq -r '.version // empty' "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"` | 1.16.6 |
+| `{PLUGIN_VERSION}` | `jq -r '.version // empty' "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"` | 1.16.7 |
 
 ## Detection Commands
 

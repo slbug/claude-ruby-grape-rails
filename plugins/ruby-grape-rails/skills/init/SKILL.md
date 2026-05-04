@@ -1,6 +1,6 @@
 ---
 name: rb:init
-description: "Use when initializing the Ruby/Rails/Grape plugin in a project. Installs auto-activation rules into CLAUDE.md for complexity detection, workflow routing, Iron Laws, and Ruby stack auto-loading."
+description: "Use when initializing the Ruby/Rails/Grape plugin in a project. Writes a managed block of project-specific stack notes (queue list, ORM-per-package map, package layout) into CLAUDE.md. Iron Laws and preferences are runtime-injected via SessionStart + SubagentStart hooks."
 when_to_use: "Triggers: \"initialize plugin\", \"setup ruby plugin\", \"install plugin\", \"configure Claude for Rails\"."
 argument-hint: "[--update]"
 effort: low

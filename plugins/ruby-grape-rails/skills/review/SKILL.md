@@ -236,12 +236,8 @@ Rules:
 ## Synthesis
 
 Read `${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Synthesis
-Procedure" before writing the consolidated artifact. That section is
-the canonical 5-step procedure: read playbook → read agent artifacts
-→ normalize verdict text → map worker severity → compute verdict
-deterministically → write. Skipping the read causes recurring drift
-(non-canonical verdict pass-through, worker-form severity leak,
-soft verdict despite present blockers).
+Procedure" before writing the consolidated artifact. Apply the 5-step
+procedure verbatim.
 
 Output path:
 `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.

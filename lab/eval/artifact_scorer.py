@@ -137,6 +137,18 @@ REVIEW_CHECKS: tuple[CheckSpec, ...] = (
         output_checks.has_review_summary_table,
     ),
     CheckSpec(
+        "review_reviewer_coverage",
+        "Has Reviewer Coverage section",
+        "artifact",
+        output_checks.has_review_reviewer_coverage,
+    ),
+    CheckSpec(
+        "review_reviewer_verdicts",
+        "Has Reviewer Verdicts section",
+        "artifact",
+        output_checks.has_review_reviewer_verdicts,
+    ),
+    CheckSpec(
         "review_file_refs",
         "Findings cite file:line refs",
         "artifact",

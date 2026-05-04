@@ -116,6 +116,18 @@ def has_review_summary_table(content: str) -> tuple[bool, str]:
     return bool(match), "Severity summary table present" if match else "Missing severity summary table"
 
 
+def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
+    match = re.search(r"(?m)^## Reviewer Coverage\s*$", content)
+    return bool(match), "Reviewer Coverage section present" if match else "Missing ## Reviewer Coverage section"
+
+
+def has_review_reviewer_verdicts(content: str) -> tuple[bool, str]:
+    content = _normalize_newlines(content)
+    match = re.search(r"(?m)^## Reviewer Verdicts\s*$", content)
+    return bool(match), "Reviewer Verdicts section present" if match else "Missing ## Reviewer Verdicts section"
+
+
 def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
     content = _normalize_newlines(content)
     matches = re.findall(r"(?m)^\*\*File\*\*:\s+`?.+:\d+`?$", content)

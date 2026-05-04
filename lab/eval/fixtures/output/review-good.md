@@ -2,7 +2,20 @@
 
 **Date**: 2026-03-28
 **Files Reviewed**: 2
-**Reviewers**: ruby-reviewer, testing-reviewer
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| testing-reviewer | artifact | 0 BLOCKER / 1 WARNING / 0 SUGGESTION |
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer | PASS | PASS |
+| testing-reviewer | PASS WITH WARNINGS | PASS WITH WARNINGS |
 
 ## Summary
 
