@@ -235,21 +235,91 @@ Rules:
 
 ## Synthesis
 
-Read each artifact from the manifest (post-recovery) and write the
-consolidated review:
+### STEP 0: Read the playbook before writing anything
 
-- Header MUST include a `## Reviewer Coverage` section with one row per
-  spawned reviewer and its recovery state: `artifact`, `stub-replaced`,
-  `recovered-from-return`, or `stub-no-output`. Surface coverage gaps;
-  do not silently absorb missing reviewers into "no findings".
-- Preserve blockers / must-fix items VERBATIM.
+Open `${CLAUDE_SKILL_DIR}/references/review-playbook.md` at the start
+of synthesis. The mapping tables and verdict algorithm are the
+canonical source — the inline summaries in this SKILL.md are not
+sufficient. Skipping the read causes the recurring drift modes:
+non-canonical verdicts pass through, worker-form severity leaks into
+the consolidated artifact, blockers exist but verdict comes out
+softer than `BLOCKED`.
+
+### STEP 1: Read each agent artifact (post-recovery)
+
+For each manifest entry: STAT the expected path, apply the recovery
+state machine in § "Artifact Recovery" below.
+
+### STEP 2: Normalize each agent's verdict text
+
+Scan each per-agent artifact for verdict prose. Map non-canonical
+forms to the canonical 4-set BEFORE writing the consolidated header:
+
+| Non-canonical form (preserve verbatim in metadata) | Canonical mapping rule |
+|---|---|
+| `CONDITIONAL PASS`, `PASS WITH CAVEATS`, `PASS-WITH-WARNS` | infer from finding count: bucket-form severity → canonical |
+| `Approved`, `LGTM`, `looks good` | `PASS` if no warnings/blockers, else map per finding count |
+| `Needs fixes`, `fix before merge`, `not ready` | `REQUIRES CHANGES` if no blockers, else `BLOCKED` |
+| `Critical`, `BLOCK`, `BLOCKER` (verdict, not severity) | `BLOCKED` |
+
+Preserve the agent's raw verdict text in a `Reviewer Verdicts`
+metadata table at top of the consolidated artifact. Do NOT erase
+their wording — only normalize the consolidated header.
+
+### STEP 3: Map worker severity to bucket form
+
+Reviewer Coverage row counts MUST use bucket form
+(`BLOCKER | WARNING | SUGGESTION`), NOT worker form
+(`Critical | Warning | Info`). Per playbook § "Worker Severity
+Mapping":
+
+- worker `Critical` introduced by this diff → `BLOCKER`
+- worker `Critical` on unchanged code → `Pre-existing BLOCKER` (counted, no verdict effect)
+- worker `Warning` → `WARNING`
+- worker `Info` → `SUGGESTION`
+
+Per-agent artifacts retain their original wording (workers wrote
+`Critical/Warning/Info` and that's preserved). The consolidated
+artifact uses bucket form throughout — Reviewer Coverage row,
+Summary table, At-a-Glance Finding Table, section headers.
+
+### STEP 4: Compute consolidated verdict deterministically
+
+Apply the algorithm from playbook § "Verdict Decision Rules":
+
+```
+if blockers_introduced_by_diff > 0:
+    verdict = BLOCKED
+elif new_public_behavior_lacks_test_coverage:
+    verdict = REQUIRES CHANGES
+elif warnings > 0:
+    verdict = PASS WITH WARNINGS
+else:
+    verdict = PASS
+```
+
+Do NOT override with author judgment. If 4 BLOCKERs are present, the
+verdict is `BLOCKED` — even when each individual blocker looks
+"fixable in one PR". Preserve any author-side nuance in the per-finding
+prose, not the verdict tag.
+
+### STEP 5: Write the consolidated review
+
+- Header MUST include a `## Reviewer Coverage` section with one row
+  per spawned reviewer and its recovery state: `artifact`,
+  `stub-replaced`, `recovered-from-return`, or `stub-no-output`.
+  Surface coverage gaps; do not silently absorb missing reviewers
+  into "no findings".
+- Header MUST include a `## Reviewer Verdicts` table preserving each
+  agent's raw verdict text alongside the normalized canonical form.
+- Preserve blockers / must-fix items VERBATIM in body.
 - Preserve decision options + rationale, unresolved disagreements,
   file paths, and concrete evidence.
 - Dedupe overlapping findings across agents; cite all sources.
 - Keep highest confidence among duplicates.
-- Sort consolidated findings: BLOCKER → WARNING → SUGGESTION; HIGH → MEDIUM → LOW confidence within bucket.
-  Map worker `Critical | Warning | Info` per `${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Worker Severity Mapping".
-- Preserve "Pre-existing Issues" + "Positive Findings" sections.
+- Sort consolidated findings: BLOCKER → WARNING → SUGGESTION;
+  HIGH → MEDIUM → LOW confidence within bucket.
+- Preserve "Pre-existing Issues" section.
 - Output: path read via
   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
 
@@ -318,12 +388,30 @@ Use the current branch name only after slugifying it. If the branch name is not 
 
 ## After Review
 
-Emit exactly one verdict — no ad-hoc categories:
+Emit exactly one verdict from the canonical 4-set:
 
 - `PASS`
 - `PASS WITH WARNINGS`
 - `REQUIRES CHANGES`
 - `BLOCKED`
+
+Verdict text is load-bearing — manifest writers, eval gates, intro
+tutorial citations, and downstream tooling parse the literal string.
+Emit each verdict VERBATIM. Do NOT abbreviate, hyphenate, paraphrase,
+or compress for terseness:
+
+| Reject | Use |
+|---|---|
+| `PASS WARN`, `PASS-WITH-WARNS`, `PWW` | `PASS WITH WARNINGS` |
+| `BLOCK`, `BLK`, `BLOCKER` (verdict, not severity tag) | `BLOCKED` |
+| `REQ-CHANGES`, `RC`, `Needs fixes` | `REQUIRES CHANGES` |
+| `OK`, `LGTM`, `Approved` | `PASS` |
+
+Same rule for manifest status enum (`pending`, `in-flight`,
+`artifact`, `stub-replaced`, `recovered-from-return`, `stub-no-output`,
+`complete`) and severity buckets (`BLOCKER`, `WARNING`, `SUGGESTION`)
+— canonical strings only. `bin/manifest-update` validates `status`
+against the enum and rejects compressed forms.
 
 Decision rules + chat scripts:
 `${CLAUDE_SKILL_DIR}/references/review-playbook.md`

@@ -83,6 +83,14 @@ If found with `Status: IN_PROGRESS`:
 
 ## Research Phase
 
+### STEP 0: Read the planning playbook before synthesis
+
+Open `${CLAUDE_SKILL_DIR}/references/planning-workflow.md` at the
+start of synthesis. Inline summaries in this SKILL.md are routing
+hints, not the canonical procedure. Skipping the read causes silent
+drift in research-cache reuse decisions, agent selection, and
+plan-template compliance.
+
 Before finalizing tasks, identify:
 
 - the owning package/app root for the touched code

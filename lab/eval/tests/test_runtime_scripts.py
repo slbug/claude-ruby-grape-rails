@@ -4899,22 +4899,27 @@ class InjectRulesTests(unittest.TestCase):
         # Literal placeholders MUST NOT survive into the LLM-bound payload —
         # CC does not re-substitute hook return strings.
         self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", ctx)
-        # Pin reference_files See: lines as expanded absolute paths
+        # `See:` framing dropped: companion paths emit bare. Real-run
+        # observation drove this — passive `See: <path>` framing read as
+        # FYI citation, agents never opened the targets.
+        self.assertNotIn("See: `", ctx)
+        # Pin reference_files paths as expanded absolute paths emitted
+        # bare (no `See:` prefix) on the line below the rule text.
         self.assertIn(
-            f"See: `{_TEST_PLUGIN_ROOT}/references/preferences/context7-usage.md`",
+            f"`{_TEST_PLUGIN_ROOT}/references/preferences/context7-usage.md`",
             ctx,
         )
         self.assertIn(
-            f"See: `{_TEST_PLUGIN_ROOT}/references/preferences/epistemic-posture.md`",
+            f"`{_TEST_PLUGIN_ROOT}/references/preferences/epistemic-posture.md`",
             ctx,
         )
         self.assertIn(
-            f"See: `{_TEST_PLUGIN_ROOT}/references/preferences/tool-batching.md`",
+            f"`{_TEST_PLUGIN_ROOT}/references/preferences/tool-batching.md`",
             ctx,
         )
-        # Spot-check Iron Law See: line expansion
+        # Spot-check Iron Law companion path expansion
         self.assertIn(
-            f"See: `{_TEST_PLUGIN_ROOT}/skills/ar-n1-check/references/preload-patterns.md`",
+            f"`{_TEST_PLUGIN_ROOT}/skills/ar-n1-check/references/preload-patterns.md`",
             ctx,
         )
 
@@ -4967,12 +4972,13 @@ class InjectRulesTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         ctx = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", ctx)
+        self.assertNotIn("See: `", ctx)
         self.assertIn(
-            "See: `/expanded/plugin/root/references/preferences/context7-usage.md`",
+            "`/expanded/plugin/root/references/preferences/context7-usage.md`",
             ctx,
         )
         self.assertIn(
-            "See: `/expanded/plugin/root/skills/ar-n1-check/references/preload-patterns.md`",
+            "`/expanded/plugin/root/skills/ar-n1-check/references/preload-patterns.md`",
             ctx,
         )
 

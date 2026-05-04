@@ -10,6 +10,15 @@ effort: xhigh
 `/rb:full` runs the full plan-work-verify-review-compound cycle autonomously.
 Skill body owns the complete cycle from main session.
 
+## STEP 0: Read the cycle + state-machine references
+
+Open `${CLAUDE_SKILL_DIR}/references/cycle-patterns.md` and
+`${CLAUDE_SKILL_DIR}/references/state-machine.md` at the start of any
+`/rb:full` run. The summaries below are routing hints; the canonical
+state transitions, blocker handling, and recovery protocols live in
+those files. Each child skill (`/rb:plan`, `/rb:work`, `/rb:verify`,
+`/rb:review`, `/rb:compound`) also has its own STEP 0 playbook read.
+
 ## Cycle
 
 0. `/rb:brainstorm` (optional) → if requirements vague

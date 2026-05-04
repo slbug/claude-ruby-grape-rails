@@ -28,6 +28,13 @@ that `/rb:plan` consumes to skip clarification.
     └─ Discuss ──> freeform ──> [DECISION POINT]
 ```
 
+## STEP 0: Read the interview playbook before starting
+
+Open `${CLAUDE_SKILL_DIR}/references/interview-techniques.md` at the
+start of the brainstorm. Inline summaries in this SKILL.md are not
+sufficient — the playbook holds the codebase-scan patterns, scan-depth
+rules, and signal-detection rubrics that drive the interview cadence.
+
 ## Phase 1: Adaptive Interview
 
 Ask ONE question at a time. Track coverage across 6 dimensions:

@@ -90,7 +90,6 @@ the PR.
 
 - **Skill rename / removal / description change** → also check
   `plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md`,
-  `plugins/ruby-grape-rails/skills/init/references/injectable-template.md`,
   `lab/eval/evals/<skill>.json`, `lab/eval/triggers/<skill>.json`,
   `lab/eval/triggers/_hard_corpus.json`,
   `lab/eval/triggers/_confusable_pairs.json`,

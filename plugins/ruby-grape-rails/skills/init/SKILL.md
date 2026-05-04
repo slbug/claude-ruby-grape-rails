@@ -121,12 +121,24 @@ the current template, removing the `<!-- IRON_LAWS_START -->` /
 
 ## What Gets Installed
 
-- workflow routing for `/rb:plan`, `/rb:work`, `/rb:review`, `/rb:verify`, `/rb:permissions`
-- Ruby Iron Laws
-- stack-aware auto-loading for Rails, Grape, Active Record, Sequel, Sidekiq, security, and testing
-- package-aware guidance for Packwerk or homegrown modular monoliths when detected
-- verification defaults for Zeitwerk, formatter, tests, and optional Brakeman
-- project-native verify-wrapper hints when the repo exposes a clear composite check entrypoint
+The injected managed block contains ONLY project-specific stack
+notes — nothing that already lives in runtime injection or in skill
+bodies:
+
+- stack-version comment header (Ruby / Rails / Grape / Sidekiq /
+  optional stack / Betterleaks / plugin version)
+- conditional sections rendered from `detect-stack` output plus
+  targeted interview answers — queue list, ORM-per-package map,
+  Karafka topic routes, Packwerk enforcement flags, Hotwire
+  channels, project secret-path conventions
+
+What is NOT installed (delivered elsewhere):
+
+| Surface | Where it lives |
+|---|---|
+| Iron Laws + Advisory Preferences | runtime hook `inject-rules.sh` on `SessionStart` + `SubagentStart` |
+| Skill workflow / spawn rules / verification commands | individual skill bodies (`/rb:plan`, `/rb:review`, `/rb:verify`, ...) |
+| Library defaults (Sidekiq base class, Turbo Frame patterns, etc.) | framework docs, not project CLAUDE.md |
 
 ## Template
 

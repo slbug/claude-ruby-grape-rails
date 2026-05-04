@@ -130,10 +130,10 @@ The plugin includes targeted references and guidance for common editing contexts
 | `config/routes.rb` | Routing patterns, controllers, scopes |
 | `*_job.rb`, `app/jobs/*` | Sidekiq patterns, idempotency rules |
 
-These are the references Claude should use for those file types. In
-practice this is strongest after `/rb:init` and when you invoke the
-matching workflow command; most file-pattern loading is behavioral
-guidance, not a hook-backed auto-loader.
+These are the references Claude should use for those file types.
+File-pattern loading is behavioral guidance plus skill `paths:`
+auto-loading; the strongest signal still comes from invoking the
+matching workflow command directly.
 
 <!-- IRON_LAWS_START -->
 
@@ -238,29 +238,44 @@ Any .rb file            → ruby-idioms (always)
 
 This is **not plugin infrastructure** — it's instructions that Claude follows. No hooks trigger skill loading.
 This is the plugin's biggest known gap — in practice, skills rarely auto-load from file context alone.
-Running `/rb:init` significantly improves this.
+Invoke the matching `/rb:<workflow>` command directly when the gap matters.
 
 ---
 
 ## Section 5: Init, Review and Gaps
 
-### Layer 4: `/rb:init` (Strengthens Everything)
+### Layer 4: `/rb:init` (Project Stack Notes)
 
-Running `/rb:init` injects enforcement rules **directly into your project's CLAUDE.md**. This is stronger than plugin-level instructions because CLAUDE.md is always read at session start.
+Running `/rb:init` writes a managed block into your project's
+`CLAUDE.md`. The block holds project-specific stack facts only —
+detected queue list, ORM-per-package map, Karafka topic routes,
+Packwerk enforcement flags, and similar items that come from
+`detect-stack` output plus targeted interview answers when
+detection is ambiguous.
 
-What it adds:
+What `/rb:init` does NOT do:
 
-- **7-step mandatory procedure** — complexity scoring, interview questions before coding, reference loading
-- **Iron Laws with STOP protocol** — explicitly tells Claude to halt on violations
-- **Verification rules** — Format checks (StandardRB or RuboCop) run automatically; full verification (`/rb:verify`) includes format, tests, and Rails-specific checks (zeitwerk:check when applicable)
-- **Stack-specific rules** — detects Rails version, Sidekiq, Grape from `Gemfile`
+- It does NOT inject Iron Laws or Advisory Preferences. Those
+  arrive at runtime via the `inject-rules.sh` hook on every
+  `SessionStart` and `SubagentStart`.
+- It does NOT inject skill workflow doctrine (complexity scoring,
+  spawn rules, verification commands). Those live in individual
+  skill bodies (`/rb:plan`, `/rb:review`, `/rb:verify`, etc.) and
+  load when the skill is invoked.
+- It does NOT inject library defaults (Sidekiq base class, Turbo
+  Frame patterns, etc.). Generic library guidance belongs in the
+  framework docs, not in your project's CLAUDE.md.
 
 ```bash
 /rb:init           # First-time setup
-/rb:init --update  # Update after plugin updates
+/rb:init --update  # Update managed block after plugin updates
 ```
 
-If you're finding the plugin inconsistent, running `/rb:init` is the single biggest improvement you can make.
+`--update` replaces the content between
+`<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->` and
+`<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->` markers, so legacy
+doctrine-heavy blocks from earlier plugin versions are migrated to
+the slim form automatically.
 
 ### Layer 5: `/rb:review` + Iron Law Judge (On-Demand)
 
@@ -306,13 +321,17 @@ Being honest about the gaps:
 
 ```text
 AUTOMATIC (hooks):     Format check, security reminders, progress logging, failure hints,
-                       Iron Laws in subagents, PreCompact rule preservation
+                       Iron Laws + Preferences injected at SessionStart + SubagentStart,
+                       PreCompact rule preservation
 BEHAVIORAL (Claude):   Iron Laws, skill loading, stop-and-explain
 ON-DEMAND (commands):  /rb:review (iron-law-judge), /rb:verify (format/tests/zeitwerk for Rails)
-STRENGTHENED BY:       /rb:init (injects rules into project CLAUDE.md)
+PROJECT CONTEXT:       /rb:init (writes detected project-stack facts into CLAUDE.md)
 ```
 
-The plugin works best when all layers are active: `/rb:init` for persistent rules, hooks for automatic checks, and `/rb:review` to catch what the behavioral layer missed.
+Hooks deliver the rules. `/rb:review` catches what behavioral layer
+missed. `/rb:init` records project-stack facts so Claude has the
+right baseline context (queue list, ORM-per-package map, package
+boundaries) without restating any rule already injected at runtime.
 
 ---
 

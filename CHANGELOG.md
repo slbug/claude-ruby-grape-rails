@@ -7,6 +7,64 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.7] - 2026-05-04
+
+### Changed
+
+- `/rb:init` injectable template slimmed to stack-version comment +
+  conditional placeholders. Removed: SKILL EXECUTION ENFORCEMENT,
+  TOOLING PREFERENCES (conflicted with runtime preference #5),
+  EXECUTE BEFORE EVERY RESPONSE 7-step routing, STEP 5 / STEP 6
+  tables, 100-line VERIFICATION bash, POST-ACTION + QUICK REFERENCE.
+  Iron Laws + Preferences are runtime-injected via
+  `inject-rules.sh` on `SessionStart` + `SubagentStart`; restating
+  them in project CLAUDE.md created drift.
+- `conditional-sections.md` rewritten with explicit
+  detect → interview → render procedure. Each section renders only
+  project-specific facts plus targeted interview answers for
+  ambiguous detection. Library defaults dropped.
+- `/rb:review` synthesis section restructured into 5 explicit steps:
+  STEP 0 read playbook, STEP 1 read artifacts, STEP 2 normalize
+  per-agent verdict text (preserve raw + map to canonical 4-set),
+  STEP 3 map worker severity to bucket form for Reviewer Coverage
+  row, STEP 4 compute consolidated verdict deterministically
+  (`BLOCKED if blockers > 0; else REQUIRES_CHANGES if new public
+  behavior lacks tests; else PASS_WITH_WARNINGS if warnings > 0;
+  else PASS`), STEP 5 write consolidated artifact. Catches the
+  recurring drift modes: non-canonical verdict pass-through,
+  worker-form severity leak, soft verdict despite present blockers.
+- `/rb:review` After Review section gained explicit
+  non-abbreviation directive: emit verdict text VERBATIM from
+  canonical 4-set; status enums + severity buckets stay canonical
+  too. `bin/manifest-update` already validates `status` against
+  enum.
+- `/rb:plan`, `/rb:brainstorm`, `/rb:investigate`, `/rb:full` skill
+  bodies gained STEP 0 directive: open the canonical playbook
+  reference at synthesis start. Inline summaries are routing hints,
+  not the canonical procedure.
+- Injector format for companion-doc paths: dropped `See:` prefix.
+  Path emits bare on the line below the rule. Real-run observation:
+  passive `See: <path>` framing read as citation, not directive —
+  zero opens across 8 subagents in a real /rb:review run. Bare path
+  keeps reachability while removing the verb that mistakenly
+  signaled "FYI only".
+
+### Fixed
+
+- Stale references in shipped surfaces tied to old heavy
+  `/rb:init` template:
+  - `intro/references/tutorial-content.md` Layer 4 description
+    rewritten to match slim template (no longer claims `/rb:init`
+    injects Iron Laws / 7-step procedure / verification block).
+  - `README.md` `/rb:init` row in commands table updated.
+  - `.github/copilot-instructions.md` removed stale reviewer
+    instruction to check `injectable-template.md` on skill renames.
+  - `init/SKILL.md` "What Gets Installed" rewritten with explicit
+    delivery-elsewhere table for Iron Laws / Preferences / skill
+    workflow / library defaults.
+- `CHANGELOG.md` footer link added for `[1.16.7]`; `[Unreleased]`
+  pointer updated to compare against `v1.16.7`.
+
 ## [1.16.6] - 2026-05-04
 
 ### Added
@@ -2487,7 +2545,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.6...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.7...HEAD
+[1.16.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.6...v1.16.7
 [1.16.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.5...v1.16.6
 [1.16.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.4...v1.16.5
 [1.16.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.3...v1.16.4

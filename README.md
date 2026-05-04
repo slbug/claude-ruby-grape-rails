@@ -615,7 +615,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | Command                  | Description                                                |
 | ------------------------ | ---------------------------------------------------------- |
 | `/rb:intro`              | Interactive plugin tutorial (8 sections, ~5 min)           |
-| `/rb:init`               | Initialize plugin in a project (auto-activation rules)     |
+| `/rb:init`               | Write project stack notes to CLAUDE.md (rules runtime-injected) |
 | `/rb:quick <task>`       | Fast implementation, skip ceremony                         |
 | `/rb:investigate <bug>`  | Systematic bug debugging (4 parallel investigation tracks) |
 | `/rb:research <topic>`   | Research Ruby topics on the web                            |

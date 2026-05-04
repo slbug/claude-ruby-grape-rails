@@ -1,123 +1,149 @@
 # Conditional Sections for Injectable Template
 
-These sections are included in CLAUDE.md based on detected project dependencies.
+Each placeholder in `injectable-template.md` renders only PROJECT-SPECIFIC
+detected or interview-collected items. Generic library defaults and
+already-injected Iron Laws / Preferences MUST NOT be written into
+`CLAUDE.md`. If detection + interview produce zero project-specific
+content for a section, render it as an empty string (omit the section
+entirely).
+
+## Render Procedure (per section)
+
+Two-step, in this order:
+
+1. **DETECT.** Run every detection rule listed for the section against
+   the current repo (file scan, `detect-stack` keys, config-file parse).
+   Collect every concrete project-specific value found.
+2. **INTERVIEW.** For each section item where detection was inconclusive
+   (file present but value ambiguous, multiple candidates, `detect-stack`
+   key missing or empty, or detected pattern needs disambiguation), ask
+   the user one targeted question. Skip detected items that already
+   have unambiguous values.
+
+After detect + targeted interview: render the section using only
+project-specific content. If both passes leave the section empty,
+omit it.
+
+## Authoring Rules (apply to every section)
+
+| Rule |
+|---|
+| Do NOT restate Iron Laws or Advisory Preferences. The runtime injector delivers them on `SessionStart` + `SubagentStart`. |
+| Do NOT inject library defaults (e.g. "Workers MUST include `Sidekiq::Job`", "Use `turbo_frame_tag`"). Only project-specific deviations or detected facts. |
+| Render only items derived from `detect-stack` output or from interview answers in the current `/rb:init` run. |
+| Empty section → omit. Do NOT leave a header without content. |
+| Format as a `**{Stack} (project)**:` bolded label followed by 1–6 bullets. No verbose narration. |
+| Do NOT skip detection in favor of interview — detect-stack output is authoritative for items it covers. |
+| Do NOT skip interview when detection is ambiguous — guessing produces drift. |
 
 ## SIDEKIQ_SECTION
 
-```markdown
-**Sidekiq Specifics**:
+Render IF Sidekiq detected AND any of the following project-specific
+facts are available; otherwise omit.
 
-- Workers MUST include `Sidekiq::Job`
-- Use `sidekiq_options queue: :default, retry: 3`
-- Enqueue only after commit using the active ORM's commit-safe mechanism
-- Dead letter queue for permanent failures
-- Monitor via Sidekiq Web UI
-```
+| Source | What to render |
+|---|---|
+| `config/sidekiq.yml` queue list | `**Queues**: <name>(<weight>), <name>(<weight>), ...` |
+| Detected non-default base class (e.g. `ApplicationJob`, custom worker) | `**Base class**: <ClassName>` |
+| Interview answer on retry strategy | `**Retry policy**: <answer>` |
+| Detected dead-letter / morgue queue config | `**Dead letter**: <queue or path>` |
+
+Skip any of the above bullets when no detected/asked value exists.
 
 ## SEQUEL_SECTION
 
-```markdown
-**Sequel Specifics**:
+Render IF Sequel detected.
 
-- Identify `Sequel::Model` and `Sequel.migration` files before applying Rails / Active Record patterns
-- Prefer `DB.transaction` and Sequel transaction hooks for commit-safe Sidekiq enqueueing
-- Do not generate `ActiveRecord::Migration[...]` classes inside Sequel packages
-- Treat datasets, associations, and migrations as package-local when the repo mixes ORMs
-```
+| Source | What to render |
+|---|---|
+| `PACKAGE_LOCATIONS` / `DETECTED_ORMS` | `**Sequel-owned packages**: <comma-separated paths>` |
+| Detected `dataset_module` patterns / interview answer | `**Custom query convention**: <pattern>` |
+| Detected `db/migrations/` (Sequel) vs `db/migrate/` (AR) split | `**Migration roots**: Sequel=<path>, AR=<path>` |
+
+Omit bullets without detected/asked values. Omit section if nothing
+project-specific.
 
 ## MIXED_ORM_SECTION
 
-```markdown
-**Mixed ORM Specifics**:
+Render IF `DETECTED_ORMS` includes both `active_record` AND `sequel`.
 
-- This repo uses both Active Record and Sequel
-- Before changing models, jobs, or migrations, identify which ORM owns the touched package
-- Sidekiq enqueue-after-commit rules must follow the package's ORM, not a global Rails default
-- Never assume all migrations in this repo are Active Record migrations
-```
+| Source | What to render |
+|---|---|
+| `PACKAGE_LOCATIONS` (per-package ORM) | `**ORM map**: <pkg> → AR, <pkg> → Sequel, ...` |
+
+Omit if the per-package map cannot be assembled.
 
 ## HOTWIRE_SECTION
 
-```markdown
-**Hotwire/Turbo Specifics**:
+Render IF Hotwire/Turbo detected.
 
-- NEVER query DB in Turbo Stream responses
-- Use `turbo_frame_tag` for partial updates
-- Broadcast after commit: `after_create_commit -> { broadcast_prepend_to "posts" }`
-- Pre-compute assigns before streams
-```
+| Source | What to render |
+|---|---|
+| `app/channels/*.rb` | `**Channels**: <ChannelName>, ...` |
+| Detected Turbo Stream broadcast targets in models | `**Broadcast roots**: <Model> → <stream-name>` |
+| Interview answer on Frame ID convention | `**Frame ID convention**: <answer>` |
+
+Omit bullets without detected values. Omit section if empty.
 
 ## KARAFKA_SECTION
 
-```markdown
-**Karafka (Kafka) Specifics**:
+Render IF Karafka detected.
 
-- Consumers MUST be idempotent
-- Handle message duplication gracefully
-- Prefer raising errors for retry/backoff (Karafka handles retries automatically)
-- Use `pause` for specific partition throttling scenarios, not general error handling
-- Monitor lag via Karafka Web UI
-```
+| Source | What to render |
+|---|---|
+| `karafka.rb` topic routes | `**Consumed topics**: <topic>(<consumer>), ...` |
+| Detected consumer base class | `**Base consumer**: <ClassName>` |
+| Interview answer on retry routing | `**Retry routing**: <answer>` |
+
+Omit bullets without detected values.
 
 ## PACKWERK_SECTION
 
-```markdown
-**Modular Monolith / Packwerk Specifics**:
+Render IF Packwerk detected OR `PACKAGE_LAYOUT` indicates a modular
+monolith.
 
-- Identify the owning package before changing code
-- Respect package boundaries and public APIs
-- Avoid proposing cross-package changes as if this were one flat Rails app
-- If package ownership or stack differs across modules, ask before applying global guidance
-```
+| Source | What to render |
+|---|---|
+| `PACKAGE_LOCATIONS` | `**Packages**:` followed by a bulleted list of `path → declared boundary` pairs |
+| `packwerk.yml` `enforce_dependencies` / `enforce_privacy` | `**Enforcement**: dependencies=<bool>, privacy=<bool>` |
+
+Omit bullets without detected values.
 
 ## BETTERLEAKS_SECTION
 
-```markdown
-**Betterleaks (Secrets Scanning)**:
+Render IF `command -v betterleaks` succeeds AND project has
+detected sensitive-path conventions.
 
-When reading logs or files that may contain PII/credentials, ALWAYS
-pipe through `betterleaks stdin --redact=100` instead of `cat`:
+| Source | What to render |
+|---|---|
+| Detected `.gitignore` entries for `*.env`, `*.key`, etc. | `**Project secret-path conventions**: <list>` |
+| Interview answer on pre-commit scan policy | `**Scan policy**: <answer>` |
 
-```bash
-betterleaks stdin --redact=100 < production.log
-betterleaks stdin --redact=100 < .env
-```
-
-Before committing, scan with `/rb:secrets` or:
-
-```bash
-betterleaks git --redact=100          # Scan git history
-betterleaks dir . --redact=100        # Scan directory
-betterleaks dir app/ --validate       # Validate secrets against APIs
-```
-
-Install: `brew install betterleaks`
-
-```
+If the only available content is generic install instructions or
+generic command examples, omit the section. Generic Betterleaks usage
+belongs in `/rb:secrets` skill body, not in project `CLAUDE.md`.
 
 ## Placeholder Substitution
 
 | Placeholder | Source | Example |
-|-------------|--------|---------|
-| `{DATE}` | Current date | 2026-03-22 |
-| `{RUBY_VERSION}` | `ruby --version` | 3.3.0 |
-| `{RAILS_VERSION}` | Gemfile.lock | 7.1.3 |
+|---|---|---|
+| `{DATE}` | Current date | 2026-05-04 |
+| `{RUBY_VERSION}` | `ruby --version` / detect-stack | 3.4.7 |
+| `{RAILS_VERSION}` | Gemfile.lock / detect-stack | 7.1.3 |
 | `{GRAPE_VERSION}` | Gemfile.lock | 2.0.0 |
 | `{SIDEKIQ_VERSION}` | Gemfile.lock | 7.2.0 |
-| `{OPTIONAL_STACK}` | Comma-prefixed extra versioned deps from detector output when available | , Karafka <detected>, Hotwire <detected> |
-| `{SIDEKIQ_SECTION}` | If sidekiq in Gemfile | Include Sidekiq section |
-| `{SEQUEL_SECTION}` | If Sequel detected | Include Sequel section |
-| `{MIXED_ORM_SECTION}` | If Active Record and Sequel both detected | Include mixed ORM section |
-| `{HOTWIRE_SECTION}` | If hotwire-rails in Gemfile | Include Hotwire section |
-| `{KARAFKA_SECTION}` | If karafka in Gemfile | Include Karafka section |
-| `{PACKWERK_SECTION}` | If Packwerk or modular layout detected | Include package/boundary section |
-| `{BETTERLEAKS_SECTION}` | If betterleaks installed | Include Betterleaks section |
+| `{OPTIONAL_STACK}` | Comma-prefixed extra versioned deps from detector output when available | `, Karafka 2.5.8, Hotwire detected` |
+| `{SIDEKIQ_SECTION}` | Render per rules above; empty string if no project-specific content |
+| `{SEQUEL_SECTION}` | Render per rules above; empty string if no project-specific content |
+| `{MIXED_ORM_SECTION}` | Render per rules above; empty string if no project-specific content |
+| `{HOTWIRE_SECTION}` | Render per rules above; empty string if no project-specific content |
+| `{KARAFKA_SECTION}` | Render per rules above; empty string if no project-specific content |
+| `{PACKWERK_SECTION}` | Render per rules above; empty string if no project-specific content |
+| `{BETTERLEAKS_SECTION}` | Render per rules above; empty string if no project-specific content |
 | `{BETTERLEAKS_STATUS}` | `command -v betterleaks` result | available / missing |
-| `{PLUGIN_VERSION}` | `jq -r '.version // empty' "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"` | 1.13.1 |
+| `{PLUGIN_VERSION}` | `jq -r '.version // empty' "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"` | 1.16.6 |
 
 ## Detection Commands
-
-Use the Ruby detection script (avoids fragile shell pipelines):
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/bin/detect-stack
@@ -126,8 +152,8 @@ command -v betterleaks &>/dev/null && echo "betterleaks"
 
 Compose the header from `detect-stack` output:
 
-- Prefer exact `*_VERSION` outputs from the script. Only fall back
-  to `detected` when the direct gem is present but no resolved
+- Prefer exact `*_VERSION` outputs from the script. Fall back to
+  `detected` only when the direct gem is present but no resolved
   version is available from `Gemfile.lock`.
 - Read `DETECTED_ORMS` / `PACKAGE_LAYOUT` / `PACKAGE_LOCATIONS`.
 - If `PACKAGE_QUERY_NEEDED=true`, ask the user for module/package
