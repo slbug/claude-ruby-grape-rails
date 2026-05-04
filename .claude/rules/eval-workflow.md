@@ -132,10 +132,11 @@ baseline and this PR.
 
   ```bash
   export RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest
-  # or inline per command:
   RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest make eval-epistemic
   RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest make eval-behavioral-fresh
   ```
+
+  Either export once per shell or pass inline per command.
 
   Under low-RAM fallback:
 

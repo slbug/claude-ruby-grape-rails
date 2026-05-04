@@ -167,8 +167,10 @@ Every Agent() call must include in its prompt:
   Worker MUST use the exact path passed to it — do NOT invent,
   modify, shorten, or extension-change the filename.
 - Required output: write artifact (always — even on PASS) and return summary
-- Findings format: file:line, Severity (Critical/Warning/Info),
-  Confidence (HIGH/MEDIUM/LOW), description, current code, suggested code
+- Findings format: `file:line`, `Severity (Critical|Warning|Info)`,
+  `Confidence (HIGH|MEDIUM|LOW)`, description, current code, suggested
+  code. Synthesis maps Critical/Warning/Info into consolidated
+  BLOCKER/WARNING/SUGGESTION per playbook § "Worker Severity Mapping".
 - Constraint: stop after returning; do NOT call Agent() — leaf review
 
 For full briefing template (verbatim text to use in prompts), see
@@ -181,7 +183,7 @@ For full briefing template (verbatim text to use in prompts), see
 3. **Deduplicate overlapping findings** - merge similar issues from different agents
 4. **Keep noise low** - prefer findings a senior Ruby reviewer would care about
 5. **Be specific** - cite line numbers, provide examples
-6. **Prioritize** - mark as critical/warning/info
+6. **Prioritize** — workers emit `Critical | Warning | Info`; synthesis maps to `BLOCKER | WARNING | SUGGESTION` per playbook § "Worker Severity Mapping"
 7. **Contextualize** - explain why it matters, not just what's wrong
 8. **Identify package + ORM first** - do not apply flat Rails / Active Record advice to Sequel or modular packages
 
@@ -245,7 +247,8 @@ consolidated review:
   file paths, and concrete evidence.
 - Dedupe overlapping findings across agents; cite all sources.
 - Keep highest confidence among duplicates.
-- Sort: Critical → Warning → Info; HIGH → MEDIUM → LOW within severity.
+- Sort consolidated findings: BLOCKER → WARNING → SUGGESTION; HIGH → MEDIUM → LOW confidence within bucket.
+  Map worker `Critical | Warning | Info` per `${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Worker Severity Mapping".
 - Preserve "Pre-existing Issues" + "Positive Findings" sections.
 - Output: path read via
   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
@@ -315,34 +318,16 @@ Use the current branch name only after slugifying it. If the branch name is not 
 
 ## After Review
 
-Based on findings severity:
+Emit exactly one verdict — no ad-hoc categories:
 
-### Clean Review (0 critical, 0-2 warnings)
+- `PASS`
+- `PASS WITH WARNINGS`
+- `REQUIRES CHANGES`
+- `BLOCKED`
 
-- Suggest `/rb:compound` - for knowledge synthesis
-- Suggest `/rb:learn` - for pattern extraction
-- User can proceed with confidence
-
-### Warning Review (0 critical, 3+ warnings)
-
-- Suggest `/rb:triage` - to prioritize fixes
-- Suggest `/rb:plan` - if fixes need planning
-- User decides which warnings to address
-
-### Critical Review (1+ critical)
-
-- Require `/rb:triage` - address critical issues first
-- Suggest `/rb:plan` - if significant rework needed
-- Do not proceed without fixes
-
-## Review Best Practices
-
-1. **Review small chunks** - Large diffs are harder to review well
-2. **Review your own code first** - Self-review catches obvious issues
-3. **Explain the 'why'** - Teach, don't just correct
-4. **Suggest, don't dictate** - Offer options when appropriate
-5. **Acknowledge trade-offs** - Some issues have valid reasons
-6. **Celebrate good code** - Positive feedback matters too
+Decision rules + chat scripts:
+`${CLAUDE_SKILL_DIR}/references/review-playbook.md`
+§ "Verdict Decision Rules" + § "Review Outcomes (chat scripts)".
 
 ## Integration with Workflow
 

@@ -459,6 +459,12 @@ def generate_injector_script(yaml, prefs)
   puts body_marker
   puts ')'
   puts ''
+  puts '# Hook output (additionalContext) is plain runtime text returned to'
+  puts '# Claude — CC does NOT re-substitute plugin variables in returned'
+  puts '# strings. Expand ${CLAUDE_PLUGIN_ROOT} in BODY here so the See:'
+  puts '# paths reach the LLM as absolute filesystem paths.'
+  puts 'BODY="${BODY//\$\{CLAUDE_PLUGIN_ROOT\}/${CLAUDE_PLUGIN_ROOT:-}}"'
+  puts ''
   puts 'jq -nc --arg ev "$EVENT" --arg ctx "$BODY" \\'
   puts '  \'{hookSpecificOutput:{hookEventName:$ev,additionalContext:$ctx}}\''
 end

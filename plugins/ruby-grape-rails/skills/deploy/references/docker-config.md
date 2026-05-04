@@ -28,7 +28,6 @@ COPY . .
 # Precompile assets
 RUN SECRET_KEY_BASE=dummy RAILS_ENV=production bundle exec rails assets:precompile
 
-# Prefer targeted cleanup to broad recursive deletion
 RUN bundle clean --force && \
     SECRET_KEY_BASE=dummy RAILS_ENV=production bundle exec rails tmp:clear
 

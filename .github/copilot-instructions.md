@@ -1,14 +1,13 @@
 # Repository Context
 
-This repo is a **Claude Code plugin** for Ruby/Rails/Grape development —
-NOT a Ruby application. Do not suggest Ruby app patterns (controllers,
-models, routes) for plugin files.
+Claude Code plugin for Ruby/Rails/Grape development — NOT a Ruby
+application. Do NOT suggest Ruby app patterns (controllers, models,
+routes) for plugin files.
 
 ## Audience: Agents, Not Humans
 
-ALL prose in this repo (except `README.md`, `CHANGELOG.md`, executable
-code under `scripts/` / `lab/eval/`) loads into some agent's context at
-runtime:
+All prose in this repo (except `README.md`, `CHANGELOG.md`, executable
+code under `scripts/` / `lab/eval/`) loads into agent context at runtime:
 
 | Surface | Audience |
 |---|---|
@@ -82,11 +81,10 @@ Do NOT flag issues already caught by CI:
 
 ## Cross-File Consistency (Drift Check)
 
-A PR diff is necessary but NOT sufficient. Many defects in this repo
-surface as drift between modified and unmodified files. Inspect
-untouched files for stale references, missed regenerations, inconsistent
-state introduced by the diff. Flag drift even when the unmodified file
-is not part of the PR.
+PR diff alone is insufficient. Inspect unmodified files for stale
+references, missed regenerations, and state introduced inconsistently
+by the diff. Flag drift even when the unmodified file is not part of
+the PR.
 
 ### Required cross-file checks
 

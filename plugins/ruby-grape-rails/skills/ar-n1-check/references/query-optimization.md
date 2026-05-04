@@ -1,57 +1,55 @@
 # Query Optimization Techniques
 
-Strategies for optimizing ActiveRecord queries and eliminating N+1 patterns.
+Eliminate N+1 patterns and reduce ActiveRecord query count.
 
 ## Batching Queries
 
-### Replace Loop Queries with IN Clause
+### Replace per-row lookup with `IN` clause
+
+Reject per-id loop:
 
 ```ruby
-# BAD: N queries
 user_ids.each do |id|
   User.find(id)
 end
+```
 
-# GOOD: Single query
+Use a single batched query:
+
+```ruby
 User.where(id: user_ids)
 ```
 
-### Batch Inserts
+### Batch inserts
+
+Use `insert_all` / `upsert_all` (Rails 6+):
 
 ```ruby
-# BAD: N inserts
-items.each do |item|
-  Item.create!(item)
-end
-
-# GOOD: Single insert_all (Rails 6+)
 Item.insert_all(items)
-
-# Or with upsert (Rails 6+)
 Item.upsert_all(items, unique_by: :index_items_on_external_id)
 ```
 
-### Batch Updates
+`create!` per row is the wrong tool when callbacks/validations are
+not required.
+
+### Batch updates
 
 ```ruby
-# BAD: N updates
-users.each do |user|
-  user.update!(active: false)
-end
-
-# GOOD: Single update_all
 User.where(id: user_ids).update_all(active: false, updated_at: Time.current)
+```
 
-# For conditional updates with touch
+For conditional toggle:
+
+```ruby
 User.where(id: user_ids).update_all("active = NOT active, updated_at = NOW()")
 ```
 
+`update_all` skips callbacks and validations — confirm acceptable
+before adopting.
+
 ## Query Composition
 
-### Composable Query Methods
-
 ```ruby
-# app/queries/user_query.rb
 class UserQuery
   def self.base
     User.all
@@ -66,33 +64,26 @@ class UserQuery
   end
 
   def self.recent(scope = base, days = 30)
-    cutoff = days.days.ago
-    scope.where("created_at > ?", cutoff)
+    scope.where("created_at > ?", days.days.ago)
   end
 end
 
-# Usage: Compose queries
 UserQuery.base
   .then { |s| UserQuery.active(s) }
   .then { |s| UserQuery.with_posts(s) }
   .then { |s| UserQuery.recent(s, 7) }
   .to_a
 
-# Or chain directly
 User.active.includes(:posts).where("created_at > ?", 7.days.ago)
 ```
 
 ## Subqueries for Complex Filtering
 
-### EXISTS Subquery
+### EXISTS subquery
 
 ```ruby
-# Find users with at least one published post
-User
-  .where_exists(:posts, published: true)
-  .to_a
+User.where_exists(:posts, published: true).to_a
 
-# Using Arel for complex conditions
 User.where(
   Post.where("posts.user_id = users.id")
       .where(published: true)
@@ -100,82 +91,69 @@ User.where(
 )
 ```
 
-### Count Subquery
+### Aggregate via single query
 
 ```ruby
-# Get users with post counts (single query)
 User
-  .select("users.*, COUNT(posts.id) as posts_count")
+  .select("users.*, COUNT(posts.id) AS posts_count")
   .left_joins(:posts)
   .group("users.id")
   .having("COUNT(posts.id) > 0")
   .to_a
-
-# user.posts_count available without N+1
 ```
 
-### Subquery in WHERE
+`posts_count` becomes a memoized attribute on each row.
+
+### Subquery in `WHERE`
 
 ```ruby
-# Find users who have posts in specific categories
 category_post_ids = Post.where(category: 'tech').select(:user_id)
-
 User.where(id: category_post_ids)
 ```
 
+`select(:user_id)` keeps execution as a single SQL statement.
+
 ## Window Functions (PostgreSQL)
 
-### ROW_NUMBER for Ranking
+### `ROW_NUMBER` ranking
 
 ```ruby
-# Rank users by order count per organization
-User.select(<<~SQL
+User.select(<<~SQL)
   users.*,
   ROW_NUMBER() OVER (
-    PARTITION BY organization_id 
+    PARTITION BY organization_id
     ORDER BY orders_count DESC
-  ) as rank
+  ) AS rank
 SQL
-).from(
-  User.select("users.*, COUNT(orders.id) as orders_count")
+.from(
+  User.select("users.*, COUNT(orders.id) AS orders_count")
       .joins("LEFT JOIN orders ON orders.user_id = users.id")
       .group("users.id, users.organization_id"),
   :users
 )
 ```
 
-### LAG/LEAD for Time Series
+### `LAG` / `LEAD` for time series
 
 ```ruby
-# Compare current order with previous
-Order.select(<<~SQL
+Order.select(<<~SQL)
   orders.*,
-  LAG(total) OVER (
-    PARTITION BY user_id 
-    ORDER BY created_at
-  ) as previous_order_total,
-  total - LAG(total) OVER (
-    PARTITION BY user_id 
-    ORDER BY created_at
-  ) as total_change
+  LAG(total) OVER (PARTITION BY user_id ORDER BY created_at) AS previous_order_total,
+  total - LAG(total) OVER (PARTITION BY user_id ORDER BY created_at) AS total_change
 SQL
-)
 ```
 
 ## CTE (Common Table Expressions)
 
-### Recursive CTE for Hierarchies
+### Recursive CTE — tree descendants
 
 ```ruby
-# Find all descendants in tree structure
 hierarchy_sql = <<~SQL
   WITH RECURSIVE descendants AS (
-    SELECT id, parent_id, 0 as depth
+    SELECT id, parent_id, 0 AS depth
     FROM categories
     WHERE id = ?
-    
     UNION ALL
-    
     SELECT c.id, c.parent_id, d.depth + 1
     FROM categories c
     INNER JOIN descendants d ON c.parent_id = d.id
@@ -186,25 +164,24 @@ SQL
 Category.find_by_sql([hierarchy_sql, root_category_id])
 ```
 
-### Non-Recursive CTE
+### Non-recursive CTE — reporting
 
 ```ruby
-# Complex reporting with intermediate results
 report_sql = <<~SQL
   WITH monthly_stats AS (
-    SELECT 
+    SELECT
       user_id,
-      DATE_TRUNC('month', created_at) as month,
-      SUM(amount) as total,
-      COUNT(*) as count
+      DATE_TRUNC('month', created_at) AS month,
+      SUM(amount) AS total,
+      COUNT(*) AS count
     FROM orders
     WHERE created_at > NOW() - INTERVAL '12 months'
     GROUP BY user_id, DATE_TRUNC('month', created_at)
   )
-  SELECT 
+  SELECT
     user_id,
-    AVG(total) as avg_monthly_revenue,
-    SUM(total) as yearly_revenue
+    AVG(total) AS avg_monthly_revenue,
+    SUM(total) AS yearly_revenue
   FROM monthly_stats
   GROUP BY user_id
 SQL
@@ -212,14 +189,14 @@ SQL
 Order.connection.select_all(report_sql)
 ```
 
-## Raw SQL When Needed
+## Raw SQL
 
-### Complex Joins
+Use `find_by_sql` only when the relation builder cannot express the
+join shape:
 
 ```ruby
-# Multi-table join with complex conditions
 sql = <<~SQL
-  SELECT users.*, orders.id as order_id, products.name as product_name
+  SELECT users.*, orders.id AS order_id, products.name AS product_name
   FROM users
   INNER JOIN orders ON orders.user_id = users.id
   INNER JOIN order_items ON order_items.order_id = orders.id
@@ -232,49 +209,36 @@ SQL
 User.find_by_sql(sql)
 ```
 
-### PostgreSQL-Specific Features
+### PostgreSQL-specific operators
 
 ```ruby
-# JSONB operations
 User.where("settings @> ?", { theme: "dark" }.to_json)
-
-# Array operations
 User.where("? = ANY(tags)", "ruby")
-
-# Full-text search
 User.where("to_tsvector('english', name || ' ' || bio) @@ to_tsquery('ruby & rails')")
 
-# Geospatial (with PostGIS extension)
 Location.where(
   "ST_DWithin(coordinates, ST_SetSRID(ST_MakePoint(?, ?), 4326), ?)",
-  longitude, latitude, 1000 # meters
+  longitude, latitude, 1000
 )
 ```
 
+Iron Law 2 / 15: never interpolate; always use placeholders.
+
 ## Query Caching
 
-### Rails Query Cache
+### Block-level cache
 
 ```ruby
-# Within a block, identical queries are cached
 ActiveRecord::Base.cache do
-  # First query hits database
   user = User.find(1)
-  
-  # Second query returns cached result
-  user = User.find(1)
-end
-
-# Or enable for entire controller action
-class UsersController < ApplicationController
-  def show
-    # All queries in this action are cached
-    @user = User.includes(:posts, :comments).find(params[:id])
-  end
+  user = User.find(1) # served from cache
 end
 ```
 
-### Fragment Caching
+Rails caches identical queries within the same controller action by
+default. Wrap explicit blocks for non-controller code.
+
+### Fragment cache key from association timestamp
 
 ```erb
 <% cache ["user-stats", @user, @user.posts.maximum(:updated_at)] do %>
@@ -287,63 +251,54 @@ end
 
 ## N+1 Prevention Checklist
 
-- [ ] Use `includes` for associations that will be accessed
-- [ ] Use `preload` when you don't need to filter by association
-- [ ] Use `eager_load` when filtering by association (LEFT JOIN)
-- [ ] Never call `count`, `first`, `last` on associations in loops
-- [ ] Use `ids` instead of `map(&:id)` for getting IDs
-- [ ] Use `pluck` instead of `map` for getting single columns
-- [ ] Consider `find_each` for large batches
+- [ ] `includes` for associations the view/serializer will read
+- [ ] `preload` when no association predicate is needed
+- [ ] `eager_load` when filtering by association (LEFT JOIN)
+- [ ] No `count` / `first` / `last` on associations inside loops
+- [ ] `ids` over `map(&:id)`
+- [ ] `pluck` over `map` for single columns
+- [ ] `find_each` for large batches
 
-## Modern Ruby/Rails Patterns (2026)
+## Modern Ruby/Rails Patterns
 
-### Using `it` keyword (Ruby 3.4+)
+### `it` keyword (Ruby 3.4+)
 
 ```ruby
-# Before Ruby 3.4
-users.map { _1.name }
-
-# Ruby 3.4+
 users.map { it.name }
 ```
 
-### Using `filter_map` (Ruby 2.7+)
+### `filter_map` (Ruby 2.7+)
 
 ```ruby
-# Old way - creates intermediate array
-users.select(&:active?).map { it.name }
-
-# Modern way - single pass
 users.filter_map { it.name if it.active? }
 ```
 
-### Using `in_order_of` (Rails 7+)
+Single-pass filter+map; no intermediate `select`.
+
+### `in_order_of` (Rails 7+)
 
 ```ruby
-# Order by specific sequence
 User.in_order_of(:role, %w[admin moderator user])
-
-# With additional ordering
 User.in_order_of(:id, priority_ids).order(:created_at)
 ```
 
-### Using `async` queries (Rails 8+)
+### Async queries (Rails 8+)
 
 ```ruby
-# Execute queries asynchronously
 users = User.where(active: true).async_load
 posts = Post.recent.async_load
 
-# Both queries run in parallel
 render json: { users: users.value, posts: posts.value }
 ```
 
+Both relations dispatch in parallel; `.value` blocks until each
+resolves.
+
 ## Performance Monitoring
 
-### Using Bullet Gem
+### Bullet gem
 
 ```ruby
-# config/environments/development.rb
 config.after_initialize do
   Bullet.enable = true
   Bullet.alert = true
@@ -356,22 +311,20 @@ config.after_initialize do
 end
 ```
 
-### Using rack-mini-profiler
+### rack-mini-profiler
 
 ```ruby
-# Gemfile
 gem 'rack-mini-profiler'
-
-# Automatically profiles all queries
-# Look for "SQL" section in profiler bar
 ```
 
-### Query Log Tags (Rails 7+)
+Adds a profiler bar with per-request SQL summary.
+
+### Query log tags (Rails 7+)
 
 ```ruby
-# config/application.rb
 config.active_record.query_log_tags_enabled = true
 config.active_record.query_log_tags = %i[application controller action job pid]
-
-# Output: /*application:MyApp,controller:users,action:index,pid:1234*/ SELECT * FROM users
 ```
+
+Each query is annotated with a SQL comment carrying the originating
+controller/job, useful for slow-query log triage.

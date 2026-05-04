@@ -252,6 +252,23 @@ Schema + per-skill staleness rules:
 | **REQUIRES CHANGES** (verdict only) | Code works but new public behavior lacks test coverage | List affected methods/endpoints/jobs |
 | **SUGGESTION** | Style, refactor, or doc improvements | Brief note, no action required |
 
+## Worker Severity Mapping
+
+Reviewer agents emit `Critical | Warning | Info`. Synthesis maps each
+finding into a consolidated bucket using this rule table:
+
+| Worker output | Diff status | Consolidated bucket |
+|---|---|---|
+| Critical | introduced by this diff | BLOCKER |
+| Critical | unchanged code | Pre-existing BLOCKER (report; do not affect verdict) |
+| Warning | any | WARNING |
+| Info | any | SUGGESTION |
+| New public behavior without tests | any | REQUIRES CHANGES verdict trigger (not a per-finding bucket) |
+
+Worker prompts keep `Critical | Warning | Info` for backward
+compatibility. Consolidated artifacts use `BLOCKER | WARNING |
+SUGGESTION` and the verdict-only `REQUIRES CHANGES`.
+
 ## Review Scope
 
 Review is **findings-only**. Do NOT:

@@ -287,60 +287,79 @@ export default class extends Controller {
 
 ## Anti-Patterns
 
-### Forget unique IDs
+### Missing unique ID on `data-turbo-permanent`
+
+Reject — morphdom needs an ID anchor to skip the subtree:
 
 ```erb
-<%# BAD: No ID means morphdom can't track it %>
 <div data-turbo-permanent><canvas></canvas></div>
+```
 
-<%# GOOD: Unique ID for tracking %>
+Always anchor with a unique ID:
+
+```erb
 <div id="chart-1" data-turbo-permanent><canvas></canvas></div>
 ```
 
-### Put data-turbo-permanent on controller element
+### `data-turbo-permanent` on the Stimulus controller element
+
+Reject — the controller's own element being skipped means
+`connect`/`disconnect` callbacks never fire:
 
 ```erb
-<%# BAD: Controller loses connect/disconnect callbacks %>
 <div id="editor" data-controller="tiptap" data-turbo-permanent></div>
+```
 
-<%# GOOD: Separate controller from permanent content %>
+Separate the controller wrapper from the JS-owned subtree:
+
+```erb
 <div id="editor" data-controller="tiptap">
   <div id="editor-content" data-turbo-permanent></div>
 </div>
 ```
 
-### Forget cleanup in disconnect
+### No cleanup in `disconnect`
+
+Reject — leaks the underlying chart/editor instance every time the
+element re-mounts:
 
 ```javascript
-// BAD: Memory leak
 export default class extends Controller {
   connect() {
     this.chart = new Chart(...)
   }
 }
+```
 
-// GOOD: Proper cleanup
+Always teardown in `disconnect`:
+
+```javascript
 export default class extends Controller {
   connect() {
     this.chart = new Chart(...)
   }
-  
+
   disconnect() {
     this.chart?.destroy()
   }
 }
 ```
 
-### Use instance variables for JS-managed content
+### Replacing JS-managed DOM via Turbo Stream
+
+Reject — Turbo tries to patch the subtree the JS library owns:
 
 ```ruby
-# BAD: Turbo tries to update, conflicts with JS
 def update
   @content = params[:content]
   render turbo_stream: turbo_stream.replace(@post, partial: "post")
 end
+```
 
-# GOOD: Send custom event for JS, render for others
+Broadcast a custom action attribute and let the Stimulus controller
+apply the new state via its API:
+
+```ruby
 def update
   Turbo::StreamsChannel.broadcast_action_to(
     @post,
@@ -377,23 +396,24 @@ Translated text can change DOM structure (different word count, RTL, different e
 2. **ALWAYS use `querySelector` with `data-*` attributes** for stable element targeting
 3. **Test with longest locale** — German/Finnish strings are often 30-50% longer than English
 
-### Anti-Pattern
+### Reject positional selectors
+
+Translation reorders / inserts elements; positional selectors break
+silently:
 
 ```javascript
-// BAD: Position changes when translation adds/removes elements
 connect() {
   this.target = this.element.children[0]
-  this.label = this.element.querySelector('span:first-child')
+  this.label  = this.element.querySelector('span:first-child')
 }
 ```
 
-### Correct Pattern
+Use `data-role` attributes — stable across locales:
 
 ```javascript
-// GOOD: data attributes survive translation changes
 connect() {
   this.target = this.element.querySelector('[data-role="content"]')
-  this.label = this.element.querySelector('[data-role="label"]')
+  this.label  = this.element.querySelector('[data-role="label"]')
 }
 ```
 
