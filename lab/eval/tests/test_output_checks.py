@@ -397,9 +397,10 @@ Another instance:
         passed, _ = output_checks.has_review_reviewer_verdicts(content)
         self.assertTrue(passed)
 
-    def test_reviewer_verdicts_rejects_no_output_for_non_stub_reviewer(self) -> None:
+    def test_reviewer_verdicts_rejects_no_output_in_both_cells_for_non_stub_reviewer(self) -> None:
         # Reviewer is `artifact` in Coverage but uses `(no output)`
-        # placeholder in Verdicts → contract violation.
+        # placeholder in BOTH Verdicts cells → contract violation. The
+        # placeholder is reserved for stub-no-output rows.
         content = """# Review: x
 
 ## Reviewer Coverage
@@ -416,7 +417,7 @@ Another instance:
 """
         passed, reason = output_checks.has_review_reviewer_verdicts(content)
         self.assertFalse(passed)
-        self.assertIn("not in 4-set", reason)
+        self.assertIn("placeholder reserved", reason)
 
     def test_reviewer_verdicts_rejects_blank_raw_cell(self) -> None:
         content = """# Review: x
