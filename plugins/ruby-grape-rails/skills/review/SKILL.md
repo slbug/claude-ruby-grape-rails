@@ -359,3 +359,11 @@ When a finding cites a sidecar, read the sidecar's `trust_state` (see
 - `missing`: tag the finding `[unverified]`; do not gate merge.
 - `weak`: keep severity; add a provenance note.
 - `clean`: proceed silently.
+
+## References
+
+| Need | Reference |
+|---|---|
+| reviewer focus areas, file-type checklists, anti-patterns, severity, verdict, mandatory finding table, chat scripts, deduplication | `${CLAUDE_SKILL_DIR}/references/review-playbook.md` |
+| review-slug derivation + filesystem-safe slug rules | `${CLAUDE_SKILL_DIR}/references/conventions.md` |
+| worked example of consolidated review output | `${CLAUDE_SKILL_DIR}/references/example-review.md` |

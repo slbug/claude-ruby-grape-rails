@@ -38,3 +38,16 @@ For infra-layer egress restriction (cloud metadata endpoints, known
 exfiltration targets), use CC 2.1.113+ `sandbox.network.deniedDomains`. Runs
 beneath plugin permission rules; applies to all Bash tool calls. See
 `/rb:permissions` → "Network egress restriction" for the settings.json shape.
+
+## References
+
+| Need | Reference |
+|---|---|
+| betterleaks CLI integration + git-history scan | `${CLAUDE_SKILL_DIR}/references/betterleaks-integration.md` |
+| Pundit/CanCanCan policies, password hashing, session auth | `${CLAUDE_SKILL_DIR}/references/authentication.md` |
+| explicit authorization patterns + multi-tenant scopes | `${CLAUDE_SKILL_DIR}/references/authorization.md` |
+| input validation, file-upload magic bytes, path traversal, XSS sanitization, SQL safety, command-injection prevention | `${CLAUDE_SKILL_DIR}/references/input-validation.md` |
+| OAuth identity resolution + token refresh + multi-provider | `${CLAUDE_SKILL_DIR}/references/oauth-linking.md` |
+| Rack::Attack rate limiting + composite keys + Redis limiter | `${CLAUDE_SKILL_DIR}/references/rate-limiting.md` |
+| CSP, CSRF, HSTS, security headers, Brakeman + bundle-audit CI wiring | `${CLAUDE_SKILL_DIR}/references/security-headers.md` |
+| SSRF, secrets management, supply chain, CORS, safe deserialization, file-upload content-type | `${CLAUDE_SKILL_DIR}/references/advanced-patterns.md` |

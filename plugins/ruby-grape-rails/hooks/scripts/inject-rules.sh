@@ -65,12 +65,14 @@ Iron Law 12: NO Ruby `eval`/`instance_eval`/`class_eval` with user input — cod
 Iron Law 13: AUTHORIZE in EVERY controller action — do not trust before_action alone
   See: `${CLAUDE_PLUGIN_ROOT}/skills/security/references/authorization.md`
 Iron Law 14: NEVER use html_safe or raw with untrusted content — XSS vulnerability
+  See: `${CLAUDE_PLUGIN_ROOT}/skills/security/references/input-validation.md`
 Iron Law 15: NO SQL string concatenation — always use parameterized queries
 Iron Law 16: NO method_missing without respond_to_missing? — breaks introspection
 Iron Law 17: SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers
 Iron Law 18: DON'T RESCUE Exception — only rescue StandardError or specific classes
   See: `${CLAUDE_PLUGIN_ROOT}/skills/ruby-idioms/references/error-handling.md`
 Iron Law 19: NEVER query DB in Turbo Stream responses — pre-compute everything
+  See: `${CLAUDE_PLUGIN_ROOT}/skills/hotwire-patterns/references/channels-presence.md`
 Iron Law 20: ALWAYS use turbo_frame_tag for partial updates
 Iron Law 21: VERIFY BEFORE CLAIMING DONE — never say 'should work' — run tests and show results
   See: `${CLAUDE_PLUGIN_ROOT}/skills/testing/references/discipline.md`

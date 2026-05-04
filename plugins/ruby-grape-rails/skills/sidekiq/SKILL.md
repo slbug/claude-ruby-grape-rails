@@ -380,7 +380,12 @@ See: [ActiveJob::Continuation Documentation](https://api.rubyonrails.org/classes
 
 ## References
 
-- `references/idempotency-patterns.md` — Detailed idempotency strategies
-- `references/iteration-patterns.md` — Sidekiq::Iteration deep dive
-- `references/solid-queue-migration.md` — Migrating from Sidekiq to Solid Queue
-- `references/performance-tuning.md` — Profiling and optimization
+| Need | Reference |
+|---|---|
+| idempotency strategies (state-check, upsert, UUID dedup, locking) | `${CLAUDE_SKILL_DIR}/references/idempotency-patterns.md` |
+| job-class skeleton + JSON-safe args + commit-safe enqueue | `${CLAUDE_SKILL_DIR}/references/job-patterns.md` |
+| Sidekiq::Iteration cursor-based deep dive | `${CLAUDE_SKILL_DIR}/references/iteration-patterns.md` |
+| migrating from Sidekiq to Solid Queue | `${CLAUDE_SKILL_DIR}/references/solid-queue-migration.md` |
+| profiling + optimization | `${CLAUDE_SKILL_DIR}/references/performance-tuning.md` |
+| queue config + concurrency + cron-scheduling + production checklist | `${CLAUDE_SKILL_DIR}/references/queue-config.md` |
+| testing patterns (RSpec, Minitest, Sidekiq::Testing) | `${CLAUDE_SKILL_DIR}/references/testing-patterns.md` |

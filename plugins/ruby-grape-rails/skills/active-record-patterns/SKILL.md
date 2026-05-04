@@ -29,3 +29,13 @@ paths:
 - use `find_each` for large backfills and batch work
 - use optimistic or pessimistic locking where correctness depends on it
 - make migrations reversible and production-safe
+
+## References
+
+| Need | Reference |
+|---|---|
+| transactions, locking, partial-failure recovery | `${CLAUDE_SKILL_DIR}/references/transactions.md` |
+| validation patterns, `update_columns` audit trails | `${CLAUDE_SKILL_DIR}/references/validations.md` |
+| query composition, scopes, subqueries, batched inserts | `${CLAUDE_SKILL_DIR}/references/queries.md` |
+| production-safe migration recipes | `${CLAUDE_SKILL_DIR}/references/migrations.md` |
+| PostgreSQL full-text + trigram + hybrid search | `${CLAUDE_SKILL_DIR}/references/fulltext-search.md` |

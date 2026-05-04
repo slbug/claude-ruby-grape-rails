@@ -115,16 +115,24 @@ export default class extends Controller {
 
 See [Stimulus Controllers](references/stimulus-controllers.md) for patterns and best practices.
 
-## Detailed Guides
+## References
 
-- [Turbo Architecture](references/turbo-architecture.md) — Drive, Frames, Streams
-- [Stimulus Controllers](references/stimulus-controllers.md) — Controller patterns
-- [Progressive Enhancement](references/progressive-enhancement.md) — No-JS-first approach
-- [Real-time Features](references/realtime-features.md) — Notifications, live updates
-- [Testing](references/testing.md) — Testing Hotwire interactions
-- [Anti-patterns](references/anti-patterns.md) — Common mistakes
-- [Migration Guide](references/migration-guide.md) — From Rails UJS to Hotwire
-- [Performance Tips](references/performance-tips.md) — Optimization strategies
+| Need | Reference |
+|---|---|
+| Turbo Drive / Frames / Streams architecture | `${CLAUDE_SKILL_DIR}/references/turbo-architecture.md` |
+| Stimulus controller patterns | `${CLAUDE_SKILL_DIR}/references/stimulus-controllers.md` |
+| no-JS-first / progressive enhancement | `${CLAUDE_SKILL_DIR}/references/progressive-enhancement.md` |
+| real-time / notification / live-update broadcast patterns | `${CLAUDE_SKILL_DIR}/references/realtime-features.md` |
+| Hotwire testing | `${CLAUDE_SKILL_DIR}/references/testing.md` |
+| Hotwire anti-patterns | `${CLAUDE_SKILL_DIR}/references/anti-patterns.md` |
+| Rails UJS → Hotwire migration | `${CLAUDE_SKILL_DIR}/references/migration-guide.md` |
+| Hotwire performance tips | `${CLAUDE_SKILL_DIR}/references/performance-tips.md` |
+| lazy-load Turbo Frames + infinite scroll + background-job streams | `${CLAUDE_SKILL_DIR}/references/async-streams.md` |
+| ActionCable channels + Turbo Streams + Redis presence tracking | `${CLAUDE_SKILL_DIR}/references/channels-presence.md` |
+| Turbo forms + Active Storage direct uploads + Stimulus debouncing | `${CLAUDE_SKILL_DIR}/references/forms-uploads.md` |
+| `data-turbo-permanent` + Stimulus connect/disconnect for TipTap, Chart.js, Leaflet, Alpine | `${CLAUDE_SKILL_DIR}/references/js-interop.md` |
+| pubsub broadcast patterns + Turbo Drive / Frames / modal navigation | `${CLAUDE_SKILL_DIR}/references/pubsub-navigation.md` |
+| reusable Turbo components | `${CLAUDE_SKILL_DIR}/references/components.md` |
 
 ## Key Patterns
 

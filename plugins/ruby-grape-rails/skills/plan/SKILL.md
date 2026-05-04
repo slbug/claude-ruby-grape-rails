@@ -412,3 +412,15 @@ When `--existing` references a research sidecar, read the sidecar's
   to strengthen evidence before planning.
 - `weak`: warn that evidence is weak; suggest `/rb:research`.
 - `clean`: proceed silently.
+
+## References
+
+| Need | Reference |
+|---|---|
+| canonical planning workflow + agent selection matrix + spawning strategy | `${CLAUDE_SKILL_DIR}/references/planning-workflow.md` |
+| scratchpad section structure consumed by `/rb:work` | `${CLAUDE_SKILL_DIR}/references/scratchpad-template.md` |
+| canonical plan.md template + `[direct]` / `[active record]` / `[hotwire]` / `[sidekiq]` task annotations | `${CLAUDE_SKILL_DIR}/references/plan-template.md` |
+| breadboarding for Hotwire/Turbo features (Places + Affordances + Wires) | `${CLAUDE_SKILL_DIR}/references/breadboarding.md` |
+| minimal / more / comprehensive detail levels per scope | `${CLAUDE_SKILL_DIR}/references/complexity-detail.md` |
+| agent-spawning matrix per feature type | `${CLAUDE_SKILL_DIR}/references/agent-selection.md` |
+| worked example plans (avatar upload + kanban with breadboard) | `${CLAUDE_SKILL_DIR}/references/example-plan.md` |

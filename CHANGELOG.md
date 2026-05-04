@@ -81,6 +81,21 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   is now the single review-output source of truth. Pointers in
   `.claude/skills/plugin-dev-workflow/references/output-verification-checklist.md`
   and `.github/copilot-instructions.md` updated.
+- 22 SKILL.md files now ship a `## References` section indexing all
+  skill `references/*.md` files with "read when X" triggers. Wires
+  46 previously-orphan reference docs into their owning SKILL.md so
+  agents can discover them: `active-record-constraint-debug`,
+  `active-record-patterns`, `ar-n1-check`, `audit`, `brief`,
+  `deploy`, `grape-idioms`, `hotwire-patterns`, `investigate`, `perf`,
+  `plan`, `rails-contexts`, `rb-trace`, `research`, `review`,
+  `ruby-idioms`, `runtime-integration`, `security`, `sidekiq`,
+  `testing`, `triage`, `work`. Ref paths use
+  `${CLAUDE_SKILL_DIR}/references/<file>.md` form.
+- Iron Law 14 (No Unsafe HTML) wired to
+  `skills/security/references/input-validation.md`; Iron Law 19
+  (No DB Queries in Turbo Streams) wired to
+  `skills/hotwire-patterns/references/channels-presence.md`. Injector
+  payload now emits 18 `See:` lines (12 Iron Laws + 6 preferences).
 
 ## [1.16.5] - 2026-05-03
 

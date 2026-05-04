@@ -26,3 +26,9 @@ Return the top findings ordered by impact and effort, then suggest:
 - `/rb:plan` for multi-fix work
 - `/rb:quick` for one or two small changes
 - `/rb:investigate` if the root cause is still uncertain
+
+## References
+
+| Need | Reference |
+|---|---|
+| benchmark-ips, EXPLAIN ANALYZE, MemoryProfiler, StackProf, flame graphs | `${CLAUDE_SKILL_DIR}/references/benchmarking.md` |

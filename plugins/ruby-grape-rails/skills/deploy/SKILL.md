@@ -454,13 +454,13 @@ healthcheck:
   start_period: 10s
 ```
 
-## Cloud Platform Guides
+## References
 
-See: [references/cloud-platforms.md](references/cloud-platforms.md) — Heroku, AWS ECS, Fly.io, Kubernetes configs
-
-## Monitoring & Observability
-
-See: [references/docker-config.md](references/docker-config.md) — Health checks, logging, and monitoring setup
+| Need | Reference |
+|---|---|
+| Heroku, AWS ECS, Fly.io, Kubernetes (high-level platform configs) | `${CLAUDE_SKILL_DIR}/references/cloud-platforms.md` |
+| Dockerfile + multi-stage + health checks + logging + monitoring | `${CLAUDE_SKILL_DIR}/references/docker-config.md` |
+| Fly.io fly.toml + Puma + Sidekiq + Postgres IPv6 + GitHub Actions deploy | `${CLAUDE_SKILL_DIR}/references/flyio-config.md` |
 
 ## Checklist
 

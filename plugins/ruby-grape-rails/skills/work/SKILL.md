@@ -324,3 +324,13 @@ and log it in `.claude/plans/<slug>/progress.md`:
 - `missing`: append a warning block to the step entry; proceed.
 - `weak`: append a warning block to the step entry; proceed.
 - `clean`: proceed silently.
+
+## References
+
+| Need | Reference |
+|---|---|
+| domain-specific implementation patterns + per-task checklists | `${CLAUDE_SKILL_DIR}/references/execution-guide.md` |
+| 3-attempt failure recovery + blocker creation | `${CLAUDE_SKILL_DIR}/references/error-recovery.md` |
+| critic-refiner pattern + harness-as-action-verifier (programmatic verification beats unstructured retry) | `${CLAUDE_SKILL_DIR}/references/harness-patterns.md` |
+| plan + progress markdown formats consumed by `/rb:work` | `${CLAUDE_SKILL_DIR}/references/file-formats.md` |
+| plan-checkbox-as-state + auto-resume + idempotent task execution | `${CLAUDE_SKILL_DIR}/references/resume-strategies.md` |

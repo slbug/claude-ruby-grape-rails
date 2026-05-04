@@ -22,3 +22,11 @@ Write the trace as a short step-by-step chain with file paths.
 This is a **skill** (`/rb:trace`), not an agent. Do NOT spawn `rb-trace` or
 `rb:trace` via the Agent tool. For agent-based deep tracing, use `call-tracer`
 (`subagent_type: "ruby-grape-rails:call-tracer"`).
+
+## References
+
+| Need | Reference |
+|---|---|
+| where tracing begins (controllers, Grape endpoints, jobs, rake, webhooks, middleware) | `${CLAUDE_SKILL_DIR}/references/entry-points.md` |
+| extracting argument patterns from call sites | `${CLAUDE_SKILL_DIR}/references/argument-extraction.md` |
+| Prism, TracePoint, RuboCop AST, Steep, Pronto | `${CLAUDE_SKILL_DIR}/references/static-analysis-tools.md` |

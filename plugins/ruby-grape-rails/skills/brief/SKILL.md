@@ -257,3 +257,10 @@ Present the brief directly to the user:
 - No file output needed
 - Format with markdown
 - Include clear next step
+
+## References
+
+| Need | Reference |
+|---|---|
+| pre-work + post-work section templates with rules per artifact type | `${CLAUDE_SKILL_DIR}/references/briefing-guide.md` |
+| when to suggest visual-explainer third-party skill for HTML diagram output | `${CLAUDE_SKILL_DIR}/references/visual-explainer.md` |

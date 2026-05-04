@@ -232,7 +232,7 @@ laws:
     init_text: "NEVER use html_safe or raw with untrusted content"
     subagent_text: "Iron Law 14: NEVER use html_safe or raw with untrusted content — XSS vulnerability"
     detector_id: "unsafe_html"
-    reference_files: []
+    reference_files: ["skills/security/references/input-validation.md"]
 
   - id: 15
     category: security
@@ -299,7 +299,7 @@ laws:
     init_text: "NEVER query DB in Turbo Stream responses"
     subagent_text: "Iron Law 19: NEVER query DB in Turbo Stream responses — pre-compute everything"
     detector_id: null
-    reference_files: []
+    reference_files: ["skills/hotwire-patterns/references/channels-presence.md"]
 
   - id: 20
     category: hotwire
