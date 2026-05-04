@@ -320,4 +320,3 @@ Planning reuses fresh research conservatively:
 | Need | Reference |
 |---|---|
 | structured library evaluation template (RubyGems facts + maintenance + recommendation) | `${CLAUDE_SKILL_DIR}/references/library-evaluation.md` |
-| Context7-first library / gem / framework lookup policy | `${CLAUDE_PLUGIN_ROOT}/references/preferences/context7-usage.md` |
