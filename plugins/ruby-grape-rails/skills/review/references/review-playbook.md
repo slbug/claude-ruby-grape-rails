@@ -186,6 +186,12 @@ Required output:
 2. Return summary in Agent return text (used as artifact-recovery fallback).
    - Always write the artifact (even if findings are empty — write PASS
      with files reviewed).
+3. Artifact MUST include a verdict line: `**Verdict**: <one of: PASS,
+   PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED>`. Synthesis preserves
+   this verbatim in the consolidated `## Reviewer Verdicts` table and
+   normalizes it to the canonical 4-set. Non-canonical wording
+   (e.g. `LGTM`, `BLOCK`, `Needs fixes`) is acceptable and will be
+   mapped per § "STEP 2"; emit a verdict line regardless.
 
 Findings format:
 - file:line — Title
@@ -441,8 +447,11 @@ no usable reviewer output; reviewer coverage gap.
 | {agent-slug} | {agent's verbatim verdict text} | PASS \| PASS WITH WARNINGS \| REQUIRES CHANGES \| BLOCKED |
 
 Raw verdict preserves the agent's wording exactly. Canonical column
-maps it through the table in § "STEP 2". Per-reviewer canonical
-values feed the consolidated verdict algorithm in § "STEP 4".
+normalizes it via the table in § "STEP 2" so reviewers reading the
+artifact see one vocabulary. The consolidated verdict in § "STEP 4"
+is computed from blocker / warning / test-coverage counts, NOT from
+this column — Reviewer Verdicts is transparency metadata, not
+algorithm input.
 
 ## Summary
 

@@ -10,11 +10,19 @@
 
 ## Reviewer Coverage
 
-| Reviewer | Recovery State |
-|---|---|
-| ruby-reviewer | artifact |
-| testing-reviewer | artifact |
-| security-analyzer | stub-replaced |
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 1 WARNING / 1 SUGGESTION |
+| testing-reviewer | artifact | 0 BLOCKER / 1 WARNING / 0 SUGGESTION |
+| security-analyzer | stub-replaced | 1 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer | PASS WITH WARNINGS | PASS WITH WARNINGS |
+| testing-reviewer | PASS WITH WARNINGS | PASS WITH WARNINGS |
+| security-analyzer | BLOCK — token leak via logs | BLOCKED |
 
 ## Summary
 

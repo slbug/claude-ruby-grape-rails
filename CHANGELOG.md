@@ -84,6 +84,23 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     workflow / library defaults.
 - `CHANGELOG.md` footer link added for `[1.16.7]`; `[Unreleased]`
   pointer updated to compare against `v1.16.7`.
+- `has_review_reviewer_coverage` bumped from 2-cell minimum to 3-cell
+  enforcement (`slug | recovery state | findings counts`). Old 2-col
+  format no longer passes the check.
+- `example-review.md` worked example updated to 3-col Reviewer
+  Coverage + new `## Reviewer Verdicts` section (was internally
+  inconsistent with new `review-playbook.md` template).
+- Worker briefing template (`review-playbook.md` § "Worker Briefing
+  Template") gained explicit verdict-line requirement so synthesis
+  STEP 2 always has raw verdict prose to extract for the
+  `## Reviewer Verdicts` table.
+- `conditional-sections.md` Authoring Rules: dropped contradicting
+  `**{Stack} (project)**:` heading rule. Per-section "What to render"
+  cells are the literal output lines.
+- `review-playbook.md` § "Reviewer Verdicts" template footer reworded:
+  the canonical column normalizes vocabulary for transparency; STEP 4
+  computes consolidated verdict from blocker / warning / coverage
+  counts, not from this column (was misdirecting synthesizers).
 
 ## [1.16.6] - 2026-05-04
 

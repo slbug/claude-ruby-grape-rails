@@ -147,9 +147,10 @@ def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
     body = _section(content, "Reviewer Coverage")
     if not body:
         return False, "Missing ## Reviewer Coverage section"
-    rows = _table_data_rows(body, min_cells=2)
+    # Contract: `| <slug> | <recovery-state> | <findings-counts> |`.
+    rows = _table_data_rows(body, min_cells=3)
     if not rows:
-        return False, "Reviewer Coverage table has no per-reviewer data rows"
+        return False, "Reviewer Coverage table missing 3-column per-reviewer rows (slug | recovery state | findings counts)"
     return True, f"Reviewer Coverage section with {len(rows)} reviewer row(s)"
 
 

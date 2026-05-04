@@ -31,7 +31,7 @@ omit it.
 | Do NOT inject library defaults (e.g. "Workers MUST include `Sidekiq::Job`", "Use `turbo_frame_tag`"). Only project-specific deviations or detected facts. |
 | Render only items derived from `detect-stack` output or from interview answers in the current `/rb:init` run. |
 | Empty section → omit. Do NOT leave a header without content. |
-| Format as a `**{Stack} (project)**:` bolded label followed by 1–6 bullets. No verbose narration. |
+| Render shape per section: each "What to render" cell below is the literal output line; emit those bullets as-is, one per detected/asked item. No verbose narration, no extra wrapper headings. |
 | Do NOT skip detection in favor of interview — detect-stack output is authoritative for items it covers. |
 | Do NOT skip interview when detection is ambiguous — guessing produces drift. |
 
