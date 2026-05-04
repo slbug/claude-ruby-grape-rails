@@ -136,7 +136,7 @@ baseline and this PR.
   RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest make eval-behavioral-fresh
   ```
 
-  Either export once per shell or pass inline per command.
+  Export once per shell, or pass the env var inline per command.
 
   Under low-RAM fallback:
 
