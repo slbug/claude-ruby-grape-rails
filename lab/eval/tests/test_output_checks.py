@@ -162,7 +162,7 @@ Use the maintained upstream path.
 """
         passed, reason = output_checks.has_review_reviewer_coverage(content)
         self.assertFalse(passed)
-        self.assertIn("only", reason)
+        self.assertIn("contract requires exactly 3", reason)
 
     def test_reviewer_coverage_rejects_invalid_recovery_state(self) -> None:
         content = """# Review: x
