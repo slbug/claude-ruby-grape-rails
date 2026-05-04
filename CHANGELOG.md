@@ -51,6 +51,26 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `lab/eval/output_checks.py` + `artifact_scorer.py` extended with
+  `review_reviewer_coverage` + `review_reviewer_verdicts` checks.
+  `lab/eval/fixtures/output/review-good.md` updated to include both
+  sections; `review-bad` `expected_failures` extended. Without this,
+  the new consolidated-review contract had no CI enforcement.
+- `/rb:init` frontmatter description rewritten to match slim
+  template behavior (was claiming workflow routing / Iron Laws
+  install). New description names the four downstream slash commands
+  (`/rb:plan`, `/rb:work`, `/rb:review`, `/rb:verify`) so
+  description-structure check still passes.
+- `/rb:plan`, `/rb:brainstorm`, `/rb:investigate`, `/rb:full`,
+  `/rb:review` STEP 0 blocks rewritten imperative-only (was
+  explanatory: "inline summaries are not sufficient", "skipping
+  causes drift" — narration violated runtime-doc contract).
+- `conditional-sections.md` opening paragraph rewritten imperative
+  ("Render each placeholder ..."); `{PLUGIN_VERSION}` placeholder
+  example bumped 1.16.6 → 1.16.7.
+- Synthesis-step procedure moved out of `/rb:review` SKILL.md into
+  `review-playbook.md` § "Synthesis Procedure" — keeps SKILL.md
+  under the line-count target (review skill score 0.86 → 0.955).
 - Stale references in shipped surfaces tied to old heavy
   `/rb:init` template:
   - `intro/references/tutorial-content.md` Layer 4 description
