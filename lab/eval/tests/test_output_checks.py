@@ -345,10 +345,10 @@ Use the maintained upstream path.
         self.assertFalse(passed)
         self.assertIn("raw verdict cell empty", reason)
 
-    def test_reviewer_completeness_rejects_reordered_coverage(self) -> None:
-        # Header order: ruby-reviewer, testing-reviewer.
-        # Coverage table order: testing-reviewer, ruby-reviewer.
-        # Set membership matches; order does not.
+    def test_reviewer_completeness_passes_when_rows_reordered(self) -> None:
+        # Manifest stores reviewers under an `agents` object (no natural
+        # order). Cosmetic reorder of Coverage / Verdicts rows MUST NOT
+        # fail — set membership + count is the contract.
         content = """# Review: x
 
 **Reviewers**: ruby-reviewer, testing-reviewer
@@ -367,9 +367,8 @@ Use the maintained upstream path.
 | ruby-reviewer | PASS | PASS |
 | testing-reviewer | PASS | PASS |
 """
-        passed, reason = output_checks.has_review_reviewer_completeness(content)
-        self.assertFalse(passed)
-        self.assertIn("does not match", reason)
+        passed, _ = output_checks.has_review_reviewer_completeness(content)
+        self.assertTrue(passed)
 
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample

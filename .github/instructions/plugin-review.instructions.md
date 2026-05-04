@@ -332,7 +332,9 @@ NOT flag the fallback chain as over-engineered.
   counts (`{n} BLOCKER / {n} WARNING / {n} SUGGESTION`); Verdicts
   MUST be 3-col (`Reviewer | Raw Verdict | Canonical`) with canonical
   column ∈ `{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}`.
-  `**Reviewers**:` header MUST list the same slugs in the same order.
+  `**Reviewers**:` header MUST list the same slug set as Coverage
+  and Verdicts rows (one row per slug; row order NOT enforced —
+  manifest stores `agents` as an object, no natural ordering).
 - `run_in_background: true` on any `Agent(...)` call in shipped
   skill bodies, fanout templates, or example snippets — flag as
   BLOCKER. Plugin agents dispatch foreground only.

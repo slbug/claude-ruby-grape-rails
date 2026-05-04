@@ -30,8 +30,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   exact 3-cell rows, recovery-state enum, findings-counts bucket
   format, canonical canonical-column, non-empty raw verdict; new
   `review_reviewer_completeness` reconciles `**Reviewers**:` header
-  against table row slugs (count, duplicates, order). Malformed
-  rows surface instead of silently dropping.
+  against table row slugs (set membership + count + duplicates; row
+  order NOT enforced — manifest stores `agents` as an object, no
+  natural ordering). Malformed rows surface instead of silently
+  dropping.
 - Injector dropped `See:` prefix; `reference_files` companion paths
   emit bare beneath each rule. Real-run observation: passive `See:`
   framing read as citation; agents never opened the targets.

@@ -228,10 +228,12 @@ def has_review_reviewer_verdicts(content: str) -> tuple[bool, str]:
 def has_review_reviewer_completeness(content: str) -> tuple[bool, str]:
     """Reconcile `**Reviewers**:` header list against Coverage + Verdicts row slugs.
 
-    Header order + count must match Coverage rows exactly, and Verdicts
-    rows exactly. Duplicate reviewer rows (e.g. two `ruby-reviewer` rows)
-    fail — playbook requires exactly one Coverage/Verdicts row per
-    spawned reviewer.
+    Set membership + count must match exactly: every header slug appears
+    once in Coverage and once in Verdicts. Order is NOT enforced — the
+    manifest stores `agents` as an object (no natural ordering), so a
+    cosmetic reorder is not a contract violation. Duplicate reviewer
+    rows (e.g. two `ruby-reviewer` rows) DO fail — playbook requires
+    exactly one row per spawned reviewer.
     """
     from collections import Counter
 
@@ -274,13 +276,12 @@ def has_review_reviewer_completeness(content: str) -> tuple[bool, str]:
         extra = sorted(set(rows) - set(header_slugs))
         if extra:
             problems.append(f"{label} table has unexpected reviewers: {extra}")
-        if not dups and not missing and not extra and rows != header_slugs:
-            # Set membership matches but order/count differs — synthesis
-            # reordered reviewers between header and table. Reject so the
-            # consolidated artifact stays deterministic.
+        if not dups and not missing and not extra and len(rows) != len(header_slugs):
+            # Set membership matches but row count differs — defensive
+            # check; should be unreachable given dup/missing/extra above.
             problems.append(
-                f"{label} table reviewer order {rows} does not match "
-                f"`**Reviewers**:` header order {header_slugs}"
+                f"{label} table row count {len(rows)} != "
+                f"`**Reviewers**:` header count {len(header_slugs)}"
             )
 
     _diff("Coverage", coverage_slugs)
