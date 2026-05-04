@@ -494,6 +494,73 @@ class CheckRefsTests(unittest.TestCase):
         self.assertIn("BROKEN_REFERENCE_PATH", out)
         self.assertIn("skills/foo/references/missing.md", out)
 
+    def test_dotslash_reference_resolves_skill_local(self) -> None:
+        """``./references/foo.md`` from a SKILL.md is markdown shorthand
+        for "current directory" — must resolve against the owning skill
+        dir, NOT against plugin root. Regression guard for the
+        false-broken/false-orphan bug on common dot-slash markdown link
+        style."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\nSee [doc](./references/local.md).\n"
+        )
+        (plugin_root / "skills" / "foo" / "references").mkdir()
+        (plugin_root / "skills" / "foo" / "references" / "local.md").write_text(
+            "# local\n"
+        )
+        (plugin_root / "references").mkdir()
+        (plugin_root / "references" / "iron-laws.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_laws: 0\ncategories: []\nlaws: []\n"
+        )
+        (plugin_root / "references" / "preferences.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_preferences: 0\ncategories: []\npreferences: []\n"
+        )
+        result = check_refs.scan(plugin_root)
+        # The dot-slash link must NOT produce a broken-path or orphan.
+        self.assertEqual(
+            [],
+            result.plain_broken,
+            f"unexpected broken: {[b.target for b in result.plain_broken]}",
+        )
+        self.assertEqual(
+            [],
+            result.orphans,
+            f"unexpected orphans: {[o.path for o in result.orphans]}",
+        )
+
+    def test_dotdotslash_reference_NOT_treated_as_skill_local(self) -> None:
+        """``../references/foo.md`` is upward traversal, NOT skill-local.
+        Detector must not be fooled by the trailing ``./`` substring.
+        The captured suffix ``references/foo.md`` is treated as
+        plugin-root-relative; mismatch is reported as plain broken."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\nSee [doc](../references/sibling.md).\n"
+        )
+        (plugin_root / "skills" / "foo" / "references").mkdir()
+        # Note: file lives under the foo skill dir; the ``..`` traversal
+        # in prose targets a NON-EXISTENT plugin-root location.
+        (plugin_root / "skills" / "foo" / "references" / "sibling.md").write_text(
+            "# sibling\n"
+        )
+        (plugin_root / "references").mkdir()
+        (plugin_root / "references" / "iron-laws.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_laws: 0\ncategories: []\nlaws: []\n"
+        )
+        (plugin_root / "references" / "preferences.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_preferences: 0\ncategories: []\npreferences: []\n"
+        )
+        result = check_refs.scan(plugin_root)
+        broken_targets = [b.target for b in result.plain_broken]
+        # Captured suffix is plugin-root-relative, not skill-local.
+        self.assertIn("references/sibling.md", broken_targets)
+
     def test_non_md_reference_asset_consumed_by_skill_md(self) -> None:
         """A `.py` reference asset is reachable when SKILL.md mentions
         the path. Consumer reachability via prose must include the

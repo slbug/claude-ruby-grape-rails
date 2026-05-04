@@ -376,10 +376,29 @@ def _extract_ref_sites(
             # and resolve against plugin root regardless of source.
             prefix_window = line[max(0, m.start() - len(plugin_root_prefix)) : m.start()]
             preceded_by_plugin_root = prefix_window.endswith(plugin_root_prefix)
+            # Detect ``./references/...`` — explicit current-directory
+            # prefix in a markdown link. Treat as skill-local: resolve
+            # against the source's owning skill directory. Distinguish
+            # from ``../references/...`` by requiring the char before
+            # the ``./`` itself be a token boundary (start of line,
+            # whitespace, or markdown-link-style delimiter), so a
+            # leading ``..`` does NOT qualify.
+            preceded_by_dotslash = (
+                m.start() >= 2
+                and line[m.start() - 2 : m.start()] == "./"
+                and (m.start() == 2 or line[m.start() - 3] in " \t([`\"'><=,")
+            )
 
             if preceded_by_plugin_root:
                 resolution = PLUGIN_LABEL
                 target = raw
+            elif (
+                preceded_by_dotslash
+                and skill_dir_rel
+                and raw.startswith("references/")
+            ):
+                resolution = skill_resolution
+                target = f"{skill_dir_rel}/{raw}"
             elif preceded_by_path_token:
                 resolution = skill_resolution
                 target = raw
