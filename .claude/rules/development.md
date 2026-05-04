@@ -28,8 +28,7 @@ Imperative-only. Tables for command/option lists.
 
 ## Validation
 
-- `python3 -m pip install -r requirements-dev.txt` — install Python dev deps (PyYAML, etc.) before any `python3 -m lab.eval...` invocation.
-  CI installs this in both lint and eval jobs; local runs must do it once per env.
+- `python3 -m pip install -r requirements-dev.txt` — run once per local environment before any `python3 -m lab.eval...` invocation. CI re-installs on every lint and eval job.
 - `npm run validate` — plugin structure and manifest
 - `python3 scripts/check-release-metadata.py` — version alignment + changelog integrity
 - `npm run check:refs` — cross-reference, registry, orphan, traversal, and broken-path gates (failure-by-default)

@@ -176,7 +176,9 @@ hash.transform_keys(&:to_s)
 hash.transform_values { |v| v * 2 }
 ```
 
-`except` and `slice` are native in 3.0+ (previously Rails-only).
+`Hash#slice` is core since Ruby 2.5; `Hash#except` is core since
+Ruby 3.0. Both originated as ActiveSupport extensions; the stdlib
+forms are now identical and require no Rails dependency.
 
 ## Enumerable
 
