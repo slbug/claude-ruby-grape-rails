@@ -463,15 +463,6 @@ def _ref_dir_rel_for(rel: str) -> str | None:
     return None
 
 
-def _resolution_for_source(path: Path, plugin_root: Path, repo_root: Path) -> str:
-    if path.is_relative_to(plugin_root):
-        return PLUGIN_LABEL
-    contrib = repo_root / ".claude"
-    if path.is_relative_to(contrib):
-        return CONTRIBUTOR_LABEL
-    return PLUGIN_LABEL
-
-
 def _collect_reference_sites(
     plugin_root: Path, repo_root: Path
 ) -> tuple[set[str], set[str], list[RefSite]]:
@@ -508,8 +499,6 @@ def _collect_reference_sites(
 
     contrib_root = repo_root / ".claude"
 
-    md_sources_only_for_validation: set[Path] = set()
-
     for src in _entry_sources(plugin_root, repo_root):
         try:
             text = src.read_text(encoding="utf-8", errors="replace")
@@ -518,8 +507,6 @@ def _collect_reference_sites(
         skill_dir_rel = _skill_dir_rel_for(src, plugin_root, repo_root)
         label = _source_label(src, plugin_root, repo_root)
         is_md = src.suffix == ".md"
-        if is_md:
-            md_sources_only_for_validation.add(src)
         skill_resolution = (
             CONTRIBUTOR_LABEL
             if src.is_relative_to(contrib_root)
