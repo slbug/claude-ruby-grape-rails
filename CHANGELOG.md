@@ -37,7 +37,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `## Reviewer Verdicts` (3-col: slug | raw | canonical) sections.
   `lab/eval/output_checks.py` enforces both with per-cell validation
   (recovery-state enum, `{n} BLOCKER / {n} WARNING / {n} SUGGESTION`
-  format, canonical-4-set membership).
+  format, canonical-4-set membership). New
+  `review_reviewer_completeness` check reconciles the `**Reviewers**:`
+  header against Coverage + Verdicts row slugs — synthesis omitting
+  a spawned reviewer now fails CI. `_table_data_rows` no longer
+  silently skips malformed rows; under-width rows surface as contract
+  violations.
 - `/rb:plan`, `/rb:brainstorm`, `/rb:investigate`, `/rb:full`
   gained imperative STEP 0 directive: open the canonical playbook
   reference at synthesis entry.
