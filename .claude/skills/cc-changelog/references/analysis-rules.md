@@ -50,7 +50,7 @@ Imperative-only. Map CC changelog entries to specific plugin components.
 | `marketplace.json` schema | `.claude-plugin/marketplace.json` |
 | `${CLAUDE_PLUGIN_DATA}` | `plugins/ruby-grape-rails/hooks/scripts/setup-dirs.sh`, `plugins/ruby-grape-rails/hooks/scripts/log-progress.sh` |
 | `${CLAUDE_PLUGIN_ROOT}` | All hooks.json paths |
-| `settings.json` keys | Plugin does not ship `settings.json` (only `agent` key is supported) |
+| `settings.json` keys | `plugins/ruby-grape-rails/settings.json` ships only `subagentStatusLine`. Documented supported keys per CC docs: `agent` + `subagentStatusLine`. New documented keys → INFO unless plugin adopts. |
 | Plugin validation changes | CI workflow |
 
 ### Tool System

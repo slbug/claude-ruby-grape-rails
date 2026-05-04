@@ -327,7 +327,12 @@ NOT flag the fallback chain as over-engineered.
 - Subagent bodies that read or write `RUN-CURRENT.json` /
   `RUN-HISTORY.jsonl` — manifest is main-session-owned only.
 - Consolidated review template missing the `## Reviewer Coverage`
-  section (per-agent recovery state must be surfaced).
+  or `## Reviewer Verdicts` section. Coverage MUST be 3-col
+  (`Reviewer | Recovery State | Findings`) with bucket-form findings
+  counts (`{n} BLOCKER / {n} WARNING / {n} SUGGESTION`); Verdicts
+  MUST be 3-col (`Reviewer | Raw Verdict | Canonical`) with canonical
+  column ∈ `{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}`.
+  `**Reviewers**:` header MUST list the same slugs in the same order.
 - `run_in_background: true` on any `Agent(...)` call in shipped
   skill bodies, fanout templates, or example snippets — flag as
   BLOCKER. Plugin agents dispatch foreground only.
