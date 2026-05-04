@@ -236,9 +236,19 @@ app/controllers/*.rb    → rails-contexts (controllers, requests)
 Any .rb file            → ruby-idioms (always)
 ```
 
-This is **not plugin infrastructure** — it's instructions that Claude follows. No hooks trigger skill loading.
-This is the plugin's biggest known gap — in practice, skills rarely auto-load from file context alone.
-Invoke the matching `/rb:<workflow>` command directly when the gap matters.
+Two loading paths exist for these mappings:
+
+- Skill frontmatter `paths:` — Claude Code's own auto-activation when
+  files in the listed glob are open or being edited. Real CC
+  infrastructure.
+- The behavioral table above — instructions Claude follows when no
+  skill auto-activates from `paths:`. No hook fires; relies on Claude
+  consulting the table.
+
+In practice the behavioral path is unreliable when nothing matches
+`paths:` — skills rarely activate from file context alone via the
+table. Invoke the matching `/rb:<workflow>` command directly when
+the gap matters.
 
 ---
 

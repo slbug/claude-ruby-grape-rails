@@ -422,15 +422,27 @@ Write the synthesized review to the path read via
 
 ## Reviewer Coverage
 
-| Reviewer | Recovery State |
-|---|---|
-| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output |
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output | {n} BLOCKER / {n} WARNING / {n} SUGGESTION |
 
-State definitions: `artifact` = on-disk file ≥ 1000 bytes, trusted as-is.
+Findings column uses bucket form (BLOCKER / WARNING / SUGGESTION),
+zero-padded when the reviewer produced none in a bucket. State
+definitions: `artifact` = on-disk file ≥ 1000 bytes, trusted as-is.
 `stub-replaced` = on-disk stub overwritten with substantially larger
 findings from agent return text. `recovered-from-return` = no on-disk
 artifact; findings extracted from agent return text. `stub-no-output` =
 no usable reviewer output; reviewer coverage gap.
+
+## Reviewer Verdicts
+
+| Reviewer | Raw verdict | Canonical |
+|---|---|---|
+| {agent-slug} | {agent's verbatim verdict text} | PASS \| PASS WITH WARNINGS \| REQUIRES CHANGES \| BLOCKED |
+
+Raw verdict preserves the agent's wording exactly. Canonical column
+maps it through the table in § "STEP 2". Per-reviewer canonical
+values feed the consolidated verdict algorithm in § "STEP 4".
 
 ## Summary
 

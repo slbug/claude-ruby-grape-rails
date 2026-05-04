@@ -7,7 +7,12 @@ effort: low
 ---
 # Plugin Initialization
 
-Install the Ruby/Rails/Grape behavioral instructions into the project `CLAUDE.md`.
+Write a managed block of project-specific stack notes into the
+project's `CLAUDE.md` so downstream `/rb:*` skills operate with
+current stack context. Behavioral rules (Iron Laws, Advisory
+Preferences) are runtime-injected via the `inject-rules.sh` hook on
+`SessionStart` + `SubagentStart`; they are NOT written to
+`CLAUDE.md`.
 
 ## Usage
 

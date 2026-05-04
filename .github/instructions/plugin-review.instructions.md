@@ -229,11 +229,12 @@ Subdirectories (treat as data, not skills):
   `output-verifier` agent and `lab/eval/output_checks.py`
 - `references/preferences/` — preference companion docs
   (`context7-usage.md`, `epistemic-posture.md`, `tool-batching.md`)
-  bound 1:1 to `preferences.yml` entries via `reference_files`. Paths
-  injected into subagent + main session payloads via
-  `inject-rules.sh`. Reviewer rule:
+  bound 1:1 to `preferences.yml` entries via `reference_files`. Each
+  preference's `reference_files` path is appended bare on the line
+  below the rule text in the subagent + main session payload emitted
+  by `inject-rules.sh`. Reviewer rule:
   - **Ban**: restating the preference rule text in agent / skill
-    bodies. The injected `See:` lines deliver both the rule and the
+    bodies. Runtime injection delivers both the rule text and the
     companion path; restating the rule body is duplication / drift.
   - **Allow**: pointer-only links to the companion doc (e.g. "see
     `${CLAUDE_PLUGIN_ROOT}/references/preferences/tool-batching.md`

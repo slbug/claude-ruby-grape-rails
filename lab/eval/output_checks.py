@@ -116,16 +116,53 @@ def has_review_summary_table(content: str) -> tuple[bool, str]:
     return bool(match), "Severity summary table present" if match else "Missing severity summary table"
 
 
+def _table_data_rows(body: str, min_cells: int) -> list[list[str]]:
+    """Return data rows of the first markdown table found in body.
+
+    Skips header + separator. Each row returned as a list of trimmed cells.
+    Only rows with at least `min_cells` non-empty cells are included.
+    """
+    lines = body.splitlines()
+    sep_idx = None
+    for i, ln in enumerate(lines):
+        s = ln.strip()
+        if "|" in s and re.match(r"^\|?\s*:?-{3,}", s):
+            sep_idx = i
+            break
+    if sep_idx is None:
+        return []
+    rows: list[list[str]] = []
+    for ln in lines[sep_idx + 1 :]:
+        s = ln.strip()
+        if not s.startswith("|"):
+            break
+        cells = [c.strip() for c in s.strip("|").split("|")]
+        if len([c for c in cells if c]) < min_cells:
+            continue
+        rows.append(cells)
+    return rows
+
+
 def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
-    content = _normalize_newlines(content)
-    match = re.search(r"(?m)^## Reviewer Coverage\s*$", content)
-    return bool(match), "Reviewer Coverage section present" if match else "Missing ## Reviewer Coverage section"
+    body = _section(content, "Reviewer Coverage")
+    if not body:
+        return False, "Missing ## Reviewer Coverage section"
+    rows = _table_data_rows(body, min_cells=2)
+    if not rows:
+        return False, "Reviewer Coverage table has no per-reviewer data rows"
+    return True, f"Reviewer Coverage section with {len(rows)} reviewer row(s)"
 
 
 def has_review_reviewer_verdicts(content: str) -> tuple[bool, str]:
-    content = _normalize_newlines(content)
-    match = re.search(r"(?m)^## Reviewer Verdicts\s*$", content)
-    return bool(match), "Reviewer Verdicts section present" if match else "Missing ## Reviewer Verdicts section"
+    body = _section(content, "Reviewer Verdicts")
+    if not body:
+        return False, "Missing ## Reviewer Verdicts section"
+    # Each data row must include reviewer slug + raw verdict + canonical verdict
+    # (table form: `| <slug> | <raw> | <canonical> |`).
+    rows = _table_data_rows(body, min_cells=3)
+    if not rows:
+        return False, "Reviewer Verdicts table missing per-reviewer raw+canonical rows"
+    return True, f"Reviewer Verdicts section with {len(rows)} verdict row(s)"
 
 
 def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
