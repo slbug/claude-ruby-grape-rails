@@ -89,8 +89,9 @@ rescue InventoryError
 end
 ```
 
-Iron Law 18: never `rescue Exception` or bare `rescue =>`. Always
-name the StandardError subclass.
+Iron Law 18: never `rescue Exception` (catches `SystemExit` /
+`SignalException`) and never bare `rescue` (silently swallows every
+`StandardError`). Always name the specific subclass.
 
 ### Result-object early return
 

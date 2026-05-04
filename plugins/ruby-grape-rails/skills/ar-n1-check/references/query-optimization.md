@@ -81,15 +81,29 @@ User.active.includes(:posts).where("created_at > ?", 7.days.ago)
 
 ### EXISTS subquery
 
-```ruby
-User.where_exists(:posts, published: true).to_a
+Rails 6.1+ ships `where.associated(:assoc)` and `where.missing(:assoc)`
+in core; both compile to SQL `EXISTS` / `NOT EXISTS` against the
+association.
 
+```ruby
+User.where.associated(:posts).where(posts: { published: true })
+```
+
+For Rails versions before 6.1, or when filtering by a relation that
+isn't expressible as a single association, use the Arel `exists`
+form:
+
+```ruby
 User.where(
   Post.where("posts.user_id = users.id")
       .where(published: true)
       .arel.exists
 )
 ```
+
+The `where_exists` method seen in older blog posts is a third-party
+gem (`EugZol/where_exists`), not core ActiveRecord. Prefer the core
+forms above.
 
 ### Aggregate via single query
 
