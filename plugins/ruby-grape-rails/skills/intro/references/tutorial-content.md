@@ -224,7 +224,9 @@ This is behavioral — it works because the rules are in Claude's context, not b
 
 ### Layer 3: Skill Loading by File Type (Behavioral)
 
-CLAUDE.md instructs Claude to load specific skills based on file patterns:
+Each domain skill declares the file globs that should activate it via
+its frontmatter `paths:` field. CC auto-loads the matching skill when
+files in those globs are open or being edited:
 
 ```text
 app/views/*.erb         → hotwire-patterns (streams, frames, Turbo)

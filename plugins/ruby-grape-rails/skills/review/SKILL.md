@@ -319,8 +319,12 @@ or compress for terseness:
 Same rule for manifest status enum (`pending`, `in-flight`,
 `artifact`, `stub-replaced`, `recovered-from-return`, `stub-no-output`,
 `complete`) and severity buckets (`BLOCKER`, `WARNING`, `SUGGESTION`)
-— canonical strings only. `bin/manifest-update` validates `status`
-against the enum and rejects compressed forms.
+— canonical strings only. `bin/manifest-update` deep-merges
+patch JSON without enum validation, so canonical-string discipline
+is the writer's responsibility. CI gate enforcement lives in
+`lab/eval/output_checks.py` (verdict + Coverage + Verdicts checks):
+a non-canonical verdict text or recovery state in a consolidated
+review fails `make eval-output`.
 
 Decision rules + chat scripts:
 `${CLAUDE_SKILL_DIR}/references/review-playbook.md`

@@ -320,6 +320,57 @@ Use the maintained upstream path.
         passed, _ = output_checks.has_review_reviewer_completeness(content)
         self.assertTrue(passed)
 
+    def test_has_review_verdict_rejects_non_canonical_text(self) -> None:
+        content = "# Review: x\n\n**Verdict**: LGTM\n"
+        passed, reason = output_checks.has_review_verdict(content)
+        self.assertFalse(passed)
+        self.assertIn("not in canonical 4-set", reason)
+
+    def test_has_review_verdict_accepts_canonical_4_set(self) -> None:
+        for verdict in ("PASS", "PASS WITH WARNINGS", "REQUIRES CHANGES", "BLOCKED"):
+            content = f"# Review: x\n\n**Verdict**: {verdict}\n"
+            passed, _ = output_checks.has_review_verdict(content)
+            self.assertTrue(passed, f"canonical {verdict!r} should pass")
+
+    def test_reviewer_verdicts_rejects_blank_raw_cell(self) -> None:
+        content = """# Review: x
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer |  | PASS |
+"""
+        passed, reason = output_checks.has_review_reviewer_verdicts(content)
+        self.assertFalse(passed)
+        self.assertIn("raw verdict cell empty", reason)
+
+    def test_reviewer_completeness_rejects_reordered_coverage(self) -> None:
+        # Header order: ruby-reviewer, testing-reviewer.
+        # Coverage table order: testing-reviewer, ruby-reviewer.
+        # Set membership matches; order does not.
+        content = """# Review: x
+
+**Reviewers**: ruby-reviewer, testing-reviewer
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| testing-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer | PASS | PASS |
+| testing-reviewer | PASS | PASS |
+"""
+        passed, reason = output_checks.has_review_reviewer_completeness(content)
+        self.assertFalse(passed)
+        self.assertIn("does not match", reason)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 

@@ -4953,11 +4953,11 @@ class InjectRulesTests(unittest.TestCase):
 
     def test_plugin_root_expands_when_env_set(self) -> None:
         """When `CLAUDE_PLUGIN_ROOT` is exported (real CC runtime), the
-        injector expands the placeholder in `See:` lines so paths reach
-        the LLM as absolute filesystem paths. CC does NOT re-substitute
-        plugin variables in hook return strings — expansion must happen
-        inside the script before the JSON is emitted. Regression guard
-        for the off-by-default BLOCKER fix."""
+        injector expands the placeholder in companion-path lines so the
+        bare paths reach the LLM as absolute filesystem paths. CC does
+        NOT re-substitute plugin variables in hook return strings —
+        expansion must happen inside the script before the JSON is
+        emitted. Regression guard for the off-by-default BLOCKER fix."""
         env = dict(os.environ)
         env["CLAUDE_PLUGIN_ROOT"] = "/expanded/plugin/root"
         result = subprocess.run(

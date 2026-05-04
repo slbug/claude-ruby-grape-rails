@@ -40,10 +40,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   format, canonical-4-set membership). New
   `review_reviewer_completeness` check reconciles the `**Reviewers**:`
   header against Coverage + Verdicts row slugs — synthesis omitting
-  a spawned reviewer or emitting duplicate rows now fails CI.
-  `_table_data_rows` no longer silently skips malformed rows; row
-  width is validated as exactly 3 cells (under- and over-width both
-  surface as contract violations).
+  a spawned reviewer, emitting duplicate rows, or reordering reviewers
+  between header and tables now fails CI. `_table_data_rows` no
+  longer silently skips malformed rows; row width is validated as
+  exactly 3 cells. Reviewer Verdicts raw cell must be non-empty.
+  Consolidated `**Verdict**:` line check upgraded to enforce the
+  canonical 4-set verbatim — non-canonical text (`LGTM`, `Needs
+  fixes`, etc.) now fails CI.
 - `/rb:plan`, `/rb:brainstorm`, `/rb:investigate`, `/rb:full`
   gained imperative STEP 0 directive: open the canonical playbook
   reference at synthesis entry.
@@ -84,6 +87,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   clarified: canonical column normalizes vocabulary for transparency;
   STEP 4 computes consolidated verdict from counts, NOT from this
   column.
+- `review/SKILL.md` After Review section: corrected false claim that
+  `bin/manifest-update` validates the status enum. Manifest helper
+  deep-merges patch JSON without enum validation; canonical-string
+  discipline is enforced by the CI gate (`lab/eval/output_checks.py`)
+  on consolidated reviews, not at the manifest layer.
 - `CHANGELOG.md` footer link for `[1.16.7]` added; `[Unreleased]`
   pointer updated to compare against `v1.16.7`.
 

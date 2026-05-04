@@ -106,8 +106,22 @@ def has_review_title(content: str) -> tuple[bool, str]:
 
 def has_review_verdict(content: str) -> tuple[bool, str]:
     content = _normalize_newlines(content)
-    match = re.search(r"(?m)^\*\*Verdict\*\*:\s+.+$", content)
-    return bool(match), "Verdict present" if match else "Missing **Verdict** line"
+    presence = re.search(r"(?m)^\*\*Verdict\*\*:\s+.+$", content)
+    if not presence:
+        return False, "Missing **Verdict** line"
+    # Verdict text must come VERBATIM from canonical 4-set. Longest-first
+    # alternation prevents `PASS` matching the prefix of `PASS WITH WARNINGS`.
+    canonical = re.search(
+        r"(?m)^\*\*Verdict\*\*:\s+(PASS WITH WARNINGS|REQUIRES CHANGES|BLOCKED|PASS)\s*$",
+        content,
+    )
+    if not canonical:
+        emitted = presence.group(0).split(":", 1)[1].strip()
+        return False, (
+            f"Verdict {emitted!r} not in canonical 4-set "
+            "{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}"
+        )
+    return True, f"Verdict present: {canonical.group(1)}"
 
 
 def has_review_summary_table(content: str) -> tuple[bool, str]:
@@ -197,9 +211,12 @@ def has_review_reviewer_verdicts(content: str) -> tuple[bool, str]:
         if len(row) != 3:
             bad.append(f"row {idx}: {len(row)} cell(s); contract requires exactly 3 (slug | raw verdict | canonical)")
             continue
-        slug, _raw, canonical = row[0], row[1], row[2]
+        slug, raw, canonical = row[0], row[1], row[2]
         if not slug:
             bad.append(f"row {idx}: missing reviewer slug")
+            continue
+        if not raw:
+            bad.append(f"{slug}: raw verdict cell empty (playbook requires preserving the agent's verbatim verdict text)")
             continue
         if canonical not in _CANONICAL_VERDICTS:
             bad.append(f"{slug}: canonical verdict {canonical!r} not in 4-set {{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}}")
@@ -257,9 +274,14 @@ def has_review_reviewer_completeness(content: str) -> tuple[bool, str]:
         extra = sorted(set(rows) - set(header_slugs))
         if extra:
             problems.append(f"{label} table has unexpected reviewers: {extra}")
-        if not dups and not missing and not extra and len(rows) != len(header_slugs):
-            # Defensive: counts differ even though set membership matches.
-            problems.append(f"{label} table row count {len(rows)} != header count {len(header_slugs)}")
+        if not dups and not missing and not extra and rows != header_slugs:
+            # Set membership matches but order/count differs — synthesis
+            # reordered reviewers between header and table. Reject so the
+            # consolidated artifact stays deterministic.
+            problems.append(
+                f"{label} table reviewer order {rows} does not match "
+                f"`**Reviewers**:` header order {header_slugs}"
+            )
 
     _diff("Coverage", coverage_slugs)
     _diff("Verdicts", verdicts_slugs)
