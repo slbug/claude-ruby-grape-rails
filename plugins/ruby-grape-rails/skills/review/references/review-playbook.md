@@ -186,12 +186,14 @@ Required output:
 2. Return summary in Agent return text (used as artifact-recovery fallback).
    - Always write the artifact (even if findings are empty — write PASS
      with files reviewed).
-3. Artifact MUST include a verdict line: `**Verdict**: <one of: PASS,
-   PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED>`. Synthesis preserves
-   this verbatim in the consolidated `## Reviewer Verdicts` table and
-   normalizes it to the canonical 4-set. Non-canonical wording
-   (e.g. `LGTM`, `BLOCK`, `Needs fixes`) is acceptable and will be
-   mapped per § "STEP 2"; emit a verdict line regardless.
+3. Artifact MUST include a verdict line emitted VERBATIM from the
+   canonical 4-set: `**Verdict**: PASS` | `**Verdict**: PASS WITH WARNINGS`
+   | `**Verdict**: REQUIRES CHANGES` | `**Verdict**: BLOCKED`. No other
+   wording. Do NOT emit `LGTM`, `BLOCK`, `Needs fixes`, `CONDITIONAL PASS`,
+   or any abbreviation. Synthesis preserves the verbatim string in the
+   consolidated `## Reviewer Verdicts` table; STEP 2 normalization is
+   defense-in-depth for legacy artifacts only — current workers MUST
+   emit canonical strings directly.
 
 Findings format:
 - file:line — Title

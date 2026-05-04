@@ -1,7 +1,9 @@
 # Review: Sidekiq Retry Policy Update
 
 **Date**: 2026-03-28
-**Files Reviewed**: 2
+**Complexity**: Simple (2 files)
+**Files Changed**: app/jobs/sync_customer_job.rb, spec/jobs/sync_customer_job_spec.rb
+**Reviewers**: ruby-reviewer, testing-reviewer
 
 ## Reviewer Coverage
 

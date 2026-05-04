@@ -236,19 +236,14 @@ app/controllers/*.rb    → rails-contexts (controllers, requests)
 Any .rb file            → ruby-idioms (always)
 ```
 
-Two loading paths exist for these mappings:
+Two loading paths cover these mappings:
 
-- Skill frontmatter `paths:` — Claude Code's own auto-activation when
-  files in the listed glob are open or being edited. Real CC
-  infrastructure.
-- The behavioral table above — instructions Claude follows when no
-  skill auto-activates from `paths:`. No hook fires; relies on Claude
-  consulting the table.
+| Path | Mechanism | Reliability |
+|---|---|---|
+| Skill frontmatter `paths:` | CC auto-activates the skill when files matching the glob are open/edited | Real CC infrastructure |
+| Behavioral table above | Claude consults the table; no hook fires | Unreliable when `paths:` does not match |
 
-In practice the behavioral path is unreliable when nothing matches
-`paths:` — skills rarely activate from file context alone via the
-table. Invoke the matching `/rb:<workflow>` command directly when
-the gap matters.
+Invoke `/rb:<workflow>` directly when the gap matters.
 
 ---
 

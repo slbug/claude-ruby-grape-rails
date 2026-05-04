@@ -11,96 +11,69 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- `/rb:init` injectable template slimmed to stack-version comment +
-  conditional placeholders. Removed: SKILL EXECUTION ENFORCEMENT,
-  TOOLING PREFERENCES (conflicted with runtime preference #5),
-  EXECUTE BEFORE EVERY RESPONSE 7-step routing, STEP 5 / STEP 6
-  tables, 100-line VERIFICATION bash, POST-ACTION + QUICK REFERENCE.
-  Iron Laws + Preferences are runtime-injected via
-  `inject-rules.sh` on `SessionStart` + `SubagentStart`; restating
-  them in project CLAUDE.md created drift.
-- `conditional-sections.md` rewritten with explicit
-  detect → interview → render procedure. Each section renders only
-  project-specific facts plus targeted interview answers for
-  ambiguous detection. Library defaults dropped.
-- `/rb:review` synthesis section restructured into 5 explicit steps:
-  STEP 0 read playbook, STEP 1 read artifacts, STEP 2 normalize
-  per-agent verdict text (preserve raw + map to canonical 4-set),
-  STEP 3 map worker severity to bucket form for Reviewer Coverage
-  row, STEP 4 compute consolidated verdict deterministically
-  (`BLOCKED if blockers > 0; else REQUIRES_CHANGES if new public
-  behavior lacks tests; else PASS_WITH_WARNINGS if warnings > 0;
-  else PASS`), STEP 5 write consolidated artifact. Catches the
-  recurring drift modes: non-canonical verdict pass-through,
-  worker-form severity leak, soft verdict despite present blockers.
-- `/rb:review` After Review section gained explicit
-  non-abbreviation directive: emit verdict text VERBATIM from
-  canonical 4-set; status enums + severity buckets stay canonical
-  too. `bin/manifest-update` already validates `status` against
-  enum.
-- `/rb:plan`, `/rb:brainstorm`, `/rb:investigate`, `/rb:full` skill
-  bodies gained STEP 0 directive: open the canonical playbook
-  reference at synthesis start. Inline summaries are routing hints,
-  not the canonical procedure.
-- Injector format for companion-doc paths: dropped `See:` prefix.
-  Path emits bare on the line below the rule. Real-run observation:
-  passive `See: <path>` framing read as citation, not directive —
-  zero opens across 8 subagents in a real /rb:review run. Bare path
-  keeps reachability while removing the verb that mistakenly
-  signaled "FYI only".
+- `/rb:init` slimmed: injectable template reduced to stack-version
+  comment + 7 conditional placeholders. Removed SKILL EXECUTION
+  ENFORCEMENT, TOOLING PREFERENCES, 7-step EXECUTE-BEFORE-EVERY-RESPONSE
+  routing, STEP 5/6 tables, 100-line VERIFICATION bash, POST-ACTION,
+  QUICK REFERENCE — these duplicated `inject-rules.sh` runtime
+  injection or skill-body content. `conditional-sections.md`
+  rewritten with detect → interview → render procedure; each section
+  renders only project-specific facts (queue list, ORM-per-package
+  map, Karafka topic routes, Packwerk enforcement flags) and drops
+  library defaults.
+- `/rb:review` synthesis restructured into 5-step procedure (read
+  artifacts → normalize per-agent verdict to canonical 4-set → map
+  worker severity to bucket form → compute consolidated verdict
+  deterministically from blocker/warning/test-coverage counts →
+  write artifact). Catches drift modes: non-canonical verdict
+  pass-through, worker-form severity leak, soft verdict despite
+  blockers. After Review block enforces canonical 4-set
+  (`PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED`)
+  verbatim across verdict text, status enums, severity buckets.
+  Worker briefing now mandates canonical verdict line; STEP 2
+  normalization remains as defense-in-depth for legacy artifacts.
+- Consolidated review template gained `## Reviewer Coverage`
+  (3-col: slug | recovery state | findings bucket counts) and new
+  `## Reviewer Verdicts` (3-col: slug | raw | canonical) sections.
+  `lab/eval/output_checks.py` enforces both with per-cell validation
+  (recovery-state enum, `{n} BLOCKER / {n} WARNING / {n} SUGGESTION`
+  format, canonical-4-set membership).
+- `/rb:plan`, `/rb:brainstorm`, `/rb:investigate`, `/rb:full`
+  gained imperative STEP 0 directive: open the canonical playbook
+  reference at synthesis entry.
+- Injector dropped `See:` prefix: `reference_files` paths emit bare
+  on the line below each rule. Real-run observation drove this —
+  passive `See:` framing read as citation, agents never opened the
+  targets.
 
 ### Fixed
 
-- `lab/eval/output_checks.py` + `artifact_scorer.py` extended with
-  `review_reviewer_coverage` + `review_reviewer_verdicts` checks.
-  `lab/eval/fixtures/output/review-good.md` updated to include both
-  sections; `review-bad` `expected_failures` extended. Without this,
-  the new consolidated-review contract had no CI enforcement.
-- `/rb:init` frontmatter description rewritten to match slim
-  template behavior (was claiming workflow routing / Iron Laws
-  install). New description names the four downstream slash commands
-  (`/rb:plan`, `/rb:work`, `/rb:review`, `/rb:verify`) so
-  description-structure check still passes.
-- `/rb:plan`, `/rb:brainstorm`, `/rb:investigate`, `/rb:full`,
-  `/rb:review` STEP 0 blocks rewritten imperative-only (was
-  explanatory: "inline summaries are not sufficient", "skipping
-  causes drift" — narration violated runtime-doc contract).
-- `conditional-sections.md` opening paragraph rewritten imperative
-  ("Render each placeholder ..."); `{PLUGIN_VERSION}` placeholder
-  example bumped 1.16.6 → 1.16.7.
+- Stale references after `/rb:init` slimming:
+  `intro/references/tutorial-content.md` Layer 4 + Section 4
+  paths-loading paragraph rewritten (no longer claims Iron Laws /
+  7-step injection, replaces narrative with table); `README.md`
+  `/rb:init` row updated; `.github/copilot-instructions.md` removed
+  stale `injectable-template.md` reviewer hint;
+  `init/SKILL.md` body + frontmatter description aligned with slim
+  template; `intent-detection/SKILL.md` Integration list dropped
+  stale `CLAUDE.md routing instructions` item.
 - Synthesis-step procedure moved out of `/rb:review` SKILL.md into
-  `review-playbook.md` § "Synthesis Procedure" — keeps SKILL.md
-  under the line-count target (review skill score 0.86 → 0.955).
-- Stale references in shipped surfaces tied to old heavy
-  `/rb:init` template:
-  - `intro/references/tutorial-content.md` Layer 4 description
-    rewritten to match slim template (no longer claims `/rb:init`
-    injects Iron Laws / 7-step procedure / verification block).
-  - `README.md` `/rb:init` row in commands table updated.
-  - `.github/copilot-instructions.md` removed stale reviewer
-    instruction to check `injectable-template.md` on skill renames.
-  - `init/SKILL.md` "What Gets Installed" rewritten with explicit
-    delivery-elsewhere table for Iron Laws / Preferences / skill
-    workflow / library defaults.
-- `CHANGELOG.md` footer link added for `[1.16.7]`; `[Unreleased]`
-  pointer updated to compare against `v1.16.7`.
-- `has_review_reviewer_coverage` bumped from 2-cell minimum to 3-cell
-  enforcement (`slug | recovery state | findings counts`). Old 2-col
-  format no longer passes the check.
-- `example-review.md` worked example updated to 3-col Reviewer
-  Coverage + new `## Reviewer Verdicts` section (was internally
-  inconsistent with new `review-playbook.md` template).
-- Worker briefing template (`review-playbook.md` § "Worker Briefing
-  Template") gained explicit verdict-line requirement so synthesis
-  STEP 2 always has raw verdict prose to extract for the
-  `## Reviewer Verdicts` table.
+  `review-playbook.md` § "Synthesis Procedure"; SKILL.md now thin
+  pointer (review skill score 0.86 → 0.955).
+- `example-review.md` worked example aligned with new template:
+  3-col Coverage table, new Reviewer Verdicts table, canonical-only
+  raw verdicts. `lab/eval/fixtures/output/review-good.md` header
+  gained `**Complexity**` + `**Reviewers**`; renamed
+  `**Files Reviewed**` to `**Files Changed**` per template.
 - `conditional-sections.md` Authoring Rules: dropped contradicting
-  `**{Stack} (project)**:` heading rule. Per-section "What to render"
-  cells are the literal output lines.
-- `review-playbook.md` § "Reviewer Verdicts" template footer reworded:
-  the canonical column normalizes vocabulary for transparency; STEP 4
-  computes consolidated verdict from blocker / warning / coverage
-  counts, not from this column (was misdirecting synthesizers).
+  `**{Stack} (project)**:` heading rule that conflicted with
+  per-section inline label format.
+- `review-playbook.md` § "Reviewer Verdicts" template footer
+  clarified: canonical column normalizes vocabulary for transparency;
+  STEP 4 computes consolidated verdict from counts, NOT from this
+  column.
+- `CHANGELOG.md` footer link for `[1.16.7]` added; `[Unreleased]`
+  pointer updated to compare against `v1.16.7`.
 
 ## [1.16.6] - 2026-05-04
 

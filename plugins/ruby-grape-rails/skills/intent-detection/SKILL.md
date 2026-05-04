@@ -104,6 +104,5 @@ When a task matches a workflow command, check complexity before suggesting:
 
 This skill is consulted at session start. It works alongside:
 
-- SessionStart hook (shows plugin loaded message)
-- CLAUDE.md routing instructions (passive reference)
+- SessionStart hook (shows plugin loaded message + injects Iron Laws + Preferences)
 - Individual workflow skills (activated by commands)

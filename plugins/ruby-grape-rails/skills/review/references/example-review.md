@@ -22,7 +22,7 @@
 |---|---|---|
 | ruby-reviewer | PASS WITH WARNINGS | PASS WITH WARNINGS |
 | testing-reviewer | PASS WITH WARNINGS | PASS WITH WARNINGS |
-| security-analyzer | BLOCK — token leak via logs | BLOCKED |
+| security-analyzer | BLOCKED | BLOCKED |
 
 ## Summary
 

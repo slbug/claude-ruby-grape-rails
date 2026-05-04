@@ -143,14 +143,37 @@ def _table_data_rows(body: str, min_cells: int) -> list[list[str]]:
     return rows
 
 
+_RECOVERY_STATES = frozenset(
+    {"artifact", "stub-replaced", "recovered-from-return", "stub-no-output"}
+)
+_CANONICAL_VERDICTS = frozenset(
+    {"PASS", "PASS WITH WARNINGS", "REQUIRES CHANGES", "BLOCKED"}
+)
+_COVERAGE_FINDINGS_RE = re.compile(
+    r"^\d+\s+BLOCKER\s*/\s*\d+\s+WARNING\s*/\s*\d+\s+SUGGESTION$"
+)
+
+
 def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
     body = _section(content, "Reviewer Coverage")
     if not body:
         return False, "Missing ## Reviewer Coverage section"
-    # Contract: `| <slug> | <recovery-state> | <findings-counts> |`.
+    # Contract: `| <slug> | <recovery-state> | <findings-counts> |`
+    # where recovery-state ∈ _RECOVERY_STATES and findings-counts matches
+    # `{n} BLOCKER / {n} WARNING / {n} SUGGESTION`.
     rows = _table_data_rows(body, min_cells=3)
     if not rows:
         return False, "Reviewer Coverage table missing 3-column per-reviewer rows (slug | recovery state | findings counts)"
+    bad: list[str] = []
+    for row in rows:
+        slug, recovery, findings = row[0], row[1], row[2]
+        if recovery not in _RECOVERY_STATES:
+            bad.append(f"{slug}: invalid recovery state {recovery!r}")
+            continue
+        if not _COVERAGE_FINDINGS_RE.match(findings):
+            bad.append(f"{slug}: findings cell {findings!r} not in `{{n}} BLOCKER / {{n}} WARNING / {{n}} SUGGESTION` form")
+    if bad:
+        return False, "Reviewer Coverage row(s) violate contract: " + "; ".join(bad)
     return True, f"Reviewer Coverage section with {len(rows)} reviewer row(s)"
 
 
@@ -158,11 +181,18 @@ def has_review_reviewer_verdicts(content: str) -> tuple[bool, str]:
     body = _section(content, "Reviewer Verdicts")
     if not body:
         return False, "Missing ## Reviewer Verdicts section"
-    # Each data row must include reviewer slug + raw verdict + canonical verdict
-    # (table form: `| <slug> | <raw> | <canonical> |`).
+    # Contract: `| <slug> | <raw verdict> | <canonical> |`
+    # where canonical ∈ _CANONICAL_VERDICTS.
     rows = _table_data_rows(body, min_cells=3)
     if not rows:
         return False, "Reviewer Verdicts table missing per-reviewer raw+canonical rows"
+    bad: list[str] = []
+    for row in rows:
+        slug, _raw, canonical = row[0], row[1], row[2]
+        if canonical not in _CANONICAL_VERDICTS:
+            bad.append(f"{slug}: canonical verdict {canonical!r} not in 4-set {{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}}")
+    if bad:
+        return False, "Reviewer Verdicts row(s) violate contract: " + "; ".join(bad)
     return True, f"Reviewer Verdicts section with {len(rows)} verdict row(s)"
 
 
