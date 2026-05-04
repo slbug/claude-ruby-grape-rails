@@ -64,6 +64,23 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `agents/call-tracer.md` + `skills/review/references/review-playbook.md`
   removed — injection delivers the path via the `See:` line;
   restating it in agent / skill bodies is duplication.
+- Iron Law count drift: `1-21` → `1-22` in
+  `skills/compound-docs/references/schema.md`,
+  `skills/compound/SKILL.md`,
+  `skills/iron-laws/references/fix-priority.md` ("Beyond the 21 laws"
+  → "Beyond the 22 laws", and "Verification (Law 21)" priority entry
+  expanded to "Verification & Discipline (Laws 21, 22)").
+- `skills/iron-laws/SKILL.md` now links
+  `references/canonical-registry.md` (was orphan — generated registry
+  was unreachable from the skill body).
+- Merged `skills/review/references/blocker-handling.md` (verdict
+  taxonomy + chat scripts + scope rule + pre-existing rule + research
+  requirement) and `skills/review/references/review-template.md`
+  (mandatory finding table + verdict line + `New?` column) into
+  `review-playbook.md`. Both originals deleted. `review-playbook.md`
+  is now the single review-output source of truth. Pointers in
+  `.claude/skills/plugin-dev-workflow/references/output-verification-checklist.md`
+  and `.github/copilot-instructions.md` updated.
 
 ## [1.16.5] - 2026-05-03
 
