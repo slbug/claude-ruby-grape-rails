@@ -54,14 +54,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Stale references after `/rb:init` slimming:
+- Stale references after `/rb:init` slimming + injector See: drop:
   `intro/references/tutorial-content.md` Layer 4 + Section 4
-  paths-loading paragraph rewritten (no longer claims Iron Laws /
-  7-step injection, replaces narrative with table); `README.md`
-  `/rb:init` row updated; `.github/copilot-instructions.md` removed
-  stale `injectable-template.md` reviewer hint;
+  paths-loading paragraph rewritten; Section 4 hook table row
+  updated to `SessionStart + SubagentStart`, `Iron Laws + Preferences`
+  with bare-path companions (was `Any subagent spawns` /
+  `Iron Laws only`). `README.md` `/rb:init` row updated.
+  `.github/copilot-instructions.md` removed stale
+  `injectable-template.md` reviewer hint and replaced
+  `inject-rules.sh See: line` wording with bare-path injection.
   `init/SKILL.md` body + frontmatter description aligned with slim
-  template; `intent-detection/SKILL.md` Integration list dropped
+  template. `intent-detection/SKILL.md` Integration list dropped
   stale `CLAUDE.md routing instructions` item.
 - Synthesis-step procedure moved out of `/rb:review` SKILL.md into
   `review-playbook.md` § "Synthesis Procedure"; SKILL.md now thin
