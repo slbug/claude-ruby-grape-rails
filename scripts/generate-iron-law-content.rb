@@ -388,12 +388,15 @@ def generate_injector_script(yaml, prefs)
 
   body += "\n"
 
+  see_line = ->(refs) {
+    return '' unless refs.is_a?(Array) && !refs.empty?
+
+    "  See: #{refs.map { |r| "`${CLAUDE_PLUGIN_ROOT}/#{r}`" }.join(', ')}\n"
+  }
+
   yaml['laws'].each do |law|
     body += "#{law['subagent_text']}\n"
-    refs = law['reference_files']
-    if refs.is_a?(Array) && !refs.empty?
-      body += "  See: #{refs.map { |r| "`${CLAUDE_PLUGIN_ROOT}/#{r}`" }.join(', ')}\n"
-    end
+    body += see_line.call(law['reference_files'])
   end
 
   has_prefs = prefs && prefs['preferences'].is_a?(Array) && !prefs['preferences'].empty?
@@ -402,10 +405,7 @@ def generate_injector_script(yaml, prefs)
     body += "\nAdvisory Preferences — #{total_prefs} Total:\n"
     prefs['preferences'].each do |pref|
       body += "#{pref['subagent_text']}\n"
-      refs = pref['reference_files']
-      if refs.is_a?(Array) && !refs.empty?
-        body += "  See: #{refs.map { |r| "`${CLAUDE_PLUGIN_ROOT}/#{r}`" }.join(', ')}\n"
-      end
+      body += see_line.call(pref['reference_files'])
     end
   end
 
