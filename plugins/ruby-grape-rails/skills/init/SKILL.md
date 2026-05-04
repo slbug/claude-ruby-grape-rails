@@ -151,17 +151,24 @@ Use `${CLAUDE_SKILL_DIR}/references/injectable-template.md` as the injected sour
 
 ## Conditional Sections
 
-Include based on detected stack and installed tools:
+Render each placeholder ONLY when BOTH conditions hold: stack/tool
+detected AND project-specific content available (from `detect-stack`
+output or targeted interview). Empty section → omit; do NOT leave a
+header without content.
 
-- `{SIDEKIQ_SECTION}` — If Sidekiq detected
-- `{SEQUEL_SECTION}` — If Sequel detected
-- `{MIXED_ORM_SECTION}` — If both Active Record and Sequel are detected
-- `{HOTWIRE_SECTION}` — If Hotwire/Turbo detected
-- `{KARAFKA_SECTION}` — If Karafka detected
-- `{PACKWERK_SECTION}` — If Packwerk or modular monolith structure detected
-- `{BETTERLEAKS_SECTION}` — If Betterleaks installed (secrets scanning)
+| Placeholder | Detection gate | Content source |
+|---|---|---|
+| `{SIDEKIQ_SECTION}` | Sidekiq detected | queue list, base class, retry policy, dead-letter config |
+| `{SEQUEL_SECTION}` | Sequel detected | per-package paths, query convention, migration roots |
+| `{MIXED_ORM_SECTION}` | Active Record AND Sequel detected | per-package ORM map |
+| `{HOTWIRE_SECTION}` | Hotwire/Turbo detected | channel list, broadcast roots, frame-id convention |
+| `{KARAFKA_SECTION}` | Karafka detected | topic routes, consumer base, retry routing |
+| `{PACKWERK_SECTION}` | Packwerk OR modular monolith layout detected | package paths + boundaries, enforcement flags |
+| `{BETTERLEAKS_SECTION}` | `betterleaks` available AND project secret-path conventions detected | secret-path conventions, scan policy |
 
-See `${CLAUDE_SKILL_DIR}/references/conditional-sections.md` for full content of each section.
+`${CLAUDE_SKILL_DIR}/references/conditional-sections.md` is the
+canonical procedure (per-section detect rules, interview prompts,
+render shape, authoring rules). Read it before rendering.
 
 ## Recommended Permission Allowlist
 

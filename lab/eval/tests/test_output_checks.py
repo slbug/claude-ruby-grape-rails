@@ -148,6 +148,106 @@ Use the maintained upstream path.
         passed, _ = output_checks.has_inline_tier_markers(content, minimum=2)
         self.assertTrue(passed)
 
+    def test_reviewer_coverage_rejects_malformed_row_alongside_valid(self) -> None:
+        # Mixed rows: one valid, one too-narrow. Must NOT pass — silent
+        # skip would let the broken row sneak through.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| testing-reviewer | artifact |
+"""
+        passed, reason = output_checks.has_review_reviewer_coverage(content)
+        self.assertFalse(passed)
+        self.assertIn("only", reason)
+
+    def test_reviewer_coverage_rejects_invalid_recovery_state(self) -> None:
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | unknown-state | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+"""
+        passed, reason = output_checks.has_review_reviewer_coverage(content)
+        self.assertFalse(passed)
+        self.assertIn("invalid recovery state", reason)
+
+    def test_reviewer_coverage_rejects_malformed_findings_cell(self) -> None:
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | none |
+"""
+        passed, reason = output_checks.has_review_reviewer_coverage(content)
+        self.assertFalse(passed)
+        self.assertIn("BLOCKER / {n} WARNING / {n} SUGGESTION", reason)
+
+    def test_reviewer_verdicts_rejects_non_canonical_verdict(self) -> None:
+        content = """# Review: x
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer | LGTM | LGTM |
+"""
+        passed, reason = output_checks.has_review_reviewer_verdicts(content)
+        self.assertFalse(passed)
+        self.assertIn("not in 4-set", reason)
+
+    def test_reviewer_completeness_rejects_missing_row_in_coverage(self) -> None:
+        # Header lists 2 reviewers, Coverage only has 1, Verdicts has both.
+        content = """# Review: x
+
+**Reviewers**: ruby-reviewer, testing-reviewer
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer | PASS | PASS |
+| testing-reviewer | PASS | PASS |
+"""
+        passed, reason = output_checks.has_review_reviewer_completeness(content)
+        self.assertFalse(passed)
+        self.assertIn("Coverage table missing reviewers", reason)
+
+    def test_reviewer_completeness_passes_when_header_matches_tables(self) -> None:
+        content = """# Review: x
+
+**Reviewers**: ruby-reviewer, testing-reviewer
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| testing-reviewer | artifact | 0 BLOCKER / 1 WARNING / 0 SUGGESTION |
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer | PASS | PASS |
+| testing-reviewer | PASS WITH WARNINGS | PASS WITH WARNINGS |
+"""
+        passed, _ = output_checks.has_review_reviewer_completeness(content)
+        self.assertTrue(passed)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 

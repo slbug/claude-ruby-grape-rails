@@ -116,11 +116,12 @@ def has_review_summary_table(content: str) -> tuple[bool, str]:
     return bool(match), "Severity summary table present" if match else "Missing severity summary table"
 
 
-def _table_data_rows(body: str, min_cells: int) -> list[list[str]]:
-    """Return data rows of the first markdown table found in body.
+def _table_data_rows(body: str) -> list[list[str]]:
+    """Return every data row of the first markdown table found in body.
 
     Skips header + separator. Each row returned as a list of trimmed cells.
-    Only rows with at least `min_cells` non-empty cells are included.
+    No cell-count filtering — callers validate width per their contract,
+    so malformed rows surface instead of being silently dropped.
     """
     lines = body.splitlines()
     sep_idx = None
@@ -137,8 +138,6 @@ def _table_data_rows(body: str, min_cells: int) -> list[list[str]]:
         if not s.startswith("|"):
             break
         cells = [c.strip() for c in s.strip("|").split("|")]
-        if len([c for c in cells if c]) < min_cells:
-            continue
         rows.append(cells)
     return rows
 
@@ -152,6 +151,7 @@ _CANONICAL_VERDICTS = frozenset(
 _COVERAGE_FINDINGS_RE = re.compile(
     r"^\d+\s+BLOCKER\s*/\s*\d+\s+WARNING\s*/\s*\d+\s+SUGGESTION$"
 )
+_REVIEWERS_HEADER_RE = re.compile(r"(?m)^\*\*Reviewers\*\*:\s*(.+?)\s*$")
 
 
 def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
@@ -161,12 +161,18 @@ def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
     # Contract: `| <slug> | <recovery-state> | <findings-counts> |`
     # where recovery-state ∈ _RECOVERY_STATES and findings-counts matches
     # `{n} BLOCKER / {n} WARNING / {n} SUGGESTION`.
-    rows = _table_data_rows(body, min_cells=3)
+    rows = _table_data_rows(body)
     if not rows:
-        return False, "Reviewer Coverage table missing 3-column per-reviewer rows (slug | recovery state | findings counts)"
+        return False, "Reviewer Coverage table empty"
     bad: list[str] = []
-    for row in rows:
+    for idx, row in enumerate(rows, start=1):
+        if len(row) < 3:
+            bad.append(f"row {idx}: only {len(row)} cell(s); contract requires 3 (slug | recovery state | findings counts)")
+            continue
         slug, recovery, findings = row[0], row[1], row[2]
+        if not slug:
+            bad.append(f"row {idx}: missing reviewer slug")
+            continue
         if recovery not in _RECOVERY_STATES:
             bad.append(f"{slug}: invalid recovery state {recovery!r}")
             continue
@@ -183,17 +189,73 @@ def has_review_reviewer_verdicts(content: str) -> tuple[bool, str]:
         return False, "Missing ## Reviewer Verdicts section"
     # Contract: `| <slug> | <raw verdict> | <canonical> |`
     # where canonical ∈ _CANONICAL_VERDICTS.
-    rows = _table_data_rows(body, min_cells=3)
+    rows = _table_data_rows(body)
     if not rows:
-        return False, "Reviewer Verdicts table missing per-reviewer raw+canonical rows"
+        return False, "Reviewer Verdicts table empty"
     bad: list[str] = []
-    for row in rows:
+    for idx, row in enumerate(rows, start=1):
+        if len(row) < 3:
+            bad.append(f"row {idx}: only {len(row)} cell(s); contract requires 3 (slug | raw verdict | canonical)")
+            continue
         slug, _raw, canonical = row[0], row[1], row[2]
+        if not slug:
+            bad.append(f"row {idx}: missing reviewer slug")
+            continue
         if canonical not in _CANONICAL_VERDICTS:
             bad.append(f"{slug}: canonical verdict {canonical!r} not in 4-set {{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}}")
     if bad:
         return False, "Reviewer Verdicts row(s) violate contract: " + "; ".join(bad)
     return True, f"Reviewer Verdicts section with {len(rows)} verdict row(s)"
+
+
+def has_review_reviewer_completeness(content: str) -> tuple[bool, str]:
+    """Reconcile `**Reviewers**:` header list against Coverage + Verdicts row slugs.
+
+    All three sets MUST be equal — synthesizing fewer rows than spawned
+    reviewers (or vice versa) is a coverage gap that the new contract
+    must surface.
+    """
+    content_norm = _normalize_newlines(content)
+    header_match = _REVIEWERS_HEADER_RE.search(content_norm)
+    if not header_match:
+        return False, "Missing `**Reviewers**:` header line"
+    header_slugs = {
+        slug
+        for slug in (s.strip() for s in header_match.group(1).split(","))
+        if slug
+    }
+    if not header_slugs:
+        return False, "`**Reviewers**:` header has no slugs"
+
+    coverage_body = _section(content, "Reviewer Coverage")
+    verdicts_body = _section(content, "Reviewer Verdicts")
+    if not coverage_body:
+        return False, "Missing ## Reviewer Coverage section (cannot reconcile reviewer set)"
+    if not verdicts_body:
+        return False, "Missing ## Reviewer Verdicts section (cannot reconcile reviewer set)"
+
+    coverage_slugs = {row[0] for row in _table_data_rows(coverage_body) if row and row[0]}
+    verdicts_slugs = {row[0] for row in _table_data_rows(verdicts_body) if row and row[0]}
+
+    problems: list[str] = []
+    if coverage_slugs != header_slugs:
+        missing_in_coverage = header_slugs - coverage_slugs
+        extra_in_coverage = coverage_slugs - header_slugs
+        if missing_in_coverage:
+            problems.append(f"Coverage table missing reviewers: {sorted(missing_in_coverage)}")
+        if extra_in_coverage:
+            problems.append(f"Coverage table has unexpected reviewers: {sorted(extra_in_coverage)}")
+    if verdicts_slugs != header_slugs:
+        missing_in_verdicts = header_slugs - verdicts_slugs
+        extra_in_verdicts = verdicts_slugs - header_slugs
+        if missing_in_verdicts:
+            problems.append(f"Verdicts table missing reviewers: {sorted(missing_in_verdicts)}")
+        if extra_in_verdicts:
+            problems.append(f"Verdicts table has unexpected reviewers: {sorted(extra_in_verdicts)}")
+
+    if problems:
+        return False, "; ".join(problems)
+    return True, f"`**Reviewers**:` header reconciled with {len(header_slugs)} Coverage + Verdicts row(s)"
 
 
 def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:

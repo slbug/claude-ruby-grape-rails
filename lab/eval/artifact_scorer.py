@@ -149,6 +149,12 @@ REVIEW_CHECKS: tuple[CheckSpec, ...] = (
         output_checks.has_review_reviewer_verdicts,
     ),
     CheckSpec(
+        "review_reviewer_completeness",
+        "Reconciles `**Reviewers**:` header against Coverage + Verdicts row slugs",
+        "artifact",
+        output_checks.has_review_reviewer_completeness,
+    ),
+    CheckSpec(
         "review_file_refs",
         "Findings cite file:line refs",
         "artifact",
@@ -222,6 +228,7 @@ FIXTURES: dict[str, tuple[FixtureSpec, ...]] = {
                 "review_verdict",
                 "review_reviewer_coverage",
                 "review_reviewer_verdicts",
+                "review_reviewer_completeness",
                 "review_file_refs",
                 "review_mandatory_table",
                 "review_no_task_lists",
