@@ -72,7 +72,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `**Files Reviewed**` to `**Files Changed**` per template.
 - `conditional-sections.md` Authoring Rules: dropped contradicting
   `**{Stack} (project)**:` heading rule that conflicted with
-  per-section inline label format.
+  per-section inline label format. `init/SKILL.md` Conditional
+  Sections list rewritten as detect-AND-content-present table —
+  matches `conditional-sections.md` omit-when-empty rule (was
+  contradicting it with bare "If detected" gate).
 - `review-playbook.md` § "Reviewer Verdicts" template footer
   clarified: canonical column normalizes vocabulary for transparency;
   STEP 4 computes consolidated verdict from counts, NOT from this
