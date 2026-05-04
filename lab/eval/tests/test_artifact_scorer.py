@@ -41,6 +41,7 @@ class ArtifactScorerTests(unittest.TestCase):
                 "review_verdict",
                 "review_reviewer_coverage",
                 "review_reviewer_verdicts",
+                "review_reviewer_completeness",
                 "review_file_refs",
                 "review_mandatory_table",
                 "review_no_task_lists",
