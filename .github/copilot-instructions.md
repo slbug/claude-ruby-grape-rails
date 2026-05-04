@@ -183,7 +183,6 @@ is not part of the PR.
   schema in `SKILL_CONVENTIONS` + `ALLOWED_PATH_RE`),
   `plugins/ruby-grape-rails/skills/review/SKILL.md`,
   `skills/review/references/review-playbook.md`,
-  `skills/review/references/review-template.md`,
   `plugins/ruby-grape-rails/skills/plan/SKILL.md`,
   `skills/plan/references/planning-workflow.md`,
   `plugins/ruby-grape-rails/skills/brainstorm/SKILL.md`, `README.md`

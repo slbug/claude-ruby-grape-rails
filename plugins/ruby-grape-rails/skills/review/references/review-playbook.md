@@ -243,6 +243,61 @@ manifest path on stdout.
 Schema + per-skill staleness rules:
 `${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
 
+## Severity Levels
+
+| Severity | Description | Action |
+|----------|-------------|--------|
+| **BLOCKER** | Must fix before merge — Iron Law violations, security vulnerabilities, data-loss risks, production-outage risks, critical correctness | Surface in chat with one-line impact |
+| **WARNING** | Should fix — performance issues, maintainability problems, potential bugs | Note in review with recommendation |
+| **REQUIRES CHANGES** (verdict only) | Code works but new public behavior lacks test coverage | List affected methods/endpoints/jobs |
+| **SUGGESTION** | Style, refactor, or doc improvements | Brief note, no action required |
+
+## Review Scope
+
+Review is **findings-only**. Do NOT:
+
+- Create task lists (`- [ ]`)
+- Add fix phases to plan files
+- Modify any files outside `.claude/reviews/`
+- Start fixing issues
+
+Task creation and planning happen in `/rb:triage` after the user decides.
+
+## Pre-existing Issues
+
+Findings on code NOT changed in this diff are marked **Pre-existing**. They
+appear in the report and summary table but do NOT affect the verdict. A PASS
+verdict is possible with pre-existing blockers as long as no NEW blockers
+were introduced by this diff.
+
+## Research Requirement for Infrastructure
+
+When reviewing CI/CD, deployment, or external service configuration:
+
+- ALWAYS verify how the specific service works before making claims
+- Use Context7 / WebFetch to verify CI runner, service-container, matrix,
+  cache, or deployment semantics
+- Do NOT rely on general memory — CI platforms change
+- Example: GitHub Actions matrix jobs each get their own service containers,
+  not a shared one. Verify, do not assume.
+
+## Verdict Decision Rules
+
+| Verdict | Conditions |
+|---------|-----------|
+| **PASS** | No new blockers, no warnings (pre-existing blockers OK) |
+| **PASS WITH WARNINGS** | No new blockers; warnings present but not test-coverage gaps |
+| **REQUIRES CHANGES** | No blockers, but new public behavior lacks test coverage |
+| **BLOCKED** | Iron Law violation, security issue, data-loss risk, production-outage risk, or critical correctness bug introduced by this diff |
+
+REQUIRES CHANGES triggers:
+
+- New public methods with zero tests
+- Removed tests without replacement coverage
+- New controller actions without tests
+- New Sidekiq jobs without `perform` tests
+- New Turbo Stream routes without basic render tests
+
 ## Consolidated Review Format
 
 Write the synthesized review to the path read via
@@ -250,9 +305,11 @@ Write the synthesized review to the path read via
 
 ````markdown
 # Review: {track}
+
 **Date**: {timestamp}
 **Complexity**: {Simple|Medium|Complex} ({N} files{, escalated: reason})
 **Files Changed**: {list}
+**Reviewers**: {comma-separated reviewer slugs from manifest `agents` map}
 
 ## Reviewer Coverage
 
@@ -260,22 +317,33 @@ Write the synthesized review to the path read via
 |---|---|
 | {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output |
 
-## Summary
-- Critical: {N}
-- Warnings: {N}
-- Info: {N}
-- Clean: {Y/N}
+State definitions: `artifact` = on-disk file ≥ 1000 bytes, trusted as-is.
+`stub-replaced` = on-disk stub overwritten with substantially larger
+findings from agent return text. `recovered-from-return` = no on-disk
+artifact; findings extracted from agent return text. `stub-no-output` =
+no usable reviewer output; reviewer coverage gap.
 
-## Critical Issues
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | {n} |
+| Warnings | {n} |
+| Suggestions | {n} |
+
+**Verdict**: PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED
+
+## Blockers ({n})
 
 ### 1. {Issue Title}
-**File**: `path/to/file.rb:{line}`
-**Severity**: Critical | **Confidence**: HIGH
-**Category**: {security/performance/correctness}
 
-{description of issue}
+**File**: `path/to/file.rb:{line}`
+**Reviewer**: {agent} | **Confidence**: HIGH | MEDIUM | LOW
+**Issue**: {description}
+**Why it matters**: {impact}
 
 **Current**:
+
 ```ruby
 {bad code}
 ```
@@ -286,15 +354,22 @@ Write the synthesized review to the path read via
 {good code}
 ```
 
-**Why it matters**: {explanation}
+## Warnings ({n})
 
-## Warnings
+### 1. {Issue Title}
 
-### 2. {Issue Title}
+**File**: `path/to/file.rb:{line}`
+**Reviewer**: {agent} | **Confidence**: HIGH | MEDIUM | LOW
+**Issue**: {description}
+**Recommendation**: {what to do}
 
-**Severity**: Warning | **Confidence**: MEDIUM
+## Suggestions ({n})
 
-...
+### 1. {Suggestion Title}
+
+**File**: `path/to/file.rb`
+**Confidence**: HIGH | MEDIUM | LOW
+**Suggestion**: {improvement}
 
 ## Pre-existing Issues (unchanged code)
 
@@ -303,35 +378,71 @@ Write the synthesized review to the path read via
 ## Positive Findings
 
 - {what was done well}
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | {title} | BLOCKER \| WARNING \| SUGGESTION | HIGH \| MEDIUM \| LOW | {agent} | {path}:{line} | Yes \| Pre-existing |
 ````
 
-## Severity Levels
+Every consolidated review MUST include the at-a-glance table, even for one
+finding. `New?` = `Yes` for findings on changed lines (this diff);
+`Pre-existing` for unchanged code (does NOT affect verdict).
 
-### Critical
+The consolidated review is findings-only — NO task lists, NO fix phases,
+NO `## Next Steps`. Task routing happens in `/rb:triage`.
 
-Must fix before merge:
+## Review Outcomes (chat scripts)
 
-- Security vulnerabilities
-- Data loss risks
-- Production outages
-- Iron Law violations in critical paths
+After writing the consolidated artifact, present the verdict in chat.
 
-### Warning
+**PASS:**
 
-Should fix before merge:
+```text
+Review complete. No blockers found.
+Ready for: /rb:learn (capture lessons) or /rb:compound (capture solution).
+```
 
-- Performance issues
-- Maintainability problems
-- Test coverage gaps
-- Potential bugs
+**PASS WITH WARNINGS:**
 
-### Info
+```text
+Review complete. {n} warnings noted.
+Warnings logged but not blocking.
+Ready for: /rb:learn or /rb:compound.
+```
 
-Nice to have:
+**REQUIRES CHANGES:**
 
-- Style suggestions
-- Refactoring opportunities
-- Documentation improvements
+```text
+Review found {n} test-coverage gaps:
+
+1. {Method/endpoint/job} in {file} — no test coverage
+2. {Method/endpoint/job} in {file} — no test coverage
+
+How would you like to proceed?
+
+- /rb:plan — Plan tests for these
+- /rb:work — Write tests directly
+- I'll handle it myself
+```
+
+**BLOCKED:**
+
+```text
+Review found {n} blockers ({n} warnings):
+
+1. {Blocker title} — {one-line impact}
+2. {Blocker title} — {one-line impact}
+
+How would you like to proceed?
+
+- /rb:triage .claude/reviews/{review-slug}-{datesuffix}.md — Select findings, create fix plan
+- /rb:work — Fix directly (best for simple, isolated fixes)
+- I'll handle it myself
+```
+
+Always enumerate actual findings — never just show a count.
 
 ## Deduplication Strategy
 

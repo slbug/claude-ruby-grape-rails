@@ -368,11 +368,11 @@ generation_targets:
     section: "Iron Laws summary"
     marker: "<!-- IRON_LAWS_START -->"
 
-  - file: "skills/iron-laws/references/canonical-registry.md"
+  - file: "plugins/ruby-grape-rails/skills/iron-laws/references/canonical-registry.md"
     section: "Full human-readable registry"
     format: "markdown_projection"
 
-  - file: "skills/intro/references/tutorial-content.md"
+  - file: "plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md"
     section: "Tutorial Iron Laws section"
     marker: "<!-- IRON_LAWS_START -->"
 
@@ -381,7 +381,7 @@ generation_targets:
     template: "subagent_text format"
     delivery: "SessionStart (main session) + SubagentStart (per-subagent)"
 
-  - file: "agents/iron-law-judge.md"
+  - file: "plugins/ruby-grape-rails/agents/iron-law-judge.md"
     section: "Iron Laws Overview"
     format: "conditional"
     condition: "Phase 0B decision = Option A or C"
