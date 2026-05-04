@@ -196,6 +196,21 @@ Findings format:
 Stop after returning. Do NOT call Agent() — this is a leaf review.
 ```
 
+## Confidence Levels
+
+Every finding MUST include a confidence label. This tells the user
+which findings are backed by evidence vs. pattern-based hunches.
+
+| Level | Meaning | Example |
+|---|---|---|
+| `HIGH` | Direct code evidence — specific line, test failure, static analysis finding | "Line 42: `params[:id]` interpolated into SQL string" |
+| `MEDIUM` | Pattern match — known anti-pattern or convention violation, no direct proof of bug | "Service object bypasses transaction boundary (common data-loss pattern)" |
+| `LOW` | Subjective — style preference, naming opinion, architecture suggestion | "Consider extracting this into a form object" |
+
+When consolidating findings from multiple agents, keep the highest
+confidence level among duplicates. Sort findings by confidence
+(`HIGH` first) within each severity bucket.
+
 ## Synthesis Procedure
 
 Five steps, in order. Skipping any step causes the recurring drift

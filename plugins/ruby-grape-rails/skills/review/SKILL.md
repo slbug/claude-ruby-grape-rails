@@ -277,21 +277,11 @@ Full table + manifest status mapping:
 
 ## Confidence Levels
 
-Every finding MUST include a confidence label. This tells the user which
-findings are backed by evidence vs. pattern-based hunches.
-
-| Level | Meaning | Example |
-|-------|---------|---------|
-| **HIGH** | Direct code evidence — specific line, test failure, static analysis finding | "Line 42: `params[:id]` interpolated into SQL string" |
-| **MEDIUM** | Pattern match — known anti-pattern or convention violation, no direct proof of bug | "Service object bypasses transaction boundary (common data-loss pattern)" |
-| **LOW** | Subjective — style preference, naming opinion, architecture suggestion | "Consider extracting this into a form object" |
-
-When consolidating findings from multiple agents, keep the highest confidence
-level among duplicates. Sort findings by confidence (HIGH first) within each
-severity level.
-
-For consolidated review format / severity definitions / deduplication strategy,
-see `${CLAUDE_SKILL_DIR}/references/review-playbook.md`.
+Every finding MUST include a confidence label
+(`HIGH | MEDIUM | LOW`). Level definitions, examples, and
+deduplication strategy live in
+`${CLAUDE_SKILL_DIR}/references/review-playbook.md`
+§ "Confidence Levels".
 
 ## Review Output Location
 
