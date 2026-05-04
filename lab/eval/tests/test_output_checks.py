@@ -326,6 +326,48 @@ Use the maintained upstream path.
         self.assertFalse(passed)
         self.assertIn("not in canonical 4-set", reason)
 
+    def test_has_review_verdict_rejects_non_canonical_when_canonical_appears_later(self) -> None:
+        # Primary `**Verdict**:` line is non-canonical. A later
+        # canonical-looking duplicate (e.g. inside an example block)
+        # MUST NOT mask the primary violation.
+        content = """# Review: x
+
+**Verdict**: LGTM
+
+## Example
+
+`**Verdict**: PASS`
+
+Another instance:
+
+**Verdict**: PASS
+"""
+        passed, reason = output_checks.has_review_verdict(content)
+        self.assertFalse(passed)
+        self.assertIn("LGTM", reason)
+
+    def test_reviewer_verdicts_rejects_no_output_placeholder_for_non_stub_reviewer(self) -> None:
+        # Non-stub reviewer (Coverage state = artifact) uses `(no output)`
+        # placeholder in raw cell. Placeholder is reserved for
+        # stub-no-output rows only.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer | (no output) | PASS |
+"""
+        passed, reason = output_checks.has_review_reviewer_verdicts(content)
+        self.assertFalse(passed)
+        self.assertIn("placeholder reserved", reason)
+
     def test_has_review_verdict_accepts_canonical_4_set(self) -> None:
         for verdict in ("PASS", "PASS WITH WARNINGS", "REQUIRES CHANGES", "BLOCKED"):
             content = f"# Review: x\n\n**Verdict**: {verdict}\n"

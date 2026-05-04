@@ -106,22 +106,21 @@ def has_review_title(content: str) -> tuple[bool, str]:
 
 def has_review_verdict(content: str) -> tuple[bool, str]:
     content = _normalize_newlines(content)
-    presence = re.search(r"(?m)^\*\*Verdict\*\*:\s+.+$", content)
-    if not presence:
+    # Validate EVERY `**Verdict**:` line in the artifact. A non-canonical
+    # primary verdict cannot be masked by a later canonical duplicate
+    # (e.g. example block) — every occurrence MUST come VERBATIM from
+    # the canonical 4-set.
+    matches = re.findall(r"(?m)^\*\*Verdict\*\*:\s+(.+?)\s*$", content)
+    if not matches:
         return False, "Missing **Verdict** line"
-    # Verdict text must come VERBATIM from canonical 4-set. Longest-first
-    # alternation prevents `PASS` matching the prefix of `PASS WITH WARNINGS`.
-    canonical = re.search(
-        r"(?m)^\*\*Verdict\*\*:\s+(PASS WITH WARNINGS|REQUIRES CHANGES|BLOCKED|PASS)\s*$",
-        content,
-    )
-    if not canonical:
-        emitted = presence.group(0).split(":", 1)[1].strip()
+    bad = [text for text in matches if text not in _CANONICAL_VERDICTS]
+    if bad:
         return False, (
-            f"Verdict {emitted!r} not in canonical 4-set "
-            "{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}"
+            f"Verdict line(s) not in canonical 4-set "
+            "{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}: "
+            + ", ".join(repr(t) for t in bad)
         )
-    return True, f"Verdict present: {canonical.group(1)}"
+    return True, f"Verdict present: {matches[0]}"
 
 
 def has_review_summary_table(content: str) -> tuple[bool, str]:
@@ -245,6 +244,22 @@ def has_review_reviewer_verdicts(content: str) -> tuple[bool, str]:
                     f"{slug}: stub-no-output reviewer requires raw={_NO_OUTPUT_PLACEHOLDER!r} "
                     f"and canonical={_NO_OUTPUT_PLACEHOLDER!r} (got raw={raw!r}, canonical={canonical!r})"
                 )
+            continue
+        # Non-stub-no-output reviewer: the `(no output)` placeholder is
+        # reserved exclusively for stub-no-output rows. Reject in either
+        # cell so artifacts cannot mask a real reviewer behind the
+        # coverage-gap placeholder.
+        if raw == _NO_OUTPUT_PLACEHOLDER:
+            bad.append(
+                f"{slug}: raw cell uses {_NO_OUTPUT_PLACEHOLDER!r} placeholder reserved for "
+                f"`stub-no-output` Coverage state — this reviewer's Coverage state is not stub-no-output"
+            )
+            continue
+        if canonical == _NO_OUTPUT_PLACEHOLDER:
+            bad.append(
+                f"{slug}: canonical cell uses {_NO_OUTPUT_PLACEHOLDER!r} placeholder reserved for "
+                f"`stub-no-output` Coverage state — this reviewer's Coverage state is not stub-no-output"
+            )
             continue
         if not raw:
             bad.append(f"{slug}: raw verdict cell empty (playbook requires preserving the agent's verbatim verdict text)")

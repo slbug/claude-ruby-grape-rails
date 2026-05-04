@@ -33,7 +33,7 @@ Detection rules:
    guidance to inject:
    - ORM: `DETECTED_ORMS`, `PRIMARY_ORM`
    - Rails shape: `RAILS_COMPONENTS`, `FULL_RAILS_APP`
-   - Ruby: `INTERPRETER_RUBY_VERSION`
+   - Ruby: `RUBY_VERSION` (project pin; falls back to interpreter when no pin). `INTERPRETER_RUBY_VERSION` is informational only — emitted when interpreter differs from project pin.
    - Packages: `PACKAGE_LAYOUT`, `PACKAGE_LOCATIONS`, `HAS_PACKWERK`,
      `PACKAGE_QUERY_NEEDED`
 6. If `PACKAGE_QUERY_NEEDED=true`, ask the user: `No Packwerk detected. Do you have something similar implemented? Provide modules/packages location and their stack/ORM.`

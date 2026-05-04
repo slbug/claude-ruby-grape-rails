@@ -51,13 +51,16 @@ Skip any of the above bullets when no detected/asked value exists.
 
 ## SEQUEL_SECTION
 
-Render IF Sequel detected.
+Render IF Sequel detected. `detect-stack` does NOT emit per-package
+ORM ownership — it lists all package paths in `PACKAGE_LOCATIONS` only
+and the ORM list in `DETECTED_ORMS`. Do NOT label every package as
+Sequel-owned in mixed AR + Sequel repos.
 
-| Source | What to render |
-|---|---|
-| `PACKAGE_LOCATIONS` / `DETECTED_ORMS` | `**Sequel-owned packages**: <comma-separated paths>` |
-| Detected `dataset_module` patterns / interview answer | `**Custom query convention**: <pattern>` |
-| Detected `db/migrations/` (Sequel) vs `db/migrate/` (AR) split | `**Migration roots**: Sequel=<path>, AR=<path>` |
+| Source | What to render | Condition |
+|---|---|---|
+| `PACKAGE_LOCATIONS` (all paths) | `**Sequel-owned packages**: <comma-separated paths>` | ONLY when `DETECTED_ORMS` == `[sequel]` (single-ORM Sequel project). Skip in mixed AR+Sequel — let `MIXED_ORM_SECTION` handle ownership via interview. |
+| Detected `dataset_module` patterns OR interview answer | `**Custom query convention**: <pattern>` | always |
+| Detected `db/migrations/` (Sequel) AND `db/migrate/` (AR) directories present | `**Migration roots**: Sequel=<path>, AR=<path>` | only when both directories exist |
 
 Omit bullets without detected/asked values. Omit section if nothing
 project-specific.
@@ -140,7 +143,7 @@ belongs in `/rb:secrets` skill body, not in project `CLAUDE.md`.
 | Placeholder | Source | Example |
 |---|---|---|
 | `{DATE}` | Current date | 2026-05-04 |
-| `{RUBY_VERSION}` | `detect-stack` `INTERPRETER_RUBY_VERSION` (locked → `RUBY_VERSION` from Gemfile.lock) | 3.4.7 |
+| `{RUBY_VERSION}` | `detect-stack` `RUBY_VERSION` (project's pinned Ruby; falls back to interpreter's `RUBY_VERSION` constant when no project pin found). `INTERPRETER_RUBY_VERSION` only emitted when interpreter differs from project pin — informational, not the placeholder source. | 3.4.7 |
 | `{RAILS_VERSION}` | `detect-stack` `RAILS_VERSION` | 7.1.3 |
 | `{GRAPE_VERSION}` | `detect-stack` `GRAPE_VERSION` | 2.0.0 |
 | `{SIDEKIQ_VERSION}` | `detect-stack` `SIDEKIQ_VERSION` | 7.2.0 |
