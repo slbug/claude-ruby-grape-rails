@@ -4,7 +4,7 @@
 # for preferences). Severity capped at `medium` / `low`.
 
 version: "1.3.0"
-last_updated: "2026-05-03"
+last_updated: "2026-05-04"
 total_preferences: 6
 
 categories:
