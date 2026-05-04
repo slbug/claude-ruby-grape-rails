@@ -44,7 +44,7 @@ Minimum runtime: python3 3.14+ for `lab/eval/`.
 
 ## Current Scope
 
-- 52/52 skill eval coverage and trigger corpora
+- 53/53 skill eval coverage and trigger corpora
 - Structural scoring for all shipped agents
 - Deterministic trigger corpora and confusable-pair analysis
 - Optional behavioral routing dimension (cached Ollama model namespace, apfel, or haiku results per `RUBY_PLUGIN_EVAL_PROVIDER`)

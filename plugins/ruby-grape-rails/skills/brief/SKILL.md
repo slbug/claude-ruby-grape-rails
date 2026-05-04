@@ -212,18 +212,18 @@ Don't include in briefs:
 ```
 ## Review Brief: Payment Processing
 
-**Summary**: 1 critical, 3 warnings, 2 info
+**Summary**: 1 BLOCKER, 3 WARNINGS, 2 SUGGESTIONS
 
-**Critical Issues**:
+**Blockers**:
 1. Float used for money calculation (app/models/order.rb:45)
-   - Must use Decimal to prevent rounding errors
+   - Must use Decimal to prevent rounding errors (Iron Law 1)
 
 **Top Warnings**:
 1. N+1 query in checkout flow
 2. Missing authorization check in controller
 3. No rate limiting on payment endpoint
 
-**Verdict**: Needs fixes before merge
+**Verdict**: BLOCKED
 
 **Next Step**: Run `/rb:triage` to prioritize fixes
 ```

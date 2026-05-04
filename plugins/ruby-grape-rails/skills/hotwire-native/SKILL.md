@@ -117,19 +117,21 @@ export default class extends BridgeComponent {
 
 See [Bridge Components](references/bridge-components.md) for component authoring.
 
-## Detailed Guides
+## References
 
-- [iOS Setup](references/ios-setup.md)
-- [Android Setup](references/android-setup.md)
-- [Path Configuration](references/path-configuration.md)
-- [Bridge Components](references/bridge-components.md)
-- [Common Components](references/common-components.md) — Camera, Location, Share, Alerts
-- [Native Screens](references/native-screens.md) — When to use native UI
-- [Push Notifications](references/push-notifications.md)
-- [Offline Support](references/offline-support.md)
-- [Testing](references/testing.md)
-- [Best Practices](references/best-practices.md)
-- [Anti-patterns](references/anti-patterns.md)
+| Need | Reference |
+|---|---|
+| iOS Hotwire Native install + project structure | `${CLAUDE_SKILL_DIR}/references/ios-setup.md` |
+| Android Hotwire Native install + project structure | `${CLAUDE_SKILL_DIR}/references/android-setup.md` |
+| path-configuration.json semantics + matching rules | `${CLAUDE_SKILL_DIR}/references/path-configuration.md` |
+| bridge component authoring (web ↔ native messaging) | `${CLAUDE_SKILL_DIR}/references/bridge-components.md` |
+| ready-made bridge components (Camera, Location, Share, Alerts) | `${CLAUDE_SKILL_DIR}/references/common-components.md` |
+| native screens — when to choose native UI over web | `${CLAUDE_SKILL_DIR}/references/native-screens.md` |
+| push-notification wiring (APNS / FCM) | `${CLAUDE_SKILL_DIR}/references/push-notifications.md` |
+| offline-mode strategy + caching | `${CLAUDE_SKILL_DIR}/references/offline-support.md` |
+| testing native flows + bridge component tests | `${CLAUDE_SKILL_DIR}/references/testing.md` |
+| Hotwire-Native production best practices | `${CLAUDE_SKILL_DIR}/references/best-practices.md` |
+| Hotwire-Native anti-patterns | `${CLAUDE_SKILL_DIR}/references/anti-patterns.md` |
 
 ## Key Decisions
 
