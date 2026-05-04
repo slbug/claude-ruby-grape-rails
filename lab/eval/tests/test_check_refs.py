@@ -193,6 +193,85 @@ class CheckRefsTests(unittest.TestCase):
         self.assertEqual(len(result.broken), 1)
         self.assertEqual(result.broken[0].target, "nope")
 
+    def test_orphan_chain_both_flagged(self) -> None:
+        """Orphan reference docs that link only to each other must BOTH
+        be flagged. Detector must not let an unreached doc count as a
+        source for its peer — otherwise a self-supporting orphan chain
+        hides itself. Regression guard for the under-reporting bug."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\n"
+        )
+        (plugin_root / "skills" / "foo" / "references").mkdir()
+        (plugin_root / "skills" / "foo" / "references" / "a.md").write_text(
+            "# A\nSee `references/b.md`.\n"
+        )
+        (plugin_root / "skills" / "foo" / "references" / "b.md").write_text(
+            "# B\n"
+        )
+        (plugin_root / "references").mkdir()
+        (plugin_root / "references" / "iron-laws.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_laws: 0\ncategories: []\nlaws: []\n"
+        )
+        (plugin_root / "references" / "preferences.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_preferences: 0\ncategories: []\npreferences: []\n"
+        )
+        result = check_refs.scan(plugin_root)
+        orphan_paths = sorted(o.path for o in result.orphans)
+        self.assertEqual(
+            orphan_paths,
+            [
+                "skills/foo/references/a.md",
+                "skills/foo/references/b.md",
+            ],
+        )
+
+    def test_reachable_chain_flags_neither(self) -> None:
+        """Conversely, when a SKILL.md references doc A and A references
+        doc B, both are reachable via transitive closure — neither
+        should be flagged."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\nSee `${CLAUDE_SKILL_DIR}/references/a.md`.\n"
+        )
+        (plugin_root / "skills" / "foo" / "references").mkdir()
+        (plugin_root / "skills" / "foo" / "references" / "a.md").write_text(
+            "# A\nSee `references/b.md`.\n"
+        )
+        (plugin_root / "skills" / "foo" / "references" / "b.md").write_text(
+            "# B\n"
+        )
+        result = check_refs.scan(plugin_root)
+        self.assertEqual(result.orphans, [])
+
+    def test_orphan_ref_only_mentioned_inside_code_fence(self) -> None:
+        """Reference path appearing ONLY inside a fenced code block must
+        NOT count as a real reference. Otherwise an illustrative example
+        in SKILL.md would shield the target from orphan detection.
+        Regression guard for the fence-bypass false negative in
+        `_extract_refs`."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\n"
+            "# Foo\n"
+            "\n"
+            "```\n"
+            "See `references/a.md` for an example.\n"
+            "```\n"
+        )
+        (plugin_root / "skills" / "foo" / "references").mkdir()
+        (plugin_root / "skills" / "foo" / "references" / "a.md").write_text(
+            "# A\n"
+        )
+        result = check_refs.scan(plugin_root)
+        orphan_paths = sorted(o.path for o in result.orphans)
+        self.assertEqual(orphan_paths, ["skills/foo/references/a.md"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -203,49 +203,85 @@ def _all_reference_md_files(plugin_root: Path) -> set[Path]:
     return out
 
 
+def _extract_refs(text: str, skill_dir_rel: str | None) -> set[str]:
+    """Extract reference paths from prose, skipping fenced code blocks.
+
+    Fenced examples (``` blocks) carry illustrative content and MUST
+    NOT count as real references — otherwise a SKILL.md mentioning
+    ``references/a.md`` only inside a code example would shield
+    ``a.md`` from orphan detection. Honors the same fence policy as
+    the broken-ref scanner via ``_iter_non_fenced_lines``.
+    """
+    out: set[str] = set()
+    for _lineno, line in _iter_non_fenced_lines(text):
+        for m in REFERENCE_PATH_RE.finditer(line):
+            raw = m.group(0)
+            if skill_dir_rel and raw.startswith("references/"):
+                out.add(f"{skill_dir_rel}/{raw}")
+            else:
+                out.add(raw)
+        for m in SKILL_REL_REF_RE.finditer(line):
+            out.add(m.group(0))
+        for m in PLUGIN_VAR_RE.finditer(line):
+            out.add(m.group(1))
+    return out
+
+
+def _normalize_skill_local(rel: str) -> str:
+    """Reference docs accept two forms: full ``skills/<skill>/references/<doc>.md``
+    and skill-local ``references/<doc>.md``. Normalize the skill-local form
+    when we know which skill emitted it."""
+    return rel
+
+
 def _collect_referenced_paths(plugin_root: Path, repo_root: Path) -> set[str]:
-    """Return reference paths (relative to plugin_root) reachable from any source.
+    """Return reference paths reachable from non-orphan entry points.
 
-    Sources scanned: every plugin .md file (skill bodies, agents, references),
-    contributor rules under .claude/rules + .claude/skills, root CLAUDE.md and
-    README.md, and registry reference_files lists. Patterns matched:
-
-    - bare ``references/foo.md`` and ``references/sub/foo.md``
-    - ``skills/<skill>/references/foo.md`` (cross-skill plugin paths)
-    - ``${CLAUDE_PLUGIN_ROOT}/...`` and ``${CLAUDE_SKILL_DIR}/...`` substitution forms
+    Builds the set in two passes so an orphan reference doc that links
+    to another orphan does NOT shield the second doc. Pass 1 seeds from
+    entry points (SKILL.md, agents, contributor rules / skills / agents,
+    bin/, hooks/scripts/, repo CLAUDE.md / README.md, registries). Pass 2
+    walks reference docs transitively, but ONLY through docs that are
+    themselves already reachable. Self-referential orphan chains stay
+    orphan.
     """
     referenced: set[str] = set()
 
-    # Registry reference_files
+    # Registry reference_files seed the closure as entry points.
     for _label, _eid, ref in _registry_reference_files(plugin_root):
         referenced.add(ref)
 
-    sources: list[Path] = []
+    # Pass 1: entry points — anything outside `references/` plus the
+    # contributor surfaces in `.claude/`.
+    entry_sources: list[Path] = []
     for md in plugin_root.rglob("*.md"):
-        sources.append(md)
+        rel_parts = md.relative_to(plugin_root).parts
+        if "references" in rel_parts:
+            continue
+        entry_sources.append(md)
     bin_dir = plugin_root / "bin"
     if bin_dir.is_dir():
         for entry in bin_dir.iterdir():
             if entry.is_file():
-                sources.append(entry)
+                entry_sources.append(entry)
     hooks_scripts = plugin_root / "hooks" / "scripts"
     if hooks_scripts.is_dir():
         for entry in hooks_scripts.iterdir():
             if entry.is_file():
-                sources.append(entry)
+                entry_sources.append(entry)
     for extra in (
         repo_root / "CLAUDE.md",
         repo_root / "README.md",
     ):
         if extra.is_file():
-            sources.append(extra)
+            entry_sources.append(extra)
     for sub in (".claude/rules", ".claude/skills", ".claude/agents"):
         sub_path = repo_root / sub
         if sub_path.is_dir():
             for md in sub_path.rglob("*.md"):
-                sources.append(md)
+                entry_sources.append(md)
 
-    for src in sources:
+    for src in entry_sources:
         try:
             text = src.read_text(encoding="utf-8", errors="replace")
         except OSError:
@@ -253,16 +289,36 @@ def _collect_referenced_paths(plugin_root: Path, repo_root: Path) -> set[str]:
         skill_dir_rel: str | None = None
         if src.is_relative_to(plugin_root) and src.name == "SKILL.md":
             skill_dir_rel = str(src.parent.relative_to(plugin_root))
-        for m in REFERENCE_PATH_RE.finditer(text):
-            raw = m.group(0)
-            if skill_dir_rel and raw.startswith("references/"):
-                referenced.add(f"{skill_dir_rel}/{raw}")
-            else:
-                referenced.add(raw)
-        for m in SKILL_REL_REF_RE.finditer(text):
-            referenced.add(m.group(0))
-        for m in PLUGIN_VAR_RE.finditer(text):
-            referenced.add(m.group(1))
+        referenced |= _extract_refs(text, skill_dir_rel)
+
+    # Pass 2: transitive closure through reachable reference docs only.
+    # An orphan ref doc never contributes to the reachable set.
+    queue: list[str] = sorted(referenced)
+    visited: set[str] = set()
+    while queue:
+        rel = queue.pop()
+        if rel in visited:
+            continue
+        visited.add(rel)
+        candidate = plugin_root / rel
+        if not candidate.is_file():
+            continue
+        try:
+            text = candidate.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        # Reference doc inside `skills/<skill>/references/...` may use
+        # the skill-local `references/<sibling>.md` form; resolve it
+        # against the owning skill directory.
+        skill_dir_rel = None
+        parts = rel.split("/")
+        if len(parts) >= 4 and parts[0] == "skills" and parts[2] == "references":
+            skill_dir_rel = f"{parts[0]}/{parts[1]}"
+        new_refs = _extract_refs(text, skill_dir_rel)
+        for nref in new_refs:
+            if nref not in referenced:
+                referenced.add(nref)
+                queue.append(nref)
 
     return referenced
 
@@ -272,8 +328,8 @@ def _detect_orphans(plugin_root: Path, repo_root: Path) -> list[OrphanRef]:
     orphans: list[OrphanRef] = []
     for md in sorted(_all_reference_md_files(plugin_root)):
         rel = str(md)
-        skill_local = None
         parts = rel.split("/")
+        skill_local = None
         if len(parts) >= 4 and parts[0] == "skills" and parts[2] == "references":
             skill_local = "/".join(parts[2:])
         if rel in referenced:

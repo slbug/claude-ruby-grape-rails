@@ -96,9 +96,14 @@ RULES_BODY_EOF
 
 # Hook output (additionalContext) is plain runtime text returned to
 # Claude — CC does NOT re-substitute plugin variables in returned
-# strings. Expand ${CLAUDE_PLUGIN_ROOT} in BODY here so the See:
-# paths reach the LLM as absolute filesystem paths.
-BODY="${BODY//\$\{CLAUDE_PLUGIN_ROOT\}/${CLAUDE_PLUGIN_ROOT:-}}"
+# strings. Expand ${CLAUDE_PLUGIN_ROOT} in BODY here so See: paths
+# reach the LLM as absolute filesystem paths. Skip expansion when
+# the env var is unset/empty (off-CC runs, CI fixtures) so the
+# literal placeholder survives instead of producing root-anchored
+# garbage like /references/foo.md.
+if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]]; then
+  BODY="${BODY//\$\{CLAUDE_PLUGIN_ROOT\}/$CLAUDE_PLUGIN_ROOT}"
+fi
 
 jq -nc --arg ev "$EVENT" --arg ctx "$BODY" \
   '{hookSpecificOutput:{hookEventName:$ev,additionalContext:$ctx}}'

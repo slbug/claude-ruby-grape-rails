@@ -7,95 +7,72 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `inject-rules.sh` now expands `${CLAUDE_PLUGIN_ROOT}` in the hook
+  payload before returning JSON. CC does not re-substitute hook
+  return strings, so `See:` lines previously reached the LLM as
+  literal placeholders. Generator emits a guarded expansion
+  (`if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]]`) so off-CC runs preserve
+  the literal token.
+- Review severity vocabulary aligned. Worker prompts keep
+  `Critical | Warning | Info`; consolidated playbook uses
+  `BLOCKER | WARNING | SUGGESTION` plus verdict-only
+  `REQUIRES CHANGES`. Mapping table added to `review-playbook.md`;
+  `review/SKILL.md` `After Review` replaced with
+  `PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED`.
+- `lab/eval/check_refs.py` extended:
+  validates `iron-laws.yml` + `preferences.yml` `reference_files`
+  paths exist; detects orphan `references/*.md`; transitive-closure
+  walk seeded from non-reference entry points so orphan chains
+  (a → b where both unreferenced) flag both ends.
+- Re-prose pass on plugin reference docs per agent-vs-human rules:
+  stripped narrative `# BAD/# GOOD/# Use this when` from code
+  blocks; converted `## Why X` preambles to imperative tables.
+  Touched `rb-trace`, `ar-n1-check`, `ruby-idioms`, `rails-idioms`,
+  `active-record-constraint-debug`, `audit`, `hotwire-patterns`,
+  `security`, `work`, `references/preferences`, `references/compression`.
+
+### Added
+
+- `lab/eval/tests/test_runtime_scripts.py`
+  `test_plugin_root_expands_when_env_set` regression guard for the
+  injector expansion fix.
+- `lab/eval/tests/test_check_refs.py`
+  `test_orphan_chain_both_flagged` + `test_reachable_chain_flags_neither`
+  pinning the transitive-closure orphan detector.
+
 ## [1.16.6] - 2026-05-03
 
 ### Added
 
-- `inject-rules.sh` payload now emits a `See:` line per preference
-  and per Iron Law that has `reference_files` set. 15 paths total
-  injected into `SessionStart` (main) + `SubagentStart` (subagent)
-  contexts (9 Iron Laws + 6 preferences) so agents can open the
-  companion docs via `${CLAUDE_PLUGIN_ROOT}/<path>` without
-  guessing the root.
-- Turn-budget rule on `rails-architect.md` (deadline 30) and
-  `ruby-runtime-advisor.md` (deadline 26) for parity with the 10
-  reviewer agents already covered.
-- "Turn Budget Semantics" section in
-  `.claude/rules/agent-development.md` clarifying that "turn" =
-  model invocation (`stop_reason` set), NOT raw assistant-message
-  jsonl line.
-- `lab/eval/tests/test_runtime_scripts.py` `InjectRulesTests`:
-  pinned 3 preferences `See:` line assertions (`context7-usage.md`,
-  `epistemic-posture.md`, `tool-batching.md`) with
-  `${CLAUDE_PLUGIN_ROOT}` prefix.
+- Injector emits `See:` line per Iron Law / preference with
+  `reference_files`. 18 paths injected via `SessionStart` +
+  `SubagentStart`.
+- Turn-budget rule on `rails-architect.md` (30) + `ruby-runtime-advisor.md` (26).
+- `Turn Budget Semantics` section in `.claude/rules/agent-development.md`.
 
 ### Changed
 
-- `plugins/ruby-grape-rails/references/research/` renamed to
-  `references/preferences/` — contents (`context7-usage.md`,
-  `epistemic-posture.md`, `tool-batching.md`) are 1:1 preference
-  companion docs, never research output. `preferences.yml`
-  `reference_files` paths + cross-references in CLAUDE.md,
-  `.claude/rules/agent-development.md`,
-  `.github/copilot-instructions.md`,
-  `.github/instructions/plugin-review.instructions.md` updated.
-- Reviewer-agent header `## CRITICAL: Save Findings File First`
-  renamed to `## Findings File Is Primary Output` across all 12
-  agents (10 reviewers + `rails-architect` +
-  `ruby-runtime-advisor`). Old header implied "first action"; body
-  says "complete analysis BY turn ~M, then Write" — mismatch
-  resolved.
-- `iron-laws.yml` `version` 1.1.0 → 1.2.0. Per-law
-  `reference_files` entries audited per existence on disk; 9 paths
-  corrected to point at real `skills/<name>/references/<doc>.md`
-  files (Laws 3, 4, 5, 8, 9, 10, 13, 18, 21); 13 entries pointing
-  at non-existent files removed (Laws 1, 2, 6, 7, 11, 12, 14, 15,
-  16, 17, 19, 20, 22). Schema field remains optional for future
-  expansion.
-- `preferences.yml` `version` 1.2.0 → 1.3.0; `reference_files`
-  paths now plugin-root-relative (`references/preferences/...`).
-- Generator (`scripts/generate-iron-law-content.rb`) emits
-  `${CLAUDE_PLUGIN_ROOT}/<r>` for each `reference_files` entry
-  (paths in YAML are plugin-root-relative).
+- `references/research/` → `references/preferences/` (companion docs,
+  not research output).
+- Reviewer-agent header `## CRITICAL: Save Findings File First` →
+  `## Findings File Is Primary Output` across 12 agents.
+- `iron-laws.yml` 1.1.0 → 1.2.0; `reference_files` entries audited
+  for on-disk existence (12 wired, others removed).
+- `preferences.yml` 1.2.0 → 1.3.0; `reference_files` paths
+  plugin-root-relative.
 
 ### Fixed
 
-- Direct `references/research/tool-batching.md` references in
-  `agents/call-tracer.md` + `skills/review/references/review-playbook.md`
-  removed — injection delivers the path via the `See:` line;
-  restating it in agent / skill bodies is duplication.
-- Iron Law count drift: `1-21` → `1-22` in
-  `skills/compound-docs/references/schema.md`,
-  `skills/compound/SKILL.md`,
-  `skills/iron-laws/references/fix-priority.md` ("Beyond the 21 laws"
-  → "Beyond the 22 laws", and "Verification (Law 21)" priority entry
-  expanded to "Verification & Discipline (Laws 21, 22)").
-- `skills/iron-laws/SKILL.md` now links
-  `references/canonical-registry.md` (was orphan — generated registry
-  was unreachable from the skill body).
-- Merged `skills/review/references/blocker-handling.md` (verdict
-  taxonomy + chat scripts + scope rule + pre-existing rule + research
-  requirement) and `skills/review/references/review-template.md`
-  (mandatory finding table + verdict line + `New?` column) into
-  `review-playbook.md`. Both originals deleted. `review-playbook.md`
-  is now the single review-output source of truth. Pointers in
-  `.claude/skills/plugin-dev-workflow/references/output-verification-checklist.md`
-  and `.github/copilot-instructions.md` updated.
-- 22 SKILL.md files now ship a `## References` section indexing all
-  skill `references/*.md` files with "read when X" triggers. Wires
-  46 previously-orphan reference docs into their owning SKILL.md so
-  agents can discover them: `active-record-constraint-debug`,
-  `active-record-patterns`, `ar-n1-check`, `audit`, `brief`,
-  `deploy`, `grape-idioms`, `hotwire-patterns`, `investigate`, `perf`,
-  `plan`, `rails-contexts`, `rb-trace`, `research`, `review`,
-  `ruby-idioms`, `runtime-integration`, `security`, `sidekiq`,
-  `testing`, `triage`, `work`. Ref paths use
-  `${CLAUDE_SKILL_DIR}/references/<file>.md` form.
-- Iron Law 14 (No Unsafe HTML) wired to
-  `skills/security/references/input-validation.md`; Iron Law 19
-  (No DB Queries in Turbo Streams) wired to
-  `skills/hotwire-patterns/references/channels-presence.md`. Injector
-  payload now emits 18 `See:` lines (12 Iron Laws + 6 preferences).
+- Iron Law count drift `1-21` → `1-22` (schema, compound, fix-priority).
+- `skills/iron-laws/SKILL.md` links `canonical-registry.md` (was orphan).
+- Merged `review/references/{blocker-handling,review-template}.md` →
+  `review-playbook.md` (single source of truth).
+- 22 SKILL.md files gained a `## References` section indexing 46
+  previously-orphan reference docs.
+- Iron Law 14 wired to `security/references/input-validation.md`;
+  Iron Law 19 wired to `hotwire-patterns/references/channels-presence.md`.
 
 ## [1.16.5] - 2026-05-03
 
