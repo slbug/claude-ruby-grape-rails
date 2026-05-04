@@ -332,6 +332,50 @@ Use the maintained upstream path.
             passed, _ = output_checks.has_review_verdict(content)
             self.assertTrue(passed, f"canonical {verdict!r} should pass")
 
+    def test_reviewer_verdicts_accepts_no_output_placeholder_for_stub_no_output(self) -> None:
+        # Reviewer marked `stub-no-output` in Coverage → Verdicts row
+        # uses literal `(no output)` in raw + canonical (no verdict
+        # prose exists to preserve).
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| security-analyzer | stub-no-output | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer | PASS | PASS |
+| security-analyzer | (no output) | (no output) |
+"""
+        passed, _ = output_checks.has_review_reviewer_verdicts(content)
+        self.assertTrue(passed)
+
+    def test_reviewer_verdicts_rejects_no_output_for_non_stub_reviewer(self) -> None:
+        # Reviewer is `artifact` in Coverage but uses `(no output)`
+        # placeholder in Verdicts → contract violation.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer | (no output) | (no output) |
+"""
+        passed, reason = output_checks.has_review_reviewer_verdicts(content)
+        self.assertFalse(passed)
+        self.assertIn("not in 4-set", reason)
+
     def test_reviewer_verdicts_rejects_blank_raw_cell(self) -> None:
         content = """# Review: x
 

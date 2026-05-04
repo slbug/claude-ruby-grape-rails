@@ -332,6 +332,9 @@ NOT flag the fallback chain as over-engineered.
   counts (`{n} BLOCKER / {n} WARNING / {n} SUGGESTION`); Verdicts
   MUST be 3-col (`Reviewer | Raw Verdict | Canonical`) with canonical
   column ∈ `{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}`.
+  Exception for `stub-no-output` rows (per Coverage): both Raw
+  Verdict and Canonical use the literal `(no output)` placeholder
+  (no verdict prose exists to preserve).
   `**Reviewers**:` header MUST list the same slug set as Coverage
   and Verdicts rows (one row per slug; row order NOT enforced —
   manifest stores `agents` as an object, no natural ordering).

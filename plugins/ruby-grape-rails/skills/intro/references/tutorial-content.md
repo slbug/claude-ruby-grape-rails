@@ -224,10 +224,7 @@ This is behavioral — it works because the rules are in Claude's context, not b
 
 ### Layer 3: Skill Loading by File Type (Behavioral)
 
-Skill activation comes from two paths. Some skills declare frontmatter
-`paths:` for CC auto-activation; others rely on description-based
-behavioral activation (Claude reads the skill description and the
-current task context). Coverage is mixed by design:
+Two activation paths exist for domain skills:
 
 | Skill | `paths:` declared | Activation path |
 |---|---|---|
@@ -235,12 +232,12 @@ current task context). Coverage is mixed by design:
 | `active-record-patterns` | `app/{models,repositories}/**`, `db/**`, package variants | CC auto-activation |
 | `testing` | `{spec,test}/**` | CC auto-activation |
 | `sidekiq` | `app/{jobs,workers,sidekiq}/**`, `config/sidekiq.yml` | CC auto-activation |
-| `ruby-idioms` | narrow subtrees only (`app/{errors,types,contracts,events,clients,chewy}/**`) | CC auto-activation on the listed subtrees; description-based elsewhere |
-| `rails-contexts` | none | description-based behavioral activation |
+| `ruby-idioms` | narrow subtrees only (`app/{errors,types,contracts,events,clients,chewy}/**`) | CC auto-activation on listed subtrees only |
+| `rails-contexts` | none | description-based only |
 
-Description-based activation is unreliable when nothing else cues
-Claude to load the skill. Invoke `/rb:<workflow>` directly when the
-gap matters.
+Invoke `/rb:<workflow>` directly when the file you are editing is
+not covered by any skill's `paths:` glob — description-based
+activation is unreliable on its own.
 
 ---
 

@@ -197,15 +197,39 @@ def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
     return True, f"Reviewer Coverage section with {len(rows)} reviewer row(s)"
 
 
+_NO_OUTPUT_PLACEHOLDER = "(no output)"
+
+
+def _stub_no_output_slugs(content: str) -> set[str]:
+    """Return slugs whose Coverage row marks them `stub-no-output`.
+
+    Synthesis of these reviewers produced no usable artifact + no
+    return text, so per-reviewer verdict prose does not exist.
+    Verdicts table represents them via the `(no output)` placeholder.
+    """
+    coverage_body = _section(content, "Reviewer Coverage")
+    if not coverage_body:
+        return set()
+    return {
+        row[0]
+        for row in _table_data_rows(coverage_body)
+        if len(row) >= 2 and row[0] and row[1] == "stub-no-output"
+    }
+
+
 def has_review_reviewer_verdicts(content: str) -> tuple[bool, str]:
     body = _section(content, "Reviewer Verdicts")
     if not body:
         return False, "Missing ## Reviewer Verdicts section"
     # Contract: `| <slug> | <raw verdict> | <canonical> |`
-    # where canonical ∈ _CANONICAL_VERDICTS.
+    # where canonical ∈ _CANONICAL_VERDICTS for normal rows.
+    # `stub-no-output` reviewers (per Coverage) MUST emit
+    # `(no output)` literal in BOTH raw and canonical cells —
+    # documented placeholder for the coverage-gap case.
     rows = _table_data_rows(body)
     if not rows:
         return False, "Reviewer Verdicts table empty"
+    no_output_slugs = _stub_no_output_slugs(content)
     bad: list[str] = []
     for idx, row in enumerate(rows, start=1):
         if len(row) != 3:
@@ -214,6 +238,13 @@ def has_review_reviewer_verdicts(content: str) -> tuple[bool, str]:
         slug, raw, canonical = row[0], row[1], row[2]
         if not slug:
             bad.append(f"row {idx}: missing reviewer slug")
+            continue
+        if slug in no_output_slugs:
+            if raw != _NO_OUTPUT_PLACEHOLDER or canonical != _NO_OUTPUT_PLACEHOLDER:
+                bad.append(
+                    f"{slug}: stub-no-output reviewer requires raw={_NO_OUTPUT_PLACEHOLDER!r} "
+                    f"and canonical={_NO_OUTPUT_PLACEHOLDER!r} (got raw={raw!r}, canonical={canonical!r})"
+                )
             continue
         if not raw:
             bad.append(f"{slug}: raw verdict cell empty (playbook requires preserving the agent's verbatim verdict text)")

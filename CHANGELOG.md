@@ -28,7 +28,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `lab/eval/output_checks.py` upgraded for the new contract: verdict
   line enforces canonical 4-set; Coverage + Verdicts checks validate
   exact 3-cell rows, recovery-state enum, findings-counts bucket
-  format, canonical canonical-column, non-empty raw verdict; new
+  format, canonical canonical-column, non-empty raw verdict
+  (with documented `(no output)` placeholder allowed for
+  `stub-no-output` reviewers per cross-table Coverage check); new
   `review_reviewer_completeness` reconciles `**Reviewers**:` header
   against table row slugs (set membership + count + duplicates; row
   order NOT enforced — manifest stores `agents` as an object, no

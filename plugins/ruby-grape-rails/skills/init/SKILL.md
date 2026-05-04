@@ -160,10 +160,10 @@ header without content.
 |---|---|---|
 | `{SIDEKIQ_SECTION}` | Sidekiq detected | queue list, base class, retry policy, dead-letter config |
 | `{SEQUEL_SECTION}` | Sequel detected | per-package paths, query convention, migration roots |
-| `{MIXED_ORM_SECTION}` | Active Record AND Sequel detected | per-package ORM map |
+| `{MIXED_ORM_SECTION}` | Active Record AND Sequel detected | per-package ORM map (from targeted interview — `detect-stack` does NOT emit per-package ORM ownership) |
 | `{HOTWIRE_SECTION}` | Hotwire/Turbo detected | channel list, broadcast roots, frame-id convention |
 | `{KARAFKA_SECTION}` | Karafka detected | topic routes, consumer base, retry routing |
-| `{PACKWERK_SECTION}` | Packwerk OR modular monolith layout detected | package paths + boundaries, enforcement flags |
+| `{PACKWERK_SECTION}` | Packwerk OR modular monolith layout detected | package paths from `PACKAGE_LOCATIONS`; enforcement flags from `packwerk.yml` + per-package `package.yml` |
 | `{BETTERLEAKS_SECTION}` | `betterleaks` available AND project secret-path conventions detected | secret-path conventions, scan policy |
 
 `${CLAUDE_SKILL_DIR}/references/conditional-sections.md` is the

@@ -65,12 +65,20 @@ project-specific.
 ## MIXED_ORM_SECTION
 
 Render IF `DETECTED_ORMS` includes both `active_record` AND `sequel`.
+`detect-stack` does NOT emit per-package ORM ownership — it lists
+package paths in `PACKAGE_LOCATIONS` only. Per-package ORM mapping
+must come from a targeted interview question. Ask the user once:
+`Both Active Record and Sequel detected. Which ORM owns each package
+(<comma-separated paths from PACKAGE_LOCATIONS>)? Reply with one
+"<path> -> AR" or "<path> -> Sequel" per line, or "skip" if not yet
+mapped.`
 
 | Source | What to render |
 |---|---|
-| `PACKAGE_LOCATIONS` (per-package ORM) | `**ORM map**: <pkg> → AR, <pkg> → Sequel, ...` |
+| Interview answer mapping each `PACKAGE_LOCATIONS` path to its ORM | `**ORM map**: <pkg> → AR, <pkg> → Sequel, ...` |
 
-Omit if the per-package map cannot be assembled.
+Omit if the user skips or detection produces no package paths.
+Do NOT fabricate ORM ownership from package names alone.
 
 ## HOTWIRE_SECTION
 
@@ -98,15 +106,20 @@ Omit bullets without detected values.
 
 ## PACKWERK_SECTION
 
-Render IF Packwerk detected OR `PACKAGE_LAYOUT` indicates a modular
-monolith.
+Render IF Packwerk detected (`HAS_PACKWERK=true`) OR `PACKAGE_LAYOUT`
+indicates a modular monolith. `detect-stack` emits raw package paths
+in `PACKAGE_LOCATIONS` only — no boundary labels. Read `packwerk.yml`
+plus each package's `package.yml` (Packwerk per-package metadata)
+for enforcement flags and boundary names. Do NOT fabricate boundary
+labels from path names.
 
 | Source | What to render |
 |---|---|
-| `PACKAGE_LOCATIONS` | `**Packages**:` followed by a bulleted list of `path → declared boundary` pairs |
-| `packwerk.yml` `enforce_dependencies` / `enforce_privacy` | `**Enforcement**: dependencies=<bool>, privacy=<bool>` |
+| `PACKAGE_LOCATIONS` | `**Packages**: <comma-separated paths>` |
+| `packwerk.yml` `enforce_dependencies` / `enforce_privacy` keys | `**Enforcement**: dependencies=<true\|false>, privacy=<true\|false>` |
+| Per-package `<pkg>/package.yml` `enforce_dependencies` / `enforce_privacy` overrides | `**Per-package enforcement overrides**: <pkg>=<dep:bool,priv:bool>, ...` |
 
-Omit bullets without detected values.
+Omit any bullet whose source is missing or unparsable.
 
 ## BETTERLEAKS_SECTION
 

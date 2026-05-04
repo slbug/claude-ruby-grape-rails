@@ -286,7 +286,9 @@ prose, not the verdict tag.
 - Header MUST include `## Reviewer Coverage` with one row per
   spawned reviewer + recovery state.
 - Header MUST include `## Reviewer Verdicts` preserving each agent's
-  raw verdict text alongside the normalized canonical form.
+  raw verdict text alongside the normalized canonical form. For
+  `stub-no-output` reviewers, both columns use the literal
+  `(no output)` placeholder (no verdict prose exists to preserve).
 - Preserve blockers / must-fix items VERBATIM in body.
 - Preserve decision options + rationale, unresolved disagreements,
   file paths, concrete evidence.
@@ -447,6 +449,7 @@ no usable reviewer output; reviewer coverage gap.
 | Reviewer | Raw verdict | Canonical |
 |---|---|---|
 | {agent-slug} | {agent's verbatim verdict text} | PASS \| PASS WITH WARNINGS \| REQUIRES CHANGES \| BLOCKED |
+| {stub-no-output-agent-slug} | (no output) | (no output) |
 
 Raw verdict preserves the agent's wording exactly. Canonical column
 normalizes it via the table in § "STEP 2" so reviewers reading the
@@ -454,6 +457,14 @@ artifact see one vocabulary. The consolidated verdict in § "STEP 4"
 is computed from blocker / warning / test-coverage counts, NOT from
 this column — Reviewer Verdicts is transparency metadata, not
 algorithm input.
+
+`stub-no-output` reviewers (per the Coverage table) produced no
+usable artifact + no return text, so verdict prose does not exist.
+For those reviewers ONLY, both Raw verdict and Canonical cells use
+the literal placeholder `(no output)`. The CI check
+(`has_review_reviewer_verdicts` in `lab/eval/output_checks.py`)
+cross-references the Coverage table to allow this placeholder for
+stub-no-output rows and rejects it everywhere else.
 
 ## Summary
 
