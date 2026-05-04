@@ -196,6 +196,83 @@ Findings format:
 Stop after returning. Do NOT call Agent() — this is a leaf review.
 ```
 
+## Synthesis Procedure
+
+Five steps, in order. Skipping any step causes the recurring drift
+modes (non-canonical verdict pass-through, worker-form severity
+leak in consolidated artifact, soft verdict despite blockers).
+
+### STEP 1: Read each agent artifact (post-recovery)
+
+For each manifest entry: STAT the expected path; apply the recovery
+state machine in § "Artifact Recovery" below.
+
+### STEP 2: Normalize each agent's verdict text
+
+Scan each per-agent artifact for verdict prose. Map non-canonical
+forms to the canonical 4-set BEFORE writing the consolidated header:
+
+| Non-canonical form (preserve verbatim in metadata) | Canonical mapping rule |
+|---|---|
+| `CONDITIONAL PASS`, `PASS WITH CAVEATS`, `PASS-WITH-WARNS` | infer from finding count; bucket-form severity → canonical |
+| `Approved`, `LGTM`, `looks good` | `PASS` if no warnings/blockers; else map per finding count |
+| `Needs fixes`, `fix before merge`, `not ready` | `REQUIRES CHANGES` if no blockers; else `BLOCKED` |
+| `Critical`, `BLOCK`, `BLOCKER` (verdict, not severity) | `BLOCKED` |
+
+Preserve the agent's raw verdict text in a `Reviewer Verdicts`
+metadata table at top of the consolidated artifact. Do NOT erase
+their wording — only normalize the consolidated header.
+
+### STEP 3: Map worker severity to bucket form
+
+Reviewer Coverage row counts MUST use bucket form
+(`BLOCKER | WARNING | SUGGESTION`), NOT worker form
+(`Critical | Warning | Info`). Per § "Worker Severity Mapping":
+
+- worker `Critical` introduced by this diff → `BLOCKER`
+- worker `Critical` on unchanged code → `Pre-existing BLOCKER` (counted; no verdict effect)
+- worker `Warning` → `WARNING`
+- worker `Info` → `SUGGESTION`
+
+Per-agent artifacts retain their original wording. The consolidated
+artifact uses bucket form throughout — Reviewer Coverage row,
+Summary table, At-a-Glance Finding Table, section headers.
+
+### STEP 4: Compute consolidated verdict deterministically
+
+Apply the algorithm from § "Verdict Decision Rules":
+
+```
+if blockers_introduced_by_diff > 0:
+    verdict = BLOCKED
+elif new_public_behavior_lacks_test_coverage:
+    verdict = REQUIRES CHANGES
+elif warnings > 0:
+    verdict = PASS WITH WARNINGS
+else:
+    verdict = PASS
+```
+
+Do NOT override with author judgment. If 4 BLOCKERs are present,
+the verdict is `BLOCKED` — even when each individual blocker looks
+"fixable in one PR". Preserve author-side nuance in per-finding
+prose, not the verdict tag.
+
+### STEP 5: Write the consolidated review
+
+- Header MUST include `## Reviewer Coverage` with one row per
+  spawned reviewer + recovery state.
+- Header MUST include `## Reviewer Verdicts` preserving each agent's
+  raw verdict text alongside the normalized canonical form.
+- Preserve blockers / must-fix items VERBATIM in body.
+- Preserve decision options + rationale, unresolved disagreements,
+  file paths, concrete evidence.
+- Dedupe overlapping findings across agents; cite all sources.
+- Keep highest confidence among duplicates.
+- Sort findings: BLOCKER → WARNING → SUGGESTION;
+  HIGH → MEDIUM → LOW within bucket.
+- Preserve "Pre-existing Issues" section.
+
 ## Artifact Recovery
 
 For each reviewer in the manifest, stat the expected path:
