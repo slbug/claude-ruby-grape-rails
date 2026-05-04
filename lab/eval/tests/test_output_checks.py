@@ -226,6 +226,78 @@ Use the maintained upstream path.
         self.assertFalse(passed)
         self.assertIn("Coverage table missing reviewers", reason)
 
+    def test_reviewer_coverage_rejects_extra_cells(self) -> None:
+        # 4 cells violates exact-3 contract.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings | Extra |
+|---|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION | junk |
+"""
+        passed, reason = output_checks.has_review_reviewer_coverage(content)
+        self.assertFalse(passed)
+        self.assertIn("4 cell", reason)
+
+    def test_reviewer_verdicts_rejects_extra_cells(self) -> None:
+        content = """# Review: x
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical | Extra |
+|---|---|---|---|
+| ruby-reviewer | PASS | PASS | junk |
+"""
+        passed, reason = output_checks.has_review_reviewer_verdicts(content)
+        self.assertFalse(passed)
+        self.assertIn("4 cell", reason)
+
+    def test_reviewer_completeness_rejects_duplicate_coverage_row(self) -> None:
+        content = """# Review: x
+
+**Reviewers**: ruby-reviewer, testing-reviewer
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| testing-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer | PASS | PASS |
+| testing-reviewer | PASS | PASS |
+"""
+        passed, reason = output_checks.has_review_reviewer_completeness(content)
+        self.assertFalse(passed)
+        self.assertIn("Coverage table has duplicate", reason)
+
+    def test_reviewer_completeness_rejects_duplicate_header_slug(self) -> None:
+        content = """# Review: x
+
+**Reviewers**: ruby-reviewer, ruby-reviewer
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer | PASS | PASS |
+"""
+        passed, reason = output_checks.has_review_reviewer_completeness(content)
+        self.assertFalse(passed)
+        self.assertIn("duplicate slug", reason)
+
     def test_reviewer_completeness_passes_when_header_matches_tables(self) -> None:
         content = """# Review: x
 

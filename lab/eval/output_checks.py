@@ -166,8 +166,8 @@ def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
         return False, "Reviewer Coverage table empty"
     bad: list[str] = []
     for idx, row in enumerate(rows, start=1):
-        if len(row) < 3:
-            bad.append(f"row {idx}: only {len(row)} cell(s); contract requires 3 (slug | recovery state | findings counts)")
+        if len(row) != 3:
+            bad.append(f"row {idx}: {len(row)} cell(s); contract requires exactly 3 (slug | recovery state | findings counts)")
             continue
         slug, recovery, findings = row[0], row[1], row[2]
         if not slug:
@@ -194,8 +194,8 @@ def has_review_reviewer_verdicts(content: str) -> tuple[bool, str]:
         return False, "Reviewer Verdicts table empty"
     bad: list[str] = []
     for idx, row in enumerate(rows, start=1):
-        if len(row) < 3:
-            bad.append(f"row {idx}: only {len(row)} cell(s); contract requires 3 (slug | raw verdict | canonical)")
+        if len(row) != 3:
+            bad.append(f"row {idx}: {len(row)} cell(s); contract requires exactly 3 (slug | raw verdict | canonical)")
             continue
         slug, _raw, canonical = row[0], row[1], row[2]
         if not slug:
@@ -211,21 +211,28 @@ def has_review_reviewer_verdicts(content: str) -> tuple[bool, str]:
 def has_review_reviewer_completeness(content: str) -> tuple[bool, str]:
     """Reconcile `**Reviewers**:` header list against Coverage + Verdicts row slugs.
 
-    All three sets MUST be equal — synthesizing fewer rows than spawned
-    reviewers (or vice versa) is a coverage gap that the new contract
-    must surface.
+    Header order + count must match Coverage rows exactly, and Verdicts
+    rows exactly. Duplicate reviewer rows (e.g. two `ruby-reviewer` rows)
+    fail — playbook requires exactly one Coverage/Verdicts row per
+    spawned reviewer.
     """
+    from collections import Counter
+
     content_norm = _normalize_newlines(content)
     header_match = _REVIEWERS_HEADER_RE.search(content_norm)
     if not header_match:
         return False, "Missing `**Reviewers**:` header line"
-    header_slugs = {
+    header_slugs = [
         slug
         for slug in (s.strip() for s in header_match.group(1).split(","))
         if slug
-    }
+    ]
     if not header_slugs:
         return False, "`**Reviewers**:` header has no slugs"
+    header_counts = Counter(header_slugs)
+    header_dups = sorted(slug for slug, n in header_counts.items() if n > 1)
+    if header_dups:
+        return False, f"`**Reviewers**:` header lists duplicate slug(s): {header_dups}"
 
     coverage_body = _section(content, "Reviewer Coverage")
     verdicts_body = _section(content, "Reviewer Verdicts")
@@ -234,24 +241,28 @@ def has_review_reviewer_completeness(content: str) -> tuple[bool, str]:
     if not verdicts_body:
         return False, "Missing ## Reviewer Verdicts section (cannot reconcile reviewer set)"
 
-    coverage_slugs = {row[0] for row in _table_data_rows(coverage_body) if row and row[0]}
-    verdicts_slugs = {row[0] for row in _table_data_rows(verdicts_body) if row and row[0]}
+    coverage_slugs = [row[0] for row in _table_data_rows(coverage_body) if row and row[0]]
+    verdicts_slugs = [row[0] for row in _table_data_rows(verdicts_body) if row and row[0]]
 
     problems: list[str] = []
-    if coverage_slugs != header_slugs:
-        missing_in_coverage = header_slugs - coverage_slugs
-        extra_in_coverage = coverage_slugs - header_slugs
-        if missing_in_coverage:
-            problems.append(f"Coverage table missing reviewers: {sorted(missing_in_coverage)}")
-        if extra_in_coverage:
-            problems.append(f"Coverage table has unexpected reviewers: {sorted(extra_in_coverage)}")
-    if verdicts_slugs != header_slugs:
-        missing_in_verdicts = header_slugs - verdicts_slugs
-        extra_in_verdicts = verdicts_slugs - header_slugs
-        if missing_in_verdicts:
-            problems.append(f"Verdicts table missing reviewers: {sorted(missing_in_verdicts)}")
-        if extra_in_verdicts:
-            problems.append(f"Verdicts table has unexpected reviewers: {sorted(extra_in_verdicts)}")
+
+    def _diff(label: str, rows: list[str]) -> None:
+        row_counts = Counter(rows)
+        dups = sorted(slug for slug, n in row_counts.items() if n > 1)
+        if dups:
+            problems.append(f"{label} table has duplicate reviewer row(s): {dups}")
+        missing = sorted(set(header_slugs) - set(rows))
+        if missing:
+            problems.append(f"{label} table missing reviewers: {missing}")
+        extra = sorted(set(rows) - set(header_slugs))
+        if extra:
+            problems.append(f"{label} table has unexpected reviewers: {extra}")
+        if not dups and not missing and not extra and len(rows) != len(header_slugs):
+            # Defensive: counts differ even though set membership matches.
+            problems.append(f"{label} table row count {len(rows)} != header count {len(header_slugs)}")
+
+    _diff("Coverage", coverage_slugs)
+    _diff("Verdicts", verdicts_slugs)
 
     if problems:
         return False, "; ".join(problems)

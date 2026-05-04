@@ -201,7 +201,7 @@ The plugin uses **layered enforcement** — some things run automatically, some 
 | Progress logging | Every file edit | Appends to `.claude/plans/{slug}/progress.md` (async) |
 | Failure hints | Bash command fails | Injects debugging hints via `additionalContext` |
 | Error critic | Repeated test failures | Escalates to structured critic analysis after 3+ failures |
-| Iron Laws injection | Any subagent spawns | Injects all 22 Iron Laws into subagents via `additionalContext` |
+| Iron Laws + Preferences injection | `SessionStart` (main session) + `SubagentStart` (any subagent spawn) | Injects 22 Iron Laws + 6 Advisory Preferences via `additionalContext`, with companion `reference_files` paths emitted bare beneath each rule |
 | PreCompact rules | Before context compaction | Warns about the active workflow phase and what to re-read after compaction |
 
 Format check **auto-fixes** — runs `standardrb --fix` when StandardRB is configured, otherwise `rubocop -a`.
