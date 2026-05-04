@@ -1,3 +1,5 @@
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -271,6 +273,146 @@ class CheckRefsTests(unittest.TestCase):
         result = check_refs.scan(plugin_root)
         orphan_paths = sorted(o.path for o in result.orphans)
         self.assertEqual(orphan_paths, ["skills/foo/references/a.md"])
+
+
+    def test_main_exits_nonzero_on_orphan_only(self) -> None:
+        """Orphan-only result must fail CI (exit 1) — no env-var bypass.
+
+        Captures stdout with ``redirect_stdout`` so the failure
+        diagnostic does not leak into the test runner output AND so we
+        can assert the nonzero exit was caused by the orphan branch
+        (rather than a different unrelated failure).
+        """
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\n"
+        )
+        (plugin_root / "skills" / "foo" / "references").mkdir()
+        (plugin_root / "skills" / "foo" / "references" / "orphan.md").write_text(
+            "# Orphan\n"
+        )
+        (plugin_root / "references").mkdir()
+        (plugin_root / "references" / "iron-laws.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_laws: 0\ncategories: []\nlaws: []\n"
+        )
+        (plugin_root / "references" / "preferences.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_preferences: 0\ncategories: []\npreferences: []\n"
+        )
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = check_refs.main(["check_refs", str(plugin_root)])
+        out = buf.getvalue()
+        self.assertEqual(rc, 1)
+        self.assertIn("ORPHAN_REFERENCE_FILE", out)
+        self.assertIn("skills/foo/references/orphan.md", out)
+        # No other failure class should fire here.
+        self.assertNotIn("BROKEN_REFERENCE_PATH", out)
+        self.assertNotIn("BROKEN_REGISTRY_REFERENCE", out)
+        self.assertNotIn("TRAVERSAL_REFERENCE", out)
+
+    def test_traversal_reference_flagged(self) -> None:
+        """`${CLAUDE_SKILL_DIR}/../<other>` should be flagged as
+        TraversalRef — cross-skill paths must use `${CLAUDE_PLUGIN_ROOT}`.
+        """
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\n"
+            "See `${CLAUDE_SKILL_DIR}/../bar/references/x.md`.\n"
+        )
+        (plugin_root / "skills" / "bar").mkdir()
+        (plugin_root / "skills" / "bar" / "references").mkdir()
+        (plugin_root / "skills" / "bar" / "references" / "x.md").write_text(
+            "# X\n"
+        )
+        result = check_refs.scan(plugin_root)
+        targets = sorted(t.target for t in result.traversal)
+        self.assertIn("../bar/references/x.md", targets)
+
+    def test_plain_broken_reference_via_skill_dir_var(self) -> None:
+        """``${CLAUDE_SKILL_DIR}/references/<missing>.md`` resolves
+        through the skill-local var path; missing target flagged as
+        BROKEN_REFERENCE_PATH."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\n"
+            "See `${CLAUDE_SKILL_DIR}/references/missing.md`.\n"
+        )
+        result = check_refs.scan(plugin_root)
+        targets = sorted(b.target for b in result.plain_broken)
+        self.assertIn("skills/foo/references/missing.md", targets)
+
+    def test_plain_broken_reference_via_bare_path(self) -> None:
+        """Bare ``references/<missing>.md`` (no var prefix) at a
+        token-start position resolves against the owning skill dir.
+        Exercises the bare-path branch of ``_extract_ref_sites`` —
+        distinct from the ``${CLAUDE_SKILL_DIR}/...`` branch — and
+        confirms a missing target is flagged."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\n"
+            "See references/missing.md for details.\n"
+        )
+        result = check_refs.scan(plugin_root)
+        targets = sorted(b.target for b in result.plain_broken)
+        self.assertIn("skills/foo/references/missing.md", targets)
+
+    def test_non_md_reference_asset_orphan_detection(self) -> None:
+        """A `.py` reference asset under `references/` with no consumer
+        should be flagged as orphan."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\n"
+        )
+        (plugin_root / "skills" / "foo" / "references").mkdir()
+        (plugin_root / "skills" / "foo" / "references" / "helper.py").write_text(
+            "# helper\n"
+        )
+        (plugin_root / "references").mkdir()
+        (plugin_root / "references" / "iron-laws.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_laws: 0\ncategories: []\nlaws: []\n"
+        )
+        (plugin_root / "references" / "preferences.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_preferences: 0\ncategories: []\npreferences: []\n"
+        )
+        result = check_refs.scan(plugin_root)
+        orphan_paths = sorted(o.path for o in result.orphans)
+        self.assertIn("skills/foo/references/helper.py", orphan_paths)
+
+    def test_non_md_reference_asset_consumed_by_skill_md(self) -> None:
+        """A `.py` reference asset is reachable when SKILL.md mentions
+        the path. Consumer reachability via prose must include the
+        non-md asset extension."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\n"
+            "Run `${CLAUDE_SKILL_DIR}/references/helper.py` to compute.\n"
+        )
+        (plugin_root / "skills" / "foo" / "references").mkdir()
+        (plugin_root / "skills" / "foo" / "references" / "helper.py").write_text(
+            "# helper\n"
+        )
+        (plugin_root / "references").mkdir()
+        (plugin_root / "references" / "iron-laws.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_laws: 0\ncategories: []\nlaws: []\n"
+        )
+        (plugin_root / "references" / "preferences.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_preferences: 0\ncategories: []\npreferences: []\n"
+        )
+        result = check_refs.scan(plugin_root)
+        orphan_paths = sorted(o.path for o in result.orphans)
+        self.assertNotIn("skills/foo/references/helper.py", orphan_paths)
 
 
 if __name__ == "__main__":

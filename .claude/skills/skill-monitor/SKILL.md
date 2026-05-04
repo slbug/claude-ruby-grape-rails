@@ -104,6 +104,13 @@ historical snapshots.
 3. Corroborate strong claims with deterministic or manual evidence.
 4. NEVER modify `metrics.jsonl` from this skill.
 
+## References
+
+| Need | Reference |
+|---|---|
+| metric definitions + behavioral-proxy rubric | `${CLAUDE_SKILL_DIR}/references/effectiveness-metrics.md` |
+| improvement proposal template | `${CLAUDE_SKILL_DIR}/references/improvement-template.md` |
+
 ## Epistemic Posture
 
 Explicit confidence on observational findings. Direct language for

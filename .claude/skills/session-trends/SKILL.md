@@ -44,7 +44,7 @@ tell contributor to run `/session-scan` first.
 
 ### 3. Compute Windowed Aggregates
 
-Run `python3 ${CLAUDE_SKILL_DIR}/../session-scan/references/compute-metrics.py --trends .claude/session-metrics/metrics.jsonl`.
+Run `python3 .claude/skills/session-scan/references/compute-metrics.py --trends .claude/session-metrics/metrics.jsonl` from repo root.
 
 Add `--project "$PROJECT_FILTER"` or `--provider "$PROVIDER_FILTER"`
 only when the contributor requested those filters.
@@ -91,6 +91,12 @@ Brand-new ledger or fewer than 10 sessions:
 2. Prefer provider-scoped comparisons over mixed-provider windows.
 3. Do NOT depend on missing local artifacts.
 4. Keep raw ledger read-only.
+
+## References
+
+| Need | Reference |
+|---|---|
+| ledger query patterns + interpretation rubric | `${CLAUDE_SKILL_DIR}/references/trend-queries.md` |
 
 ## Epistemic Posture
 

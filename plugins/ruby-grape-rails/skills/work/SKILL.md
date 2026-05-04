@@ -249,8 +249,8 @@ Update `scratchpad.md` with:
   - branch state, API failures, or next-step notes
 
 Follow the canonical structure in
-`${CLAUDE_SKILL_DIR}/../plan/references/scratchpad-template.md`. Prefer appending to the
-existing sections rather than inventing new top-level headings.
+`${CLAUDE_PLUGIN_ROOT}/skills/plan/references/scratchpad-template.md`. Prefer
+appending to the existing sections rather than inventing new top-level headings.
 
 ## Completion Protocol
 
