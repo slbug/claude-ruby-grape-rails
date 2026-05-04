@@ -224,28 +224,23 @@ This is behavioral — it works because the rules are in Claude's context, not b
 
 ### Layer 3: Skill Loading by File Type (Behavioral)
 
-Each domain skill declares the file globs that should activate it via
-its frontmatter `paths:` field. CC auto-loads the matching skill when
-files in those globs are open or being edited:
+Skill activation comes from two paths. Some skills declare frontmatter
+`paths:` for CC auto-activation; others rely on description-based
+behavioral activation (Claude reads the skill description and the
+current task context). Coverage is mixed by design:
 
-```text
-app/views/*.erb         → hotwire-patterns (streams, frames, Turbo)
-app/models/*.rb         → active-record-patterns (queries, associations)
-app/controllers/*.rb    → rails-contexts (controllers, requests)
-*_spec.rb               → testing (RSpec, Minitest, factories)
-*_test.rb                → testing (Minitest)
-*_worker.rb             → sidekiq (jobs, idempotency, queue config)
-Any .rb file            → ruby-idioms (always)
-```
-
-Two loading paths cover these mappings:
-
-| Path | Mechanism | Reliability |
+| Skill | `paths:` declared | Activation path |
 |---|---|---|
-| Skill frontmatter `paths:` | CC auto-activates the skill when files matching the glob are open/edited | Real CC infrastructure |
-| Behavioral table above | Claude consults the table; no hook fires | Unreliable when `paths:` does not match |
+| `hotwire-patterns` | `app/views/**/*.{erb,haml,slim}`, `app/{javascript,components,channels}/**` | CC auto-activation |
+| `active-record-patterns` | `app/{models,repositories}/**`, `db/**`, package variants | CC auto-activation |
+| `testing` | `{spec,test}/**` | CC auto-activation |
+| `sidekiq` | `app/{jobs,workers,sidekiq}/**`, `config/sidekiq.yml` | CC auto-activation |
+| `ruby-idioms` | narrow subtrees only (`app/{errors,types,contracts,events,clients,chewy}/**`) | CC auto-activation on the listed subtrees; description-based elsewhere |
+| `rails-contexts` | none | description-based behavioral activation |
 
-Invoke `/rb:<workflow>` directly when the gap matters.
+Description-based activation is unreliable when nothing else cues
+Claude to load the skill. Invoke `/rb:<workflow>` directly when the
+gap matters.
 
 ---
 

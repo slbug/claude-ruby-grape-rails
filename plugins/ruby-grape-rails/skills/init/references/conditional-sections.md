@@ -127,11 +127,11 @@ belongs in `/rb:secrets` skill body, not in project `CLAUDE.md`.
 | Placeholder | Source | Example |
 |---|---|---|
 | `{DATE}` | Current date | 2026-05-04 |
-| `{RUBY_VERSION}` | `ruby --version` / detect-stack | 3.4.7 |
-| `{RAILS_VERSION}` | Gemfile.lock / detect-stack | 7.1.3 |
-| `{GRAPE_VERSION}` | Gemfile.lock | 2.0.0 |
-| `{SIDEKIQ_VERSION}` | Gemfile.lock | 7.2.0 |
-| `{OPTIONAL_STACK}` | Comma-prefixed extra versioned deps from detector output when available | `, Karafka 2.5.8, Hotwire detected` |
+| `{RUBY_VERSION}` | `detect-stack` `INTERPRETER_RUBY_VERSION` (locked → `RUBY_VERSION` from Gemfile.lock) | 3.4.7 |
+| `{RAILS_VERSION}` | `detect-stack` `RAILS_VERSION` | 7.1.3 |
+| `{GRAPE_VERSION}` | `detect-stack` `GRAPE_VERSION` | 2.0.0 |
+| `{SIDEKIQ_VERSION}` | `detect-stack` `SIDEKIQ_VERSION` | 7.2.0 |
+| `{OPTIONAL_STACK}` | `detect-stack` extra-stack keys, comma-prefixed | `, Karafka 2.5.8, Hotwire detected` |
 | `{SIDEKIQ_SECTION}` | Render per rules above; empty string if no project-specific content |
 | `{SEQUEL_SECTION}` | Render per rules above; empty string if no project-specific content |
 | `{MIXED_ORM_SECTION}` | Render per rules above; empty string if no project-specific content |
