@@ -392,10 +392,6 @@ no usable reviewer output; reviewer coverage gap.
 
 - {issue} (not introduced by this change)
 
-## Positive Findings
-
-- {what was done well}
-
 ## At-a-Glance Finding Table
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |

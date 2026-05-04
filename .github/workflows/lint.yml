@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Python dev dependencies
+        run: python3 -m pip install -r requirements-dev.txt
+
       - name: Lint Markdown files
         run: npm run lint:markdown
 
@@ -39,6 +42,9 @@ jobs:
 
       - name: Validate release metadata and changelog links
         run: python3 scripts/check-release-metadata.py
+
+      - name: Validate cross-references (slash / skill / agent / registry / orphan / traversal)
+        run: npm run check:refs
 
       - name: Install shellcheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck

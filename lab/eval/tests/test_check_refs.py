@@ -387,6 +387,113 @@ class CheckRefsTests(unittest.TestCase):
         orphan_paths = sorted(o.path for o in result.orphans)
         self.assertIn("skills/foo/references/helper.py", orphan_paths)
 
+    def _run_main(
+        self, plugin_root: Path
+    ) -> tuple[int, str]:
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = check_refs.main(["check_refs", str(plugin_root)])
+        return rc, buf.getvalue()
+
+    def _empty_registries(self, plugin_root: Path) -> None:
+        (plugin_root / "references").mkdir(exist_ok=True)
+        (plugin_root / "references" / "iron-laws.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_laws: 0\ncategories: []\nlaws: []\n"
+        )
+        (plugin_root / "references" / "preferences.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_preferences: 0\ncategories: []\npreferences: []\n"
+        )
+
+    def test_main_exits_nonzero_on_broken_slash_reference(self) -> None:
+        """Broken `/rb:<name>` invocation must fail CLI with the broken-ref
+        diagnostic in stdout."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "caller").mkdir()
+        (plugin_root / "skills" / "caller" / "SKILL.md").write_text(
+            "---\nname: rb:caller\n---\nSee /rb:nonexistent.\n"
+        )
+        self._empty_registries(plugin_root)
+        rc, out = self._run_main(plugin_root)
+        self.assertEqual(rc, 1)
+        self.assertIn("broken references", out)
+        self.assertIn("nonexistent", out)
+        self.assertNotIn("ORPHAN_REFERENCE_FILE", out)
+        self.assertNotIn("BROKEN_REGISTRY_REFERENCE", out)
+        self.assertNotIn("TRAVERSAL_REFERENCE", out)
+
+    def test_main_exits_nonzero_on_broken_registry_reference(self) -> None:
+        """`reference_files` entry pointing at a missing file must fail
+        CLI with BROKEN_REGISTRY_REFERENCE in stdout."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\n"
+        )
+        (plugin_root / "references").mkdir()
+        (plugin_root / "references" / "iron-laws.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_laws: 1\n"
+            "categories:\n"
+            "  - id: cat\n"
+            "    name: cat\n"
+            "    law_count: 1\n"
+            "laws:\n"
+            "  - id: 1\n"
+            "    category: cat\n"
+            "    title: t\n"
+            "    rule: r\n"
+            "    summary_text: s\n"
+            "    rationale: rat\n"
+            "    subagent_text: sub\n"
+            "    reference_files:\n"
+            "      - skills/foo/references/missing.md\n"
+        )
+        (plugin_root / "references" / "preferences.yml").write_text(
+            "version: 1.0.0\nlast_updated: 2026-05-04\n"
+            "total_preferences: 0\ncategories: []\npreferences: []\n"
+        )
+        rc, out = self._run_main(plugin_root)
+        self.assertEqual(rc, 1)
+        self.assertIn("BROKEN_REGISTRY_REFERENCE", out)
+        self.assertIn("skills/foo/references/missing.md", out)
+
+    def test_main_exits_nonzero_on_traversal_reference(self) -> None:
+        """`${CLAUDE_SKILL_DIR}/../<other>` must fail CLI with
+        TRAVERSAL_REFERENCE in stdout."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\n"
+            "See `${CLAUDE_SKILL_DIR}/../bar/references/x.md`.\n"
+        )
+        (plugin_root / "skills" / "bar").mkdir()
+        (plugin_root / "skills" / "bar" / "references").mkdir()
+        (plugin_root / "skills" / "bar" / "references" / "x.md").write_text(
+            "# X\n"
+        )
+        self._empty_registries(plugin_root)
+        rc, out = self._run_main(plugin_root)
+        self.assertEqual(rc, 1)
+        self.assertIn("TRAVERSAL_REFERENCE", out)
+        self.assertIn("../bar/references/x.md", out)
+
+    def test_main_exits_nonzero_on_plain_broken_reference(self) -> None:
+        """Missing prose-extracted reference path must fail CLI with
+        BROKEN_REFERENCE_PATH in stdout."""
+        plugin_root = _make_plugin(self.tmp_path)
+        (plugin_root / "skills" / "foo").mkdir()
+        (plugin_root / "skills" / "foo" / "SKILL.md").write_text(
+            "---\nname: foo\n---\n"
+            "See `${CLAUDE_SKILL_DIR}/references/missing.md`.\n"
+        )
+        self._empty_registries(plugin_root)
+        rc, out = self._run_main(plugin_root)
+        self.assertEqual(rc, 1)
+        self.assertIn("BROKEN_REFERENCE_PATH", out)
+        self.assertIn("skills/foo/references/missing.md", out)
+
     def test_non_md_reference_asset_consumed_by_skill_md(self) -> None:
         """A `.py` reference asset is reachable when SKILL.md mentions
         the path. Consumer reachability via prose must include the

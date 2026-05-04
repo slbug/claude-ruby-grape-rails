@@ -41,7 +41,13 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import yaml
+try:
+    import yaml
+except ModuleNotFoundError as exc:  # pragma: no cover - env-bootstrap branch
+    raise SystemExit(
+        "check_refs requires PyYAML. Install dev deps:\n"
+        "    python3 -m pip install -r requirements-dev.txt"
+    ) from exc
 
 from .frontmatter import parse_frontmatter
 
