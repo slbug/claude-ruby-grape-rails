@@ -80,16 +80,20 @@ This is more reliable than asking Claude to self-check because:
 
 ## Anti-Pattern: Unstructured Retry Loop
 
+Reject — repeated retries with the same approach burn the budget
+without addressing the root cause:
+
 ```
-# BAD: Same approach, hope for different result
 Attempt 1: bundle exec rspec → FAIL
 Attempt 2: tweak code → bundle exec rspec → FAIL (same error)
 Attempt 3: tweak more → bundle exec rspec → FAIL (same error)
-→ BLOCKER (wasted 3 attempts)
+→ BLOCKER (3 attempts wasted)
 ```
 
+Use the critic-refiner cycle instead — structured analysis between
+attempts:
+
 ```
-# GOOD: Critic-refiner with structured analysis
 Attempt 1: bundle exec rspec → FAIL
 Attempt 2: compare errors → same root cause → re-read source
            → different fix approach → bundle exec rspec → PASS

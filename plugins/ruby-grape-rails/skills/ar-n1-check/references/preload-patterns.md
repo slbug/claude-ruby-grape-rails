@@ -1,80 +1,61 @@
 # Preload Patterns
 
-Efficient strategies for loading associations in Active Record.
+Strategies for loading Active Record associations without N+1.
 
 ## Basic Preloading
 
-### Single Association
+### Single association
 
 ```ruby
-# In query - loads users and their posts in 2 queries
 User.includes(:posts)
-
-# Or using preload (same result)
 User.preload(:posts)
-
-# In controller
-@users = User.includes(:posts)
 ```
 
-### Nested Associations
+`includes` and `preload` both issue 2 queries. Use `includes` by
+default; it can switch to JOIN automatically when the association is
+referenced in `where`/`order`. Use `preload` when forcing the
+two-query path.
+
+### Nested associations
 
 ```ruby
-# Preload nested: user -> posts -> comments
 User.includes(posts: :comments)
-
-# Multiple levels
 User.includes(posts: [comments: :author])
-
-# Mix includes and joins when needed
 User.includes(:profile, posts: :comments)
 ```
 
-### Multiple Associations
+### Multiple associations at the same level
 
 ```ruby
-# Multiple associations at same level
 User.includes(:posts, :comments, :profile)
-
-# Mixed nesting
-User.includes(:profile, posts: :comments)
 ```
 
 ## Advanced Preloading
 
-### Custom Scope Preloads
+### Filter preloaded scope
 
 ```ruby
-# Preload only active posts
 User.includes(:posts).where(posts: { active: true })
-
-# Or with separate scope
-recent_posts = Post.where("created_at > ?", 1.week.ago)
-User.preload(posts: recent_posts)
 ```
 
-### Preload with Ordering
+Forces JOIN form when the `where` references the included table.
+
+### Order preloaded records
 
 ```ruby
-# Order preloaded associations
 class User < ApplicationRecord
   has_many :posts, -> { order(created_at: :desc) }
 end
 
-# Or inline
 User.includes(posts: -> { order(created_at: :desc) })
 ```
 
-### Preload with Limit
+### Preload with limit per parent
+
+`limit` inside an iterated `has_many` triggers N+1. Define a separate
+scoped association:
 
 ```ruby
-# Get only latest 5 posts per user - requires custom query
-User.find_each do |user|
-  # Bad: N+1 query
-  user.posts.limit(5)
-end
-
-# Good: Use a custom association with limit
 class User < ApplicationRecord
   has_many :recent_posts, -> { order(created_at: :desc).limit(5) }, class_name: "Post"
 end
@@ -84,89 +65,85 @@ User.includes(:recent_posts)
 
 ## Eager Loading with Joins
 
-### Filtering by Associations
+### Filter parents by association predicate
 
 ```ruby
-# Find users with published posts (efficient)
 User.joins(:posts).where(posts: { published: true }).distinct
 
-# Count with conditions
 User.left_joins(:posts)
-    .select("users.*, COUNT(posts.id) as posts_count")
+    .select("users.*, COUNT(posts.id) AS posts_count")
     .group("users.id")
 ```
 
-### Join Preload (eager_load)
+### `eager_load` (single LEFT OUTER JOIN)
 
 ```ruby
-# Single query with LEFT OUTER JOIN
-# Good for small datasets, filters on associations
 User.eager_load(:posts, :comments)
     .where(posts: { published: true })
-
-# Same as:
-User.includes(:posts, :comments).where(posts: { published: true })
 ```
 
-## Preloader API (Manual Control)
+Equivalent to `includes(...).where(...)` when `where` references the
+included table. Single SQL round-trip; row count multiplies by joined
+rows — fine for small parent sets, costly for wide associations.
+
+## Manual Preloader API
+
+For records already loaded into memory:
 
 ```ruby
-# Manual preloading for already-loaded records
 users = User.limit(10).to_a
 ActiveRecord::Associations::Preloader.new(
   records: users,
   associations: [:posts, :comments]
 ).call
-
-# Now posts and comments are loaded
-users.each do |user|
-  puts user.posts.map(&:title)  # No N+1
-end
 ```
 
 ## Anti-patterns
 
-### N+1 Without Preload
+### Iterate without preload (N+1)
+
+Reject:
 
 ```ruby
-# BAD: Query for each user's posts
 User.all.each do |user|
-  puts user.posts.count  # N+1 query
+  puts user.posts.count
 end
+```
 
-# GOOD: Preload first
+Fix:
+
+```ruby
 User.includes(:posts).each do |user|
   puts user.posts.count
 end
 ```
 
-### Preload Without Using
+### Preload an unused association
+
+Reject:
 
 ```ruby
-# BAD: Preload but don't use it
 users = User.includes(:posts)
-users.each do |user|
-  puts user.name  # Never uses posts
-end
-
-# GOOD: Only preload when needed
-users = User.all
-users.each do |user|
-  puts user.name
-end
+users.each { |user| puts user.name }
 ```
 
-### Preload in Loops
+Drop the include when the association is not read.
+
+### Preload inside a loop
+
+Reject:
 
 ```ruby
-# BAD: Preload inside loop (inefficient)
 organizations.each do |org|
   org.users.includes(:posts).each do |user|
     puts user.posts.map(&:title)
   end
 end
+```
 
-# GOOD: Preload at top level
+Fix at the top level:
+
+```ruby
 organizations.includes(users: :posts).each do |org|
   org.users.each do |user|
     puts user.posts.map(&:title)
@@ -174,15 +151,15 @@ organizations.includes(users: :posts).each do |org|
 end
 ```
 
-## Best Practices
+## Practices
 
-### Use Bullet Gem
+### Bullet gem (development)
 
 ```ruby
-# Gemfile
 gem 'bullet', group: :development
+```
 
-# config/environments/development.rb
+```ruby
 config.after_initialize do
   Bullet.enable = true
   Bullet.alert = true
@@ -193,20 +170,17 @@ config.after_initialize do
 end
 ```
 
-### Lazy Load in Production
+### Eager load in production
 
 ```ruby
-# config/environments/production.rb
 config.eager_load = true
 ```
 
-### Always Include in API Controllers
+### API controllers — preload before render
 
 ```ruby
-# app/controllers/api/posts_controller.rb
 def index
-  @posts = Post.includes(:author, :comments, :tags)
-                 .page(params[:page])
+  @posts = Post.includes(:author, :comments, :tags).page(params[:page])
   render json: @posts
 end
 ```

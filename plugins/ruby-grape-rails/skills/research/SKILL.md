@@ -314,4 +314,9 @@ Planning reuses fresh research conservatively:
   matches
 - stale files are background context only
 - files without parseable freshness metadata are background context only
-- current-code agents still need to inspect the live repo
+
+## References
+
+| Need | Reference |
+|---|---|
+| structured library evaluation template (RubyGems facts + maintenance + recommendation) | `${CLAUDE_SKILL_DIR}/references/library-evaluation.md` |

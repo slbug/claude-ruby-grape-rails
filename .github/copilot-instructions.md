@@ -1,14 +1,13 @@
 # Repository Context
 
-This repo is a **Claude Code plugin** for Ruby/Rails/Grape development —
-NOT a Ruby application. Do not suggest Ruby app patterns (controllers,
-models, routes) for plugin files.
+Claude Code plugin for Ruby/Rails/Grape development — NOT a Ruby
+application. Do NOT suggest Ruby app patterns (controllers, models,
+routes) for plugin files.
 
 ## Audience: Agents, Not Humans
 
-ALL prose in this repo (except `README.md`, `CHANGELOG.md`, executable
-code under `scripts/` / `lab/eval/`) loads into some agent's context at
-runtime:
+All prose in this repo (except `README.md`, `CHANGELOG.md`, executable
+code under `scripts/` / `lab/eval/`) loads into agent context at runtime:
 
 | Surface | Audience |
 |---|---|
@@ -82,11 +81,10 @@ Do NOT flag issues already caught by CI:
 
 ## Cross-File Consistency (Drift Check)
 
-A PR diff is necessary but NOT sufficient. Many defects in this repo
-surface as drift between modified and unmodified files. Inspect
-untouched files for stale references, missed regenerations, inconsistent
-state introduced by the diff. Flag drift even when the unmodified file
-is not part of the PR.
+PR diff alone is insufficient. Inspect unmodified files for stale
+references, missed regenerations, and state introduced inconsistently
+by the diff. Flag drift even when the unmodified file is not part of
+the PR.
 
 ### Required cross-file checks
 
@@ -183,7 +181,6 @@ is not part of the PR.
   schema in `SKILL_CONVENTIONS` + `ALLOWED_PATH_RE`),
   `plugins/ruby-grape-rails/skills/review/SKILL.md`,
   `skills/review/references/review-playbook.md`,
-  `skills/review/references/review-template.md`,
   `plugins/ruby-grape-rails/skills/plan/SKILL.md`,
   `skills/plan/references/planning-workflow.md`,
   `plugins/ruby-grape-rails/skills/brainstorm/SKILL.md`, `README.md`
@@ -197,13 +194,14 @@ is not part of the PR.
   datesuffix) for review consolidated artifacts → drift defect. Schema
   change without matching `bin/manifest-update` `SKILL_CONVENTIONS`
   update → silent contract break.
-- **`plugins/ruby-grape-rails/references/research/tool-batching.md`**
-  edited → verify links from `.claude/rules/agent-development.md` §
-  "Bash Discipline" and
-  `plugins/ruby-grape-rails/skills/review/references/review-playbook.md`
-  § "Diff strategy" still resolve. Tool-batching preference rule itself
-  lives in `references/preferences.yml`; rule edits trigger preferences
-  regeneration as above.
+- **`plugins/ruby-grape-rails/references/preferences/tool-batching.md`**
+  edited → verify link from `.claude/rules/agent-development.md` §
+  "Bash Discipline" still resolves. The path is also injected into
+  every subagent + main session via `inject-rules.sh` `See:` line
+  derived from `preferences.yml` `reference_files`. Tool-batching
+  preference rule itself lives in `references/preferences.yml`; rule
+  edits trigger preferences regeneration as above. Direct references
+  in shipped agent or skill bodies are forbidden — rely on injection.
 
 ### How to surface drift findings
 

@@ -68,5 +68,9 @@ Should I apply this fix?
 
 ## References
 
+- `references/canonical-registry.md` — Generated full registry from
+  `${CLAUDE_PLUGIN_ROOT}/references/iron-laws.yml`. Read when the user
+  asks for the complete law list, per-law rationale, or enforcement
+  tiers.
 - `references/violation-patterns.md` — Detailed detection patterns and grep commands
 - `references/fix-priority.md` — Critical vs warning violations and fix order

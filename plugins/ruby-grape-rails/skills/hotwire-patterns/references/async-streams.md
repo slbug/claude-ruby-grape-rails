@@ -316,17 +316,21 @@ end
 
 ## Anti-patterns
 
-### Loading Data on Every Request
+### Re-querying on every request
+
+Reject — issues full association load + render on each visit:
 
 ```ruby
-# BAD: No caching, slow queries
 class PostsController < ApplicationController
   def index
-    @posts = Post.all.includes(:comments, :author) # Slow every time
+    @posts = Post.all.includes(:comments, :author)
   end
 end
+```
 
-# GOOD: Use Russian Doll caching
+Use Russian-doll caching keyed on `updated_at`:
+
+```ruby
 class PostsController < ApplicationController
   def index
     @posts = Post.includes(:comments, :author).cache_tag_with(Post.maximum(:updated_at))
@@ -335,14 +339,14 @@ end
 ```
 
 ```erb
-<%# app/views/posts/index.html.erb %>
 <%= turbo_frame_tag "posts" do %>
   <% @posts.each do |post| %>
     <%= render partial: "post", locals: { post: post } %>
   <% end %>
 <% end %>
+```
 
-<%# app/views/posts/_post.html.erb %>
+```erb
 <% cache post do %>
   <article id="<%= dom_id(post) %>">
     <h2><%= post.title %></h2>
@@ -354,13 +358,18 @@ end
 <% end %>
 ```
 
-### Not Handling Loading States
+### Frame without a loading state
+
+Reject — empty frame content shows nothing while the inner request
+is in flight:
 
 ```erb
-<%# BAD: No feedback while loading %>
 <%= turbo_frame_tag "comments", src: post_comments_path(@post) %>
+```
 
-<%# GOOD: Show loading indicator %>
+Provide a placeholder body inside the frame:
+
+```erb
 <%= turbo_frame_tag "comments", src: post_comments_path(@post), loading: :lazy do %>
   <div class="loading">
     <%= spinner_icon %>
@@ -369,18 +378,23 @@ end
 <% end %>
 ```
 
-### Synchronous Heavy Operations
+### Synchronous heavy work in the request
+
+Reject — long blocking work in the controller:
 
 ```ruby
-# BAD: Blocks request
 class ReportsController < ApplicationController
   def create
-    @report = Report.generate(params) # Takes 30 seconds
+    @report = Report.generate(params)
     send_data @report.to_csv
   end
 end
+```
 
-# GOOD: Background job with Turbo Stream updates
+Move to a background job, redirect to a status view, broadcast
+progress over Turbo Streams:
+
+```ruby
 class ReportsController < ApplicationController
   def create
     @report = current_user.reports.create!(status: :pending)

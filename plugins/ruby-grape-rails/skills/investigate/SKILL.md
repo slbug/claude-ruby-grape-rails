@@ -48,4 +48,11 @@ If the agent's return text matches the pause signature in
 `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`, follow that protocol
 to resume the agent before treating the artifact as missing.
 
-See also: `${CLAUDE_SKILL_DIR}/references/discipline.md`
+## References
+
+| Need | Reference |
+|---|---|
+| investigation discipline (no guessing, structured tracks) | `${CLAUDE_SKILL_DIR}/references/discipline.md` |
+| investigation report template (Ralph Wiggum checklist + Root Cause + Fix) | `${CLAUDE_SKILL_DIR}/references/investigation-template.md` |
+| common error-pattern catalog | `${CLAUDE_SKILL_DIR}/references/error-patterns.md` |
+| quick debug commands + common-fix recipes (string vs atom keys, eager-load gaps, nil propagation) | `${CLAUDE_SKILL_DIR}/references/debug-commands.md` |

@@ -1,7 +1,7 @@
 # Iron Laws Canonical Registry
 
-**Version**: 1.1.0
-**Last Updated**: 2026-05-03
+**Version**: 1.2.0
+**Last Updated**: 2026-05-04
 **Total Laws**: 22
 
 <!-- This file is a generated projection of iron-laws.yml — DO NOT EDIT DIRECTLY -->

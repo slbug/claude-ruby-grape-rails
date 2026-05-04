@@ -74,7 +74,7 @@ YAML frontmatter schema for solution documentation files.
 
 ### iron_law_number
 
-- **Type**: integer (1-21)
+- **Type**: integer (1-22)
 - **Description**: Which Iron Law was violated (if applicable)
 
 ### related_solutions

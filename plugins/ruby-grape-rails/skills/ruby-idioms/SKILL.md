@@ -261,8 +261,14 @@ end
 
 ## References
 
-- `references/pattern-matching.md` — Advanced pattern matching patterns
-- `references/data-transformations.md` — Functional pipelines and transformations
-- `references/enumerable-patterns.md` — Lazy enumeration and batching
-- `references/testing-patterns.md` — RSpec patterns with modern Ruby
-- `references/ruby-4-migration.md` — Ruby 4.0 upgrade guide
+| Need | Reference |
+|---|---|
+| advanced pattern matching | `${CLAUDE_SKILL_DIR}/references/pattern-matching.md` |
+| functional pipelines + `.then`/`it` chaining | `${CLAUDE_SKILL_DIR}/references/data-transformations.md` |
+| lazy enumeration + batching | `${CLAUDE_SKILL_DIR}/references/enumerable-patterns.md` |
+| RSpec patterns with modern Ruby | `${CLAUDE_SKILL_DIR}/references/testing-patterns.md` |
+| Ruby 4.0 upgrade path | `${CLAUDE_SKILL_DIR}/references/ruby-4-migration.md` |
+| fluent interfaces, Result objects, dry-monads, error handling | `${CLAUDE_SKILL_DIR}/references/method-chaining.md` |
+| Rake task + Thor patterns | `${CLAUDE_SKILL_DIR}/references/rake-tasks.md` |
+| Ruby 3.4+ language features (`it`, endless methods, Data classes, Ractor, YJIT, ZJIT) | `${CLAUDE_SKILL_DIR}/references/ruby-34-features.md` |
+| anti-patterns / troubleshooting | `${CLAUDE_SKILL_DIR}/references/anti-patterns.md`, `${CLAUDE_SKILL_DIR}/references/troubleshooting.md` |

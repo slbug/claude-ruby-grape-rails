@@ -7,6 +7,81 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.6] - 2026-05-04
+
+### Added
+
+- Injector emits `See:` line per Iron Law / preference with
+  `reference_files`. 18 paths injected via `SessionStart` +
+  `SubagentStart`.
+- Turn-budget rule on `rails-architect.md` (30) + `ruby-runtime-advisor.md` (26).
+- `Turn Budget Semantics` section in `.claude/rules/agent-development.md`.
+- `lab/eval/tests/test_runtime_scripts.py`
+  `test_plugin_root_expands_when_env_set` regression guard for the
+  injector expansion fix.
+- `lab/eval/tests/test_check_refs.py` orphan-chain, reachable-chain,
+  fenced-reference, traversal, plain-broken (var + bare paths),
+  non-md asset (orphan + consumed), and main-exit-code tests.
+
+### Changed
+
+- `references/research/` → `references/preferences/` (companion docs,
+  not research output).
+- Reviewer-agent header `## CRITICAL: Save Findings File First` →
+  `## Findings File Is Primary Output` across 12 agents.
+- `iron-laws.yml` 1.1.0 → 1.2.0; `reference_files` entries audited
+  for on-disk existence (12 wired, others removed).
+- `preferences.yml` 1.2.0 → 1.3.0; `reference_files` paths
+  plugin-root-relative.
+- Review severity vocabulary aligned. Worker prompts keep
+  `Critical | Warning | Info`; consolidated playbook uses
+  `BLOCKER | WARNING | SUGGESTION` plus verdict-only
+  `REQUIRES CHANGES`. Mapping table added to `review-playbook.md`;
+  `review/SKILL.md` `After Review` replaced with
+  `PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED`.
+- Re-prose pass on plugin reference docs per agent-vs-human rules:
+  stripped narrative `# BAD/# GOOD/# Use this when` from code
+  blocks; converted `## Why X` preambles to imperative tables.
+  Touched `rb-trace`, `ar-n1-check`, `ruby-idioms`, `rails-idioms`,
+  `active-record-constraint-debug`, `audit`, `hotwire-patterns`,
+  `security`, `work`, `references/preferences`, `references/compression`.
+
+### Fixed
+
+- `inject-rules.sh` now expands `${CLAUDE_PLUGIN_ROOT}` in the hook
+  payload before returning JSON. CC does not re-substitute hook
+  return strings, so `See:` lines previously reached the LLM as
+  literal placeholders. Generator emits a guarded expansion
+  (`if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]]`) so off-CC runs preserve
+  the literal token.
+- `lab/eval/check_refs.py` substantially extended: validates
+  `iron-laws.yml` + `preferences.yml` `reference_files` paths exist;
+  detects orphan reference assets across plugin AND contributor
+  (`.claude/skills/**/references/`) scopes; covers non-md assets
+  (`.py`, `.rb`, `.sh`, `.yml`, `.yaml`, `.json`); validates plain
+  prose reference paths; rejects `..` traversal; transitive closure
+  seeded from non-reference entry points so orphan chains flag both
+  ends; fence-aware extraction so code examples do not shield real
+  orphans. Failure-by-default — orphans, plain-broken, traversal,
+  registry-broken, and broken slash/skill/agent refs all fail CI.
+- Cross-skill traversal patterns fixed: `work/SKILL.md` `${CLAUDE_SKILL_DIR}/../plan/...`
+  → `${CLAUDE_PLUGIN_ROOT}/skills/plan/...`;
+  `compound/references/compound-workflow.md` malformed
+  `compound-docs/references/...` → `${CLAUDE_PLUGIN_ROOT}/skills/...`
+  form; contributor `session-trends/SKILL.md` traversal switched to
+  repo-relative path; `cc-changelog/references/analysis-rules.md`
+  stale plugin path fully qualified.
+- Contributor `## References` indexes added to `session-trends`
+  and `skill-monitor` SKILL.md (previously-orphan companion docs).
+- Iron Law count drift `1-21` → `1-22` (schema, compound, fix-priority).
+- `skills/iron-laws/SKILL.md` links `canonical-registry.md` (was orphan).
+- Merged `review/references/{blocker-handling,review-template}.md` →
+  `review-playbook.md` (single source of truth).
+- 22 SKILL.md files gained a `## References` section indexing 46
+  previously-orphan reference docs.
+- Iron Law 14 wired to `security/references/input-validation.md`;
+  Iron Law 19 wired to `hotwire-patterns/references/channels-presence.md`.
+
 ## [1.16.5] - 2026-05-03
 
 ### Added
@@ -2412,7 +2487,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.5...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.6...HEAD
+[1.16.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.5...v1.16.6
 [1.16.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.4...v1.16.5
 [1.16.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.3...v1.16.4
 [1.16.3]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.2...v1.16.3

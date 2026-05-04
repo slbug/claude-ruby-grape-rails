@@ -32,19 +32,22 @@ end
 class SessionController < ApplicationController
   def create
     user = User.find_by(email: params[:email])
-    
+
     if user&.authenticate(params[:password])
-      # Timing-safe authentication (bcrypt handles this)
       session[:user_id] = user.id
       redirect_to root_path, notice: 'Signed in successfully'
     else
-      # Don't reveal if user exists
       flash.now[:alert] = 'Invalid email or password'
       render :new
     end
   end
 end
 ```
+
+`bcrypt` (via `has_secure_password`) provides timing-safe comparison.
+The failure flash deliberately avoids distinguishing "no such user"
+from "wrong password" — never let the response reveal whether an
+account exists.
 
 ## Session Configuration
 

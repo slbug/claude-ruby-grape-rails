@@ -27,18 +27,24 @@ end
 
 **Root cause**: `accepts_nested_attributes_for` builds separate INSERT for each parent's children. If two parents reference the same child (e.g., same URL), the second INSERT violates the unique constraint.
 
-**Fix**: Deduplicate before building associations
+**Fix**: Deduplicate before building associations.
+
+Reject the per-contact loop — each call rebuilds child rows that
+collide on the unique URL constraint:
 
 ```ruby
-# BAD: Each contact gets its own link records
 contacts.each do |contact|
   contact.update(links: extract_links(contact.text))
 end
+```
 
-# GOOD: Deduplicate links first, then associate
+Deduplicate links first, batch-insert with conflict skip, then
+associate:
+
+```ruby
 all_links = contacts.flat_map { |c| extract_links(c.text) }.uniq { |l| l.url }
-link_ids = Link.insert_all(all_links, on_conflict: :nothing, returning: :id).rows.flatten
-link_map = Link.where(id: link_ids).index_by(&:url)
+link_ids  = Link.insert_all(all_links, on_conflict: :nothing, returning: :id).rows.flatten
+link_map  = Link.where(id: link_ids).index_by(&:url)
 
 contacts.each do |contact|
   contact_link_ids = extract_links(contact.text).map { |l| link_map[l.url]&.id }.compact
@@ -50,17 +56,18 @@ end
 
 **Symptom**: `insert_all` fails when input data has duplicate values for a unique column.
 
-**Fix**: Deduplicate input or use `on_conflict: :nothing`
+**Fix**: Deduplicate input or push the conflict resolution to the DB.
+
+Pre-dedup in Ruby:
 
 ```ruby
-# Deduplicate input
 unique_records = records.uniq { |r| r[:email] }
+```
 
-# Or handle at DB level
-User.insert_all(records,
-  on_conflict: :nothing,
-  unique_by: :email
-)
+Or skip conflicts at insert time:
+
+```ruby
+User.insert_all(records, on_conflict: :nothing, unique_by: :email)
 ```
 
 ## Foreign Key Violations
@@ -88,14 +95,20 @@ end
 
 **Symptom**: Deleting a parent silently deletes children (or fails if no cascade).
 
-**Check migration**: Look for `on_delete` option
+**Check migration**: confirm `on_delete` semantics.
+
+| `on_delete:` | DB action |
+|---|---|
+| `:cascade` | Delete children with parent |
+| `:restrict` | Block parent delete while children exist |
+| `:nullify` | Set child FK to NULL |
+| `:nothing` | Defer to DB default |
 
 ```ruby
-# In migration
-add_reference :children, :parent, foreign_key: { on_delete: :cascade }   # CASCADE
-add_reference :children, :parent, foreign_key: { on_delete: :restrict }    # BLOCK
-add_reference :children, :parent, foreign_key: { on_delete: :nullify }   # SET NULL
-add_reference :children, :parent, foreign_key: { on_delete: :nothing }    # DB DEFAULT
+add_reference :children, :parent, foreign_key: { on_delete: :cascade }
+add_reference :children, :parent, foreign_key: { on_delete: :restrict }
+add_reference :children, :parent, foreign_key: { on_delete: :nullify }
+add_reference :children, :parent, foreign_key: { on_delete: :nothing }
 ```
 
 ## Check Constraint Violations
@@ -106,13 +119,19 @@ add_reference :children, :parent, foreign_key: { on_delete: :nothing }    # DB D
 
 **Root cause**: Value not in the allowed list defined in migration.
 
-**Debug**: Compare model enum values with migration constraint
+**Debug**: confirm model enum values match the migration check
+constraint exactly. The two declarations are independent — drift
+between them is the usual root cause.
+
+Model:
 
 ```ruby
-# Model
 enum status: { draft: 'draft', active: 'active', archived: 'archived' }
+```
 
-# Migration must match
+Migration:
+
+```ruby
 add_check_constraint :items, "status IN ('draft', 'active', 'archived')", name: 'status_must_be_valid'
 ```
 
@@ -128,13 +147,12 @@ grep -r "add_check_constraint\|add_index.*unique" db/migrate/
 
 ## Debugging Techniques
 
-### Inspect the Validation Error
+### Inspect the validation error
 
 ```ruby
 begin
   Entity.create!(**attrs)
 rescue ActiveRecord::RecordNotUnique => e
-  # Handle duplicate gracefully
   logger.info "Entity already exists: #{e.message}"
   :already_exists
 rescue ActiveRecord::RecordInvalid => e
@@ -143,10 +161,9 @@ rescue ActiveRecord::RecordInvalid => e
 end
 ```
 
-### Check for Existing Data
+### Find the colliding row
 
 ```ruby
-# Find what's violating the unique constraint
 Entity.where(unique_field: value).to_a
 ```
 
@@ -159,39 +176,39 @@ mcp__tidewave__project_eval "Entity.where(field: value).to_a"
 
 ## Prevention Patterns
 
-```ruby
-# Always Handle Constraint Errors
+### Always handle constraint errors at the boundary
 
+```ruby
 def create_entity(attrs)
-  begin
-    Entity.create!(attrs)
-  rescue ActiveRecord::RecordNotUnique
-    # Handle duplicate gracefully
-    :already_exists
-  rescue ActiveRecord::RecordInvalid => e
-    # Handle validation errors
-    { error: e.record.errors.full_messages }
-  end
+  Entity.create!(attrs)
+rescue ActiveRecord::RecordNotUnique
+  :already_exists
+rescue ActiveRecord::RecordInvalid => e
+  { error: e.record.errors.full_messages }
 end
 ```
 
-### Use Upserts for Idempotency
+### Upsert for idempotency
 
 ```ruby
 def upsert_entity(attrs)
-  Entity.upsert(attrs, 
-    on_conflict: :update, 
+  Entity.upsert(
+    attrs,
+    on_conflict: :update,
     conflict_target: :external_id,
     returning: true
   )
 end
 ```
 
-### Add Both Validation AND Constraint
+### Layer model validation with DB constraint
+
+Validation gives fast feedback; the DB constraint guarantees the
+invariant under concurrent writes.
 
 ```ruby
 class Entity < ApplicationRecord
   validates :email, presence: true
-  validates :email, uniqueness: true  # Quick feedback
+  validates :email, uniqueness: true
 end
 ```

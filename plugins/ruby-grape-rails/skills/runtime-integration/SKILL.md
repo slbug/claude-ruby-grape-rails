@@ -261,6 +261,9 @@ Without Tidewave, use:
 
 ## References
 
-- [Tidewave Rails README](https://github.com/tidewave-ai/tidewave_rails)
-- [Proactive Patterns](references/proactive-patterns.md)
-- [Validation Checklist](references/validation-checklist.md)
+| Need | Reference |
+|---|---|
+| Tidewave gem | <https://github.com/tidewave-ai/tidewave_rails> |
+| proactive patterns for `/rb:investigate`, `/rb:plan`, `/rb:work` integration | `${CLAUDE_SKILL_DIR}/references/proactive-patterns.md` |
+| Tidewave-required validation checklist | `${CLAUDE_SKILL_DIR}/references/validation-checklist.md` |
+| MCP tool catalog (`project_eval`, `execute_sql_query`, `get_docs`, `get_logs`, `get_models`, `get_source_location`) | `${CLAUDE_SKILL_DIR}/references/tool-examples.md` |

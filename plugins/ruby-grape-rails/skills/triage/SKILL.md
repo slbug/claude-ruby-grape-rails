@@ -485,6 +485,12 @@ potential_root_cause: "Missing includes pattern across controllers"
 | `export` | Export triage to issue tracker |
 | `skip all` | Exclude all findings |
 
+## References
+
+| Need | Reference |
+|---|---|
+| auto-approve / usually-fix / often-skip rules + severity reclassification | `${CLAUDE_SKILL_DIR}/references/triage-patterns.md` |
+
 ## Trust States
 
 When triaging a review with a provenance sidecar, read the sidecar's

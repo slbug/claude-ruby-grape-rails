@@ -127,19 +127,24 @@ app/
 
 ### Service Object Pattern Assessment
 
+Single responsibility — each service owns one domain noun:
+
 ```ruby
-# GOOD: Single responsibility
 class UserService
   def self.create(attrs)
     User.create!(attrs)
   end
-  
+
   def self.find(id)
     User.find(id)
   end
 end
+```
 
-# BAD: Too many responsibilities
+Reject god-services that absorb unrelated responsibilities (auth,
+import/export, reporting):
+
+```ruby
 class UserManager
   def create_user(attrs); end
   def reset_password(user); end
@@ -151,19 +156,19 @@ end
 
 ### Grape API Organization
 
+One resource per file. Mount versioned resource classes from a base
+API:
+
 ```ruby
-# app/api/base.rb
 class API < Grape::API
   mount V1::Users
   mount V1::Orders
 end
 
-# Healthy: Each resource has its own file
-# app/api/v1/users.rb
 module V1
   class Users < Grape::API
     resource :users do
-      get { User.all }
+      get  { User.all }
       post { User.create!(declared_params) }
     end
   end
@@ -172,17 +177,15 @@ end
 
 ## Modern Ruby 3.4+ Patterns (2026)
 
-### Using Data Classes for Value Objects
+### Data classes for value objects (Ruby 3.2+)
 
 ```ruby
-# app/value_objects/coordinate.rb
 Coordinate = Data.define(:latitude, :longitude) do
   def to_s
     "#{latitude},#{longitude}"
   end
 end
 
-# Usage
 coord = Coordinate.new(40.7128, -74.0060)
 coord.latitude  # => 40.7128
 ```
@@ -204,20 +207,18 @@ def handle_result(result)
 end
 ```
 
-### Using `it` for Simple Blocks
+### `it` keyword for short blocks (Ruby 3.4+)
 
 ```ruby
-# Ruby 3.4+
 users.map { it.name }
 posts.filter_map { it.title if it.published? }
 ```
 
 ## Tooling for Architecture Analysis
 
-### Using RuboCop with Custom Cops
+### RuboCop with custom architectural cops
 
 ```yaml
-# .rubocop.yml
 require:
   - rubocop-rails
   - rubocop-performance
@@ -226,12 +227,14 @@ require:
 AllCops:
   NewCops: enable
 
-# Custom: Prevent direct model calls in controllers
 Custom/NoDirectDbInController:
   Enabled: true
   Include:
     - app/controllers/**/*.rb
 ```
+
+`Custom/NoDirectDbInController` rejects direct model calls inside the
+controller layer.
 
 ### Using Pronto for CI
 
@@ -243,34 +246,37 @@ Custom/NoDirectDbInController:
     bundle exec rake architecture:check
 ```
 
-### Using Ruby-Next for Compatibility
+### Ruby-Next for back-port runtime support
 
 ```ruby
-# Gemfile
 gem 'ruby-next', require: false
+```
 
-# Enable Ruby 3.4 features on older versions
+```ruby
 require 'ruby-next/language/runtime'
 ```
 
+Enables Ruby 3.4 syntax on older runtimes; out of scope for this
+plugin's own code (3.4+ floor) but acceptable in projects pinned to
+older Ruby.
+
 ## Metrics Calculation
 
-### Calculate Service Complexity
+### Service complexity rake task
 
 ```ruby
-# lib/tasks/architecture.rake
 namespace :architecture do
   desc "Calculate service complexity metrics"
   task analyze: :environment do
     Dir["app/services/*.rb"].each do |file|
       content = File.read(file)
       methods = content.scan(/^  def [a-z]/).count
-      lines = content.lines.count
-      
+      lines   = content.lines.count
+
       puts "#{File.basename(file)}:"
       puts "  Public methods: #{methods}"
-      puts "  Total lines: #{lines}"
-      puts "  Ratio: #{(lines.to_f / methods).round(2)} lines/method"
+      puts "  Total lines:    #{lines}"
+      puts "  Ratio:          #{(lines.to_f / methods).round(2)} lines/method"
       puts
     end
   end

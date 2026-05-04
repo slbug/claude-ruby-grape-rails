@@ -56,7 +56,7 @@ Solution documents use YAML frontmatter defined in `${CLAUDE_PLUGIN_ROOT}/skills
 ### Optional Fields
 
 - `ruby_version` / `rails_version`: Specific version pattern X.Y.Z
-- `iron_law_number`: Integer (1-21) indicating which Iron Law was violated
+- `iron_law_number`: Integer (1-22) indicating which Iron Law was violated
 - `related_solutions`: Array of file paths to related solutions
 
 ## Example Compound Document

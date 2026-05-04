@@ -28,9 +28,11 @@ Imperative-only. Tables for command/option lists.
 
 ## Validation
 
+- `python3 -m pip install -r requirements-dev.txt` — run once per local environment before any `python3 -m lab.eval...` invocation. CI re-installs on every lint and eval job.
 - `npm run validate` — plugin structure and manifest
 - `python3 scripts/check-release-metadata.py` — version alignment + changelog integrity
-- Both should pass before committing
+- `npm run check:refs` — cross-reference, registry, orphan, traversal, and broken-path gates (failure-by-default)
+- All three should pass before committing
 
 ## Adding a New Agent
 

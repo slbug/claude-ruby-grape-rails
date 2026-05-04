@@ -62,7 +62,7 @@ Imperative-only. Map CC changelog entries to specific plugin components.
 | Tool deprecation | Agent tool references, skill instructions |
 | `SendMessage` / `TaskCreate` / etc. | Skill bodies using these tools |
 | Atomic file write / `rename(2)` semantics | `plugins/ruby-grape-rails/bin/manifest-update` (atomic write helper, `SKILL_CONVENTIONS`, `ALLOWED_PATH_RE`) |
-| Subagent Write to existing file | `plugins/ruby-grape-rails/bin/manifest-update`, `references/run-manifest.md` (per-run unique path strategy) |
+| Subagent Write to existing file | `plugins/ruby-grape-rails/bin/manifest-update`, `plugins/ruby-grape-rails/references/run-manifest.md` (per-run unique path strategy) |
 
 ### Compaction and Memory
 

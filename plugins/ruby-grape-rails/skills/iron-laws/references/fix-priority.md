@@ -4,7 +4,7 @@
 
 1. **Critical** (Laws 1, 2, 4, 6, 7, 10, 11, 12, 13, 14, 15): Security, data integrity, correctness — Fix immediately
 2. **Warnings** (Laws 3, 5, 8, 9, 16, 17, 18, 19, 20): Performance, maintainability — Fix before merge
-3. **Verification** (Law 21): Testing discipline — Required for completion
+3. **Verification & Discipline** (Laws 21, 22): Testing + surgical-change discipline — Required for completion
 
 ## Critical Laws
 
@@ -22,7 +22,7 @@
 
 ## Additional Heuristics
 
-Beyond the 21 laws, also watch for:
+Beyond the 22 laws, also watch for:
 
 - **Index foreign keys** — Performance (not a Law)
 - **No secrets in logs** — Filter sensitive params

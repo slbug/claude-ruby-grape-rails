@@ -388,8 +388,15 @@ def generate_injector_script(yaml, prefs)
 
   body += "\n"
 
+  see_line = ->(refs) {
+    return '' unless refs.is_a?(Array) && !refs.empty?
+
+    "  See: #{refs.map { |r| "`${CLAUDE_PLUGIN_ROOT}/#{r}`" }.join(', ')}\n"
+  }
+
   yaml['laws'].each do |law|
     body += "#{law['subagent_text']}\n"
+    body += see_line.call(law['reference_files'])
   end
 
   has_prefs = prefs && prefs['preferences'].is_a?(Array) && !prefs['preferences'].empty?
@@ -398,6 +405,7 @@ def generate_injector_script(yaml, prefs)
     body += "\nAdvisory Preferences — #{total_prefs} Total:\n"
     prefs['preferences'].each do |pref|
       body += "#{pref['subagent_text']}\n"
+      body += see_line.call(pref['reference_files'])
     end
   end
 
@@ -450,6 +458,17 @@ def generate_injector_script(yaml, prefs)
   print body
   puts body_marker
   puts ')'
+  puts ''
+  puts '# Hook output (additionalContext) is plain runtime text returned to'
+  puts '# Claude — CC does NOT re-substitute plugin variables in returned'
+  puts '# strings. Expand ${CLAUDE_PLUGIN_ROOT} in BODY here so See: paths'
+  puts '# reach the LLM as absolute filesystem paths. Skip expansion when'
+  puts '# the env var is unset/empty (off-CC runs, CI fixtures) so the'
+  puts '# literal placeholder survives instead of producing root-anchored'
+  puts '# garbage like /references/foo.md.'
+  puts 'if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]]; then'
+  puts '  BODY="${BODY//\$\{CLAUDE_PLUGIN_ROOT\}/$CLAUDE_PLUGIN_ROOT}"'
+  puts 'fi'
   puts ''
   puts 'jq -nc --arg ev "$EVENT" --arg ctx "$BODY" \\'
   puts '  \'{hookSpecificOutput:{hookEventName:$ev,additionalContext:$ctx}}\''

@@ -13,3 +13,10 @@ Review five areas:
 - data integrity and query quality
 - test depth and flake risk
 - deploy/runtime readiness
+
+## References
+
+| Need | Reference |
+|---|---|
+| service-object health matrix, fan-in/out scoring, boundary violation checks | `${CLAUDE_SKILL_DIR}/references/architecture-checks.md` |
+| A-F grade scoring per category + weighted overall score | `${CLAUDE_SKILL_DIR}/references/scoring-methodology.md` |

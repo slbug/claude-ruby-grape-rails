@@ -20,3 +20,9 @@ Check:
 - whether application validation matches database truth
 - whether the failing write should be wrapped in a transaction or lock
 - whether stale data or a bad migration introduced the mismatch
+
+## References
+
+| Need | Reference |
+|---|---|
+| race-condition upserts, FK violations, check-constraint debugging recipes | `${CLAUDE_SKILL_DIR}/references/constraint-patterns.md` |

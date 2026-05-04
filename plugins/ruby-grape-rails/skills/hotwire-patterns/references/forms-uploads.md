@@ -484,43 +484,51 @@ end
 
 ## Anti-patterns
 
-### Not Using Direct Uploads
+### Synchronous upload via standard form
+
+Reject — request thread blocks on upload bytes; large files time out.
 
 ```ruby
-# BAD: Blocks request, large files cause timeouts
 def create
-  @user = User.create!(user_params) # Upload happens synchronously
+  @user = User.create!(user_params)
   redirect_to @user
 end
-
-# GOOD: Direct upload, then attach
-# File uploads to storage directly from browser
-# Only signed_id is sent to Rails
 ```
 
-### Storing in Database
+Use `direct_upload: true` so the browser uploads directly to storage
+and Rails receives only the `signed_id`.
+
+### Base64 column in database
+
+Reject — bloats the DB row, blocks ActiveRecord ops, no CDN path.
 
 ```ruby
-# BAD: Base64 in database column
 class User < ApplicationRecord
-  # Don't do this
+  # avatar_base64: text column
 end
+```
 
-# GOOD: Use Active Storage
+Use Active Storage instead:
+
+```ruby
 class User < ApplicationRecord
   has_one_attached :avatar
 end
 ```
 
-### Not Validating File Types
+### Unvalidated `has_one_attached`
+
+Reject — accepts any MIME type and any size.
 
 ```ruby
-# BAD: Accept any file
 has_one_attached :document
+```
 
-# GOOD: Validate file type
+Require type + size constraints:
+
+```ruby
 has_one_attached :document
-validates :document, content_type: { 
+validates :document, content_type: {
   in: ['application/pdf', 'application/msword'],
   message: 'must be a PDF or Word document'
 }

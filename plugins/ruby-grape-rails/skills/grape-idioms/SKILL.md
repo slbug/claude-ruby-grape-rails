@@ -25,3 +25,10 @@ paths:
 - `rescue_from` for predictable API errors
 - presenters/entities only when they clarify response shape
 - request specs for transport behavior
+
+## References
+
+| Need | Reference |
+|---|---|
+| declared params, versioning, entities, mounted-API patterns, error envelopes, JWT/OAuth auth, Rails integration | `${CLAUDE_SKILL_DIR}/references/grape-patterns.md` |
+| JSON API patterns (Rails-side overlap) | `${CLAUDE_PLUGIN_ROOT}/skills/rails-contexts/references/json-api-patterns.md` |

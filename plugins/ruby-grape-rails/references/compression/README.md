@@ -83,7 +83,7 @@ reported elided byte count reflects the actual head/tail surviving
 sizes, so per-line accounting stays truthful when scrub trims a
 partial codepoint at the boundary.
 
-## Why no replacement (yet)
+## No replacement path on Bash today
 
 The original design called for an opt-in mode that would replace the
 Bash tool stdout with a compressed form. That mechanism does not exist
@@ -110,9 +110,10 @@ layer-add, or pre-compaction) is deferred until telemetry quantifies
 which workloads actually benefit. The contributor reader is the
 operator surface for that decision.
 
-## Why collect anyway
+## Collection rationale
 
-Two recent reference points for terminal-output compression:
+Two reference points for terminal-output compression motivate the
+telemetry investment ahead of the replacement path:
 
 - TACO (Ren et al., *A Self-Evolving Framework for Efficient Terminal
   Agents via Observational Context Compression*, arxiv:2604.19572)
@@ -200,10 +201,11 @@ payloads pass through unchanged.
 ## Fixture-eval gate
 
 `make eval-compression` runs the fixture set. Success threshold:
-≥ 40% mean **bytes** reduction (note: bytes, not tokens — this is the
-upper-bound potential, not delivered savings; see "Why no replacement"
-above for why delivered savings are deferred), zero preservation
-violations, ≤ 15% diff against expected output.
+≥ 40% mean **bytes** reduction (bytes, not tokens — this is the
+upper-bound potential, not delivered savings; the "No replacement
+path on Bash today" section explains why delivered savings are
+deferred), zero preservation violations, ≤ 15% diff against expected
+output.
 
 ## Telemetry reader
 

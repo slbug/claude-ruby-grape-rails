@@ -27,7 +27,9 @@ Keep these surfaces separate.
 
 ## Review Artifact Expectations
 
-- consolidated review contract from [`plugins/ruby-grape-rails/skills/review/references/review-template.md`](../../../../plugins/ruby-grape-rails/skills/review/references/review-template.md)
+- consolidated review contract from
+  [`plugins/ruby-grape-rails/skills/review/references/review-playbook.md`](../../../../plugins/ruby-grape-rails/skills/review/references/review-playbook.md)
+  § "Consolidated Review Format"
 - verdict line
 - findings cite `file:line`
 - review artifacts stay findings-only

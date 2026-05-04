@@ -426,6 +426,8 @@ RSpec.describe 'Async operations' do
 end
 ```
 
-## Rails Integration & Performance
+## References
 
-See: [references/rails-integration.md](references/rails-integration.md) — Rails controller patterns, background processing, performance comparison, and migration guide
+| Need | Reference |
+|---|---|
+| Rails controller patterns + background processing + perf comparison + migration guide | `${CLAUDE_SKILL_DIR}/references/rails-integration.md` |

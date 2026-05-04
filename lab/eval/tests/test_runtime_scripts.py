@@ -4846,14 +4846,26 @@ class BlockDangerousOpsPermissionDeniedTests(unittest.TestCase):
             self.assertFalse((real_dir / "denied-commands.jsonl").exists())
 
 
+_TEST_PLUGIN_ROOT = "/test/plugin/root"
+
+
 class InjectRulesTests(unittest.TestCase):
     """`inject-rules.sh` is wired in `hooks.json` under both `SessionStart`
     (main session) and `SubagentStart` (per-subagent). Reads
     `hook_event_name` from input and echoes it back in
     `hookSpecificOutput.hookEventName`, so one body works for both events
-    without duplicate scripts or de-dup guards."""
+    without duplicate scripts or de-dup guards.
+
+    All tests inject `CLAUDE_PLUGIN_ROOT` because CC always exports it
+    to hook processes per plugin docs (`plugins-reference.md`
+    "Environment variables"). The injector must expand the placeholder
+    inside the script — hook return strings are NOT re-substituted by
+    CC after the script exits — so `See:` lines reach the LLM as
+    absolute filesystem paths."""
 
     def _run(self, payload: str) -> subprocess.CompletedProcess[str]:
+        env = dict(os.environ)
+        env["CLAUDE_PLUGIN_ROOT"] = _TEST_PLUGIN_ROOT
         return subprocess.run(
             ["bash", str(INJECT_RULES)],
             input=payload,
@@ -4861,7 +4873,7 @@ class InjectRulesTests(unittest.TestCase):
             text=True,
             cwd=REPO_ROOT,
             check=False,
-            env=dict(os.environ),
+            env=env,
         )
 
     def _assert_payload(self, stdout: str, expected_event: str) -> None:
@@ -4884,6 +4896,27 @@ class InjectRulesTests(unittest.TestCase):
         self.assertIn("positive success targets", ctx)
         self.assertIn("`ugrep`", ctx)
         self.assertIn("Bash command bodies execute, not narrate", ctx)
+        # Literal placeholders MUST NOT survive into the LLM-bound payload —
+        # CC does not re-substitute hook return strings.
+        self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", ctx)
+        # Pin reference_files See: lines as expanded absolute paths
+        self.assertIn(
+            f"See: `{_TEST_PLUGIN_ROOT}/references/preferences/context7-usage.md`",
+            ctx,
+        )
+        self.assertIn(
+            f"See: `{_TEST_PLUGIN_ROOT}/references/preferences/epistemic-posture.md`",
+            ctx,
+        )
+        self.assertIn(
+            f"See: `{_TEST_PLUGIN_ROOT}/references/preferences/tool-batching.md`",
+            ctx,
+        )
+        # Spot-check Iron Law See: line expansion
+        self.assertIn(
+            f"See: `{_TEST_PLUGIN_ROOT}/skills/ar-n1-check/references/preload-patterns.md`",
+            ctx,
+        )
 
     def test_subagent_start_event_emits_matching_payload(self) -> None:
         result = self._run(
@@ -4912,6 +4945,36 @@ class InjectRulesTests(unittest.TestCase):
         sub_ctx = json.loads(sub.stdout)["hookSpecificOutput"]["additionalContext"]
         main_ctx = json.loads(main.stdout)["hookSpecificOutput"]["additionalContext"]
         self.assertEqual(sub_ctx, main_ctx)
+
+    def test_plugin_root_expands_when_env_set(self) -> None:
+        """When `CLAUDE_PLUGIN_ROOT` is exported (real CC runtime), the
+        injector expands the placeholder in `See:` lines so paths reach
+        the LLM as absolute filesystem paths. CC does NOT re-substitute
+        plugin variables in hook return strings — expansion must happen
+        inside the script before the JSON is emitted. Regression guard
+        for the off-by-default BLOCKER fix."""
+        env = dict(os.environ)
+        env["CLAUDE_PLUGIN_ROOT"] = "/expanded/plugin/root"
+        result = subprocess.run(
+            ["bash", str(INJECT_RULES)],
+            input=json.dumps({"hook_event_name": "SubagentStart"}),
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+            env=env,
+        )
+        self.assertEqual(result.returncode, 0)
+        ctx = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+        self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", ctx)
+        self.assertIn(
+            "See: `/expanded/plugin/root/references/preferences/context7-usage.md`",
+            ctx,
+        )
+        self.assertIn(
+            "See: `/expanded/plugin/root/skills/ar-n1-check/references/preload-patterns.md`",
+            ctx,
+        )
 
     def test_missing_event_name_silent_exits(self) -> None:
         result = self._run(json.dumps({}))

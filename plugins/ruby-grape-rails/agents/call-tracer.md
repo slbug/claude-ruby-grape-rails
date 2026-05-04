@@ -18,6 +18,4 @@ Start from the provided entry point and build a concrete chain through:
 - models/queries
 - jobs, cache writes, and broadcasts
 
-Output a short step-by-step trace with file paths. See
-`${CLAUDE_PLUGIN_ROOT}/references/research/tool-batching.md` for
-search examples if needed.
+Output a short step-by-step trace with file paths.

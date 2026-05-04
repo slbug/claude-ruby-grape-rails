@@ -14,16 +14,17 @@ Extends core security skill with SSRF prevention, secrets management, and supply
 
 ## SSRF Prevention (Server-Side Request Forgery)
 
-### The Risk
-
-User-controlled URLs can access internal services:
+A user-controlled URL passed straight to an HTTP client can hit
+loopback, RFC1918, and cloud-metadata endpoints. Reject:
 
 ```ruby
-# VULNERABLE
 def fetch_url(url)
-  response = HTTP.get(url)  # User passes http://169.254.169.254/metadata
+  HTTP.get(url)
 end
 ```
+
+Attack vector: caller passes `http://169.254.169.254/metadata` (AWS /
+GCP / Azure metadata service) and exfiltrates instance credentials.
 
 ### Prevention Patterns
 
@@ -83,7 +84,6 @@ class WebhookService
       return { error: :unsafe_url }
     end
     
-    # Verify URL responds before saving
     response = HTTP.timeout(5).head(url)
     
     unless response.status.success?
@@ -214,15 +214,11 @@ Inspect dependency graph for a gem: `bundle viz --format png`.
 
 ### Minimal Dependencies
 
-```ruby
-# Prefer standard library
-# BAD - unnecessary dep for simple JSON
-gem 'json_pure'
+Prefer stdlib over an extra gem when stdlib covers the surface:
 
-# GOOD - use built-in
-require 'json'
-JSON.parse(data)
-```
+| Reject | Use |
+|---|---|
+| `gem 'json_pure'` | `require 'json'; JSON.parse(data)` |
 
 ## Extended Security Checklist
 
@@ -266,38 +262,36 @@ Add to security review:
 
 ## CORS Configuration
 
+Use explicit origin allowlists. Regex origins like
+`/^https?:\/\/.*example\.com$/` match attacker-owned look-alikes
+(`evil-example.com`). `credentials: true` is only safe paired with an
+explicit origin list.
+
 ```ruby
-# config/initializers/cors.rb
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
-    # SAFE: Explicit origins
     origins 'https://app.example.com', 'https://admin.example.com'
-    
-    # VULNERABLE: Overly broad regex
-    # origins /^https?:\/\/.*example\.com$/
-    # Matches: https://evil-example.com (attacker domain!)
-    
+
     resource '*',
       headers: :any,
       methods: [:get, :post, :put, :patch, :delete, :options, :head],
-      credentials: true  # Only with explicit origins above
+      credentials: true
   end
 end
 ```
 
 ## Safe Deserialization
 
-```ruby
-# VULNERABLE: arbitrary code execution
-YAML.load(user_data)
-Marshal.load(user_data)
+`YAML.load` and `Marshal.load` allow arbitrary code execution on
+attacker-controlled input. Reject both for any user-derived data.
 
-# SAFE: safe_load only
-YAML.safe_load(user_data, permitted_classes: [Date, Time, Symbol])
+| Reject | Use |
+|---|---|
+| `YAML.load(user_data)` | `YAML.safe_load(user_data, permitted_classes: [Date, Time, Symbol])` |
+| `Marshal.load(user_data)` | `JSON.parse(user_data)` |
 
-# Use JSON instead when possible
-JSON.parse(user_data)
-```
+JSON is the default when the format is in your control. Reach for
+`safe_load` only when the schema requires YAML-native types.
 
 ## File Upload Content-Type Validation
 
