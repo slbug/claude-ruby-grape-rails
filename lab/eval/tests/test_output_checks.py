@@ -1452,7 +1452,11 @@ Some prose.
         self.assertIn("Second", reason)
         self.assertIn("**File**:", reason)
 
-    def test_mandatory_table_rejects_zero_data_rows(self) -> None:
+    def test_mandatory_table_accepts_zero_data_rows_for_empty_pass(self) -> None:
+        # Per `review-playbook.md` line 187-188: empty-findings PASS
+        # writes the artifact with zero data rows under the section
+        # header. Validator MUST accept this shape;
+        # Summary↔At-a-Glance cross-check enforces consistency.
         content = """# Review: x
 
 ## At-a-Glance Finding Table
@@ -1461,8 +1465,8 @@ Some prose.
 |---|---------|----------|------------|----------|------|------|
 """
         passed, reason = output_checks.has_review_mandatory_table(content)
-        self.assertFalse(passed)
-        self.assertIn("0 data rows", reason)
+        self.assertTrue(passed)
+        self.assertIn("0 row(s)", reason)
 
     def test_summary_excludes_preexisting_rejects_off_list_severity(self) -> None:
         content = """# Review: x
