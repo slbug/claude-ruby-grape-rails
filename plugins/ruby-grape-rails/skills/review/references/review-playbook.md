@@ -228,11 +228,16 @@ state machine in § "Artifact Recovery" below.
 Scan each per-agent artifact for verdict prose. Map non-canonical
 forms to the canonical 4-set BEFORE writing the consolidated header:
 
+Use ONLY the worker artifact's verdict prose + the worker's own
+finding-counts (`Critical | Warning | Info` form, not yet mapped —
+mapping is STEP 3). Do NOT cross-reference bucket-form counts here;
+bucket-form is introduced in STEP 3.
+
 | Non-canonical form (preserve verbatim in metadata) | Canonical mapping rule |
 |---|---|
-| `CONDITIONAL PASS`, `PASS WITH CAVEATS`, `PASS-WITH-WARNS` | infer from finding count; bucket-form severity → canonical |
-| `Approved`, `LGTM`, `looks good` | `PASS` if no warnings/blockers; else map per finding count |
-| `Needs fixes`, `fix before merge`, `not ready` | `REQUIRES CHANGES` if no blockers; else `BLOCKED` |
+| `CONDITIONAL PASS`, `PASS WITH CAVEATS`, `PASS-WITH-WARNS` | infer from worker `Critical / Warning / Info` counts: any `Critical` → `BLOCKED`; else any `Warning` → `PASS WITH WARNINGS`; else `PASS` |
+| `Approved`, `LGTM`, `looks good` | `PASS` if worker reports zero `Critical` and zero `Warning`; else map per worker counts |
+| `Needs fixes`, `fix before merge`, `not ready` | `REQUIRES CHANGES` if worker reports zero `Critical`; else `BLOCKED` |
 | `Critical`, `BLOCK`, `BLOCKER` (verdict, not severity) | `BLOCKED` |
 
 Preserve the agent's raw verdict text VERBATIM in the

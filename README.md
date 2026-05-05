@@ -290,10 +290,11 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 - **One plan = one work unit.** Large features get split into multiple plans. Each is self-contained.
 - **Agents are automatic.** The plugin spawns specialist agents behind the scenes. You don't manage them directly.
 - **Specialist agents stay lean.** Reviewers and analyzers set
-  `omitClaudeMd: true` so subagents keep product/runtime context while
-  skipping the project `CLAUDE.md` payload. They are instructed to
-  write only their own artifacts under `.claude/`, not edit project
-  code.
+  `omitClaudeMd: true` so subagents skip the entire project
+  `CLAUDE.md` payload (including the `/rb:init` stack notes —
+  Iron Laws + Advisory Preferences still arrive on `SubagentStart`
+  via `inject-rules.sh`). They are instructed to write only their
+  own artifacts under `.claude/`, not edit project code.
 - **The stack is detected, not guessed.** `/rb:init` and SessionStart hooks identify Rails/Grape/Sidekiq/Karafka, Active Record vs Sequel, and Packwerk/modular package layouts before giving guidance.
 - **Session start is split into fast sync + async refresh.** You get immediate
   stack context from the quick snapshot while slower helper-version probes

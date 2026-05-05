@@ -8,10 +8,21 @@ in any phase.
 
 Task line format MUST be `- [ ] [Pn-Tm][annotation] Description` per
 `${CLAUDE_PLUGIN_ROOT}/skills/work/references/file-formats.md` so
-`/rb:work` can parse, route, and resume via `--from Pn-Tm`. Phase 1
-holds Blockers (`P1-T1`, `P1-T2`, ...); Phase 2 holds selected
-Warnings (`P2-T1`, ...). The `[annotation]` value MUST be one of
-the canonical Set A per
+`/rb:work` can parse, route, and resume via `--from Pn-Tm`. Phase
+mapping:
+
+| Phase | Findings | Task IDs |
+|---|---|---|
+| Phase 1: Blockers | every NEW BLOCKER (auto-included) | `P1-T1`, `P1-T2`, ... |
+| Phase 2: Warnings (selected) | NEW WARNINGs the user selected at SKILL Step 4 | `P2-T1`, ... |
+| Phase 3: Suggestions (selected) | NEW SUGGESTIONs the user selected via `S<n>` at SKILL Step 4. Omit phase entirely when zero suggestions selected. | `P3-T1`, ... |
+
+`## Deferred Findings` lists NEW Warnings + Suggestions the user did
+NOT select; these are excluded from any Phase. `## Pre-existing
+Issues (informational)` lists `New? = Pre-existing` rows as bullets;
+NEVER as `- [ ]` task lines.
+
+The `[annotation]` value MUST be one of the canonical Set A per
 `${CLAUDE_PLUGIN_ROOT}/skills/plan/references/planning-workflow.md`
 § "Plan Generation": `[direct]`, `[active record]`, `[hotwire]`,
 `[sidekiq]`, `[concurrency]`, `[security]`, `[test]`. Do NOT emit
@@ -36,8 +47,8 @@ are descriptive narrative, not plan annotations.
 |---|---|---|---|---|
 | BLOCKER | 3 | 3 | 0 | 0 |
 | WARNING | 4 | 1 | 3 | 0 |
-| SUGGESTION | 1 | 0 | 0 | 1 |
-| **Total** | **8** | **4** | **3** | **1** |
+| SUGGESTION | 2 | 1 | 1 | 0 |
+| **Total** | **9** | **5** | **4** | **0** |
 
 Counts NEW findings only. Pre-existing tracked in
 `## Pre-existing Issues (informational)`.
@@ -52,6 +63,10 @@ Counts NEW findings only. Pre-existing tracked in
 
 - [ ] [P2-T1][test] Add edge-case spec for refund branch in `spec/services/refund_spec.rb` — missing test coverage on non-default path (non-Iron-Law warning); source `.claude/reviews/fix-auth-20260505-103000.md`; ~15 min
 
+## Phase 3: Suggestions (selected) [PENDING]
+
+- [ ] [P3-T1][direct] Extract `RETRY_LIMIT` constant in `app/services/sync_service.rb` — minor refactor user opted in (`S1`); source `.claude/reviews/fix-auth-20260505-103000.md`; ~5 min
+
 ## Deferred Findings
 
 ### Warnings (Deferred)
@@ -62,9 +77,9 @@ Counts NEW findings only. Pre-existing tracked in
 - app/helpers/formatting.rb:12 - Method too long
 - app/models/user.rb:23 - Could use delegate
 
-### Suggestions (Excluded)
+### Suggestions (Deferred)
 
-- app/views/layouts/application.html.erb:5 - Quote style
+- app/views/layouts/application.html.erb:5 - Quote style (user did not select)
 
 ## Pre-existing Issues (informational)
 
