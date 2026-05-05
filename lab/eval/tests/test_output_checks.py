@@ -1137,6 +1137,36 @@ Some prose.
         self.assertIn("malformed enum", reason)
         self.assertIn("'maybe'", reason)
 
+    def test_has_review_mandatory_table_rejects_row_missing_new_cell(self) -> None:
+        # Row carries 6 cells (no `New?`). Without explicit row-width
+        # validation, summary/coverage cross-checks silently skip the
+        # row → pre-existing leakage hides. Fail fast on bad shape.
+        content = """# Review: x
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Issue | BLOCKER | HIGH | r | f.rb:1 |
+"""
+        passed, reason = output_checks.has_review_mandatory_table(content)
+        self.assertFalse(passed)
+        self.assertIn("contract requires exactly 7", reason)
+
+    def test_has_review_mandatory_table_accepts_valid_7cell_rows(self) -> None:
+        content = """# Review: x
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Issue | BLOCKER | HIGH | r | f.rb:1 | Yes |
+| 2 | Other | WARNING | MEDIUM | r | g.rb:5 | Pre-existing |
+"""
+        passed, reason = output_checks.has_review_mandatory_table(content)
+        self.assertTrue(passed)
+        self.assertIn("2 row(s)", reason)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 

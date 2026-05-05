@@ -127,9 +127,13 @@ class TriagePlanTemplateDriftTests(unittest.TestCase):
         )
 
 
-_FOR_PLAN_HEADING_RE = re.compile(r"^##\s+Output Format\s*$")
+_OUTPUT_FORMAT_HEADING_RE = re.compile(r"^##\s+Output Format\s*$")
 _FENCE_OPEN_RE = re.compile(r"^(`{3,}|~{3,})")
-_BARE_TASK_RE = re.compile(r"^\s*-\s+\[[ xX]\]\s+(?!\[P\d+-T\d+\]\[)")
+# Canonical task line: `- [ ] [Pn-Tm][annotation] ...`. Lookahead for
+# both bracket pairs back-to-back; any deviation (no Pn-Tm, no
+# annotation bracket, missing annotation) trips the gate.
+_CANONICAL_TASK_RE = re.compile(r"^\s*-\s+\[[ xX]\]\s+\[P\d+-T\d+\]\[[^\]]+\]\s+\S")
+_TASK_CHECKBOX_RE = re.compile(r"^\s*-\s+\[[ xX]\]\s+\S")
 
 
 class TriageSkillEmbeddedExampleDriftTests(unittest.TestCase):
@@ -142,12 +146,14 @@ class TriageSkillEmbeddedExampleDriftTests(unittest.TestCase):
     file is correct.
     """
 
-    def test_for_plan_example_uses_canonical_task_format(self) -> None:
-        """`- [ ] ...` lines under `### For Plan` MUST use `[Pn-Tm][annotation]`.
+    def test_output_format_example_uses_canonical_task_shape(self) -> None:
+        """`- [ ] ...` lines under `## Output Format` MUST match `[Pn-Tm][annotation] ...`.
 
-        Bare checkboxes in the example would teach `/rb:triage` to
-        emit plan files unparseable by `/rb:work`. Pin the canonical
-        task shape inside the SKILL body's worked example.
+        Bare checkboxes (`- [ ] foo`), missing Pn-Tm prefix
+        (`- [ ] [active record] foo`), or missing annotation
+        bracket (`- [ ] [P1-T1] foo`) all teach `/rb:triage` to emit
+        plan files unparseable by `/rb:work`. Pin the full canonical
+        shape inside the SKILL body's worked example.
         """
         text = TRIAGE_SKILL.read_text(encoding="utf-8")
         in_section = False
@@ -155,23 +161,25 @@ class TriageSkillEmbeddedExampleDriftTests(unittest.TestCase):
         bad: list[str] = []
         for line in text.splitlines():
             if not in_section:
-                if _FOR_PLAN_HEADING_RE.match(line):
+                if _OUTPUT_FORMAT_HEADING_RE.match(line):
                     in_section = True
                 continue
-            # Stop at the next `### `/`## ` heading outside fenced blocks.
-            if not in_fence and (line.startswith("### ") or line.startswith("## ")):
+            # Stop at the next `## ` heading outside fenced blocks.
+            if not in_fence and line.startswith("## "):
                 break
             if _FENCE_OPEN_RE.match(line.lstrip()):
                 in_fence = not in_fence
                 continue
             if not in_fence:
                 continue
-            if _BARE_TASK_RE.match(line) and not line.lstrip().startswith("- [ ] [P"):
+            # Inside a fenced example. Every checkbox line MUST match
+            # the canonical shape; flag any that does not.
+            if _TASK_CHECKBOX_RE.match(line) and not _CANONICAL_TASK_RE.match(line):
                 bad.append(line.strip())
         self.assertFalse(
             bad,
-            "`### For Plan` example task lines MUST use `[Pn-Tm][annotation]` "
-            "format. Drifted lines: " + "; ".join(bad),
+            "`## Output Format` example task lines MUST use full "
+            "`[Pn-Tm][annotation] ...` shape. Drifted lines: " + "; ".join(bad),
         )
 
     def test_skill_pseudocode_no_rule_id_grouping(self) -> None:

@@ -82,7 +82,7 @@ end
 ### 1. Extract Magic-Token TTL Constant
 
 **File**: `app/models/magic_token.rb`
-**Confidence**: LOW
+**Reviewer**: ruby-reviewer | **Confidence**: LOW
 **Suggestion**: Replace inline `24.hours.ago` with `TTL = 24.hours`
 constant + scope for reuse and test clarity.
 

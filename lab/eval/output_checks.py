@@ -738,15 +738,33 @@ def has_review_mandatory_table(content: str) -> tuple[bool, str]:
     Schema: `# | Finding | Severity | Confidence | Reviewer | File | New?`.
     Anchored to the section heading per `review-playbook.md` § "At-a-Glance
     Finding Table". Skips fenced Markdown excerpts so a quoted template
-    inside Current/Suggested doesn't count as the live table.
+    inside Current/Suggested doesn't count as the live table. Every data
+    row MUST carry exactly 7 cells — a row missing the `New?` cell or any
+    other column would otherwise drop silently from the summary / coverage
+    cross-checks (which skip non-7-cell rows) and let pre-existing
+    leakage hide.
     """
     section = _section(content, "At-a-Glance Finding Table")
     if not section:
         return False, "Missing `## At-a-Glance Finding Table` section"
+    header_found = False
     for line in _iter_lines_outside_fences(section):
         if _MANDATORY_TABLE_HEADER_RE.match(line):
-            return True, "Mandatory finding table present"
-    return False, "Missing 7-col At-a-Glance table header (`# | Finding | Severity | Confidence | Reviewer | File | New?`) under `## At-a-Glance Finding Table` section"
+            header_found = True
+            break
+    if not header_found:
+        return False, "Missing 7-col At-a-Glance table header (`# | Finding | Severity | Confidence | Reviewer | File | New?`) under `## At-a-Glance Finding Table` section"
+    rows = _table_data_rows(section)
+    bad: list[str] = []
+    for idx, row in enumerate(rows, start=1):
+        if len(row) != 7:
+            bad.append(
+                f"row {idx}: {len(row)} cell(s); contract requires exactly 7 "
+                "(`# | Finding | Severity | Confidence | Reviewer | File | New?`)"
+            )
+    if bad:
+        return False, "At-a-Glance row(s) violate contract: " + "; ".join(bad)
+    return True, f"Mandatory finding table present ({len(rows)} row(s))"
 
 
 def review_has_no_task_lists(content: str) -> tuple[bool, str]:

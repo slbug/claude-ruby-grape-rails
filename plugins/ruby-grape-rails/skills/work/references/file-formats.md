@@ -29,10 +29,13 @@ Plans must follow this structure for parsing:
 - [ ] [P2-T3][security] Task that depends on above
 ```
 
-**Task format**: `- [ ] [Pn-Tm][agent] Description`
+**Task format**: `- [ ] [Pn-Tm][annotation] Description`
 
 - `[Pn-Tm]`: Phase n, Task m (for resume)
-- `[agent]`: Agent annotation (for routing)
+- `[annotation]`: Routing annotation from canonical Set A (per
+  `${CLAUDE_PLUGIN_ROOT}/skills/plan/references/planning-workflow.md`
+  § "Plan Generation"): `[direct]`, `[active record]`, `[hotwire]`,
+  `[sidekiq]`, `[concurrency]`, `[security]`, `[test]`
 
 **Task ID format**: `[Pn-Tm]` - Phase n, Task m. Used for:
 

@@ -509,7 +509,7 @@ NOT counted here — see `## Pre-existing Issues` + at-a-glance
 ### 1. {Suggestion Title}
 
 **File**: `path/to/file.rb`
-**Confidence**: HIGH | MEDIUM | LOW
+**Reviewer**: {agent} | **Confidence**: HIGH | MEDIUM | LOW
 **Suggestion**: {improvement}
 
 ## Pre-existing Issues (unchanged code)
@@ -537,7 +537,10 @@ After writing the consolidated artifact, present the verdict in chat.
 **PASS:**
 
 ```text
-Review complete. No blockers found.
+Review complete. No NEW blockers introduced by this diff.
+(Pre-existing blockers, if any, are tracked separately in
+`## Pre-existing Issues` and do NOT affect verdict per
+§ "Pre-existing Issues".)
 Ready for: /rb:learn (capture lessons) or /rb:compound (capture solution).
 ```
 
