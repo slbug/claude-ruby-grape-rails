@@ -64,6 +64,11 @@ Reports:
 - mean / p50 / p95 compression ratio (overall + per command class)
 - top weak-savings commands (ratio < 20%)
 - preservation-violation count
+- recommendation verdict — `safe-to-evaluate-replacement` when every
+  tracked command class has ≥ `MIN_SAMPLES_PER_CLASS` samples, every
+  per-class p50 ≥ `MIN_P50_RATIO`, and zero preservation violations.
+  Otherwise emits `keep-collecting (unmet: ...)` with the failing
+  conditions. Thresholds defined inline in `bin/compression-stats`.
 
 ## Sharing a Report
 

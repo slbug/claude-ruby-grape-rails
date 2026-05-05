@@ -1322,6 +1322,39 @@ Some prose.
         passed, _ = output_checks.review_has_no_followup_sections(content)
         self.assertTrue(passed)
 
+    def test_has_review_file_refs_rejects_path_only_under_blockers(self) -> None:
+        # Per playbook template: Blockers MUST carry `:line`.
+        # Path-only is only valid under `## Suggestions`.
+        content = """# Review: x
+
+## Blockers (1)
+
+### 1. Issue
+
+**File**: `app/models/user.rb`
+**Reviewer**: ruby-reviewer | **Confidence**: HIGH
+**Issue**: bad
+"""
+        passed, reason = output_checks.has_review_file_refs(content, minimum=1)
+        self.assertFalse(passed)
+        self.assertIn("Blockers", reason)
+        self.assertIn(":line", reason)
+
+    def test_has_review_file_refs_rejects_path_only_under_warnings(self) -> None:
+        content = """# Review: x
+
+## Warnings (1)
+
+### 1. Issue
+
+**File**: `app/models/user.rb`
+**Reviewer**: ruby-reviewer | **Confidence**: HIGH
+**Issue**: bad
+"""
+        passed, reason = output_checks.has_review_file_refs(content, minimum=1)
+        self.assertFalse(passed)
+        self.assertIn("Warnings", reason)
+
     def test_has_review_file_refs_accepts_path_only_for_suggestions(self) -> None:
         # Suggestions section template allows `**File**: path/to/file.rb`
         # without `:line` (whole-file scope). Validator MUST accept.

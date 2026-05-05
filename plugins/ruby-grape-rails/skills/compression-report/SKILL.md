@@ -77,8 +77,10 @@ replacement mechanism.
    - `violation_samples` — up to 10 samples whose preservation check
      flagged something, with redacted `cmd`, `raw_log_id`,
      `violation_count`
-   - `recommendation` — verdict against the documented promotion
-     criteria
+   - `recommendation` — verdict per
+     `${CLAUDE_PLUGIN_ROOT}/references/compression/README.md`
+     § "End-User Reader" (`safe-to-evaluate-replacement` vs
+     `keep-collecting (unmet: ...)`)
 
    The redacted JSON deliberately omits absolute paths. The raw
    captures live next to the jsonl on the user's local machine; you

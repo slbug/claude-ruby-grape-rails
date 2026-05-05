@@ -422,20 +422,72 @@ def has_review_reviewer_completeness(content: str) -> tuple[bool, str]:
     return True, f"`**Reviewers**:` header reconciled with {len(header_slugs)} Coverage + Verdicts row(s)"
 
 
-def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
-    """Count `**File**: path[:line]` refs across LIVE finding bodies.
+_FILE_REF_STRICT_RE = re.compile(r"^\*\*File\*\*:\s+`?[^`\s]+:\d+`?$")
+_FILE_REF_LOOSE_RE = re.compile(r"^\*\*File\*\*:\s+`?[^`\s]+(?::\d+)?`?$")
+_FILE_REF_LINE_RE = re.compile(r"^\*\*File\*\*:")
+_BUCKET_HEADING_RE = re.compile(r"^## (Blockers|Warnings|Suggestions)(?:\s|\(|$)")
+_PRE_EXISTING_HEADING_RE = re.compile(r"^## Pre-existing Issues\b")
 
-    Per `review-playbook.md` template: Blockers / Warnings carry
-    `path:line` refs; Suggestions allow path-only (no `:line`) since
-    they may target a class or whole file. Pattern accepts both.
-    Fence-aware: a quoted Markdown excerpt under `**Current**` /
-    `**Suggested**` legitimately can carry `**File**:` lines as data.
-    Skip them so a fenced excerpt cannot satisfy the minimum.
+
+def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
+    """Validate `**File**:` refs per bucket-specific shape.
+
+    Per `review-playbook.md` template:
+      - `## Blockers` / `## Warnings`: `**File**: `path/to/file.rb:{line}``
+        (line number REQUIRED — these point at concrete diff sites).
+      - `## Suggestions`: `**File**: `path/to/file.rb`` (path-only
+        allowed; suggestions may target a class or whole file).
+
+    `## Pre-existing Issues (unchanged code)` uses bullet form, not
+    `**File**:` lines — skipped. Fence-aware: a quoted Markdown
+    excerpt under `**Current**` / `**Suggested**` carries `**File**:`
+    lines as DATA. Skip them so a fenced excerpt cannot satisfy the
+    minimum on its own. Bucket-shape violations fail the gate even
+    when the artifact has the minimum count.
     """
-    # Accepts: `**File**: path:42`, `**File**: `path:42``,
-    # `**File**: path/to/file.rb`, `**File**: `path/to/file.rb``.
-    pat = re.compile(r"^\*\*File\*\*:\s+`?[^`\s]+(?::\d+)?`?$")
-    count = sum(1 for line in _iter_lines_outside_fences(content) if pat.match(line))
+    current_bucket: str | None = None
+    in_pre_existing = False
+    count = 0
+    bad: list[str] = []
+    for line in _iter_lines_outside_fences(content):
+        if _PRE_EXISTING_HEADING_RE.match(line):
+            current_bucket = None
+            in_pre_existing = True
+            continue
+        m = _BUCKET_HEADING_RE.match(line)
+        if m:
+            current_bucket = m.group(1)
+            in_pre_existing = False
+            continue
+        if line.startswith("## "):
+            current_bucket = None
+            in_pre_existing = False
+            continue
+        if in_pre_existing or not _FILE_REF_LINE_RE.match(line):
+            continue
+        if current_bucket in {"Blockers", "Warnings"}:
+            if _FILE_REF_STRICT_RE.match(line):
+                count += 1
+            else:
+                bad.append(
+                    f"{current_bucket}: {line.strip()!r} lacks `:line` "
+                    f"(required for {current_bucket} per playbook template)"
+                )
+        elif current_bucket == "Suggestions":
+            if _FILE_REF_LOOSE_RE.match(line):
+                count += 1
+            else:
+                bad.append(f"Suggestions: {line.strip()!r} malformed path")
+        else:
+            # Outside any tracked bucket (e.g., a stray header-area
+            # `**File**:` line) — accept loose match toward the count.
+            if _FILE_REF_LOOSE_RE.match(line):
+                count += 1
+    if bad:
+        return False, (
+            f"{count} valid finding file ref(s); bucket-shape violations: "
+            + "; ".join(bad[:5])
+        )
     return count >= minimum, f"{count} finding file ref(s) present"
 
 
