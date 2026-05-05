@@ -573,6 +573,9 @@ _AT_A_GLANCE_SUMMARY_LABELS = (
 )
 
 
+_VALID_NEW_STATES = frozenset({"yes", "pre-existing"})
+
+
 def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
     """Summary counts MUST equal At-a-Glance NEW row counts per severity.
 
@@ -583,9 +586,12 @@ def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
     `New? = Pre-existing`, but MUST NOT contribute to Summary counts.
 
     Cross-checks each severity in Summary against the count of
-    At-a-Glance rows whose `New?` cell equals `Yes`. Skips when
-    At-a-Glance is absent (`has_review_mandatory_table` already
-    surfaces that gap).
+    At-a-Glance rows whose `New?` cell equals `Yes`. Rejects rows
+    whose `New?` enum is anything other than `Yes` or `Pre-existing`
+    — a malformed value (e.g. `No`, blank) would otherwise silently
+    drop from the tally and let pre-existing leakage pass the gate.
+    Skips when At-a-Glance is absent (`has_review_mandatory_table`
+    already surfaces that gap).
     """
     section = _section(content, "At-a-Glance Finding Table")
     if not section:
@@ -594,13 +600,24 @@ def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
     if not rows:
         return True, "No At-a-Glance rows (Summary cross-check skipped)"
     new_counts = {label: 0 for label, _ in _AT_A_GLANCE_SUMMARY_LABELS}
-    for row in rows:
+    bad_enum: list[str] = []
+    for idx, row in enumerate(rows, start=1):
         if len(row) != 7:
             continue
         severity = row[2].upper()
         new_state = row[6].strip().lower()
-        if severity in new_counts and new_state == "yes":
+        if severity not in new_counts:
+            continue
+        if new_state not in _VALID_NEW_STATES:
+            bad_enum.append(
+                f"At-a-Glance row {idx}: `New?` cell {row[6]!r} not in "
+                "{`Yes`, `Pre-existing`} — malformed enum"
+            )
+            continue
+        if new_state == "yes":
             new_counts[severity] += 1
+    if bad_enum:
+        return False, "; ".join(bad_enum)
     bad: list[str] = []
     for severity, summary_label in _AT_A_GLANCE_SUMMARY_LABELS:
         summary_count = _summary_count(content, summary_label)
@@ -652,8 +669,11 @@ def has_review_coverage_excludes_preexisting(content: str) -> tuple[bool, str]:
     if not glance_rows:
         return True, "No At-a-Glance rows (cross-check skipped)"
     # Tally NEW findings per (reviewer, severity) from At-a-Glance.
+    # Reject rows with a malformed `New?` cell — silently treating
+    # them as non-new would let pre-existing leakage hide.
     new_per_reviewer: dict[str, dict[str, int]] = {}
-    for row in glance_rows:
+    bad_enum: list[str] = []
+    for idx, row in enumerate(glance_rows, start=1):
         if len(row) != 7:
             continue
         severity = row[2].upper()
@@ -661,12 +681,21 @@ def has_review_coverage_excludes_preexisting(content: str) -> tuple[bool, str]:
         new_state = row[6].strip().lower()
         if severity not in {"BLOCKER", "WARNING", "SUGGESTION"}:
             continue
-        if not reviewer or new_state != "yes":
+        if not reviewer:
             continue
-        bucket = new_per_reviewer.setdefault(
-            reviewer, {"BLOCKER": 0, "WARNING": 0, "SUGGESTION": 0}
-        )
-        bucket[severity] += 1
+        if new_state not in _VALID_NEW_STATES:
+            bad_enum.append(
+                f"At-a-Glance row {idx}: `New?` cell {row[6]!r} not in "
+                "{`Yes`, `Pre-existing`} — malformed enum"
+            )
+            continue
+        if new_state == "yes":
+            bucket = new_per_reviewer.setdefault(
+                reviewer, {"BLOCKER": 0, "WARNING": 0, "SUGGESTION": 0}
+            )
+            bucket[severity] += 1
+    if bad_enum:
+        return False, "; ".join(bad_enum)
     coverage_rows = _table_data_rows(coverage_body)
     bad: list[str] = []
     for row in coverage_rows:

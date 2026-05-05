@@ -22,6 +22,13 @@ TRIAGE_PLAN_TEMPLATE = (
 _IRON_LAW_RE = re.compile(r"Iron Law\s+\d+", re.IGNORECASE)
 _PHASE_HEADING_RE = re.compile(r"^##+\s+(Phase\s+\d+|Deferred Findings|Pre-existing Issues)", re.IGNORECASE)
 _TASK_LINE_RE = re.compile(r"^\s*-\s+\[[ xX]\]\s+\[P\d+-T\d+\]")
+_TASK_ANNOTATION_RE = re.compile(r"^\s*-\s+\[[ xX]\]\s+\[P\d+-T\d+\]\[([^\]]+)\]")
+# Canonical Set A from `plan/references/planning-workflow.md` § "Plan Generation".
+# `/rb:work` parser routes on this enum; off-list labels are descriptive narrative
+# (e.g. `[ruby]`, `[ar]`, `[grape]`) and break the work workflow.
+_CANONICAL_PLAN_ANNOTATIONS = frozenset(
+    {"direct", "active record", "hotwire", "sidekiq", "concurrency", "security", "test"}
+)
 
 
 def _walk_phase_sections(text: str):
@@ -92,6 +99,31 @@ class TriagePlanTemplateDriftTests(unittest.TestCase):
         """
         text = TRIAGE_PLAN_TEMPLATE.read_text(encoding="utf-8")
         self.assertIn("## Phase 2: Warnings (selected)", text)
+
+    def test_task_annotations_use_canonical_set_a(self) -> None:
+        """Every `- [ ] [Pn-Tm][annotation] ...` task line MUST use a Set A annotation.
+
+        Set A per `plan/references/planning-workflow.md` § "Plan
+        Generation": `direct`, `active record`, `hotwire`, `sidekiq`,
+        `concurrency`, `security`, `test`. Off-list labels (`ruby`,
+        `testing`, `grape`, `ar`, `sequel`, `perf`) are descriptive
+        narrative or subagent type names, not plan-task annotations,
+        and break `/rb:work` parsing.
+        """
+        text = TRIAGE_PLAN_TEMPLATE.read_text(encoding="utf-8")
+        bad: list[str] = []
+        for line in text.splitlines():
+            m = _TASK_ANNOTATION_RE.match(line)
+            if not m:
+                continue
+            annotation = m.group(1)
+            if annotation not in _CANONICAL_PLAN_ANNOTATIONS:
+                bad.append(f"non-Set-A annotation [{annotation}] in: {line.strip()!r}")
+        self.assertFalse(
+            bad,
+            "Plan-task annotations MUST be from canonical Set A; off-list labels "
+            "break `/rb:work`. Drifted lines: " + "; ".join(bad),
+        )
 
 
 if __name__ == "__main__":

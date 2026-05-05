@@ -83,24 +83,41 @@ Read the consolidated review markdown.
 
 | Source section | Extract |
 |---|---|
-| Preamble | `**Date**:`, `**Complexity**:`, `**Files Changed**:`, `**Reviewers**:`, `**Verdict**:` (metadata) |
+| Preamble | `**Date**:`, `**Complexity**:`, `**Files Changed**:`, `**Reviewers**:` (metadata) |
 | `## Reviewer Coverage` | Per-reviewer recovery state + finding counts |
 | `## Reviewer Verdicts` | Per-reviewer raw + canonical verdicts |
+| `## Summary` (then `**Verdict**:` line immediately AFTER the Summary table per `${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md` § "Consolidated Review Format") | Severity counts + consolidated verdict |
 | `## At-a-Glance Finding Table` | Per-finding row: `# / Finding / Severity / Confidence / Reviewer / File / New?` |
 | `## Blockers ({n})` / `## Warnings ({n})` / `## Suggestions ({n})` | Detailed finding bodies: `**File**:`, `**Reviewer**: ... \| **Confidence**:`, `**Issue**:`, `**Why it matters**:`, `**Current**:`, `**Suggested**:`, `**Recommendation**: \| Suggestion:` |
 | `## Pre-existing Issues (unchanged code)` | Findings to surface in plan's `## Pre-existing Issues (informational)` only |
 
-Match each At-a-Glance row to its detailed finding by `File` cell.
+Match each At-a-Glance row to its detailed finding by the
+`(File, Reviewer, Severity)` tuple. `File` alone is ambiguous —
+the review contract allows multiple findings against the same path.
 The Iron Law label for the plan's task line comes from the issue
 text + `iron-laws.yml` registry (e.g., "Multi-step operations
-without transaction wrap" → Iron Law 5). The plan's `[agent]`
-annotation comes from the finding's reviewer slug or Iron Law
-category. Emit annotation in space form per
-`${CLAUDE_PLUGIN_ROOT}/skills/work/references/file-formats.md`.
-Common annotations: `active record`, `sidekiq`, `security`, `ruby`,
-`hotwire`, `testing`, `grape`, `direct`. Do NOT use the underscore
-form from `iron-laws.yml` `category:` field — `/rb:work` parser
-routes on space form.
+without transaction wrap" → Iron Law 5).
+
+The plan's `[agent]` annotation MUST be one of the canonical Set A
+values per `${CLAUDE_PLUGIN_ROOT}/skills/plan/references/planning-workflow.md`
+§ "Plan Generation":
+
+| Annotation | Use for |
+|---|---|
+| `[direct]` | most common — generic Ruby work, refactors, glue |
+| `[active record]` | models, migrations, ORM-touching findings |
+| `[hotwire]` | Turbo Streams, Frames, Stimulus, broadcasts |
+| `[sidekiq]` | jobs, queues, Sidekiq-specific findings |
+| `[concurrency]` | threads, fibers, async, race conditions |
+| `[security]` | auth, SQL injection, XSS, secrets, authorization |
+| `[test]` | spec / test additions or fixes |
+
+Do NOT emit `[ruby]`, `[testing]`, `[grape]`, `[ar]`, `[sequel]`,
+`[perf]`, or `[general-purpose]` — those are descriptive narrative
+labels (or subagent type names), not plan-task annotations, per
+`planning-workflow.md` § "Plan-Task Annotations Cross-Reference".
+Do NOT use the underscore form from `iron-laws.yml` `category:`
+field. `/rb:work` parser routes on the canonical Set A only.
 
 ### Step 2: Auto-Categorize via Review Bucket
 

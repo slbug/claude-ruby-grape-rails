@@ -1066,6 +1066,77 @@ Some prose.
         passed, _ = output_checks.has_review_reviewer_coverage(content)
         self.assertTrue(passed)
 
+    def test_summary_excludes_preexisting_rejects_malformed_new_enum(self) -> None:
+        # A `New?` cell of `No` is not in the {Yes, Pre-existing} enum.
+        # Validator MUST reject rather than silently dropping the row
+        # from the NEW tally — silent drop would let pre-existing
+        # leakage pass.
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 1 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: BLOCKED
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Issue | BLOCKER | HIGH | r | f.rb:1 | No |
+"""
+        passed, reason = output_checks.has_review_summary_excludes_preexisting(content)
+        self.assertFalse(passed)
+        self.assertIn("malformed enum", reason)
+        self.assertIn("'No'", reason)
+
+    def test_summary_excludes_preexisting_rejects_blank_new_cell(self) -> None:
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: PASS
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Issue | BLOCKER | HIGH | r | f.rb:1 |  |
+"""
+        passed, reason = output_checks.has_review_summary_excludes_preexisting(content)
+        self.assertFalse(passed)
+        self.assertIn("malformed enum", reason)
+
+    def test_coverage_excludes_preexisting_rejects_malformed_new_enum(self) -> None:
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Issue | BLOCKER | HIGH | ruby-reviewer | f.rb:1 | maybe |
+"""
+        passed, reason = output_checks.has_review_coverage_excludes_preexisting(content)
+        self.assertFalse(passed)
+        self.assertIn("malformed enum", reason)
+        self.assertIn("'maybe'", reason)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 

@@ -6,13 +6,17 @@ Buckets use canonical review vocabulary
 `## Pre-existing Issues (informational)` only — never auto-included
 in any phase.
 
-Task line format MUST be `- [ ] [Pn-Tm][agent] Description` per
+Task line format MUST be `- [ ] [Pn-Tm][annotation] Description` per
 `${CLAUDE_PLUGIN_ROOT}/skills/work/references/file-formats.md` so
 `/rb:work` can parse, route, and resume via `--from Pn-Tm`. Phase 1
 holds Blockers (`P1-T1`, `P1-T2`, ...); Phase 2 holds selected
-Warnings (`P2-T1`, ...). The `[agent]` annotation routes to a
-specialist (`active record`, `sidekiq`, `security`, `ruby`,
-`hotwire`, `direct`).
+Warnings (`P2-T1`, ...). The `[annotation]` value MUST be one of
+the canonical Set A per
+`${CLAUDE_PLUGIN_ROOT}/skills/plan/references/planning-workflow.md`
+§ "Plan Generation": `[direct]`, `[active record]`, `[hotwire]`,
+`[sidekiq]`, `[concurrency]`, `[security]`, `[test]`. Do NOT emit
+`[ruby]`, `[testing]`, `[grape]`, or other off-list labels — those
+are descriptive narrative, not plan annotations.
 
 ````markdown
 # Plan: Fix auth review findings
@@ -46,7 +50,7 @@ Counts NEW findings only. Pre-existing tracked in
 
 ## Phase 2: Warnings (selected) [PENDING]
 
-- [ ] [P2-T1][testing] Add edge-case spec for refund branch in `spec/services/refund_spec.rb` — missing test coverage on non-default path (non-Iron-Law warning); source `.claude/reviews/fix-auth-20260505-103000.md`; ~15 min
+- [ ] [P2-T1][test] Add edge-case spec for refund branch in `spec/services/refund_spec.rb` — missing test coverage on non-default path (non-Iron-Law warning); source `.claude/reviews/fix-auth-20260505-103000.md`; ~15 min
 
 ## Deferred Findings
 
