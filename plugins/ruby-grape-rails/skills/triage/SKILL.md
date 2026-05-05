@@ -1,6 +1,6 @@
 ---
 name: rb:triage
-description: "Use when triaging review findings interactively. Use after /rb:review when you want a human decision on what to fix now, skip, or defer. Prioritizes Iron Law violations and separates critical fixes from optional improvements."
+description: "Use when triaging review findings interactively. Use after /rb:review to decide what to fix now, skip, or defer in a Ruby/Rails project. Prioritizes BLOCKER findings (Iron Law violations, security risks, migration safety) and routes selected items into a fix plan for /rb:work."
 when_to_use: "Triggers: \"triage\", \"which to fix\", \"prioritize findings\", \"after review\"."
 argument-hint: "[path to review file]"
 effort: low
@@ -74,233 +74,52 @@ priorities:
 
 ## Triage Process
 
+5 steps. Each reads from review artifact, classifies via review bucket,
+writes selected items to a fix plan.
+
 ### Step 1: Load Review File
 
-```ruby
-# Parse the review markdown file
-def load_review(path)
-  content = File.read(path)
-  findings = parse_findings(content)
-  
-  {
-    file: path,
-    findings: findings,
-    metadata: extract_metadata(content)
-  }
-end
-```
+Read the consolidated review markdown. Parse `## Reviewer Coverage`,
+`## Reviewer Verdicts`, `## At-a-Glance Finding Table` for findings.
+Capture `**Date**:`, `**Files Changed**:`, `**Reviewers**:`, and the
+consolidated `**Verdict**:` as metadata.
 
-### Step 2: Auto-Categorize
+### Step 2: Auto-Categorize via Review Bucket
 
-Read the review's existing severity bucket
-(`BLOCKER | WARNING | SUGGESTION`) and map to triage priority:
+Read each finding's bucket (`BLOCKER | WARNING | SUGGESTION`):
 
-```ruby
-def categorize_finding(finding)
-  case finding[:severity]
-  when "BLOCKER"
-    :always_include
-  when "WARNING"
-    if finding[:type] =~ /style|formatting|rubocop/i
-      :defer
-    else
-      :recommend
-    end
-  when "SUGGESTION"
-    :defer
-  else
-    :recommend
-  end
-end
-```
+- BLOCKER → always include (auto-selected, never optional)
+- WARNING → recommend (default selected; user may defer)
+- SUGGESTION → defer (default unselected; user may include)
 
-Pre-existing BLOCKERs (per `New?` column) stay informational — do NOT
-auto-include them in the fix plan.
+Pre-existing findings (per `New?` column = `Pre-existing`) stay
+informational only. Do NOT auto-include them in the fix plan.
 
 ### Step 3: Group Findings
 
-```ruby
-def group_findings(findings)
-  findings.group_by do |f|
-    # Group by file and type for batch fixing
-    [
-      f[:file],
-      f[:category],
-      f[:rule_id]
-    ]
-  end
-end
-```
+Group by `[file, bucket, rule_id]` so batch-fixable items appear
+together in the selection UI.
 
-### Step 4: Present to User with Structured Multi-Select
+### Step 4: Present Multi-Select UI
 
-Illustrative expected UI:
+Use `AskUserQuestion` with `multiSelect: true`. Auto-include all
+BLOCKERs before asking; ask only about WARNING + SUGGESTION items.
+Offer bucket shortcuts first (`All WARNING`, `All SUGGESTION`), then
+individual items. Each option label uses prefix `B<n>` / `W<n>` /
+`S<n>`; description includes file, line, one-line reason. Batch into
+multiple screens when more than 6 selectable items exist. Do NOT ask
+the user to type freeform selection commands.
 
-```
-╔══════════════════════════════════════════════════════════════╗
-║  TRIAGE: Review Findings                                     ║
-║  Source: .claude/reviews/fix-auth-20260505-103000.md                         ║
-╠══════════════════════════════════════════════════════════════╣
-║                                                              ║
-║  🔴 BLOCKER (Auto-selected)                                  ║
-║  ─────────────────────────────────────────────────────────   ║
-║  [✓] app/models/user.rb:45 - Missing transaction wrap        ║
-║       Iron Law 5: Transaction Boundaries                     ║
-║                                                              ║
-║  [✓] app/jobs/email_job.rb:12 - Passing AR object to job     ║
-║       Iron Law 10: Pass IDs, not records                     ║
-║                                                              ║
-║  [✓] app/controllers/orders_controller.rb:23 - N+1 Query     ║
-║       Iron Law 3: Use includes/preload                       ║
-║                                                              ║
-║  ─────────────────────────────────────────────────────────   ║
-║  3 BLOCKERs (automatically included)                         ║
-║                                                              ║
-╠══════════════════════════════════════════════════════════════╣
-║                                                              ║
-║  🟠 WARNING (Recommended)                                    ║
-║  ─────────────────────────────────────────────────────────   ║
-║  [✓] app/services/payment.rb:34 - Bare rescue                ║
-║       Iron Law 18: Rescue StandardError, not Exception       ║
-║                                                              ║
-║  [ ] app/models/order.rb:89 - Missing test for edge case     ║
-║       Refund logic has no regression coverage                ║
-║                                                              ║
-║  ─────────────────────────────────────────────────────────   ║
-║  1 of 2 selected                                             ║
-║                                                              ║
-╠══════════════════════════════════════════════════════════════╣
-║                                                              ║
-║  🟡 WARNING (Optional)                                       ║
-║  ─────────────────────────────────────────────────────────   ║
-║  [ ] app/helpers/formatting.rb:12 - Method too long          ║
-║       45 lines                                               ║
-║                                                              ║
-║  [ ] app/models/user.rb:23 - Could use delegate              ║
-║       Redundant wrapper method                               ║
-║                                                              ║
-║  ─────────────────────────────────────────────────────────   ║
-║  0 of 2 selected                                             ║
-║                                                              ║
-╠══════════════════════════════════════════════════════════════╣
-║                                                              ║
-║  🟢 SUGGESTION (Defer)                                       ║
-║  ─────────────────────────────────────────────────────────   ║
-║  [ ] app/views/layouts/application.html.erb:5 - Quotes       ║
-║       Single vs double quotes                                ║
-║                                                              ║
-║  ─────────────────────────────────────────────────────────   ║
-║  0 of 1 selected (will be excluded)                          ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
-```
-
-Use `AskUserQuestion` with `multiSelect: true`.
-
-Do **not** ask the user to type `confirm`, `drop W2`, or other freeform selection commands if structured selection is available.
-
-Rules:
-
-- auto-include all BLOCKER findings before asking
-- offer bucket shortcuts first (BLOCKER / WARNING / SUGGESTION)
-- then list individual findings
-- if there are more than 6 selectable items, batch them into multiple `AskUserQuestion` screens
-- each option description must include file, line, and a one-line reason
-
-Example:
-
-```yaml
-AskUserQuestion:
-  header: "Triage"
-  multiSelect: true
-  question: "Which non-BLOCKER findings do you want to fix now? BLOCKERs are already included."
-  options:
-    - label: "All WARNING (2)"
-      description: "Include all WARNING findings"
-    - label: "All SUGGESTION (2)"
-      description: "Include all SUGGESTION findings"
-    - label: "W1 Bare rescue"
-      description: "app/services/payment.rb:34 — catches broad exceptions"
-    - label: "W2 Missing edge-case test"
-      description: "app/models/order.rb:89 — refund path lacks regression coverage"
-    - label: "S1 Method too long"
-      description: "app/helpers/formatting.rb:12 — 45 lines"
-    - label: "S2 Could use delegate"
-      description: "app/models/user.rb:23 — redundant wrapper method"
-```
-
-Summarize selection state back to the user:
-
-- auto-included: `B1 B2 B3` (BLOCKERs)
-- selected: `W1`
-- deferred: `W2 S1 S2`
+Summarize state back: `auto-included: B1 B2 B3 | selected: W1 |
+deferred: W2 S1 S2`.
 
 ### Step 5: Write Triage Output
 
-The plan should be saved to `.claude/plans/{slug}/plan.md`:
-
-```markdown
-# Plan: Fix auth review findings
-
-## Metadata
-- Created: 2024-01-15T10:30:00Z
-- Source Review: .claude/reviews/fix-auth-20260505-103000.md
-- Generated By: /rb:triage
-- Triaged By: user
-
-## Summary
-
-| Bucket | Total | Selected | Deferred | Excluded |
-|---|---|---|---|---|
-| BLOCKER | 3 | 3 | 0 | 0 |
-| WARNING | 4 | 1 | 3 | 0 |
-| SUGGESTION | 1 | 0 | 0 | 1 |
-| **Total** | **8** | **4** | **3** | **1** |
-
-## Phase 1: Blockers
-
-- [ ] Fix transaction wrap in `app/models/user.rb:45`
-  - Rule: Iron Law - Transaction Safety
-  - Source: .claude/reviews/fix-auth-20260505-103000.md
-  - Estimated effort: 15 minutes
-
-- [ ] Fix JSON-safe args in `app/jobs/email_job.rb:12`
-  - Rule: Iron Law - JSON-Safe Arguments
-  - Source: .claude/reviews/fix-auth-20260505-103000.md
-  - Estimated effort: 10 minutes
-
-- [ ] Fix N+1 query in `app/controllers/orders_controller.rb:23`
-  - Rule: Query Performance
-  - Source: .claude/reviews/fix-auth-20260505-103000.md
-  - Estimated effort: 5 minutes
-
-## Phase 2: Warnings (selected)
-
-- [ ] Replace bare rescue in `app/services/payment.rb:34`
-  - Rule: Error Handling
-  - Source: .claude/reviews/fix-auth-20260505-103000.md
-  - Estimated effort: 10 minutes
-
-## Deferred Findings
-
-### Warnings (Deferred)
-
-- app/models/order.rb:89 - Missing test for edge case
-  - Reason: Requires clarification on expected behavior
-  - Action: Schedule separate testing session
-- app/helpers/formatting.rb:12 - Method too long
-- app/models/user.rb:23 - Could use delegate
-
-### Suggestions (Excluded)
-
-- app/views/layouts/application.html.erb:5 - Quote style
-
-## Next Steps
-
-1. Run `/rb:work` to fix the 4 selected items
-2. Estimated time: 40 minutes
-3. Review deferred items in future sprint
-```
+Save the plan to `.claude/plans/{slug}/plan.md` using the canonical
+template at
+`${CLAUDE_SKILL_DIR}/references/triage-plan-template.md`. Include
+Metadata, Summary table, Phase 1 (Blockers), Phase 2 (Warnings
+selected), Deferred Findings, and Next Steps.
 
 ## Decision Tree
 
@@ -477,6 +296,7 @@ potential_root_cause: "Missing includes pattern across controllers"
 | Need | Reference |
 |---|---|
 | auto-approve / usually-fix / often-skip rules + severity reclassification | `${CLAUDE_SKILL_DIR}/references/triage-patterns.md` |
+| canonical fix-plan output template (Step 5 destination format) | `${CLAUDE_SKILL_DIR}/references/triage-plan-template.md` |
 
 ## Trust States
 

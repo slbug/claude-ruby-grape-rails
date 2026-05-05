@@ -1,6 +1,6 @@
 ---
 name: intent-detection
-description: "Detect user intent from their first message and suggest the best /rb: command. Use when the user describes a task (bug, feature, refactor) without specifying a command."
+description: "Detect user intent and route to the right /rb: workflow. Use when the user describes a Ruby/Rails task (bug, feature, refactor) without specifying a slash command. Covers plan, work, review, verify, debug, and security / migration / performance routing."
 when_to_use: "Triggers: \"what command\", \"which rb:\", \"suggest command\", \"help me pick\"."
 user-invocable: false
 effort: low
