@@ -213,36 +213,16 @@ SUGGESTION + cross-cutting filters:
 
 ### Smart Grouping
 
-```ruby
-# Group findings that should be fixed together
-def suggest_groups(findings)
-  groups = []
-  
-  # Group by file + rule
-  by_rule = findings.group_by { |f| [f[:file], f[:rule_id]] }
-  by_rule.each do |(file, rule), items|
-    if items.size > 1
-      groups << {
-        name: "#{file}: #{rule} (#{items.size} occurrences)",
-        items: items,
-        recommendation: :fix_together
-      }
-    end
-  end
-  
-  # Group related files
-  model_files = findings.select { |f| f[:file].include?('models') }
-  if model_files.size > 1
-    groups << {
-      name: "Model Layer Improvements",
-      items: model_files,
-      recommendation: :fix_sequentially
-    }
-  end
-  
-  groups
-end
-```
+Bucketize findings via reasoning, not by running code. Step 3
+already pins the primary key: group NEW findings by
+`(file, bucket)`. Review artifacts carry no stable identifier
+beyond that tuple — do NOT invent one.
+
+| Grouping rule | Effect on selection UI |
+|---|---|
+| Same `(file, bucket)` with ≥ 2 occurrences | Surface together; recommend `fix_together` |
+| Findings touching the same domain layer (e.g., 2+ in `app/models/*`) | Optional cross-cutting shortcut (e.g., "Select All in app/models/"); recommend `fix_sequentially` |
+| Different buckets in same file | Keep separate — auto-include / recommend / defer follows the bucket, not the file |
 
 ## Integration with Workflow
 
@@ -308,27 +288,28 @@ These may conflict. Review together?
 [Review Both] [Skip Both] [Ask Reviewer]
 ```
 
-## Output Formats
+## Output Format
 
-### For Plan
+Sole output: `.claude/plans/{slug}/plan.md`. Tasks MUST use the
+canonical `- [ ] [Pn-Tm][annotation] ...` format from
+`${CLAUDE_PLUGIN_ROOT}/skills/work/references/file-formats.md` +
+canonical Set A annotations from
+`${CLAUDE_PLUGIN_ROOT}/skills/plan/references/planning-workflow.md`
+§ "Plan Generation". `/rb:work` parser routes on this format and
+resumes via `--from Pn-Tm`.
 
 ```markdown
 # Creates `.claude/plans/{slug}/plan.md` with selected findings as tasks
 
-- [ ] Fix transaction wrap in User.create_with_profile
-- [ ] Fix JSON-safe args in EmailJob
-- [ ] Fix N+1 in OrdersController#index
-- [ ] Fix bare rescue in PaymentService
-```
+## Phase 1: Blockers [PENDING]
 
-### For Compound
+- [ ] [P1-T1][active record] Fix transaction wrap in `User.create_with_profile` — Iron Law 5
+- [ ] [P1-T2][sidekiq] Fix JSON-safe args in `EmailJob#perform` — Iron Law 9
+- [ ] [P1-T3][active record] Fix N+1 in `OrdersController#index` — Iron Law 3
 
-```yaml
-# If root cause analysis is needed
-# Some findings may point to same root cause
-type: compound_analysis
-findings: [1, 3]
-potential_root_cause: "Missing includes pattern across controllers"
+## Phase 2: Warnings (selected) [PENDING]
+
+- [ ] [P2-T1][test] Add edge-case spec for `PaymentService` refund branch
 ```
 
 ## Best Practices

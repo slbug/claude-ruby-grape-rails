@@ -64,7 +64,12 @@ A workflow is COMPLETED when:
 
 - [ ] All planned tasks completed or explicitly deferred
 - [ ] Verification suite passes
-- [ ] Reviews complete with no critical issues
+- [ ] Reviews complete with consolidated `**Verdict**:` ∈
+      {`PASS`, `PASS WITH WARNINGS`} — no NEW BLOCKERs introduced by
+      this diff (per
+      `${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
+      § "Verdict Decision Rules"). `REQUIRES CHANGES` triggers a new
+      `/rb:plan` cycle for the test-coverage gap; `BLOCKED` halts.
 - [ ] Learnings captured in compound docs
 - [ ] `progress.md` final write: `**State**: COMPLETED`
 - [ ] User acknowledged completion

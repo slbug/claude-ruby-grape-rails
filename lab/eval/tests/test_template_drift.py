@@ -18,6 +18,7 @@ TRIAGE_PLAN_TEMPLATE = (
     REPO_ROOT
     / "plugins/ruby-grape-rails/skills/triage/references/triage-plan-template.md"
 )
+TRIAGE_SKILL = REPO_ROOT / "plugins/ruby-grape-rails/skills/triage/SKILL.md"
 
 _IRON_LAW_RE = re.compile(r"Iron Law\s+\d+", re.IGNORECASE)
 _PHASE_HEADING_RE = re.compile(r"^##+\s+(Phase\s+\d+|Deferred Findings|Pre-existing Issues)", re.IGNORECASE)
@@ -123,6 +124,103 @@ class TriagePlanTemplateDriftTests(unittest.TestCase):
             bad,
             "Plan-task annotations MUST be from canonical Set A; off-list labels "
             "break `/rb:work`. Drifted lines: " + "; ".join(bad),
+        )
+
+
+_FOR_PLAN_HEADING_RE = re.compile(r"^##\s+Output Format\s*$")
+_FENCE_OPEN_RE = re.compile(r"^(`{3,}|~{3,})")
+_BARE_TASK_RE = re.compile(r"^\s*-\s+\[[ xX]\]\s+(?!\[P\d+-T\d+\]\[)")
+
+
+class TriageSkillEmbeddedExampleDriftTests(unittest.TestCase):
+    """Drift gates for canonical examples embedded INSIDE `triage/SKILL.md`.
+
+    `triage-plan-template.md` already has its own gates; this class
+    covers the SKILL body's `### For Plan` example block + the
+    Smart Grouping pseudocode, both of which load directly into agent
+    context and can teach drifted contracts even when the template
+    file is correct.
+    """
+
+    def test_for_plan_example_uses_canonical_task_format(self) -> None:
+        """`- [ ] ...` lines under `### For Plan` MUST use `[Pn-Tm][annotation]`.
+
+        Bare checkboxes in the example would teach `/rb:triage` to
+        emit plan files unparseable by `/rb:work`. Pin the canonical
+        task shape inside the SKILL body's worked example.
+        """
+        text = TRIAGE_SKILL.read_text(encoding="utf-8")
+        in_section = False
+        in_fence = False
+        bad: list[str] = []
+        for line in text.splitlines():
+            if not in_section:
+                if _FOR_PLAN_HEADING_RE.match(line):
+                    in_section = True
+                continue
+            # Stop at the next `### `/`## ` heading outside fenced blocks.
+            if not in_fence and (line.startswith("### ") or line.startswith("## ")):
+                break
+            if _FENCE_OPEN_RE.match(line.lstrip()):
+                in_fence = not in_fence
+                continue
+            if not in_fence:
+                continue
+            if _BARE_TASK_RE.match(line) and not line.lstrip().startswith("- [ ] [P"):
+                bad.append(line.strip())
+        self.assertFalse(
+            bad,
+            "`### For Plan` example task lines MUST use `[Pn-Tm][annotation]` "
+            "format. Drifted lines: " + "; ".join(bad),
+        )
+
+    def test_skill_pseudocode_no_rule_id_grouping(self) -> None:
+        """Step 3 contract: review artifacts have no stable `rule_id`.
+
+        Embedded pseudocode (Smart Grouping etc.) MUST NOT key
+        groupings on `rule_id` — that would teach the synthesizer to
+        invent IDs the artifact does not provide. The Step 3 prose
+        legitimately mentions `rule_id` to prohibit it; this gate
+        targets the symbol-access pattern (`f[:rule_id]`,
+        `finding[:rule_id]`, `:rule_id` in `group_by`) inside
+        executable-looking pseudocode, not bare prose mentions.
+        """
+        text = TRIAGE_SKILL.read_text(encoding="utf-8")
+        bad_patterns = [r"\[\s*:rule_id\s*\]", r"group_by[^\n]*rule_id", r"f\.rule_id\b"]
+        bad: list[str] = []
+        for pat in bad_patterns:
+            for m in re.finditer(pat, text):
+                bad.append(f"{pat!r} matched: {m.group(0)!r}")
+        self.assertFalse(
+            bad,
+            "Pseudocode in triage SKILL.md MUST NOT key groupings on rule_id "
+            "(no stable id in review artifacts). Drifted patterns: " + "; ".join(bad),
+        )
+
+    def test_skill_no_pseudocode_implementation_blocks(self) -> None:
+        """SKILL bodies are agent instructions, not implementation pseudocode.
+
+        Triage routing happens via agent reasoning over the review
+        artifact. Embedded ` ```ruby ` / ` ```yaml ` blocks describing
+        in-process algorithms or fabricated schemas (e.g.,
+        `compound_analysis`) teach the wrong execution model.
+        Allowed fenced blocks: shell command examples (` ```text `,
+        ` ``` ` plain) under Integration / Edge Cases / Commands.
+        """
+        text = TRIAGE_SKILL.read_text(encoding="utf-8")
+        # Forbid `def `, `findings.group_by`, fabricated YAML schemas.
+        forbidden = [
+            (r"^\s*def\s+\w+\(", "Ruby `def` method block"),
+            (r"compound_analysis\b", "fabricated `compound_analysis` schema"),
+            (r"potential_root_cause\s*:", "fabricated `potential_root_cause` schema"),
+        ]
+        bad: list[str] = []
+        for pat, label in forbidden:
+            if re.search(pat, text, re.MULTILINE):
+                bad.append(label)
+        self.assertFalse(
+            bad,
+            "SKILL.md is agent instructions, not pseudocode. Found: " + "; ".join(bad),
         )
 
 
