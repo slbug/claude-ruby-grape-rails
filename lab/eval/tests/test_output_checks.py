@@ -1533,6 +1533,34 @@ Some prose.
         passed, _ = output_checks.has_review_summary_excludes_preexisting(content)
         self.assertTrue(passed)
 
+    def test_fence_walker_treats_info_string_line_as_open_not_close(self) -> None:
+        # Per CommonMark: a closing fence carries NO info string. A
+        # line like ` ```ruby ` with same backtick count opens a NEW
+        # fence inside the outer one — must NOT close the outer.
+        # Outer 4-backtick `markdown` excerpt with inner 3-backtick
+        # `ruby` block: outer must remain OPEN for the inner block,
+        # then the closing 3-backtick line closes inner, then the
+        # final 4-backtick line closes outer. Lines INSIDE outer
+        # must NOT yield outside-fence.
+        content = """before
+
+````markdown
+**Verdict**: LGTM
+
+```ruby
+puts "hello"
+```
+
+**Verdict**: BLOCK
+````
+
+after
+"""
+        # Verdict-line walker should see 0 verdict lines outside
+        # fences (outer covers all interior).
+        verdicts = output_checks._verdict_lines_outside_fences(content)
+        self.assertEqual(verdicts, [])
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 

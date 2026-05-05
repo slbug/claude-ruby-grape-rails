@@ -126,10 +126,13 @@ def _iter_lines_outside_fences(content: str):
     """Yield each line outside fenced code blocks, CommonMark-aware.
 
     Track the EXACT marker (char + length) that opened the current
-    fence. Close only on a matching marker char with length >= the
-    opener. Inner fences with fewer / different markers stay as
-    content. Required for repo's 4-backtick excerpts that nest
-    3-backtick samples (Markdown reviews, playbook templates).
+    fence. A closing fence per CommonMark MUST NOT carry an info
+    string — a line like ` ```ruby ` opens a NEW fence, never closes
+    the current one. Close only on a matching marker char with
+    length >= the opener AND no info string. Inner fences with
+    fewer / different markers stay as content. Required for repo's
+    4-backtick excerpts that nest 3-backtick samples (Markdown
+    reviews, playbook templates).
     """
     content = _normalize_newlines(content)
     fence: tuple[str, int] | None = None
@@ -139,13 +142,19 @@ def _iter_lines_outside_fences(content: str):
         if m:
             marker = m.group(1)
             ch, ln = marker[0], len(marker)
+            # Per CommonMark: closing fence has no info string. Anything
+            # after the marker (excluding trailing whitespace) means this
+            # line opens a fence rather than closes one.
+            has_info_string = stripped[len(marker):].strip() != ""
             if fence is None:
+                # Already inside no fence: this opens one.
                 fence = (ch, ln)
                 continue
-            if fence[0] == ch and ln >= fence[1]:
+            if fence[0] == ch and ln >= fence[1] and not has_info_string:
                 fence = None
                 continue
-            # Different char or shorter — treat as content inside outer fence.
+            # Different char, shorter, OR has info string → content
+            # inside outer fence.
         if fence is None:
             yield line
 

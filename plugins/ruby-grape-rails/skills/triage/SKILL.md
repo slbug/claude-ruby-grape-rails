@@ -155,8 +155,7 @@ For NEW findings:
 
 | Consolidated `**Verdict**:` | Action |
 |---|---|
-| `BLOCKED` / `PASS WITH WARNINGS` | continue to Step 3 |
-| `PASS` | continue to Step 3 (only Pre-existing rows possible; plan emits Pre-existing section only) |
+| `BLOCKED` / `PASS WITH WARNINGS` / `PASS` | continue to Step 3 (PASS reviews can carry NEW SUGGESTION rows that the user may opt in to via `S<n>`; verdict only excludes blockers + warnings) |
 | `REQUIRES CHANGES` | STOP triage. Print the redirect message below. Do NOT proceed to Steps 3-5. |
 
 Redirect message for `REQUIRES CHANGES`:

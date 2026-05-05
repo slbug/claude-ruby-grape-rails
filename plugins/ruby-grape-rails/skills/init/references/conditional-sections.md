@@ -29,7 +29,7 @@ omit it.
 |---|
 | Do NOT restate Iron Laws or Advisory Preferences. The runtime injector delivers them on `SessionStart` + `SubagentStart`. |
 | Do NOT inject library defaults (e.g. "Workers MUST include `Sidekiq::Job`", "Use `turbo_frame_tag`"). Only project-specific deviations or detected facts. |
-| Render only items derived from `detect-stack` output or from interview answers in the current `/rb:init` run. |
+| Render only items derived from `detect-stack` output, the scoped repo file scans listed per section (e.g. `config/sidekiq.yml`, `app/channels/*.rb`, `karafka.rb`, `packwerk.yml`, per-package `package.yml`, `.gitignore`), or interview answers in the current `/rb:init` run. Do NOT scan files outside the per-section scope. |
 | Empty section → omit. Do NOT leave a header without content. |
 | Render shape per section: each "What to render" cell below is the literal output line; emit those bullets as-is, one per detected/asked item. No verbose narration, no extra wrapper headings. |
 | Do NOT skip detection in favor of interview — detect-stack output is authoritative for items it covers. |
@@ -66,8 +66,10 @@ project-specific.
 
 ## MIXED_ORM_SECTION
 
-Render IF `DETECTED_ORMS` includes both `active_record` AND `sequel`.
-Ask the user once for per-package ORM ownership:
+Render IF `DETECTED_ORMS` includes both `active_record` AND `sequel`
+(comma-list contains both substrings). Trigger the interview
+regardless of `PACKAGE_QUERY_NEEDED` — per-package ORM ownership is
+NOT in `detect-stack` output, only the user knows it. Ask once:
 
 ```text
 Both Active Record and Sequel detected. Which ORM owns each package

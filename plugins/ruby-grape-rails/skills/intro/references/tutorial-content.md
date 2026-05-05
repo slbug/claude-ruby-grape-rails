@@ -254,8 +254,9 @@ stack facts only.
 
 | Source | Examples |
 |---|---|
-| `detect-stack` output | queue list, ORM-per-package map, Karafka topic routes, Packwerk enforcement flags |
-| Targeted interview | answers when `detect-stack` is ambiguous (multiple ORMs, package boundaries unclear) |
+| `detect-stack` output | Ruby/Rails/Grape/Sidekiq/Karafka versions, `DETECTED_ORMS`, `PACKAGE_LAYOUT`, `PACKAGE_LOCATIONS`, `HAS_PACKWERK` |
+| Scoped repo file scans | queue list (`config/sidekiq.yml`), Hotwire channels (`app/channels/*`), Karafka topic routes (`karafka.rb`), Packwerk enforcement flags (`packwerk.yml` + per-package `package.yml`) |
+| Targeted interview | per-package ORM map for mixed AR+Sequel repos (NOT in `detect-stack`), retry policy, frame-id convention, secret-path scan policy |
 
 `/rb:init` does NOT inject:
 

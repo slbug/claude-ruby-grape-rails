@@ -93,7 +93,7 @@ gate `/rb:work` on these.
 
 ## Next Steps
 
-1. Run `/rb:work` to fix the 4 selected items
-2. Estimated time: 40 minutes
+1. Run `/rb:work` to fix the 5 selected items (3 BLOCKER + 1 WARNING + 1 SUGGESTION)
+2. Estimated time: 45 minutes
 3. Review deferred items in future sprint
 ````

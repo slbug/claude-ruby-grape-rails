@@ -35,6 +35,12 @@ Detection rules:
    - Packages: `PACKAGE_LAYOUT`, `PACKAGE_LOCATIONS`, `HAS_PACKWERK`,
      `PACKAGE_QUERY_NEEDED`
 6. If `PACKAGE_QUERY_NEEDED=true`, ask the user: `No Packwerk detected. Do you have something similar implemented? Provide modules/packages location and their stack/ORM.`
+7. If `DETECTED_ORMS` contains BOTH `active_record` AND `sequel`
+   (mixed-ORM repo), run the `MIXED_ORM_SECTION` interview (per
+   `${CLAUDE_SKILL_DIR}/references/conditional-sections.md`
+   § "MIXED_ORM_SECTION") regardless of `PACKAGE_QUERY_NEEDED`
+   value. `detect-stack` does NOT emit per-package ORM ownership —
+   interview is the only source. Skip when only one ORM detected.
 7. **Do not** reimplement stack detection inline in chat or ad-hoc Ruby snippets. `detect-stack` is the source of truth.
 8. If `${CLAUDE_PLUGIN_ROOT}/bin/detect-stack` is missing or fails, STOP and explain that plugin stack detection is unavailable instead of inventing a fallback parser.
 
