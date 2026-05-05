@@ -34,14 +34,12 @@ Skip for vague requirements or trivial fixes.
 ## State Machine (summary)
 
 ```text
-INITIALIZING → [DISCOVERING (optional, brainstorm)] → PLANNING → WORKING → VERIFYING → REVIEWING → COMPOUNDING → COMPLETED
+INITIALIZING → [DISCOVERING] → PLANNING → WORKING → VERIFYING → REVIEWING → COMPOUNDING → COMPLETED
 ```
 
-DISCOVERING runs only when requirements are vague enough to need
-`/rb:brainstorm`; otherwise INITIALIZING transitions directly to
-PLANNING. See `${CLAUDE_SKILL_DIR}/references/state-machine.md`
-§ "Phase Transitions" for the two transition rows that branch on
-brainstorm-needed vs brainstorm-skipped.
+DISCOVERING is optional (`/rb:brainstorm`). INITIALIZING transitions
+directly to PLANNING when brainstorm is skipped. Branch rules:
+`${CLAUDE_SKILL_DIR}/references/state-machine.md` § "Phase Transitions".
 
 `/rb:full` skill body writes `**State**:` to `progress.md` at every
 transition. The `plan-stop-reminder.sh` hook checks for this field to

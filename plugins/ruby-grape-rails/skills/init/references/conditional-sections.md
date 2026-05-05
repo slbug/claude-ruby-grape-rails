@@ -156,12 +156,9 @@ belongs in `/rb:secrets` skill body, not in project `CLAUDE.md`.
 | `{BETTERLEAKS_STATUS}` | `command -v betterleaks` result | available / missing |
 | `{PLUGIN_VERSION}` | `jq -r '.version // empty' "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"` | 1.16.7 |
 
-`KARAFKA_VERSION`, `HOTWIRE_VERSION`, `SEQUEL_VERSION`,
-`ACTIVERECORD_VERSION` are `detect-stack` keys consumed only via
-`{STACK_HEADER}` composition. No standalone placeholder rows
-because the template does not reference them individually — they
-are read by the agent during header composition, not substituted
-elsewhere.
+Read `KARAFKA_VERSION`, `HOTWIRE_VERSION`, `SEQUEL_VERSION`,
+`ACTIVERECORD_VERSION` from `detect-stack` only when composing
+`{STACK_HEADER}`. Do NOT substitute them elsewhere in the template.
 
 ## Detection Commands
 

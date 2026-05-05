@@ -282,15 +282,11 @@ else:
 Apply the algorithm verbatim. Do NOT override with author judgment.
 Preserve nuance in per-finding prose, not in the verdict tag.
 
-The `new_public_behavior_lacks_test_coverage` branch is the only
-input that requires synthesis-time judgement (not a deterministic
-At-a-Glance count). Synthesis derives it by inspecting per-agent
-artifacts for findings tagged as test-coverage gaps (per § "Worker
-Severity Mapping" — `New public behavior without tests` → REQUIRES
-CHANGES verdict trigger). When the branch fires, populate the
-`## Test Coverage Gaps ({n})` section in the consolidated artifact
-(see § "Consolidated Review Format"); the chat script enumerates
-that section verbatim.
+`new_public_behavior_lacks_test_coverage`: derive at synthesis time
+from per-agent findings tagged as test-coverage gaps (per § "Worker
+Severity Mapping"). When fired, populate `## Test Coverage Gaps
+({n})` in the consolidated artifact (see § "Consolidated Review
+Format"). REQUIRES CHANGES chat script reads that section verbatim.
 
 ### STEP 5: Write the consolidated review
 
@@ -533,11 +529,10 @@ NOT counted here — see `## Pre-existing Issues` + at-a-glance
 
 ## Test Coverage Gaps ({n})
 
-Required ONLY when consolidated `**Verdict**: REQUIRES CHANGES`.
-Each row: a NEW public surface (method, controller action,
-Sidekiq job, Turbo Stream route) introduced by this diff with
-no test coverage. Drives the REQUIRES CHANGES verdict per STEP 4.
-Omit the entire section when the verdict is not REQUIRES CHANGES.
+Emit ONLY when consolidated `**Verdict**: REQUIRES CHANGES`. Omit
+section entirely on other verdicts. One row per NEW public surface
+(method / controller action / Sidekiq job / Turbo Stream route)
+introduced by this diff with no test coverage.
 
 | # | Surface | File | Why uncovered | Suggested test |
 |---|---------|------|---------------|----------------|
@@ -595,9 +590,6 @@ How would you like to proceed?
 - /rb:work — Write tests directly
 - I'll handle it myself
 ```
-
-`/rb:plan` reads the consolidated review's `## Test Coverage Gaps`
-section as its scope when given a review path; one task per gap.
 
 **BLOCKED:**
 

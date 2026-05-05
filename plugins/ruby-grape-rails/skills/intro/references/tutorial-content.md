@@ -39,6 +39,14 @@ Use `/rb:brainstorm` when requirements are vague or multiple approaches exist.
 It gathers requirements interactively and produces an `interview.md` that
 `/rb:plan` consumes. Skip it when requirements are already clear.
 
+After `/rb:review` the verdict drives the next step:
+
+| Verdict | Next step |
+|---|---|
+| `PASS` / `PASS WITH WARNINGS` | `/rb:compound` (capture solution) |
+| `BLOCKED` | `/rb:triage` to select which blockers/warnings to fix → `/rb:work` against the resulting plan |
+| `REQUIRES CHANGES` | `/rb:plan {review-path}` — plan reads the review's `## Test Coverage Gaps` section |
+
 Each phase reads from the previous phase's output. Plans become checkboxes. Checkboxes track progress. Reviews catch mistakes. Compound knowledge makes future work faster.
 
 ### What You Get

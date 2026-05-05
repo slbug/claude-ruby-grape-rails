@@ -275,10 +275,8 @@ unconditionally via `active-plan-marker.sh set` after `plan.md` write.
 
 ## Completion Criteria
 
-Single source of truth:
-`${CLAUDE_PLUGIN_ROOT}/skills/full/SKILL.md` § "Completion Criteria".
-State machine consumers read SKILL criteria verbatim. Do NOT
-duplicate the list here.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/full/SKILL.md` § "Completion
+Criteria". Do NOT duplicate the list here.
 
 ## Integration Points
 

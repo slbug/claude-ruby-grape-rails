@@ -151,26 +151,25 @@ For NEW findings:
 - WARNING → recommend (default selected; user may defer)
 - SUGGESTION → defer (default unselected; user may include)
 
-### Step 2b: Test Coverage Gaps (REQUIRES CHANGES verdict only)
+### Step 2b: Verdict gate
 
-When the consolidated review has `**Verdict**: REQUIRES CHANGES`,
-read the `## Test Coverage Gaps ({n})` section from the review
-artifact (per
-`${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
-§ "Consolidated Review Format"). These rows are NOT in the
-At-a-Glance Finding Table or any Blockers/Warnings/Suggestions
-section — they live in their own section, drive the verdict, and
-each row maps to one Phase 2 task line (`[test]` annotation,
-non-Iron-Law warning class). Auto-select ALL test-coverage gap
-rows; do NOT present them in the selection UI (the verdict already
-makes them mandatory).
+| Consolidated `**Verdict**:` | Action |
+|---|---|
+| `BLOCKED` / `PASS WITH WARNINGS` | continue to Step 3 |
+| `PASS` | continue to Step 3 (only Pre-existing rows possible; plan emits Pre-existing section only) |
+| `REQUIRES CHANGES` | STOP triage. Print the redirect message below. Do NOT proceed to Steps 3-5. |
 
-Example mapping (Test Coverage Gap row → Phase 2 task line):
+Redirect message for `REQUIRES CHANGES`:
 
-- Gap row: `User#authenticate` in `app/models/user.rb:42`
-- Task line: `- [ ] [P2-T{n}][test] Add spec for User#authenticate
-  exercising auth path — test-coverage gap (REQUIRES CHANGES);
-  source {review-path}`
+```text
+Review verdict is REQUIRES CHANGES — test-coverage gaps only.
+Run instead:
+
+  /rb:plan {review-artifact-path}
+
+`/rb:plan` reads the review's `## Test Coverage Gaps` section
+and writes one task per gap.
+```
 
 ### Step 3: Group Findings
 

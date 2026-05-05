@@ -61,6 +61,30 @@ For the exact shell-guard sequence, see
 `${CLAUDE_SKILL_DIR}/references/planning-workflow.md` §
 "Slug Pre-Bind Detection (strict guards)".
 
+## Review-Path Input (from `/rb:review` verdict REQUIRES CHANGES)
+
+When `$ARGUMENTS` is a path to a consolidated review artifact under
+`.claude/reviews/{review-slug}-{datesuffix}.md` AND that artifact
+carries `**Verdict**: REQUIRES CHANGES`:
+
+1. Read the review's `## Test Coverage Gaps ({n})` section per
+   `${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
+   § "Consolidated Review Format".
+2. Each row in that section becomes one task in the generated plan:
+   `- [ ] [P1-Tn][test] Add spec for {Surface} — test-coverage gap
+   (REQUIRES CHANGES); source {review-path}`. One row → one task.
+3. Skip the Research Phase agent fanout — gaps are already
+   identified in the review. Plan goes straight to DESIGN with the
+   `[test]` task list.
+4. Do NOT include any Blockers/Warnings/Suggestions findings in the
+   plan; this branch handles ONLY the test-coverage gap surface.
+   `/rb:triage` handles mixed-bucket reviews (`BLOCKED` /
+   `PASS WITH WARNINGS`).
+5. Set `Source Review:` metadata in the plan to the review path.
+
+For other verdicts on a review-path argument, fall through to the
+standard plan flow (treat the review as feature description input).
+
 ## Interview Detection (from /rb:brainstorm)
 
 Before asking clarification questions, check for a brainstorm interview:
