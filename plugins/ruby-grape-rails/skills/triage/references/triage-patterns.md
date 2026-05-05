@@ -62,12 +62,25 @@ stage and priorities:
 
 ## Severity Reclassification Guide
 
-### Downgrade from BLOCKER when
+### Pre-existing findings (do NOT downgrade)
+
+Pre-existing findings (review's `New? = Pre-existing` column) keep
+their bucket but are excluded from `## Summary`, `## Reviewer
+Coverage`, and the consolidated verdict per
+`${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
+§ "Pre-existing Issues". Triage routes them to the plan's
+`## Pre-existing Issues (informational)` section only. NEVER
+auto-include in any Phase. Do NOT relabel a pre-existing BLOCKER as
+WARNING / SUGGESTION.
+
+### Downgrade from BLOCKER (non-Iron-Law, NEW findings only) when
 
 - The issue is in code that's not yet reachable
 - There's an existing workaround in production
 - The fix requires a separate migration/PR
-- The issue existed before this change (pre-existing)
+
+Iron Law violations are non-negotiable BLOCKERs per the "Always
+Fix" list above; do NOT downgrade them on these grounds.
 
 ### Upgrade from SUGGESTION when
 

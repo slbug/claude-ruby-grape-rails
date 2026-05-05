@@ -56,7 +56,7 @@ priorities:
 
 ### WARNING → Recommend Include
 
-- **Error handling**: bare rescues, silent failures
+- **Error handling (non-Iron-Law)**: missing error handling on external API calls (bare `rescue` / `rescue Exception` is Iron Law 18 → BLOCKER, not WARNING)
 - **Test coverage**: missing tests for critical paths
 - **API contract**: breaking changes to public APIs
 - **Documentation**: missing docs for public methods
@@ -96,10 +96,11 @@ text + `iron-laws.yml` registry (e.g., "Multi-step operations
 without transaction wrap" → Iron Law 5). The plan's `[agent]`
 annotation comes from the finding's reviewer slug or Iron Law
 category. Emit annotation in space form per
-`${CLAUDE_PLUGIN_ROOT}/skills/work/references/file-formats.md`:
-`active record`, `sidekiq`, `security`, `ruby`, `hotwire`,
-`direct`. Do NOT use the underscore form from `iron-laws.yml`
-`category:` field — `/rb:work` parser routes on space form.
+`${CLAUDE_PLUGIN_ROOT}/skills/work/references/file-formats.md`.
+Common annotations: `active record`, `sidekiq`, `security`, `ruby`,
+`hotwire`, `testing`, `grape`, `direct`. Do NOT use the underscore
+form from `iron-laws.yml` `category:` field — `/rb:work` parser
+routes on space form.
 
 ### Step 2: Auto-Categorize via Review Bucket
 

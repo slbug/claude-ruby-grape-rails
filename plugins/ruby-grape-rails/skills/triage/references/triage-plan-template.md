@@ -46,7 +46,7 @@ Counts NEW findings only. Pre-existing tracked in
 
 ## Phase 2: Warnings (selected) [PENDING]
 
-- [ ] [P2-T1][ruby] Replace bare rescue in `app/services/payment.rb:34` — Iron Law 18 (rescue StandardError); source `.claude/reviews/fix-auth-20260505-103000.md`; ~10 min
+- [ ] [P2-T1][testing] Add edge-case spec for refund branch in `spec/services/refund_spec.rb` — missing test coverage on non-default path (non-Iron-Law warning); source `.claude/reviews/fix-auth-20260505-103000.md`; ~15 min
 
 ## Deferred Findings
 
