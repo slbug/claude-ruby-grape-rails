@@ -521,7 +521,10 @@ For hands-off development:
 /rb:full Add user profile avatars with S3 upload
 ```
 
-Runs the complete cycle: plan (with research), work, verify, review. Halts on `BLOCKED` or `REQUIRES CHANGES` verdict; user decides next step.
+Runs the complete cycle: plan (with research), work, verify, review.
+Halts on `/rb:verify --full` gate failure (HALTED_VERIFY_FAILED), or
+on review verdict `BLOCKED` / `REQUIRES CHANGES`; user decides next
+step.
 
 ## Workflow Tips
 

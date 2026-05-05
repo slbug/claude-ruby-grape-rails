@@ -105,6 +105,18 @@ class TriagePlanTemplateDriftTests(unittest.TestCase):
         text = TRIAGE_PLAN_TEMPLATE.read_text(encoding="utf-8")
         self.assertIn("## Phase 2: Warnings (selected)", text)
 
+    def test_phase_1_documents_both_canonical_headings(self) -> None:
+        """Phase 1 has TWO canonical headings (mutually exclusive per verdict).
+
+        BLOCKED → `## Phase 1: Blockers`. REQUIRES CHANGES →
+        `## Phase 1: Test Coverage Gaps`. Both must appear in the
+        template's Phase mapping table — agent reads the table to
+        pick the correct heading at Step 5.
+        """
+        text = TRIAGE_PLAN_TEMPLATE.read_text(encoding="utf-8")
+        self.assertIn("## Phase 1: Blockers", text)
+        self.assertIn("## Phase 1: Test Coverage Gaps", text)
+
     def test_task_annotations_use_canonical_set_a(self) -> None:
         """Every `- [ ] [Pn-Tm][annotation] ...` task line MUST use a Set A annotation.
 

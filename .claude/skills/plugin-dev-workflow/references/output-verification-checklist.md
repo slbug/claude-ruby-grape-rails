@@ -12,7 +12,7 @@ checks.
 |---|---|
 | shipped plugin contract | [`plugins/ruby-grape-rails/references/output-verification/provenance-template.md`](../../../../plugins/ruby-grape-rails/references/output-verification/provenance-template.md) |
 | contributor-only validation | `make eval-output`, `npm run eval:output` |
-| tracked fixtures | [`research-good.md`](../../../../lab/eval/fixtures/output/research-good.md), [`research-bad.md`](../../../../lab/eval/fixtures/output/research-bad.md), [`review-good.md`](../../../../lab/eval/fixtures/output/review-good.md), [`review-bad.md`](../../../../lab/eval/fixtures/output/review-bad.md) |
+| tracked fixtures | [`research-good.md`](../../../../lab/eval/fixtures/output/research-good.md), [`research-bad.md`](../../../../lab/eval/fixtures/output/research-bad.md), [`review-good.md`](../../../../lab/eval/fixtures/output/review-good.md), [`review-empty-pass.md`](../../../../lab/eval/fixtures/output/review-empty-pass.md), [`review-requires-changes.md`](../../../../lab/eval/fixtures/output/review-requires-changes.md), [`review-bad.md`](../../../../lab/eval/fixtures/output/review-bad.md) |
 
 Keep these surfaces separate.
 

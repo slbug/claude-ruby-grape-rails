@@ -43,9 +43,10 @@ After `/rb:review` the verdict drives the next step:
 
 | Verdict | Next step |
 |---|---|
-| `PASS` / `PASS WITH WARNINGS` | `/rb:compound` (capture solution) |
-| `BLOCKED` | `/rb:triage` to select which blockers/warnings to fix → `/rb:work` against the resulting plan |
-| `REQUIRES CHANGES` | `/rb:plan {review-path}` — plan reads the review's `## Test Coverage Gaps` section |
+| `PASS` | `/rb:compound` to capture lessons. Optionally `/rb:triage {review-path}` to opt in to suggestions. |
+| `PASS WITH WARNINGS` | `/rb:triage {review-path}` to batch warnings, or `/rb:compound` to capture lessons without fixing. |
+| `BLOCKED` | `/rb:triage {review-path}` to select which findings to fix → `/rb:work` against the resulting plan. |
+| `REQUIRES CHANGES` | `/rb:triage {review-path}` (default; auto-includes test-coverage gaps + handles any warnings). `/rb:plan {review-path}` for gaps-only plan, no triage UI. |
 
 Each phase reads from the previous phase's output. Plans become checkboxes. Checkboxes track progress. Reviews catch mistakes. Compound knowledge makes future work faster.
 

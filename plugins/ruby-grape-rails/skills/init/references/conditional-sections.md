@@ -69,21 +69,24 @@ project-specific.
 Render IF `DETECTED_ORMS` includes both `active_record` AND `sequel`
 (comma-list contains both substrings). Trigger the interview
 regardless of `PACKAGE_QUERY_NEEDED` — per-package ORM ownership is
-NOT in `detect-stack` output, only the user knows it. Ask once:
+NOT in `detect-stack` output, only the user knows it.
 
-```text
-Both Active Record and Sequel detected. Which ORM owns each package
-(<comma-separated paths from PACKAGE_LOCATIONS>)? Reply with one
-"<path> -> AR" or "<path> -> Sequel" per line, or "skip" if not yet
-mapped.
-```
+Two interview shapes per layout:
+
+| `PACKAGE_LOCATIONS` | Ask | Render target |
+|---|---|---|
+| present (Packwerk / modular monolith) | `Both Active Record and Sequel detected. Which ORM owns each package (<comma-separated paths from PACKAGE_LOCATIONS>)? Reply with one "<path> -> AR" or "<path> -> Sequel" per line, or "skip" if not yet mapped.` | `**ORM map**: <pkg> → AR, <pkg> → Sequel, ...` |
+| absent / empty (mixed-ORM monolith with no package layout) | `Both Active Record and Sequel detected, but no package boundaries are declared. Which directories or model namespaces use Active Record vs Sequel? Reply with one "<path-or-namespace> -> AR" or "<path-or-namespace> -> Sequel" per line, or "skip" if not yet mapped.` | `**ORM map (directory/namespace scope)**: <scope> → AR, <scope> → Sequel, ...` |
 
 | Source | What to render |
 |---|---|
-| Interview answer mapping each `PACKAGE_LOCATIONS` path to its ORM | `**ORM map**: <pkg> → AR, <pkg> → Sequel, ...` |
+| Interview answer (any layout) | the appropriate `**ORM map**:` line per the layout row above |
 
-Omit if the user skips or detection produces no package paths.
-Do NOT fabricate ORM ownership from package names alone.
+When the user answers `skip`, render a single bullet (literal):
+`**ORM map**: skipped — both ORMs detected, ownership unmapped. Re-run /rb:init --update after mapping decisions are made.`
+Do NOT fabricate ORM ownership from package names alone. Do NOT
+omit the section silently when the user provides a skip — the skip
+note is itself a project-specific fact.
 
 ## HOTWIRE_SECTION
 

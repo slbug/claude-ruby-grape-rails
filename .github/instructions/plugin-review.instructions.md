@@ -353,6 +353,11 @@ NOT flag the fallback chain as over-engineered.
 - Pre-existing findings counted in `## Summary` table. Pre-existing
   belongs in `## Pre-existing Issues` only; mixing inflates verdict
   thresholds and contradicts the deterministic verdict algorithm.
+- `## Test Coverage Gaps ({n})` section presence ↔ verdict mismatch.
+  Section is verdict-gated per `review-playbook.md` § "Consolidated
+  Review Format": REQUIRED when `**Verdict**: REQUIRES CHANGES`,
+  OMITTED on other verdicts. Flag artifacts with section + non-REQUIRES
+  CHANGES verdict, OR REQUIRES CHANGES verdict + missing section.
 - More than one `**Verdict**:` line outside fenced blocks. Exactly
   one consolidated verdict per artifact.
 - `run_in_background: true` on any `Agent(...)` call in shipped

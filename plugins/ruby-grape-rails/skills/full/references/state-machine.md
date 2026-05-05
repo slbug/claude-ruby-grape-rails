@@ -62,6 +62,7 @@ table below).
 | REVIEWING | `/rb:review` | git diff | `.claude/reviews/{review-slug}-{datesuffix}.md` |
 | COMPOUNDING | `/rb:compound ${PLAN_DIR}/plan.md` | plan path | `.claude/solutions/{category}/{fix}.md` |
 | COMPLETED | skill body | all phases passed | final `progress.md` State write |
+| HALTED_VERIFY_FAILED | skill body | any `/rb:verify --full` gate failed | halt cycle; user fixes failing gate (test, lint, brakeman, zeitwerk, migration safety) and re-runs `/rb:full` or resumes manually |
 | HALTED_REVIEW_BLOCKED | skill body | consolidated `**Verdict**: BLOCKED` parsed | halt cycle; user decides next |
 | HALTED_REVIEW_REQUIRES_CHANGES | skill body | consolidated `**Verdict**: REQUIRES CHANGES` parsed | halt cycle; user invokes `/rb:triage {review-path}` (default; handles gaps + any warnings) OR `/rb:plan {review-path}` (gaps-only, no triage UI) |
 | HALTED_REVIEW_UNKNOWN | skill body | review missing/unparseable / verdict line absent | halt cycle; user decides next |
@@ -76,6 +77,7 @@ table below).
 | PLANNING | WORKING | plan.md exists | write progress.md State; invoke `/rb:work ${PLAN_DIR}/plan.md` |
 | WORKING | VERIFYING | all checkboxes done | write progress.md State; invoke `/rb:verify --full` |
 | VERIFYING | REVIEWING | verify passed | write progress.md State; invoke `/rb:review` |
+| VERIFYING | HALTED_VERIFY_FAILED | any verify gate failed | write progress.md State; stop (user fixes failing gate, re-runs `/rb:full` or resumes manually) |
 | REVIEWING | COMPOUNDING | `**Verdict**: PASS` or `PASS WITH WARNINGS` | write progress.md State; invoke `/rb:compound ${PLAN_DIR}/plan.md` |
 | REVIEWING | HALTED_REVIEW_BLOCKED | `**Verdict**: BLOCKED` | write progress.md State; stop |
 | REVIEWING | HALTED_REVIEW_REQUIRES_CHANGES | `**Verdict**: REQUIRES CHANGES` | write progress.md State; stop (user runs `/rb:triage {review-path}` default, or `/rb:plan {review-path}` for gaps-only) |
