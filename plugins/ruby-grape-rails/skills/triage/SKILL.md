@@ -22,16 +22,14 @@ Batch-select findings from the review before creating follow-up work.
 ```
 Review File
     ↓
-Parse Findings
+Parse Findings (BLOCKER / WARNING / SUGGESTION)
     ↓
 ┌─────────────────┐
 │ Auto-Categorize │
 ├─────────────────┤
-│ • Iron Law      │ → Critical (always include)
-│ • Security      │ → High (always include)
-│ • N+1           │ → High (always include)
-│ • Style         │ → Low (ask user)
-│ • Performance   │ → Low (needs evidence)
+│ • BLOCKER       │ → always include
+│ • WARNING       │ → recommend (ask user)
+│ • SUGGESTION    │ → defer (ask user)
 └─────────────────┘
     ↓
 Present Grouped Findings
@@ -144,26 +142,26 @@ Illustrative expected UI:
 ║  Source: .claude/reviews/fix-auth-20260505-103000.md                         ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  🔴 CRITICAL (Auto-selected)                                 ║
+║  🔴 BLOCKER (Auto-selected)                                  ║
 ║  ─────────────────────────────────────────────────────────   ║
 ║  [✓] app/models/user.rb:45 - Missing transaction wrap        ║
-║       Iron Law: Wrap related creates in transaction          ║
+║       Iron Law 5: Transaction Boundaries                     ║
 ║                                                              ║
 ║  [✓] app/jobs/email_job.rb:12 - Passing AR object to job     ║
-║       Iron Law: Pass IDs, not objects                        ║
+║       Iron Law 10: Pass IDs, not records                     ║
 ║                                                              ║
 ║  [✓] app/controllers/orders_controller.rb:23 - N+1 Query     ║
-║       50 queries where 2 would suffice                       ║
+║       Iron Law 3: Use includes/preload                       ║
 ║                                                              ║
 ║  ─────────────────────────────────────────────────────────   ║
-║  3 critical issues (automatically included)                  ║
+║  3 BLOCKERs (automatically included)                         ║
 ║                                                              ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  🟠 HIGH (Recommended)                                       ║
+║  🟠 WARNING (Recommended)                                    ║
 ║  ─────────────────────────────────────────────────────────   ║
 ║  [✓] app/services/payment.rb:34 - Bare rescue                ║
-║       Catches broad exceptions                               ║
+║       Iron Law 18: Rescue StandardError, not Exception       ║
 ║                                                              ║
 ║  [ ] app/models/order.rb:89 - Missing test for edge case     ║
 ║       Refund logic has no regression coverage                ║
@@ -173,7 +171,7 @@ Illustrative expected UI:
 ║                                                              ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  🟡 MEDIUM (Optional)                                        ║
+║  🟡 WARNING (Optional)                                       ║
 ║  ─────────────────────────────────────────────────────────   ║
 ║  [ ] app/helpers/formatting.rb:12 - Method too long          ║
 ║       45 lines                                               ║
@@ -186,7 +184,7 @@ Illustrative expected UI:
 ║                                                              ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║
-║  🟢 LOW (Defer)                                              ║
+║  🟢 SUGGESTION (Defer)                                       ║
 ║  ─────────────────────────────────────────────────────────   ║
 ║  [ ] app/views/layouts/application.html.erb:5 - Quotes       ║
 ║       Single vs double quotes                                ║
@@ -203,8 +201,8 @@ Do **not** ask the user to type `confirm`, `drop W2`, or other freeform selectio
 
 Rules:
 
-- auto-include all Critical / Iron Law findings before asking
-- offer severity shortcuts first
+- auto-include all BLOCKER findings before asking
+- offer bucket shortcuts first (BLOCKER / WARNING / SUGGESTION)
 - then list individual findings
 - if there are more than 6 selectable items, batch them into multiple `AskUserQuestion` screens
 - each option description must include file, line, and a one-line reason
@@ -215,27 +213,27 @@ Example:
 AskUserQuestion:
   header: "Triage"
   multiSelect: true
-  question: "Which non-critical findings do you want to fix now? Critical items are already included."
+  question: "Which non-BLOCKER findings do you want to fix now? BLOCKERs are already included."
   options:
-    - label: "All HIGH (2)"
-      description: "Include all high-priority findings"
-    - label: "All MEDIUM (2)"
-      description: "Include all medium-priority findings"
+    - label: "All WARNING (2)"
+      description: "Include all WARNING findings"
+    - label: "All SUGGESTION (2)"
+      description: "Include all SUGGESTION findings"
     - label: "W1 Bare rescue"
       description: "app/services/payment.rb:34 — catches broad exceptions"
     - label: "W2 Missing edge-case test"
       description: "app/models/order.rb:89 — refund path lacks regression coverage"
-    - label: "M1 Method too long"
+    - label: "S1 Method too long"
       description: "app/helpers/formatting.rb:12 — 45 lines"
-    - label: "M2 Could use delegate"
+    - label: "S2 Could use delegate"
       description: "app/models/user.rb:23 — redundant wrapper method"
 ```
 
-The resulting selection state should be summarized back to the user in a short confirmation such as:
+Summarize selection state back to the user:
 
-- auto-included: `C1 C2 C3`
+- auto-included: `B1 B2 B3` (BLOCKERs)
 - selected: `W1`
-- deferred: `W2 M1 M2`
+- deferred: `W2 S1 S2`
 
 ### Step 5: Write Triage Output
 
@@ -306,39 +304,30 @@ The plan should be saved to `.claude/plans/{slug}/plan.md`:
 
 ## Decision Tree
 
+Read the review's existing bucket per finding. Override only when
+the bucket is missing or ambiguous:
+
 ```
-Is finding an Iron Law violation?
-├── YES → Include in Critical
-│         └── Never optional
+Review bucket = BLOCKER?
+├── YES → always include
+│         └── never optional
 │
-└── NO → Is it a security issue?
-          ├── YES → Include in Critical
+└── NO → bucket = WARNING?
+          ├── YES → recommend (default selected; user can defer)
           │
-          └── NO → Is it an N+1 or performance killer?
-                    ├── YES → Include in Critical
+          └── NO → bucket = SUGGESTION?
+                    ├── YES → defer (default unselected; user can include)
                     │
-                    └── NO → Does it affect data integrity?
-                              ├── YES → Include in High
-                              │
-                              └── NO → Is it error handling?
-                                        ├── YES → Include in High
-                                        │
-                                        └── NO → Is it test coverage?
-                                                  ├── YES → Include in High
-                                                  │
-                                                  └── NO → Is it style/format?
-                                                            ├── YES → Mark as Low
-                                                            │
-                                                            └── NO → Ask user
+                    └── NO → bucket missing / ambiguous → ask user
 ```
 
 ## Batch Operations
 
-### Select All in Category
+### Select All in Bucket
 
 ```
-[Select All Critical]
-[Select All High]  
+[Select All BLOCKER]
+[Select All WARNING]
 [Select All in File: app/models/user.rb]
 [Select All of Type: N+1]
 ```
@@ -395,7 +384,7 @@ end
 
 ### Direct to Work
 
-If triage generated a plan with selected critical items:
+If triage generated a plan with selected BLOCKER items:
 
 ```
 /rb:work .claude/plans/fix-user-model/plan.md
@@ -415,12 +404,12 @@ No findings selected. Options:
 [Cancel]
 ```
 
-### All Critical
+### All BLOCKER
 
-If all findings are critical:
+If all findings are BLOCKER:
 
 ```
-All 5 findings are critical and must be addressed.
+All 5 findings are BLOCKERs and must be addressed.
 Estimated time: 2 hours
 
 [Start Work] [Schedule for Later] [Export to Issue Tracker]
@@ -465,7 +454,7 @@ potential_root_cause: "Missing includes pattern across controllers"
 
 ## Best Practices
 
-1. **Always explain why** a finding is critical
+1. **Always explain why** a finding is BLOCKER
 2. **Show estimated effort** for each item
 3. **Group by location** when possible for efficient fixing
 4. **Preserve excluded items** for future reference
@@ -478,7 +467,7 @@ potential_root_cause: "Missing includes pattern across controllers"
 |---------|-------------|
 | `/rb:triage` | Triage most recent review |
 | `/rb:triage <file>` | Triage specific review file |
-| `select all critical` | Auto-select all critical findings |
+| `select all blockers` | Auto-select all BLOCKER findings |
 | `group by file` | Reorganize display by file |
 | `export` | Export triage to issue tracker |
 | `skip all` | Exclude all findings |

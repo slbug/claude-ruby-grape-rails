@@ -195,7 +195,11 @@ class ProvenanceScanScannedRootsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
             write_sidecar(tmp, ".claude/research/r.provenance.md", CLEAN_SIDECAR)
-            write_sidecar(tmp, ".claude/reviews/v.provenance.md", CLEAN_SIDECAR)
+            write_sidecar(
+                tmp,
+                ".claude/reviews/v-20260505-120000.provenance.md",
+                CLEAN_SIDECAR,
+            )
             write_sidecar(tmp, ".claude/audit/a.provenance.md", CLEAN_SIDECAR)
             write_sidecar(
                 tmp,
@@ -204,7 +208,7 @@ class ProvenanceScanScannedRootsTests(unittest.TestCase):
             )
             write_sidecar(
                 tmp,
-                ".claude/plans/feature-x/reviews/t.provenance.md",
+                ".claude/plans/feature-x/reviews/t-20260505-120000.provenance.md",
                 CLEAN_SIDECAR,
             )
             result = run_scan(tmp)
