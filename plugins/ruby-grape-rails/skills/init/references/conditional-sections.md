@@ -57,7 +57,7 @@ not an ownership map.
 
 | Source | What to render | Condition |
 |---|---|---|
-| `PACKAGE_LOCATIONS` (all paths) | `**Sequel-owned packages**: <comma-separated paths>` | ONLY when `DETECTED_ORMS` == `[sequel]` (single-ORM Sequel project). Skip in mixed AR+Sequel — let `MIXED_ORM_SECTION` handle ownership via interview. |
+| `PACKAGE_LOCATIONS` (all paths) | `**Sequel-owned packages**: <comma-separated paths>` | ONLY when `DETECTED_ORMS` is exactly the literal string `sequel` (single-ORM Sequel project). `detect-stack` emits `DETECTED_ORMS=<comma-joined>`, so mixed repos read as `active_record,sequel` — skip and let `MIXED_ORM_SECTION` handle ownership via interview. |
 | Detected `dataset_module` patterns OR interview answer | `**Custom query convention**: <pattern>` | always |
 | Detected `db/migrations/` (Sequel) AND `db/migrate/` (AR) directories present | `**Migration roots**: Sequel=<path>, AR=<path>` | only when both directories exist |
 

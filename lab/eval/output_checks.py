@@ -224,7 +224,7 @@ _CANONICAL_VERDICTS = frozenset(
 _COVERAGE_FINDINGS_RE = re.compile(
     r"^\d+\s+BLOCKER\s*/\s*\d+\s+WARNING\s*/\s*\d+\s+SUGGESTION$"
 )
-_REVIEWERS_HEADER_RE = re.compile(r"(?m)^\*\*Reviewers\*\*:\s*(.+?)\s*$")
+_STUB_NO_OUTPUT_FINDINGS = "0 BLOCKER / 0 WARNING / 0 SUGGESTION"
 
 
 def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
@@ -233,7 +233,9 @@ def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
         return False, "Missing ## Reviewer Coverage section"
     # Contract: `| <slug> | <recovery-state> | <findings-counts> |`
     # where recovery-state ∈ _RECOVERY_STATES and findings-counts matches
-    # `{n} BLOCKER / {n} WARNING / {n} SUGGESTION`.
+    # `{n} BLOCKER / {n} WARNING / {n} SUGGESTION`. `stub-no-output`
+    # rows MUST carry the all-zero findings cell — synthesis recovered
+    # no usable output, so the reviewer cannot have contributed findings.
     rows = _table_data_rows(body)
     if not rows:
         return False, "Reviewer Coverage table empty"
@@ -251,6 +253,13 @@ def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
             continue
         if not _COVERAGE_FINDINGS_RE.match(findings):
             bad.append(f"{slug}: findings cell {findings!r} not in `{{n}} BLOCKER / {{n}} WARNING / {{n}} SUGGESTION` form")
+            continue
+        if recovery == "stub-no-output" and findings != _STUB_NO_OUTPUT_FINDINGS:
+            bad.append(
+                f"{slug}: stub-no-output reviewer requires findings cell "
+                f"{_STUB_NO_OUTPUT_FINDINGS!r} (got {findings!r}) — "
+                "no usable output means no contributable findings"
+            )
     if bad:
         return False, "Reviewer Coverage row(s) violate contract: " + "; ".join(bad)
     return True, f"Reviewer Coverage section with {len(rows)} reviewer row(s)"
@@ -343,13 +352,21 @@ def has_review_reviewer_completeness(content: str) -> tuple[bool, str]:
     """
     from collections import Counter
 
-    content_norm = _normalize_newlines(content)
-    header_match = _REVIEWERS_HEADER_RE.search(content_norm)
-    if not header_match:
+    # Fence-aware: `**Reviewers**:` inside fenced Markdown excerpts is
+    # quoted template, not the live header. Match only outside fences
+    # so a fenced example cannot satisfy or override the real header.
+    header_pat = re.compile(r"^\*\*Reviewers\*\*:\s*(.+?)\s*$")
+    header_value: str | None = None
+    for line in _iter_lines_outside_fences(content):
+        m = header_pat.match(line)
+        if m:
+            header_value = m.group(1)
+            break
+    if header_value is None:
         return False, "Missing `**Reviewers**:` header line"
     header_slugs = [
         slug
-        for slug in (s.strip() for s in header_match.group(1).split(","))
+        for slug in (s.strip() for s in header_value.split(","))
         if slug
     ]
     if not header_slugs:
@@ -412,8 +429,9 @@ def has_review_metadata_fields(content: str) -> tuple[bool, str]:
 
     Per `review-playbook.md` § "Consolidated Review Format":
     `**Date**`, `**Complexity**`, `**Files Changed**`, `**Reviewers**`.
-    Scans only lines OUTSIDE fenced code blocks — a quoted Markdown
-    template under `**Current**` / `**Suggested**` does not count.
+    Scan stops at the first `## ` heading outside fenced code blocks —
+    these fields belong in the preamble (header), not in footer prose
+    or quoted Markdown templates under `**Current**` / `**Suggested**`.
     """
     patterns = {
         field: re.compile(rf"^\*\*{re.escape(field)}\*\*:\s+\S")
@@ -421,6 +439,8 @@ def has_review_metadata_fields(content: str) -> tuple[bool, str]:
     }
     found: set[str] = set()
     for line in _iter_lines_outside_fences(content):
+        if line.startswith("## "):
+            break
         for field, pat in patterns.items():
             if field in found:
                 continue
@@ -430,7 +450,7 @@ def has_review_metadata_fields(content: str) -> tuple[bool, str]:
             break
     missing = [field for field in _METADATA_FIELDS if field not in found]
     if missing:
-        return False, f"Missing metadata field(s): {missing} (each requires `**Field**:` line with non-empty value, outside fenced blocks)"
+        return False, f"Missing metadata field(s): {missing} (each requires `**Field**:` line in preamble before first `## ` heading, with non-empty value)"
     return True, f"All {len(_METADATA_FIELDS)} metadata fields present"
 
 

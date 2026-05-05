@@ -825,6 +825,83 @@ Some prose.
         passed, _ = output_checks.has_review_verdict_matches_summary(content)
         self.assertTrue(passed)
 
+    def test_reviewer_completeness_rejects_fenced_only_reviewers_header(self) -> None:
+        # Real artifact has NO `**Reviewers**:` header. Fenced excerpt
+        # contains one — must NOT satisfy the completeness gate.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer | PASS | PASS |
+
+## Suggestions (1)
+
+### 1. Update example doc
+
+````markdown
+**Reviewers**: ruby-reviewer, testing-reviewer
+````
+"""
+        passed, reason = output_checks.has_review_reviewer_completeness(content)
+        self.assertFalse(passed)
+        self.assertIn("Missing `**Reviewers**:` header", reason)
+
+    def test_reviewer_coverage_rejects_stub_no_output_with_nonzero_findings(self) -> None:
+        # `stub-no-output` means synthesis recovered no usable output;
+        # the reviewer cannot have contributed findings. A non-zero
+        # findings cell is semantically impossible.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| security-analyzer | stub-no-output | 1 BLOCKER / 0 WARNING / 0 SUGGESTION |
+"""
+        passed, reason = output_checks.has_review_reviewer_coverage(content)
+        self.assertFalse(passed)
+        self.assertIn("stub-no-output", reason)
+        self.assertIn("0 BLOCKER / 0 WARNING / 0 SUGGESTION", reason)
+
+    def test_reviewer_coverage_accepts_stub_no_output_with_all_zero_findings(self) -> None:
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| security-analyzer | stub-no-output | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+"""
+        passed, _ = output_checks.has_review_reviewer_coverage(content)
+        self.assertTrue(passed)
+
+    def test_has_review_metadata_fields_rejects_fields_in_footer_prose(self) -> None:
+        # All four fields appear, but only AFTER the first `## ` section
+        # heading (i.e., in body / footer prose, not the preamble).
+        # Playbook requires header placement.
+        content = """# Review: x
+
+## Summary
+
+Some prose.
+
+**Date**: 2026-05-05
+**Complexity**: Simple (1 file)
+**Files Changed**: app/foo.rb
+**Reviewers**: ruby-reviewer
+"""
+        passed, reason = output_checks.has_review_metadata_fields(content)
+        self.assertFalse(passed)
+        self.assertIn("preamble", reason)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 

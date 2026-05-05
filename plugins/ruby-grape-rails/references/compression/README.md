@@ -1,8 +1,9 @@
 # Verification-Output Compression — Telemetry
 
-End-user collector for verify-command stdout. Records real
-compression ratios + raw verify output for contributor analysis. Does
-NOT replace the Bash stdout the model receives.
+End-user collector for verify-command Bash output (stdout + stderr
+on success; top-level `error` blob on `PostToolUseFailure`). Records
+real compression ratios + raw verify output for contributor analysis.
+Does NOT replace the Bash stdout the model receives.
 
 Opt-in. Default OFF. Set `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1` to
 collect; otherwise hooks exit silently.
