@@ -246,9 +246,14 @@ Reviewer Coverage row counts MUST use bucket form
 (`Critical | Warning | Info`). Per § "Worker Severity Mapping":
 
 - worker `Critical` introduced by this diff → `BLOCKER`
-- worker `Critical` on unchanged code → `Pre-existing BLOCKER` (counted; no verdict effect)
+- worker `Critical` on unchanged code → tracked in `## Pre-existing Issues` only; NOT in Coverage row, NOT in Summary table
 - worker `Warning` → `WARNING`
 - worker `Info` → `SUGGESTION`
+
+Coverage row counts + Summary table counts use NEW findings only
+(diff-introduced). Pre-existing findings appear in `## Pre-existing
+Issues` section and the At-a-Glance Finding Table with
+`New? = Pre-existing`. They never affect the consolidated verdict.
 
 Apply bucket form across Coverage row, Summary table, At-a-Glance
 Finding Table, and section headers. Per-agent artifacts keep their
@@ -426,7 +431,10 @@ Write the synthesized review to the path read via
 |---|---|---|
 | {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output | {n} BLOCKER / {n} WARNING / {n} SUGGESTION |
 
-Findings column uses bucket form (`BLOCKER / WARNING / SUGGESTION`).
+Findings column uses bucket form (`BLOCKER / WARNING / SUGGESTION`)
+and counts NEW findings only (diff-introduced). Pre-existing
+findings attributed to the reviewer appear in `## Pre-existing
+Issues` and the at-a-glance table with `New? = Pre-existing`.
 Zero-pad when a bucket is empty. State definitions:
 
 - `artifact` — on-disk file ≥ 1000 bytes; trust as-is
@@ -450,6 +458,10 @@ For rows whose Coverage state is `stub-no-output`: emit
 `stub-no-output` rows only.
 
 ## Summary
+
+Counts NEW findings only (diff-introduced). Pre-existing issues are
+NOT counted here — see `## Pre-existing Issues` + at-a-glance
+`New? = Pre-existing`.
 
 | Severity | Count |
 |----------|-------|

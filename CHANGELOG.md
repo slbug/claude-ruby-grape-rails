@@ -189,9 +189,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Schema drift in `/rb:review` + `/rb:plan` + `/rb:brainstorm` skill
   bodies: ambiguous "recovery `status`" phrasing caused main-session
   manifest patches to emit an undocumented `recovery` field
-  alongside `status`. Verified in ludwig session
-  `040c3082-ad98-4ed6-aa38-218e93acfbc4` —
-  `printf '{"agents":{"%s":{"status":"artifact","recovery":"artifact"}}}'`.
+  alongside `status`.
   Wording fix removes the parse path that produces the extra field.
 
 ## [1.16.4] - 2026-05-03

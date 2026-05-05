@@ -86,24 +86,32 @@ consolidated `**Verdict**:` as metadata.
 
 ### Step 2: Auto-Categorize via Review Bucket
 
-Read each finding's bucket (`BLOCKER | WARNING | SUGGESTION`):
+Read each finding's bucket (`BLOCKER | WARNING | SUGGESTION`) AND
+its `New?` column. Apply this filter FIRST:
+
+- `New? = Pre-existing` → informational only; never auto-include,
+  never offer in selection UI. List under a separate "Pre-existing
+  Issues" section in the fix plan for context.
+- `New? = Yes` → proceed to bucket-based categorization below.
+
+For NEW findings:
 
 - BLOCKER → always include (auto-selected, never optional)
 - WARNING → recommend (default selected; user may defer)
 - SUGGESTION → defer (default unselected; user may include)
 
-Pre-existing findings (per `New?` column = `Pre-existing`) stay
-informational only. Do NOT auto-include them in the fix plan.
-
 ### Step 3: Group Findings
 
-Group by `[file, bucket, rule_id]` so batch-fixable items appear
-together in the selection UI.
+Group NEW findings by `[file, bucket]` so batch-fixable items appear
+together in the selection UI. The review artifact does NOT carry a
+stable `rule_id`; do not invent one.
 
 ### Step 4: Present Multi-Select UI
 
 Use `AskUserQuestion` with `multiSelect: true`. Auto-include all
-BLOCKERs before asking; ask only about WARNING + SUGGESTION items.
+NEW BLOCKERs before asking; ask only about NEW WARNING + NEW
+SUGGESTION items. Pre-existing findings are NOT presented for
+selection.
 Offer bucket shortcuts first (`All WARNING`, `All SUGGESTION`), then
 individual items. Each option label uses prefix `B<n>` / `W<n>` /
 `S<n>`; description includes file, line, one-line reason. Batch into
