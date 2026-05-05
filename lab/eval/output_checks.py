@@ -438,15 +438,19 @@ def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
       - `## Suggestions`: `**File**: `path/to/file.rb`` (path-only
         allowed; suggestions may target a class or whole file).
 
-    `## Pre-existing Issues (unchanged code)` uses bullet form, not
-    `**File**:` lines — skipped. Fence-aware: a quoted Markdown
+    Empty-findings PASS artifacts (per `review-playbook.md` line
+    187-188: "Always write the artifact even if findings are empty")
+    have zero `### N.` headings inside any bucket section — vacuous
+    pass. `## Pre-existing Issues (unchanged code)` uses bullet form,
+    not `**File**:` lines — skipped. Fence-aware: a quoted Markdown
     excerpt under `**Current**` / `**Suggested**` carries `**File**:`
-    lines as DATA. Skip them so a fenced excerpt cannot satisfy the
-    minimum on its own. Bucket-shape violations fail the gate even
-    when the artifact has the minimum count.
+    lines as DATA. Skip them. Bucket-shape violations fail the gate
+    even when the artifact has the minimum count.
     """
+    finding_heading_re = re.compile(r"^### \d+\.\s+\S")
     current_bucket: str | None = None
     in_pre_existing = False
+    findings_seen = 0
     count = 0
     bad: list[str] = []
     for line in _iter_lines_outside_fences(content):
@@ -463,7 +467,12 @@ def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
             current_bucket = None
             in_pre_existing = False
             continue
-        if in_pre_existing or not _FILE_REF_LINE_RE.match(line):
+        if in_pre_existing:
+            continue
+        if current_bucket and finding_heading_re.match(line):
+            findings_seen += 1
+            continue
+        if not _FILE_REF_LINE_RE.match(line):
             continue
         if current_bucket in {"Blockers", "Warnings"}:
             if _FILE_REF_STRICT_RE.match(line):
@@ -488,6 +497,8 @@ def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
             f"{count} valid finding file ref(s); bucket-shape violations: "
             + "; ".join(bad[:5])
         )
+    if findings_seen == 0:
+        return True, "No findings present (file_refs vacuously satisfied)"
     return count >= minimum, f"{count} finding file ref(s) present"
 
 
@@ -885,12 +896,12 @@ def has_review_mandatory_table(content: str) -> tuple[bool, str]:
     if not header_found:
         return False, "Missing 7-col At-a-Glance table header (`# | Finding | Severity | Confidence | Reviewer | File | New?`) under `## At-a-Glance Finding Table` section"
     rows = _table_data_rows(section)
-    if not rows:
-        return False, (
-            "At-a-Glance Finding Table has 0 data rows; per `review-playbook.md` "
-            "every consolidated review MUST list at least one finding row "
-            "(NEW or Pre-existing)"
-        )
+    # Per `review-playbook.md` § "Required output" line 187-188:
+    # "Always write the artifact (even if findings are empty — write
+    # PASS with files reviewed)". Empty-findings PASS reviews carry
+    # the section header + 0 data rows, which is valid. Mismatched
+    # row counts vs Summary are caught by
+    # `has_review_summary_excludes_preexisting` cross-check.
     bad: list[str] = []
     for idx, row in enumerate(rows, start=1):
         if len(row) != 7:

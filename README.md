@@ -291,8 +291,9 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 - **Agents are automatic.** The plugin spawns specialist agents behind the scenes. You don't manage them directly.
 - **Specialist agents stay lean.** Reviewers and analyzers set
   `omitClaudeMd: true` so subagents keep product/runtime context while
-  skipping contributor-only repo guidance. They are instructed to write
-  only their own artifacts under `.claude/`, not edit project code.
+  skipping the project `CLAUDE.md` payload. They are instructed to
+  write only their own artifacts under `.claude/`, not edit project
+  code.
 - **The stack is detected, not guessed.** `/rb:init` and SessionStart hooks identify Rails/Grape/Sidekiq/Karafka, Active Record vs Sequel, and Packwerk/modular package layouts before giving guidance.
 - **Session start is split into fast sync + async refresh.** You get immediate
   stack context from the quick snapshot while slower helper-version probes

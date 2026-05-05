@@ -162,7 +162,7 @@ REVIEW_CHECKS: tuple[CheckSpec, ...] = (
     ),
     CheckSpec(
         "review_file_refs",
-        "Findings cite file:line refs",
+        "Findings cite file refs per bucket shape (Blockers/Warnings: path:line; Suggestions: path[:line] allowed)",
         "artifact",
         output_checks.has_review_file_refs,
     ),

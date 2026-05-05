@@ -1488,6 +1488,47 @@ Some prose.
         self.assertIn("Severity", reason)
         self.assertIn("CRITICAL", reason)
 
+    def test_empty_findings_pass_artifact_passes_validators(self) -> None:
+        # Per `review-playbook.md` line 187-188: PASS reviews with
+        # zero findings MUST still write the artifact. Validators
+        # MUST allow this shape — At-a-Glance with 0 data rows,
+        # `has_review_file_refs` vacuously satisfied.
+        content = """# Review: Empty Clean Diff
+
+**Date**: 2026-05-05
+**Complexity**: Simple (1 file)
+**Files Changed**: app/models/user.rb
+**Reviewers**: ruby-reviewer
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: PASS
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+"""
+        # mandatory_table accepts 0 data rows.
+        passed, _ = output_checks.has_review_mandatory_table(content)
+        self.assertTrue(passed)
+        # file_refs vacuously satisfied (no `### N.` headings inside buckets).
+        passed, reason = output_checks.has_review_file_refs(content, minimum=1)
+        self.assertTrue(passed)
+        self.assertIn("No findings present", reason)
+        # finding_confidence vacuously satisfied (no findings).
+        passed, _ = output_checks.has_review_finding_confidence(content)
+        self.assertTrue(passed)
+        # summary_excludes_preexisting passes (Summary 0/0/0 == empty At-a-Glance).
+        passed, _ = output_checks.has_review_summary_excludes_preexisting(content)
+        self.assertTrue(passed)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 
