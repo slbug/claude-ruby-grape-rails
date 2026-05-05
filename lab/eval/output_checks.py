@@ -31,14 +31,16 @@ def _section(content: str, heading: str) -> str:
 
     Walks lines outside fenced code blocks. Quoted ## headings inside
     Current/Suggested fences are NOT recognized — only live consolidated
-    sections drive validation.
+    sections drive validation. Heading match accepts optional trailing
+    `({n})` count suffix per playbook convention (e.g. `## Blockers (3)`,
+    `## Test Coverage Gaps (2)`); both bare and counted forms resolve.
     """
-    target = f"## {heading}"
+    target_re = re.compile(rf"^## {re.escape(heading)}(?:\s*\(\d+\))?\s*$")
     in_section = False
     body: list[str] = []
     for line in _iter_lines_outside_fences(content):
         if line.startswith("## "):
-            if line.strip() == target:
+            if target_re.match(line.strip()):
                 in_section = True
                 continue
             if in_section:
