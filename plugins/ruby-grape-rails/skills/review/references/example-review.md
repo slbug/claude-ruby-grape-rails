@@ -51,7 +51,7 @@ def self.verify(token)
 end
 ```
 
-**Recommended**:
+**Suggested**:
 
 ```ruby
 def self.verify(token)

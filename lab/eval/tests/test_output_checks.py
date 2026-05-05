@@ -1412,6 +1412,82 @@ Some prose.
         self.assertIn("Suggestions", reason)
         self.assertIn("row missing", reason)
 
+    def test_finding_confidence_rejects_finding_missing_file_line(self) -> None:
+        # Finding has Confidence but NO **File**: line.
+        # Validator anchored on `### N.` heading detects it.
+        content = """# Review: x
+
+## Warnings (1)
+
+### 1. Issue without file ref
+
+**Reviewer**: ruby-reviewer | **Confidence**: HIGH
+**Issue**: bad
+"""
+        passed, reason = output_checks.has_review_finding_confidence(content)
+        self.assertFalse(passed)
+        self.assertIn("**File**:", reason)
+
+    def test_finding_confidence_rejects_two_findings_one_missing_file(self) -> None:
+        # Two findings: first complete, second missing **File**.
+        # Old `**File**:`-anchored loop missed the second finding;
+        # new `### N.` anchor catches it.
+        content = """# Review: x
+
+## Warnings (2)
+
+### 1. First
+
+**File**: `app/foo.rb:1`
+**Reviewer**: r | **Confidence**: HIGH
+**Issue**: a
+
+### 2. Second (missing File line)
+
+**Reviewer**: r | **Confidence**: MEDIUM
+**Issue**: b
+"""
+        passed, reason = output_checks.has_review_finding_confidence(content)
+        self.assertFalse(passed)
+        self.assertIn("Second", reason)
+        self.assertIn("**File**:", reason)
+
+    def test_mandatory_table_rejects_zero_data_rows(self) -> None:
+        content = """# Review: x
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+"""
+        passed, reason = output_checks.has_review_mandatory_table(content)
+        self.assertFalse(passed)
+        self.assertIn("0 data rows", reason)
+
+    def test_summary_excludes_preexisting_rejects_off_list_severity(self) -> None:
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: PASS
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Issue | CRITICAL | HIGH | r | f.rb:1 | Yes |
+"""
+        passed, reason = output_checks.has_review_summary_excludes_preexisting(content)
+        self.assertFalse(passed)
+        self.assertIn("Severity", reason)
+        self.assertIn("CRITICAL", reason)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 

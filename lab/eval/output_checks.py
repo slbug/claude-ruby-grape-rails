@@ -525,40 +525,71 @@ def has_review_metadata_fields(content: str) -> tuple[bool, str]:
 
 
 def has_review_finding_confidence(content: str) -> tuple[bool, str]:
-    """Each finding MUST carry its own `**Confidence**: HIGH|MEDIUM|LOW`.
+    """Each finding under `## Blockers` / `## Warnings` / `## Suggestions`
+    MUST carry BOTH `**File**:` AND `**Confidence**: HIGH|MEDIUM|LOW`.
 
-    Anchor every Confidence label to its preceding `**File**:` finding
-    block (next File header starts a new finding). Reject artifacts
-    where a finding has zero confidence labels even when the global
-    count matches. Reviewed Markdown excerpts inside fenced
-    Current/Suggested blocks are skipped.
+    Anchor on `### N. {Title}` headings inside a bucket section
+    (the playbook's per-finding structure). The next `### ` heading
+    or any `## ` section heading closes the current finding block.
+    Anchoring on `### N.` (not on `**File**:`) means a finding that
+    omits `**File**:` entirely is detected and rejected — the prior
+    `**File**:`-anchored loop made such findings invisible.
+    Reviewed Markdown excerpts inside fenced Current/Suggested
+    blocks are skipped via fence-aware iteration.
     """
     file_pat = re.compile(r"^\*\*File\*\*:\s+")
     conf_pat = re.compile(r"\*\*Confidence\*\*:\s+(HIGH|MEDIUM|LOW)\b")
-    in_finding = False
-    saw_confidence = False
-    finding_count = 0
-    missing_indices: list[int] = []
+    bucket_heading_re = re.compile(r"^## (Blockers|Warnings|Suggestions)(?:\s|\(|$)")
+    finding_heading_re = re.compile(r"^### \d+\.\s+(.+?)\s*$")
+    in_bucket = False
+    findings: list[dict] = []
+    current: dict | None = None
     for line in _iter_lines_outside_fences(content):
-        if file_pat.match(line):
-            if in_finding and not saw_confidence:
-                missing_indices.append(finding_count)
-            finding_count += 1
-            in_finding = True
-            saw_confidence = False
+        if bucket_heading_re.match(line):
+            if current is not None:
+                findings.append(current)
+                current = None
+            in_bucket = True
             continue
-        if in_finding and conf_pat.search(line):
-            saw_confidence = True
-    if in_finding and not saw_confidence:
-        missing_indices.append(finding_count)
-    if finding_count == 0:
-        return True, "No findings present (Confidence check vacuously satisfied)"
-    if missing_indices:
+        if line.startswith("## "):
+            if current is not None:
+                findings.append(current)
+                current = None
+            in_bucket = False
+            continue
+        if not in_bucket:
+            continue
+        m = finding_heading_re.match(line)
+        if m:
+            if current is not None:
+                findings.append(current)
+            current = {"title": m.group(1), "has_file": False, "has_confidence": False}
+            continue
+        if current is None:
+            continue
+        if file_pat.match(line):
+            current["has_file"] = True
+        if conf_pat.search(line):
+            current["has_confidence"] = True
+    if current is not None:
+        findings.append(current)
+    if not findings:
+        return True, "No findings present (validator vacuously satisfied)"
+    missing: list[str] = []
+    for idx, f in enumerate(findings, start=1):
+        gaps = []
+        if not f["has_file"]:
+            gaps.append("`**File**:`")
+        if not f["has_confidence"]:
+            gaps.append("`**Confidence**: HIGH|MEDIUM|LOW`")
+        if gaps:
+            missing.append(f"finding {idx} {f['title']!r}: missing {', '.join(gaps)}")
+    if missing:
         return False, (
-            f"{len(missing_indices)} of {finding_count} finding(s) missing "
-            f"`**Confidence**: HIGH|MEDIUM|LOW` (finding indices: {missing_indices})"
+            f"{len(missing)} of {len(findings)} finding(s) missing required fields: "
+            + "; ".join(missing[:5])
         )
-    return True, f"{finding_count} finding(s), each with Confidence"
+    return True, f"{len(findings)} finding(s), each with `**File**:` + `**Confidence**:`"
 
 
 def _summary_count(content: str, label: str) -> int | None:
@@ -667,8 +698,6 @@ def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
     if not section:
         return True, "No At-a-Glance section (Summary cross-check skipped)"
     rows = _table_data_rows(section)
-    if not rows:
-        return True, "No At-a-Glance rows (Summary cross-check skipped)"
     new_counts = {label: 0 for label, _ in _AT_A_GLANCE_SUMMARY_LABELS}
     bad_enum: list[str] = []
     for idx, row in enumerate(rows, start=1):
@@ -677,6 +706,10 @@ def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
         severity = row[2].upper()
         new_state = row[6].strip().lower()
         if severity not in new_counts:
+            bad_enum.append(
+                f"At-a-Glance row {idx}: `Severity` cell {row[2]!r} not in "
+                "{`BLOCKER`, `WARNING`, `SUGGESTION`} — malformed enum"
+            )
             continue
         if new_state not in _VALID_NEW_STATES:
             bad_enum.append(
@@ -743,12 +776,11 @@ def has_review_coverage_excludes_preexisting(content: str) -> tuple[bool, str]:
     if not at_a_glance_body:
         return True, "No At-a-Glance section (cross-check skipped)"
     glance_rows = _table_data_rows(at_a_glance_body)
-    if not glance_rows:
-        return True, "No At-a-Glance rows (cross-check skipped)"
     # Tally NEW findings per (reviewer, severity) AND total
     # attributions per reviewer (NEW + Pre-existing) from At-a-Glance.
-    # Reject rows with a malformed `New?` cell — silently treating
-    # them as non-new would let pre-existing leakage hide.
+    # Reject rows with a malformed `Severity` or `New?` enum cell —
+    # silently treating them as non-counting would let pre-existing
+    # leakage hide.
     new_per_reviewer: dict[str, dict[str, int]] = {}
     total_per_reviewer: dict[str, int] = {}
     bad_enum: list[str] = []
@@ -759,6 +791,10 @@ def has_review_coverage_excludes_preexisting(content: str) -> tuple[bool, str]:
         reviewer = row[4].strip()
         new_state = row[6].strip().lower()
         if severity not in {"BLOCKER", "WARNING", "SUGGESTION"}:
+            bad_enum.append(
+                f"At-a-Glance row {idx}: `Severity` cell {row[2]!r} not in "
+                "{`BLOCKER`, `WARNING`, `SUGGESTION`} — malformed enum"
+            )
             continue
         if not reviewer:
             continue
@@ -849,6 +885,12 @@ def has_review_mandatory_table(content: str) -> tuple[bool, str]:
     if not header_found:
         return False, "Missing 7-col At-a-Glance table header (`# | Finding | Severity | Confidence | Reviewer | File | New?`) under `## At-a-Glance Finding Table` section"
     rows = _table_data_rows(section)
+    if not rows:
+        return False, (
+            "At-a-Glance Finding Table has 0 data rows; per `review-playbook.md` "
+            "every consolidated review MUST list at least one finding row "
+            "(NEW or Pre-existing)"
+        )
     bad: list[str] = []
     for idx, row in enumerate(rows, start=1):
         if len(row) != 7:

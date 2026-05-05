@@ -10,9 +10,10 @@ mixed Active Record + Sequel repos and Packwerk-style modular monoliths
 without flattening everything into generic Rails advice.
 
 The plugin also keeps the runtime path leaner than older builds: read-only
-agents skip contributor-only `CLAUDE.md` context via `omitClaudeMd`, session
-start writes a fast runtime snapshot before a quiet async refresh, and active
-plans keep structured scratchpads for dead ends, decisions, and handoffs.
+specialist agents skip the project `CLAUDE.md` payload via `omitClaudeMd`,
+session start writes a fast runtime snapshot before a quiet async refresh,
+and active plans keep structured scratchpads for dead ends, decisions, and
+handoffs.
 
 ```bash
 # You describe the feature. The plugin figures out the rest.
@@ -582,7 +583,7 @@ The plugin enforces **22 Iron Laws** that prevent common, costly mistakes:
 ### Enforcement
 
 - **Programmatic**: 6 programmatic detectors checked automatically on targeted Ruby-ish edits
-- **Behavioral**: All 22 laws injected into subagent context
+- **Behavioral**: All 22 Iron Laws + 6 Advisory Preferences injected on `SessionStart` (main session) and `SubagentStart` (every spawned subagent)
 - **Review-time**: Full audit during `/rb:review`
 
 See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonical-registry.md) for details.

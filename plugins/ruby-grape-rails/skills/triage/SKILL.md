@@ -88,7 +88,7 @@ Read the consolidated review markdown.
 | `## Reviewer Verdicts` | Per-reviewer raw + canonical verdicts |
 | `## Summary` (then `**Verdict**:` line immediately AFTER the Summary table per `${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md` § "Consolidated Review Format") | Severity counts + consolidated verdict |
 | `## At-a-Glance Finding Table` | Per-finding row: `# / Finding / Severity / Confidence / Reviewer / File / New?` |
-| `## Blockers ({n})` / `## Warnings ({n})` / `## Suggestions ({n})` | Detailed finding bodies: `**File**:`, `**Reviewer**: ... \| **Confidence**:`, `**Issue**:`, `**Why it matters**:`, `**Current**:`, `**Suggested**:`, `**Recommendation**: \| Suggestion:` |
+| `## Blockers ({n})` / `## Warnings ({n})` / `## Suggestions ({n})` | Detailed finding bodies: `**File**:`, `**Reviewer**: ... \| **Confidence**:`, `**Issue**:`, `**Why it matters**:` (Blockers only), `**Current**:` + `**Suggested**:` (Blockers code blocks), `**Recommendation**:` (Warnings) or `**Suggestion**:` (Suggestions) |
 | `## Pre-existing Issues (unchanged code)` | Findings to surface in plan's `## Pre-existing Issues (informational)` only |
 
 For NEW At-a-Glance rows (`New? = Yes`), match each row to its
