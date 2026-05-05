@@ -224,6 +224,13 @@ _CANONICAL_VERDICTS = frozenset(
 _COVERAGE_FINDINGS_RE = re.compile(
     r"^\d+\s+BLOCKER\s*/\s*\d+\s+WARNING\s*/\s*\d+\s+SUGGESTION$"
 )
+# Whitespace-tolerant zero-counts gate for `stub-no-output` rows.
+# Mirrors `_COVERAGE_FINDINGS_RE` shape but pins every count to 0,
+# so `0 BLOCKER  /  0 WARNING /  0 SUGGESTION` (extra inner spaces)
+# matches the same way the shape-only check does.
+_STUB_NO_OUTPUT_FINDINGS_RE = re.compile(
+    r"^0\s+BLOCKER\s*/\s*0\s+WARNING\s*/\s*0\s+SUGGESTION$"
+)
 _STUB_NO_OUTPUT_FINDINGS = "0 BLOCKER / 0 WARNING / 0 SUGGESTION"
 
 
@@ -254,10 +261,10 @@ def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
         if not _COVERAGE_FINDINGS_RE.match(findings):
             bad.append(f"{slug}: findings cell {findings!r} not in `{{n}} BLOCKER / {{n}} WARNING / {{n}} SUGGESTION` form")
             continue
-        if recovery == "stub-no-output" and findings != _STUB_NO_OUTPUT_FINDINGS:
+        if recovery == "stub-no-output" and not _STUB_NO_OUTPUT_FINDINGS_RE.match(findings):
             bad.append(
-                f"{slug}: stub-no-output reviewer requires findings cell "
-                f"{_STUB_NO_OUTPUT_FINDINGS!r} (got {findings!r}) — "
+                f"{slug}: stub-no-output reviewer requires all-zero findings cell "
+                f"(canonical form {_STUB_NO_OUTPUT_FINDINGS!r}, got {findings!r}) — "
                 "no usable output means no contributable findings"
             )
     if bad:
@@ -613,6 +620,82 @@ def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
         f"Summary counts match At-a-Glance NEW rows "
         f"(B={new_counts['BLOCKER']} W={new_counts['WARNING']} S={new_counts['SUGGESTION']})",
     )
+
+
+_COVERAGE_FINDINGS_PARSE_RE = re.compile(
+    r"^(\d+)\s+BLOCKER\s*/\s*(\d+)\s+WARNING\s*/\s*(\d+)\s+SUGGESTION$"
+)
+
+
+def has_review_coverage_excludes_preexisting(content: str) -> tuple[bool, str]:
+    """Per-reviewer Coverage counts MUST equal At-a-Glance NEW rows attributed to that reviewer.
+
+    Per `review-playbook.md` STEP 3 + § "Reviewer Coverage":
+    `## Reviewer Coverage` row counts use NEW findings only
+    (diff-introduced). Pre-existing findings attributed to a reviewer
+    appear in `## Pre-existing Issues` + the At-a-Glance Finding
+    Table with `New? = Pre-existing`, but MUST NOT inflate that
+    reviewer's Coverage row.
+
+    Cross-checks each Coverage row's findings cell against the count
+    of At-a-Glance rows where `Reviewer` matches AND `New?` is `Yes`.
+    Skips when Coverage or At-a-Glance is absent — sibling validators
+    surface those gaps.
+    """
+    coverage_body = _section(content, "Reviewer Coverage")
+    if not coverage_body:
+        return True, "No Reviewer Coverage section (cross-check skipped)"
+    at_a_glance_body = _section(content, "At-a-Glance Finding Table")
+    if not at_a_glance_body:
+        return True, "No At-a-Glance section (cross-check skipped)"
+    glance_rows = _table_data_rows(at_a_glance_body)
+    if not glance_rows:
+        return True, "No At-a-Glance rows (cross-check skipped)"
+    # Tally NEW findings per (reviewer, severity) from At-a-Glance.
+    new_per_reviewer: dict[str, dict[str, int]] = {}
+    for row in glance_rows:
+        if len(row) != 7:
+            continue
+        severity = row[2].upper()
+        reviewer = row[4].strip()
+        new_state = row[6].strip().lower()
+        if severity not in {"BLOCKER", "WARNING", "SUGGESTION"}:
+            continue
+        if not reviewer or new_state != "yes":
+            continue
+        bucket = new_per_reviewer.setdefault(
+            reviewer, {"BLOCKER": 0, "WARNING": 0, "SUGGESTION": 0}
+        )
+        bucket[severity] += 1
+    coverage_rows = _table_data_rows(coverage_body)
+    bad: list[str] = []
+    for row in coverage_rows:
+        if len(row) != 3:
+            continue
+        slug, recovery, findings = row[0], row[1], row[2]
+        if not slug or recovery == "stub-no-output":
+            continue
+        m = _COVERAGE_FINDINGS_PARSE_RE.match(findings)
+        if not m:
+            continue
+        coverage_counts = {
+            "BLOCKER": int(m.group(1)),
+            "WARNING": int(m.group(2)),
+            "SUGGESTION": int(m.group(3)),
+        }
+        new_counts = new_per_reviewer.get(
+            slug, {"BLOCKER": 0, "WARNING": 0, "SUGGESTION": 0}
+        )
+        for severity in ("BLOCKER", "WARNING", "SUGGESTION"):
+            if coverage_counts[severity] != new_counts[severity]:
+                bad.append(
+                    f"{slug}: Coverage {severity} count {coverage_counts[severity]} "
+                    f"!= {new_counts[severity]} NEW row(s) attributed to {slug} in "
+                    "At-a-Glance — pre-existing findings MUST NOT inflate Coverage"
+                )
+    if bad:
+        return False, "; ".join(bad)
+    return True, f"Coverage counts match per-reviewer At-a-Glance NEW rows ({len(coverage_rows)} row(s))"
 
 
 _MANDATORY_TABLE_HEADER_RE = re.compile(

@@ -185,6 +185,12 @@ REVIEW_CHECKS: tuple[CheckSpec, ...] = (
         output_checks.has_review_summary_excludes_preexisting,
     ),
     CheckSpec(
+        "review_coverage_excludes_preexisting",
+        "Per-reviewer Coverage counts equal At-a-Glance NEW rows attributed to that reviewer",
+        "artifact",
+        output_checks.has_review_coverage_excludes_preexisting,
+    ),
+    CheckSpec(
         "review_mandatory_table",
         "Has mandatory finding table",
         "artifact",

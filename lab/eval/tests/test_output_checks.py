@@ -972,6 +972,100 @@ Some prose.
         passed, _ = output_checks.has_review_summary_excludes_preexisting(content)
         self.assertTrue(passed)
 
+    def test_coverage_excludes_preexisting_rejects_preexisting_counted_in_coverage(self) -> None:
+        # ruby-reviewer's Coverage row reports 1 BLOCKER. At-a-Glance
+        # shows 0 NEW BLOCKER rows for ruby-reviewer (only a Pre-existing
+        # one). Coverage MUST exclude pre-existing per playbook STEP 3.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 1 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Old issue | BLOCKER | HIGH | ruby-reviewer | f.rb:1 | Pre-existing |
+"""
+        passed, reason = output_checks.has_review_coverage_excludes_preexisting(content)
+        self.assertFalse(passed)
+        self.assertIn("ruby-reviewer", reason)
+        self.assertIn("BLOCKER", reason)
+        self.assertIn("pre-existing", reason)
+
+    def test_coverage_excludes_preexisting_accepts_matching_per_reviewer_new_counts(self) -> None:
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 1 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| testing-reviewer | artifact | 0 BLOCKER / 1 WARNING / 0 SUGGESTION |
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | New issue | BLOCKER | HIGH | ruby-reviewer | f.rb:1 | Yes |
+| 2 | Old issue | BLOCKER | HIGH | ruby-reviewer | f.rb:9 | Pre-existing |
+| 3 | Test gap | WARNING | MEDIUM | testing-reviewer | spec.rb:5 | Yes |
+"""
+        passed, _ = output_checks.has_review_coverage_excludes_preexisting(content)
+        self.assertTrue(passed)
+
+    def test_coverage_excludes_preexisting_skips_stub_no_output_rows(self) -> None:
+        # stub-no-output rows already enforce all-zero counts via
+        # `has_review_reviewer_coverage`; cross-check skips them so a
+        # legitimate stub-no-output reviewer with no At-a-Glance rows
+        # does not produce a false count mismatch.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| security-analyzer | stub-no-output | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+"""
+        passed, _ = output_checks.has_review_coverage_excludes_preexisting(content)
+        self.assertTrue(passed)
+
+    def test_coverage_excludes_preexisting_skips_when_at_a_glance_missing(self) -> None:
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+"""
+        passed, _ = output_checks.has_review_coverage_excludes_preexisting(content)
+        self.assertTrue(passed)
+
+    def test_reviewer_coverage_accepts_stub_no_output_with_extra_inner_whitespace(self) -> None:
+        # Whitespace-tolerant zero-counts gate for stub-no-output —
+        # extra inner spaces around `/` MUST NOT trip the gate when
+        # counts are still 0/0/0.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| security-analyzer | stub-no-output | 0 BLOCKER  /  0 WARNING  /  0 SUGGESTION |
+"""
+        passed, _ = output_checks.has_review_reviewer_coverage(content)
+        self.assertTrue(passed)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 

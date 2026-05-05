@@ -39,13 +39,14 @@ On match (env var enabled):
   top-level `error` blob on failure) under
   `${CLAUDE_PLUGIN_DATA}/verify-raw/<uuid>.log`.
 
-`SessionStart` advisory hook nudges the user once accumulated
-telemetry crosses either threshold from `rules.yml`
-(`advisory.size_threshold_bytes`, `advisory.sample_threshold`).
-Hook is read-only. Surfaces on-disk paths only — no literal `rm`
-strings (a re-read of the SessionStart context could otherwise
-misinterpret them as self-delete instructions). User composes
-cleanup commands from the surfaced paths.
+`SessionStart` advisory hook (read-only):
+
+- Trigger: accumulated telemetry crosses `advisory.size_threshold_bytes`
+  OR `advisory.sample_threshold` from `rules.yml`.
+- Output: on-disk paths only. NEVER emit literal `rm` strings — a
+  re-read of the SessionStart context could misinterpret them as
+  self-delete instructions.
+- User composes cleanup commands from the surfaced paths.
 
 ## End-User Reader
 
@@ -99,14 +100,13 @@ command class:
 Line-oriented collapsers (stack frames, deprecation runs, repeated
 warnings, K-line block dedup) do NOT reduce a single logical line
 encoding a large payload (canonical case: inline rspec expectation
-diff `expected: { ... } got: { ... }` with the whole JSON dump on
-one line). Megastring pass rewrites every line whose byte length
-exceeds `megastring.threshold_bytes`:
+diff with full JSON on one line). Megastring pass rewrites every
+line whose byte length exceeds `megastring.threshold_bytes`:
 
-- keep `keep_head` bytes from the start
-- emit the rendered `collapse.megastring` template
-- keep `keep_tail` bytes from the end
-- elide the middle bytes
+1. Keep `keep_head` bytes from the start.
+2. Emit the rendered `collapse.megastring` template.
+3. Keep `keep_tail` bytes from the end.
+4. Elide the middle bytes.
 
 Tunables in `rules.yml`:
 
@@ -116,34 +116,37 @@ Tunables in `rules.yml`:
 | `megastring.keep_head` | 500 | Preserves leading identifier (`expected:`, test description, file path). |
 | `megastring.keep_tail` | 500 | Preserves terminating syntax (`}`, `)`, `got:`). |
 
-Pass disables itself when `keep_head + keep_tail >= threshold_bytes`.
-Boundaries are byte-aligned; multibyte UTF-8 split points scrubbed
-via `String#scrub('')` so downstream regex passes never see invalid
-byte sequences. Reported elided-byte count reflects actual surviving
-sizes after scrub.
+Disable conditions + scrub:
+
+- Pass disables itself when `keep_head + keep_tail >= threshold_bytes`.
+- Boundaries byte-aligned. Scrub multibyte UTF-8 split points via
+  `String#scrub('')` so downstream regex passes never see invalid
+  byte sequences.
+- Reported elided-byte count reflects actual surviving sizes after scrub.
 
 ## No Bash Replacement Path
 
-`PostToolUse` cannot replace Bash stdout. CC delivers tool output to
-the model directly; only `updatedMCPToolOutput` replaces output
-(MCP-only, not Bash). PostToolUse stdout goes to the debug log; only
-`UserPromptSubmit`, `UserPromptExpansion`, `SessionStart` stdout
-becomes context.
+| Hook surface | Replaces tool output the model receives? |
+|---|---|
+| `PostToolUse` (Bash) | NO — stdout goes to debug log only |
+| `updatedMCPToolOutput` | YES — MCP-only, not Bash |
+| `UserPromptSubmit` / `UserPromptExpansion` / `SessionStart` | stdout becomes context (not a tool-output replacement) |
 
-A real replacement (PreToolUse rewrite, additionalContext layer-add,
-or pre-compaction) is deferred until telemetry quantifies which
-workloads benefit. The contributor reader is the operator surface
-for that decision.
+Defer a real replacement (PreToolUse rewrite, additionalContext
+layer-add, or pre-compaction) until telemetry quantifies workload
+benefit. Contributor reader (`bin/compression-stats`) is the
+operator surface for that decision.
 
-Reference points:
+Reference benchmarks (bytes-into-the-model, NOT this collector's
+direct metric):
 
 - TACO (Ren et al., arxiv:2604.19572) — ~10% token-overhead reduction
 - ACON (Kang et al., arxiv:2510.00615) — 26-54% peak-token reduction
   on long-horizon agent tasks
 
-These are bytes-into-the-model metrics. This collector measures the
-upper bound on Ruby-stack verify commands so a future release can
-prove workload-relevance before redesign.
+This collector measures the upper bound on Ruby-stack verify
+commands so a future release can prove workload-relevance before
+redesign.
 
 ## Interaction with `rtk`
 
@@ -154,17 +157,16 @@ hook that rewrites verification commands (e.g. `rspec spec/foo` →
 Collector triggers (`^rspec\b`, `^bundle exec rspec\b`, …) do NOT
 match `rtk *`:
 
-- No double-measurement. Hook exits silently when rtk has rewritten
-  the command.
-- If rtk rewrites every verify invocation, the collector is a no-op
-  for that user. Intended — rtk's JSON output is already compact;
-  running stack/gem collapsers over it would corrupt it.
+- Hook exits silently when rtk has rewritten the command — no
+  double-measurement.
+- Universal rtk users see the collector as a no-op. Intended: rtk's
+  JSON output is compact; running stack/gem collapsers over it
+  would corrupt it.
 
-To collect on rtk-rewritten commands, extend `triggers.yml`
-`verify_commands.direct` with
-`^rtk (rspec|rubocop|standardrb|brakeman|reek)\b` AND add a
-JSON-detection short-circuit to `lib/verify_compression.rb` so JSON
-payloads pass through unchanged.
+To collect on rtk-rewritten commands:
+
+1. Extend `triggers.yml` `verify_commands.direct` with `^rtk (rspec|rubocop|standardrb|brakeman|reek)\b`.
+2. Add a JSON-detection short-circuit to `lib/verify_compression.rb` so JSON payloads pass through unchanged.
 
 ## Safety
 

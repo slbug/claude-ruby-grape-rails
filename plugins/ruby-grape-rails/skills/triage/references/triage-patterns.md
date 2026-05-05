@@ -29,14 +29,14 @@ to "Usually Fix":
 - Partial updates without `turbo_frame_tag` (Iron Law 20)
 - "Should work" claims without test output (Iron Law 21)
 - `bundle exec rails zeitwerk:check` failures
+- Hard-coded credentials / API keys (cleartext secrets — security issue)
 
 ### Usually Fix
 
-Non-Iron-Law issues worth addressing:
+Non-Iron-Law, non-security issues worth addressing:
 
 - Tests without assertions or using `sleep`
 - Missing error handling on external API calls
-- Hard-coded credentials / API keys
 - Missing rate limiting on user-facing endpoints
 - Missing pagination on list endpoints over a small bound
 
