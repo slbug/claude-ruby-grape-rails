@@ -457,6 +457,123 @@ Another instance:
         passed, _ = output_checks.has_review_reviewer_completeness(content)
         self.assertTrue(passed)
 
+    def test_has_review_verdict_skips_fenced_blocks(self) -> None:
+        # `**Verdict**: LGTM` inside a fenced Markdown excerpt under a
+        # Suggested/Current section is a reviewed snippet, not the
+        # consolidated verdict — must NOT trip the canonical check.
+        content = """# Review: x
+
+**Verdict**: PASS
+
+## Suggestions (1)
+
+### 1. Update example doc
+
+````markdown
+**Verdict**: LGTM
+````
+"""
+        passed, _ = output_checks.has_review_verdict(content)
+        self.assertTrue(passed)
+
+    def test_has_review_finding_confidence_rejects_missing_label(self) -> None:
+        content = """# Review: x
+
+## Warnings (1)
+
+### 1. Issue
+
+**File**: `app/foo.rb:10`
+**Reviewer**: ruby-reviewer
+**Issue**: bad
+**Recommendation**: fix
+"""
+        passed, reason = output_checks.has_review_finding_confidence(content)
+        self.assertFalse(passed)
+        self.assertIn("Confidence", reason)
+
+    def test_has_review_finding_confidence_accepts_inline_confidence(self) -> None:
+        content = """# Review: x
+
+## Warnings (1)
+
+### 1. Issue
+
+**File**: `app/foo.rb:10`
+**Reviewer**: ruby-reviewer | **Confidence**: HIGH
+**Issue**: bad
+"""
+        passed, _ = output_checks.has_review_finding_confidence(content)
+        self.assertTrue(passed)
+
+    def test_verdict_matches_summary_rejects_pass_with_blockers(self) -> None:
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 2 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: PASS
+"""
+        passed, reason = output_checks.has_review_verdict_matches_summary(content)
+        self.assertFalse(passed)
+        self.assertIn("blocker(s)", reason)
+        self.assertIn("BLOCKED", reason)
+
+    def test_verdict_matches_summary_rejects_pass_with_warnings(self) -> None:
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 3 |
+| Suggestions | 0 |
+
+**Verdict**: PASS
+"""
+        passed, reason = output_checks.has_review_verdict_matches_summary(content)
+        self.assertFalse(passed)
+        self.assertIn("PASS WITH WARNINGS", reason)
+
+    def test_verdict_matches_summary_rejects_blocked_with_zero_counts(self) -> None:
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: BLOCKED
+"""
+        passed, reason = output_checks.has_review_verdict_matches_summary(content)
+        self.assertFalse(passed)
+        self.assertIn("PASS or REQUIRES CHANGES", reason)
+
+    def test_verdict_matches_summary_accepts_consistent_pass_with_warnings(self) -> None:
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 1 |
+| Suggestions | 0 |
+
+**Verdict**: PASS WITH WARNINGS
+"""
+        passed, _ = output_checks.has_review_verdict_matches_summary(content)
+        self.assertTrue(passed)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 

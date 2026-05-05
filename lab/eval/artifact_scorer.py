@@ -161,6 +161,18 @@ REVIEW_CHECKS: tuple[CheckSpec, ...] = (
         output_checks.has_review_file_refs,
     ),
     CheckSpec(
+        "review_finding_confidence",
+        "Every finding has a HIGH|MEDIUM|LOW confidence label",
+        "artifact",
+        output_checks.has_review_finding_confidence,
+    ),
+    CheckSpec(
+        "review_verdict_matches_summary",
+        "Consolidated verdict matches Summary blocker/warning counts",
+        "artifact",
+        output_checks.has_review_verdict_matches_summary,
+    ),
+    CheckSpec(
         "review_mandatory_table",
         "Has mandatory finding table",
         "artifact",
@@ -230,6 +242,8 @@ FIXTURES: dict[str, tuple[FixtureSpec, ...]] = {
                 "review_reviewer_verdicts",
                 "review_reviewer_completeness",
                 "review_file_refs",
+                "review_finding_confidence",
+                "review_verdict_matches_summary",
                 "review_mandatory_table",
                 "review_no_task_lists",
                 "review_no_followup_sections",

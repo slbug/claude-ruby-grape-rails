@@ -34,7 +34,7 @@
 ### 1. Retry policy change is not covered by a focused spec
 
 **File**: `app/jobs/sync_customer_job.rb:14`
-**Reviewer**: testing-reviewer
+**Reviewer**: testing-reviewer | **Confidence**: HIGH
 **Issue**: The diff changes retry behavior but leaves the job spec asserting only enqueueing.
 **Recommendation**: Add one spec that exercises the retry option or its configuration boundary.
 

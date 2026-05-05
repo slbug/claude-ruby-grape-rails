@@ -104,13 +104,37 @@ def has_review_title(content: str) -> tuple[bool, str]:
     return bool(match), "Review title present" if match else "Missing # Review: heading"
 
 
-def has_review_verdict(content: str) -> tuple[bool, str]:
+def _verdict_lines_outside_fences(content: str) -> list[str]:
+    """Return every `**Verdict**: <text>` line outside fenced code blocks.
+
+    Reviewed Markdown snippets under Current/Suggested may contain
+    verbatim `**Verdict**:` lines as part of the diff payload; those
+    must NOT trigger validation. Toggles `in_fence` on triple-backtick
+    or triple-tilde fences (matching `has_h1`).
+    """
     content = _normalize_newlines(content)
-    # Validate EVERY `**Verdict**:` line in the artifact. A non-canonical
-    # primary verdict cannot be masked by a later canonical duplicate
-    # (e.g. example block) — every occurrence MUST come VERBATIM from
-    # the canonical 4-set.
-    matches = re.findall(r"(?m)^\*\*Verdict\*\*:\s+(.+?)\s*$", content)
+    in_fence = False
+    out: list[str] = []
+    pat = re.compile(r"^\*\*Verdict\*\*:\s+(.+?)\s*$")
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        m = pat.match(line)
+        if m:
+            out.append(m.group(1))
+    return out
+
+
+def has_review_verdict(content: str) -> tuple[bool, str]:
+    # Validate EVERY `**Verdict**:` line outside fenced blocks. A
+    # non-canonical primary verdict cannot be masked by a later
+    # canonical duplicate. Reviewed snippets inside ```...``` are
+    # data, not directives — skip them.
+    matches = _verdict_lines_outside_fences(content)
     if not matches:
         return False, "Missing **Verdict** line"
     bad = [text for text in matches if text not in _CANONICAL_VERDICTS]
@@ -342,6 +366,97 @@ def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
     content = _normalize_newlines(content)
     matches = re.findall(r"(?m)^\*\*File\*\*:\s+`?.+:\d+`?$", content)
     return len(matches) >= minimum, f"{len(matches)} finding file ref(s) present"
+
+
+def has_review_finding_confidence(content: str) -> tuple[bool, str]:
+    """Every finding MUST include a `**Confidence**: HIGH|MEDIUM|LOW` label.
+
+    Playbook § "Confidence Levels" requires a confidence label per
+    finding to distinguish evidence-backed findings from
+    pattern-based hunches. Validator counts `**File**:` lines (one
+    per finding) and matching `**Confidence**: <HIGH|MEDIUM|LOW>`
+    occurrences. Both counts must match.
+    """
+    content = _normalize_newlines(content)
+    file_count = len(re.findall(r"(?m)^\*\*File\*\*:\s+", content))
+    if file_count == 0:
+        return True, "No findings present (Confidence check vacuously satisfied)"
+    conf_count = len(re.findall(r"\*\*Confidence\*\*:\s+(HIGH|MEDIUM|LOW)\b", content))
+    if conf_count < file_count:
+        return False, (
+            f"{file_count} finding(s) detected via `**File**:` but only "
+            f"{conf_count} `**Confidence**: HIGH|MEDIUM|LOW` label(s); "
+            "every finding requires a confidence label"
+        )
+    return True, f"{conf_count} Confidence label(s) for {file_count} finding(s)"
+
+
+def _summary_count(content: str, label: str) -> int | None:
+    """Parse the per-severity count from the consolidated `## Summary` table.
+
+    Table shape (per `review-playbook.md` template):
+
+        | Severity | Count |
+        |---|---|
+        | Blockers | {n} |
+        | Warnings | {n} |
+        | Suggestions | {n} |
+
+    Returns None when the section or the row is missing / unparsable.
+    """
+    body = _section(content, "Summary")
+    if not body:
+        return None
+    pat = re.compile(rf"^\|\s*{re.escape(label)}\s*\|\s*(\d+)\s*\|", re.MULTILINE)
+    m = pat.search(body)
+    if not m:
+        return None
+    return int(m.group(1))
+
+
+def has_review_verdict_matches_summary(content: str) -> tuple[bool, str]:
+    """Cross-validate the consolidated `**Verdict**:` line against Summary counts.
+
+    Per playbook § "STEP 4" + "Verdict Decision Rules":
+
+      blockers > 0          → BLOCKED
+      blockers == 0,
+        warnings > 0        → PASS WITH WARNINGS or REQUIRES CHANGES
+      blockers == 0,
+        warnings == 0       → PASS or REQUIRES CHANGES (test-coverage gap)
+
+    The "test-coverage gap" branch needs diff context the artifact
+    does not carry, so the validator cannot decide REQUIRES CHANGES
+    vs the alternatives. It rejects only the unambiguous violations:
+
+      - blockers > 0 + verdict ≠ BLOCKED
+      - blockers == 0 + warnings > 0 + verdict == PASS
+      - all counts == 0 + verdict ∈ {BLOCKED, PASS WITH WARNINGS}
+    """
+    blockers = _summary_count(content, "Blockers")
+    warnings = _summary_count(content, "Warnings")
+    if blockers is None or warnings is None:
+        return False, "Summary section missing Blockers / Warnings count rows"
+    verdicts = _verdict_lines_outside_fences(content)
+    if not verdicts:
+        return False, "Missing **Verdict** line"
+    verdict = verdicts[0]
+    if blockers > 0 and verdict != "BLOCKED":
+        return False, (
+            f"Summary reports {blockers} blocker(s) but verdict is {verdict!r}; "
+            "playbook STEP 4 requires BLOCKED when blockers > 0"
+        )
+    if blockers == 0 and warnings > 0 and verdict == "PASS":
+        return False, (
+            f"Summary reports {warnings} warning(s) and 0 blockers but verdict is PASS; "
+            "expected PASS WITH WARNINGS or REQUIRES CHANGES"
+        )
+    if blockers == 0 and warnings == 0 and verdict in {"BLOCKED", "PASS WITH WARNINGS"}:
+        return False, (
+            f"Summary reports 0 blockers and 0 warnings but verdict is {verdict!r}; "
+            "expected PASS or REQUIRES CHANGES"
+        )
+    return True, f"Verdict {verdict!r} consistent with Summary (B={blockers} W={warnings})"
 
 
 def has_review_mandatory_table(content: str) -> tuple[bool, str]:

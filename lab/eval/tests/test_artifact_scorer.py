@@ -43,6 +43,8 @@ class ArtifactScorerTests(unittest.TestCase):
                 "review_reviewer_verdicts",
                 "review_reviewer_completeness",
                 "review_file_refs",
+                "review_finding_confidence",
+                "review_verdict_matches_summary",
                 "review_mandatory_table",
                 "review_no_task_lists",
                 "review_no_followup_sections",
