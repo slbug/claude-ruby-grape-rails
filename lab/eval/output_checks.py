@@ -423,9 +423,16 @@ def has_review_reviewer_completeness(content: str) -> tuple[bool, str]:
 
 
 def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
-    content = _normalize_newlines(content)
-    matches = re.findall(r"(?m)^\*\*File\*\*:\s+`?.+:\d+`?$", content)
-    return len(matches) >= minimum, f"{len(matches)} finding file ref(s) present"
+    """Count `**File**: path:line` refs across LIVE finding bodies.
+
+    Fence-aware: a quoted Markdown excerpt under `**Current**` /
+    `**Suggested**` (per `review-playbook.md` § "Consolidated Review
+    Format") legitimately can carry `**File**:` lines as data. Skip
+    them so a fenced excerpt cannot satisfy the minimum on its own.
+    """
+    pat = re.compile(r"^\*\*File\*\*:\s+`?.+:\d+`?$")
+    count = sum(1 for line in _iter_lines_outside_fences(content) if pat.match(line))
+    return count >= minimum, f"{count} finding file ref(s) present"
 
 
 _METADATA_FIELDS = ("Date", "Complexity", "Files Changed", "Reviewers")
@@ -768,19 +775,33 @@ def has_review_mandatory_table(content: str) -> tuple[bool, str]:
 
 
 def review_has_no_task_lists(content: str) -> tuple[bool, str]:
-    content = _normalize_newlines(content)
-    match = re.search(r"(?m)^\s*-\s+\[[ xX]\]\s+", content)
-    return not bool(match), "No task lists present" if not match else "Review should not contain task lists"
+    """Reject `- [ ] ...` task lines in the LIVE consolidated review.
+
+    Fence-aware: review template at `review-playbook.md:486` allows
+    fenced `**Current**` / `**Suggested**` excerpts which can quote
+    a Markdown source containing task lists as data. Skip fenced
+    content so quoted snippets do not falsely trip the gate.
+    """
+    pat = re.compile(r"^\s*-\s+\[[ xX]\]\s+")
+    for line in _iter_lines_outside_fences(content):
+        if pat.match(line):
+            return False, "Review should not contain task lists"
+    return True, "No task lists present"
 
 
 def review_has_no_followup_sections(content: str) -> tuple[bool, str]:
-    content = _normalize_newlines(content)
-    match = re.search(r"(?m)^## (Next Steps|Action Items|Follow-up|Follow Up|Fix Plan)\s*$", content)
-    return (
-        (True, "No follow-up planning section present")
-        if not match
-        else (False, "Review should not contain follow-up planning sections")
-    )
+    """Reject follow-up planning headings in the LIVE consolidated review.
+
+    Fence-aware: a quoted Markdown excerpt under `**Current**` /
+    `**Suggested**` can include a `## Next Steps` heading as data
+    (review of a doc that itself plans follow-ups). Skip fenced
+    content so quoted snippets do not falsely trip the gate.
+    """
+    pat = re.compile(r"^## (Next Steps|Action Items|Follow-up|Follow Up|Fix Plan)\s*$")
+    for line in _iter_lines_outside_fences(content):
+        if pat.match(line):
+            return False, "Review should not contain follow-up planning sections"
+    return True, "No follow-up planning section present"
 
 
 def has_provenance_header(content: str) -> tuple[bool, str]:

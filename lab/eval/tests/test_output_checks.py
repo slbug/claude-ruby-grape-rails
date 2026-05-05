@@ -1167,6 +1167,72 @@ Some prose.
         self.assertTrue(passed)
         self.assertIn("2 row(s)", reason)
 
+    def test_has_review_file_refs_skips_fenced_excerpts(self) -> None:
+        # Real artifact has zero out-of-fence `**File**:` lines. A
+        # fenced Markdown excerpt under `**Current**` contains a
+        # `**File**:` line as DATA — must NOT count.
+        content = """# Review: x
+
+## Suggestions (1)
+
+### 1. Update example
+
+````markdown
+**File**: `quoted/example.md:5`
+**Reviewer**: ruby-reviewer
+````
+"""
+        passed, reason = output_checks.has_review_file_refs(content, minimum=1)
+        self.assertFalse(passed)
+        self.assertIn("0 finding file ref(s)", reason)
+
+    def test_review_has_no_task_lists_skips_fenced_excerpts(self) -> None:
+        # Fenced markdown excerpt with a task list is quoted DATA,
+        # not a live review task list. Must NOT trip the gate.
+        content = """# Review: x
+
+## Warnings (1)
+
+### 1. Doc has stale checklist
+
+**File**: `docs/old.md:1`
+**Reviewer**: ruby-reviewer | **Confidence**: HIGH
+**Issue**: Stale `- [ ]` checkbox in doc.
+
+**Current**:
+
+````markdown
+- [ ] An old doc TODO
+- [x] Already done
+````
+"""
+        passed, _ = output_checks.review_has_no_task_lists(content)
+        self.assertTrue(passed)
+
+    def test_review_has_no_followup_sections_skips_fenced_excerpts(self) -> None:
+        # Reviewing a doc that itself has `## Next Steps` — quoted
+        # under fenced `**Current**`/`**Suggested**`. Live review has
+        # no such section. Must NOT trip the gate.
+        content = """# Review: x
+
+## Warnings (1)
+
+### 1. Reviewing a doc that plans follow-ups
+
+**File**: `docs/plan.md:1`
+**Reviewer**: ruby-reviewer | **Confidence**: HIGH
+
+**Current**:
+
+````markdown
+## Next Steps
+
+1. Do thing.
+````
+"""
+        passed, _ = output_checks.review_has_no_followup_sections(content)
+        self.assertTrue(passed)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 

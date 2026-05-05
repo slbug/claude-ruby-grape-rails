@@ -62,8 +62,9 @@ workers.
 | REVIEWING | `/rb:review` | git diff | `.claude/reviews/{review-slug}-{datesuffix}.md` |
 | COMPOUNDING | `/rb:compound ${PLAN_DIR}/plan.md` | plan path | `.claude/solutions/{category}/{fix}.md` |
 | COMPLETED | skill body | all phases passed | final `progress.md` State write |
-| HALTED_REVIEW_CRITICAL | skill body | `Critical: > 0` parsed | halt cycle; user decides next |
-| HALTED_REVIEW_UNKNOWN | skill body | review missing/unparseable | halt cycle; user decides next |
+| HALTED_REVIEW_BLOCKED | skill body | consolidated `**Verdict**: BLOCKED` parsed | halt cycle; user decides next |
+| HALTED_REVIEW_REQUIRES_CHANGES | skill body | consolidated `**Verdict**: REQUIRES CHANGES` parsed | halt cycle; user invokes new `/rb:plan` for the test-coverage gap |
+| HALTED_REVIEW_UNKNOWN | skill body | review missing/unparseable / verdict line absent | halt cycle; user decides next |
 
 ## Phase Transitions
 
@@ -75,9 +76,10 @@ workers.
 | PLANNING | WORKING | plan.md exists | write progress.md State; invoke `/rb:work ${PLAN_DIR}/plan.md` |
 | WORKING | VERIFYING | all checkboxes done | write progress.md State; invoke `/rb:verify --full` |
 | VERIFYING | REVIEWING | verify passed | write progress.md State; invoke `/rb:review` |
-| REVIEWING | COMPOUNDING | Critical == 0 | write progress.md State; invoke `/rb:compound ${PLAN_DIR}/plan.md` |
-| REVIEWING | HALTED_REVIEW_CRITICAL | Critical > 0 | write progress.md State; stop |
-| REVIEWING | HALTED_REVIEW_UNKNOWN | review missing/unparseable | write progress.md State; stop |
+| REVIEWING | COMPOUNDING | `**Verdict**: PASS` or `PASS WITH WARNINGS` | write progress.md State; invoke `/rb:compound ${PLAN_DIR}/plan.md` |
+| REVIEWING | HALTED_REVIEW_BLOCKED | `**Verdict**: BLOCKED` | write progress.md State; stop |
+| REVIEWING | HALTED_REVIEW_REQUIRES_CHANGES | `**Verdict**: REQUIRES CHANGES` | write progress.md State; stop (user re-runs `/rb:plan` for the test-coverage gap) |
+| REVIEWING | HALTED_REVIEW_UNKNOWN | review missing/unparseable / verdict line absent | write progress.md State; stop |
 | COMPOUNDING | COMPLETED | solution doc written | write progress.md final State |
 
 ## Local PLAN_DIR Pattern
@@ -122,24 +124,36 @@ EOF
 "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/active-plan-marker.sh" set "${PLAN_DIR}"
 ```
 
-## Critical-Review Gate
+## Review Verdict Gate
 
-After /rb:review writes .claude/reviews/{review-slug}-{datesuffix}.md, /rb:full
-parses the consolidated review's `## Summary` block:
+After /rb:review writes .claude/reviews/{review-slug}-{datesuffix}.md,
+/rb:full parses the consolidated `**Verdict**:` line (canonical 4-set
+per `${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
+§ "Verdict Decision Rules"). The verdict line sits immediately after
+the `## Summary` table:
 
 ```text
 ## Summary
-- Critical: {N}
-- Warnings: {N}
-- Info: {N}
+
+| Severity | Count |
+|----------|-------|
+| Blockers | {n} |
+| Warnings | {n} |
+| Suggestions | {n} |
+
+**Verdict**: PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED
 ```
 
-If Critical > 0 → write **State**: HALTED_REVIEW_CRITICAL; stop cycle.
-If consolidated review missing OR `Critical:` line absent/unparseable
-  → write **State**: HALTED_REVIEW_UNKNOWN; stop cycle.
-Else → continue to COMPOUNDING.
+| Verdict | Transition |
+|---|---|
+| `PASS` / `PASS WITH WARNINGS` | continue to COMPOUNDING |
+| `BLOCKED` | write `**State**: HALTED_REVIEW_BLOCKED`; stop cycle |
+| `REQUIRES CHANGES` | write `**State**: HALTED_REVIEW_REQUIRES_CHANGES`; stop (user re-runs `/rb:plan` for the test-coverage gap) |
+| missing artifact / verdict line absent / off-canonical wording | write `**State**: HALTED_REVIEW_UNKNOWN`; stop cycle |
 
-No autonomous re-run regardless of severity. User decides next step.
+Summary `Blockers` count is informational here — `**Verdict**:` is
+the load-bearing gate. No autonomous re-run regardless of verdict.
+User decides next step.
 
 ## Marker Lifecycle Constraints
 
@@ -265,7 +279,7 @@ A `/rb:full` cycle is COMPLETED when ALL of:
 
 - All planned tasks completed or explicitly deferred
 - Verification suite passes (all gates above)
-- `/rb:review` consolidated review has `Critical: 0`
+- `/rb:review` consolidated review verdict ∈ {`PASS`, `PASS WITH WARNINGS`} (no NEW BLOCKERs introduced by this diff)
 - `/rb:compound` solution doc written or explicit "no compound" decision logged
 - `progress.md` final State write: `**State**: COMPLETED`
 
