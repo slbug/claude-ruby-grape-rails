@@ -41,8 +41,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   "Confidence Levels"); new `review_verdict_matches_summary`
   cross-validates the consolidated verdict against Summary
   blocker/warning counts (rejects PASS with blockers, PASS with
-  warnings + 0 blockers, BLOCKED/PASS-WITH-WARNINGS with all-zero
-  counts). Malformed rows surface instead of silently dropping.
+  warnings + 0 blockers, BLOCKED or PASS WITH WARNINGS with
+  all-zero counts). Malformed rows surface instead of silently
+  dropping.
 - Injector dropped `See:` prefix; `reference_files` companion paths
   emit bare beneath each rule. Real-run observation: passive `See:`
   framing read as citation; agents never opened the targets.
