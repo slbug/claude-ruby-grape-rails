@@ -19,6 +19,10 @@ TRIAGE_PLAN_TEMPLATE = (
     / "plugins/ruby-grape-rails/skills/triage/references/triage-plan-template.md"
 )
 TRIAGE_SKILL = REPO_ROOT / "plugins/ruby-grape-rails/skills/triage/SKILL.md"
+REVIEW_GOOD_FIXTURE = REPO_ROOT / "lab/eval/fixtures/output/review-good.md"
+EXAMPLE_REVIEW = (
+    REPO_ROOT / "plugins/ruby-grape-rails/skills/review/references/example-review.md"
+)
 
 _IRON_LAW_RE = re.compile(r"Iron Law\s+\d+", re.IGNORECASE)
 _PHASE_HEADING_RE = re.compile(r"^##+\s+(Phase\s+\d+|Deferred Findings|Pre-existing Issues)", re.IGNORECASE)
@@ -203,6 +207,59 @@ class TriageSkillEmbeddedExampleDriftTests(unittest.TestCase):
             bad,
             "Pseudocode in triage SKILL.md MUST NOT key groupings on rule_id "
             "(no stable id in review artifacts). Drifted patterns: " + "; ".join(bad),
+        )
+
+    def test_at_a_glance_finding_text_matches_detail_heading_in_fixture(self) -> None:
+        """`review-good.md` NEW rows: At-a-Glance `Finding` text == `### N. {Title}` verbatim.
+
+        Triage SKILL.md Step 1 mandates this match for NEW rows
+        (`New? = Yes`). A drifted fixture teaches paraphrasing.
+        Pre-existing rows (`New? = Pre-existing`) skip this gate —
+        they have no backing detail heading.
+        """
+        self._assert_at_a_glance_titles_match(REVIEW_GOOD_FIXTURE)
+
+    def test_at_a_glance_finding_text_matches_detail_heading_in_example(self) -> None:
+        """Same gate for `example-review.md` (loaded by /rb:review skill body)."""
+        self._assert_at_a_glance_titles_match(EXAMPLE_REVIEW)
+
+    def _assert_at_a_glance_titles_match(self, path: Path) -> None:
+        text = path.read_text(encoding="utf-8")
+        # Collect every `### N. Title` heading.
+        detail_titles: set[str] = set()
+        for line in text.splitlines():
+            m = re.match(r"^###\s+\d+\.\s+(.+?)\s*$", line)
+            if m:
+                detail_titles.add(m.group(1))
+        # Walk At-a-Glance section. Each NEW (`Yes`) row's Finding cell
+        # MUST match a detail title verbatim.
+        in_table = False
+        bad: list[str] = []
+        for line in text.splitlines():
+            if line.startswith("## At-a-Glance Finding Table"):
+                in_table = True
+                continue
+            if in_table and line.startswith("## "):
+                break
+            if not in_table or not line.startswith("|"):
+                continue
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            if len(cells) != 7:
+                continue
+            if not re.match(r"^\d+$", cells[0]):
+                continue
+            finding_cell = cells[1]
+            new_state = cells[6].lower()
+            if new_state != "yes":
+                continue
+            if finding_cell not in detail_titles:
+                bad.append(
+                    f"row '{finding_cell}' has no matching `### N. {finding_cell}` heading"
+                )
+        self.assertFalse(
+            bad,
+            f"{path.name}: NEW At-a-Glance rows MUST match detail headings verbatim. "
+            "Drifted: " + "; ".join(bad),
         )
 
     def test_skill_no_pseudocode_implementation_blocks(self) -> None:

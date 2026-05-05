@@ -46,4 +46,4 @@ No additional suggestions.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Retry policy change lacks direct spec coverage | WARNING | HIGH | testing-reviewer | `app/jobs/sync_customer_job.rb:14` | Yes |
+| 1 | Retry policy change is not covered by a focused spec | WARNING | HIGH | testing-reviewer | `app/jobs/sync_customer_job.rb:14` | Yes |

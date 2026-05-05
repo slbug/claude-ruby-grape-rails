@@ -95,9 +95,9 @@ constant + scope for reuse and test clarity.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---|---|---|---|---|---|
-| 1 | Magic token never expires | BLOCKER | HIGH | security-analyzer | `magic_token.rb:45` | Yes |
-| 2 | Missing rate limiting | WARNING | MEDIUM | security-analyzer | `magic_links_controller.rb:18` | Yes |
-| 3 | No expired-token spec | WARNING | HIGH | testing-reviewer | `magic_token_spec.rb:12` | Yes |
-| 4 | Inline TTL literal | SUGGESTION | LOW | ruby-reviewer | `magic_token.rb` | Yes |
+| 1 | Magic Token Never Expires | BLOCKER | HIGH | security-analyzer | `magic_token.rb:45` | Yes |
+| 2 | Missing Rate Limiting | WARNING | MEDIUM | security-analyzer | `magic_links_controller.rb:18` | Yes |
+| 3 | Test Coverage Gap on Expiration | WARNING | HIGH | testing-reviewer | `magic_token_spec.rb:12` | Yes |
+| 4 | Extract Magic-Token TTL Constant | SUGGESTION | LOW | ruby-reviewer | `magic_token.rb` | Yes |
 | 5 | Duplicate-email returns nil | BLOCKER | HIGH | ruby-reviewer | `user.rb:67` | Pre-existing |
 ````

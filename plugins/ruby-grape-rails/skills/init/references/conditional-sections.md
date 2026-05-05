@@ -141,11 +141,12 @@ belongs in `/rb:secrets` skill body, not in project `CLAUDE.md`.
 | Placeholder | Source | Example |
 |---|---|---|
 | `{DATE}` | Current date | 2026-05-04 |
+| `{STACK_HEADER}` | Composed: always emit `Ruby <RUBY_VERSION>`. Append `, Rails <RAILS_VERSION>` ONLY when `detect-stack` emits `RAILS_VERSION`. Same conditional rule for `, Grape <GRAPE_VERSION>` and `, Sidekiq <SIDEKIQ_VERSION>`. Append `{OPTIONAL_STACK}` (already comma-prefixed) for extra detected stacks. Omit any stack whose version is absent — do NOT emit a bare label (e.g. literal `Rails` followed by empty version). | `Ruby 3.4.7, Rails 7.1.3, Grape 2.0.0, Sidekiq 7.2.0, Karafka 2.5.8` |
 | `{RUBY_VERSION}` | `detect-stack` `RUBY_VERSION` (project's pinned Ruby; falls back to interpreter's `RUBY_VERSION` constant when no project pin found). `INTERPRETER_RUBY_VERSION` only emitted when interpreter differs from project pin — informational, not the placeholder source. | 3.4.7 |
-| `{RAILS_VERSION}` | `detect-stack` `RAILS_VERSION` | 7.1.3 |
-| `{GRAPE_VERSION}` | `detect-stack` `GRAPE_VERSION` | 2.0.0 |
-| `{SIDEKIQ_VERSION}` | `detect-stack` `SIDEKIQ_VERSION` | 7.2.0 |
-| `{OPTIONAL_STACK}` | `detect-stack` extra-stack keys, comma-prefixed | `, Karafka 2.5.8, Hotwire detected` |
+| `{RAILS_VERSION}` | `detect-stack` `RAILS_VERSION` (absent on non-Rails projects — drives `{STACK_HEADER}` omission) | 7.1.3 |
+| `{GRAPE_VERSION}` | `detect-stack` `GRAPE_VERSION` (absent on non-Grape projects) | 2.0.0 |
+| `{SIDEKIQ_VERSION}` | `detect-stack` `SIDEKIQ_VERSION` (absent on non-Sidekiq projects) | 7.2.0 |
+| `{OPTIONAL_STACK}` | `detect-stack` extra-stack keys, comma-prefixed; consumed by `{STACK_HEADER}` composition | `, Karafka 2.5.8, Hotwire detected` |
 | `{SIDEKIQ_SECTION}` | Render per rules above; empty string if no project-specific content |
 | `{SEQUEL_SECTION}` | Render per rules above; empty string if no project-specific content |
 | `{MIXED_ORM_SECTION}` | Render per rules above; empty string if no project-specific content |

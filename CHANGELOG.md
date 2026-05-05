@@ -40,10 +40,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   HIGH|MEDIUM|LOW` label per finding (matches playbook §
   "Confidence Levels"); new `review_verdict_matches_summary`
   cross-validates the consolidated verdict against Summary
-  blocker/warning counts (rejects PASS with blockers, PASS with
-  warnings + 0 blockers, BLOCKED or PASS WITH WARNINGS with
-  all-zero counts). Malformed rows surface instead of silently
-  dropping.
+  blocker/warning counts via 4 reject conditions: (a) blockers > 0
+  with verdict ≠ BLOCKED; (b) blockers == 0 with verdict == BLOCKED
+  (BLOCKED requires blockers > 0; warnings-only summaries are
+  invalid); (c) blockers == 0 with warnings > 0 and verdict == PASS;
+  (d) blockers == 0 with warnings == 0 and verdict == PASS WITH
+  WARNINGS. REQUIRES CHANGES is accepted only when blockers == 0
+  (test-coverage gap branch). Malformed rows surface instead of
+  silently dropping.
 - Injector dropped `See:` prefix; `reference_files` companion paths
   emit bare beneath each rule. Real-run observation: passive `See:`
   framing read as citation; agents never opened the targets.

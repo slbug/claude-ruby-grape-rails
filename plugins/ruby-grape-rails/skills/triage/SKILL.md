@@ -91,14 +91,22 @@ Read the consolidated review markdown.
 | `## Blockers ({n})` / `## Warnings ({n})` / `## Suggestions ({n})` | Detailed finding bodies: `**File**:`, `**Reviewer**: ... \| **Confidence**:`, `**Issue**:`, `**Why it matters**:`, `**Current**:`, `**Suggested**:`, `**Recommendation**: \| Suggestion:` |
 | `## Pre-existing Issues (unchanged code)` | Findings to surface in plan's `## Pre-existing Issues (informational)` only |
 
-Match each At-a-Glance row to its detailed finding by the `Finding`
-column text — the At-a-Glance `Finding` cell MUST equal the
-`### N. {Title}` heading under the appropriate `## Blockers` /
-`## Warnings` / `## Suggestions` section verbatim. Use
-`(File, Reviewer, Severity)` as a corroboration tuple. Title text
-disambiguates the case where one reviewer reports two findings of
-the same bucket against the same path; the tuple alone is
-ambiguous in that case. The Iron Law label for the plan's task
+For NEW At-a-Glance rows (`New? = Yes`), match each row to its
+detailed finding by the `Finding` column text — the At-a-Glance
+`Finding` cell MUST equal the `### N. {Title}` heading under the
+appropriate `## Blockers` / `## Warnings` / `## Suggestions`
+section verbatim. Use `(File, Reviewer, Severity)` as a
+corroboration tuple. Title text disambiguates the case where one
+reviewer reports two findings of the same bucket against the same
+path; the tuple alone is ambiguous in that case.
+
+Pre-existing At-a-Glance rows (`New? = Pre-existing`) have NO
+backing `### N. {Title}` heading — `## Pre-existing Issues
+(unchanged code)` lists them as bullets, not headings. The
+`Finding` cell carries a concise description of the unchanged-code
+issue. Surface them in the plan's `## Pre-existing Issues
+(informational)` section unchanged; do NOT attempt the
+title-verbatim match. The Iron Law label for the plan's task
 line comes from the issue text + `iron-laws.yml` registry (e.g.,
 "Multi-step operations without transaction wrap" → Iron Law 5).
 
