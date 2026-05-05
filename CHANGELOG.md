@@ -26,16 +26,23 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   load-bearing across worker briefings, consolidated artifact, and
   CI gate.
 - `lab/eval/output_checks.py` upgraded for the new contract: verdict
-  line enforces canonical 4-set; Coverage + Verdicts checks validate
-  exact 3-cell rows, recovery-state enum, findings-counts bucket
-  format, canonical canonical-column, non-empty raw verdict
-  (with documented `(no output)` placeholder allowed for
-  `stub-no-output` reviewers per cross-table Coverage check); new
-  `review_reviewer_completeness` reconciles `**Reviewers**:` header
-  against table row slugs (set membership + count + duplicates; row
-  order NOT enforced — manifest stores `agents` as an object, no
-  natural ordering). Malformed rows surface instead of silently
-  dropping.
+  line enforces canonical 4-set across EVERY `**Verdict**:` line
+  outside fenced blocks (reviewed Markdown excerpts skipped); both
+  Coverage and Verdicts checks validate exact 3-cell rows, recovery-state enum,
+  findings-counts bucket format, canonical column membership, raw cell
+  non-empty (with documented `(no output)` placeholder allowed for
+  `stub-no-output` reviewers per cross-table Coverage check; rejected
+  for non-stub rows); new `review_reviewer_completeness` reconciles
+  `**Reviewers**:` header against table row slugs (set membership +
+  count + duplicates; row order NOT enforced — manifest stores
+  `agents` as an object, no natural ordering); new
+  `review_finding_confidence` requires a `**Confidence**:
+  HIGH|MEDIUM|LOW` label per finding (matches playbook §
+  "Confidence Levels"); new `review_verdict_matches_summary`
+  cross-validates the consolidated verdict against Summary
+  blocker/warning counts (rejects PASS with blockers, PASS with
+  warnings + 0 blockers, BLOCKED/PASS-WITH-WARNINGS with all-zero
+  counts). Malformed rows surface instead of silently dropping.
 - Injector dropped `See:` prefix; `reference_files` companion paths
   emit bare beneath each rule. Real-run observation: passive `See:`
   framing read as citation; agents never opened the targets.
