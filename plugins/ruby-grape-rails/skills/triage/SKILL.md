@@ -151,6 +151,27 @@ For NEW findings:
 - WARNING → recommend (default selected; user may defer)
 - SUGGESTION → defer (default unselected; user may include)
 
+### Step 2b: Test Coverage Gaps (REQUIRES CHANGES verdict only)
+
+When the consolidated review has `**Verdict**: REQUIRES CHANGES`,
+read the `## Test Coverage Gaps ({n})` section from the review
+artifact (per
+`${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
+§ "Consolidated Review Format"). These rows are NOT in the
+At-a-Glance Finding Table or any Blockers/Warnings/Suggestions
+section — they live in their own section, drive the verdict, and
+each row maps to one Phase 2 task line (`[test]` annotation,
+non-Iron-Law warning class). Auto-select ALL test-coverage gap
+rows; do NOT present them in the selection UI (the verdict already
+makes them mandatory).
+
+Example mapping (Test Coverage Gap row → Phase 2 task line):
+
+- Gap row: `User#authenticate` in `app/models/user.rb:42`
+- Task line: `- [ ] [P2-T{n}][test] Add spec for User#authenticate
+  exercising auth path — test-coverage gap (REQUIRES CHANGES);
+  source {review-path}`
+
 ### Step 3: Group Findings
 
 Group NEW findings by `[file, bucket]` so batch-fixable items appear
@@ -291,8 +312,10 @@ If all findings are BLOCKER:
 All 5 findings are BLOCKERs and must be addressed.
 Estimated time: 2 hours
 
-[Start Work] [Schedule for Later] [Export to Issue Tracker]
+[Start Work]
 ```
+
+`[Start Work]` invokes `/rb:work` against the generated plan.
 
 ### Contradictory Findings
 
@@ -305,7 +328,7 @@ Finding A: "Extract method to reduce complexity"
 Finding B: "Inline method for clarity"
 
 These may conflict. Review together?
-[Review Both] [Skip Both] [Ask Reviewer]
+[Review Both] [Skip Both]
 ```
 
 ## Output Format
@@ -357,7 +380,6 @@ suggestions selected — phase is conditional.)
 | `select all warnings` | Select all WARNING findings (BLOCKERs auto-included by Step 4) |
 | `select all suggestions` | Select all SUGGESTION findings |
 | `group by file` | Reorganize display by file |
-| `export` | Export triage to issue tracker |
 | `skip all warnings` | Defer all non-BLOCKER findings |
 
 ## References

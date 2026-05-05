@@ -282,6 +282,16 @@ else:
 Apply the algorithm verbatim. Do NOT override with author judgment.
 Preserve nuance in per-finding prose, not in the verdict tag.
 
+The `new_public_behavior_lacks_test_coverage` branch is the only
+input that requires synthesis-time judgement (not a deterministic
+At-a-Glance count). Synthesis derives it by inspecting per-agent
+artifacts for findings tagged as test-coverage gaps (per § "Worker
+Severity Mapping" — `New public behavior without tests` → REQUIRES
+CHANGES verdict trigger). When the branch fires, populate the
+`## Test Coverage Gaps ({n})` section in the consolidated artifact
+(see § "Consolidated Review Format"); the chat script enumerates
+that section verbatim.
+
 ### STEP 5: Write the consolidated review
 
 - Header MUST include `## Reviewer Coverage` with one row per
@@ -521,6 +531,18 @@ NOT counted here — see `## Pre-existing Issues` + at-a-glance
 
 - {issue} (not introduced by this change)
 
+## Test Coverage Gaps ({n})
+
+Required ONLY when consolidated `**Verdict**: REQUIRES CHANGES`.
+Each row: a NEW public surface (method, controller action,
+Sidekiq job, Turbo Stream route) introduced by this diff with
+no test coverage. Drives the REQUIRES CHANGES verdict per STEP 4.
+Omit the entire section when the verdict is not REQUIRES CHANGES.
+
+| # | Surface | File | Why uncovered | Suggested test |
+|---|---------|------|---------------|----------------|
+| 1 | `Class#method` / `Controller#action` / `JobClass#perform` | `path/to/file.rb:{line}` | new diff-introduced public behavior; no spec exercises it | `spec/path/to/file_spec.rb` — assert `{behavior}` |
+
 ## At-a-Glance Finding Table
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
@@ -560,17 +582,22 @@ Ready for: /rb:learn or /rb:compound.
 **REQUIRES CHANGES:**
 
 ```text
-Review found {n} test-coverage gaps:
+Review found {n} test-coverage gaps (full list in
+`.claude/reviews/{review-slug}-{datesuffix}.md` § "Test Coverage Gaps"):
 
-1. {Method/endpoint/job} in {file} — no test coverage
-2. {Method/endpoint/job} in {file} — no test coverage
+1. {Surface} in {file} — no test coverage
+2. {Surface} in {file} — no test coverage
 
 How would you like to proceed?
 
-- /rb:plan — Plan tests for these
+- /rb:plan .claude/reviews/{review-slug}-{datesuffix}.md
+    — Plan tests for the gaps section above
 - /rb:work — Write tests directly
 - I'll handle it myself
 ```
+
+`/rb:plan` reads the consolidated review's `## Test Coverage Gaps`
+section as its scope when given a review path; one task per gap.
 
 **BLOCKED:**
 

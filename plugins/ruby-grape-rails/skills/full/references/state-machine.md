@@ -63,7 +63,7 @@ table below).
 | COMPOUNDING | `/rb:compound ${PLAN_DIR}/plan.md` | plan path | `.claude/solutions/{category}/{fix}.md` |
 | COMPLETED | skill body | all phases passed | final `progress.md` State write |
 | HALTED_REVIEW_BLOCKED | skill body | consolidated `**Verdict**: BLOCKED` parsed | halt cycle; user decides next |
-| HALTED_REVIEW_REQUIRES_CHANGES | skill body | consolidated `**Verdict**: REQUIRES CHANGES` parsed | halt cycle; user invokes new `/rb:plan` for the test-coverage gap |
+| HALTED_REVIEW_REQUIRES_CHANGES | skill body | consolidated `**Verdict**: REQUIRES CHANGES` parsed | halt cycle; user invokes `/rb:plan {review-artifact-path}` — plan reads the consolidated review's `## Test Coverage Gaps` section as its scope (one task per gap) |
 | HALTED_REVIEW_UNKNOWN | skill body | review missing/unparseable / verdict line absent | halt cycle; user decides next |
 
 ## Phase Transitions
@@ -78,7 +78,7 @@ table below).
 | VERIFYING | REVIEWING | verify passed | write progress.md State; invoke `/rb:review` |
 | REVIEWING | COMPOUNDING | `**Verdict**: PASS` or `PASS WITH WARNINGS` | write progress.md State; invoke `/rb:compound ${PLAN_DIR}/plan.md` |
 | REVIEWING | HALTED_REVIEW_BLOCKED | `**Verdict**: BLOCKED` | write progress.md State; stop |
-| REVIEWING | HALTED_REVIEW_REQUIRES_CHANGES | `**Verdict**: REQUIRES CHANGES` | write progress.md State; stop (user re-runs `/rb:plan` for the test-coverage gap) |
+| REVIEWING | HALTED_REVIEW_REQUIRES_CHANGES | `**Verdict**: REQUIRES CHANGES` | write progress.md State; stop (user re-runs `/rb:plan {review-artifact-path}` — plan reads the review's `## Test Coverage Gaps` section as scope) |
 | REVIEWING | HALTED_REVIEW_UNKNOWN | review missing/unparseable / verdict line absent | write progress.md State; stop |
 | COMPOUNDING | COMPLETED | solution doc written | write progress.md final State |
 
@@ -148,7 +148,7 @@ the `## Summary` table:
 |---|---|
 | `PASS` / `PASS WITH WARNINGS` | continue to COMPOUNDING |
 | `BLOCKED` | write `**State**: HALTED_REVIEW_BLOCKED`; stop cycle |
-| `REQUIRES CHANGES` | write `**State**: HALTED_REVIEW_REQUIRES_CHANGES`; stop (user re-runs `/rb:plan` for the test-coverage gap) |
+| `REQUIRES CHANGES` | write `**State**: HALTED_REVIEW_REQUIRES_CHANGES`; stop (user re-runs `/rb:plan {review-artifact-path}` — plan reads `## Test Coverage Gaps` as scope) |
 | missing artifact / verdict line absent / off-canonical wording | write `**State**: HALTED_REVIEW_UNKNOWN`; stop cycle |
 
 Summary `Blockers` count is informational here — `**Verdict**:` is
@@ -275,13 +275,10 @@ unconditionally via `active-plan-marker.sh set` after `plan.md` write.
 
 ## Completion Criteria
 
-A `/rb:full` cycle is COMPLETED when ALL of:
-
-- All planned tasks completed or explicitly deferred
-- Verification suite passes (all gates above)
-- `/rb:review` consolidated review verdict ∈ {`PASS`, `PASS WITH WARNINGS`} (no NEW BLOCKERs introduced by this diff)
-- `/rb:compound` solution doc written or explicit "no compound" decision logged
-- `progress.md` final State write: `**State**: COMPLETED`
+Single source of truth:
+`${CLAUDE_PLUGIN_ROOT}/skills/full/SKILL.md` § "Completion Criteria".
+State machine consumers read SKILL criteria verbatim. Do NOT
+duplicate the list here.
 
 ## Integration Points
 

@@ -1,6 +1,6 @@
 ---
 name: rb:full
-description: "Use when running the hands-off end-to-end lifecycle: autonomously runs plan, work, verify, review, and compound in one command with no user intervention needed."
+description: "Use when running the end-to-end lifecycle: plan, work, verify, review, and compound chained in one command. Runs autonomously on the happy path; halts and asks the user only on review verdict BLOCKED, REQUIRES CHANGES, verify failure, or final completion confirmation."
 when_to_use: "Triggers: \"do everything\", \"full lifecycle\", \"hands-off\", \"plan and implement\", \"end to end\"."
 argument-hint: "<feature description OR plan path>"
 effort: xhigh
@@ -34,8 +34,14 @@ Skip for vague requirements or trivial fixes.
 ## State Machine (summary)
 
 ```text
-INITIALIZING → DISCOVERING → PLANNING → WORKING → VERIFYING → REVIEWING → COMPOUNDING → COMPLETED
+INITIALIZING → [DISCOVERING (optional, brainstorm)] → PLANNING → WORKING → VERIFYING → REVIEWING → COMPOUNDING → COMPLETED
 ```
+
+DISCOVERING runs only when requirements are vague enough to need
+`/rb:brainstorm`; otherwise INITIALIZING transitions directly to
+PLANNING. See `${CLAUDE_SKILL_DIR}/references/state-machine.md`
+§ "Phase Transitions" for the two transition rows that branch on
+brainstorm-needed vs brainstorm-skipped.
 
 `/rb:full` skill body writes `**State**:` to `progress.md` at every
 transition. The `plan-stop-reminder.sh` hook checks for this field to
@@ -69,9 +75,9 @@ A workflow is COMPLETED when:
       this diff (per
       `${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
       § "Verdict Decision Rules"). `BLOCKED` and `REQUIRES CHANGES`
-      both halt the cycle; user decides next step (typically a new
-      `/rb:plan` for the test-coverage gap on `REQUIRES CHANGES`).
-      No autonomous re-run.
+      both halt the cycle. On `REQUIRES CHANGES`, user invokes
+      `/rb:plan {review-artifact-path}`; plan reads the review's
+      `## Test Coverage Gaps` section as scope. No autonomous re-run.
 - [ ] Learnings captured in compound docs
 - [ ] `progress.md` final write: `**State**: COMPLETED`
 - [ ] User acknowledged completion

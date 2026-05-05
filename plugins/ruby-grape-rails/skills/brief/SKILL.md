@@ -203,7 +203,7 @@ Don't include in briefs:
 
 **Key Risks**:
 - Session storage (HIGH) - need Redis config
-- Password hashing (CRITICAL) - use bcrypt, not MD5
+- Password hashing (BLOCKER) - use bcrypt, not MD5
 
 **Next Step**: Run `/rb:work .claude/plans/user-auth/plan.md`
 ```

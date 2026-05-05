@@ -250,6 +250,12 @@ FIXTURES: dict[str, tuple[FixtureSpec, ...]] = {
             provenance_path=FIXTURES_DIR / "review-good.provenance.md",
         ),
         FixtureSpec(
+            name="review-empty-pass",
+            suite="review",
+            artifact_path=FIXTURES_DIR / "review-empty-pass.md",
+            provenance_path=FIXTURES_DIR / "review-empty-pass.provenance.md",
+        ),
+        FixtureSpec(
             name="review-bad",
             suite="review",
             artifact_path=FIXTURES_DIR / "review-bad.md",

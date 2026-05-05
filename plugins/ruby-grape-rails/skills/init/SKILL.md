@@ -48,7 +48,12 @@ Use Ruby for detection (avoids fragile shell pipelines):
 
 When building the injected header:
 
-- omit Rails entirely when `RAILS_VERSION` is absent
+- compose the stack-version comment line from a single
+  `{STACK_HEADER}` placeholder per
+  `${CLAUDE_SKILL_DIR}/references/conditional-sections.md`
+  § "Placeholder Substitution" — `/rb:init` derives the header from
+  individual `*_VERSION` keys; absent keys are omitted (no bare
+  label without version)
 - prefer detected version values from `detect-stack` / cached runtime state instead of hardcoded examples
 - avoid degrading locked versions to `detected`
 - use `DETECTED_ORMS` to distinguish Active Record, Sequel, and mixed ORM repositories
@@ -126,8 +131,12 @@ the current template, removing the `<!-- IRON_LAWS_START -->` /
 
 Inject ONLY project-specific stack notes:
 
-- stack-version comment header (Ruby / Rails / Grape / Sidekiq /
-  optional stack / Betterleaks / plugin version)
+- stack-version comment header — single `{STACK_HEADER}`
+  placeholder composed from `detect-stack` `*_VERSION` keys plus
+  `Betterleaks: {BETTERLEAKS_STATUS}` plus
+  `plugin v{PLUGIN_VERSION}`. Composition rule lives in
+  `${CLAUDE_SKILL_DIR}/references/conditional-sections.md`
+  § "Placeholder Substitution".
 - conditional sections from `detect-stack` output + targeted
   interview answers — queue list, ORM-per-package map, Karafka
   topic routes, Packwerk enforcement flags, Hotwire channels,
