@@ -63,7 +63,7 @@ table below).
 | COMPOUNDING | `/rb:compound ${PLAN_DIR}/plan.md` | plan path | `.claude/solutions/{category}/{fix}.md` |
 | COMPLETED | skill body | all phases passed | final `progress.md` State write |
 | HALTED_REVIEW_BLOCKED | skill body | consolidated `**Verdict**: BLOCKED` parsed | halt cycle; user decides next |
-| HALTED_REVIEW_REQUIRES_CHANGES | skill body | consolidated `**Verdict**: REQUIRES CHANGES` parsed | halt cycle; user invokes `/rb:plan {review-artifact-path}` — plan reads the consolidated review's `## Test Coverage Gaps` section as its scope (one task per gap) |
+| HALTED_REVIEW_REQUIRES_CHANGES | skill body | consolidated `**Verdict**: REQUIRES CHANGES` parsed | halt cycle; user invokes `/rb:triage {review-path}` (default; handles gaps + any warnings) OR `/rb:plan {review-path}` (gaps-only, no triage UI) |
 | HALTED_REVIEW_UNKNOWN | skill body | review missing/unparseable / verdict line absent | halt cycle; user decides next |
 
 ## Phase Transitions
@@ -78,7 +78,7 @@ table below).
 | VERIFYING | REVIEWING | verify passed | write progress.md State; invoke `/rb:review` |
 | REVIEWING | COMPOUNDING | `**Verdict**: PASS` or `PASS WITH WARNINGS` | write progress.md State; invoke `/rb:compound ${PLAN_DIR}/plan.md` |
 | REVIEWING | HALTED_REVIEW_BLOCKED | `**Verdict**: BLOCKED` | write progress.md State; stop |
-| REVIEWING | HALTED_REVIEW_REQUIRES_CHANGES | `**Verdict**: REQUIRES CHANGES` | write progress.md State; stop (user re-runs `/rb:plan {review-artifact-path}` — plan reads the review's `## Test Coverage Gaps` section as scope) |
+| REVIEWING | HALTED_REVIEW_REQUIRES_CHANGES | `**Verdict**: REQUIRES CHANGES` | write progress.md State; stop (user runs `/rb:triage {review-path}` default, or `/rb:plan {review-path}` for gaps-only) |
 | REVIEWING | HALTED_REVIEW_UNKNOWN | review missing/unparseable / verdict line absent | write progress.md State; stop |
 | COMPOUNDING | COMPLETED | solution doc written | write progress.md final State |
 
@@ -148,7 +148,7 @@ the `## Summary` table:
 |---|---|
 | `PASS` / `PASS WITH WARNINGS` | continue to COMPOUNDING |
 | `BLOCKED` | write `**State**: HALTED_REVIEW_BLOCKED`; stop cycle |
-| `REQUIRES CHANGES` | write `**State**: HALTED_REVIEW_REQUIRES_CHANGES`; stop (user re-runs `/rb:plan {review-artifact-path}` — plan reads `## Test Coverage Gaps` as scope) |
+| `REQUIRES CHANGES` | write `**State**: HALTED_REVIEW_REQUIRES_CHANGES`; stop (user runs `/rb:triage {review-path}` default, or `/rb:plan {review-path}` for gaps-only) |
 | missing artifact / verdict line absent / off-canonical wording | write `**State**: HALTED_REVIEW_UNKNOWN`; stop cycle |
 
 Summary `Blockers` count is informational here — `**Verdict**:` is

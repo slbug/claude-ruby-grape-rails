@@ -1,6 +1,6 @@
 ---
 name: rb:init
-description: "Use when initializing the Ruby/Rails/Grape plugin in a project. Writes a managed block of project-specific stack notes (queue list, ORM-per-package map, package layout) into CLAUDE.md so /rb:plan, /rb:work, /rb:review, and /rb:verify operate with current stack context. Iron Laws and preferences are runtime-injected via SessionStart + SubagentStart hooks."
+description: "Use when initializing the Ruby/Rails/Grape plugin in a project. Writes a managed block of project-specific stack notes (queue list, ORM-per-package map, package layout) into CLAUDE.md. Reaches the MAIN session and any subagents that opt in to CLAUDE.md; specialist subagents with `omitClaudeMd: true` (most reviewers/analyzers) do NOT see the block. Iron Laws + Advisory Preferences reach all subagents via the `inject-rules.sh` SessionStart + SubagentStart hooks regardless."
 when_to_use: "Triggers: \"initialize plugin\", \"setup ruby plugin\", \"install plugin\", \"configure Claude for Rails\"."
 argument-hint: "[--update]"
 effort: low
@@ -11,6 +11,19 @@ Write a managed block of project-specific stack notes into the
 project's `CLAUDE.md`. Do NOT write Iron Laws or Advisory
 Preferences into `CLAUDE.md` — `inject-rules.sh` delivers them at
 runtime on `SessionStart` + `SubagentStart`.
+
+Block-reach contract:
+
+| Consumer | Sees `CLAUDE.md` block? |
+|---|---|
+| Main session (interactive Claude) | YES |
+| Subagent spawned WITHOUT `omitClaudeMd: true` | YES |
+| Specialist subagent with `omitClaudeMd: true` (most reviewers/analyzers) | NO — relies on `inject-rules.sh` SubagentStart for Iron Laws + Preferences only; no stack notes |
+
+Plan the block content for main-session skill bodies (`/rb:plan`,
+`/rb:review`, `/rb:verify`, `/rb:work`). Do NOT inject content
+needed by specialist subagents into this block; surface it through
+their per-agent prompt or the `inject-rules.sh` runtime payload.
 
 ## Usage
 

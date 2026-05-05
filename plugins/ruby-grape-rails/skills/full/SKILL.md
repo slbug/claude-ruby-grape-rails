@@ -73,9 +73,9 @@ A workflow is COMPLETED when:
       this diff (per
       `${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
       § "Verdict Decision Rules"). `BLOCKED` and `REQUIRES CHANGES`
-      both halt the cycle. On `REQUIRES CHANGES`, user invokes
-      `/rb:plan {review-artifact-path}`; plan reads the review's
-      `## Test Coverage Gaps` section as scope. No autonomous re-run.
+      both halt the cycle. On `REQUIRES CHANGES`, user runs
+      `/rb:triage {review-path}` (default; handles gaps + warnings)
+      or `/rb:plan {review-path}` (gaps-only). No autonomous re-run.
 - [ ] Learnings captured in compound docs
 - [ ] `progress.md` final write: `**State**: COMPLETED`
 - [ ] User acknowledged completion

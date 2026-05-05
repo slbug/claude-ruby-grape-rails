@@ -90,6 +90,7 @@ Read the consolidated review markdown.
 | `## At-a-Glance Finding Table` | Per-finding row: `# / Finding / Severity / Confidence / Reviewer / File / New?` |
 | `## Blockers ({n})` / `## Warnings ({n})` / `## Suggestions ({n})` | Detailed finding bodies: `**File**:`, `**Reviewer**: ... \| **Confidence**:`, `**Issue**:`, `**Why it matters**:` (Blockers only), `**Current**:` + `**Suggested**:` (Blockers code blocks), `**Recommendation**:` (Warnings) or `**Suggestion**:` (Suggestions) |
 | `## Pre-existing Issues (unchanged code)` | Findings to surface in plan's `## Pre-existing Issues (informational)` only |
+| `## Test Coverage Gaps ({n})` (REQUIRES CHANGES verdict only) | One row per uncovered NEW public surface; columns `# / Surface / File / Why uncovered / Suggested test`. Step 2b auto-includes each row as a Phase 2 `[test]` task. |
 
 For NEW At-a-Glance rows (`New? = Yes`), match each row to its
 detailed finding by the `Finding` column text — the At-a-Glance
@@ -151,24 +152,24 @@ For NEW findings:
 - WARNING → recommend (default selected; user may defer)
 - SUGGESTION → defer (default unselected; user may include)
 
-### Step 2b: Verdict gate
+### Step 2b: Verdict gate + Test Coverage Gaps ingestion
 
 | Consolidated `**Verdict**:` | Action |
 |---|---|
-| `BLOCKED` / `PASS WITH WARNINGS` / `PASS` | continue to Step 3 (PASS reviews can carry NEW SUGGESTION rows that the user may opt in to via `S<n>`; verdict only excludes blockers + warnings) |
-| `REQUIRES CHANGES` | STOP triage. Print the redirect message below. Do NOT proceed to Steps 3-5. |
+| `BLOCKED` / `PASS WITH WARNINGS` / `PASS` | continue to Step 3 |
+| `REQUIRES CHANGES` | continue to Step 3. ALSO read `## Test Coverage Gaps ({n})`. Auto-include every gap row as a Phase 2 `[test]` task in Step 5. Do NOT present gaps in the selection UI. |
 
-Redirect message for `REQUIRES CHANGES`:
+Gap row → Phase 2 task line shape:
 
 ```text
-Review verdict is REQUIRES CHANGES — test-coverage gaps only.
-Run instead:
-
-  /rb:plan {review-artifact-path}
-
-`/rb:plan` reads the review's `## Test Coverage Gaps` section
-and writes one task per gap.
+- [ ] [P2-T{n}][test] Add spec for {Surface} — test-coverage gap
+  (REQUIRES CHANGES); source {review-path}
 ```
+
+`/rb:plan {review-path}` handles gaps-only REQUIRES CHANGES reviews
+without the selection UI. `/rb:triage` is the default; covers
+mixed cases (REQUIRES CHANGES with warnings, BLOCKED, PASS WITH
+WARNINGS, PASS with opt-in suggestions).
 
 ### Step 3: Group Findings
 

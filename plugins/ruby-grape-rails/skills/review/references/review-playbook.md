@@ -585,8 +585,10 @@ Review found {n} test-coverage gaps (full list in
 
 How would you like to proceed?
 
+- /rb:triage .claude/reviews/{review-slug}-{datesuffix}.md
+    — Default. Auto-includes gaps + lets you select any warnings.
 - /rb:plan .claude/reviews/{review-slug}-{datesuffix}.md
-    — Plan tests for the gaps section above
+    — Gaps-only plan, no triage UI.
 - /rb:work — Write tests directly
 - I'll handle it myself
 ```

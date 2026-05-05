@@ -71,7 +71,8 @@ on verdict:
 |---|---|
 | `REQUIRES CHANGES` | proceed with the test-coverage-gap branch below |
 | `BLOCKED` | STOP. Print: `Review verdict is BLOCKED. Run /rb:triage {review-path} to select which findings to fix.` |
-| `PASS` / `PASS WITH WARNINGS` | STOP. Print: `Review verdict is {verdict}. No new blockers to plan. Run /rb:compound to capture lessons, or /rb:triage {review-path} if you want to opt in to suggestions.` |
+| `PASS WITH WARNINGS` | STOP. Print: `Review verdict is PASS WITH WARNINGS. Run /rb:triage {review-path} to batch warnings, or /rb:compound to capture lessons.` |
+| `PASS` | STOP. Print: `Review verdict is PASS. Run /rb:compound to capture lessons; /rb:triage {review-path} to opt in to suggestions.` |
 | missing / off-canonical | STOP. Print: `Cannot read consolidated **Verdict**: line from {path}. Inspect the artifact manually.` |
 
 A consolidated review artifact is NOT valid feature-description input.
