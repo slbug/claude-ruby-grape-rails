@@ -664,6 +664,25 @@ def has_review_verdict_matches_summary(content: str) -> tuple[bool, str]:
     if not verdicts:
         return False, "Missing **Verdict** line"
     verdict = verdicts[0]
+    if verdict == "REQUIRES CHANGES":
+        # REQUIRES CHANGES verdict requires at least one populated
+        # row in `## Test Coverage Gaps` section. Without rows, both
+        # `/rb:plan {review-path}` and `/rb:triage {review-path}`
+        # downstream paths have no work to materialize.
+        gaps_body = _section(content, "Test Coverage Gaps")
+        if not gaps_body:
+            return False, (
+                "Verdict is REQUIRES CHANGES but `## Test Coverage Gaps` "
+                "section is missing; both `/rb:plan {review-path}` and "
+                "`/rb:triage {review-path}` flows depend on this section"
+            )
+        gap_rows = _table_data_rows(gaps_body)
+        if not gap_rows:
+            return False, (
+                "Verdict is REQUIRES CHANGES and `## Test Coverage Gaps` "
+                "section is present but has 0 data rows; verdict requires "
+                "at least one uncovered surface"
+            )
     if blockers > 0 and verdict != "BLOCKED":
         return False, (
             f"Summary reports {blockers} blocker(s) but verdict is {verdict!r}; "

@@ -1561,6 +1561,71 @@ after
         verdicts = output_checks._verdict_lines_outside_fences(content)
         self.assertEqual(verdicts, [])
 
+    def test_verdict_matches_summary_rejects_requires_changes_without_gaps_section(self) -> None:
+        # REQUIRES CHANGES verdict requires `## Test Coverage Gaps`
+        # section with at least one row. Missing section → fail.
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: REQUIRES CHANGES
+"""
+        passed, reason = output_checks.has_review_verdict_matches_summary(content)
+        self.assertFalse(passed)
+        self.assertIn("Test Coverage Gaps", reason)
+        self.assertIn("missing", reason)
+
+    def test_verdict_matches_summary_rejects_requires_changes_empty_gaps(self) -> None:
+        # Section present but 0 rows → fail.
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: REQUIRES CHANGES
+
+## Test Coverage Gaps (0)
+
+| # | Surface | File | Why uncovered | Suggested test |
+|---|---------|------|---------------|----------------|
+"""
+        passed, reason = output_checks.has_review_verdict_matches_summary(content)
+        self.assertFalse(passed)
+        self.assertIn("0 data rows", reason)
+
+    def test_verdict_matches_summary_accepts_requires_changes_with_gaps(self) -> None:
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: REQUIRES CHANGES
+
+## Test Coverage Gaps (1)
+
+| # | Surface | File | Why uncovered | Suggested test |
+|---|---------|------|---------------|----------------|
+| 1 | `Foo#bar` | `app/foo.rb:1` | new public method | `spec/foo_spec.rb` — assert bar |
+"""
+        passed, _ = output_checks.has_review_verdict_matches_summary(content)
+        self.assertTrue(passed)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 

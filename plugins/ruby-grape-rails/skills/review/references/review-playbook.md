@@ -589,9 +589,15 @@ How would you like to proceed?
     — Default. Auto-includes gaps + lets you select any warnings.
 - /rb:plan .claude/reviews/{review-slug}-{datesuffix}.md
     — Gaps-only plan, no triage UI.
-- /rb:work — Write tests directly
+- /rb:quick — Inline test addition (single uncovered surface, simple case)
 - I'll handle it myself
 ```
+
+Do NOT suggest bare `/rb:work` here — it would resume any active
+plan from `.claude/ACTIVE_PLAN`, not address these gaps. Both
+review-path flows (`/rb:triage` / `/rb:plan` with the review path)
+generate the right plan first. `/rb:quick` is plan-free and fits
+single-surface coverage additions only.
 
 **BLOCKED:**
 
@@ -604,9 +610,14 @@ Review found {n} blockers ({n} warnings):
 How would you like to proceed?
 
 - /rb:triage .claude/reviews/{review-slug}-{datesuffix}.md — Select findings, create fix plan
-- /rb:work — Fix directly (best for simple, isolated fixes)
+- /rb:quick — Inline fix (single isolated change, <~20 lines)
 - I'll handle it myself
 ```
+
+Do NOT suggest bare `/rb:work` here — it would resume any active
+plan from `.claude/ACTIVE_PLAN`, not address these blockers.
+`/rb:triage {review-path}` generates the right plan first.
+`/rb:quick` is plan-free and fits single isolated fixes only.
 
 Always enumerate actual findings — never just show a count.
 

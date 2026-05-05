@@ -90,7 +90,7 @@ Read the consolidated review markdown.
 | `## At-a-Glance Finding Table` | Per-finding row: `# / Finding / Severity / Confidence / Reviewer / File / New?` |
 | `## Blockers ({n})` / `## Warnings ({n})` / `## Suggestions ({n})` | Detailed finding bodies: `**File**:`, `**Reviewer**: ... \| **Confidence**:`, `**Issue**:`, `**Why it matters**:` (Blockers only), `**Current**:` + `**Suggested**:` (Blockers code blocks), `**Recommendation**:` (Warnings) or `**Suggestion**:` (Suggestions) |
 | `## Pre-existing Issues (unchanged code)` | Findings to surface in plan's `## Pre-existing Issues (informational)` only |
-| `## Test Coverage Gaps ({n})` (REQUIRES CHANGES verdict only) | One row per uncovered NEW public surface; columns `# / Surface / File / Why uncovered / Suggested test`. Step 2b auto-includes each row as a Phase 2 `[test]` task. |
+| `## Test Coverage Gaps ({n})` (REQUIRES CHANGES verdict only) | One row per uncovered NEW public surface; columns `# / Surface / File / Why uncovered / Suggested test`. Step 2b + Step 5 auto-include each row as a Phase 1 `[test]` task. |
 
 For NEW At-a-Glance rows (`New? = Yes`), match each row to its
 detailed finding by the `Finding` column text — the At-a-Glance
@@ -182,18 +182,25 @@ stable `rule_id`; do not invent one.
 
 ### Step 4: Present Multi-Select UI
 
-Use `AskUserQuestion` with `multiSelect: true`. Auto-include all
-NEW BLOCKERs before asking; ask only about NEW WARNING + NEW
-SUGGESTION items. Pre-existing findings are NOT presented for
-selection.
-Offer bucket shortcuts first (`All WARNING`, `All SUGGESTION`), then
-individual items. Each option label uses prefix `B<n>` / `W<n>` /
-`S<n>`; description includes file, line, one-line reason. Batch into
-multiple screens when more than 6 selectable items exist. Do NOT ask
+Use `AskUserQuestion` with `multiSelect: true`. Auto-include rules
+per Step 2b verdict gate:
+
+| Verdict | Auto-include (no UI) | Present in selection UI |
+|---|---|---|
+| `BLOCKED` | every NEW BLOCKER (`B<n>`) | NEW WARNINGs (`W<n>`), NEW SUGGESTIONs (`S<n>`) |
+| `REQUIRES CHANGES` | every Test Coverage Gap row (`G<n>`) | NEW WARNINGs (`W<n>`), NEW SUGGESTIONs (`S<n>`) |
+| `PASS WITH WARNINGS` / `PASS` | none | NEW WARNINGs (`W<n>`), NEW SUGGESTIONs (`S<n>`) |
+
+Pre-existing findings are NEVER presented for selection. Offer bucket
+shortcuts first (`All WARNING`, `All SUGGESTION`), then individual
+items. Description per option includes file, line, one-line reason.
+Batch into multiple screens when > 6 selectable items. Do NOT ask
 the user to type freeform selection commands.
 
-Summarize state back: `auto-included: B1 B2 B3 | selected: W1 |
-deferred: W2 S1 S2`.
+Summarize state back, e.g.:
+`auto-included: B1 B2 B3 | selected: W1 | deferred: W2 S1 S2`
+or for REQUIRES CHANGES:
+`auto-included: G1 G2 | selected: W1 | deferred: W2 S1`.
 
 ### Step 5: Write Triage Output
 
@@ -346,6 +353,8 @@ canonical Set A annotations from
 § "Plan Generation". `/rb:work` parser routes on this format and
 resumes via `--from Pn-Tm`.
 
+Example for BLOCKED verdict (Phase 1 = Blockers):
+
 ```markdown
 # Creates `.claude/plans/{slug}/plan.md` with selected findings as tasks
 
@@ -364,8 +373,20 @@ resumes via `--from Pn-Tm`.
 - [ ] [P3-T1][direct] Extract `RETRY_LIMIT` constant in `SyncService`
 ```
 
-(Omit `## Phase 3: Suggestions (selected)` entirely when zero
-suggestions selected — phase is conditional.)
+Example for REQUIRES CHANGES verdict (Phase 1 = Test Coverage Gaps):
+
+```markdown
+# Creates `.claude/plans/{slug}/plan.md` with selected findings as tasks
+
+## Phase 1: Test Coverage Gaps [PENDING]
+
+- [ ] [P1-T1][test] Add spec for `PasswordsController#create` — test-coverage gap (REQUIRES CHANGES); source .claude/reviews/...md
+- [ ] [P1-T2][test] Add spec for `PasswordsController#create` 429 throttle branch — test-coverage gap (REQUIRES CHANGES); source .claude/reviews/...md
+```
+
+Phase 1 heading is OMITTED entirely for PASS / PASS WITH WARNINGS
+verdicts. Phase 2 + Phase 3 headings are OMITTED when zero items
+selected at Step 4.
 
 ## Best Practices
 
