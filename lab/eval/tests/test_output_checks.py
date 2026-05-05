@@ -546,6 +546,8 @@ Some prose.
     def test_has_review_mandatory_table_rejects_old_6col_format(self) -> None:
         content = """# Review: x
 
+## At-a-Glance Finding Table
+
 | # | Finding | Severity | Reviewer | File | New? |
 |---|---------|----------|----------|------|------|
 | 1 | Issue | WARNING | r | f.rb:1 | Yes |
@@ -557,12 +559,49 @@ Some prose.
     def test_has_review_mandatory_table_accepts_7col_with_confidence(self) -> None:
         content = """# Review: x
 
+## At-a-Glance Finding Table
+
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
 | 1 | Issue | WARNING | HIGH | r | f.rb:1 | Yes |
 """
         passed, _ = output_checks.has_review_mandatory_table(content)
         self.assertTrue(passed)
+
+    def test_has_review_metadata_fields_rejects_missing_complexity(self) -> None:
+        content = """# Review: x
+
+**Date**: 2026-05-05
+**Files Changed**: app/foo.rb
+**Reviewers**: ruby-reviewer
+"""
+        passed, reason = output_checks.has_review_metadata_fields(content)
+        self.assertFalse(passed)
+        self.assertIn("Complexity", reason)
+
+    def test_has_review_metadata_fields_accepts_all_four(self) -> None:
+        content = """# Review: x
+
+**Date**: 2026-05-05
+**Complexity**: Simple (1 file)
+**Files Changed**: app/foo.rb
+**Reviewers**: ruby-reviewer
+"""
+        passed, _ = output_checks.has_review_metadata_fields(content)
+        self.assertTrue(passed)
+
+    def test_has_review_mandatory_table_requires_section_heading(self) -> None:
+        # Table with correct schema but no `## At-a-Glance Finding Table`
+        # heading should fail.
+        content = """# Review: x
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Issue | WARNING | HIGH | r | f.rb:1 | Yes |
+"""
+        passed, reason = output_checks.has_review_mandatory_table(content)
+        self.assertFalse(passed)
+        self.assertIn("At-a-Glance Finding Table", reason)
 
     def test_has_review_mandatory_table_skips_fenced_excerpt(self) -> None:
         # Mandatory table header inside a fenced Markdown excerpt is

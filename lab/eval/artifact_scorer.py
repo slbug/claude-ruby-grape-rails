@@ -137,6 +137,12 @@ REVIEW_CHECKS: tuple[CheckSpec, ...] = (
         output_checks.has_review_summary_table,
     ),
     CheckSpec(
+        "review_metadata_fields",
+        "Has Date / Complexity / Files Changed / Reviewers metadata",
+        "artifact",
+        output_checks.has_review_metadata_fields,
+    ),
+    CheckSpec(
         "review_reviewer_coverage",
         "Has Reviewer Coverage section",
         "artifact",
@@ -238,6 +244,7 @@ FIXTURES: dict[str, tuple[FixtureSpec, ...]] = {
             provenance_path=FIXTURES_DIR / "review-bad.provenance.md",
             expected_failures=(
                 "review_verdict",
+                "review_metadata_fields",
                 "review_reviewer_coverage",
                 "review_reviewer_verdicts",
                 "review_reviewer_completeness",

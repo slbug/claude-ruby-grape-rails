@@ -1,8 +1,10 @@
 # Triage Plan Output Template
 
-`/rb:triage` writes its output to `.claude/plans/{slug}/plan.md`
-using this template. Buckets follow the canonical review contract
-(`BLOCKER | WARNING | SUGGESTION`).
+Emit `.claude/plans/{slug}/plan.md` matching the structure below.
+Buckets use canonical review vocabulary
+(`BLOCKER | WARNING | SUGGESTION`). Pre-existing findings go in
+`## Pre-existing Issues (informational)` only — never auto-included
+in any phase.
 
 ````markdown
 # Plan: Fix auth review findings
@@ -21,6 +23,9 @@ using this template. Buckets follow the canonical review contract
 | WARNING | 4 | 1 | 3 | 0 |
 | SUGGESTION | 1 | 0 | 0 | 1 |
 | **Total** | **8** | **4** | **3** | **1** |
+
+Counts NEW findings only. Pre-existing tracked in
+`## Pre-existing Issues (informational)`.
 
 ## Phase 1: Blockers
 
@@ -59,6 +64,16 @@ using this template. Buckets follow the canonical review contract
 ### Suggestions (Excluded)
 
 - app/views/layouts/application.html.erb:5 - Quote style
+
+## Pre-existing Issues (informational)
+
+Pre-existing findings (per review's `New? = Pre-existing` column).
+Listed for visibility only. Do NOT include in any Phase. Do NOT
+gate `/rb:work` on these.
+
+- app/models/user.rb:67 - Duplicate-email returns nil instead of raising
+  - Reviewer: ruby-reviewer
+  - Pre-existing in code prior to this diff
 
 ## Next Steps
 

@@ -39,6 +39,7 @@ class ArtifactScorerTests(unittest.TestCase):
             set(result["actual_failures"]),
             {
                 "review_verdict",
+                "review_metadata_fields",
                 "review_reviewer_coverage",
                 "review_reviewer_verdicts",
                 "review_reviewer_completeness",

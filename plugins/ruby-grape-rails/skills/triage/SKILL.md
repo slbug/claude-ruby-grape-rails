@@ -152,9 +152,13 @@ Review bucket = BLOCKER?
 
 ### Select All in Bucket
 
+BLOCKERs are auto-included by Step 4; do NOT surface a "Select All
+BLOCKER" shortcut in the selection UI. Offer only WARNING /
+SUGGESTION + cross-cutting filters:
+
 ```
-[Select All BLOCKER]
 [Select All WARNING]
+[Select All SUGGESTION]
 [Select All in File: app/models/user.rb]
 [Select All of Type: N+1]
 ```

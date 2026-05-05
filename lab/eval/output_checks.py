@@ -389,6 +389,29 @@ def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
     return len(matches) >= minimum, f"{len(matches)} finding file ref(s) present"
 
 
+_METADATA_FIELDS = ("Date", "Complexity", "Files Changed", "Reviewers")
+
+
+def has_review_metadata_fields(content: str) -> tuple[bool, str]:
+    """Consolidated review header MUST carry the canonical metadata fields.
+
+    Per `review-playbook.md` § "Consolidated Review Format":
+    `**Date**`, `**Complexity**`, `**Files Changed**`, `**Reviewers**`.
+    `/rb:triage` reads `Files Changed` to scope its analysis;
+    downstream skills cite Date + Complexity. Missing any of these is
+    a contract break.
+    """
+    content = _normalize_newlines(content)
+    missing: list[str] = []
+    for field in _METADATA_FIELDS:
+        # Match `**Field**:` at start of line, anywhere in artifact.
+        if not re.search(rf"(?m)^\*\*{re.escape(field)}\*\*:\s+\S", content):
+            missing.append(field)
+    if missing:
+        return False, f"Missing metadata field(s): {missing} (each requires `**Field**:` line with non-empty value)"
+    return True, f"All {len(_METADATA_FIELDS)} metadata fields present"
+
+
 def has_review_finding_confidence(content: str) -> tuple[bool, str]:
     """Each finding MUST carry its own `**Confidence**: HIGH|MEDIUM|LOW`.
 
@@ -500,16 +523,20 @@ _MANDATORY_TABLE_HEADER_RE = re.compile(
 
 
 def has_review_mandatory_table(content: str) -> tuple[bool, str]:
-    """Canonical 7-column At-a-Glance Finding Table outside fenced blocks.
+    """Canonical 7-column At-a-Glance Finding Table under its `## At-a-Glance Finding Table` section.
 
     Schema: `# | Finding | Severity | Confidence | Reviewer | File | New?`.
-    Skips fenced Markdown excerpts so a quoted template inside
-    Current/Suggested doesn't count as the live table.
+    Anchored to the section heading per `review-playbook.md` § "At-a-Glance
+    Finding Table". Skips fenced Markdown excerpts so a quoted template
+    inside Current/Suggested doesn't count as the live table.
     """
-    for line in _iter_lines_outside_fences(content):
+    section = _section(content, "At-a-Glance Finding Table")
+    if not section:
+        return False, "Missing `## At-a-Glance Finding Table` section"
+    for line in _iter_lines_outside_fences(section):
         if _MANDATORY_TABLE_HEADER_RE.match(line):
             return True, "Mandatory finding table present"
-    return False, "Missing mandatory finding table (expected 7-col with Confidence outside fenced blocks)"
+    return False, "Missing 7-col At-a-Glance table header (`# | Finding | Severity | Confidence | Reviewer | File | New?`) under `## At-a-Glance Finding Table` section"
 
 
 def review_has_no_task_lists(content: str) -> tuple[bool, str]:
