@@ -423,14 +423,18 @@ def has_review_reviewer_completeness(content: str) -> tuple[bool, str]:
 
 
 def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
-    """Count `**File**: path:line` refs across LIVE finding bodies.
+    """Count `**File**: path[:line]` refs across LIVE finding bodies.
 
+    Per `review-playbook.md` template: Blockers / Warnings carry
+    `path:line` refs; Suggestions allow path-only (no `:line`) since
+    they may target a class or whole file. Pattern accepts both.
     Fence-aware: a quoted Markdown excerpt under `**Current**` /
-    `**Suggested**` (per `review-playbook.md` § "Consolidated Review
-    Format") legitimately can carry `**File**:` lines as data. Skip
-    them so a fenced excerpt cannot satisfy the minimum on its own.
+    `**Suggested**` legitimately can carry `**File**:` lines as data.
+    Skip them so a fenced excerpt cannot satisfy the minimum.
     """
-    pat = re.compile(r"^\*\*File\*\*:\s+`?.+:\d+`?$")
+    # Accepts: `**File**: path:42`, `**File**: `path:42``,
+    # `**File**: path/to/file.rb`, `**File**: `path/to/file.rb``.
+    pat = re.compile(r"^\*\*File\*\*:\s+`?[^`\s]+(?::\d+)?`?$")
     count = sum(1 for line in _iter_lines_outside_fences(content) if pat.match(line))
     return count >= minimum, f"{count} finding file ref(s) present"
 
@@ -636,6 +640,13 @@ def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
     for severity, summary_label in _AT_A_GLANCE_SUMMARY_LABELS:
         summary_count = _summary_count(content, summary_label)
         if summary_count is None:
+            # Per `review-playbook.md` template: `## Summary` MUST
+            # carry all 3 rows (`Blockers`, `Warnings`, `Suggestions`).
+            # A missing row hides drift and breaks the cross-check.
+            bad.append(
+                f"{summary_label}: row missing from `## Summary` — "
+                "playbook requires all 3 severity rows"
+            )
             continue
         new_count = new_counts[severity]
         if summary_count != new_count:

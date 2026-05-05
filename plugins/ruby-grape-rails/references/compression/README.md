@@ -64,7 +64,6 @@ Reports:
 - mean / p50 / p95 compression ratio (overall + per command class)
 - top weak-savings commands (ratio < 20%)
 - preservation-violation count
-- recommendation against the promotion criteria below
 
 ## Sharing a Report
 

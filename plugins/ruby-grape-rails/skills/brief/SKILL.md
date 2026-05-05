@@ -213,16 +213,18 @@ Don't include in briefs:
 ```
 ## Review Brief: Payment Processing
 
-**Summary**: 1 BLOCKER, 3 WARNINGS, 2 SUGGESTIONS
+**Summary**: 3 BLOCKERS, 2 WARNINGS, 2 SUGGESTIONS
 
 **Blockers**:
 1. Float used for money calculation (app/models/order.rb:45)
    - Must use Decimal to prevent rounding errors (Iron Law 1)
+2. N+1 query in checkout flow (app/controllers/checkout_controller.rb:23)
+   - Use `.includes()` / `.preload()` (Iron Law 3)
+3. Missing authorization check in `PaymentsController#charge` (Iron Law 13)
 
-**Top Warnings**:
-1. N+1 query in checkout flow
-2. Missing authorization check in controller
-3. No rate limiting on payment endpoint
+**Top Warnings** (non-Iron-Law):
+1. No rate limiting on payment endpoint
+2. Missing test for refund edge case
 
 **Verdict**: BLOCKED
 
