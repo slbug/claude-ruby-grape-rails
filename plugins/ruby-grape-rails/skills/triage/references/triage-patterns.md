@@ -73,14 +73,20 @@ Coverage`, and the consolidated verdict per
 auto-include in any Phase. Do NOT relabel a pre-existing BLOCKER as
 WARNING / SUGGESTION.
 
-### Downgrade from BLOCKER (non-Iron-Law, NEW findings only) when
+### Downgrade from BLOCKER (non-Iron-Law, non-security, NEW findings only) when
 
 - The issue is in code that's not yet reachable
 - There's an existing workaround in production
 - The fix requires a separate migration/PR
 
-Iron Law violations are non-negotiable BLOCKERs per the "Always
-Fix" list above; do NOT downgrade them on these grounds.
+Iron Law violations + security issues are both non-negotiable
+BLOCKERs per the "Always Fix" list above. Do NOT downgrade EITHER
+class on these grounds:
+
+- Iron Laws (1-22): listed under "Always Fix"
+- Security issues: hard-coded credentials / API keys, SQL injection,
+  XSS, missing authorization, `eval` with user input, mass-assignment
+  on protected fields, SSRF, secrets leakage
 
 ### Upgrade from SUGGESTION when
 

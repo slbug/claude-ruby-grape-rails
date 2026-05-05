@@ -560,12 +560,17 @@ def has_review_verdict_matches_summary(content: str) -> tuple[bool, str]:
             f"Summary reports {blockers} blocker(s) but verdict is {verdict!r}; "
             "playbook STEP 4 requires BLOCKED when blockers > 0"
         )
+    if blockers == 0 and verdict == "BLOCKED":
+        return False, (
+            f"Summary reports 0 blockers but verdict is BLOCKED; "
+            "playbook STEP 4 requires blockers > 0 for BLOCKED"
+        )
     if blockers == 0 and warnings > 0 and verdict == "PASS":
         return False, (
             f"Summary reports {warnings} warning(s) and 0 blockers but verdict is PASS; "
             "expected PASS WITH WARNINGS or REQUIRES CHANGES"
         )
-    if blockers == 0 and warnings == 0 and verdict in {"BLOCKED", "PASS WITH WARNINGS"}:
+    if blockers == 0 and warnings == 0 and verdict == "PASS WITH WARNINGS":
         return False, (
             f"Summary reports 0 blockers and 0 warnings but verdict is {verdict!r}; "
             "expected PASS or REQUIRES CHANGES"

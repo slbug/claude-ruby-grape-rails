@@ -1,9 +1,9 @@
 # Trust States
 
-Each provenance sidecar (`*.provenance.md`) declares `claims`,
-`sources`, and `conflicts` in YAML frontmatter. Compute `trust_state`
-at read time from those fields. Do NOT author or persist
-`trust_state` directly.
+Compute `trust_state` from the provenance sidecar
+(`*.provenance.md`) YAML frontmatter at read time. Do NOT author or
+persist `trust_state` directly. Required frontmatter fields:
+`claims`, `sources`, `conflicts`.
 
 ## States
 

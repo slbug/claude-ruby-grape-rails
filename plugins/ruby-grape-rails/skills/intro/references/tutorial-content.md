@@ -240,25 +240,22 @@ not covered by any skill's `paths:` glob.
 
 ### Layer 4: `/rb:init` (Project Stack Notes)
 
-Running `/rb:init` writes a managed block into your project's
-`CLAUDE.md`. The block holds project-specific stack facts only —
-detected queue list, ORM-per-package map, Karafka topic routes,
-Packwerk enforcement flags, and similar items that come from
-`detect-stack` output plus targeted interview answers when
-detection is ambiguous.
+Run `/rb:init` to write a managed block into the project
+`CLAUDE.md`. Block contents: stack-version header + project-specific
+stack facts only.
 
-What `/rb:init` does NOT do:
+| Source | Examples |
+|---|---|
+| `detect-stack` output | queue list, ORM-per-package map, Karafka topic routes, Packwerk enforcement flags |
+| Targeted interview | answers when `detect-stack` is ambiguous (multiple ORMs, package boundaries unclear) |
 
-- It does NOT inject Iron Laws or Advisory Preferences. Those
-  arrive at runtime via the `inject-rules.sh` hook on every
-  `SessionStart` and `SubagentStart`.
-- It does NOT inject skill workflow doctrine (complexity scoring,
-  spawn rules, verification commands). Those live in individual
-  skill bodies (`/rb:plan`, `/rb:review`, `/rb:verify`, etc.) and
-  load when the skill is invoked.
-- It does NOT inject library defaults (Sidekiq base class, Turbo
-  Frame patterns, etc.). Generic library guidance belongs in the
-  framework docs, not in your project's CLAUDE.md.
+`/rb:init` does NOT inject:
+
+| Surface | Where it lives instead |
+|---|---|
+| Iron Laws + Advisory Preferences | `inject-rules.sh` hook on every `SessionStart` + `SubagentStart` |
+| Skill workflow doctrine (complexity scoring, spawn rules, verification commands) | individual skill bodies (`/rb:plan`, `/rb:review`, `/rb:verify`) — load when skill invoked |
+| Library defaults (Sidekiq base class, Turbo Frame patterns) | framework docs, NOT project `CLAUDE.md` |
 
 ```bash
 /rb:init           # First-time setup

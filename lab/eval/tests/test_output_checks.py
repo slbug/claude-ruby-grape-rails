@@ -792,7 +792,33 @@ Some prose.
         self.assertFalse(passed)
         self.assertIn("PASS WITH WARNINGS", reason)
 
+    def test_verdict_matches_summary_rejects_blocked_with_warnings_only(self) -> None:
+        # Per playbook STEP 4: BLOCKED requires blockers > 0.
+        # warnings > 0 + blockers == 0 + verdict == BLOCKED is invalid;
+        # expected PASS WITH WARNINGS or REQUIRES CHANGES.
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 3 |
+| Suggestions | 0 |
+
+**Verdict**: BLOCKED
+"""
+        passed, reason = output_checks.has_review_verdict_matches_summary(content)
+        self.assertFalse(passed)
+        self.assertIn("0 blockers", reason)
+        self.assertIn("BLOCKED", reason)
+        self.assertIn("blockers > 0", reason)
+
     def test_verdict_matches_summary_rejects_blocked_with_zero_counts(self) -> None:
+        # Zero blockers + verdict=BLOCKED is rejected by the
+        # blockers-required gate (BLOCKED requires blockers > 0).
+        # Earlier wording cited "PASS or REQUIRES CHANGES"; the
+        # blockers-required rule now fires first and is more precise.
         content = """# Review: x
 
 ## Summary
@@ -804,6 +830,24 @@ Some prose.
 | Suggestions | 0 |
 
 **Verdict**: BLOCKED
+"""
+        passed, reason = output_checks.has_review_verdict_matches_summary(content)
+        self.assertFalse(passed)
+        self.assertIn("blockers > 0", reason)
+        self.assertIn("BLOCKED", reason)
+
+    def test_verdict_matches_summary_rejects_pass_with_warnings_no_warnings(self) -> None:
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: PASS WITH WARNINGS
 """
         passed, reason = output_checks.has_review_verdict_matches_summary(content)
         self.assertFalse(passed)

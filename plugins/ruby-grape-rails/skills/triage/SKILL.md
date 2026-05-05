@@ -91,12 +91,16 @@ Read the consolidated review markdown.
 | `## Blockers ({n})` / `## Warnings ({n})` / `## Suggestions ({n})` | Detailed finding bodies: `**File**:`, `**Reviewer**: ... \| **Confidence**:`, `**Issue**:`, `**Why it matters**:`, `**Current**:`, `**Suggested**:`, `**Recommendation**: \| Suggestion:` |
 | `## Pre-existing Issues (unchanged code)` | Findings to surface in plan's `## Pre-existing Issues (informational)` only |
 
-Match each At-a-Glance row to its detailed finding by the
-`(File, Reviewer, Severity)` tuple. `File` alone is ambiguous —
-the review contract allows multiple findings against the same path.
-The Iron Law label for the plan's task line comes from the issue
-text + `iron-laws.yml` registry (e.g., "Multi-step operations
-without transaction wrap" → Iron Law 5).
+Match each At-a-Glance row to its detailed finding by the `Finding`
+column text — the At-a-Glance `Finding` cell MUST equal the
+`### N. {Title}` heading under the appropriate `## Blockers` /
+`## Warnings` / `## Suggestions` section verbatim. Use
+`(File, Reviewer, Severity)` as a corroboration tuple. Title text
+disambiguates the case where one reviewer reports two findings of
+the same bucket against the same path; the tuple alone is
+ambiguous in that case. The Iron Law label for the plan's task
+line comes from the issue text + `iron-laws.yml` registry (e.g.,
+"Multi-step operations without transaction wrap" → Iron Law 5).
 
 The plan's `[annotation]` value MUST be one of the canonical Set A
 entries per `${CLAUDE_PLUGIN_ROOT}/skills/plan/references/planning-workflow.md`
