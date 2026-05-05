@@ -226,18 +226,13 @@ This is behavioral — it works because the rules are in Claude's context, not b
 
 Two activation paths exist for domain skills:
 
-| Skill | `paths:` declared | Activation path |
-|---|---|---|
-| `hotwire-patterns` | `app/views/**/*.{erb,haml,slim}`, `app/{javascript,components,channels}/**` | CC auto-activation |
-| `active-record-patterns` | `app/{models,repositories}/**`, `db/**`, package variants | CC auto-activation |
-| `testing` | `{spec,test}/**` | CC auto-activation |
-| `sidekiq` | `app/{jobs,workers,sidekiq}/**`, `config/sidekiq.yml` | CC auto-activation |
-| `ruby-idioms` | narrow subtrees only (`app/{errors,types,contracts,events,clients,chewy}/**`) | CC auto-activation on listed subtrees only |
-| `rails-contexts` | none | description-based only |
+| Path | Trigger |
+|---|---|
+| CC auto-activation | Skill declares `paths:` in its frontmatter; CC loads the skill when files matching the glob are open or being edited. ~16 shipped skills declare `paths:` (hotwire-patterns, active-record-patterns, testing, sidekiq, security, karafka, grape-idioms, ar-n1-check, deploy, hotwire-native, async-patterns, sequel-patterns, safe-migrations, rails-idioms, ruby-idioms, active-record-constraint-debug). Read each skill's frontmatter for the exact glob set. |
+| Description-based | Skill omits `paths:`; CC matches on description text (less reliable). Examples: `rails-contexts`, `ruby-contexts`. |
 
 Invoke `/rb:<workflow>` directly when the file you are editing is
-not covered by any skill's `paths:` glob — description-based
-activation is unreliable on its own.
+not covered by any skill's `paths:` glob.
 
 ---
 
@@ -362,7 +357,7 @@ boundaries) without restating any rule already injected at runtime.
 | `/rb:permissions` | Tune Claude Bash permissions from real session evidence |
 | `/rb:research <topic>` | Research with parallel workers, runtime tooling-first |
 | `/rb:pr-review <PR#>` | Address PR review comments |
-| `/rb:init` | Initialize plugin in a project |
+| `/rb:init` | Write project stack notes to CLAUDE.md (rules runtime-injected) |
 | `/rb:runtime` | Runtime tooling (Tidewave integration) |
 | `/rb:secrets` | Scan for leaked credentials |
 | `/rb:document` | Generate YARD/RDoc, README, ADRs |

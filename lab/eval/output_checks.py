@@ -104,25 +104,42 @@ def has_review_title(content: str) -> tuple[bool, str]:
     return bool(match), "Review title present" if match else "Missing # Review: heading"
 
 
-def _verdict_lines_outside_fences(content: str) -> list[str]:
-    """Return every `**Verdict**: <text>` line outside fenced code blocks.
+_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
 
-    Reviewed Markdown snippets under Current/Suggested may contain
-    verbatim `**Verdict**:` lines as part of the diff payload; those
-    must NOT trigger validation. Toggles `in_fence` on triple-backtick
-    or triple-tilde fences (matching `has_h1`).
+
+def _iter_lines_outside_fences(content: str):
+    """Yield each line outside fenced code blocks, CommonMark-aware.
+
+    Track the EXACT marker (char + length) that opened the current
+    fence. Close only on a matching marker char with length >= the
+    opener. Inner fences with fewer / different markers stay as
+    content. Required for repo's 4-backtick excerpts that nest
+    3-backtick samples (Markdown reviews, playbook templates).
     """
     content = _normalize_newlines(content)
-    in_fence = False
-    out: list[str] = []
-    pat = re.compile(r"^\*\*Verdict\*\*:\s+(.+?)\s*$")
+    fence: tuple[str, int] | None = None
     for line in content.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
-            in_fence = not in_fence
-            continue
-        if in_fence:
-            continue
+        stripped = line.lstrip()
+        m = _FENCE_RE.match(stripped)
+        if m:
+            marker = m.group(1)
+            ch, ln = marker[0], len(marker)
+            if fence is None:
+                fence = (ch, ln)
+                continue
+            if fence[0] == ch and ln >= fence[1]:
+                fence = None
+                continue
+            # Different char or shorter — treat as content inside outer fence.
+        if fence is None:
+            yield line
+
+
+def _verdict_lines_outside_fences(content: str) -> list[str]:
+    """Return every `**Verdict**: <text>` line outside fenced blocks."""
+    pat = re.compile(r"^\*\*Verdict\*\*:\s+(.+?)\s*$")
+    out: list[str] = []
+    for line in _iter_lines_outside_fences(content):
         m = pat.match(line)
         if m:
             out.append(m.group(1))
@@ -369,19 +386,23 @@ def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
 
 
 def has_review_finding_confidence(content: str) -> tuple[bool, str]:
-    """Every finding MUST include a `**Confidence**: HIGH|MEDIUM|LOW` label.
+    """Every finding MUST include `**Confidence**: HIGH|MEDIUM|LOW`.
 
-    Playbook § "Confidence Levels" requires a confidence label per
-    finding to distinguish evidence-backed findings from
-    pattern-based hunches. Validator counts `**File**:` lines (one
-    per finding) and matching `**Confidence**: <HIGH|MEDIUM|LOW>`
-    occurrences. Both counts must match.
+    Counts `**File**:` lines (one per finding) and matching
+    `**Confidence**: <HIGH|MEDIUM|LOW>` occurrences OUTSIDE fenced
+    code blocks (reviewed Markdown excerpts inside Current/Suggested
+    fences are data, not directives).
     """
-    content = _normalize_newlines(content)
-    file_count = len(re.findall(r"(?m)^\*\*File\*\*:\s+", content))
+    file_pat = re.compile(r"^\*\*File\*\*:\s+")
+    conf_pat = re.compile(r"\*\*Confidence\*\*:\s+(HIGH|MEDIUM|LOW)\b")
+    file_count = 0
+    conf_count = 0
+    for line in _iter_lines_outside_fences(content):
+        if file_pat.match(line):
+            file_count += 1
+        conf_count += len(conf_pat.findall(line))
     if file_count == 0:
         return True, "No findings present (Confidence check vacuously satisfied)"
-    conf_count = len(re.findall(r"\*\*Confidence\*\*:\s+(HIGH|MEDIUM|LOW)\b", content))
     if conf_count < file_count:
         return False, (
             f"{file_count} finding(s) detected via `**File**:` but only "

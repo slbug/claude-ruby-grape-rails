@@ -186,14 +186,11 @@ Required output:
 2. Return summary in Agent return text (used as artifact-recovery fallback).
    - Always write the artifact (even if findings are empty — write PASS
      with files reviewed).
-3. Artifact MUST include a verdict line emitted VERBATIM from the
-   canonical 4-set: `**Verdict**: PASS` | `**Verdict**: PASS WITH WARNINGS`
-   | `**Verdict**: REQUIRES CHANGES` | `**Verdict**: BLOCKED`. No other
-   wording. Do NOT emit `LGTM`, `BLOCK`, `Needs fixes`, `CONDITIONAL PASS`,
-   or any abbreviation. Synthesis preserves the verbatim string in the
-   consolidated `## Reviewer Verdicts` table; STEP 2 normalization is
-   defense-in-depth for legacy artifacts only — current workers MUST
-   emit canonical strings directly.
+3. Artifact MUST include a verdict line VERBATIM from the canonical
+   4-set: `**Verdict**: PASS` | `**Verdict**: PASS WITH WARNINGS` |
+   `**Verdict**: REQUIRES CHANGES` | `**Verdict**: BLOCKED`. No other
+   wording. Do NOT emit `LGTM`, `BLOCK`, `Needs fixes`,
+   `CONDITIONAL PASS`, or any abbreviation.
 
 Findings format:
 - file:line — Title
@@ -206,8 +203,7 @@ Stop after returning. Do NOT call Agent() — this is a leaf review.
 
 ## Confidence Levels
 
-Every finding MUST include a confidence label. This tells the user
-which findings are backed by evidence vs. pattern-based hunches.
+Every finding MUST carry a confidence label.
 
 | Level | Meaning | Example |
 |---|---|---|
@@ -215,15 +211,12 @@ which findings are backed by evidence vs. pattern-based hunches.
 | `MEDIUM` | Pattern match — known anti-pattern or convention violation, no direct proof of bug | "Service object bypasses transaction boundary (common data-loss pattern)" |
 | `LOW` | Subjective — style preference, naming opinion, architecture suggestion | "Consider extracting this into a form object" |
 
-When consolidating findings from multiple agents, keep the highest
-confidence level among duplicates. Sort findings by confidence
-(`HIGH` first) within each severity bucket.
+Consolidate duplicates: keep highest confidence among them. Sort
+findings within each severity bucket: `HIGH` → `MEDIUM` → `LOW`.
 
 ## Synthesis Procedure
 
-Five steps, in order. Skipping any step causes the recurring drift
-modes (non-canonical verdict pass-through, worker-form severity
-leak in consolidated artifact, soft verdict despite blockers).
+Five steps, in order. Do NOT skip.
 
 ### STEP 1: Read each agent artifact (post-recovery)
 
@@ -242,9 +235,9 @@ forms to the canonical 4-set BEFORE writing the consolidated header:
 | `Needs fixes`, `fix before merge`, `not ready` | `REQUIRES CHANGES` if no blockers; else `BLOCKED` |
 | `Critical`, `BLOCK`, `BLOCKER` (verdict, not severity) | `BLOCKED` |
 
-Preserve the agent's raw verdict text in a `Reviewer Verdicts`
-metadata table at top of the consolidated artifact. Do NOT erase
-their wording — only normalize the consolidated header.
+Preserve the agent's raw verdict text VERBATIM in the
+`Reviewer Verdicts` metadata table at top of the consolidated
+artifact. Normalize only the consolidated header.
 
 ### STEP 3: Map worker severity to bucket form
 
@@ -257,9 +250,9 @@ Reviewer Coverage row counts MUST use bucket form
 - worker `Warning` → `WARNING`
 - worker `Info` → `SUGGESTION`
 
-Per-agent artifacts retain their original wording. The consolidated
-artifact uses bucket form throughout — Reviewer Coverage row,
-Summary table, At-a-Glance Finding Table, section headers.
+Apply bucket form across Coverage row, Summary table, At-a-Glance
+Finding Table, and section headers. Per-agent artifacts keep their
+original wording.
 
 ### STEP 4: Compute consolidated verdict deterministically
 
@@ -276,19 +269,16 @@ else:
     verdict = PASS
 ```
 
-Do NOT override with author judgment. If 4 BLOCKERs are present,
-the verdict is `BLOCKED` — even when each individual blocker looks
-"fixable in one PR". Preserve author-side nuance in per-finding
-prose, not the verdict tag.
+Apply the algorithm verbatim. Do NOT override with author judgment.
+Preserve nuance in per-finding prose, not in the verdict tag.
 
 ### STEP 5: Write the consolidated review
 
 - Header MUST include `## Reviewer Coverage` with one row per
   spawned reviewer + recovery state.
-- Header MUST include `## Reviewer Verdicts` preserving each agent's
-  raw verdict text alongside the normalized canonical form. For
-  `stub-no-output` reviewers, both columns use the literal
-  `(no output)` placeholder (no verdict prose exists to preserve).
+- Header MUST include `## Reviewer Verdicts` with each agent's raw
+  verdict text + normalized canonical form. For `stub-no-output`
+  reviewers, emit `(no output)` literal in both cells.
 - Preserve blockers / must-fix items VERBATIM in body.
 - Preserve decision options + rationale, unresolved disagreements,
   file paths, concrete evidence.
@@ -436,13 +426,13 @@ Write the synthesized review to the path read via
 |---|---|---|
 | {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output | {n} BLOCKER / {n} WARNING / {n} SUGGESTION |
 
-Findings column uses bucket form (BLOCKER / WARNING / SUGGESTION),
-zero-padded when the reviewer produced none in a bucket. State
-definitions: `artifact` = on-disk file ≥ 1000 bytes, trusted as-is.
-`stub-replaced` = on-disk stub overwritten with substantially larger
-findings from agent return text. `recovered-from-return` = no on-disk
-artifact; findings extracted from agent return text. `stub-no-output` =
-no usable reviewer output; reviewer coverage gap.
+Findings column uses bucket form (`BLOCKER / WARNING / SUGGESTION`).
+Zero-pad when a bucket is empty. State definitions:
+
+- `artifact` — on-disk file ≥ 1000 bytes; trust as-is
+- `stub-replaced` — on-disk stub overwritten with larger findings from agent return text
+- `recovered-from-return` — no on-disk artifact; findings extracted from return text
+- `stub-no-output` — no usable reviewer output; coverage gap
 
 ## Reviewer Verdicts
 
@@ -451,20 +441,13 @@ no usable reviewer output; reviewer coverage gap.
 | {agent-slug} | {agent's verbatim verdict text} | PASS \| PASS WITH WARNINGS \| REQUIRES CHANGES \| BLOCKED |
 | {stub-no-output-agent-slug} | (no output) | (no output) |
 
-Raw verdict preserves the agent's wording exactly. Canonical column
-normalizes it via the table in § "STEP 2" so reviewers reading the
-artifact see one vocabulary. The consolidated verdict in § "STEP 4"
-is computed from blocker / warning / test-coverage counts, NOT from
-this column — Reviewer Verdicts is transparency metadata, not
-algorithm input.
+Raw verdict: VERBATIM agent wording. Canonical: map per § "STEP 2".
+The consolidated `**Verdict**:` line comes from § "STEP 4"
+(blocker / warning / test-coverage counts), not from this column.
 
-`stub-no-output` reviewers (per the Coverage table) produced no
-usable artifact + no return text, so verdict prose does not exist.
-For those reviewers ONLY, both Raw verdict and Canonical cells use
-the literal placeholder `(no output)`. The CI check
-(`has_review_reviewer_verdicts` in `lab/eval/output_checks.py`)
-cross-references the Coverage table to allow this placeholder for
-stub-no-output rows and rejects it everywhere else.
+For rows whose Coverage state is `stub-no-output`: emit
+`(no output)` literal in BOTH cells. Reserve the placeholder for
+`stub-no-output` rows only.
 
 ## Summary
 

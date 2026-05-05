@@ -457,6 +457,56 @@ Another instance:
         passed, _ = output_checks.has_review_reviewer_completeness(content)
         self.assertTrue(passed)
 
+    def test_has_review_verdict_handles_4backtick_outer_with_3backtick_inner(self) -> None:
+        # CommonMark: 4-backtick fence opens; only matching 4-backtick
+        # closes. Inner 3-backtick samples must NOT close outer.
+        content = """# Review: x
+
+**Verdict**: PASS
+
+## Suggestions (1)
+
+### 1. Update example doc
+
+````markdown
+**Verdict**: LGTM
+
+```ruby
+puts "hello"
+```
+
+**Verdict**: BLOCK
+````
+"""
+        passed, _ = output_checks.has_review_verdict(content)
+        self.assertTrue(passed)
+
+    def test_has_review_finding_confidence_skips_fenced_excerpts(self) -> None:
+        # Reviewed Markdown excerpt inside outer 4-backtick fence
+        # contains `**File**:` + `**Confidence**:` lines as DATA.
+        # Validator must skip them; outer review has 1 real finding.
+        content = """# Review: x
+
+## Warnings (1)
+
+### 1. Real Issue
+
+**File**: `app/foo.rb:10`
+**Reviewer**: ruby-reviewer | **Confidence**: HIGH
+**Issue**: bad
+
+**Current**:
+
+````markdown
+**File**: `quoted/example.md:5`
+**Reviewer**: testing-reviewer
+````
+
+**Recommendation**: fix it
+"""
+        passed, _ = output_checks.has_review_finding_confidence(content)
+        self.assertTrue(passed)
+
     def test_has_review_verdict_skips_fenced_blocks(self) -> None:
         # `**Verdict**: LGTM` inside a fenced Markdown excerpt under a
         # Suggested/Current section is a reviewed snippet, not the

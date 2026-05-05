@@ -98,10 +98,9 @@ no longer ships `IRON_LAWS_START/END` or `PREFERENCES_START/END` blocks
   other skills' `/rb:<name>` mentions. For agent removals, also check
   skill-body fanout owners
   (`plugins/ruby-grape-rails/skills/{review,plan,full}/SKILL.md`,
-  `.claude/skills/docs-check/SKILL.md`) and agent count claims. The
-  init injectable template carries no skill or agent names — slim
-  managed block holds only stack-version comment + 7 conditional
-  placeholders, so renames do not touch it.
+  `.claude/skills/docs-check/SKILL.md`) and agent count claims.
+  Init injectable template carries no skill or agent names; renames
+  do not touch it.
 - Iron Law count claim ("22 Total", "N Iron Laws") in any markdown →
   verify against `plugins/ruby-grape-rails/references/iron-laws.yml`
 - Plugin version mentioned in markdown → align with manifest trio

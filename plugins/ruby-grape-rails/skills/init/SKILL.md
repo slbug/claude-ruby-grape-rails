@@ -8,11 +8,9 @@ effort: low
 # Plugin Initialization
 
 Write a managed block of project-specific stack notes into the
-project's `CLAUDE.md` so downstream `/rb:*` skills operate with
-current stack context. Behavioral rules (Iron Laws, Advisory
-Preferences) are runtime-injected via the `inject-rules.sh` hook on
-`SessionStart` + `SubagentStart`; they are NOT written to
-`CLAUDE.md`.
+project's `CLAUDE.md`. Do NOT write Iron Laws or Advisory
+Preferences into `CLAUDE.md` — `inject-rules.sh` delivers them at
+runtime on `SessionStart` + `SubagentStart`.
 
 ## Usage
 
@@ -33,7 +31,7 @@ Detection rules:
    guidance to inject:
    - ORM: `DETECTED_ORMS`, `PRIMARY_ORM`
    - Rails shape: `RAILS_COMPONENTS`, `FULL_RAILS_APP`
-   - Ruby: `RUBY_VERSION` (project pin; falls back to interpreter when no pin). `INTERPRETER_RUBY_VERSION` is informational only — emitted when interpreter differs from project pin.
+   - Ruby: `RUBY_VERSION` (placeholder source). `INTERPRETER_RUBY_VERSION` is informational only — emitted when interpreter differs from project pin.
    - Packages: `PACKAGE_LAYOUT`, `PACKAGE_LOCATIONS`, `HAS_PACKWERK`,
      `PACKAGE_QUERY_NEEDED`
 6. If `PACKAGE_QUERY_NEEDED=true`, ask the user: `No Packwerk detected. Do you have something similar implemented? Provide modules/packages location and their stack/ORM.`
@@ -126,18 +124,16 @@ the current template, removing the `<!-- IRON_LAWS_START -->` /
 
 ## What Gets Installed
 
-The injected managed block contains ONLY project-specific stack
-notes — nothing that already lives in runtime injection or in skill
-bodies:
+Inject ONLY project-specific stack notes:
 
 - stack-version comment header (Ruby / Rails / Grape / Sidekiq /
   optional stack / Betterleaks / plugin version)
-- conditional sections rendered from `detect-stack` output plus
-  targeted interview answers — queue list, ORM-per-package map,
-  Karafka topic routes, Packwerk enforcement flags, Hotwire
-  channels, project secret-path conventions
+- conditional sections from `detect-stack` output + targeted
+  interview answers — queue list, ORM-per-package map, Karafka
+  topic routes, Packwerk enforcement flags, Hotwire channels,
+  project secret-path conventions
 
-What is NOT installed (delivered elsewhere):
+Do NOT inject anything from this row of the table:
 
 | Surface | Where it lives |
 |---|---|
@@ -151,10 +147,9 @@ Use `${CLAUDE_SKILL_DIR}/references/injectable-template.md` as the injected sour
 
 ## Conditional Sections
 
-Render each placeholder ONLY when BOTH conditions hold: stack/tool
-detected AND project-specific content available (from `detect-stack`
-output or targeted interview). Empty section → omit; do NOT leave a
-header without content.
+Render each placeholder ONLY when stack/tool detected AND
+project-specific content available (from `detect-stack` or interview).
+Omit empty sections. Do NOT leave a header without content.
 
 | Placeholder | Detection gate | Content source |
 |---|---|---|
@@ -166,9 +161,9 @@ header without content.
 | `{PACKWERK_SECTION}` | Packwerk OR modular monolith layout detected | package paths from `PACKAGE_LOCATIONS`; enforcement flags from `packwerk.yml` + per-package `package.yml` |
 | `{BETTERLEAKS_SECTION}` | `betterleaks` available AND project secret-path conventions detected | secret-path conventions, scan policy |
 
-`${CLAUDE_SKILL_DIR}/references/conditional-sections.md` is the
-canonical procedure (per-section detect rules, interview prompts,
-render shape, authoring rules). Read it before rendering.
+Read `${CLAUDE_SKILL_DIR}/references/conditional-sections.md` for
+per-section detect rules, interview prompts, render shape, and
+authoring rules.
 
 ## Recommended Permission Allowlist
 

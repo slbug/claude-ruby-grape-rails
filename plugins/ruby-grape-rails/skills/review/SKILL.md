@@ -304,10 +304,8 @@ Emit exactly one verdict from the canonical 4-set:
 - `REQUIRES CHANGES`
 - `BLOCKED`
 
-Verdict text is load-bearing — manifest writers, eval gates, intro
-tutorial citations, and downstream tooling parse the literal string.
 Emit each verdict VERBATIM. Do NOT abbreviate, hyphenate, paraphrase,
-or compress for terseness:
+or compress:
 
 | Reject | Use |
 |---|---|
@@ -316,15 +314,11 @@ or compress for terseness:
 | `REQ-CHANGES`, `RC`, `Needs fixes` | `REQUIRES CHANGES` |
 | `OK`, `LGTM`, `Approved` | `PASS` |
 
-Same rule for manifest status enum (`pending`, `in-flight`,
-`artifact`, `stub-replaced`, `recovered-from-return`, `stub-no-output`,
-`complete`) and severity buckets (`BLOCKER`, `WARNING`, `SUGGESTION`)
-— canonical strings only. `bin/manifest-update` deep-merges
-patch JSON without enum validation, so canonical-string discipline
-is the writer's responsibility. CI gate enforcement lives in
-`lab/eval/output_checks.py` (verdict + Coverage + Verdicts checks):
-a non-canonical verdict text or recovery state in a consolidated
-review fails `make eval-output`.
+Use canonical strings only for manifest status enum (`pending`,
+`in-flight`, `artifact`, `stub-replaced`, `recovered-from-return`,
+`stub-no-output`, `complete`) and severity buckets (`BLOCKER`,
+`WARNING`, `SUGGESTION`). The synthesizing skill body owns this
+discipline; `bin/manifest-update` does not validate enums on patch.
 
 Decision rules + chat scripts:
 `${CLAUDE_SKILL_DIR}/references/review-playbook.md`

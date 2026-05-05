@@ -51,10 +51,9 @@ Skip any of the above bullets when no detected/asked value exists.
 
 ## SEQUEL_SECTION
 
-Render IF Sequel detected. `detect-stack` does NOT emit per-package
-ORM ownership — it lists all package paths in `PACKAGE_LOCATIONS` only
-and the ORM list in `DETECTED_ORMS`. Do NOT label every package as
-Sequel-owned in mixed AR + Sequel repos.
+Render IF Sequel detected. Do NOT label every package as Sequel-owned
+in mixed AR + Sequel repos — `PACKAGE_LOCATIONS` is the full path list,
+not an ownership map.
 
 | Source | What to render | Condition |
 |---|---|---|
@@ -68,13 +67,14 @@ project-specific.
 ## MIXED_ORM_SECTION
 
 Render IF `DETECTED_ORMS` includes both `active_record` AND `sequel`.
-`detect-stack` does NOT emit per-package ORM ownership — it lists
-package paths in `PACKAGE_LOCATIONS` only. Per-package ORM mapping
-must come from a targeted interview question. Ask the user once:
-`Both Active Record and Sequel detected. Which ORM owns each package
+Ask the user once for per-package ORM ownership:
+
+```text
+Both Active Record and Sequel detected. Which ORM owns each package
 (<comma-separated paths from PACKAGE_LOCATIONS>)? Reply with one
 "<path> -> AR" or "<path> -> Sequel" per line, or "skip" if not yet
-mapped.`
+mapped.
+```
 
 | Source | What to render |
 |---|---|
@@ -110,11 +110,9 @@ Omit bullets without detected values.
 ## PACKWERK_SECTION
 
 Render IF Packwerk detected (`HAS_PACKWERK=true`) OR `PACKAGE_LAYOUT`
-indicates a modular monolith. `detect-stack` emits raw package paths
-in `PACKAGE_LOCATIONS` only — no boundary labels. Read `packwerk.yml`
-plus each package's `package.yml` (Packwerk per-package metadata)
-for enforcement flags and boundary names. Do NOT fabricate boundary
-labels from path names.
+indicates a modular monolith. Read `packwerk.yml` and each package's
+`package.yml` for enforcement flags and boundary names. Do NOT
+fabricate boundary labels from path names.
 
 | Source | What to render |
 |---|---|

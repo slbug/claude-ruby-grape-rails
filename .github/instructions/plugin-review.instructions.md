@@ -229,13 +229,12 @@ Subdirectories (treat as data, not skills):
   `output-verifier` agent and `lab/eval/output_checks.py`
 - `references/preferences/` — preference companion docs
   (`context7-usage.md`, `epistemic-posture.md`, `tool-batching.md`)
-  bound 1:1 to `preferences.yml` entries via `reference_files`. Each
-  preference's `reference_files` path is appended bare on the line
-  below the rule text in the subagent + main session payload emitted
-  by `inject-rules.sh`. Reviewer rule:
+  bound 1:1 to `preferences.yml` entries via `reference_files`.
+  `inject-rules.sh` emits each preference's `reference_files` path
+  bare on the line below the rule text, in subagent + main session
+  payloads. Reviewer rule:
   - **Ban**: restating the preference rule text in agent / skill
-    bodies. Runtime injection delivers both the rule text and the
-    companion path; restating the rule body is duplication / drift.
+    bodies. Runtime injection covers it; restating duplicates.
   - **Allow**: pointer-only links to the companion doc (e.g. "see
     `${CLAUDE_PLUGIN_ROOT}/references/preferences/tool-batching.md`
     for BAD/GOOD examples") when the citing surface needs to direct
@@ -326,18 +325,23 @@ NOT flag the fallback chain as over-engineered.
   nothing; see `references/run-manifest.md`).
 - Subagent bodies that read or write `RUN-CURRENT.json` /
   `RUN-HISTORY.jsonl` — manifest is main-session-owned only.
-- Consolidated review template missing the `## Reviewer Coverage`
-  or `## Reviewer Verdicts` section. Coverage MUST be 3-col
-  (`Reviewer | Recovery State | Findings`) with bucket-form findings
-  counts (`{n} BLOCKER / {n} WARNING / {n} SUGGESTION`); Verdicts
-  MUST be 3-col (`Reviewer | Raw Verdict | Canonical`) with canonical
-  column ∈ `{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}`.
-  Exception for `stub-no-output` rows (per Coverage): both Raw
-  Verdict and Canonical use the literal `(no output)` placeholder
-  (no verdict prose exists to preserve).
-  `**Reviewers**:` header MUST list the same slug set as Coverage
-  and Verdicts rows (one row per slug; row order NOT enforced —
-  manifest stores `agents` as an object, no natural ordering).
+- Consolidated review missing `## Reviewer Coverage` or
+  `## Reviewer Verdicts`. Coverage MUST be 3-col
+  (`Reviewer | Recovery State | Findings`); findings cell shape
+  `{n} BLOCKER / {n} WARNING / {n} SUGGESTION`. Verdicts MUST be
+  3-col (`Reviewer | Raw Verdict | Canonical`); canonical ∈
+  `{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}`.
+  `stub-no-output` rows (per Coverage): both Raw Verdict and
+  Canonical = literal `(no output)`. `**Reviewers**:` header slug
+  set MUST match Coverage and Verdicts row slug sets exactly. One
+  row per slug. Row order not enforced.
+- Finding body under `**File**:` missing `**Confidence**: HIGH|MEDIUM|LOW`.
+  At-a-glance table cell does NOT count.
+- `**Verdict**:` line inconsistent with `## Summary` counts:
+  blockers > 0 + verdict ≠ `BLOCKED`;
+  blockers == 0 + warnings > 0 + verdict == `PASS`;
+  blockers == 0 + warnings == 0 + verdict ∈ `{BLOCKED, PASS WITH WARNINGS}`.
+  `REQUIRES CHANGES` accepted at any count level.
 - `run_in_background: true` on any `Agent(...)` call in shipped
   skill bodies, fanout templates, or example snippets — flag as
   BLOCKER. Plugin agents dispatch foreground only.
