@@ -16,7 +16,7 @@
 
 ### 1. Retry logic looks risky
 
-**File**: `app/jobs/sync_customer_job.rb`
+**File**: (unknown path)
 **Reviewer**: ruby-reviewer
 **Issue**: This probably changed something important.
 **Recommendation**: Fix it.
