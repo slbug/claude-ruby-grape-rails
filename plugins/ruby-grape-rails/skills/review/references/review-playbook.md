@@ -379,10 +379,13 @@ Task creation and planning happen in `/rb:triage` after the user decides.
 
 ## Pre-existing Issues
 
-Findings on code NOT changed in this diff are marked **Pre-existing**. They
-appear in the report and summary table but do NOT affect the verdict. A PASS
-verdict is possible with pre-existing blockers as long as no NEW blockers
-were introduced by this diff.
+Findings on code NOT changed in this diff carry `New? = Pre-existing`
+in the At-a-Glance Finding Table and appear in the dedicated
+`## Pre-existing Issues (unchanged code)` section. They are NOT
+counted in `## Summary` or in `## Reviewer Coverage` row counts —
+both reflect NEW findings only (diff-introduced). They never affect
+the consolidated verdict; PASS is possible with pre-existing blockers
+as long as no NEW blockers were introduced.
 
 ## Research Requirement for Infrastructure
 

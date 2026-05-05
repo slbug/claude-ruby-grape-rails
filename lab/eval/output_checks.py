@@ -559,6 +559,62 @@ def has_review_verdict_matches_summary(content: str) -> tuple[bool, str]:
     return True, f"Verdict {verdict!r} consistent with Summary (B={blockers} W={warnings})"
 
 
+_AT_A_GLANCE_SUMMARY_LABELS = (
+    ("BLOCKER", "Blockers"),
+    ("WARNING", "Warnings"),
+    ("SUGGESTION", "Suggestions"),
+)
+
+
+def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
+    """Summary counts MUST equal At-a-Glance NEW row counts per severity.
+
+    Per `review-playbook.md` STEP 3 + § "Pre-existing Issues":
+    `## Summary` counts NEW findings only (diff-introduced).
+    Pre-existing findings appear in `## Pre-existing Issues
+    (unchanged code)` and the At-a-Glance Finding Table with
+    `New? = Pre-existing`, but MUST NOT contribute to Summary counts.
+
+    Cross-checks each severity in Summary against the count of
+    At-a-Glance rows whose `New?` cell equals `Yes`. Skips when
+    At-a-Glance is absent (`has_review_mandatory_table` already
+    surfaces that gap).
+    """
+    section = _section(content, "At-a-Glance Finding Table")
+    if not section:
+        return True, "No At-a-Glance section (Summary cross-check skipped)"
+    rows = _table_data_rows(section)
+    if not rows:
+        return True, "No At-a-Glance rows (Summary cross-check skipped)"
+    new_counts = {label: 0 for label, _ in _AT_A_GLANCE_SUMMARY_LABELS}
+    for row in rows:
+        if len(row) != 7:
+            continue
+        severity = row[2].upper()
+        new_state = row[6].strip().lower()
+        if severity in new_counts and new_state == "yes":
+            new_counts[severity] += 1
+    bad: list[str] = []
+    for severity, summary_label in _AT_A_GLANCE_SUMMARY_LABELS:
+        summary_count = _summary_count(content, summary_label)
+        if summary_count is None:
+            continue
+        new_count = new_counts[severity]
+        if summary_count != new_count:
+            bad.append(
+                f"{summary_label}: Summary reports {summary_count} but At-a-Glance "
+                f"shows {new_count} NEW {severity} finding(s) — pre-existing "
+                "findings MUST NOT be counted in Summary"
+            )
+    if bad:
+        return False, "; ".join(bad)
+    return (
+        True,
+        f"Summary counts match At-a-Glance NEW rows "
+        f"(B={new_counts['BLOCKER']} W={new_counts['WARNING']} S={new_counts['SUGGESTION']})",
+    )
+
+
 _MANDATORY_TABLE_HEADER_RE = re.compile(
     r"^\|\s*#\s*\|\s*Finding\s*\|\s*Severity\s*\|\s*Confidence\s*\|\s*Reviewer\s*\|\s*File\s*\|\s*New\?\s*\|$"
 )

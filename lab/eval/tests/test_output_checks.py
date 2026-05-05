@@ -902,6 +902,76 @@ Some prose.
         self.assertFalse(passed)
         self.assertIn("preamble", reason)
 
+    def test_summary_excludes_preexisting_rejects_preexisting_counted_in_summary(self) -> None:
+        # At-a-Glance shows 1 BLOCKER row marked Pre-existing and 0 NEW
+        # blocker rows. Summary counts the pre-existing one → contract
+        # violation per playbook STEP 3 + § "Pre-existing Issues".
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 1 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: BLOCKED
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Old issue | BLOCKER | HIGH | r | f.rb:1 | Pre-existing |
+"""
+        passed, reason = output_checks.has_review_summary_excludes_preexisting(content)
+        self.assertFalse(passed)
+        self.assertIn("Blockers", reason)
+        self.assertIn("pre-existing", reason)
+
+    def test_summary_excludes_preexisting_accepts_matching_new_counts(self) -> None:
+        # Summary counts equal NEW (Yes) rows; pre-existing rows present
+        # in At-a-Glance but excluded from Summary.
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 1 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: BLOCKED
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | New issue | BLOCKER | HIGH | r | f.rb:1 | Yes |
+| 2 | Old issue | BLOCKER | HIGH | r | f.rb:9 | Pre-existing |
+"""
+        passed, _ = output_checks.has_review_summary_excludes_preexisting(content)
+        self.assertTrue(passed)
+
+    def test_summary_excludes_preexisting_skips_when_at_a_glance_missing(self) -> None:
+        # No At-a-Glance section → cross-check skipped (mandatory-table
+        # validator surfaces the gap separately).
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: PASS
+"""
+        passed, _ = output_checks.has_review_summary_excludes_preexisting(content)
+        self.assertTrue(passed)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 
