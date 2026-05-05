@@ -6,23 +6,28 @@
 
 Iron Law violations and security issues:
 
-- SQL injection or XSS via `.html_safe` or `raw()` with untrusted content
-- Missing authorization in controller actions (Iron Law 11)
-- `constantize` with user input (Iron Law 10)
-- `float` used for money fields (Iron Law 4)
-- DB queries in non-connected ActionCable channel (Iron Law 1)
-- Non-idempotent Sidekiq jobs (Iron Law 7)
+- SQL injection or XSS via `.html_safe` or `raw()` with untrusted content (Iron Law 14)
+- SQL string interpolation / concatenation (Iron Law 2 + 15)
+- Ruby `eval` / `instance_eval` / `class_eval` with user input (Iron Law 12)
+- Missing authorization in controller actions (Iron Law 13)
+- `float` used for money fields (Iron Law 1)
+- DB queries inside Turbo Stream responses (Iron Law 19)
+- Non-idempotent Sidekiq jobs (Iron Law 8)
+- ORM objects passed as Sidekiq args (Iron Law 10)
 - `bundle exec rails zeitwerk:check` failures
 
 ### Usually Fix
 
 Common Ruby/Rails/Grape issues worth addressing:
 
-- N+1 queries — missing `.includes()` (Iron Law 6)
-- Missing `lock` in concurrent ActiveRecord operations (Iron Law 5)
-- Large lists without pagination or Turbo streams (Iron Law 2)
-- ActionCable subscribe without `subscribed?` check (Iron Law 3)
-- Sidekiq args with symbol keys (Iron Law 8)
+- N+1 queries — missing `.includes()` / `.preload()` (Iron Law 3)
+- Multi-step operations without transaction wrap (Iron Law 5)
+- `update_columns` / `save(validate: false)` in normal flows (Iron Law 6)
+- `default_scope` on models (Iron Law 7)
+- Sidekiq args with symbols / non-JSON-safe types (Iron Law 9)
+- `after_save` enqueueing where `after_commit` is required (Iron Law 4)
+- Bare `rescue` / `rescue Exception` (Iron Law 18)
+- Partial updates without `turbo_frame_tag` (Iron Law 20)
 - Tests without assertions or using `sleep`
 - Missing error handling on external API calls
 

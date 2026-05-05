@@ -564,6 +564,58 @@ Some prose.
         passed, _ = output_checks.has_review_mandatory_table(content)
         self.assertTrue(passed)
 
+    def test_has_review_mandatory_table_skips_fenced_excerpt(self) -> None:
+        # Mandatory table header inside a fenced Markdown excerpt is
+        # data, not the live consolidated artifact. Validator must NOT
+        # accept it as the real table.
+        content = """# Review: x
+
+## Suggestions (1)
+
+### 1. Update playbook example
+
+````markdown
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Example | WARNING | LOW | r | f.rb:1 | Yes |
+````
+"""
+        passed, _ = output_checks.has_review_mandatory_table(content)
+        self.assertFalse(passed)
+
+    def test_has_provenance_artifact_pointer_rejects_undated_review_path(self) -> None:
+        content = """# Provenance: x
+
+**Artifact**: `.claude/reviews/fix-auth-review.md`
+"""
+        passed, reason = output_checks.has_provenance_artifact_pointer(content)
+        self.assertFalse(passed)
+        self.assertIn("datesuffix", reason)
+
+    def test_has_provenance_artifact_pointer_accepts_dated_review_path(self) -> None:
+        content = """# Provenance: x
+
+**Artifact**: `.claude/reviews/fix-auth-review-20260505-123000.md`
+"""
+        passed, _ = output_checks.has_provenance_artifact_pointer(content)
+        self.assertTrue(passed)
+
+    def test_has_provenance_artifact_pointer_accepts_dated_per_agent_review_path(self) -> None:
+        content = """# Provenance: x
+
+**Artifact**: `.claude/reviews/ruby-reviewer/fix-auth-review-20260505-123000.md`
+"""
+        passed, _ = output_checks.has_provenance_artifact_pointer(content)
+        self.assertTrue(passed)
+
+    def test_has_provenance_artifact_pointer_accepts_non_review_paths(self) -> None:
+        content = """# Provenance: x
+
+**Artifact**: `.claude/research/topic.md`
+"""
+        passed, _ = output_checks.has_provenance_artifact_pointer(content)
+        self.assertTrue(passed)
+
     def test_has_review_verdict_skips_fenced_blocks(self) -> None:
         # `**Verdict**: LGTM` inside a fenced Markdown excerpt under a
         # Suggested/Current section is a reviewed snippet, not the

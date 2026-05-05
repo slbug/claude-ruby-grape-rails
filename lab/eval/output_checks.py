@@ -494,16 +494,22 @@ def has_review_verdict_matches_summary(content: str) -> tuple[bool, str]:
     return True, f"Verdict {verdict!r} consistent with Summary (B={blockers} W={warnings})"
 
 
+_MANDATORY_TABLE_HEADER_RE = re.compile(
+    r"^\|\s*#\s*\|\s*Finding\s*\|\s*Severity\s*\|\s*Confidence\s*\|\s*Reviewer\s*\|\s*File\s*\|\s*New\?\s*\|$"
+)
+
+
 def has_review_mandatory_table(content: str) -> tuple[bool, str]:
-    content = _normalize_newlines(content)
-    # Canonical 7-column At-a-Glance Finding Table per
-    # `review-playbook.md` § "At-a-Glance Finding Table":
-    # `# | Finding | Severity | Confidence | Reviewer | File | New?`.
-    match = re.search(
-        r"(?m)^\|\s*#\s*\|\s*Finding\s*\|\s*Severity\s*\|\s*Confidence\s*\|\s*Reviewer\s*\|\s*File\s*\|\s*New\?\s*\|$",
-        content,
-    )
-    return bool(match), "Mandatory finding table present" if match else "Missing mandatory finding table (expected 7-col with Confidence)"
+    """Canonical 7-column At-a-Glance Finding Table outside fenced blocks.
+
+    Schema: `# | Finding | Severity | Confidence | Reviewer | File | New?`.
+    Skips fenced Markdown excerpts so a quoted template inside
+    Current/Suggested doesn't count as the live table.
+    """
+    for line in _iter_lines_outside_fences(content):
+        if _MANDATORY_TABLE_HEADER_RE.match(line):
+            return True, "Mandatory finding table present"
+    return False, "Missing mandatory finding table (expected 7-col with Confidence outside fenced blocks)"
 
 
 def review_has_no_task_lists(content: str) -> tuple[bool, str]:
@@ -528,10 +534,34 @@ def has_provenance_header(content: str) -> tuple[bool, str]:
     return bool(match), "Provenance heading present" if match else "Missing # Provenance: heading"
 
 
+_REVIEW_ARTIFACT_DATED_RE = re.compile(
+    r"\.claude/reviews/(?:[^/\s]+/)?[^/\s]+-\d{8}-\d{6}\.md\b"
+)
+_REVIEW_ARTIFACT_PATH_RE = re.compile(r"\.claude/reviews/[^\s`]+\.md\b")
+
+
 def has_provenance_artifact_pointer(content: str) -> tuple[bool, str]:
+    """Provenance MUST point at the verified artifact.
+
+    When the path is `.claude/reviews/...md`, require the
+    `-{YYYYMMDD}-{HHMMSS}` datesuffix segment per the review path
+    contract (`{review-slug}-{datesuffix}.md` and
+    `{agent-slug}/{review-slug}-{datesuffix}.md`). Other artifact
+    paths (research, audit, plans) accept any non-empty pointer.
+    """
     content = _normalize_newlines(content)
-    match = re.search(r"(?m)^\*\*Artifact\*\*:\s+.+$", content)
-    return bool(match), "Artifact pointer present" if match else "Missing **Artifact** pointer"
+    match = re.search(r"(?m)^\*\*Artifact\*\*:\s+(.+?)\s*$", content)
+    if not match:
+        return False, "Missing **Artifact** pointer"
+    pointer = match.group(1)
+    review_match = _REVIEW_ARTIFACT_PATH_RE.search(pointer)
+    if review_match and not _REVIEW_ARTIFACT_DATED_RE.search(pointer):
+        return False, (
+            f"Artifact pointer {pointer!r} references `.claude/reviews/...` "
+            "without `-YYYYMMDD-HHMMSS` datesuffix; review path contract "
+            "requires `{review-slug}-{datesuffix}.md`"
+        )
+    return True, "Artifact pointer present"
 
 
 def has_provenance_summary_counts(content: str) -> tuple[bool, str]:

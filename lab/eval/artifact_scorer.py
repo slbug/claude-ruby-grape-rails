@@ -248,6 +248,7 @@ FIXTURES: dict[str, tuple[FixtureSpec, ...]] = {
                 "review_no_task_lists",
                 "review_no_followup_sections",
                 "review_provenance_local_evidence",
+                "provenance_artifact_pointer",
                 "provenance_claim_entries",
                 "provenance_required_fixes",
             ),

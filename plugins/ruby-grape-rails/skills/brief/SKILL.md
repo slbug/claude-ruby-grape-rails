@@ -133,10 +133,11 @@ What to do now:
 
 **Extract**:
 
-- Critical issue count
-- Warning count
+- BLOCKER count (new findings only)
+- WARNING count
+- SUGGESTION count
+- Canonical verdict (PASS / PASS WITH WARNINGS / REQUIRES CHANGES / BLOCKED)
 - Most severe finding
-- Clean vs. needs work
 
 **Format**:
 
