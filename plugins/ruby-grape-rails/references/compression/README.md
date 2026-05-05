@@ -2,19 +2,18 @@
 
 | Setting | Value |
 |---|---|
-| Purpose | Collect verify-command Bash output for contributor compression analysis |
+| Purpose | Collect local verify-command Bash output for compression analysis. Opt-in only. |
 | Captured streams | stdout + stderr on success; top-level `error` blob on `PostToolUseFailure` |
 | Replaces tool output? | NO — Bash stdout flows to the model unchanged |
 | Activation | Set `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1` to enable. Default OFF; hooks exit silently when unset. |
 
 Data flow:
 
-| Stage | Actor | Action |
-|---|---|---|
-| Collect | end-user | `PostToolUse` / `PostToolUseFailure` hooks on `Bash` append JSONL stats + raw logs to `${CLAUDE_PLUGIN_DATA}` |
-| Read | end-user | `bin/compression-stats` aggregates JSONL on demand |
-| Share | end-user | `/rb:compression-report` skill drafts an anonymized Markdown report from `compression-stats --redact` |
-| Analyze | contributor | Eval-gate fixture suite verifies the compressor against tracked inputs |
+| Stage | Action |
+|---|---|
+| Collect | `PostToolUse` / `PostToolUseFailure` hooks on `Bash` append JSONL stats + raw logs to `${CLAUDE_PLUGIN_DATA}` |
+| Read | `bin/compression-stats` aggregates JSONL on demand |
+| Share | `/rb:compression-report` drafts an anonymized Markdown report from `compression-stats --redact` for the user to file as a GitHub issue |
 
 ## End-User Collection
 
@@ -67,32 +66,12 @@ Reports:
 - preservation-violation count
 - recommendation against the promotion criteria below
 
-## End-User → Contributor Handoff
+## Sharing a Report
 
-`/rb:compression-report` skill drafts an anonymized Markdown report
-from `compression-stats --redact` plus selective raw-log Reads. User
-reviews the markdown, files it as a GitHub issue. The redacted JSON
-is intermediate input — NOT a paste-anywhere artifact.
-
-## Contributor Consumption
-
-Contributor eval suite consumes the same `lib/verify_compression.rb`
-behavior the end-user collector exercises. CI gate runs against
-tracked fixtures, asserts:
-
-- ≥ 40% mean bytes reduction (bytes, not tokens — upper-bound
-  potential per the "no Bash replacement path" note below)
-- 0 preservation violations
-- ≤ 15% diff against expected output
-
-Promotion to a real Bash-replacement mechanism requires
-`bin/compression-stats` reporting against ≥ 100 real samples per
-command class:
-
-- 0 preservation violations
-- strong p50 (not just mean) ratio
-- no command family consistently underperforming
-- manual review of the worst 10 samples confirms rule integrity
+`/rb:compression-report` drafts an anonymized Markdown report from
+`compression-stats --redact` plus selective raw-log Reads. Review
+the markdown, file it as a GitHub issue. The redacted JSON is
+intermediate input — NOT a paste-anywhere artifact.
 
 ## Megastring Middle-Collapse
 
@@ -133,8 +112,8 @@ Disable conditions + scrub:
 
 Defer a real replacement (PreToolUse rewrite, additionalContext
 layer-add, or pre-compaction) until telemetry quantifies workload
-benefit. Contributor reader (`bin/compression-stats`) is the
-operator surface for that decision.
+benefit. `bin/compression-stats` is the operator surface for that
+decision.
 
 Reference benchmarks (bytes-into-the-model, NOT this collector's
 direct metric):

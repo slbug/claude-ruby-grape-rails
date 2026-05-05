@@ -29,12 +29,6 @@ writes a dated report under `.claude/provenance-scan/`.
 
 Compound + strategy cards inherit the source artifact's trust state.
 
-## Telemetry handoff (end-user → contributor)
-
-Trust-state is also a contributor-eval signal. The deterministic CI
-gate counts the distribution across tracked fixtures. End-users do
-NOT run the eval gate — that surface is contributor-only.
-
 ## References
 
 - *Adaptation of Agentic AI: A Survey of Post-Training, Memory, and

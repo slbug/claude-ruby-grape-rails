@@ -1061,6 +1061,51 @@ Some prose.
         passed, _ = output_checks.has_review_coverage_excludes_preexisting(content)
         self.assertTrue(passed)
 
+    def test_coverage_excludes_preexisting_rejects_stub_no_output_with_attributions(self) -> None:
+        # stub-no-output reviewer means no usable output; ANY
+        # At-a-Glance row attributing a finding to that reviewer is
+        # impossible per `review-playbook.md` § "Artifact Recovery".
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| security-analyzer | stub-no-output | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Issue | BLOCKER | HIGH | security-analyzer | f.rb:1 | Yes |
+"""
+        passed, reason = output_checks.has_review_coverage_excludes_preexisting(content)
+        self.assertFalse(passed)
+        self.assertIn("security-analyzer", reason)
+        self.assertIn("stub-no-output", reason)
+
+    def test_coverage_excludes_preexisting_rejects_stub_no_output_with_preexisting_attribution(self) -> None:
+        # Same gate fires when a stub-no-output reviewer is
+        # attributed a Pre-existing finding too — they produced NO
+        # usable output, period.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| security-analyzer | stub-no-output | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Old issue | BLOCKER | HIGH | security-analyzer | f.rb:9 | Pre-existing |
+"""
+        passed, reason = output_checks.has_review_coverage_excludes_preexisting(content)
+        self.assertFalse(passed)
+        self.assertIn("stub-no-output", reason)
+
     def test_coverage_excludes_preexisting_skips_stub_no_output_rows(self) -> None:
         # stub-no-output rows already enforce all-zero counts via
         # `has_review_reviewer_coverage`; cross-check skips them so a

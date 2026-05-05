@@ -682,10 +682,12 @@ def has_review_coverage_excludes_preexisting(content: str) -> tuple[bool, str]:
     glance_rows = _table_data_rows(at_a_glance_body)
     if not glance_rows:
         return True, "No At-a-Glance rows (cross-check skipped)"
-    # Tally NEW findings per (reviewer, severity) from At-a-Glance.
+    # Tally NEW findings per (reviewer, severity) AND total
+    # attributions per reviewer (NEW + Pre-existing) from At-a-Glance.
     # Reject rows with a malformed `New?` cell — silently treating
     # them as non-new would let pre-existing leakage hide.
     new_per_reviewer: dict[str, dict[str, int]] = {}
+    total_per_reviewer: dict[str, int] = {}
     bad_enum: list[str] = []
     for idx, row in enumerate(glance_rows, start=1):
         if len(row) != 7:
@@ -703,6 +705,7 @@ def has_review_coverage_excludes_preexisting(content: str) -> tuple[bool, str]:
                 "{`Yes`, `Pre-existing`} — malformed enum"
             )
             continue
+        total_per_reviewer[reviewer] = total_per_reviewer.get(reviewer, 0) + 1
         if new_state == "yes":
             bucket = new_per_reviewer.setdefault(
                 reviewer, {"BLOCKER": 0, "WARNING": 0, "SUGGESTION": 0}
@@ -716,7 +719,21 @@ def has_review_coverage_excludes_preexisting(content: str) -> tuple[bool, str]:
         if len(row) != 3:
             continue
         slug, recovery, findings = row[0], row[1], row[2]
-        if not slug or recovery == "stub-no-output":
+        if not slug:
+            continue
+        if recovery == "stub-no-output":
+            # `stub-no-output` reviewers produced no usable output per
+            # `review-playbook.md` § "Artifact Recovery"; ANY
+            # At-a-Glance row attributing a finding to them (NEW or
+            # Pre-existing) is impossible. Reject.
+            attributions = total_per_reviewer.get(slug, 0)
+            if attributions > 0:
+                bad.append(
+                    f"{slug}: stub-no-output reviewer has {attributions} "
+                    "At-a-Glance row(s) attributing findings — "
+                    "stub-no-output means no usable output, so the reviewer "
+                    "cannot have contributed findings (NEW or Pre-existing)"
+                )
             continue
         m = _COVERAGE_FINDINGS_PARSE_RE.match(findings)
         if not m:
