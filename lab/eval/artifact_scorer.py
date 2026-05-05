@@ -197,6 +197,18 @@ REVIEW_CHECKS: tuple[CheckSpec, ...] = (
         output_checks.has_review_mandatory_table,
     ),
     CheckSpec(
+        "review_test_coverage_gaps_schema",
+        "Test Coverage Gaps table is 5-col with ≥1 row when section present",
+        "artifact",
+        output_checks.has_review_test_coverage_gaps_schema,
+    ),
+    CheckSpec(
+        "review_finding_titles_match_glance",
+        "NEW At-a-Glance row Finding cell matches `### N. {Title}` heading verbatim",
+        "artifact",
+        output_checks.has_review_finding_titles_match_glance,
+    ),
+    CheckSpec(
         "review_no_task_lists",
         "Review stays findings-only",
         "artifact",

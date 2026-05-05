@@ -522,9 +522,10 @@ For hands-off development:
 ```
 
 Runs the complete cycle: plan (with research), work, verify, review.
-Halts on `/rb:verify --full` gate failure (HALTED_VERIFY_FAILED), or
-on review verdict `BLOCKED` / `REQUIRES CHANGES`; user decides next
-step.
+Halts on `/rb:verify --full` gate failure (HALTED_VERIFY_FAILED), on
+review verdict `BLOCKED` (HALTED_REVIEW_BLOCKED) or `REQUIRES CHANGES`
+(HALTED_REVIEW_REQUIRES_CHANGES), or on missing/unparsable consolidated
+review (HALTED_REVIEW_UNKNOWN); user decides next step.
 
 ## Workflow Tips
 

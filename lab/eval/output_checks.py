@@ -666,12 +666,12 @@ def has_review_verdict_matches_summary(content: str) -> tuple[bool, str]:
     if not verdicts:
         return False, "Missing **Verdict** line"
     verdict = verdicts[0]
+    # `## Test Coverage Gaps` section is verdict-exclusive per
+    # `review-playbook.md` § "Test Coverage Gaps": REQUIRED on
+    # REQUIRES CHANGES, FORBIDDEN on PASS / PASS WITH WARNINGS /
+    # BLOCKED. Both directions enforced.
+    gaps_body = _section(content, "Test Coverage Gaps")
     if verdict == "REQUIRES CHANGES":
-        # REQUIRES CHANGES verdict requires at least one populated
-        # row in `## Test Coverage Gaps` section. Without rows, both
-        # `/rb:plan {review-path}` and `/rb:triage {review-path}`
-        # downstream paths have no work to materialize.
-        gaps_body = _section(content, "Test Coverage Gaps")
         if not gaps_body:
             return False, (
                 "Verdict is REQUIRES CHANGES but `## Test Coverage Gaps` "
@@ -685,6 +685,12 @@ def has_review_verdict_matches_summary(content: str) -> tuple[bool, str]:
                 "section is present but has 0 data rows; verdict requires "
                 "at least one uncovered surface"
             )
+    elif gaps_body:
+        return False, (
+            f"`## Test Coverage Gaps` section present but verdict is {verdict!r}; "
+            "section is exclusive to REQUIRES CHANGES per playbook "
+            "§ \"Test Coverage Gaps\""
+        )
     if blockers > 0 and verdict != "BLOCKED":
         return False, (
             f"Summary reports {blockers} blocker(s) but verdict is {verdict!r}; "
@@ -942,6 +948,96 @@ def has_review_mandatory_table(content: str) -> tuple[bool, str]:
     if bad:
         return False, "At-a-Glance row(s) violate contract: " + "; ".join(bad)
     return True, f"Mandatory finding table present ({len(rows)} row(s))"
+
+
+def has_review_test_coverage_gaps_schema(content: str) -> tuple[bool, str]:
+    """`## Test Coverage Gaps` table MUST be 5-col + ≥1 row when section present.
+
+    Per `review-playbook.md` § "Test Coverage Gaps": each row carries
+    `# / Surface / File / Why uncovered / Suggested test`. Both
+    `/rb:plan {review-path}` and `/rb:triage {review-path}` parse
+    these cells; a malformed table makes the downstream flow
+    unreadable. Validator skips when section is absent — verdict-gate
+    presence/absence is enforced by `has_review_verdict_matches_summary`.
+    """
+    section = _section(content, "Test Coverage Gaps")
+    if not section:
+        return True, "No Test Coverage Gaps section (schema check skipped)"
+    rows = _table_data_rows(section)
+    if not rows:
+        return False, (
+            "`## Test Coverage Gaps` section present but has 0 data rows; "
+            "schema requires at least one row when section is emitted"
+        )
+    bad: list[str] = []
+    for idx, row in enumerate(rows, start=1):
+        if len(row) != 5:
+            bad.append(
+                f"row {idx}: {len(row)} cell(s); contract requires exactly 5 "
+                "(`# | Surface | File | Why uncovered | Suggested test`)"
+            )
+            continue
+        if not row[1].strip():
+            bad.append(f"row {idx}: empty `Surface` cell")
+        if not row[2].strip():
+            bad.append(f"row {idx}: empty `File` cell")
+    if bad:
+        return False, "Test Coverage Gaps row(s) violate contract: " + "; ".join(bad)
+    return True, f"Test Coverage Gaps section with {len(rows)} valid row(s)"
+
+
+def has_review_finding_titles_match_glance(content: str) -> tuple[bool, str]:
+    """Each NEW At-a-Glance row's `Finding` cell MUST equal a `### N. {Title}` heading verbatim.
+
+    Per `triage/SKILL.md` Step 1: triage matches At-a-Glance rows to
+    detail findings by Finding-title text. Paraphrased / missing
+    detail headings break the row-to-detail lookup downstream.
+    Pre-existing rows (`New? = Pre-existing`) skip this gate — they
+    have no backing `### N.` heading; their Finding cell is a free
+    description.
+    """
+    section = _section(content, "At-a-Glance Finding Table")
+    if not section:
+        return True, "No At-a-Glance section (title-match skipped)"
+    rows = _table_data_rows(section)
+    if not rows:
+        return True, "No At-a-Glance rows (title-match skipped)"
+    finding_heading_re = re.compile(r"^### \d+\.\s+(.+?)\s*$")
+    bucket_heading_re = re.compile(r"^## (Blockers|Warnings|Suggestions)(?:\s|\(|$)")
+    in_bucket = False
+    detail_titles: set[str] = set()
+    for line in _iter_lines_outside_fences(content):
+        if bucket_heading_re.match(line):
+            in_bucket = True
+            continue
+        if line.startswith("## "):
+            in_bucket = False
+            continue
+        if not in_bucket:
+            continue
+        m = finding_heading_re.match(line)
+        if m:
+            detail_titles.add(m.group(1))
+    bad: list[str] = []
+    for idx, row in enumerate(rows, start=1):
+        if len(row) != 7:
+            continue
+        finding_cell = row[1].strip()
+        new_state = row[6].strip().lower()
+        if new_state != "yes":
+            continue
+        if finding_cell not in detail_titles:
+            bad.append(
+                f"row {idx}: `Finding` cell {finding_cell!r} has no matching "
+                "`### N. {Title}` heading in `## Blockers` / `## Warnings` / "
+                "`## Suggestions`"
+            )
+    if bad:
+        return False, (
+            f"{len(bad)} NEW At-a-Glance row(s) with no detail-heading match "
+            "(triage row-to-detail lookup will fail): " + "; ".join(bad[:5])
+        )
+    return True, f"All NEW At-a-Glance rows match detail headings ({len(detail_titles)} title(s))"
 
 
 def review_has_no_task_lists(content: str) -> tuple[bool, str]:

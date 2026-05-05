@@ -1,6 +1,6 @@
 ---
 name: rb:full
-description: "Use when running the end-to-end lifecycle: plan, work, verify, review, and compound chained in one command. Runs autonomously on the happy path; halts and asks the user only on review verdict BLOCKED, REQUIRES CHANGES, verify failure, or final completion confirmation."
+description: "Use when running the end-to-end lifecycle: plan, work, verify, review, and compound chained in one command. Runs autonomously on the happy path; halts and asks the user on `/rb:verify --full` gate failure (HALTED_VERIFY_FAILED), review verdict BLOCKED (HALTED_REVIEW_BLOCKED), REQUIRES CHANGES (HALTED_REVIEW_REQUIRES_CHANGES), missing/unparsable consolidated review (HALTED_REVIEW_UNKNOWN), or final completion confirmation."
 when_to_use: "Triggers: \"do everything\", \"full lifecycle\", \"hands-off\", \"plan and implement\", \"end to end\"."
 argument-hint: "<feature description OR plan path>"
 effort: xhigh
@@ -72,10 +72,12 @@ A workflow is COMPLETED when:
       {`PASS`, `PASS WITH WARNINGS`} — no NEW BLOCKERs introduced by
       this diff (per
       `${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
-      § "Verdict Decision Rules"). `BLOCKED` and `REQUIRES CHANGES`
-      both halt the cycle. On `REQUIRES CHANGES`, user runs
-      `/rb:triage {review-path}` (default; handles gaps + warnings)
-      or `/rb:plan {review-path}` (gaps-only). No autonomous re-run.
+      § "Verdict Decision Rules"). All other paths halt the cycle.
+      `BLOCKED` → HALTED_REVIEW_BLOCKED (user runs `/rb:triage {review-path}`).
+      `REQUIRES CHANGES` → HALTED_REVIEW_REQUIRES_CHANGES (user runs
+      `/rb:triage {review-path}` default, or `/rb:plan {review-path}` for
+      gaps-only). Missing artifact / verdict absent / off-canonical wording
+      → HALTED_REVIEW_UNKNOWN (user inspects manually). No autonomous re-run.
 - [ ] Learnings captured in compound docs
 - [ ] `progress.md` final write: `**State**: COMPLETED`
 - [ ] User acknowledged completion

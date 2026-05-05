@@ -1626,6 +1626,122 @@ after
         passed, _ = output_checks.has_review_verdict_matches_summary(content)
         self.assertTrue(passed)
 
+    def test_verdict_matches_summary_rejects_test_coverage_gaps_with_pass(self) -> None:
+        # Test Coverage Gaps section is exclusive to REQUIRES CHANGES.
+        # PASS verdict + section present → reject.
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: PASS
+
+## Test Coverage Gaps (1)
+
+| # | Surface | File | Why uncovered | Suggested test |
+|---|---------|------|---------------|----------------|
+| 1 | `Foo#bar` | `app/foo.rb:1` | new | `spec/foo_spec.rb` |
+"""
+        passed, reason = output_checks.has_review_verdict_matches_summary(content)
+        self.assertFalse(passed)
+        self.assertIn("Test Coverage Gaps", reason)
+        self.assertIn("PASS", reason)
+
+    def test_test_coverage_gaps_schema_rejects_4col_row(self) -> None:
+        content = """# Review: x
+
+## Test Coverage Gaps (1)
+
+| # | Surface | File | Why uncovered |
+|---|---------|------|---------------|
+| 1 | `Foo#bar` | `app/foo.rb:1` | new |
+"""
+        passed, reason = output_checks.has_review_test_coverage_gaps_schema(content)
+        self.assertFalse(passed)
+        self.assertIn("contract requires exactly 5", reason)
+
+    def test_test_coverage_gaps_schema_rejects_empty_surface_cell(self) -> None:
+        content = """# Review: x
+
+## Test Coverage Gaps (1)
+
+| # | Surface | File | Why uncovered | Suggested test |
+|---|---------|------|---------------|----------------|
+| 1 |  | `app/foo.rb:1` | new | `spec/foo_spec.rb` |
+"""
+        passed, reason = output_checks.has_review_test_coverage_gaps_schema(content)
+        self.assertFalse(passed)
+        self.assertIn("Surface", reason)
+
+    def test_test_coverage_gaps_schema_skips_when_section_absent(self) -> None:
+        content = """# Review: x
+
+## Summary
+
+PASS
+"""
+        passed, _ = output_checks.has_review_test_coverage_gaps_schema(content)
+        self.assertTrue(passed)
+
+    def test_finding_titles_match_glance_rejects_paraphrased_title(self) -> None:
+        # Detail heading uses one phrasing; At-a-Glance uses paraphrase.
+        # Triage row-to-detail lookup fails → reject.
+        content = """# Review: x
+
+## Warnings (1)
+
+### 1. Retry policy change is not covered by a focused spec
+
+**File**: `app/foo.rb:1`
+**Reviewer**: r | **Confidence**: HIGH
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Retry policy lacks spec coverage | WARNING | HIGH | r | app/foo.rb:1 | Yes |
+"""
+        passed, reason = output_checks.has_review_finding_titles_match_glance(content)
+        self.assertFalse(passed)
+        self.assertIn("Retry policy lacks spec coverage", reason)
+
+    def test_finding_titles_match_glance_accepts_verbatim(self) -> None:
+        content = """# Review: x
+
+## Warnings (1)
+
+### 1. Retry policy change is not covered by a focused spec
+
+**File**: `app/foo.rb:1`
+**Reviewer**: r | **Confidence**: HIGH
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Retry policy change is not covered by a focused spec | WARNING | HIGH | r | app/foo.rb:1 | Yes |
+"""
+        passed, _ = output_checks.has_review_finding_titles_match_glance(content)
+        self.assertTrue(passed)
+
+    def test_finding_titles_match_glance_skips_pre_existing_rows(self) -> None:
+        # Pre-existing rows have no `### N.` heading. Skip.
+        content = """# Review: x
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Old issue summary | BLOCKER | HIGH | r | app/foo.rb:1 | Pre-existing |
+"""
+        passed, _ = output_checks.has_review_finding_titles_match_glance(content)
+        self.assertTrue(passed)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 
