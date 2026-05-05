@@ -63,9 +63,20 @@ For the exact shell-guard sequence, see
 
 ## Review-Path Input (verdict-gated)
 
-When `$ARGUMENTS` matches `.claude/reviews/{review-slug}-{datesuffix}.md`,
-read the artifact's consolidated `**Verdict**:` line FIRST. Branch
-on verdict:
+Triggers ONLY when `$ARGUMENTS` is a path under `.claude/reviews/`.
+Feature descriptions, `interview.md` paths, and existing `plan.md`
+paths bypass this section and follow their own flows above/below.
+
+Path validation FIRST — only the consolidated artifact is valid:
+
+| `$ARGUMENTS` shape (under `.claude/reviews/`) | Action |
+|---|---|
+| `.claude/reviews/{review-slug}-{datesuffix}.md` (direct child of `reviews/`) | proceed to verdict gate below |
+| `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` (per-reviewer artifact under subdirectory) | STOP. Print: `Path is a per-reviewer artifact, not the consolidated review. Run with the consolidated path: .claude/reviews/{review-slug}-{datesuffix}.md` |
+| `.claude/reviews/{review-slug}/RUN-CURRENT.json` (manifest) | STOP. Print: `Path is the manifest, not the consolidated review.` |
+
+After path validation passes, read the artifact's consolidated
+`**Verdict**:` line. Branch on verdict:
 
 | Verdict | Action |
 |---|---|
@@ -84,14 +95,16 @@ review paths.
 1. Read the review's `## Test Coverage Gaps ({n})` section per
    `${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
    § "Consolidated Review Format".
-2. Each row → one plan task:
+2. Guard: if section is MISSING or has 0 data rows, STOP. Print:
+   `Review verdict is REQUIRES CHANGES but ## Test Coverage Gaps section is missing/empty in {path}. Cannot generate plan; inspect the artifact manually or regenerate the review.`
+3. Each row → one plan task:
    `- [ ] [P1-Tn][test] Add spec for {Surface} — test-coverage gap
    (REQUIRES CHANGES); source {review-path}`. One row → one task.
-3. Skip the Research Phase agent fanout. Plan goes straight to
+4. Skip the Research Phase agent fanout. Plan goes straight to
    DESIGN with the `[test]` task list.
-4. Do NOT include any Blockers/Warnings/Suggestions findings.
+5. Do NOT include any Blockers/Warnings/Suggestions findings.
    `/rb:triage` owns mixed-bucket reviews.
-5. Set `Source Review:` metadata in the plan to the review path.
+6. Set `Source Review:` metadata in the plan to the review path.
 
 ## Interview Detection (from /rb:brainstorm)
 

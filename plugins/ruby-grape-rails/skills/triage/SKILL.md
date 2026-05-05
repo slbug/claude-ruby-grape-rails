@@ -79,7 +79,18 @@ writes selected items to a fix plan.
 
 ### Step 1: Load Review File
 
-Read the consolidated review markdown.
+Argument resolution FIRST. Triage operates ONLY on a consolidated
+review artifact (no plain description / no feature input):
+
+| `$ARGUMENTS` shape | Action |
+|---|---|
+| empty / absent | Resolve newest consolidated review: glob `.claude/reviews/*-*.md` (direct children of `reviews/`, with `-{datesuffix}` segment). Pick the file with the most recent mtime. If none found, STOP. Print: `No consolidated review artifact found under .claude/reviews/. Run /rb:review first.` |
+| `.claude/reviews/{review-slug}-{datesuffix}.md` (direct child of `reviews/`) | proceed |
+| `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` (per-reviewer artifact under subdirectory) | STOP. Print: `Path is a per-reviewer artifact, not the consolidated review. Run with the consolidated path: .claude/reviews/{review-slug}-{datesuffix}.md` |
+| `.claude/reviews/{review-slug}/RUN-CURRENT.json` (manifest) | STOP. Print: `Path is the manifest, not the consolidated review.` |
+| anything else (plain text, non-review path) | STOP. Print: `/rb:triage operates on a consolidated review artifact. Run /rb:plan {description} for feature planning, or /rb:review first to produce a review artifact.` |
+
+After argument resolution passes, read the consolidated review markdown.
 
 | Source section | Extract |
 |---|---|

@@ -23,16 +23,7 @@ persist `trust_state` directly. Required frontmatter fields:
 | `conflicted` | HALT | HALT | escalate finding severity by one level | surface prominently |
 | `missing` | warn; suggest `/rb:research` | warn; log | tag finding `[unverified]`; do not gate merge | flag as hint |
 
-End-user `/rb:provenance-scan` audits sidecar distribution across
-`.claude/{research,reviews,audit,plans/*/{research,reviews}}` and
-writes a dated report under `.claude/provenance-scan/`.
-
-Compound + strategy cards inherit the source artifact's trust state.
-
-## References
-
-- *Adaptation of Agentic AI: A Survey of Post-Training, Memory, and
-  Skills* — <https://arxiv.org/abs/2512.16301v3>. Provenance sidecars
-  function as the plugin's external adaptive memory (T2 in the
-  survey's taxonomy). The trust-state split is this plugin's
-  evidence-gate gap-fill, not a paper claim.
+| Surface | Action |
+|---|---|
+| `/rb:provenance-scan` | audit sidecar distribution across `.claude/{research,reviews,audit,plans/*/{research,reviews}}`; write dated report to `.claude/provenance-scan/` |
+| Compound + strategy cards | inherit source artifact's trust state |
