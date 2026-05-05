@@ -507,6 +507,63 @@ puts "hello"
         passed, _ = output_checks.has_review_finding_confidence(content)
         self.assertTrue(passed)
 
+    def test_has_review_finding_confidence_anchors_to_each_finding(self) -> None:
+        # Two confidence labels on finding 1, none on finding 2.
+        # Global count matches but per-finding anchoring rejects.
+        content = """# Review: x
+
+## Warnings (2)
+
+### 1. First Issue
+
+**File**: `app/foo.rb:10`
+**Reviewer**: ruby-reviewer | **Confidence**: HIGH
+**Reviewer-note**: secondary | **Confidence**: MEDIUM
+
+### 2. Second Issue
+
+**File**: `app/bar.rb:20`
+**Reviewer**: testing-reviewer
+**Issue**: missing test
+"""
+        passed, reason = output_checks.has_review_finding_confidence(content)
+        self.assertFalse(passed)
+        self.assertIn("missing", reason)
+
+    def test_has_review_verdict_rejects_multiple_verdict_lines(self) -> None:
+        content = """# Review: x
+
+**Verdict**: PASS WITH WARNINGS
+
+Some prose.
+
+**Verdict**: BLOCKED
+"""
+        passed, reason = output_checks.has_review_verdict(content)
+        self.assertFalse(passed)
+        self.assertIn("exactly one verdict", reason)
+
+    def test_has_review_mandatory_table_rejects_old_6col_format(self) -> None:
+        content = """# Review: x
+
+| # | Finding | Severity | Reviewer | File | New? |
+|---|---------|----------|----------|------|------|
+| 1 | Issue | WARNING | r | f.rb:1 | Yes |
+"""
+        passed, reason = output_checks.has_review_mandatory_table(content)
+        self.assertFalse(passed)
+        self.assertIn("Confidence", reason)
+
+    def test_has_review_mandatory_table_accepts_7col_with_confidence(self) -> None:
+        content = """# Review: x
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Issue | WARNING | HIGH | r | f.rb:1 | Yes |
+"""
+        passed, _ = output_checks.has_review_mandatory_table(content)
+        self.assertTrue(passed)
+
     def test_has_review_verdict_skips_fenced_blocks(self) -> None:
         # `**Verdict**: LGTM` inside a fenced Markdown excerpt under a
         # Suggested/Current section is a reviewed snippet, not the

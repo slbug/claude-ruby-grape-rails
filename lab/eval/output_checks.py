@@ -154,12 +154,16 @@ def has_review_verdict(content: str) -> tuple[bool, str]:
     matches = _verdict_lines_outside_fences(content)
     if not matches:
         return False, "Missing **Verdict** line"
-    bad = [text for text in matches if text not in _CANONICAL_VERDICTS]
-    if bad:
+    if len(matches) > 1:
         return False, (
-            f"Verdict line(s) not in canonical 4-set "
-            "{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}: "
-            + ", ".join(repr(t) for t in bad)
+            f"{len(matches)} `**Verdict**:` lines outside fenced blocks; "
+            "consolidated review MUST emit exactly one verdict line. "
+            f"Found: {matches}"
+        )
+    if matches[0] not in _CANONICAL_VERDICTS:
+        return False, (
+            f"Verdict {matches[0]!r} not in canonical 4-set "
+            "{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}"
         )
     return True, f"Verdict present: {matches[0]}"
 
@@ -386,30 +390,40 @@ def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
 
 
 def has_review_finding_confidence(content: str) -> tuple[bool, str]:
-    """Every finding MUST include `**Confidence**: HIGH|MEDIUM|LOW`.
+    """Each finding MUST carry its own `**Confidence**: HIGH|MEDIUM|LOW`.
 
-    Counts `**File**:` lines (one per finding) and matching
-    `**Confidence**: <HIGH|MEDIUM|LOW>` occurrences OUTSIDE fenced
-    code blocks (reviewed Markdown excerpts inside Current/Suggested
-    fences are data, not directives).
+    Anchor every Confidence label to its preceding `**File**:` finding
+    block (next File header starts a new finding). Reject artifacts
+    where a finding has zero confidence labels even when the global
+    count matches. Reviewed Markdown excerpts inside fenced
+    Current/Suggested blocks are skipped.
     """
     file_pat = re.compile(r"^\*\*File\*\*:\s+")
     conf_pat = re.compile(r"\*\*Confidence\*\*:\s+(HIGH|MEDIUM|LOW)\b")
-    file_count = 0
-    conf_count = 0
+    in_finding = False
+    saw_confidence = False
+    finding_count = 0
+    missing_indices: list[int] = []
     for line in _iter_lines_outside_fences(content):
         if file_pat.match(line):
-            file_count += 1
-        conf_count += len(conf_pat.findall(line))
-    if file_count == 0:
+            if in_finding and not saw_confidence:
+                missing_indices.append(finding_count)
+            finding_count += 1
+            in_finding = True
+            saw_confidence = False
+            continue
+        if in_finding and conf_pat.search(line):
+            saw_confidence = True
+    if in_finding and not saw_confidence:
+        missing_indices.append(finding_count)
+    if finding_count == 0:
         return True, "No findings present (Confidence check vacuously satisfied)"
-    if conf_count < file_count:
+    if missing_indices:
         return False, (
-            f"{file_count} finding(s) detected via `**File**:` but only "
-            f"{conf_count} `**Confidence**: HIGH|MEDIUM|LOW` label(s); "
-            "every finding requires a confidence label"
+            f"{len(missing_indices)} of {finding_count} finding(s) missing "
+            f"`**Confidence**: HIGH|MEDIUM|LOW` (finding indices: {missing_indices})"
         )
-    return True, f"{conf_count} Confidence label(s) for {file_count} finding(s)"
+    return True, f"{finding_count} finding(s), each with Confidence"
 
 
 def _summary_count(content: str, label: str) -> int | None:
@@ -482,11 +496,14 @@ def has_review_verdict_matches_summary(content: str) -> tuple[bool, str]:
 
 def has_review_mandatory_table(content: str) -> tuple[bool, str]:
     content = _normalize_newlines(content)
+    # Canonical 7-column At-a-Glance Finding Table per
+    # `review-playbook.md` § "At-a-Glance Finding Table":
+    # `# | Finding | Severity | Confidence | Reviewer | File | New?`.
     match = re.search(
-        r"(?m)^\|\s*#\s*\|\s*Finding\s*\|\s*Severity\s*\|\s*Reviewer\s*\|\s*File\s*\|\s*New\?\s*\|$",
+        r"(?m)^\|\s*#\s*\|\s*Finding\s*\|\s*Severity\s*\|\s*Confidence\s*\|\s*Reviewer\s*\|\s*File\s*\|\s*New\?\s*\|$",
         content,
     )
-    return bool(match), "Mandatory finding table present" if match else "Missing mandatory finding table"
+    return bool(match), "Mandatory finding table present" if match else "Missing mandatory finding table (expected 7-col with Confidence)"
 
 
 def review_has_no_task_lists(content: str) -> tuple[bool, str]:

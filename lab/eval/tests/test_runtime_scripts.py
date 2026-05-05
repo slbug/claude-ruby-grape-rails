@@ -4860,8 +4860,8 @@ class InjectRulesTests(unittest.TestCase):
     to hook processes per plugin docs (`plugins-reference.md`
     "Environment variables"). The injector must expand the placeholder
     inside the script — hook return strings are NOT re-substituted by
-    CC after the script exits — so `See:` lines reach the LLM as
-    absolute filesystem paths."""
+    CC after the script exits — so companion-doc paths reach the LLM
+    as absolute filesystem paths."""
 
     def _run(self, payload: str) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)

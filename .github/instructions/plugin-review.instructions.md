@@ -341,7 +341,10 @@ NOT flag the fallback chain as over-engineered.
   blockers > 0 + verdict ≠ `BLOCKED`;
   blockers == 0 + warnings > 0 + verdict == `PASS`;
   blockers == 0 + warnings == 0 + verdict ∈ `{BLOCKED, PASS WITH WARNINGS}`.
-  `REQUIRES CHANGES` accepted at any count level.
+  `REQUIRES CHANGES` accepted only when blockers == 0 (test-coverage
+  gap branch).
+- More than one `**Verdict**:` line outside fenced blocks. Exactly
+  one consolidated verdict per artifact.
 - `run_in_background: true` on any `Agent(...)` call in shipped
   skill bodies, fanout templates, or example snippets — flag as
   BLOCKER. Plugin agents dispatch foreground only.

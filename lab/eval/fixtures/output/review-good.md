@@ -42,6 +42,6 @@
 
 No additional suggestions.
 
-| # | Finding | Severity | Reviewer | File | New? |
-|---|---------|----------|----------|------|------|
-| 1 | Retry policy change lacks direct spec coverage | WARNING | testing-reviewer | `app/jobs/sync_customer_job.rb:14` | Yes |
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Retry policy change lacks direct spec coverage | WARNING | HIGH | testing-reviewer | `app/jobs/sync_customer_job.rb:14` | Yes |

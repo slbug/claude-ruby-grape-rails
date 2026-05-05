@@ -436,12 +436,12 @@ Zero-pad when a bucket is empty. State definitions:
 
 ## Reviewer Verdicts
 
-| Reviewer | Raw verdict | Canonical |
+| Reviewer | Raw Verdict | Canonical |
 |---|---|---|
 | {agent-slug} | {agent's verbatim verdict text} | PASS \| PASS WITH WARNINGS \| REQUIRES CHANGES \| BLOCKED |
 | {stub-no-output-agent-slug} | (no output) | (no output) |
 
-Raw verdict: VERBATIM agent wording. Canonical: map per § "STEP 2".
+Raw Verdict: VERBATIM agent wording. Canonical: map per § "STEP 2".
 The consolidated `**Verdict**:` line comes from § "STEP 4"
 (blocker / warning / test-coverage counts), not from this column.
 

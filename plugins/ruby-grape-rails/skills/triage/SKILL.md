@@ -45,7 +45,10 @@ Next Action
 
 ## Severity Classification
 
-### Critical (Always Include)
+Map review buckets (`BLOCKER | WARNING | SUGGESTION`) to triage
+priorities:
+
+### BLOCKER → Always Include
 
 - **Iron Law violations**: transaction safety, after_commit discipline, JSON-safe args
 - **Security issues**: SQL injection, XSS, mass assignment, hardcoded secrets
@@ -53,26 +56,23 @@ Next Action
 - **N+1 queries**: database performance killers
 - **Transaction safety**: operations outside transactions that should be inside
 
-### High (Recommend Include)
+### WARNING → Recommend Include
 
 - **Error handling**: bare rescues, silent failures
 - **Test coverage**: missing tests for critical paths
 - **API contract**: breaking changes to public APIs
 - **Documentation**: missing docs for public methods
-
-### Medium (Ask User)
-
-- **Code style**: inconsistent formatting (if not auto-fixable)
 - **Refactoring opportunities**: complex methods, Law of Demeter violations
 - **Naming**: unclear variable/method names
-- **Comments**: missing or misleading comments
 
-### Low (Defer by Default)
+### SUGGESTION → Defer by Default
 
+- **Code style**: inconsistent formatting (if not auto-fixable)
 - **Performance**: without profiling evidence
 - **Micro-optimizations**: minor efficiency gains
 - **Subjective preferences**: personal style differences
 - **Future-proofing**: speculative abstractions
+- **Comments**: missing or misleading comments
 
 ## Triage Process
 
@@ -94,28 +94,30 @@ end
 
 ### Step 2: Auto-Categorize
 
+Read the review's existing severity bucket
+(`BLOCKER | WARNING | SUGGESTION`) and map to triage priority:
+
 ```ruby
 def categorize_finding(finding)
-  case finding[:type]
-  when /iron.law|transaction|after_commit|json.safe/i
-    :critical
-  when /security|sql.injection|xss|vulnerability/i
-    :critical
-  when /n\+1|query.performance/i
-    :critical
-  when /error.handling|rescue|exception/i
-    :high
-  when /test.coverage|missing.test/i
-    :high
-  when /style|formatting|rubocop/i
-    :low
-  when /performance|optimization/i
-    finding[:has_profiling_data] ? :medium : :low
+  case finding[:severity]
+  when "BLOCKER"
+    :always_include
+  when "WARNING"
+    if finding[:type] =~ /style|formatting|rubocop/i
+      :defer
+    else
+      :recommend
+    end
+  when "SUGGESTION"
+    :defer
   else
-    :medium
+    :recommend
   end
 end
 ```
+
+Pre-existing BLOCKERs (per `New?` column) stay informational — do NOT
+auto-include them in the fix plan.
 
 ### Step 3: Group Findings
 
@@ -385,10 +387,10 @@ end
 ```
 # After review completes
 /rb:review app/models/user.rb
-# → Creates review file
+# → Creates `.claude/reviews/{review-slug}-{datesuffix}.md`
 
 # Then triage
-/rb:triage .claude/reviews/fix-user-model.md
+/rb:triage .claude/reviews/fix-user-model-20260505-123000.md
 # → Creates .claude/plans/fix-user-model/plan.md
 
 # Then work on selected items

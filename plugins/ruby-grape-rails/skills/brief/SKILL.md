@@ -143,9 +143,9 @@ What to do now:
 ```
 ## Review Brief: {Feature Name}
 
-**Summary**: {N} critical, {N} warnings, {N} info
+**Summary**: {N} BLOCKER, {N} WARNING, {N} SUGGESTION
 
-**Critical Issues**:
+**Blockers**:
 1. {description} ({file}:{line})
 2. ...
 
@@ -153,7 +153,7 @@ What to do now:
 1. {description}
 2. ...
 
-**Verdict**: {clean/warning/critical}
+**Verdict**: PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED
 
 **Next Step**: {action}
 ```
