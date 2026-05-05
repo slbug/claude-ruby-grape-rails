@@ -544,8 +544,10 @@ def has_review_verdict_matches_summary(content: str) -> tuple[bool, str]:
     vs the alternatives. It rejects only the unambiguous violations:
 
       - blockers > 0 + verdict ≠ BLOCKED
+      - blockers == 0 + verdict == BLOCKED (BLOCKED requires
+        blockers > 0; warnings-only summaries are invalid)
       - blockers == 0 + warnings > 0 + verdict == PASS
-      - all counts == 0 + verdict ∈ {BLOCKED, PASS WITH WARNINGS}
+      - blockers == 0 + warnings == 0 + verdict == PASS WITH WARNINGS
     """
     blockers = _summary_count(content, "Blockers")
     warnings = _summary_count(content, "Warnings")

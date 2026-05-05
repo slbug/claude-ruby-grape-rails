@@ -340,10 +340,14 @@ NOT flag the fallback chain as over-engineered.
 - `**Verdict**:` line inconsistent with `## Summary` counts. Summary
   counts NEW findings only (per playbook STEP 3); pre-existing
   appears separately in `## Pre-existing Issues` + at-a-glance
-  `New? = Pre-existing`. Apply rules to Summary count:
-  blockers > 0 + verdict ≠ `BLOCKED`;
-  blockers == 0 + warnings > 0 + verdict == `PASS`;
-  blockers == 0 + warnings == 0 + verdict ∈ `{BLOCKED, PASS WITH WARNINGS}`.
+  `New? = Pre-existing`. Apply rules to Summary count (each row is
+  an independent reject condition):
+  - blockers > 0 + verdict ≠ `BLOCKED`
+  - blockers == 0 + verdict == `BLOCKED` (BLOCKED requires
+    blockers > 0; warnings-only summaries with verdict == BLOCKED
+    are invalid)
+  - blockers == 0 + warnings > 0 + verdict == `PASS`
+  - blockers == 0 + warnings == 0 + verdict == `PASS WITH WARNINGS`
   `REQUIRES CHANGES` accepted only when blockers == 0 (test-coverage
   gap branch).
 - Pre-existing findings counted in `## Summary` table. Pre-existing

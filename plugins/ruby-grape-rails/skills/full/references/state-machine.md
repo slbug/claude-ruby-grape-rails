@@ -32,23 +32,23 @@ workers.
                 │  REVIEWING  │  (/rb:review)
                 └──────┬──────┘
                        │
-              Critical >0?
-              ┌────┴────┐
-            yes         no
-              │          ▼
-              │   ┌─────────────┐
-              │   │ COMPOUNDING │  (/rb:compound ${PLAN_DIR}/plan.md)
-              │   └──────┬──────┘
-              │          ▼
-              │   ┌─────────────┐
-              │   │  COMPLETED  │
-              │   └─────────────┘
-              ▼
-       ┌──────────────────────┐
-       │ HALTED_REVIEW_       │
-       │ CRITICAL             │
-       └──────────────────────┘
+                 **Verdict**:
+              ┌────────┼─────────────┐
+       BLOCKED │       │ REQUIRES    │ PASS / PASS WITH WARNINGS
+              │       │ CHANGES     │
+              ▼       ▼             ▼
+       ┌──────────┐ ┌────────────┐ ┌─────────────┐
+       │ HALTED_  │ │ HALTED_    │ │ COMPOUNDING │  (/rb:compound ${PLAN_DIR}/plan.md)
+       │ REVIEW_  │ │ REVIEW_    │ └──────┬──────┘
+       │ BLOCKED  │ │ REQUIRES_  │        ▼
+       │          │ │ CHANGES    │ ┌─────────────┐
+       └──────────┘ └────────────┘ │  COMPLETED  │
+                                   └─────────────┘
 ```
+
+Missing artifact / verdict line absent / off-canonical wording →
+`HALTED_REVIEW_UNKNOWN` (not shown above; see "Phase Transitions"
+table below).
 
 ## Phase Details
 
