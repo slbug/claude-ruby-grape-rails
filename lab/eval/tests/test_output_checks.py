@@ -568,6 +568,59 @@ Some prose.
         passed, _ = output_checks.has_review_mandatory_table(content)
         self.assertTrue(passed)
 
+    def test_section_skips_fenced_quoted_headings(self) -> None:
+        # `## Reviewer Coverage` heading inside a fenced markdown
+        # excerpt is a quoted template, not a live section. Validator
+        # MUST not pick up its body.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+
+## Suggestions (1)
+
+### 1. Update doc
+
+````markdown
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| fake-reviewer | invalid-state | bogus |
+````
+"""
+        passed, _ = output_checks.has_review_reviewer_coverage(content)
+        # Live Coverage section has 1 valid row; fenced excerpt with
+        # invalid state must NOT leak into validation.
+        self.assertTrue(passed)
+
+    def test_has_review_metadata_fields_skips_fenced_excerpts(self) -> None:
+        # Real artifact missing Complexity. Fenced excerpt contains
+        # all 4 fields — must NOT count.
+        content = """# Review: x
+
+**Date**: 2026-05-05
+**Files Changed**: app/foo.rb
+**Reviewers**: ruby-reviewer
+
+## Suggestions (1)
+
+### 1. Update doc
+
+````markdown
+**Date**: 2024-01-01
+**Complexity**: Simple (1 file)
+**Files Changed**: example.rb
+**Reviewers**: ruby-reviewer
+````
+"""
+        passed, reason = output_checks.has_review_metadata_fields(content)
+        self.assertFalse(passed)
+        self.assertIn("Complexity", reason)
+
     def test_has_review_metadata_fields_rejects_missing_complexity(self) -> None:
         content = """# Review: x
 

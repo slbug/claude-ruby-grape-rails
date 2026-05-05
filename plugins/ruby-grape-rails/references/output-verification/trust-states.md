@@ -33,8 +33,7 @@ Compound + strategy cards inherit the source artifact's trust state.
 
 Trust-state is also a contributor-eval signal. The deterministic CI
 gate counts the distribution across tracked fixtures. End-users do
-NOT run the eval gate; that surface is contributor-only and reads
-the same rules from this file.
+NOT run the eval gate — that surface is contributor-only.
 
 ## References
 

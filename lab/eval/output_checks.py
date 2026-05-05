@@ -27,10 +27,25 @@ def _normalize_newlines(content: str) -> str:
 
 
 def _section(content: str, heading: str) -> str:
-    content = _normalize_newlines(content)
-    pattern = re.compile(rf"(?ms)^## {re.escape(heading)}\n(.*?)(?=^## |\Z)")
-    match = pattern.search(content)
-    return match.group(1).strip() if match else ""
+    """Return body of `## {heading}` section, fence-aware.
+
+    Walks lines outside fenced code blocks. Quoted ## headings inside
+    Current/Suggested fences are NOT recognized — only live consolidated
+    sections drive validation.
+    """
+    target = f"## {heading}"
+    in_section = False
+    body: list[str] = []
+    for line in _iter_lines_outside_fences(content):
+        if line.startswith("## "):
+            if line.strip() == target:
+                in_section = True
+                continue
+            if in_section:
+                break
+        if in_section:
+            body.append(line)
+    return "\n".join(body).strip()
 
 
 def has_h1(content: str) -> tuple[bool, str]:
@@ -397,18 +412,25 @@ def has_review_metadata_fields(content: str) -> tuple[bool, str]:
 
     Per `review-playbook.md` § "Consolidated Review Format":
     `**Date**`, `**Complexity**`, `**Files Changed**`, `**Reviewers**`.
-    `/rb:triage` reads `Files Changed` to scope its analysis;
-    downstream skills cite Date + Complexity. Missing any of these is
-    a contract break.
+    Scans only lines OUTSIDE fenced code blocks — a quoted Markdown
+    template under `**Current**` / `**Suggested**` does not count.
     """
-    content = _normalize_newlines(content)
-    missing: list[str] = []
-    for field in _METADATA_FIELDS:
-        # Match `**Field**:` at start of line, anywhere in artifact.
-        if not re.search(rf"(?m)^\*\*{re.escape(field)}\*\*:\s+\S", content):
-            missing.append(field)
+    patterns = {
+        field: re.compile(rf"^\*\*{re.escape(field)}\*\*:\s+\S")
+        for field in _METADATA_FIELDS
+    }
+    found: set[str] = set()
+    for line in _iter_lines_outside_fences(content):
+        for field, pat in patterns.items():
+            if field in found:
+                continue
+            if pat.match(line):
+                found.add(field)
+        if len(found) == len(_METADATA_FIELDS):
+            break
+    missing = [field for field in _METADATA_FIELDS if field not in found]
     if missing:
-        return False, f"Missing metadata field(s): {missing} (each requires `**Field**:` line with non-empty value)"
+        return False, f"Missing metadata field(s): {missing} (each requires `**Field**:` line with non-empty value, outside fenced blocks)"
     return True, f"All {len(_METADATA_FIELDS)} metadata fields present"
 
 

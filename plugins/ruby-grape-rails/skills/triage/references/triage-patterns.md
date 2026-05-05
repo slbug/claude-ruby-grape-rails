@@ -4,32 +4,41 @@
 
 ### Always Fix (auto-approve, don't even ask)
 
-Iron Law violations and security issues:
+ALL Iron Law violations + security issues. Iron Laws are
+non-negotiable per the review BLOCKER contract; do NOT downgrade them
+to "Usually Fix":
 
-- SQL injection or XSS via `.html_safe` or `raw()` with untrusted content (Iron Law 14)
+- SQL injection / XSS via `.html_safe` or `raw()` with untrusted content (Iron Law 14)
 - SQL string interpolation / concatenation (Iron Law 2 + 15)
 - Ruby `eval` / `instance_eval` / `class_eval` with user input (Iron Law 12)
 - Missing authorization in controller actions (Iron Law 13)
 - `float` used for money fields (Iron Law 1)
-- DB queries inside Turbo Stream responses (Iron Law 19)
+- N+1 queries — missing `.includes()` / `.preload()` (Iron Law 3)
+- `after_save` where `after_commit` is required (Iron Law 4)
+- Multi-step operations without transaction wrap (Iron Law 5)
+- `update_columns` / `save(validate: false)` in normal flows (Iron Law 6)
+- `default_scope` on models (Iron Law 7)
 - Non-idempotent Sidekiq jobs (Iron Law 8)
+- Sidekiq args with symbols / non-JSON-safe types (Iron Law 9)
 - ORM objects passed as Sidekiq args (Iron Law 10)
+- `after_save` enqueueing instead of after-commit hook (Iron Law 11)
+- `method_missing` without `respond_to_missing?` (Iron Law 16)
+- Unsupervised background processes (Iron Law 17)
+- Bare `rescue` / `rescue Exception` (Iron Law 18)
+- DB queries inside Turbo Stream responses (Iron Law 19)
+- Partial updates without `turbo_frame_tag` (Iron Law 20)
+- "Should work" claims without test output (Iron Law 21)
 - `bundle exec rails zeitwerk:check` failures
 
 ### Usually Fix
 
-Common Ruby/Rails/Grape issues worth addressing:
+Non-Iron-Law issues worth addressing:
 
-- N+1 queries — missing `.includes()` / `.preload()` (Iron Law 3)
-- Multi-step operations without transaction wrap (Iron Law 5)
-- `update_columns` / `save(validate: false)` in normal flows (Iron Law 6)
-- `default_scope` on models (Iron Law 7)
-- Sidekiq args with symbols / non-JSON-safe types (Iron Law 9)
-- `after_save` enqueueing where `after_commit` is required (Iron Law 4)
-- Bare `rescue` / `rescue Exception` (Iron Law 18)
-- Partial updates without `turbo_frame_tag` (Iron Law 20)
 - Tests without assertions or using `sleep`
 - Missing error handling on external API calls
+- Hard-coded credentials / API keys
+- Missing rate limiting on user-facing endpoints
+- Missing pagination on list endpoints over a small bound
 
 ### Often Skip
 

@@ -298,10 +298,11 @@ potential_root_cause: "Missing includes pattern across controllers"
 |---------|-------------|
 | `/rb:triage` | Triage most recent review |
 | `/rb:triage <file>` | Triage specific review file |
-| `select all blockers` | Auto-select all BLOCKER findings |
+| `select all warnings` | Select all WARNING findings (BLOCKERs auto-included by Step 4) |
+| `select all suggestions` | Select all SUGGESTION findings |
 | `group by file` | Reorganize display by file |
 | `export` | Export triage to issue tracker |
-| `skip all` | Exclude all findings |
+| `skip all warnings` | Defer all non-BLOCKER findings |
 
 ## References
 
