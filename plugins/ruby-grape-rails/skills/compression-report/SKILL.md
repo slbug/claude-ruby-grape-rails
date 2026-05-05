@@ -144,6 +144,13 @@ replacement mechanism.
      raw logs:  ${CLAUDE_PLUGIN_DATA}/verify-raw  (directory)
    ```
 
+## References
+
+| Need | Reference |
+|---|---|
+| Telemetry collector activation, hook trigger families, data flow, Megastring collapse, rtk interaction, safety posture | `${CLAUDE_PLUGIN_ROOT}/references/compression/README.md` |
+| Trigger / exclusion / preservation rules + advisory thresholds | `${CLAUDE_PLUGIN_ROOT}/references/compression/rules.yml`, `${CLAUDE_PLUGIN_ROOT}/references/compression/triggers.yml` |
+
 ## Privacy posture
 
 - The redactor strips: `KEY=value` env-var values; `spec/...` and
