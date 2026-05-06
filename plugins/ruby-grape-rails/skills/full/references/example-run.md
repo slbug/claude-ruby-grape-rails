@@ -7,7 +7,7 @@ $ /rb:full Add magic link authentication
 
 [INITIALIZING] Creating feature branch: feature/magic-link-auth
 [DISCOVERING] Scanning codebase for patterns...
-  Complexity: HIGH (8/10) — security-critical, new auth mechanism
+  Complexity: High — security-critical, new auth mechanism
   User choice: "research it"
 
 [PLANNING] Spawning 4 research agents (comprehensive)...

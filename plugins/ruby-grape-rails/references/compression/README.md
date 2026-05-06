@@ -148,10 +148,14 @@ match `rtk *`:
   JSON output is compact; running stack/gem collapsers over it
   would corrupt it.
 
-To collect on rtk-rewritten commands:
+If you rely on rtk for every verify command and still want compression
+telemetry, you have two options:
 
-1. Extend `triggers.yml` `verify_commands.direct` with `^rtk (rspec|rubocop|standardrb|brakeman|reek)\b`.
-2. Add a JSON-detection short-circuit to `lib/verify_compression.rb` so JSON payloads pass through unchanged.
+- Disable rtk's `PreToolUse` rewrite for the measurement window so
+  raw `rspec` / `rubocop` / `brakeman` / etc. invocations reach the
+  collector triggers unchanged.
+- Open an issue at the plugin repo describing your rtk command shape;
+  rtk-rewritten triggers are not currently shipped.
 
 ## Safety
 

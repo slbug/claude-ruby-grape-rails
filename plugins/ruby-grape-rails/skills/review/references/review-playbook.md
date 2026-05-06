@@ -563,7 +563,14 @@ Review complete. No NEW blockers introduced by this diff.
 (Pre-existing blockers, if any, are tracked separately in
 `## Pre-existing Issues` and do NOT affect verdict per
 § "Pre-existing Issues".)
-Ready for: /rb:learn (capture lessons) or /rb:compound (capture solution).
+
+How would you like to proceed?
+
+- /rb:compound — Capture solution (default).
+- /rb:learn — Capture lessons.
+- /rb:triage .claude/reviews/{review-slug}-{datesuffix}.md
+    — Opt in to suggestions (NEW SUGGESTIONs only; no warnings or blockers to handle).
+- I'll handle it myself
 ```
 
 **PASS WITH WARNINGS:**

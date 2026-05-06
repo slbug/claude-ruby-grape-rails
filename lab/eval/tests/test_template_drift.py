@@ -42,9 +42,14 @@ _CANONICAL_PLAN_ANNOTATIONS = frozenset(
 def _walk_phase_sections(text: str):
     """Yield (heading, lines) per top-level `## Phase N` / Deferred / Pre-existing section.
 
-    Walks the rendered template body inside the outer 4-backtick fence
-    used by `triage-plan-template.md`. Each tuple holds the heading
-    text and the body lines until the next matching heading.
+    Walks the entire file. Fence state is NOT tracked: headings
+    outside the outer 4-backtick `markdown` fence in
+    `triage-plan-template.md` would be picked up if they ever existed.
+    They currently do not — the prose preamble references the
+    canonical headings only inside a markdown table cell (`| ## Phase
+    1 ... |`), which `_PHASE_HEADING_RE`'s `^##+\s+` line-anchor
+    rejects. Each tuple holds the heading text and the body lines
+    until the next matching heading.
     """
     current_heading: str | None = None
     current_body: list[str] = []
@@ -217,10 +222,14 @@ class TriageSkillEmbeddedExampleDriftTests(unittest.TestCase):
         Embedded pseudocode (Smart Grouping etc.) MUST NOT key
         groupings on `rule_id` — that would teach the synthesizer to
         invent IDs the artifact does not provide. The Step 3 prose
-        legitimately mentions `rule_id` to prohibit it; this gate
-        targets the symbol-access pattern (`f[:rule_id]`,
-        `finding[:rule_id]`, `:rule_id` in `group_by`) inside
-        executable-looking pseudocode, not bare prose mentions.
+        legitimately mentions `rule_id` to prohibit it. The regex
+        scan runs over the entire SKILL.md text without fence
+        tracking; precision relies on the patterns themselves
+        (`[:rule_id]`, `group_by ... rule_id`, `f.rule_id`) being
+        symbol-access syntax that is unlikely to appear in normal
+        prose, not on a code-fence restriction. If future prose
+        introduces such a token outside pseudocode, tighten the
+        patterns or add fence tracking.
         """
         text = TRIAGE_SKILL.read_text(encoding="utf-8")
         bad_patterns = [r"\[\s*:rule_id\s*\]", r"group_by[^\n]*rule_id", r"f\.rule_id\b"]

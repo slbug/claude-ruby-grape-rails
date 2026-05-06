@@ -1,6 +1,6 @@
 ---
 name: rb:full
-description: "Use when running the end-to-end lifecycle: plan, work, verify, review, and compound chained in one command. Runs autonomously on the happy path; halts and asks the user on `/rb:verify --full` gate failure (HALTED_VERIFY_FAILED), review verdict BLOCKED (HALTED_REVIEW_BLOCKED), REQUIRES CHANGES (HALTED_REVIEW_REQUIRES_CHANGES), missing/unparsable consolidated review (HALTED_REVIEW_UNKNOWN), or final completion confirmation."
+description: "Use when running the end-to-end lifecycle: plan, work, verify, review, and compound chained in one command. Runs autonomously on the happy path; halts and asks the user on `/rb:verify --full` gate failure (HALTED_VERIFY_FAILED), review verdict BLOCKED (HALTED_REVIEW_BLOCKED), REQUIRES CHANGES (HALTED_REVIEW_REQUIRES_CHANGES), or missing/unparsable consolidated review (HALTED_REVIEW_UNKNOWN). Reaches COMPLETED autonomously once the compound solution doc is written — no final user-acknowledgment prompt."
 when_to_use: "Triggers: \"do everything\", \"full lifecycle\", \"hands-off\", \"plan and implement\", \"end to end\"."
 argument-hint: "<feature description OR plan path>"
 effort: xhigh
@@ -80,7 +80,6 @@ A workflow is COMPLETED when:
       → HALTED_REVIEW_UNKNOWN (user inspects manually). No autonomous re-run.
 - [ ] Learnings captured in compound docs
 - [ ] `progress.md` final write: `**State**: COMPLETED`
-- [ ] User acknowledged completion
 
 ## Laws
 
