@@ -202,11 +202,26 @@ per Step 2b verdict gate:
 | `REQUIRES CHANGES` | every Test Coverage Gap row (`G<n>`) | NEW WARNINGs (`W<n>`), NEW SUGGESTIONs (`S<n>`) |
 | `PASS WITH WARNINGS` / `PASS` | none | NEW WARNINGs (`W<n>`), NEW SUGGESTIONs (`S<n>`) |
 
-Pre-existing findings are NEVER presented for selection. Offer bucket
-shortcuts first (`All WARNING`, `All SUGGESTION`), then individual
-items. Description per option includes file, line, one-line reason.
-Batch into multiple screens when > 6 selectable items. Do NOT ask
-the user to type freeform selection commands.
+Never surface pre-existing findings in the selection UI. Drive
+selection entirely through `AskUserQuestion` options; never accept
+freeform-typed commands. Present this option set in the multi-select
+prompt, bucket shortcuts first then individual items:
+
+| Option label | Effect |
+|---|---|
+| `All WARNING` | Select every NEW WARNING. Leave SUGGESTION selections untouched. |
+| `All SUGGESTION` | Select every NEW SUGGESTION. Leave WARNING selections untouched. |
+| `Skip all WARNING` | Defer every NEW WARNING. Leave SUGGESTION selections untouched. |
+| `Skip all SUGGESTION` | Defer every NEW SUGGESTION. Leave WARNING selections untouched. |
+| `Group by file` | Re-render the option list grouped by file. Do NOT change selection state. |
+| `W<n>` / `S<n>` (one row per finding) | Select the individual NEW WARNING / SUGGESTION. Description: file, line, one-line reason. |
+
+Accept combinations of shortcuts and individual picks in one
+response (e.g., `All WARNING` + `S2` + `S5`). Resolve combinations
+in selection order: cancel an earlier `All WARNING` when a later
+`Skip all WARNING` follows; let individual `W<n>` / `S<n>` picks
+override their bucket-level skip. Split into multiple screens when
+> 6 selectable items.
 
 Summarize state back, e.g.:
 `auto-included: B1 B2 B3 | selected: W1 | deferred: W2 S1 S2`
@@ -412,13 +427,13 @@ selected at Step 4.
 
 | Command | Description |
 |---------|-------------|
-| `/rb:triage` | Triage most recent review |
+| `/rb:triage` | Triage most recent consolidated review |
 | `/rb:triage <file>` | Triage specific review file |
-| `select all warnings` | Select all WARNING findings (BLOCKERs auto-included by Step 4) |
-| `select all suggestions` | Select all SUGGESTION findings |
-| `group by file` | Reorganize display by file |
-| `skip all warnings` | Defer every WARNING. Does NOT touch SUGGESTION selections. |
-| `skip all suggestions` | Defer every SUGGESTION. Does NOT touch WARNING selections. |
+
+For in-UI bucket shortcuts (`All WARNING`, `Skip all WARNING`,
+`Group by file`, …), surface them as `AskUserQuestion` option labels
+per § "Step 4: Present Multi-Select UI"; never prompt the user to
+type them as commands.
 
 ## References
 
