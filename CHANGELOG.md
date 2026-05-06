@@ -54,6 +54,25 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `/rb:plan`, `/rb:brainstorm`, `/rb:investigate`, `/rb:full` gained
   STEP 0 directive: open the canonical playbook reference at
   synthesis entry.
+- `/rb:triage` rewrite: bucket vocabulary aligned to review's
+  `BLOCKER | WARNING | SUGGESTION`; new `triage-plan-template.md`
+  reference with `[Pn-Tm][annotation]` task-line shape per
+  `work/file-formats.md` + canonical Set A; verdict gate (Step 2b)
+  routes BLOCKED / PASS WITH WARNINGS / PASS through normal flow,
+  rejects per-reviewer / manifest paths up front; REQUIRES CHANGES
+  also flows through triage with auto-included Phase 1 Test Coverage
+  Gaps tasks. Pre-existing findings route to a dedicated
+  `## Pre-existing Issues (informational)` section, never become
+  task lines. `triage-patterns.md` Always-Fix list expanded to ALL
+  Iron Law violations + non-Iron-Law security issues; downgrade
+  rules tightened to non-Iron-Law, non-security NEW findings only.
+- `/rb:plan` accepts a consolidated review path with
+  `**Verdict**: REQUIRES CHANGES` and produces a one-task-per-gap
+  plan from the review's `## Test Coverage Gaps` section. Other
+  verdicts (PASS / PASS WITH WARNINGS / BLOCKED) are rejected with
+  redirects to `/rb:triage` or `/rb:compound`. Per-reviewer
+  artifacts and manifest paths under `.claude/reviews/{slug}/...`
+  are rejected explicitly.
 
 ### Fixed
 

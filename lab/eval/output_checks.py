@@ -963,12 +963,18 @@ def has_review_test_coverage_gaps_schema(content: str) -> tuple[bool, str]:
     `# / Surface / File / Why uncovered / Suggested test`. Both
     `/rb:plan {review-path}` and `/rb:triage {review-path}` parse
     these cells; a malformed table makes the downstream flow
-    unreadable. Validator skips when section is absent — verdict-gate
-    presence/absence is enforced by `has_review_verdict_matches_summary`.
+    unreadable. Section presence is detected by raw heading scan
+    (NOT body-truthiness) so a bare empty heading still triggers the
+    schema gate. Validator skips only when no heading exists.
     """
-    section = _section(content, "Test Coverage Gaps")
-    if not section:
+    heading_present = any(
+        line.strip() == "## Test Coverage Gaps"
+        or re.match(r"^## Test Coverage Gaps\s*\(\d+\)\s*$", line.strip())
+        for line in _iter_lines_outside_fences(content)
+    )
+    if not heading_present:
         return True, "No Test Coverage Gaps section (schema check skipped)"
+    section = _section(content, "Test Coverage Gaps")
     rows = _table_data_rows(section)
     if not rows:
         return False, (
