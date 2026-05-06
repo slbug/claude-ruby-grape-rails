@@ -84,7 +84,7 @@ review artifact (no plain description / no feature input):
 
 | `$ARGUMENTS` shape | Action |
 |---|---|
-| empty / absent | Resolve newest consolidated review: glob `.claude/reviews/*-*.md` (direct children of `reviews/`, with `-{datesuffix}` segment). Pick the file with the most recent mtime. If none found, STOP. Print: `No consolidated review artifact found under .claude/reviews/. Run /rb:review first.` |
+| empty / absent | Resolve newest consolidated review: glob `.claude/reviews/*-*.md`, EXCLUDE `.provenance.md` sidecars (suffix `-{datesuffix}.provenance.md`) — accept only files whose basename ends in `-{datesuffix}.md` with no `.provenance` segment. Direct children of `reviews/` only (no per-reviewer subdirectory). Pick the file with the most recent mtime. If none found, STOP. Print: `No consolidated review artifact found under .claude/reviews/. Run /rb:review first.` |
 | `.claude/reviews/{review-slug}-{datesuffix}.md` (direct child of `reviews/`) | proceed |
 | `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` (per-reviewer artifact under subdirectory) | STOP. Print: `Path is a per-reviewer artifact, not the consolidated review. Run with the consolidated path: .claude/reviews/{review-slug}-{datesuffix}.md` |
 | `.claude/reviews/{review-slug}/RUN-CURRENT.json` (manifest) | STOP. Print: `Path is the manifest, not the consolidated review.` |

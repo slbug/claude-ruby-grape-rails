@@ -1,6 +1,6 @@
 ---
 name: rb:plan
-description: "Use when you need an implementation plan for multi-file Rails or Grape features, Sidekiq changes, or risky migrations and refactors before coding starts. Also accepts review files and existing plans."
+description: "Use when you need an implementation plan for multi-file Rails or Grape features, Sidekiq changes, or risky migrations and refactors before coding starts. Also accepts existing plan.md (enhancement), interview.md (from /rb:brainstorm), or a consolidated review artifact whose verdict is REQUIRES CHANGES (generates one-task-per-gap plan). Other review verdicts (PASS / PASS WITH WARNINGS / BLOCKED) route to /rb:triage or /rb:compound, NOT /rb:plan."
 when_to_use: "Triggers: \"plan this feature\", \"make a plan\", \"implementation plan\", \"how should we build\", \"plan before coding\". Does NOT handle: brainstorming ideas, implementing code, code review."
 argument-hint: <feature description OR path to existing plan.md OR path to interview.md OR path to .claude/reviews/...md (REQUIRES CHANGES verdict only)>
 effort: xhigh
@@ -104,7 +104,9 @@ review paths.
    DESIGN with the `[test]` task list.
 5. Do NOT include any Blockers/Warnings/Suggestions findings.
    `/rb:triage` owns mixed-bucket reviews.
-6. Set `Source Review:` metadata in the plan to the review path.
+6. Set the plan preamble `**Input**:` field to the review path
+   (per `${CLAUDE_SKILL_DIR}/references/plan-template.md` § "Full
+   Plan Template" — `**Input**: {review path, or "from description"}`).
 
 ## Interview Detection (from /rb:brainstorm)
 

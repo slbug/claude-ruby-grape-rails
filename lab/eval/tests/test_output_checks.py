@@ -1742,6 +1742,28 @@ PASS
         passed, _ = output_checks.has_review_finding_titles_match_glance(content)
         self.assertTrue(passed)
 
+    def test_has_review_file_refs_rejects_stray_outside_bucket(self) -> None:
+        # `**File**:` line in preamble/footer (NOT under
+        # ## Blockers / ## Warnings / ## Suggestions) MUST NOT
+        # count toward the minimum.
+        content = """# Review: x
+
+**File**: `app/foo.rb:1`
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: PASS
+"""
+        passed, reason = output_checks.has_review_file_refs(content, minimum=1)
+        self.assertFalse(passed)
+        self.assertIn("0 finding file ref", reason)
+
     def test_review_has_no_followup_sections_rejects_next_steps(self) -> None:
         content = """# Review: sample
 

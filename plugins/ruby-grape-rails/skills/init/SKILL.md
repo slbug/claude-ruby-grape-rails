@@ -54,8 +54,8 @@ Detection rules:
    § "MIXED_ORM_SECTION") regardless of `PACKAGE_QUERY_NEEDED`
    value. `detect-stack` does NOT emit per-package ORM ownership —
    interview is the only source. Skip when only one ORM detected.
-7. **Do not** reimplement stack detection inline in chat or ad-hoc Ruby snippets. `detect-stack` is the source of truth.
-8. If `${CLAUDE_PLUGIN_ROOT}/bin/detect-stack` is missing or fails, STOP and explain that plugin stack detection is unavailable instead of inventing a fallback parser.
+8. **Do not** reimplement stack detection inline in chat or ad-hoc Ruby snippets. `detect-stack` is the source of truth.
+9. If `${CLAUDE_PLUGIN_ROOT}/bin/detect-stack` is missing or fails, STOP and explain that plugin stack detection is unavailable instead of inventing a fallback parser.
 
 Use Ruby for detection (avoids fragile shell pipelines):
 

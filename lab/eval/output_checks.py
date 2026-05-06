@@ -498,11 +498,9 @@ def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
                 count += 1
             else:
                 bad.append(f"Suggestions: {line.strip()!r} malformed path")
-        else:
-            # Outside any tracked bucket (e.g., a stray header-area
-            # `**File**:` line) — accept loose match toward the count.
-            if _FILE_REF_LOOSE_RE.match(line):
-                count += 1
+        # Outside any tracked bucket (header preamble, footer prose,
+        # stray Markdown): NEVER count toward the minimum. Only
+        # bucket-scoped finding bodies satisfy the file-ref contract.
     if bad:
         return False, (
             f"{count} valid finding file ref(s); bucket-shape violations: "
