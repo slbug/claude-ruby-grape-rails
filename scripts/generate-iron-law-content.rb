@@ -388,15 +388,19 @@ def generate_injector_script(yaml, prefs)
 
   body += "\n"
 
-  see_line = ->(refs) {
+  # Companion-doc paths are emitted bare (no `See:` prefix). Real-run
+  # observation: passive `See: <path>` framing reads as citation, not
+  # directive — 0 opens across 8 subagents. Bare path keeps reachability
+  # while removing the verb that mistakenly signaled "FYI only".
+  ref_paths = ->(refs) {
     return '' unless refs.is_a?(Array) && !refs.empty?
 
-    "  See: #{refs.map { |r| "`${CLAUDE_PLUGIN_ROOT}/#{r}`" }.join(', ')}\n"
+    "  #{refs.map { |r| "`${CLAUDE_PLUGIN_ROOT}/#{r}`" }.join(', ')}\n"
   }
 
   yaml['laws'].each do |law|
     body += "#{law['subagent_text']}\n"
-    body += see_line.call(law['reference_files'])
+    body += ref_paths.call(law['reference_files'])
   end
 
   has_prefs = prefs && prefs['preferences'].is_a?(Array) && !prefs['preferences'].empty?
@@ -405,7 +409,7 @@ def generate_injector_script(yaml, prefs)
     body += "\nAdvisory Preferences — #{total_prefs} Total:\n"
     prefs['preferences'].each do |pref|
       body += "#{pref['subagent_text']}\n"
-      body += see_line.call(pref['reference_files'])
+      body += ref_paths.call(pref['reference_files'])
     end
   end
 
@@ -461,9 +465,9 @@ def generate_injector_script(yaml, prefs)
   puts ''
   puts '# Hook output (additionalContext) is plain runtime text returned to'
   puts '# Claude — CC does NOT re-substitute plugin variables in returned'
-  puts '# strings. Expand ${CLAUDE_PLUGIN_ROOT} in BODY here so See: paths'
-  puts '# reach the LLM as absolute filesystem paths. Skip expansion when'
-  puts '# the env var is unset/empty (off-CC runs, CI fixtures) so the'
+  puts '# strings. Expand ${CLAUDE_PLUGIN_ROOT} in BODY here so companion'
+  puts '# paths reach the LLM as absolute filesystem paths. Skip expansion'
+  puts '# when the env var is unset/empty (off-CC runs, local test harness) so the'
   puts '# literal placeholder survives instead of producing root-anchored'
   puts '# garbage like /references/foo.md.'
   puts 'if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]]; then'
@@ -530,7 +534,7 @@ def generate_canonical_registry(yaml)
 end
 
 # Generate README section
-def generate_readme(yaml)
+def generate_readme(yaml, prefs)
   puts "The plugin enforces **#{yaml['total_laws']} Iron Laws** that prevent common, costly mistakes:"
   puts ''
   puts '| Category | Count | Laws |'
@@ -549,7 +553,8 @@ def generate_readme(yaml)
   puts ''
   programmatic_count = yaml['laws'].filter_map { |law| law['detector_id'] }.uniq.count
   puts "- **Programmatic**: #{programmatic_count} programmatic detectors checked automatically on targeted Ruby-ish edits"
-  puts "- **Behavioral**: All #{yaml['total_laws']} laws injected into subagent context"
+  prefs_count = (prefs && prefs['preferences'].is_a?(Array)) ? prefs['preferences'].size : 0
+  puts "- **Behavioral**: All #{yaml['total_laws']} Iron Laws + #{prefs_count} Advisory Preferences injected on `SessionStart` (main session) and `SubagentStart` (every spawned subagent)"
   puts '- **Review-time**: Full audit during `/rb:review`'
   puts ''
   puts 'See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonical-registry.md) for details.'
@@ -579,7 +584,7 @@ when 'injector'
 when 'canonical'
   generate_canonical_registry(yaml)
 when 'readme'
-  generate_readme(yaml)
+  generate_readme(yaml, prefs)
 when 'judge'
   generate_judge_section(yaml)
 when 'validate'

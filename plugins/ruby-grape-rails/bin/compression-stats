@@ -2,10 +2,11 @@
 # frozen_string_literal: true
 
 # Compression telemetry reader. Reads ${CLAUDE_PLUGIN_DATA}/compression.jsonl
-# (or --log <path>) and prints aggregate statistics for the contributor
-# operator surface: sample count; mean / p50 / p95 ratios overall and per
-# command class; top weak-savings commands; preservation-violation count;
-# recommendation verdict against documented promotion criteria.
+# (or --log <path>) and prints aggregate statistics: sample count;
+# mean / p50 / p95 ratios overall and per command class; top
+# weak-savings commands; preservation-violation count; recommendation
+# verdict against the in-script promotion thresholds (MIN_SAMPLES_PER_CLASS
+# + MIN_P50_RATIO).
 
 require 'json'
 require 'optparse'
@@ -40,8 +41,13 @@ def default_log_path
   candidates.max_by { |p| File.mtime(p) }
 end
 
-# Promotion criteria thresholds. Mirrors the criteria documented in
-# references/compression/README.md "Promotion criteria".
+# Recommendation-verdict thresholds (consumed only by `verdict()` below).
+#
+# - MIN_SAMPLES_PER_CLASS: per-class sample floor before that class's
+#   p50 is statistically stable. Classes with `count <
+#   MIN_SAMPLES_PER_CLASS` are flagged `underpowered-classes=...`.
+# - MIN_P50_RATIO: per-class p50 floor. Sufficiently-powered classes
+#   whose `p50 < MIN_P50_RATIO` are flagged `weak-p50=...`.
 MIN_SAMPLES_PER_CLASS = 100
 MIN_P50_RATIO = 0.40
 

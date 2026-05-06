@@ -39,6 +39,15 @@ Use `/rb:brainstorm` when requirements are vague or multiple approaches exist.
 It gathers requirements interactively and produces an `interview.md` that
 `/rb:plan` consumes. Skip it when requirements are already clear.
 
+After `/rb:review`, follow this verdict-routing table to pick the next step:
+
+| Verdict | Next step |
+|---|---|
+| `PASS` | `/rb:compound` to capture lessons. Optionally `/rb:triage {review-path}` to opt in to suggestions. |
+| `PASS WITH WARNINGS` | `/rb:triage {review-path}` to batch warnings, or `/rb:compound` to capture lessons without fixing. |
+| `BLOCKED` | `/rb:triage {review-path}` to select which findings to fix → `/rb:work` against the resulting plan. |
+| `REQUIRES CHANGES` | `/rb:triage {review-path}` (default; auto-includes test-coverage gaps + handles any warnings). `/rb:plan {review-path}` for gaps-only plan, no triage UI. |
+
 Each phase reads from the previous phase's output. Plans become checkboxes. Checkboxes track progress. Reviews catch mistakes. Compound knowledge makes future work faster.
 
 ### What You Get
@@ -130,10 +139,10 @@ The plugin includes targeted references and guidance for common editing contexts
 | `config/routes.rb` | Routing patterns, controllers, scopes |
 | `*_job.rb`, `app/jobs/*` | Sidekiq patterns, idempotency rules |
 
-These are the references Claude should use for those file types. In
-practice this is strongest after `/rb:init` and when you invoke the
-matching workflow command; most file-pattern loading is behavioral
-guidance, not a hook-backed auto-loader.
+These are the references Claude should use for those file types.
+File-pattern loading is behavioral guidance plus skill `paths:`
+auto-loading; the strongest signal still comes from invoking the
+matching workflow command directly.
 
 <!-- IRON_LAWS_START -->
 
@@ -201,7 +210,7 @@ The plugin uses **layered enforcement** — some things run automatically, some 
 | Progress logging | Every file edit | Appends to `.claude/plans/{slug}/progress.md` (async) |
 | Failure hints | Bash command fails | Injects debugging hints via `additionalContext` |
 | Error critic | Repeated test failures | Escalates to structured critic analysis after 3+ failures |
-| Iron Laws injection | Any subagent spawns | Injects all 22 Iron Laws into subagents via `additionalContext` |
+| Iron Laws + Preferences injection | `SessionStart` (main session) + `SubagentStart` (any subagent spawn) | Injects 22 Iron Laws + 6 Advisory Preferences via `additionalContext`. Rules with `reference_files` declared in `iron-laws.yml` / `preferences.yml` get a bare companion path on the line beneath the rule; rules without `reference_files` emit no path. |
 | PreCompact rules | Before context compaction | Warns about the active workflow phase and what to re-read after compaction |
 
 Format check **auto-fixes** — runs `standardrb --fix` when StandardRB is configured, otherwise `rubocop -a`.
@@ -224,43 +233,50 @@ This is behavioral — it works because the rules are in Claude's context, not b
 
 ### Layer 3: Skill Loading by File Type (Behavioral)
 
-CLAUDE.md instructs Claude to load specific skills based on file patterns:
+Two activation paths exist for domain skills:
 
-```text
-app/views/*.erb         → hotwire-patterns (streams, frames, Turbo)
-app/models/*.rb         → active-record-patterns (queries, associations)
-app/controllers/*.rb    → rails-contexts (controllers, requests)
-*_spec.rb               → testing (RSpec, Minitest, factories)
-*_test.rb                → testing (Minitest)
-*_worker.rb             → sidekiq (jobs, idempotency, queue config)
-Any .rb file            → ruby-idioms (always)
-```
+| Path | Trigger |
+|---|---|
+| CC auto-activation | Skill declares `paths:` in its frontmatter; CC loads the skill when files matching the glob are open or being edited. ~16 shipped skills declare `paths:` (hotwire-patterns, active-record-patterns, testing, sidekiq, security, karafka, grape-idioms, ar-n1-check, deploy, hotwire-native, async-patterns, sequel-patterns, safe-migrations, rails-idioms, ruby-idioms, active-record-constraint-debug). Read each skill's frontmatter for the exact glob set. |
+| Description-based | Skill omits `paths:`; CC matches on description text (less reliable). Examples: `rails-contexts`, `ruby-contexts`. |
 
-This is **not plugin infrastructure** — it's instructions that Claude follows. No hooks trigger skill loading.
-This is the plugin's biggest known gap — in practice, skills rarely auto-load from file context alone.
-Running `/rb:init` significantly improves this.
+Invoke `/rb:<workflow>` directly when the file you are editing is
+not covered by any skill's `paths:` glob.
 
 ---
 
 ## Section 5: Init, Review and Gaps
 
-### Layer 4: `/rb:init` (Strengthens Everything)
+### Layer 4: `/rb:init` (Project Stack Notes)
 
-Running `/rb:init` injects enforcement rules **directly into your project's CLAUDE.md**. This is stronger than plugin-level instructions because CLAUDE.md is always read at session start.
+Run `/rb:init` to write a managed block into the project
+`CLAUDE.md`. Block contents: stack-version header + project-specific
+stack facts only.
 
-What it adds:
+| Source | Examples |
+|---|---|
+| `detect-stack` output | Ruby/Rails/Grape/Sidekiq/Karafka versions, `DETECTED_ORMS`, `PACKAGE_LAYOUT`, `PACKAGE_LOCATIONS`, `HAS_PACKWERK` |
+| Scoped repo file scans | queue list (`config/sidekiq.yml`), Hotwire channels (`app/channels/*`), Karafka topic routes (`karafka.rb`), Packwerk enforcement flags (`packwerk.yml` + per-package `package.yml`) |
+| Targeted interview | per-package ORM map for mixed AR+Sequel repos (NOT in `detect-stack`), retry policy, frame-id convention, secret-path scan policy |
 
-- **7-step mandatory procedure** — complexity scoring, interview questions before coding, reference loading
-- **Iron Laws with STOP protocol** — explicitly tells Claude to halt on violations
-- **Verification rules** — Format checks (StandardRB or RuboCop) run automatically; full verification (`/rb:verify`) includes format, tests, and Rails-specific checks (zeitwerk:check when applicable)
-- **Stack-specific rules** — detects Rails version, Sidekiq, Grape from `Gemfile`
+`/rb:init` does NOT inject:
+
+| Surface | Where it lives instead |
+|---|---|
+| Iron Laws + Advisory Preferences | `inject-rules.sh` hook on every `SessionStart` + `SubagentStart` |
+| Skill workflow doctrine (complexity scoring, spawn rules, verification commands) | individual skill bodies (`/rb:plan`, `/rb:review`, `/rb:verify`) — load when skill invoked |
+| Library defaults (Sidekiq base class, Turbo Frame patterns) | framework docs, NOT project `CLAUDE.md` |
 
 ```bash
 /rb:init           # First-time setup
-/rb:init --update  # Update after plugin updates
+/rb:init --update  # Update managed block after plugin updates
 ```
 
-If you're finding the plugin inconsistent, running `/rb:init` is the single biggest improvement you can make.
+`--update` replaces the content between
+`<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->` and
+`<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->` markers, so legacy
+doctrine-heavy blocks from earlier plugin versions are migrated to
+the slim form automatically.
 
 ### Layer 5: `/rb:review` + Iron Law Judge (On-Demand)
 
@@ -306,13 +322,17 @@ Being honest about the gaps:
 
 ```text
 AUTOMATIC (hooks):     Format check, security reminders, progress logging, failure hints,
-                       Iron Laws in subagents, PreCompact rule preservation
+                       Iron Laws + Preferences injected at SessionStart + SubagentStart,
+                       PreCompact rule preservation
 BEHAVIORAL (Claude):   Iron Laws, skill loading, stop-and-explain
 ON-DEMAND (commands):  /rb:review (iron-law-judge), /rb:verify (format/tests/zeitwerk for Rails)
-STRENGTHENED BY:       /rb:init (injects rules into project CLAUDE.md)
+PROJECT CONTEXT:       /rb:init (writes detected project-stack facts into CLAUDE.md)
 ```
 
-The plugin works best when all layers are active: `/rb:init` for persistent rules, hooks for automatic checks, and `/rb:review` to catch what the behavioral layer missed.
+Hooks deliver the rules. `/rb:review` catches what behavioral layer
+missed. `/rb:init` records project-stack facts so Claude has the
+right baseline context (queue list, ORM-per-package map, package
+boundaries) without restating any rule already injected at runtime.
 
 ---
 
@@ -344,7 +364,7 @@ The plugin works best when all layers are active: `/rb:init` for persistent rule
 | `/rb:permissions` | Tune Claude Bash permissions from real session evidence |
 | `/rb:research <topic>` | Research with parallel workers, runtime tooling-first |
 | `/rb:pr-review <PR#>` | Address PR review comments |
-| `/rb:init` | Initialize plugin in a project |
+| `/rb:init` | Write project stack notes to CLAUDE.md (rules runtime-injected) |
 | `/rb:runtime` | Runtime tooling (Tidewave integration) |
 | `/rb:secrets` | Scan for leaked credentials |
 | `/rb:document` | Generate YARD/RDoc, README, ADRs |

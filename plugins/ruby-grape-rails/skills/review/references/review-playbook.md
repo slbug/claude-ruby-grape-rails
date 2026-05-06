@@ -186,6 +186,11 @@ Required output:
 2. Return summary in Agent return text (used as artifact-recovery fallback).
    - Always write the artifact (even if findings are empty — write PASS
      with files reviewed).
+3. Artifact MUST include a verdict line VERBATIM from the canonical
+   4-set: `**Verdict**: PASS` | `**Verdict**: PASS WITH WARNINGS` |
+   `**Verdict**: REQUIRES CHANGES` | `**Verdict**: BLOCKED`. No other
+   wording. Do NOT emit `LGTM`, `BLOCK`, `Needs fixes`,
+   `CONDITIONAL PASS`, or any abbreviation.
 
 Findings format:
 - file:line — Title
@@ -195,6 +200,109 @@ Findings format:
 
 Stop after returning. Do NOT call Agent() — this is a leaf review.
 ```
+
+## Confidence Levels
+
+Every finding MUST carry a confidence label.
+
+| Level | Meaning | Example |
+|---|---|---|
+| `HIGH` | Direct code evidence — specific line, test failure, static analysis finding | "Line 42: `params[:id]` interpolated into SQL string" |
+| `MEDIUM` | Pattern match — known anti-pattern or convention violation, no direct proof of bug | "Service object bypasses transaction boundary (common data-loss pattern)" |
+| `LOW` | Subjective — style preference, naming opinion, architecture suggestion | "Consider extracting this into a form object" |
+
+Consolidate duplicates: keep highest confidence among them. Sort
+findings within each severity bucket: `HIGH` → `MEDIUM` → `LOW`.
+
+## Synthesis Procedure
+
+Five steps, in order. Do NOT skip.
+
+### STEP 1: Read each agent artifact (post-recovery)
+
+For each manifest entry: STAT the expected path; apply the recovery
+state machine in § "Artifact Recovery" below.
+
+### STEP 2: Normalize each agent's verdict text
+
+Scan each per-agent artifact for verdict prose. Map non-canonical
+forms to the canonical 4-set BEFORE writing the consolidated header:
+
+Use ONLY the worker artifact's verdict prose + the worker's own
+finding-counts (`Critical | Warning | Info` form, not yet mapped —
+mapping is STEP 3). Do NOT cross-reference bucket-form counts here;
+bucket-form is introduced in STEP 3.
+
+| Non-canonical form (preserve verbatim in metadata) | Canonical mapping rule |
+|---|---|
+| `CONDITIONAL PASS`, `PASS WITH CAVEATS`, `PASS-WITH-WARNS` | infer from worker `Critical / Warning / Info` counts: any `Critical` → `BLOCKED`; else any `Warning` → `PASS WITH WARNINGS`; else `PASS` |
+| `Approved`, `LGTM`, `looks good` | `PASS` if worker reports zero `Critical` and zero `Warning`; else map per worker counts |
+| `Needs fixes`, `fix before merge`, `not ready` | infer from worker counts: any `Critical` → `BLOCKED`; else any `Warning` → `PASS WITH WARNINGS`; else `PASS`. Do NOT auto-route to `REQUIRES CHANGES` — that verdict is reserved for missing test coverage on NEW public behavior (per § "Verdict Decision Rules"). Only emit `REQUIRES CHANGES` when the worker explicitly flagged a `New public behavior without tests` finding. |
+| `Critical`, `BLOCK`, `BLOCKER` (verdict, not severity) | `BLOCKED` |
+
+Preserve the agent's raw verdict text VERBATIM in the
+`Reviewer Verdicts` metadata table at top of the consolidated
+artifact. Normalize only the consolidated header.
+
+### STEP 3: Map worker severity to bucket form
+
+Reviewer Coverage row counts MUST use bucket form
+(`BLOCKER | WARNING | SUGGESTION`), NOT worker form
+(`Critical | Warning | Info`). Per § "Worker Severity Mapping":
+
+- worker `Critical` introduced by this diff → `BLOCKER`
+- worker `Critical` on unchanged code → tracked in `## Pre-existing Issues` only; NOT in Coverage row, NOT in Summary table
+- worker `Warning` → `WARNING`
+- worker `Info` → `SUGGESTION`
+
+Coverage row counts + Summary table counts use NEW findings only
+(diff-introduced). Pre-existing findings appear in `## Pre-existing
+Issues` section and the At-a-Glance Finding Table with
+`New? = Pre-existing`. They never affect the consolidated verdict.
+
+Apply bucket form across Coverage row, Summary table, At-a-Glance
+Finding Table, and section headers. Per-agent artifacts keep their
+original wording.
+
+### STEP 4: Compute consolidated verdict deterministically
+
+Apply the algorithm from § "Verdict Decision Rules":
+
+```
+if blockers_introduced_by_diff > 0:
+    verdict = BLOCKED
+elif new_public_behavior_lacks_test_coverage:
+    verdict = REQUIRES CHANGES
+elif warnings > 0:
+    verdict = PASS WITH WARNINGS
+else:
+    verdict = PASS
+```
+
+Apply the algorithm verbatim. Do NOT override with author judgment.
+Preserve nuance in per-finding prose, not in the verdict tag.
+
+`new_public_behavior_lacks_test_coverage`: derive at synthesis time
+from per-agent findings tagged as test-coverage gaps (per § "Worker
+Severity Mapping"). When fired, populate `## Test Coverage Gaps
+({n})` in the consolidated artifact (see § "Consolidated Review
+Format"). REQUIRES CHANGES chat script reads that section verbatim.
+
+### STEP 5: Write the consolidated review
+
+- Header MUST include `## Reviewer Coverage` with one row per
+  spawned reviewer + recovery state.
+- Header MUST include `## Reviewer Verdicts` with each agent's raw
+  verdict text + normalized canonical form. For `stub-no-output`
+  reviewers, emit `(no output)` literal in both cells.
+- Preserve blockers / must-fix items VERBATIM in body.
+- Preserve decision options + rationale, unresolved disagreements,
+  file paths, concrete evidence.
+- Dedupe overlapping findings across agents; cite all sources.
+- Keep highest confidence among duplicates.
+- Sort findings: BLOCKER → WARNING → SUGGESTION;
+  HIGH → MEDIUM → LOW within bucket.
+- Preserve "Pre-existing Issues" section.
 
 ## Artifact Recovery
 
@@ -282,10 +390,13 @@ Task creation and planning happen in `/rb:triage` after the user decides.
 
 ## Pre-existing Issues
 
-Findings on code NOT changed in this diff are marked **Pre-existing**. They
-appear in the report and summary table but do NOT affect the verdict. A PASS
-verdict is possible with pre-existing blockers as long as no NEW blockers
-were introduced by this diff.
+Findings on code NOT changed in this diff carry `New? = Pre-existing`
+in the At-a-Glance Finding Table and appear in the dedicated
+`## Pre-existing Issues (unchanged code)` section. They are NOT
+counted in `## Summary` or in `## Reviewer Coverage` row counts —
+both reflect NEW findings only (diff-introduced). They never affect
+the consolidated verdict; PASS is possible with pre-existing blockers
+as long as no NEW blockers were introduced.
 
 ## Research Requirement for Infrastructure
 
@@ -330,17 +441,41 @@ Write the synthesized review to the path read via
 
 ## Reviewer Coverage
 
-| Reviewer | Recovery State |
-|---|---|
-| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output |
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output | {n} BLOCKER / {n} WARNING / {n} SUGGESTION |
 
-State definitions: `artifact` = on-disk file ≥ 1000 bytes, trusted as-is.
-`stub-replaced` = on-disk stub overwritten with substantially larger
-findings from agent return text. `recovered-from-return` = no on-disk
-artifact; findings extracted from agent return text. `stub-no-output` =
-no usable reviewer output; reviewer coverage gap.
+Findings column uses bucket form (`BLOCKER / WARNING / SUGGESTION`)
+and counts NEW findings only (diff-introduced). Pre-existing
+findings attributed to the reviewer appear in `## Pre-existing
+Issues` and the at-a-glance table with `New? = Pre-existing`.
+Zero-pad when a bucket is empty. State definitions:
+
+- `artifact` — on-disk file ≥ 1000 bytes; trust as-is
+- `stub-replaced` — on-disk stub overwritten with larger findings from agent return text
+- `recovered-from-return` — no on-disk artifact; findings extracted from return text
+- `stub-no-output` — no usable reviewer output; coverage gap
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| {agent-slug} | {agent's verbatim verdict text} | PASS \| PASS WITH WARNINGS \| REQUIRES CHANGES \| BLOCKED |
+| {stub-no-output-agent-slug} | (no output) | (no output) |
+
+Raw Verdict: VERBATIM agent wording. Canonical: map per § "STEP 2".
+The consolidated `**Verdict**:` line comes from § "STEP 4"
+(blocker / warning / test-coverage counts), not from this column.
+
+For rows whose Coverage state is `stub-no-output`: emit
+`(no output)` literal in BOTH cells. Reserve the placeholder for
+`stub-no-output` rows only.
 
 ## Summary
+
+Counts NEW findings only (diff-introduced). Pre-existing issues are
+NOT counted here — see `## Pre-existing Issues` + at-a-glance
+`New? = Pre-existing`.
 
 | Severity | Count |
 |----------|-------|
@@ -385,12 +520,23 @@ no usable reviewer output; reviewer coverage gap.
 ### 1. {Suggestion Title}
 
 **File**: `path/to/file.rb`
-**Confidence**: HIGH | MEDIUM | LOW
+**Reviewer**: {agent} | **Confidence**: HIGH | MEDIUM | LOW
 **Suggestion**: {improvement}
 
 ## Pre-existing Issues (unchanged code)
 
 - {issue} (not introduced by this change)
+
+## Test Coverage Gaps ({n})
+
+Emit ONLY when consolidated `**Verdict**: REQUIRES CHANGES`. Omit
+section entirely on other verdicts. One row per NEW public surface
+(method / controller action / Sidekiq job / Turbo Stream route)
+introduced by this diff with no test coverage.
+
+| # | Surface | File | Why uncovered | Suggested test |
+|---|---------|------|---------------|----------------|
+| 1 | `Class#method` / `Controller#action` / `JobClass#perform` | `path/to/file.rb:{line}` | new diff-introduced public behavior; no spec exercises it | `spec/path/to/file_spec.rb` — assert `{behavior}` |
 
 ## At-a-Glance Finding Table
 
@@ -413,32 +559,64 @@ After writing the consolidated artifact, present the verdict in chat.
 **PASS:**
 
 ```text
-Review complete. No blockers found.
-Ready for: /rb:learn (capture lessons) or /rb:compound (capture solution).
+Review complete. No NEW blockers introduced by this diff.
+(Pre-existing blockers, if any, are tracked separately in
+`## Pre-existing Issues` and do NOT affect verdict per
+§ "Pre-existing Issues".)
+
+How would you like to proceed?
+
+- /rb:compound — Capture solution (default).
+- /rb:learn — Capture lessons.
+- /rb:triage .claude/reviews/{review-slug}-{datesuffix}.md
+    — Opt in to suggestions (NEW SUGGESTIONs only; no warnings or blockers to handle).
+- I'll handle it myself
 ```
 
 **PASS WITH WARNINGS:**
 
 ```text
-Review complete. {n} warnings noted.
-Warnings logged but not blocking.
-Ready for: /rb:learn or /rb:compound.
+Review complete. {n} warnings noted (full list in
+`.claude/reviews/{review-slug}-{datesuffix}.md` § "At-a-Glance Finding Table").
+Warnings are non-blocking.
+
+How would you like to proceed?
+
+- /rb:triage .claude/reviews/{review-slug}-{datesuffix}.md
+    — Default. Select which warnings to fix; defer the rest.
+- /rb:learn — Capture lessons without fixing.
+- /rb:compound — Capture solution without fixing.
+- I'll handle it myself
 ```
+
+Do NOT suggest bare `/rb:work` here — it would resume any active
+plan from `.claude/ACTIVE_PLAN`, not address these warnings.
+`/rb:triage {review-path}` generates the right plan first.
 
 **REQUIRES CHANGES:**
 
 ```text
-Review found {n} test-coverage gaps:
+Review found {n} test-coverage gaps (full list in
+`.claude/reviews/{review-slug}-{datesuffix}.md` § "Test Coverage Gaps"):
 
-1. {Method/endpoint/job} in {file} — no test coverage
-2. {Method/endpoint/job} in {file} — no test coverage
+1. {Surface} in {file} — no test coverage
+2. {Surface} in {file} — no test coverage
 
 How would you like to proceed?
 
-- /rb:plan — Plan tests for these
-- /rb:work — Write tests directly
+- /rb:triage .claude/reviews/{review-slug}-{datesuffix}.md
+    — Default. Auto-includes gaps + lets you select any warnings.
+- /rb:plan .claude/reviews/{review-slug}-{datesuffix}.md
+    — Gaps-only plan, no triage UI.
+- /rb:quick — Inline test addition (single uncovered surface, simple case)
 - I'll handle it myself
 ```
+
+Do NOT suggest bare `/rb:work` here — it would resume any active
+plan from `.claude/ACTIVE_PLAN`, not address these gaps. Both
+review-path flows (`/rb:triage` / `/rb:plan` with the review path)
+generate the right plan first. `/rb:quick` is plan-free and fits
+single-surface coverage additions only.
 
 **BLOCKED:**
 
@@ -451,9 +629,14 @@ Review found {n} blockers ({n} warnings):
 How would you like to proceed?
 
 - /rb:triage .claude/reviews/{review-slug}-{datesuffix}.md — Select findings, create fix plan
-- /rb:work — Fix directly (best for simple, isolated fixes)
+- /rb:quick — Inline fix (single isolated change, <~20 lines)
 - I'll handle it myself
 ```
+
+Do NOT suggest bare `/rb:work` here — it would resume any active
+plan from `.claude/ACTIVE_PLAN`, not address these blockers.
+`/rb:triage {review-path}` generates the right plan first.
+`/rb:quick` is plan-free and fits single isolated fixes only.
 
 Always enumerate actual findings — never just show a count.
 

@@ -69,8 +69,10 @@ megastring:
 # threshold below; cleanup is then the user's manual action via plain
 # `rm` on the surfaced paths.
 #
-# No anchor template — PostToolUse cannot replace Bash output; see
-# references/compression/README.md "Why no replacement". A real
+# No anchor template — PostToolUse cannot replace Bash output (CC
+# delivers tool output to the model directly; only `updatedMCPToolOutput`
+# replaces output, MCP-only). See `references/compression/README.md`
+# § "No Bash Replacement Path" for the hook-surface table. A real
 # replacement mechanism is deferred until telemetry quantifies
 # real-world ratios.
 advisory:
@@ -78,6 +80,8 @@ advisory:
   # the point at which a redacted report becomes statistically
   # interesting and disk usage starts being noticeable.
   size_threshold_bytes: 52428800  # 50 MB
-  # Number of jsonl entries (sample count). Aligns with the promotion
-  # criteria in references/compression/README.md "Promotion criteria".
+  # Number of jsonl entries (sample count). 1000 ≈ 100 samples per
+  # verify-command class across the ~10 tracked classes — point at
+  # which per-class compression ratios stabilize and a redacted
+  # report becomes maintainer-actionable.
   sample_threshold: 1000

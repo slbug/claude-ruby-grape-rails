@@ -28,6 +28,12 @@ that `/rb:plan` consumes to skip clarification.
     └─ Discuss ──> freeform ──> [DECISION POINT]
 ```
 
+## STEP 0: Read the interview playbook before starting
+
+Read `${CLAUDE_SKILL_DIR}/references/interview-techniques.md`. Apply
+its codebase-scan patterns, scan-depth rules, and signal-detection
+rubrics as the canonical interview cadence.
+
 ## Phase 1: Adaptive Interview
 
 Ask ONE question at a time. Track coverage across 6 dimensions:

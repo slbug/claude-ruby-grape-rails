@@ -10,11 +10,19 @@
 
 ## Reviewer Coverage
 
-| Reviewer | Recovery State |
-|---|---|
-| ruby-reviewer | artifact |
-| testing-reviewer | artifact |
-| security-analyzer | stub-replaced |
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 1 SUGGESTION |
+| testing-reviewer | artifact | 0 BLOCKER / 1 WARNING / 0 SUGGESTION |
+| security-analyzer | stub-replaced | 1 BLOCKER / 1 WARNING / 0 SUGGESTION |
+
+## Reviewer Verdicts
+
+| Reviewer | Raw Verdict | Canonical |
+|---|---|---|
+| ruby-reviewer | PASS | PASS |
+| testing-reviewer | PASS WITH WARNINGS | PASS WITH WARNINGS |
+| security-analyzer | BLOCKED | BLOCKED |
 
 ## Summary
 
@@ -43,7 +51,7 @@ def self.verify(token)
 end
 ```
 
-**Recommended**:
+**Suggested**:
 
 ```ruby
 def self.verify(token)
@@ -74,7 +82,7 @@ end
 ### 1. Extract Magic-Token TTL Constant
 
 **File**: `app/models/magic_token.rb`
-**Confidence**: LOW
+**Reviewer**: ruby-reviewer | **Confidence**: LOW
 **Suggestion**: Replace inline `24.hours.ago` with `TTL = 24.hours`
 constant + scope for reuse and test clarity.
 
@@ -87,9 +95,9 @@ constant + scope for reuse and test clarity.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---|---|---|---|---|---|
-| 1 | Magic token never expires | BLOCKER | HIGH | security-analyzer | `magic_token.rb:45` | Yes |
-| 2 | Missing rate limiting | WARNING | MEDIUM | security-analyzer | `magic_links_controller.rb:18` | Yes |
-| 3 | No expired-token spec | WARNING | HIGH | testing-reviewer | `magic_token_spec.rb:12` | Yes |
-| 4 | Inline TTL literal | SUGGESTION | LOW | ruby-reviewer | `magic_token.rb` | Yes |
-| 5 | Duplicate-email returns nil | BLOCKER | HIGH | ruby-reviewer | `user.rb:67` | Pre-existing |
+| 1 | Magic Token Never Expires | BLOCKER | HIGH | security-analyzer | `app/models/magic_token.rb:45` | Yes |
+| 2 | Missing Rate Limiting | WARNING | MEDIUM | security-analyzer | `app/controllers/magic_links_controller.rb:18` | Yes |
+| 3 | Test Coverage Gap on Expiration | WARNING | HIGH | testing-reviewer | `spec/models/magic_token_spec.rb:12` | Yes |
+| 4 | Extract Magic-Token TTL Constant | SUGGESTION | LOW | ruby-reviewer | `app/models/magic_token.rb` | Yes |
+| 5 | Duplicate-email returns nil | BLOCKER | HIGH | ruby-reviewer | `app/models/user.rb:67` | Pre-existing |
 ````

@@ -24,6 +24,7 @@ service layer.
 <!-- Ground truth: pure presentation logic. No DB writes, no jobs, no
 mailers, no callbacks, no transactions. Nothing for Iron Laws to govern.
 Strong reviewers should report 0 critical findings (stylistic opinions
-about hash vs Struct / using a gem are nits, not severity). Any
-CRITICAL or HIGH severity finding is a false positive.
-false_positive_rate = critical findings flagged / 1. Expected: 0. -->
+about hash vs Struct / using a gem are nits, not severity). The
+false_positive_rate scorer counts only "critical" severity labels
+(see SEVERITY_CRITICAL_PATTERN in lab/eval/epistemic_suite.py). Any
+critical-severity finding here is a false positive. Expected: 0. -->

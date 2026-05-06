@@ -48,13 +48,11 @@ Prefer denylist-only over `tools:` allowlists (follows built-in agent pattern).
 
 ## Bash Discipline
 
-Tool-batching discipline is registered in `preferences.yml` and
-injected via `inject-rules.sh` (preference text + `reference_files`
-path). Authoring rule: do NOT restate the discipline in agent bodies.
-Agent bodies focus on domain analysis and findings format. Examples +
-BAD/GOOD pairs at
-`plugins/ruby-grape-rails/references/preferences/tool-batching.md`
-are delivered to agents via the injected `See:` line.
+Tool-batching discipline lives in `preferences.yml`. `inject-rules.sh`
+emits the preference text with its `reference_files` path bare on the
+next line. Do NOT restate the discipline in agent bodies. Keep agent
+bodies on domain analysis and findings format. BAD/GOOD example pairs:
+`plugins/ruby-grape-rails/references/preferences/tool-batching.md`.
 
 ## Turn Budget Semantics
 

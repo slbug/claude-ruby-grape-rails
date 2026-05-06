@@ -12,9 +12,9 @@ user-invocable: true
 Drafts an anonymized markdown report from the verify-output compression
 telemetry the plugin collects under
 `${CLAUDE_PLUGIN_DATA}/compression.jsonl` and hands it back for the
-user to file as a GitHub issue. The report is contributor-grade signal
-that helps decide whether a future release should ship a real
-replacement mechanism.
+user to file as a GitHub issue. The report is maintainer-actionable
+signal that helps the plugin maintainers decide whether a future
+release should ship a real replacement mechanism.
 
 ## Iron Laws
 
@@ -25,7 +25,7 @@ replacement mechanism.
    quoting from it.
 2. **Never run `compression-stats` without `--redact` for issue
    bodies.** The non-redact JSON contains absolute home-dir paths
-   inside `raw_log` fields and full `cmd` strings. That is contributor
+   inside `raw_log` fields and full `cmd` strings. That is local
    debug output, not public-issue data.
 3. **Never auto-create the GitHub issue.** Hand the drafted report to
    the user and let them open the issue manually. Telemetry is the
@@ -77,8 +77,10 @@ replacement mechanism.
    - `violation_samples` — up to 10 samples whose preservation check
      flagged something, with redacted `cmd`, `raw_log_id`,
      `violation_count`
-   - `recommendation` — verdict against the documented promotion
-     criteria
+   - `recommendation` — verdict per
+     `${CLAUDE_PLUGIN_ROOT}/references/compression/README.md`
+     § "End-User Reader" (`safe-to-evaluate-replacement` vs
+     `keep-collecting (unmet: ...)`)
 
    The redacted JSON deliberately omits absolute paths. The raw
    captures live next to the jsonl on the user's local machine; you
@@ -108,7 +110,7 @@ replacement mechanism.
      grounded in the raw logs you read. Example: "rspec p50 = 0.71
      because failure stacks routinely exceed 5 frames; rake p50 =
      0.05 because routes output is already compact." Cite raw_log_id
-     references like `raw_log_id=abc-123` so a contributor can
+     references like `raw_log_id=abc-123` so a maintainer can
      correlate against their own data if they reproduce.
    - **Preservation issues.** If `preservation_violations > 0`,
      describe the pattern (e.g. "violations centered on
@@ -143,6 +145,13 @@ replacement mechanism.
      jsonl:     ${CLAUDE_PLUGIN_DATA}/compression.jsonl
      raw logs:  ${CLAUDE_PLUGIN_DATA}/verify-raw  (directory)
    ```
+
+## References
+
+| Need | Reference |
+|---|---|
+| Telemetry collector activation, hook trigger families, data flow, Megastring collapse, rtk interaction, safety posture | `${CLAUDE_PLUGIN_ROOT}/references/compression/README.md` |
+| Trigger / exclusion / preservation rules + advisory thresholds | `${CLAUDE_PLUGIN_ROOT}/references/compression/rules.yml`, `${CLAUDE_PLUGIN_ROOT}/references/compression/triggers.yml` |
 
 ## Privacy posture
 

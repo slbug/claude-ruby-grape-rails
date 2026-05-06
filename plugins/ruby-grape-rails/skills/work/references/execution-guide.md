@@ -231,10 +231,15 @@ duplicate file (causes load errors from duplicate definitions)
 
 After each task passes verification:
 
-1. **Update plan**: Mark checkbox `- [x] [Pn-Tm]...` and **append
-   implementation note** — key decisions, gotchas, actual values.
-   Example: `- [x] [P2-T2] Add password validations — used bcrypt, 12 rounds, added virtual :password`
-   These notes survive context compaction since the plan is re-read on resume.
+1. **Update plan**: Mark checkbox `- [x] [Pn-Tm][annotation] ...` and
+   **append implementation note** — key decisions, gotchas, actual values.
+   Example:
+   `- [x] [P2-T2][active record] Add password validations — used bcrypt, 12 rounds, added virtual :password`
+   `[annotation]` is REQUIRED per
+   `${CLAUDE_PLUGIN_ROOT}/skills/work/references/file-formats.md`
+   § "Plan File Format" (canonical Set A from
+   `planning-workflow.md`). These notes survive context compaction
+   since the plan is re-read on resume.
 2. **Update phase status**: If all tasks done, change to `[COMPLETED]`
 3. **Log progress**: Append to `.claude/plans/{feature}/progress.md`
 4. **Start next task**: Move to next unchecked task
@@ -260,15 +265,15 @@ BLOCKER is hit.
 ```markdown
 # Before
 ## Phase 1: Schema Design [IN_PROGRESS]
-- [x] [P1-T1] Create users migration
-- [x] [P1-T2] Add indexes
-- [x] [P1-T3] Create user model
+- [x] [P1-T1][active record] Create users migration
+- [x] [P1-T2][active record] Add indexes
+- [x] [P1-T3][active record] Create user model
 
 # After
 ## Phase 1: Schema Design [COMPLETED]
-- [x] [P1-T1] Create users migration — citext for email, added password_digest string field
-- [x] [P1-T2] Add indexes — unique on email, composite on [user_id, status]
-- [x] [P1-T3] Create user model — used has_secure_password, added virtual :password
+- [x] [P1-T1][active record] Create users migration — citext for email, added password_digest string field
+- [x] [P1-T2][active record] Add indexes — unique on email, composite on [user_id, status]
+- [x] [P1-T3][active record] Create user model — used has_secure_password, added virtual :password
 
 ## Phase 2: Controller Implementation [IN_PROGRESS]  <-- Auto-start immediately
 ```

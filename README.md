@@ -10,9 +10,10 @@ mixed Active Record + Sequel repos and Packwerk-style modular monoliths
 without flattening everything into generic Rails advice.
 
 The plugin also keeps the runtime path leaner than older builds: read-only
-agents skip contributor-only `CLAUDE.md` context via `omitClaudeMd`, session
-start writes a fast runtime snapshot before a quiet async refresh, and active
-plans keep structured scratchpads for dead ends, decisions, and handoffs.
+specialist agents skip the project `CLAUDE.md` payload via `omitClaudeMd`,
+session start writes a fast runtime snapshot before a quiet async refresh,
+and active plans keep structured scratchpads for dead ends, decisions, and
+handoffs.
 
 ```bash
 # You describe the feature. The plugin figures out the rest.
@@ -289,9 +290,11 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 - **One plan = one work unit.** Large features get split into multiple plans. Each is self-contained.
 - **Agents are automatic.** The plugin spawns specialist agents behind the scenes. You don't manage them directly.
 - **Specialist agents stay lean.** Reviewers and analyzers set
-  `omitClaudeMd: true` so subagents keep product/runtime context while
-  skipping contributor-only repo guidance. They are instructed to write
-  only their own artifacts under `.claude/`, not edit project code.
+  `omitClaudeMd: true` so subagents skip the entire project
+  `CLAUDE.md` payload (including the `/rb:init` stack notes —
+  Iron Laws + Advisory Preferences still arrive on `SubagentStart`
+  via `inject-rules.sh`). They are instructed to write only their
+  own artifacts under `.claude/`, not edit project code.
 - **The stack is detected, not guessed.** `/rb:init` and SessionStart hooks identify Rails/Grape/Sidekiq/Karafka, Active Record vs Sequel, and Packwerk/modular package layouts before giving guidance.
 - **Session start is split into fast sync + async refresh.** You get immediate
   stack context from the quick snapshot while slower helper-version probes
@@ -518,7 +521,11 @@ For hands-off development:
 /rb:full Add user profile avatars with S3 upload
 ```
 
-Runs the complete cycle: plan (with research), work, verify, review. Halts on Critical findings; user decides next step.
+Runs the complete cycle: plan (with research), work, verify, review,
+compound. Halts on `/rb:verify --full` gate failure (HALTED_VERIFY_FAILED),
+on review verdict `BLOCKED` (HALTED_REVIEW_BLOCKED) or `REQUIRES CHANGES`
+(HALTED_REVIEW_REQUIRES_CHANGES), or on missing/unparsable consolidated
+review (HALTED_REVIEW_UNKNOWN); user decides next step.
 
 ## Workflow Tips
 
@@ -582,7 +589,7 @@ The plugin enforces **22 Iron Laws** that prevent common, costly mistakes:
 ### Enforcement
 
 - **Programmatic**: 6 programmatic detectors checked automatically on targeted Ruby-ish edits
-- **Behavioral**: All 22 laws injected into subagent context
+- **Behavioral**: All 22 Iron Laws + 6 Advisory Preferences injected on `SessionStart` (main session) and `SubagentStart` (every spawned subagent)
 - **Review-time**: Full audit during `/rb:review`
 
 See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonical-registry.md) for details.
@@ -615,7 +622,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | Command                  | Description                                                |
 | ------------------------ | ---------------------------------------------------------- |
 | `/rb:intro`              | Interactive plugin tutorial (8 sections, ~5 min)           |
-| `/rb:init`               | Initialize plugin in a project (auto-activation rules)     |
+| `/rb:init`               | Write project stack notes to CLAUDE.md (rules runtime-injected) |
 | `/rb:quick <task>`       | Fast implementation, skip ceremony                         |
 | `/rb:investigate <bug>`  | Systematic bug debugging (4 parallel investigation tracks) |
 | `/rb:research <topic>`   | Research Ruby topics on the web                            |

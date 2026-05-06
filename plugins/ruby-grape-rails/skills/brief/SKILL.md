@@ -133,19 +133,20 @@ What to do now:
 
 **Extract**:
 
-- Critical issue count
-- Warning count
+- BLOCKER count (new findings only)
+- WARNING count
+- SUGGESTION count
+- Canonical verdict (PASS / PASS WITH WARNINGS / REQUIRES CHANGES / BLOCKED)
 - Most severe finding
-- Clean vs. needs work
 
 **Format**:
 
 ```
 ## Review Brief: {Feature Name}
 
-**Summary**: {N} critical, {N} warnings, {N} info
+**Summary**: {N} BLOCKER, {N} WARNING, {N} SUGGESTION
 
-**Critical Issues**:
+**Blockers**:
 1. {description} ({file}:{line})
 2. ...
 
@@ -153,7 +154,7 @@ What to do now:
 1. {description}
 2. ...
 
-**Verdict**: {clean/warning/critical}
+**Verdict**: PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED
 
 **Next Step**: {action}
 ```
@@ -163,7 +164,7 @@ What to do now:
 1. **Be concise** - 30 seconds to read
 2. **Be specific** - Cite files, line numbers
 3. **Be actionable** - Clear next step
-4. **Prioritize** - Critical first, noise last
+4. **Prioritize** - BLOCKERs first, then WARNINGs, then SUGGESTIONs (per review bucket vocabulary)
 5. **Contextualize** - Why it matters
 
 ## What to Skip
@@ -202,7 +203,7 @@ Don't include in briefs:
 
 **Key Risks**:
 - Session storage (HIGH) - need Redis config
-- Password hashing (CRITICAL) - use bcrypt, not MD5
+- Password hashing (BLOCKER) - use bcrypt, not MD5
 
 **Next Step**: Run `/rb:work .claude/plans/user-auth/plan.md`
 ```
@@ -212,16 +213,18 @@ Don't include in briefs:
 ```
 ## Review Brief: Payment Processing
 
-**Summary**: 1 BLOCKER, 3 WARNINGS, 2 SUGGESTIONS
+**Summary**: 3 BLOCKERS, 2 WARNINGS, 2 SUGGESTIONS
 
 **Blockers**:
 1. Float used for money calculation (app/models/order.rb:45)
    - Must use Decimal to prevent rounding errors (Iron Law 1)
+2. N+1 query in checkout flow (app/controllers/checkout_controller.rb:23)
+   - Use `.includes()` / `.preload()` (Iron Law 3)
+3. Missing authorization check in `PaymentsController#charge` (Iron Law 13)
 
-**Top Warnings**:
-1. N+1 query in checkout flow
-2. Missing authorization check in controller
-3. No rate limiting on payment endpoint
+**Top Warnings** (non-Iron-Law):
+1. No rate limiting on payment endpoint
+2. Missing test for refund edge case
 
 **Verdict**: BLOCKED
 

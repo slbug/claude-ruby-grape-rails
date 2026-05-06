@@ -235,23 +235,12 @@ Rules:
 
 ## Synthesis
 
-Read each artifact from the manifest (post-recovery) and write the
-consolidated review:
+Read `${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Synthesis
+Procedure" before writing the consolidated artifact. Apply the 5-step
+procedure verbatim.
 
-- Header MUST include a `## Reviewer Coverage` section with one row per
-  spawned reviewer and its recovery state: `artifact`, `stub-replaced`,
-  `recovered-from-return`, or `stub-no-output`. Surface coverage gaps;
-  do not silently absorb missing reviewers into "no findings".
-- Preserve blockers / must-fix items VERBATIM.
-- Preserve decision options + rationale, unresolved disagreements,
-  file paths, and concrete evidence.
-- Dedupe overlapping findings across agents; cite all sources.
-- Keep highest confidence among duplicates.
-- Sort consolidated findings: BLOCKER → WARNING → SUGGESTION; HIGH → MEDIUM → LOW confidence within bucket.
-  Map worker `Critical | Warning | Info` per `${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Worker Severity Mapping".
-- Preserve "Pre-existing Issues" + "Positive Findings" sections.
-- Output: path read via
-  `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
+Output path:
+`${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
 
 ## Artifact Recovery
 
@@ -284,21 +273,11 @@ Full table + manifest status mapping:
 
 ## Confidence Levels
 
-Every finding MUST include a confidence label. This tells the user which
-findings are backed by evidence vs. pattern-based hunches.
-
-| Level | Meaning | Example |
-|-------|---------|---------|
-| **HIGH** | Direct code evidence — specific line, test failure, static analysis finding | "Line 42: `params[:id]` interpolated into SQL string" |
-| **MEDIUM** | Pattern match — known anti-pattern or convention violation, no direct proof of bug | "Service object bypasses transaction boundary (common data-loss pattern)" |
-| **LOW** | Subjective — style preference, naming opinion, architecture suggestion | "Consider extracting this into a form object" |
-
-When consolidating findings from multiple agents, keep the highest confidence
-level among duplicates. Sort findings by confidence (HIGH first) within each
-severity level.
-
-For consolidated review format / severity definitions / deduplication strategy,
-see `${CLAUDE_SKILL_DIR}/references/review-playbook.md`.
+Every finding MUST include a confidence label
+(`HIGH | MEDIUM | LOW`). Level definitions, examples, and
+deduplication strategy live in
+`${CLAUDE_SKILL_DIR}/references/review-playbook.md`
+§ "Confidence Levels".
 
 ## Review Output Location
 
@@ -318,12 +297,32 @@ Use the current branch name only after slugifying it. If the branch name is not 
 
 ## After Review
 
-Emit exactly one verdict — no ad-hoc categories:
+Emit exactly one verdict from the canonical 4-set:
 
 - `PASS`
 - `PASS WITH WARNINGS`
 - `REQUIRES CHANGES`
 - `BLOCKED`
+
+Emit each verdict VERBATIM. Do NOT abbreviate, hyphenate, paraphrase,
+or compress:
+
+| Reject | Use |
+|---|---|
+| `PASS WARN`, `PASS-WITH-WARNS`, `PWW` | `PASS WITH WARNINGS` |
+| `BLOCK`, `BLK`, `BLOCKER` (verdict, not severity tag) | `BLOCKED` |
+| `REQ-CHANGES`, `RC` | `REQUIRES CHANGES` (only when actual test-coverage gap on NEW public behavior; see playbook § "Verdict Decision Rules") |
+| `OK`, `LGTM`, `Approved` | `PASS` |
+
+`Needs fixes` does NOT auto-route to `REQUIRES CHANGES` — infer per
+worker counts (`Critical` → `BLOCKED`; else `Warning` → `PASS WITH WARNINGS`;
+else `PASS`).
+
+Use canonical strings only for manifest status enum (`pending`,
+`in-flight`, `artifact`, `stub-replaced`, `recovered-from-return`,
+`stub-no-output`, `complete`) and severity buckets (`BLOCKER`,
+`WARNING`, `SUGGESTION`). The synthesizing skill body owns this
+discipline; `bin/manifest-update` does not validate enums on patch.
 
 Decision rules + chat scripts:
 `${CLAUDE_SKILL_DIR}/references/review-playbook.md`

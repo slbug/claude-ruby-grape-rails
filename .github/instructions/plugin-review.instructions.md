@@ -229,12 +229,12 @@ Subdirectories (treat as data, not skills):
   `output-verifier` agent and `lab/eval/output_checks.py`
 - `references/preferences/` — preference companion docs
   (`context7-usage.md`, `epistemic-posture.md`, `tool-batching.md`)
-  bound 1:1 to `preferences.yml` entries via `reference_files`. Paths
-  injected into subagent + main session payloads via
-  `inject-rules.sh`. Reviewer rule:
+  bound 1:1 to `preferences.yml` entries via `reference_files`.
+  `inject-rules.sh` emits each preference's `reference_files` path
+  bare on the line below the rule text, in subagent + main session
+  payloads. Reviewer rule:
   - **Ban**: restating the preference rule text in agent / skill
-    bodies. The injected `See:` lines deliver both the rule and the
-    companion path; restating the rule body is duplication / drift.
+    bodies. Runtime injection covers it; restating duplicates.
   - **Allow**: pointer-only links to the companion doc (e.g. "see
     `${CLAUDE_PLUGIN_ROOT}/references/preferences/tool-batching.md`
     for BAD/GOOD examples") when the citing surface needs to direct
@@ -325,8 +325,41 @@ NOT flag the fallback chain as over-engineered.
   nothing; see `references/run-manifest.md`).
 - Subagent bodies that read or write `RUN-CURRENT.json` /
   `RUN-HISTORY.jsonl` — manifest is main-session-owned only.
-- Consolidated review template missing the `## Reviewer Coverage`
-  section (per-agent recovery state must be surfaced).
+- Consolidated review missing `## Reviewer Coverage` or
+  `## Reviewer Verdicts`. Coverage MUST be 3-col
+  (`Reviewer | Recovery State | Findings`); findings cell shape
+  `{n} BLOCKER / {n} WARNING / {n} SUGGESTION`. Verdicts MUST be
+  3-col (`Reviewer | Raw Verdict | Canonical`); canonical ∈
+  `{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}`.
+  `stub-no-output` rows (per Coverage): both Raw Verdict and
+  Canonical = literal `(no output)`. `**Reviewers**:` header slug
+  set MUST match Coverage and Verdicts row slug sets exactly. One
+  row per slug. Row order not enforced.
+- Finding body under `**File**:` missing `**Confidence**: HIGH|MEDIUM|LOW`.
+  At-a-glance table cell does NOT count.
+- `**Verdict**:` line inconsistent with `## Summary` counts. Summary
+  counts NEW findings only (per playbook STEP 3); pre-existing
+  appears separately in `## Pre-existing Issues` + at-a-glance
+  `New? = Pre-existing`. Apply rules to Summary count (each row is
+  an independent reject condition):
+  - blockers > 0 + verdict ≠ `BLOCKED`
+  - blockers == 0 + verdict == `BLOCKED` (BLOCKED requires
+    blockers > 0; warnings-only summaries with verdict == BLOCKED
+    are invalid)
+  - blockers == 0 + warnings > 0 + verdict == `PASS`
+  - blockers == 0 + warnings == 0 + verdict == `PASS WITH WARNINGS`
+  `REQUIRES CHANGES` accepted only when blockers == 0 (test-coverage
+  gap branch).
+- Pre-existing findings counted in `## Summary` table. Pre-existing
+  belongs in `## Pre-existing Issues` only; mixing inflates verdict
+  thresholds and contradicts the deterministic verdict algorithm.
+- `## Test Coverage Gaps ({n})` section presence ↔ verdict mismatch.
+  Section is verdict-gated per `review-playbook.md` § "Consolidated
+  Review Format": REQUIRED when `**Verdict**: REQUIRES CHANGES`,
+  OMITTED on other verdicts. Flag artifacts with section + non-REQUIRES
+  CHANGES verdict, OR REQUIRES CHANGES verdict + missing section.
+- More than one `**Verdict**:` line outside fenced blocks. Exactly
+  one consolidated verdict per artifact.
 - `run_in_background: true` on any `Agent(...)` call in shipped
   skill bodies, fanout templates, or example snippets — flag as
   BLOCKER. Plugin agents dispatch foreground only.

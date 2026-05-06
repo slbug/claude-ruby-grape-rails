@@ -27,10 +27,27 @@ def _normalize_newlines(content: str) -> str:
 
 
 def _section(content: str, heading: str) -> str:
-    content = _normalize_newlines(content)
-    pattern = re.compile(rf"(?ms)^## {re.escape(heading)}\n(.*?)(?=^## |\Z)")
-    match = pattern.search(content)
-    return match.group(1).strip() if match else ""
+    """Return body of `## {heading}` section, fence-aware.
+
+    Walks lines outside fenced code blocks. Quoted ## headings inside
+    Current/Suggested fences are NOT recognized — only live consolidated
+    sections drive validation. Heading match accepts optional trailing
+    `({n})` count suffix per playbook convention (e.g. `## Blockers (3)`,
+    `## Test Coverage Gaps (2)`); both bare and counted forms resolve.
+    """
+    target_re = re.compile(rf"^## {re.escape(heading)}(?:\s*\(\d+\))?\s*$")
+    in_section = False
+    body: list[str] = []
+    for line in _iter_lines_outside_fences(content):
+        if line.startswith("## "):
+            if target_re.match(line.strip()):
+                in_section = True
+                continue
+            if in_section:
+                break
+        if in_section:
+            body.append(line)
+    return "\n".join(body).strip()
 
 
 def has_h1(content: str) -> tuple[bool, str]:
@@ -104,10 +121,77 @@ def has_review_title(content: str) -> tuple[bool, str]:
     return bool(match), "Review title present" if match else "Missing # Review: heading"
 
 
-def has_review_verdict(content: str) -> tuple[bool, str]:
+_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
+
+
+def _iter_lines_outside_fences(content: str):
+    """Yield each line outside fenced code blocks, CommonMark-aware.
+
+    Track the EXACT marker (char + length) that opened the current
+    fence. A closing fence per CommonMark MUST NOT carry an info
+    string — a line like ` ```ruby ` opens a NEW fence, never closes
+    the current one. Close only on a matching marker char with
+    length >= the opener AND no info string. Inner fences with
+    fewer / different markers stay as content. Required for repo's
+    4-backtick excerpts that nest 3-backtick samples (Markdown
+    reviews, playbook templates).
+    """
     content = _normalize_newlines(content)
-    match = re.search(r"(?m)^\*\*Verdict\*\*:\s+.+$", content)
-    return bool(match), "Verdict present" if match else "Missing **Verdict** line"
+    fence: tuple[str, int] | None = None
+    for line in content.splitlines():
+        stripped = line.lstrip()
+        m = _FENCE_RE.match(stripped)
+        if m:
+            marker = m.group(1)
+            ch, ln = marker[0], len(marker)
+            # Per CommonMark: closing fence has no info string. Anything
+            # after the marker (excluding trailing whitespace) means this
+            # line opens a fence rather than closes one.
+            has_info_string = stripped[len(marker):].strip() != ""
+            if fence is None:
+                # Already inside no fence: this opens one.
+                fence = (ch, ln)
+                continue
+            if fence[0] == ch and ln >= fence[1] and not has_info_string:
+                fence = None
+                continue
+            # Different char, shorter, OR has info string → content
+            # inside outer fence.
+        if fence is None:
+            yield line
+
+
+def _verdict_lines_outside_fences(content: str) -> list[str]:
+    """Return every `**Verdict**: <text>` line outside fenced blocks."""
+    pat = re.compile(r"^\*\*Verdict\*\*:\s+(.+?)\s*$")
+    out: list[str] = []
+    for line in _iter_lines_outside_fences(content):
+        m = pat.match(line)
+        if m:
+            out.append(m.group(1))
+    return out
+
+
+def has_review_verdict(content: str) -> tuple[bool, str]:
+    # Validate EVERY `**Verdict**:` line outside fenced blocks. A
+    # non-canonical primary verdict cannot be masked by a later
+    # canonical duplicate. Reviewed snippets inside ```...``` are
+    # data, not directives — skip them.
+    matches = _verdict_lines_outside_fences(content)
+    if not matches:
+        return False, "Missing **Verdict** line"
+    if len(matches) > 1:
+        return False, (
+            f"{len(matches)} `**Verdict**:` lines outside fenced blocks; "
+            "consolidated review MUST emit exactly one verdict line. "
+            f"Found: {matches}"
+        )
+    if matches[0] not in _CANONICAL_VERDICTS:
+        return False, (
+            f"Verdict {matches[0]!r} not in canonical 4-set "
+            "{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}"
+        )
+    return True, f"Verdict present: {matches[0]}"
 
 
 def has_review_summary_table(content: str) -> tuple[bool, str]:
@@ -116,35 +200,886 @@ def has_review_summary_table(content: str) -> tuple[bool, str]:
     return bool(match), "Severity summary table present" if match else "Missing severity summary table"
 
 
+def _table_data_rows(body: str) -> list[list[str]]:
+    """Return every data row of the first markdown table found in body.
+
+    Skips header + separator. Each row returned as a list of trimmed cells.
+    No cell-count filtering — callers validate width per their contract,
+    so malformed rows surface instead of being silently dropped.
+    """
+    lines = body.splitlines()
+    sep_idx = None
+    for i, ln in enumerate(lines):
+        s = ln.strip()
+        if "|" in s and re.match(r"^\|?\s*:?-{3,}", s):
+            sep_idx = i
+            break
+    if sep_idx is None:
+        return []
+    rows: list[list[str]] = []
+    for ln in lines[sep_idx + 1 :]:
+        s = ln.strip()
+        if not s.startswith("|"):
+            break
+        cells = [c.strip() for c in s.strip("|").split("|")]
+        rows.append(cells)
+    return rows
+
+
+_RECOVERY_STATES = frozenset(
+    {"artifact", "stub-replaced", "recovered-from-return", "stub-no-output"}
+)
+_CANONICAL_VERDICTS = frozenset(
+    {"PASS", "PASS WITH WARNINGS", "REQUIRES CHANGES", "BLOCKED"}
+)
+_COVERAGE_FINDINGS_RE = re.compile(
+    r"^\d+\s+BLOCKER\s*/\s*\d+\s+WARNING\s*/\s*\d+\s+SUGGESTION$"
+)
+# Whitespace-tolerant zero-counts gate for `stub-no-output` rows.
+# Mirrors `_COVERAGE_FINDINGS_RE` shape but pins every count to 0,
+# so `0 BLOCKER  /  0 WARNING /  0 SUGGESTION` (extra inner spaces)
+# matches the same way the shape-only check does.
+_STUB_NO_OUTPUT_FINDINGS_RE = re.compile(
+    r"^0\s+BLOCKER\s*/\s*0\s+WARNING\s*/\s*0\s+SUGGESTION$"
+)
+_STUB_NO_OUTPUT_FINDINGS = "0 BLOCKER / 0 WARNING / 0 SUGGESTION"
+
+
+def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
+    body = _section(content, "Reviewer Coverage")
+    if not body:
+        return False, "Missing ## Reviewer Coverage section"
+    # Contract: `| <slug> | <recovery-state> | <findings-counts> |`
+    # where recovery-state ∈ _RECOVERY_STATES and findings-counts matches
+    # `{n} BLOCKER / {n} WARNING / {n} SUGGESTION`. `stub-no-output`
+    # rows MUST carry the all-zero findings cell — synthesis recovered
+    # no usable output, so the reviewer cannot have contributed findings.
+    rows = _table_data_rows(body)
+    if not rows:
+        return False, "Reviewer Coverage table empty"
+    bad: list[str] = []
+    for idx, row in enumerate(rows, start=1):
+        if len(row) != 3:
+            bad.append(f"row {idx}: {len(row)} cell(s); contract requires exactly 3 (slug | recovery state | findings counts)")
+            continue
+        slug, recovery, findings = row[0], row[1], row[2]
+        if not slug:
+            bad.append(f"row {idx}: missing reviewer slug")
+            continue
+        if recovery not in _RECOVERY_STATES:
+            bad.append(f"{slug}: invalid recovery state {recovery!r}")
+            continue
+        if not _COVERAGE_FINDINGS_RE.match(findings):
+            bad.append(f"{slug}: findings cell {findings!r} not in `{{n}} BLOCKER / {{n}} WARNING / {{n}} SUGGESTION` form")
+            continue
+        if recovery == "stub-no-output" and not _STUB_NO_OUTPUT_FINDINGS_RE.match(findings):
+            bad.append(
+                f"{slug}: stub-no-output reviewer requires all-zero findings cell "
+                f"(canonical form {_STUB_NO_OUTPUT_FINDINGS!r}, got {findings!r}) — "
+                "no usable output means no contributable findings"
+            )
+    if bad:
+        return False, "Reviewer Coverage row(s) violate contract: " + "; ".join(bad)
+    return True, f"Reviewer Coverage section with {len(rows)} reviewer row(s)"
+
+
+_NO_OUTPUT_PLACEHOLDER = "(no output)"
+
+
+def _stub_no_output_slugs(content: str) -> set[str]:
+    """Return slugs whose Coverage row marks them `stub-no-output`.
+
+    Synthesis of these reviewers produced no usable artifact + no
+    return text, so per-reviewer verdict prose does not exist.
+    Verdicts table represents them via the `(no output)` placeholder.
+    """
+    coverage_body = _section(content, "Reviewer Coverage")
+    if not coverage_body:
+        return set()
+    return {
+        row[0]
+        for row in _table_data_rows(coverage_body)
+        if len(row) >= 2 and row[0] and row[1] == "stub-no-output"
+    }
+
+
+def has_review_reviewer_verdicts(content: str) -> tuple[bool, str]:
+    body = _section(content, "Reviewer Verdicts")
+    if not body:
+        return False, "Missing ## Reviewer Verdicts section"
+    # Contract: `| <slug> | <raw verdict> | <canonical> |`
+    # where canonical ∈ _CANONICAL_VERDICTS for normal rows.
+    # `stub-no-output` reviewers (per Coverage) MUST emit
+    # `(no output)` literal in BOTH raw and canonical cells —
+    # documented placeholder for the coverage-gap case.
+    rows = _table_data_rows(body)
+    if not rows:
+        return False, "Reviewer Verdicts table empty"
+    no_output_slugs = _stub_no_output_slugs(content)
+    bad: list[str] = []
+    for idx, row in enumerate(rows, start=1):
+        if len(row) != 3:
+            bad.append(f"row {idx}: {len(row)} cell(s); contract requires exactly 3 (slug | raw verdict | canonical)")
+            continue
+        slug, raw, canonical = row[0], row[1], row[2]
+        if not slug:
+            bad.append(f"row {idx}: missing reviewer slug")
+            continue
+        if slug in no_output_slugs:
+            if raw != _NO_OUTPUT_PLACEHOLDER or canonical != _NO_OUTPUT_PLACEHOLDER:
+                bad.append(
+                    f"{slug}: stub-no-output reviewer requires raw={_NO_OUTPUT_PLACEHOLDER!r} "
+                    f"and canonical={_NO_OUTPUT_PLACEHOLDER!r} (got raw={raw!r}, canonical={canonical!r})"
+                )
+            continue
+        # Non-stub-no-output reviewer: the `(no output)` placeholder is
+        # reserved exclusively for stub-no-output rows. Reject in either
+        # cell so artifacts cannot mask a real reviewer behind the
+        # coverage-gap placeholder.
+        if raw == _NO_OUTPUT_PLACEHOLDER:
+            bad.append(
+                f"{slug}: raw cell uses {_NO_OUTPUT_PLACEHOLDER!r} placeholder reserved for "
+                f"`stub-no-output` Coverage state — this reviewer's Coverage state is not stub-no-output"
+            )
+            continue
+        if canonical == _NO_OUTPUT_PLACEHOLDER:
+            bad.append(
+                f"{slug}: canonical cell uses {_NO_OUTPUT_PLACEHOLDER!r} placeholder reserved for "
+                f"`stub-no-output` Coverage state — this reviewer's Coverage state is not stub-no-output"
+            )
+            continue
+        if not raw:
+            bad.append(f"{slug}: raw verdict cell empty (playbook requires preserving the agent's verbatim verdict text)")
+            continue
+        if canonical not in _CANONICAL_VERDICTS:
+            bad.append(f"{slug}: canonical verdict {canonical!r} not in 4-set {{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}}")
+    if bad:
+        return False, "Reviewer Verdicts row(s) violate contract: " + "; ".join(bad)
+    return True, f"Reviewer Verdicts section with {len(rows)} verdict row(s)"
+
+
+def has_review_reviewer_completeness(content: str) -> tuple[bool, str]:
+    """Reconcile `**Reviewers**:` header list against Coverage + Verdicts row slugs.
+
+    Set membership + count must match exactly: every header slug appears
+    once in Coverage and once in Verdicts. Order is NOT enforced — the
+    manifest stores `agents` as an object (no natural ordering), so a
+    cosmetic reorder is not a contract violation. Duplicate reviewer
+    rows (e.g. two `ruby-reviewer` rows) DO fail — playbook requires
+    exactly one row per spawned reviewer.
+    """
+    from collections import Counter
+
+    # Fence-aware: `**Reviewers**:` inside fenced Markdown excerpts is
+    # quoted template, not the live header. Match only outside fences
+    # so a fenced example cannot satisfy or override the real header.
+    header_pat = re.compile(r"^\*\*Reviewers\*\*:\s*(.+?)\s*$")
+    header_value: str | None = None
+    for line in _iter_lines_outside_fences(content):
+        m = header_pat.match(line)
+        if m:
+            header_value = m.group(1)
+            break
+    if header_value is None:
+        return False, "Missing `**Reviewers**:` header line"
+    header_slugs = [
+        slug
+        for slug in (s.strip() for s in header_value.split(","))
+        if slug
+    ]
+    if not header_slugs:
+        return False, "`**Reviewers**:` header has no slugs"
+    header_counts = Counter(header_slugs)
+    header_dups = sorted(slug for slug, n in header_counts.items() if n > 1)
+    if header_dups:
+        return False, f"`**Reviewers**:` header lists duplicate slug(s): {header_dups}"
+
+    coverage_body = _section(content, "Reviewer Coverage")
+    verdicts_body = _section(content, "Reviewer Verdicts")
+    if not coverage_body:
+        return False, "Missing ## Reviewer Coverage section (cannot reconcile reviewer set)"
+    if not verdicts_body:
+        return False, "Missing ## Reviewer Verdicts section (cannot reconcile reviewer set)"
+
+    coverage_slugs = [row[0] for row in _table_data_rows(coverage_body) if row and row[0]]
+    verdicts_slugs = [row[0] for row in _table_data_rows(verdicts_body) if row and row[0]]
+
+    problems: list[str] = []
+
+    def _diff(label: str, rows: list[str]) -> None:
+        row_counts = Counter(rows)
+        dups = sorted(slug for slug, n in row_counts.items() if n > 1)
+        if dups:
+            problems.append(f"{label} table has duplicate reviewer row(s): {dups}")
+        missing = sorted(set(header_slugs) - set(rows))
+        if missing:
+            problems.append(f"{label} table missing reviewers: {missing}")
+        extra = sorted(set(rows) - set(header_slugs))
+        if extra:
+            problems.append(f"{label} table has unexpected reviewers: {extra}")
+        if not dups and not missing and not extra and len(rows) != len(header_slugs):
+            # Set membership matches but row count differs — defensive
+            # check; should be unreachable given dup/missing/extra above.
+            problems.append(
+                f"{label} table row count {len(rows)} != "
+                f"`**Reviewers**:` header count {len(header_slugs)}"
+            )
+
+    _diff("Coverage", coverage_slugs)
+    _diff("Verdicts", verdicts_slugs)
+
+    if problems:
+        return False, "; ".join(problems)
+    return True, f"`**Reviewers**:` header reconciled with {len(header_slugs)} Coverage + Verdicts row(s)"
+
+
+_FILE_REF_STRICT_RE = re.compile(r"^\*\*File\*\*:\s+`?[^`\s]+:\d+`?$")
+_FILE_REF_LOOSE_RE = re.compile(r"^\*\*File\*\*:\s+`?[^`\s]+(?::\d+)?`?$")
+_FILE_REF_LINE_RE = re.compile(r"^\*\*File\*\*:")
+_BUCKET_HEADING_RE = re.compile(r"^## (Blockers|Warnings|Suggestions)(?:\s|\(|$)")
+_PRE_EXISTING_HEADING_RE = re.compile(r"^## Pre-existing Issues\b")
+
+
 def has_review_file_refs(content: str, minimum: int = 1) -> tuple[bool, str]:
-    content = _normalize_newlines(content)
-    matches = re.findall(r"(?m)^\*\*File\*\*:\s+`?.+:\d+`?$", content)
-    return len(matches) >= minimum, f"{len(matches)} finding file ref(s) present"
+    """Validate `**File**:` refs per bucket-specific shape.
+
+    Per `review-playbook.md` template:
+      - `## Blockers` / `## Warnings`: `**File**: `path/to/file.rb:{line}``
+        (line number REQUIRED — these point at concrete diff sites).
+      - `## Suggestions`: `**File**: `path/to/file.rb`` (path-only
+        allowed; suggestions may target a class or whole file).
+
+    Empty-findings PASS artifacts (per `review-playbook.md` line
+    187-188: "Always write the artifact even if findings are empty")
+    have zero `### N.` headings inside any bucket section — vacuous
+    pass. `## Pre-existing Issues (unchanged code)` uses bullet form,
+    not `**File**:` lines — skipped. Fence-aware: a quoted Markdown
+    excerpt under `**Current**` / `**Suggested**` carries `**File**:`
+    lines as DATA. Skip them. Bucket-shape violations fail the gate
+    even when the artifact has the minimum count.
+    """
+    finding_heading_re = re.compile(r"^### \d+\.\s+\S")
+    current_bucket: str | None = None
+    in_pre_existing = False
+    findings_seen = 0
+    count = 0
+    bad: list[str] = []
+    for line in _iter_lines_outside_fences(content):
+        if _PRE_EXISTING_HEADING_RE.match(line):
+            current_bucket = None
+            in_pre_existing = True
+            continue
+        m = _BUCKET_HEADING_RE.match(line)
+        if m:
+            current_bucket = m.group(1)
+            in_pre_existing = False
+            continue
+        if line.startswith("## "):
+            current_bucket = None
+            in_pre_existing = False
+            continue
+        if in_pre_existing:
+            continue
+        if current_bucket and finding_heading_re.match(line):
+            findings_seen += 1
+            continue
+        if not _FILE_REF_LINE_RE.match(line):
+            continue
+        if current_bucket in {"Blockers", "Warnings"}:
+            if _FILE_REF_STRICT_RE.match(line):
+                count += 1
+            else:
+                bad.append(
+                    f"{current_bucket}: {line.strip()!r} lacks `:line` "
+                    f"(required for {current_bucket} per playbook template)"
+                )
+        elif current_bucket == "Suggestions":
+            if _FILE_REF_LOOSE_RE.match(line):
+                count += 1
+            else:
+                bad.append(f"Suggestions: {line.strip()!r} malformed path")
+        # Outside any tracked bucket (header preamble, footer prose,
+        # stray Markdown): NEVER count toward the minimum. Only
+        # bucket-scoped finding bodies satisfy the file-ref contract.
+    if bad:
+        return False, (
+            f"{count} valid finding file ref(s); bucket-shape violations: "
+            + "; ".join(bad[:5])
+        )
+    if findings_seen == 0:
+        return True, "No findings present (file_refs vacuously satisfied)"
+    return count >= minimum, f"{count} finding file ref(s) present"
+
+
+_METADATA_FIELDS = ("Date", "Complexity", "Files Changed", "Reviewers")
+
+
+def has_review_metadata_fields(content: str) -> tuple[bool, str]:
+    """Consolidated review header MUST carry the canonical metadata fields.
+
+    Per `review-playbook.md` § "Consolidated Review Format":
+    `**Date**`, `**Complexity**`, `**Files Changed**`, `**Reviewers**`.
+    Scan stops at the first `## ` heading outside fenced code blocks —
+    these fields belong in the preamble (header), not in footer prose
+    or quoted Markdown templates under `**Current**` / `**Suggested**`.
+    """
+    patterns = {
+        field: re.compile(rf"^\*\*{re.escape(field)}\*\*:\s+\S")
+        for field in _METADATA_FIELDS
+    }
+    found: set[str] = set()
+    for line in _iter_lines_outside_fences(content):
+        if line.startswith("## "):
+            break
+        for field, pat in patterns.items():
+            if field in found:
+                continue
+            if pat.match(line):
+                found.add(field)
+        if len(found) == len(_METADATA_FIELDS):
+            break
+    missing = [field for field in _METADATA_FIELDS if field not in found]
+    if missing:
+        return False, f"Missing metadata field(s): {missing} (each requires `**Field**:` line in preamble before first `## ` heading, with non-empty value)"
+    return True, f"All {len(_METADATA_FIELDS)} metadata fields present"
+
+
+def has_review_finding_confidence(content: str) -> tuple[bool, str]:
+    """Each finding under `## Blockers` / `## Warnings` / `## Suggestions`
+    MUST carry BOTH `**File**:` AND `**Confidence**: HIGH|MEDIUM|LOW`.
+
+    Anchor on `### N. {Title}` headings inside a bucket section
+    (the playbook's per-finding structure). The next `### ` heading
+    or any `## ` section heading closes the current finding block.
+    Anchoring on `### N.` (not on `**File**:`) means a finding that
+    omits `**File**:` entirely is detected and rejected — the prior
+    `**File**:`-anchored loop made such findings invisible.
+    Reviewed Markdown excerpts inside fenced Current/Suggested
+    blocks are skipped via fence-aware iteration.
+    """
+    file_pat = re.compile(r"^\*\*File\*\*:\s+")
+    conf_pat = re.compile(r"\*\*Confidence\*\*:\s+(HIGH|MEDIUM|LOW)\b")
+    bucket_heading_re = re.compile(r"^## (Blockers|Warnings|Suggestions)(?:\s|\(|$)")
+    finding_heading_re = re.compile(r"^### \d+\.\s+(.+?)\s*$")
+    in_bucket = False
+    findings: list[dict] = []
+    current: dict | None = None
+    for line in _iter_lines_outside_fences(content):
+        if bucket_heading_re.match(line):
+            if current is not None:
+                findings.append(current)
+                current = None
+            in_bucket = True
+            continue
+        if line.startswith("## "):
+            if current is not None:
+                findings.append(current)
+                current = None
+            in_bucket = False
+            continue
+        if not in_bucket:
+            continue
+        m = finding_heading_re.match(line)
+        if m:
+            if current is not None:
+                findings.append(current)
+            current = {"title": m.group(1), "has_file": False, "has_confidence": False}
+            continue
+        if current is None:
+            continue
+        if file_pat.match(line):
+            current["has_file"] = True
+        if conf_pat.search(line):
+            current["has_confidence"] = True
+    if current is not None:
+        findings.append(current)
+    if not findings:
+        return True, "No findings present (validator vacuously satisfied)"
+    missing: list[str] = []
+    for idx, f in enumerate(findings, start=1):
+        gaps = []
+        if not f["has_file"]:
+            gaps.append("`**File**:`")
+        if not f["has_confidence"]:
+            gaps.append("`**Confidence**: HIGH|MEDIUM|LOW`")
+        if gaps:
+            missing.append(f"finding {idx} {f['title']!r}: missing {', '.join(gaps)}")
+    if missing:
+        return False, (
+            f"{len(missing)} of {len(findings)} finding(s) missing required fields: "
+            + "; ".join(missing[:5])
+        )
+    return True, f"{len(findings)} finding(s), each with `**File**:` + `**Confidence**:`"
+
+
+def _summary_count(content: str, label: str) -> int | None:
+    """Parse the per-severity count from the consolidated `## Summary` table.
+
+    Table shape (per `review-playbook.md` template):
+
+        | Severity | Count |
+        |---|---|
+        | Blockers | {n} |
+        | Warnings | {n} |
+        | Suggestions | {n} |
+
+    Returns None when the section or the row is missing / unparsable.
+    """
+    body = _section(content, "Summary")
+    if not body:
+        return None
+    pat = re.compile(rf"^\|\s*{re.escape(label)}\s*\|\s*(\d+)\s*\|", re.MULTILINE)
+    m = pat.search(body)
+    if not m:
+        return None
+    return int(m.group(1))
+
+
+def has_review_verdict_matches_summary(content: str) -> tuple[bool, str]:
+    """Cross-validate the consolidated `**Verdict**:` line against Summary counts.
+
+    Per playbook § "STEP 4" + "Verdict Decision Rules":
+
+      blockers > 0          → BLOCKED
+      blockers == 0,
+        warnings > 0        → PASS WITH WARNINGS or REQUIRES CHANGES
+      blockers == 0,
+        warnings == 0       → PASS or REQUIRES CHANGES (test-coverage gap)
+
+    The "test-coverage gap" branch needs diff context the artifact
+    does not carry, so the validator cannot decide REQUIRES CHANGES
+    vs the alternatives. It rejects only the unambiguous violations:
+
+      - blockers > 0 + verdict ≠ BLOCKED
+      - blockers == 0 + verdict == BLOCKED (BLOCKED requires
+        blockers > 0; warnings-only summaries are invalid)
+      - blockers == 0 + warnings > 0 + verdict == PASS
+      - blockers == 0 + warnings == 0 + verdict == PASS WITH WARNINGS
+    """
+    blockers = _summary_count(content, "Blockers")
+    warnings = _summary_count(content, "Warnings")
+    if blockers is None or warnings is None:
+        return False, "Summary section missing Blockers / Warnings count rows"
+    verdicts = _verdict_lines_outside_fences(content)
+    if not verdicts:
+        return False, "Missing **Verdict** line"
+    verdict = verdicts[0]
+    # `## Test Coverage Gaps` section is verdict-exclusive per
+    # `review-playbook.md` § "Test Coverage Gaps": REQUIRED on
+    # REQUIRES CHANGES, FORBIDDEN on PASS / PASS WITH WARNINGS /
+    # BLOCKED. Heading presence (not body presence) is the gate —
+    # a bare empty heading still violates the "omit on other
+    # verdicts" contract.
+    gaps_heading_present = any(
+        line.strip() == "## Test Coverage Gaps"
+        or re.match(r"^## Test Coverage Gaps\s*\(\d+\)\s*$", line.strip())
+        for line in _iter_lines_outside_fences(content)
+    )
+    gaps_body = _section(content, "Test Coverage Gaps")
+    if verdict == "REQUIRES CHANGES":
+        if not gaps_heading_present:
+            return False, (
+                "Verdict is REQUIRES CHANGES but `## Test Coverage Gaps` "
+                "heading is missing; both `/rb:plan {review-path}` and "
+                "`/rb:triage {review-path}` flows depend on this section"
+            )
+        gap_rows = _table_data_rows(gaps_body)
+        if not gap_rows:
+            return False, (
+                "Verdict is REQUIRES CHANGES and `## Test Coverage Gaps` "
+                "section is present but has 0 data rows; verdict requires "
+                "at least one uncovered surface"
+            )
+    elif gaps_heading_present:
+        return False, (
+            f"`## Test Coverage Gaps` heading present but verdict is {verdict!r}; "
+            "section is exclusive to REQUIRES CHANGES per playbook "
+            "§ \"Test Coverage Gaps\". Omit the heading entirely on "
+            "non-REQUIRES-CHANGES verdicts."
+        )
+    if blockers > 0 and verdict != "BLOCKED":
+        return False, (
+            f"Summary reports {blockers} blocker(s) but verdict is {verdict!r}; "
+            "playbook STEP 4 requires BLOCKED when blockers > 0"
+        )
+    if blockers == 0 and verdict == "BLOCKED":
+        return False, (
+            f"Summary reports 0 blockers but verdict is BLOCKED; "
+            "playbook STEP 4 requires blockers > 0 for BLOCKED"
+        )
+    if blockers == 0 and warnings > 0 and verdict == "PASS":
+        return False, (
+            f"Summary reports {warnings} warning(s) and 0 blockers but verdict is PASS; "
+            "expected PASS WITH WARNINGS or REQUIRES CHANGES"
+        )
+    if blockers == 0 and warnings == 0 and verdict == "PASS WITH WARNINGS":
+        return False, (
+            f"Summary reports 0 blockers and 0 warnings but verdict is {verdict!r}; "
+            "expected PASS or REQUIRES CHANGES"
+        )
+    return True, f"Verdict {verdict!r} consistent with Summary (B={blockers} W={warnings})"
+
+
+_AT_A_GLANCE_SUMMARY_LABELS = (
+    ("BLOCKER", "Blockers"),
+    ("WARNING", "Warnings"),
+    ("SUGGESTION", "Suggestions"),
+)
+
+
+_VALID_NEW_STATES = frozenset({"yes", "pre-existing"})
+
+
+def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
+    """Summary counts MUST equal At-a-Glance NEW row counts per severity.
+
+    Per `review-playbook.md` STEP 3 + § "Pre-existing Issues":
+    `## Summary` counts NEW findings only (diff-introduced).
+    Pre-existing findings appear in `## Pre-existing Issues
+    (unchanged code)` and the At-a-Glance Finding Table with
+    `New? = Pre-existing`, but MUST NOT contribute to Summary counts.
+
+    Cross-checks each severity in Summary against the count of
+    At-a-Glance rows whose `New?` cell equals `Yes`. Rejects rows
+    whose `New?` enum is anything other than `Yes` or `Pre-existing`
+    — a malformed value (e.g. `No`, blank) would otherwise silently
+    drop from the tally and let pre-existing leakage pass the gate.
+    Skips when At-a-Glance is absent (`has_review_mandatory_table`
+    already surfaces that gap).
+    """
+    section = _section(content, "At-a-Glance Finding Table")
+    if not section:
+        return True, "No At-a-Glance section (Summary cross-check skipped)"
+    rows = _table_data_rows(section)
+    new_counts = {label: 0 for label, _ in _AT_A_GLANCE_SUMMARY_LABELS}
+    bad_enum: list[str] = []
+    for idx, row in enumerate(rows, start=1):
+        if len(row) != 7:
+            continue
+        severity = row[2].upper()
+        new_state = row[6].strip().lower()
+        if severity not in new_counts:
+            bad_enum.append(
+                f"At-a-Glance row {idx}: `Severity` cell {row[2]!r} not in "
+                "{`BLOCKER`, `WARNING`, `SUGGESTION`} — malformed enum"
+            )
+            continue
+        if new_state not in _VALID_NEW_STATES:
+            bad_enum.append(
+                f"At-a-Glance row {idx}: `New?` cell {row[6]!r} not in "
+                "{`Yes`, `Pre-existing`} — malformed enum"
+            )
+            continue
+        if new_state == "yes":
+            new_counts[severity] += 1
+    if bad_enum:
+        return False, "; ".join(bad_enum)
+    bad: list[str] = []
+    for severity, summary_label in _AT_A_GLANCE_SUMMARY_LABELS:
+        summary_count = _summary_count(content, summary_label)
+        if summary_count is None:
+            # Per `review-playbook.md` template: `## Summary` MUST
+            # carry all 3 rows (`Blockers`, `Warnings`, `Suggestions`).
+            # A missing row hides drift and breaks the cross-check.
+            bad.append(
+                f"{summary_label}: row missing from `## Summary` — "
+                "playbook requires all 3 severity rows"
+            )
+            continue
+        new_count = new_counts[severity]
+        if summary_count != new_count:
+            bad.append(
+                f"{summary_label}: Summary reports {summary_count} but At-a-Glance "
+                f"shows {new_count} NEW {severity} finding(s) — pre-existing "
+                "findings MUST NOT be counted in Summary"
+            )
+    if bad:
+        return False, "; ".join(bad)
+    return (
+        True,
+        f"Summary counts match At-a-Glance NEW rows "
+        f"(B={new_counts['BLOCKER']} W={new_counts['WARNING']} S={new_counts['SUGGESTION']})",
+    )
+
+
+_COVERAGE_FINDINGS_PARSE_RE = re.compile(
+    r"^(\d+)\s+BLOCKER\s*/\s*(\d+)\s+WARNING\s*/\s*(\d+)\s+SUGGESTION$"
+)
+
+
+def has_review_coverage_excludes_preexisting(content: str) -> tuple[bool, str]:
+    """Per-reviewer Coverage counts MUST equal At-a-Glance NEW rows attributed to that reviewer.
+
+    Per `review-playbook.md` STEP 3 + § "Reviewer Coverage":
+    `## Reviewer Coverage` row counts use NEW findings only
+    (diff-introduced). Pre-existing findings attributed to a reviewer
+    appear in `## Pre-existing Issues` + the At-a-Glance Finding
+    Table with `New? = Pre-existing`, but MUST NOT inflate that
+    reviewer's Coverage row.
+
+    Cross-checks each Coverage row's findings cell against the count
+    of At-a-Glance rows where `Reviewer` matches AND `New?` is `Yes`.
+    Skips when Coverage or At-a-Glance is absent — sibling validators
+    surface those gaps.
+    """
+    coverage_body = _section(content, "Reviewer Coverage")
+    if not coverage_body:
+        return True, "No Reviewer Coverage section (cross-check skipped)"
+    at_a_glance_body = _section(content, "At-a-Glance Finding Table")
+    if not at_a_glance_body:
+        return True, "No At-a-Glance section (cross-check skipped)"
+    glance_rows = _table_data_rows(at_a_glance_body)
+    # Tally NEW findings per (reviewer, severity) AND total
+    # attributions per reviewer (NEW + Pre-existing) from At-a-Glance.
+    # Reject rows with a malformed `Severity` or `New?` enum cell —
+    # silently treating them as non-counting would let pre-existing
+    # leakage hide.
+    new_per_reviewer: dict[str, dict[str, int]] = {}
+    total_per_reviewer: dict[str, int] = {}
+    bad_enum: list[str] = []
+    for idx, row in enumerate(glance_rows, start=1):
+        if len(row) != 7:
+            continue
+        severity = row[2].upper()
+        reviewer = row[4].strip()
+        new_state = row[6].strip().lower()
+        if severity not in {"BLOCKER", "WARNING", "SUGGESTION"}:
+            bad_enum.append(
+                f"At-a-Glance row {idx}: `Severity` cell {row[2]!r} not in "
+                "{`BLOCKER`, `WARNING`, `SUGGESTION`} — malformed enum"
+            )
+            continue
+        if not reviewer:
+            continue
+        if new_state not in _VALID_NEW_STATES:
+            bad_enum.append(
+                f"At-a-Glance row {idx}: `New?` cell {row[6]!r} not in "
+                "{`Yes`, `Pre-existing`} — malformed enum"
+            )
+            continue
+        total_per_reviewer[reviewer] = total_per_reviewer.get(reviewer, 0) + 1
+        if new_state == "yes":
+            bucket = new_per_reviewer.setdefault(
+                reviewer, {"BLOCKER": 0, "WARNING": 0, "SUGGESTION": 0}
+            )
+            bucket[severity] += 1
+    if bad_enum:
+        return False, "; ".join(bad_enum)
+    coverage_rows = _table_data_rows(coverage_body)
+    bad: list[str] = []
+    for row in coverage_rows:
+        if len(row) != 3:
+            continue
+        slug, recovery, findings = row[0], row[1], row[2]
+        if not slug:
+            continue
+        if recovery == "stub-no-output":
+            # `stub-no-output` reviewers produced no usable output per
+            # `review-playbook.md` § "Artifact Recovery"; ANY
+            # At-a-Glance row attributing a finding to them (NEW or
+            # Pre-existing) is impossible. Reject.
+            attributions = total_per_reviewer.get(slug, 0)
+            if attributions > 0:
+                bad.append(
+                    f"{slug}: stub-no-output reviewer has {attributions} "
+                    "At-a-Glance row(s) attributing findings — "
+                    "stub-no-output means no usable output, so the reviewer "
+                    "cannot have contributed findings (NEW or Pre-existing)"
+                )
+            continue
+        m = _COVERAGE_FINDINGS_PARSE_RE.match(findings)
+        if not m:
+            continue
+        coverage_counts = {
+            "BLOCKER": int(m.group(1)),
+            "WARNING": int(m.group(2)),
+            "SUGGESTION": int(m.group(3)),
+        }
+        new_counts = new_per_reviewer.get(
+            slug, {"BLOCKER": 0, "WARNING": 0, "SUGGESTION": 0}
+        )
+        for severity in ("BLOCKER", "WARNING", "SUGGESTION"):
+            if coverage_counts[severity] != new_counts[severity]:
+                bad.append(
+                    f"{slug}: Coverage {severity} count {coverage_counts[severity]} "
+                    f"!= {new_counts[severity]} NEW row(s) attributed to {slug} in "
+                    "At-a-Glance — pre-existing findings MUST NOT inflate Coverage"
+                )
+    if bad:
+        return False, "; ".join(bad)
+    return True, f"Coverage counts match per-reviewer At-a-Glance NEW rows ({len(coverage_rows)} row(s))"
+
+
+_MANDATORY_TABLE_HEADER_RE = re.compile(
+    r"^\|\s*#\s*\|\s*Finding\s*\|\s*Severity\s*\|\s*Confidence\s*\|\s*Reviewer\s*\|\s*File\s*\|\s*New\?\s*\|$"
+)
 
 
 def has_review_mandatory_table(content: str) -> tuple[bool, str]:
-    content = _normalize_newlines(content)
-    match = re.search(
-        r"(?m)^\|\s*#\s*\|\s*Finding\s*\|\s*Severity\s*\|\s*Reviewer\s*\|\s*File\s*\|\s*New\?\s*\|$",
-        content,
+    """Canonical 7-column At-a-Glance Finding Table under its `## At-a-Glance Finding Table` section.
+
+    Schema: `# | Finding | Severity | Confidence | Reviewer | File | New?`.
+    Anchored to the section heading per `review-playbook.md` § "At-a-Glance
+    Finding Table". Skips fenced Markdown excerpts so a quoted template
+    inside Current/Suggested doesn't count as the live table. Every data
+    row MUST carry exactly 7 cells — a row missing the `New?` cell or any
+    other column would otherwise drop silently from the summary / coverage
+    cross-checks (which skip non-7-cell rows) and let pre-existing
+    leakage hide.
+    """
+    section = _section(content, "At-a-Glance Finding Table")
+    if not section:
+        return False, "Missing `## At-a-Glance Finding Table` section"
+    header_found = False
+    for line in _iter_lines_outside_fences(section):
+        if _MANDATORY_TABLE_HEADER_RE.match(line):
+            header_found = True
+            break
+    if not header_found:
+        return False, "Missing 7-col At-a-Glance table header (`# | Finding | Severity | Confidence | Reviewer | File | New?`) under `## At-a-Glance Finding Table` section"
+    rows = _table_data_rows(section)
+    # Per `review-playbook.md` § "Required output" line 187-188:
+    # "Always write the artifact (even if findings are empty — write
+    # PASS with files reviewed)". Empty-findings PASS reviews carry
+    # the section header + 0 data rows, which is valid. Mismatched
+    # row counts vs Summary are caught by
+    # `has_review_summary_excludes_preexisting` cross-check.
+    bad: list[str] = []
+    for idx, row in enumerate(rows, start=1):
+        if len(row) != 7:
+            bad.append(
+                f"row {idx}: {len(row)} cell(s); contract requires exactly 7 "
+                "(`# | Finding | Severity | Confidence | Reviewer | File | New?`)"
+            )
+    if bad:
+        return False, "At-a-Glance row(s) violate contract: " + "; ".join(bad)
+    return True, f"Mandatory finding table present ({len(rows)} row(s))"
+
+
+def has_review_test_coverage_gaps_schema(content: str) -> tuple[bool, str]:
+    """`## Test Coverage Gaps` table MUST be 5-col + ≥1 row when section present.
+
+    Per `review-playbook.md` § "Test Coverage Gaps": each row carries
+    `# / Surface / File / Why uncovered / Suggested test`. Both
+    `/rb:plan {review-path}` and `/rb:triage {review-path}` parse
+    these cells; a malformed table makes the downstream flow
+    unreadable. Section presence is detected by raw heading scan
+    (NOT body-truthiness) so a bare empty heading still triggers the
+    schema gate. Validator skips only when no heading exists.
+    """
+    heading_present = any(
+        line.strip() == "## Test Coverage Gaps"
+        or re.match(r"^## Test Coverage Gaps\s*\(\d+\)\s*$", line.strip())
+        for line in _iter_lines_outside_fences(content)
     )
-    return bool(match), "Mandatory finding table present" if match else "Missing mandatory finding table"
+    if not heading_present:
+        return True, "No Test Coverage Gaps section (schema check skipped)"
+    section = _section(content, "Test Coverage Gaps")
+    rows = _table_data_rows(section)
+    if not rows:
+        return False, (
+            "`## Test Coverage Gaps` section present but has 0 data rows; "
+            "schema requires at least one row when section is emitted"
+        )
+    bad: list[str] = []
+    for idx, row in enumerate(rows, start=1):
+        if len(row) != 5:
+            bad.append(
+                f"row {idx}: {len(row)} cell(s); contract requires exactly 5 "
+                "(`# | Surface | File | Why uncovered | Suggested test`)"
+            )
+            continue
+        if not row[1].strip():
+            bad.append(f"row {idx}: empty `Surface` cell")
+        if not row[2].strip():
+            bad.append(f"row {idx}: empty `File` cell")
+    if bad:
+        return False, "Test Coverage Gaps row(s) violate contract: " + "; ".join(bad)
+    return True, f"Test Coverage Gaps section with {len(rows)} valid row(s)"
+
+
+def has_review_finding_titles_match_glance(content: str) -> tuple[bool, str]:
+    """Each NEW At-a-Glance row's `Finding` cell MUST equal a `### N. {Title}` heading verbatim.
+
+    Per `triage/SKILL.md` Step 1: triage matches At-a-Glance rows to
+    detail findings by Finding-title text. Paraphrased / missing
+    detail headings break the row-to-detail lookup downstream.
+    Pre-existing rows (`New? = Pre-existing`) skip this gate — they
+    have no backing `### N.` heading; their Finding cell is a free
+    description.
+    """
+    section = _section(content, "At-a-Glance Finding Table")
+    if not section:
+        return True, "No At-a-Glance section (title-match skipped)"
+    rows = _table_data_rows(section)
+    if not rows:
+        return True, "No At-a-Glance rows (title-match skipped)"
+    finding_heading_re = re.compile(r"^### \d+\.\s+(.+?)\s*$")
+    bucket_heading_re = re.compile(r"^## (Blockers|Warnings|Suggestions)(?:\s|\(|$)")
+    in_bucket = False
+    detail_titles: set[str] = set()
+    for line in _iter_lines_outside_fences(content):
+        if bucket_heading_re.match(line):
+            in_bucket = True
+            continue
+        if line.startswith("## "):
+            in_bucket = False
+            continue
+        if not in_bucket:
+            continue
+        m = finding_heading_re.match(line)
+        if m:
+            detail_titles.add(m.group(1))
+    bad: list[str] = []
+    for idx, row in enumerate(rows, start=1):
+        if len(row) != 7:
+            continue
+        finding_cell = row[1].strip()
+        new_state = row[6].strip().lower()
+        if new_state != "yes":
+            continue
+        if finding_cell not in detail_titles:
+            bad.append(
+                f"row {idx}: `Finding` cell {finding_cell!r} has no matching "
+                "`### N. {Title}` heading in `## Blockers` / `## Warnings` / "
+                "`## Suggestions`"
+            )
+    if bad:
+        return False, (
+            f"{len(bad)} NEW At-a-Glance row(s) with no detail-heading match "
+            "(triage row-to-detail lookup will fail): " + "; ".join(bad[:5])
+        )
+    return True, f"All NEW At-a-Glance rows match detail headings ({len(detail_titles)} title(s))"
 
 
 def review_has_no_task_lists(content: str) -> tuple[bool, str]:
-    content = _normalize_newlines(content)
-    match = re.search(r"(?m)^\s*-\s+\[[ xX]\]\s+", content)
-    return not bool(match), "No task lists present" if not match else "Review should not contain task lists"
+    """Reject `- [ ] ...` task lines in the LIVE consolidated review.
+
+    Fence-aware: review template at `review-playbook.md:486` allows
+    fenced `**Current**` / `**Suggested**` excerpts which can quote
+    a Markdown source containing task lists as data. Skip fenced
+    content so quoted snippets do not falsely trip the gate.
+    """
+    pat = re.compile(r"^\s*-\s+\[[ xX]\]\s+")
+    for line in _iter_lines_outside_fences(content):
+        if pat.match(line):
+            return False, "Review should not contain task lists"
+    return True, "No task lists present"
 
 
 def review_has_no_followup_sections(content: str) -> tuple[bool, str]:
-    content = _normalize_newlines(content)
-    match = re.search(r"(?m)^## (Next Steps|Action Items|Follow-up|Follow Up|Fix Plan)\s*$", content)
-    return (
-        (True, "No follow-up planning section present")
-        if not match
-        else (False, "Review should not contain follow-up planning sections")
-    )
+    """Reject follow-up planning headings in the LIVE consolidated review.
+
+    Fence-aware: a quoted Markdown excerpt under `**Current**` /
+    `**Suggested**` can include a `## Next Steps` heading as data
+    (review of a doc that itself plans follow-ups). Skip fenced
+    content so quoted snippets do not falsely trip the gate.
+    """
+    pat = re.compile(r"^## (Next Steps|Action Items|Follow-up|Follow Up|Fix Plan)\s*$")
+    for line in _iter_lines_outside_fences(content):
+        if pat.match(line):
+            return False, "Review should not contain follow-up planning sections"
+    return True, "No follow-up planning section present"
 
 
 def has_provenance_header(content: str) -> tuple[bool, str]:
@@ -153,10 +1088,34 @@ def has_provenance_header(content: str) -> tuple[bool, str]:
     return bool(match), "Provenance heading present" if match else "Missing # Provenance: heading"
 
 
+_REVIEW_ARTIFACT_DATED_RE = re.compile(
+    r"\.claude/reviews/(?:[^/\s]+/)?[^/\s]+-\d{8}-\d{6}\.md\b"
+)
+_REVIEW_ARTIFACT_PATH_RE = re.compile(r"\.claude/reviews/[^\s`]+\.md\b")
+
+
 def has_provenance_artifact_pointer(content: str) -> tuple[bool, str]:
+    """Provenance MUST point at the verified artifact.
+
+    When the path is `.claude/reviews/...md`, require the
+    `-{YYYYMMDD}-{HHMMSS}` datesuffix segment per the review path
+    contract (`{review-slug}-{datesuffix}.md` and
+    `{agent-slug}/{review-slug}-{datesuffix}.md`). Other artifact
+    paths (research, audit, plans) accept any non-empty pointer.
+    """
     content = _normalize_newlines(content)
-    match = re.search(r"(?m)^\*\*Artifact\*\*:\s+.+$", content)
-    return bool(match), "Artifact pointer present" if match else "Missing **Artifact** pointer"
+    match = re.search(r"(?m)^\*\*Artifact\*\*:\s+(.+?)\s*$", content)
+    if not match:
+        return False, "Missing **Artifact** pointer"
+    pointer = match.group(1)
+    review_match = _REVIEW_ARTIFACT_PATH_RE.search(pointer)
+    if review_match and not _REVIEW_ARTIFACT_DATED_RE.search(pointer):
+        return False, (
+            f"Artifact pointer {pointer!r} references `.claude/reviews/...` "
+            "without `-YYYYMMDD-HHMMSS` datesuffix; review path contract "
+            "requires `{review-slug}-{datesuffix}.md`"
+        )
+    return True, "Artifact pointer present"
 
 
 def has_provenance_summary_counts(content: str) -> tuple[bool, str]:

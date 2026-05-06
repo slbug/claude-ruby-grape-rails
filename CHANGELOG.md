@@ -7,6 +7,96 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.7] - 2026-05-04
+
+### Changed
+
+- `/rb:init` slimmed: injectable template reduced to stack-version
+  comment + 7 conditional placeholders. Removed all doctrine that
+  duplicated runtime injection or skill bodies. `conditional-sections.md`
+  now drives a detect → interview → render procedure that emits
+  project-specific facts only and omits empty sections.
+- `/rb:review` synthesis restructured into a 5-step procedure
+  (read → normalize per-agent verdict → map severity to bucket form →
+  compute consolidated verdict deterministically from
+  blocker/warning/test-coverage counts → write). Consolidated
+  template gained `## Reviewer Coverage` and `## Reviewer Verdicts`
+  sections. Canonical 4-set verdict
+  (`PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED`) is now
+  load-bearing across worker briefings, consolidated artifact, and
+  CI gate.
+- `lab/eval/output_checks.py` upgraded for the new contract: verdict
+  line enforces canonical 4-set across EVERY `**Verdict**:` line
+  outside fenced blocks (reviewed Markdown excerpts skipped); both
+  Coverage and Verdicts checks validate exact 3-cell rows, recovery-state enum,
+  findings-counts bucket format, canonical column membership, raw cell
+  non-empty (with documented `(no output)` placeholder allowed for
+  `stub-no-output` reviewers per cross-table Coverage check; rejected
+  for non-stub rows); new `review_reviewer_completeness` reconciles
+  `**Reviewers**:` header against table row slugs (set membership +
+  count + duplicates; row order NOT enforced — manifest stores
+  `agents` as an object, no natural ordering); new
+  `review_finding_confidence` requires a `**Confidence**:
+  HIGH|MEDIUM|LOW` label per finding (matches playbook §
+  "Confidence Levels"); new `review_verdict_matches_summary`
+  cross-validates the consolidated verdict against Summary
+  blocker/warning counts via 4 reject conditions: (a) blockers > 0
+  with verdict ≠ BLOCKED; (b) blockers == 0 with verdict == BLOCKED
+  (BLOCKED requires blockers > 0; warnings-only summaries are
+  invalid); (c) blockers == 0 with warnings > 0 and verdict == PASS;
+  (d) blockers == 0 with warnings == 0 and verdict == PASS WITH
+  WARNINGS. REQUIRES CHANGES is accepted only when blockers == 0
+  (test-coverage gap branch). Malformed rows surface instead of
+  silently dropping.
+- Injector dropped `See:` prefix; `reference_files` companion paths
+  emit bare beneath each rule. Real-run observation: passive `See:`
+  framing read as citation; agents never opened the targets.
+- `/rb:plan`, `/rb:brainstorm`, `/rb:investigate`, `/rb:full` gained
+  STEP 0 directive: open the canonical playbook reference at
+  synthesis entry.
+- `/rb:triage` rewrite: bucket vocabulary aligned to review's
+  `BLOCKER | WARNING | SUGGESTION`; new `triage-plan-template.md`
+  reference with `[Pn-Tm][annotation]` task-line shape per
+  `work/file-formats.md` + canonical Set A; verdict gate (Step 2b)
+  routes BLOCKED / PASS WITH WARNINGS / PASS through normal flow,
+  rejects per-reviewer / manifest paths up front; REQUIRES CHANGES
+  also flows through triage with auto-included Phase 1 Test Coverage
+  Gaps tasks. Pre-existing findings route to a dedicated
+  `## Pre-existing Issues (informational)` section, never become
+  task lines. `triage-patterns.md` Always-Fix list expanded to ALL
+  Iron Law violations + non-Iron-Law security issues; downgrade
+  rules tightened to non-Iron-Law, non-security NEW findings only.
+- `/rb:plan` accepts a consolidated review path with
+  `**Verdict**: REQUIRES CHANGES` and produces a one-task-per-gap
+  plan from the review's `## Test Coverage Gaps` section. Other
+  verdicts (PASS / PASS WITH WARNINGS / BLOCKED) are rejected with
+  redirects to `/rb:triage` or `/rb:compound`. Per-reviewer
+  artifacts and manifest paths under `.claude/reviews/{slug}/...`
+  are rejected explicitly.
+
+### Fixed
+
+- Drift after slim init template + See: drop:
+  `tutorial-content.md` Layer 3-4 + Section 4 hook table row + Section
+  5 Layer 4; `README.md` `/rb:init` row; `init/SKILL.md` body,
+  frontmatter description, Conditional Sections list;
+  `intent-detection/SKILL.md` Integration list;
+  `.github/copilot-instructions.md` reviewer hints +
+  `inject-rules.sh` wording; `.github/instructions/plugin-review.instructions.md`
+  preferences-injection rule. `example-review.md` worked example
+  and `review-good.md` fixture aligned with the new
+  consolidated-review template.
+- Synthesis procedure moved out of `/rb:review` SKILL.md into
+  `review-playbook.md` § "Synthesis Procedure" (review skill score
+  0.86 → 0.955).
+- `review/SKILL.md` After Review section: corrected false claim that
+  `bin/manifest-update` validates the status enum. Manifest helper
+  deep-merges patch JSON without enum validation; canonical-string
+  discipline is enforced by the CI gate on consolidated reviews,
+  not at the manifest layer.
+- `CHANGELOG.md` footer link for `[1.16.7]` added; `[Unreleased]`
+  pointer updated to compare against `v1.16.7`.
+
 ## [1.16.6] - 2026-05-04
 
 ### Added
@@ -122,9 +212,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Schema drift in `/rb:review` + `/rb:plan` + `/rb:brainstorm` skill
   bodies: ambiguous "recovery `status`" phrasing caused main-session
   manifest patches to emit an undocumented `recovery` field
-  alongside `status`. Verified in ludwig session
-  `040c3082-ad98-4ed6-aa38-218e93acfbc4` —
-  `printf '{"agents":{"%s":{"status":"artifact","recovery":"artifact"}}}'`.
+  alongside `status`.
   Wording fix removes the parse path that produces the extra field.
 
 ## [1.16.4] - 2026-05-03
@@ -2487,7 +2575,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.6...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.7...HEAD
+[1.16.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.6...v1.16.7
 [1.16.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.5...v1.16.6
 [1.16.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.4...v1.16.5
 [1.16.4]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.3...v1.16.4

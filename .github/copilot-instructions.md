@@ -90,7 +90,6 @@ the PR.
 
 - **Skill rename / removal / description change** → also check
   `plugins/ruby-grape-rails/skills/intro/references/tutorial-content.md`,
-  `plugins/ruby-grape-rails/skills/init/references/injectable-template.md`,
   `lab/eval/evals/<skill>.json`, `lab/eval/triggers/<skill>.json`,
   `lab/eval/triggers/_hard_corpus.json`,
   `lab/eval/triggers/_confusable_pairs.json`,
@@ -197,11 +196,12 @@ the PR.
 - **`plugins/ruby-grape-rails/references/preferences/tool-batching.md`**
   edited → verify link from `.claude/rules/agent-development.md` §
   "Bash Discipline" still resolves. The path is also injected into
-  every subagent + main session via `inject-rules.sh` `See:` line
-  derived from `preferences.yml` `reference_files`. Tool-batching
-  preference rule itself lives in `references/preferences.yml`; rule
-  edits trigger preferences regeneration as above. Direct references
-  in shipped agent or skill bodies are forbidden — rely on injection.
+  every subagent + main session via `inject-rules.sh` — emitted bare
+  on the line below each preference rule, derived from
+  `preferences.yml` `reference_files`. Tool-batching preference rule
+  itself lives in `references/preferences.yml`; rule edits trigger
+  preferences regeneration as above. Direct references in shipped
+  agent or skill bodies are forbidden — rely on injection.
 
 ### How to surface drift findings
 

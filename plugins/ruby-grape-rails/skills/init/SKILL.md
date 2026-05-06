@@ -1,13 +1,29 @@
 ---
 name: rb:init
-description: "Use when initializing the Ruby/Rails/Grape plugin in a project. Installs auto-activation rules into CLAUDE.md for complexity detection, workflow routing, Iron Laws, and Ruby stack auto-loading."
+description: "Use when initializing the Ruby/Rails/Grape plugin in a project. Writes a managed block of project-specific stack notes (queue list, ORM-per-package map, package layout) into CLAUDE.md. Reaches the MAIN session and any subagents that opt in to CLAUDE.md; specialist subagents with `omitClaudeMd: true` (most reviewers/analyzers) do NOT see the block. Iron Laws + Advisory Preferences reach all subagents via the `inject-rules.sh` SessionStart + SubagentStart hooks regardless."
 when_to_use: "Triggers: \"initialize plugin\", \"setup ruby plugin\", \"install plugin\", \"configure Claude for Rails\"."
 argument-hint: "[--update]"
 effort: low
 ---
 # Plugin Initialization
 
-Install the Ruby/Rails/Grape behavioral instructions into the project `CLAUDE.md`.
+Write a managed block of project-specific stack notes into the
+project's `CLAUDE.md`. Do NOT write Iron Laws or Advisory
+Preferences into `CLAUDE.md` — `inject-rules.sh` delivers them at
+runtime on `SessionStart` + `SubagentStart`.
+
+Block-reach contract:
+
+| Consumer | Sees `CLAUDE.md` block? |
+|---|---|
+| Main session (interactive Claude) | YES |
+| Subagent spawned WITHOUT `omitClaudeMd: true` | YES |
+| Specialist subagent with `omitClaudeMd: true` (most reviewers/analyzers) | NO — relies on `inject-rules.sh` SubagentStart for Iron Laws + Preferences only; no stack notes |
+
+Plan the block content for main-session skill bodies (`/rb:plan`,
+`/rb:review`, `/rb:verify`, `/rb:work`). Do NOT inject content
+needed by specialist subagents into this block; surface it through
+their per-agent prompt or the `inject-rules.sh` runtime payload.
 
 ## Usage
 
@@ -28,12 +44,18 @@ Detection rules:
    guidance to inject:
    - ORM: `DETECTED_ORMS`, `PRIMARY_ORM`
    - Rails shape: `RAILS_COMPONENTS`, `FULL_RAILS_APP`
-   - Ruby: `INTERPRETER_RUBY_VERSION`
+   - Ruby: `RUBY_VERSION` (placeholder source). `INTERPRETER_RUBY_VERSION` is informational only — emitted when interpreter differs from project pin.
    - Packages: `PACKAGE_LAYOUT`, `PACKAGE_LOCATIONS`, `HAS_PACKWERK`,
      `PACKAGE_QUERY_NEEDED`
 6. If `PACKAGE_QUERY_NEEDED=true`, ask the user: `No Packwerk detected. Do you have something similar implemented? Provide modules/packages location and their stack/ORM.`
-7. **Do not** reimplement stack detection inline in chat or ad-hoc Ruby snippets. `detect-stack` is the source of truth.
-8. If `${CLAUDE_PLUGIN_ROOT}/bin/detect-stack` is missing or fails, STOP and explain that plugin stack detection is unavailable instead of inventing a fallback parser.
+7. If `DETECTED_ORMS` contains BOTH `active_record` AND `sequel`
+   (mixed-ORM repo), run the `MIXED_ORM_SECTION` interview (per
+   `${CLAUDE_SKILL_DIR}/references/conditional-sections.md`
+   § "MIXED_ORM_SECTION") regardless of `PACKAGE_QUERY_NEEDED`
+   value. `detect-stack` does NOT emit per-package ORM ownership —
+   interview is the only source. Skip when only one ORM detected.
+8. **Do not** reimplement stack detection inline in chat or ad-hoc Ruby snippets. `detect-stack` is the source of truth.
+9. If `${CLAUDE_PLUGIN_ROOT}/bin/detect-stack` is missing or fails, STOP and explain that plugin stack detection is unavailable instead of inventing a fallback parser.
 
 Use Ruby for detection (avoids fragile shell pipelines):
 
@@ -45,7 +67,10 @@ Use Ruby for detection (avoids fragile shell pipelines):
 
 When building the injected header:
 
-- omit Rails entirely when `RAILS_VERSION` is absent
+- compose the stack-version comment line from `{STACK_HEADER}` per
+  `${CLAUDE_SKILL_DIR}/references/conditional-sections.md`
+  § "Placeholder Substitution". Omit absent `*_VERSION` keys; never
+  emit bare label without version
 - prefer detected version values from `detect-stack` / cached runtime state instead of hardcoded examples
 - avoid degrading locked versions to `detected`
 - use `DETECTED_ORMS` to distinguish Active Record, Sequel, and mixed ORM repositories
@@ -121,12 +146,25 @@ the current template, removing the `<!-- IRON_LAWS_START -->` /
 
 ## What Gets Installed
 
-- workflow routing for `/rb:plan`, `/rb:work`, `/rb:review`, `/rb:verify`, `/rb:permissions`
-- Ruby Iron Laws
-- stack-aware auto-loading for Rails, Grape, Active Record, Sequel, Sidekiq, security, and testing
-- package-aware guidance for Packwerk or homegrown modular monoliths when detected
-- verification defaults for Zeitwerk, formatter, tests, and optional Brakeman
-- project-native verify-wrapper hints when the repo exposes a clear composite check entrypoint
+Inject ONLY project-specific stack notes:
+
+- stack-version comment header: `{STACK_HEADER}` +
+  `Betterleaks: {BETTERLEAKS_STATUS}` + `plugin v{PLUGIN_VERSION}`.
+  Composition rule:
+  `${CLAUDE_SKILL_DIR}/references/conditional-sections.md`
+  § "Placeholder Substitution".
+- conditional sections from `detect-stack` output + targeted
+  interview answers — queue list, ORM-per-package map, Karafka
+  topic routes, Packwerk enforcement flags, Hotwire channels,
+  project secret-path conventions
+
+Do NOT inject anything from this row of the table:
+
+| Surface | Where it lives |
+|---|---|
+| Iron Laws + Advisory Preferences | runtime hook `inject-rules.sh` on `SessionStart` + `SubagentStart` |
+| Skill workflow / spawn rules / verification commands | individual skill bodies (`/rb:plan`, `/rb:review`, `/rb:verify`, ...) |
+| Library defaults (Sidekiq base class, Turbo Frame patterns, etc.) | framework docs, not project CLAUDE.md |
 
 ## Template
 
@@ -134,17 +172,23 @@ Use `${CLAUDE_SKILL_DIR}/references/injectable-template.md` as the injected sour
 
 ## Conditional Sections
 
-Include based on detected stack and installed tools:
+Render each placeholder ONLY when stack/tool detected AND
+project-specific content available (from `detect-stack` or interview).
+Omit empty sections. Do NOT leave a header without content.
 
-- `{SIDEKIQ_SECTION}` — If Sidekiq detected
-- `{SEQUEL_SECTION}` — If Sequel detected
-- `{MIXED_ORM_SECTION}` — If both Active Record and Sequel are detected
-- `{HOTWIRE_SECTION}` — If Hotwire/Turbo detected
-- `{KARAFKA_SECTION}` — If Karafka detected
-- `{PACKWERK_SECTION}` — If Packwerk or modular monolith structure detected
-- `{BETTERLEAKS_SECTION}` — If Betterleaks installed (secrets scanning)
+| Placeholder | Detection gate | Content source |
+|---|---|---|
+| `{SIDEKIQ_SECTION}` | Sidekiq detected | queue list, base class, retry policy, dead-letter config |
+| `{SEQUEL_SECTION}` | Sequel detected | per-package paths, query convention, migration roots |
+| `{MIXED_ORM_SECTION}` | Active Record AND Sequel detected | per-package ORM map (from targeted interview — `detect-stack` does NOT emit per-package ORM ownership) |
+| `{HOTWIRE_SECTION}` | Hotwire/Turbo detected | channel list, broadcast roots, frame-id convention |
+| `{KARAFKA_SECTION}` | Karafka detected | topic routes, consumer base, retry routing |
+| `{PACKWERK_SECTION}` | Packwerk OR modular monolith layout detected | package paths from `PACKAGE_LOCATIONS`; enforcement flags from `packwerk.yml` + per-package `package.yml` |
+| `{BETTERLEAKS_SECTION}` | `betterleaks` available AND project secret-path conventions detected | secret-path conventions, scan policy |
 
-See `${CLAUDE_SKILL_DIR}/references/conditional-sections.md` for full content of each section.
+Read `${CLAUDE_SKILL_DIR}/references/conditional-sections.md` for
+per-section detect rules, interview prompts, render shape, and
+authoring rules.
 
 ## Recommended Permission Allowlist
 

@@ -94,12 +94,13 @@ no longer ships `IRON_LAWS_START/END` or `PREFERENCES_START/END` blocks
 ## Cross-File Drift Around Markdown Changes
 
 - Skill or agent renamed / removed / new → check
-  `intro/references/tutorial-content.md`,
-  `init/references/injectable-template.md`, README, CHANGELOG, and
+  `intro/references/tutorial-content.md`, README, CHANGELOG, and
   other skills' `/rb:<name>` mentions. For agent removals, also check
   skill-body fanout owners
   (`plugins/ruby-grape-rails/skills/{review,plan,full}/SKILL.md`,
   `.claude/skills/docs-check/SKILL.md`) and agent count claims.
+  Init injectable template carries no skill or agent names; renames
+  do not touch it.
 - Iron Law count claim ("22 Total", "N Iron Laws") in any markdown →
   verify against `plugins/ruby-grape-rails/references/iron-laws.yml`
 - Plugin version mentioned in markdown → align with manifest trio

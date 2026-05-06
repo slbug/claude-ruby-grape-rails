@@ -1,6 +1,6 @@
 ---
 name: rb:full
-description: "Use when running the hands-off end-to-end lifecycle: autonomously runs plan, work, verify, review, and compound in one command with no user intervention needed."
+description: "Use when running the end-to-end lifecycle: plan, work, verify, review, and compound chained in one command. Runs autonomously on the happy path; halts and asks the user on `/rb:verify --full` gate failure (HALTED_VERIFY_FAILED), review verdict BLOCKED (HALTED_REVIEW_BLOCKED), REQUIRES CHANGES (HALTED_REVIEW_REQUIRES_CHANGES), or missing/unparsable consolidated review (HALTED_REVIEW_UNKNOWN). Reaches COMPLETED autonomously once the compound solution doc is written — no final user-acknowledgment prompt."
 when_to_use: "Triggers: \"do everything\", \"full lifecycle\", \"hands-off\", \"plan and implement\", \"end to end\"."
 argument-hint: "<feature description OR plan path>"
 effort: xhigh
@@ -9,6 +9,15 @@ effort: xhigh
 
 `/rb:full` runs the full plan-work-verify-review-compound cycle autonomously.
 Skill body owns the complete cycle from main session.
+
+## STEP 0: Read the cycle + state-machine references
+
+Read `${CLAUDE_SKILL_DIR}/references/cycle-patterns.md` and
+`${CLAUDE_SKILL_DIR}/references/state-machine.md`. Apply the state
+transitions, blocker handling, and recovery protocols as the
+canonical procedure. Each child skill (`/rb:plan`, `/rb:work`,
+`/rb:verify`, `/rb:review`, `/rb:compound`) runs its own STEP 0
+playbook read on entry.
 
 ## Cycle
 
@@ -25,8 +34,12 @@ Skip for vague requirements or trivial fixes.
 ## State Machine (summary)
 
 ```text
-INITIALIZING → DISCOVERING → PLANNING → WORKING → VERIFYING → REVIEWING → COMPOUNDING → COMPLETED
+INITIALIZING → [DISCOVERING] → PLANNING → WORKING → VERIFYING → REVIEWING → COMPOUNDING → COMPLETED
 ```
+
+DISCOVERING is optional (`/rb:brainstorm`). INITIALIZING transitions
+directly to PLANNING when brainstorm is skipped. Branch rules:
+`${CLAUDE_SKILL_DIR}/references/state-machine.md` § "Phase Transitions".
 
 `/rb:full` skill body writes `**State**:` to `progress.md` at every
 transition. The `plan-stop-reminder.sh` hook checks for this field to
@@ -55,10 +68,18 @@ A workflow is COMPLETED when:
 
 - [ ] All planned tasks completed or explicitly deferred
 - [ ] Verification suite passes
-- [ ] Reviews complete with no critical issues
+- [ ] Reviews complete with consolidated `**Verdict**:` ∈
+      {`PASS`, `PASS WITH WARNINGS`} — no NEW BLOCKERs introduced by
+      this diff (per
+      `${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
+      § "Verdict Decision Rules"). All other paths halt the cycle.
+      `BLOCKED` → HALTED_REVIEW_BLOCKED (user runs `/rb:triage {review-path}`).
+      `REQUIRES CHANGES` → HALTED_REVIEW_REQUIRES_CHANGES (user runs
+      `/rb:triage {review-path}` default, or `/rb:plan {review-path}` for
+      gaps-only). Missing artifact / verdict absent / off-canonical wording
+      → HALTED_REVIEW_UNKNOWN (user inspects manually). No autonomous re-run.
 - [ ] Learnings captured in compound docs
 - [ ] `progress.md` final write: `**State**: COMPLETED`
-- [ ] User acknowledged completion
 
 ## Laws
 

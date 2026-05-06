@@ -4860,8 +4860,8 @@ class InjectRulesTests(unittest.TestCase):
     to hook processes per plugin docs (`plugins-reference.md`
     "Environment variables"). The injector must expand the placeholder
     inside the script — hook return strings are NOT re-substituted by
-    CC after the script exits — so `See:` lines reach the LLM as
-    absolute filesystem paths."""
+    CC after the script exits — so companion-doc paths reach the LLM
+    as absolute filesystem paths."""
 
     def _run(self, payload: str) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
@@ -4899,22 +4899,27 @@ class InjectRulesTests(unittest.TestCase):
         # Literal placeholders MUST NOT survive into the LLM-bound payload —
         # CC does not re-substitute hook return strings.
         self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", ctx)
-        # Pin reference_files See: lines as expanded absolute paths
+        # `See:` framing dropped: companion paths emit bare. Real-run
+        # observation drove this — passive `See: <path>` framing read as
+        # FYI citation, agents never opened the targets.
+        self.assertNotIn("See: `", ctx)
+        # Pin reference_files paths as expanded absolute paths emitted
+        # bare (no `See:` prefix) on the line below the rule text.
         self.assertIn(
-            f"See: `{_TEST_PLUGIN_ROOT}/references/preferences/context7-usage.md`",
+            f"`{_TEST_PLUGIN_ROOT}/references/preferences/context7-usage.md`",
             ctx,
         )
         self.assertIn(
-            f"See: `{_TEST_PLUGIN_ROOT}/references/preferences/epistemic-posture.md`",
+            f"`{_TEST_PLUGIN_ROOT}/references/preferences/epistemic-posture.md`",
             ctx,
         )
         self.assertIn(
-            f"See: `{_TEST_PLUGIN_ROOT}/references/preferences/tool-batching.md`",
+            f"`{_TEST_PLUGIN_ROOT}/references/preferences/tool-batching.md`",
             ctx,
         )
-        # Spot-check Iron Law See: line expansion
+        # Spot-check Iron Law companion path expansion
         self.assertIn(
-            f"See: `{_TEST_PLUGIN_ROOT}/skills/ar-n1-check/references/preload-patterns.md`",
+            f"`{_TEST_PLUGIN_ROOT}/skills/ar-n1-check/references/preload-patterns.md`",
             ctx,
         )
 
@@ -4948,11 +4953,11 @@ class InjectRulesTests(unittest.TestCase):
 
     def test_plugin_root_expands_when_env_set(self) -> None:
         """When `CLAUDE_PLUGIN_ROOT` is exported (real CC runtime), the
-        injector expands the placeholder in `See:` lines so paths reach
-        the LLM as absolute filesystem paths. CC does NOT re-substitute
-        plugin variables in hook return strings — expansion must happen
-        inside the script before the JSON is emitted. Regression guard
-        for the off-by-default BLOCKER fix."""
+        injector expands the placeholder in companion-path lines so the
+        bare paths reach the LLM as absolute filesystem paths. CC does
+        NOT re-substitute plugin variables in hook return strings —
+        expansion must happen inside the script before the JSON is
+        emitted. Regression guard for the off-by-default BLOCKER fix."""
         env = dict(os.environ)
         env["CLAUDE_PLUGIN_ROOT"] = "/expanded/plugin/root"
         result = subprocess.run(
@@ -4967,12 +4972,13 @@ class InjectRulesTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         ctx = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
         self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", ctx)
+        self.assertNotIn("See: `", ctx)
         self.assertIn(
-            "See: `/expanded/plugin/root/references/preferences/context7-usage.md`",
+            "`/expanded/plugin/root/references/preferences/context7-usage.md`",
             ctx,
         )
         self.assertIn(
-            "See: `/expanded/plugin/root/skills/ar-n1-check/references/preload-patterns.md`",
+            "`/expanded/plugin/root/skills/ar-n1-check/references/preload-patterns.md`",
             ctx,
         )
 

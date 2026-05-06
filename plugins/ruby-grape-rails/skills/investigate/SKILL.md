@@ -9,6 +9,13 @@ effort: high
 
 Run a structured investigation instead of guessing.
 
+## STEP 0: Read the investigation discipline references
+
+Read `${CLAUDE_SKILL_DIR}/references/discipline.md` and
+`${CLAUDE_SKILL_DIR}/references/error-patterns.md`. Apply the
+verify-loop discipline + error-classification rubric as the
+canonical procedure.
+
 ## Investigation Tracks
 
 - request path and route trace

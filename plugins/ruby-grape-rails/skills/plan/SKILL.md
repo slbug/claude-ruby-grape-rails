@@ -1,8 +1,8 @@
 ---
 name: rb:plan
-description: "Use when you need an implementation plan for multi-file Rails or Grape features, Sidekiq changes, or risky migrations and refactors before coding starts. Also accepts review files and existing plans."
+description: "Use when you need an implementation plan for multi-file Rails or Grape features, Sidekiq changes, or risky migrations and refactors before coding starts. Also accepts existing plan.md (enhancement), interview.md (from /rb:brainstorm), or a consolidated review artifact whose verdict is REQUIRES CHANGES (generates one-task-per-gap plan). Other review verdicts (PASS / PASS WITH WARNINGS / BLOCKED) route to /rb:triage or /rb:compound, NOT /rb:plan."
 when_to_use: "Triggers: \"plan this feature\", \"make a plan\", \"implementation plan\", \"how should we build\", \"plan before coding\". Does NOT handle: brainstorming ideas, implementing code, code review."
-argument-hint: <feature description OR path to review/plan file>
+argument-hint: <feature description OR path to existing plan.md OR path to interview.md OR path to .claude/reviews/...md (REQUIRES CHANGES verdict only)>
 effort: xhigh
 ---
 # Plan Ruby/Rails/Grape Work
@@ -61,6 +61,53 @@ For the exact shell-guard sequence, see
 `${CLAUDE_SKILL_DIR}/references/planning-workflow.md` §
 "Slug Pre-Bind Detection (strict guards)".
 
+## Review-Path Input (verdict-gated)
+
+Triggers ONLY when `$ARGUMENTS` is a path under `.claude/reviews/`.
+Feature descriptions, `interview.md` paths, and existing `plan.md`
+paths bypass this section and follow their own flows above/below.
+
+Path validation FIRST — only the consolidated artifact is valid:
+
+| `$ARGUMENTS` shape (under `.claude/reviews/`) | Action |
+|---|---|
+| `.claude/reviews/{review-slug}-{datesuffix}.md` (direct child of `reviews/`) | proceed to verdict gate below |
+| `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` (per-reviewer artifact under subdirectory) | STOP. Print: `Path is a per-reviewer artifact, not the consolidated review. Run with the consolidated path: .claude/reviews/{review-slug}-{datesuffix}.md` |
+| `.claude/reviews/{review-slug}/RUN-CURRENT.json` (manifest) | STOP. Print: `Path is the manifest, not the consolidated review.` |
+
+After path validation passes, read the artifact's consolidated
+`**Verdict**:` line. Branch on verdict:
+
+| Verdict | Action |
+|---|---|
+| `REQUIRES CHANGES` | proceed with the test-coverage-gap branch below |
+| `BLOCKED` | STOP. Print: `Review verdict is BLOCKED. Run /rb:triage {review-path} to select which findings to fix.` |
+| `PASS WITH WARNINGS` | STOP. Print: `Review verdict is PASS WITH WARNINGS. Run /rb:triage {review-path} to batch warnings, or /rb:compound to capture lessons.` |
+| `PASS` | STOP. Print: `Review verdict is PASS. Run /rb:compound to capture lessons; /rb:triage {review-path} to opt in to suggestions.` |
+| missing / off-canonical | STOP. Print: `Cannot read consolidated **Verdict**: line from {path}. Inspect the artifact manually.` |
+
+A consolidated review artifact is NOT valid feature-description input.
+Do NOT fall through to the standard planning flow on non-REQUIRES-CHANGES
+review paths.
+
+### REQUIRES CHANGES branch
+
+1. Read the review's `## Test Coverage Gaps ({n})` section per
+   `${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
+   § "Consolidated Review Format".
+2. Guard: if section is MISSING or has 0 data rows, STOP. Print:
+   `Review verdict is REQUIRES CHANGES but ## Test Coverage Gaps section is missing/empty in {path}. Cannot generate plan; inspect the artifact manually or regenerate the review.`
+3. Each row → one plan task:
+   `- [ ] [P1-Tn][test] Add spec for {Surface} — test-coverage gap
+   (REQUIRES CHANGES); source {review-path}`. One row → one task.
+4. Skip the Research Phase agent fanout. Plan goes straight to
+   DESIGN with the `[test]` task list.
+5. Do NOT include any Blockers/Warnings/Suggestions findings.
+   `/rb:triage` owns mixed-bucket reviews.
+6. Set the plan preamble `**Input**:` field to the review path
+   (per `${CLAUDE_SKILL_DIR}/references/plan-template.md` § "Full
+   Plan Template" — `**Input**: {review path, or "from description"}`).
+
 ## Interview Detection (from /rb:brainstorm)
 
 Before asking clarification questions, check for a brainstorm interview:
@@ -82,6 +129,12 @@ If found with `Status: IN_PROGRESS`:
 - Ask ONLY about uncovered dimensions (don't re-ask covered ones)
 
 ## Research Phase
+
+### STEP 0: Read the planning playbook before synthesis
+
+Read `${CLAUDE_SKILL_DIR}/references/planning-workflow.md`. Apply
+its research-cache reuse rules, agent selection, and plan-template
+spec as the canonical procedure.
 
 Before finalizing tasks, identify:
 
