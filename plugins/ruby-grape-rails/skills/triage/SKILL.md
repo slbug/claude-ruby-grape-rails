@@ -74,8 +74,8 @@ priorities:
 
 ## Triage Process
 
-5 steps. Each reads from review artifact, classifies via review bucket,
-writes selected items to a fix plan.
+Follow these 5 steps. Each reads from the review artifact, classifies
+via review bucket, writes selected items to a fix plan.
 
 ### Step 1: Load Review File
 

@@ -98,7 +98,7 @@ RULES_BODY_EOF
 # Claude — CC does NOT re-substitute plugin variables in returned
 # strings. Expand ${CLAUDE_PLUGIN_ROOT} in BODY here so companion
 # paths reach the LLM as absolute filesystem paths. Skip expansion
-# when the env var is unset/empty (off-CC runs, CI fixtures) so the
+# when the env var is unset/empty (off-CC runs, local test harness) so the
 # literal placeholder survives instead of producing root-anchored
 # garbage like /references/foo.md.
 if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]]; then

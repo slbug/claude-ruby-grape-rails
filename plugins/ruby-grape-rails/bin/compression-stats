@@ -48,10 +48,6 @@ end
 #   MIN_SAMPLES_PER_CLASS` are flagged `underpowered-classes=...`.
 # - MIN_P50_RATIO: per-class p50 floor. Sufficiently-powered classes
 #   whose `p50 < MIN_P50_RATIO` are flagged `weak-p50=...`.
-#
-# Independent of the eval-gate fixture's MEAN-bytes threshold (≥ 0.40
-# mean across tracked fixtures, asserted by `make eval-compression`).
-# Same numeric value, different statistic; do NOT conflate.
 MIN_SAMPLES_PER_CLASS = 100
 MIN_P50_RATIO = 0.40
 

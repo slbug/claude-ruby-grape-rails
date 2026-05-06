@@ -338,7 +338,10 @@ class FullCycleExampleRunDriftTests(unittest.TestCase):
         """Per playbook STEP 4: PASS WITH WARNINGS requires WARNINGs > 0.
 
         SUGGESTIONs alone (no WARNINGs / no BLOCKERs) → PASS, not
-        PASS WITH WARNINGS.
+        PASS WITH WARNINGS. The parenthetical note must cite a
+        POSITIVE warning count; negation/zero patterns ("no warnings",
+        "0 warnings", "zero warnings") fail the gate even when they
+        textually contain the substring "warning".
         """
         text = FULL_EXAMPLE_RUN.read_text(encoding="utf-8")
         m = re.search(
@@ -349,13 +352,30 @@ class FullCycleExampleRunDriftTests(unittest.TestCase):
         )
         if m is None:
             return
-        note = m.group("note")
-        if "warning" not in note.lower() and "warnings" not in note.lower():
+        note = m.group("note").lower()
+
+        negation_patterns = [
+            r"\bno\s+warnings?\b",
+            r"\b0\s+warnings?\b",
+            r"\bzero\s+warnings?\b",
+            r"\bwithout\s+warnings?\b",
+        ]
+        for pat in negation_patterns:
+            if re.search(pat, note):
+                self.fail(
+                    "Synthesized **Verdict**: PASS WITH WARNINGS but "
+                    f"parenthetical note negates warnings (matched {pat!r}). "
+                    "Per playbook STEP 4, WARNINGs > 0 required for this "
+                    "verdict; SUGGESTIONs alone → PASS."
+                )
+
+        positive_count = re.search(r"\b([1-9]\d*)\s+warnings?\b", note)
+        if positive_count is None:
             self.fail(
-                "Synthesized **Verdict**: PASS WITH WARNINGS without "
-                "warnings cited in the parenthetical note. Per playbook "
-                "STEP 4, warnings > 0 required for this verdict; "
-                "suggestions alone → PASS."
+                "Synthesized **Verdict**: PASS WITH WARNINGS without a "
+                "positive warning count in the parenthetical note. Per "
+                "playbook STEP 4, WARNINGs > 0 required for this verdict; "
+                "cite the count explicitly (e.g., '2 warnings, 1 suggestion')."
             )
 
     def test_per_reviewer_verdicts_use_canonical_4_set(self) -> None:

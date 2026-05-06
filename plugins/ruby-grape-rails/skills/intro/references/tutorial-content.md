@@ -39,7 +39,7 @@ Use `/rb:brainstorm` when requirements are vague or multiple approaches exist.
 It gathers requirements interactively and produces an `interview.md` that
 `/rb:plan` consumes. Skip it when requirements are already clear.
 
-After `/rb:review` the verdict drives the next step:
+After `/rb:review`, follow this verdict-routing table to pick the next step:
 
 | Verdict | Next step |
 |---|---|
