@@ -83,5 +83,5 @@ advisory:
   # Number of jsonl entries (sample count). 1000 ≈ 100 samples per
   # verify-command class across the ~10 tracked classes — point at
   # which per-class compression ratios stabilize and a redacted
-  # report becomes contributor-actionable.
+  # report becomes maintainer-actionable.
   sample_threshold: 1000

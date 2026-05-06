@@ -23,6 +23,9 @@ REVIEW_GOOD_FIXTURE = REPO_ROOT / "lab/eval/fixtures/output/review-good.md"
 EXAMPLE_REVIEW = (
     REPO_ROOT / "plugins/ruby-grape-rails/skills/review/references/example-review.md"
 )
+FULL_EXAMPLE_RUN = (
+    REPO_ROOT / "plugins/ruby-grape-rails/skills/full/references/example-run.md"
+)
 
 _IRON_LAW_RE = re.compile(r"Iron Law\s+\d+", re.IGNORECASE)
 _PHASE_HEADING_RE = re.compile(r"^##+\s+(Phase\s+\d+|Deferred Findings|Pre-existing Issues)", re.IGNORECASE)
@@ -308,6 +311,72 @@ class TriageSkillEmbeddedExampleDriftTests(unittest.TestCase):
         self.assertFalse(
             bad,
             "SKILL.md is agent instructions, not pseudocode. Found: " + "; ".join(bad),
+        )
+
+
+_CANONICAL_VERDICTS = {"PASS", "PASS WITH WARNINGS", "REQUIRES CHANGES", "BLOCKED"}
+
+
+class FullCycleExampleRunDriftTests(unittest.TestCase):
+    """Drift gates for `skills/full/references/example-run.md`.
+
+    Shipped canonical worked example loaded into agent context when
+    `/rb:full` reads its detail references. Verdict math drift here
+    teaches `/rb:full` to misclassify reviews (e.g., emit
+    `PASS WITH WARNINGS` for a review that has only SUGGESTIONs).
+    """
+
+    def test_synthesized_verdict_uses_canonical_4_set(self) -> None:
+        text = FULL_EXAMPLE_RUN.read_text(encoding="utf-8")
+        m = re.search(r"Synthesized \*\*Verdict\*\*:\s*([A-Z][A-Z ]*[A-Z])", text)
+        self.assertIsNotNone(m, "Synthesized **Verdict**: line missing from example-run.md")
+        verdict = m.group(1).strip()
+        self.assertIn(verdict, _CANONICAL_VERDICTS,
+                      f"Synthesized verdict {verdict!r} not in canonical 4-set")
+
+    def test_pass_with_warnings_only_when_warnings_present(self) -> None:
+        """Per playbook STEP 4: PASS WITH WARNINGS requires WARNINGs > 0.
+
+        SUGGESTIONs alone (no WARNINGs / no BLOCKERs) → PASS, not
+        PASS WITH WARNINGS.
+        """
+        text = FULL_EXAMPLE_RUN.read_text(encoding="utf-8")
+        m = re.search(
+            r"Synthesized \*\*Verdict\*\*:\s*PASS WITH WARNINGS"
+            r".*?\((?P<note>[^)]*)\)",
+            text,
+            re.DOTALL,
+        )
+        if m is None:
+            return
+        note = m.group("note")
+        if "warning" not in note.lower() and "warnings" not in note.lower():
+            self.fail(
+                "Synthesized **Verdict**: PASS WITH WARNINGS without "
+                "warnings cited in the parenthetical note. Per playbook "
+                "STEP 4, warnings > 0 required for this verdict; "
+                "suggestions alone → PASS."
+            )
+
+    def test_per_reviewer_verdicts_use_canonical_4_set(self) -> None:
+        text = FULL_EXAMPLE_RUN.read_text(encoding="utf-8")
+        bad: list[str] = []
+        # Pattern: `✓ {agent}: VERDICT (...)` or `✓ {agent}: VERDICT`.
+        for m in re.finditer(
+            r"^  ✓ (?P<agent>[\w-]+):\s+(?P<verdict>[A-Z][A-Z ]*[A-Z])(?=\s*[(]|\s*$)",
+            text,
+            re.MULTILINE,
+        ):
+            verdict = m.group("verdict").strip()
+            if verdict in {"All tests pass"}:
+                continue
+            if verdict not in _CANONICAL_VERDICTS:
+                bad.append(f"{m.group('agent')}: {verdict!r}")
+        self.assertFalse(
+            bad,
+            "Per-reviewer verdicts MUST be from canonical 4-set "
+            "{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}. "
+            "Drifted: " + "; ".join(bad),
         )
 
 
