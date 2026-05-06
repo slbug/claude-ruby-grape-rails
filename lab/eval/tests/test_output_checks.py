@@ -1742,23 +1742,22 @@ PASS
         passed, _ = output_checks.has_review_finding_titles_match_glance(content)
         self.assertTrue(passed)
 
-    def test_has_review_file_refs_rejects_stray_outside_bucket(self) -> None:
+    def test_has_review_file_refs_ignores_stray_outside_bucket(self) -> None:
         # `**File**:` line in preamble/footer (NOT under
-        # ## Blockers / ## Warnings / ## Suggestions) MUST NOT
-        # count toward the minimum.
+        # ## Blockers / ## Warnings / ## Suggestions) MUST NOT count
+        # toward the minimum. With a real finding inside `## Warnings`
+        # missing its `**File**:` line, the only ref is the stray
+        # preamble one; validator must not credit it.
         content = """# Review: x
 
-**File**: `app/foo.rb:1`
+**File**: `header/preamble.rb:1`
 
-## Summary
+## Warnings (1)
 
-| Severity | Count |
-|----------|-------|
-| Blockers | 0 |
-| Warnings | 0 |
-| Suggestions | 0 |
+### 1. Issue
 
-**Verdict**: PASS
+**Reviewer**: r | **Confidence**: HIGH
+**Issue**: bad
 """
         passed, reason = output_checks.has_review_file_refs(content, minimum=1)
         self.assertFalse(passed)
