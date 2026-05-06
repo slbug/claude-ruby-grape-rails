@@ -51,6 +51,14 @@ $ /rb:full Add magic link authentication
   ✓ Task 4/4: Email tests
 [WORKING] Phase 4 complete, committed
 
+[VERIFYING] /rb:verify --full
+  ✓ Zeitwerk autoload check
+  ✓ Lint / formatter
+  ✓ Unit + request specs (all green)
+  ✓ Brakeman (no findings)
+  ✓ Migration safety scan
+[VERIFYING] All gates passed
+
 [REVIEWING] Spawning 4 review agents...
   ✓ ruby-reviewer: PASS WITH WARNINGS (2 suggestions)
   ✓ testing-reviewer: PASS

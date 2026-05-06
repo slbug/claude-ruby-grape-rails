@@ -667,13 +667,20 @@ def has_review_verdict_matches_summary(content: str) -> tuple[bool, str]:
     # `## Test Coverage Gaps` section is verdict-exclusive per
     # `review-playbook.md` § "Test Coverage Gaps": REQUIRED on
     # REQUIRES CHANGES, FORBIDDEN on PASS / PASS WITH WARNINGS /
-    # BLOCKED. Both directions enforced.
+    # BLOCKED. Heading presence (not body presence) is the gate —
+    # a bare empty heading still violates the "omit on other
+    # verdicts" contract.
+    gaps_heading_present = any(
+        line.strip() == "## Test Coverage Gaps"
+        or re.match(r"^## Test Coverage Gaps\s*\(\d+\)\s*$", line.strip())
+        for line in _iter_lines_outside_fences(content)
+    )
     gaps_body = _section(content, "Test Coverage Gaps")
     if verdict == "REQUIRES CHANGES":
-        if not gaps_body:
+        if not gaps_heading_present:
             return False, (
                 "Verdict is REQUIRES CHANGES but `## Test Coverage Gaps` "
-                "section is missing; both `/rb:plan {review-path}` and "
+                "heading is missing; both `/rb:plan {review-path}` and "
                 "`/rb:triage {review-path}` flows depend on this section"
             )
         gap_rows = _table_data_rows(gaps_body)
@@ -683,11 +690,12 @@ def has_review_verdict_matches_summary(content: str) -> tuple[bool, str]:
                 "section is present but has 0 data rows; verdict requires "
                 "at least one uncovered surface"
             )
-    elif gaps_body:
+    elif gaps_heading_present:
         return False, (
-            f"`## Test Coverage Gaps` section present but verdict is {verdict!r}; "
+            f"`## Test Coverage Gaps` heading present but verdict is {verdict!r}; "
             "section is exclusive to REQUIRES CHANGES per playbook "
-            "§ \"Test Coverage Gaps\""
+            "§ \"Test Coverage Gaps\". Omit the heading entirely on "
+            "non-REQUIRES-CHANGES verdicts."
         )
     if blockers > 0 and verdict != "BLOCKED":
         return False, (

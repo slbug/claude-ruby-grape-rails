@@ -81,7 +81,16 @@ class TriagePlanTemplateDriftTests(unittest.TestCase):
         bad: list[str] = []
         for heading, body in _walk_phase_sections(text):
             heading_l = heading.lower()
-            if heading_l.startswith("phase 1") or "pre-existing" in heading_l:
+            # Pre-existing Issues exempt — pre-existing findings retain
+            # their Iron Law label.
+            if "pre-existing" in heading_l:
+                continue
+            # Phase 1 has TWO canonical shapes:
+            #   - `## Phase 1: Blockers` (BLOCKED verdict): Iron Law refs allowed
+            #   - `## Phase 1: Test Coverage Gaps` (REQUIRES CHANGES): NO Iron Law (gaps are coverage, not Iron Law)
+            # Only the Blockers variant exempts Iron Law; Test Coverage
+            # Gaps Phase 1 must be flagged.
+            if heading_l.startswith("phase 1: blockers"):
                 continue
             for line in body:
                 if not _TASK_LINE_RE.match(line):
@@ -91,8 +100,9 @@ class TriagePlanTemplateDriftTests(unittest.TestCase):
         self.assertFalse(
             bad,
             "Iron Law violations are BLOCKER per triage-patterns; canonical "
-            "examples MUST NOT place them in non-BLOCKER phases. "
-            "Drifted lines: " + "; ".join(bad),
+            "examples MUST NOT place them in non-Blockers phases (incl. "
+            "Phase 1 Test Coverage Gaps, which is for coverage gaps, not "
+            "Iron Law violations). Drifted lines: " + "; ".join(bad),
         )
 
     def test_phase_2_uses_canonical_warning_pseudo_bucket(self) -> None:

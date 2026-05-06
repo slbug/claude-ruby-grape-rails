@@ -237,7 +237,7 @@ bucket-form is introduced in STEP 3.
 |---|---|
 | `CONDITIONAL PASS`, `PASS WITH CAVEATS`, `PASS-WITH-WARNS` | infer from worker `Critical / Warning / Info` counts: any `Critical` → `BLOCKED`; else any `Warning` → `PASS WITH WARNINGS`; else `PASS` |
 | `Approved`, `LGTM`, `looks good` | `PASS` if worker reports zero `Critical` and zero `Warning`; else map per worker counts |
-| `Needs fixes`, `fix before merge`, `not ready` | `REQUIRES CHANGES` if worker reports zero `Critical`; else `BLOCKED` |
+| `Needs fixes`, `fix before merge`, `not ready` | infer from worker counts: any `Critical` → `BLOCKED`; else any `Warning` → `PASS WITH WARNINGS`; else `PASS`. Do NOT auto-route to `REQUIRES CHANGES` — that verdict is reserved for missing test coverage on NEW public behavior (per § "Verdict Decision Rules"). Only emit `REQUIRES CHANGES` when the worker explicitly flagged a `New public behavior without tests` finding. |
 | `Critical`, `BLOCK`, `BLOCKER` (verdict, not severity) | `BLOCKED` |
 
 Preserve the agent's raw verdict text VERBATIM in the

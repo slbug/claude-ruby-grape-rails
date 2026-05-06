@@ -521,9 +521,9 @@ For hands-off development:
 /rb:full Add user profile avatars with S3 upload
 ```
 
-Runs the complete cycle: plan (with research), work, verify, review.
-Halts on `/rb:verify --full` gate failure (HALTED_VERIFY_FAILED), on
-review verdict `BLOCKED` (HALTED_REVIEW_BLOCKED) or `REQUIRES CHANGES`
+Runs the complete cycle: plan (with research), work, verify, review,
+compound. Halts on `/rb:verify --full` gate failure (HALTED_VERIFY_FAILED),
+on review verdict `BLOCKED` (HALTED_REVIEW_BLOCKED) or `REQUIRES CHANGES`
 (HALTED_REVIEW_REQUIRES_CHANGES), or on missing/unparsable consolidated
 review (HALTED_REVIEW_UNKNOWN); user decides next step.
 

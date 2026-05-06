@@ -311,8 +311,12 @@ or compress:
 |---|---|
 | `PASS WARN`, `PASS-WITH-WARNS`, `PWW` | `PASS WITH WARNINGS` |
 | `BLOCK`, `BLK`, `BLOCKER` (verdict, not severity tag) | `BLOCKED` |
-| `REQ-CHANGES`, `RC`, `Needs fixes` | `REQUIRES CHANGES` |
+| `REQ-CHANGES`, `RC` | `REQUIRES CHANGES` (only when actual test-coverage gap on NEW public behavior; see playbook § "Verdict Decision Rules") |
 | `OK`, `LGTM`, `Approved` | `PASS` |
+
+`Needs fixes` does NOT auto-route to `REQUIRES CHANGES` — infer per
+worker counts (`Critical` → `BLOCKED`; else `Warning` → `PASS WITH WARNINGS`;
+else `PASS`).
 
 Use canonical strings only for manifest status enum (`pending`,
 `in-flight`, `artifact`, `stub-replaced`, `recovered-from-return`,
