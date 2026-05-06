@@ -569,10 +569,22 @@ Ready for: /rb:learn (capture lessons) or /rb:compound (capture solution).
 **PASS WITH WARNINGS:**
 
 ```text
-Review complete. {n} warnings noted.
-Warnings logged but not blocking.
-Ready for: /rb:learn or /rb:compound.
+Review complete. {n} warnings noted (full list in
+`.claude/reviews/{review-slug}-{datesuffix}.md` § "At-a-Glance Finding Table").
+Warnings are non-blocking.
+
+How would you like to proceed?
+
+- /rb:triage .claude/reviews/{review-slug}-{datesuffix}.md
+    — Default. Select which warnings to fix; defer the rest.
+- /rb:learn — Capture lessons without fixing.
+- /rb:compound — Capture solution without fixing.
+- I'll handle it myself
 ```
+
+Do NOT suggest bare `/rb:work` here — it would resume any active
+plan from `.claude/ACTIVE_PLAN`, not address these warnings.
+`/rb:triage {review-path}` generates the right plan first.
 
 **REQUIRES CHANGES:**
 

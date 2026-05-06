@@ -417,7 +417,8 @@ selected at Step 4.
 | `select all warnings` | Select all WARNING findings (BLOCKERs auto-included by Step 4) |
 | `select all suggestions` | Select all SUGGESTION findings |
 | `group by file` | Reorganize display by file |
-| `skip all warnings` | Defer all non-BLOCKER findings |
+| `skip all warnings` | Defer every WARNING. Does NOT touch SUGGESTION selections. |
+| `skip all suggestions` | Defer every SUGGESTION. Does NOT touch WARNING selections. |
 
 ## References
 
