@@ -1,38 +1,34 @@
 # Incident Playbook
 
-Production-incident triage flow. Apply when investigating a live failure
-that already shipped (Sentry/AppSignal/Honeybadger payload, user report,
-oncall page).
+Apply when investigating live failure already shipped: Sentry / AppSignal
+/ Honeybadger payload, user report, oncall page.
 
 ## 1. Triage payload
 
-Extract from the payload before opening any code:
+Extract before opening code:
 
 - error class + message (exact text)
 - top-N stack frames
 - request context (method, path, user ID, params)
 - environment + release tag
 
-Never accept "looks like X" without backtrace evidence.
+Reject "looks like X" without backtrace evidence.
 
 ### PII / secret redaction
 
-User IDs, params, request bodies, and stack-frame locals may contain
-PII (emails, names, addresses), credentials (tokens, session cookies,
-API keys), or business secrets. Before persisting any payload excerpt
-to a durable artifact (`.claude/solutions/...`, scratchpad, commit
-message), redact:
+Redact before persisting any payload excerpt to a durable artifact
+(`.claude/solutions/...`, scratchpad, commit message):
 
-- email → `<email>`
-- token / cookie / API key / password → `<redacted-secret>`
-- raw user identifier → opaque pseudonym (`<user-A>`)
-- arbitrary string params → `<param-name>=<redacted>` if value not
-  load-bearing for the bug
+| Source | Replacement |
+|---|---|
+| email | `<email>` |
+| token / cookie / API key / password | `<redacted-secret>` |
+| raw user identifier | opaque pseudonym (`<user-A>`) |
+| arbitrary string params | `<param-name>=<redacted>` (drop unless load-bearing) |
 
-Redact at extraction time. Never paste raw payloads into solution
-docs. If a value IS load-bearing (e.g., specific malformed token
-shape that triggers the bug), redact secret content while preserving
-the structural pattern (`Bearer eyJ...<redacted>`).
+Redact at extraction time. Never paste raw payloads into solution docs.
+For load-bearing values (malformed token shape that triggers bug),
+redact secret content but preserve structural pattern: `Bearer eyJ...<redacted>`.
 
 ## 2. Backtrace first
 
@@ -45,8 +41,8 @@ last left app code. That frame is the first place to probe.
 grep -rn "<symptom-keyword>" .claude/solutions/
 ```
 
-If a matching solution doc exists, read it. Verify replacement strategy
-still applies before re-using.
+Read matching solution doc. Verify replacement strategy still applies
+before re-using.
 
 ## 4. Reproduce locally
 
@@ -62,8 +58,8 @@ RSpec.describe "regression #<id>" do
 end
 ```
 
-If you cannot reproduce, you do not have root cause. Stop. Gather more
-evidence from production logs or escalate.
+Cannot reproduce → no root cause. Stop. Gather more evidence from
+production logs or escalate.
 
 ## 5. Regression-test-first fix
 
@@ -73,9 +69,9 @@ evidence from production logs or escalate.
 
 ## 6. Tidewave verify (when gem loaded)
 
-If `tidewave` is loaded:
+Tidewave loaded:
 
-- Query live routes / middleware / config to confirm production-shape
+- Query live routes / middleware / config; confirm production-shape
 - Use `rails runner` for one-off state introspection
 - Confirm fix holds under real boot, not just test harness
 

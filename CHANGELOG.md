@@ -11,56 +11,74 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- `make eval-skill-budget` deterministic gate at
-  `lab/eval/skill_budget.py`. Audits aggregate combined
-  `description` + `when_to_use` chars across model-visible skills
-  against CC `skillListingBudgetFraction` × context window (10,000
-  chars target on plugin's 1M-context default). Per-skill 1,536 cap
-  stays in existing `lab/eval/evals/*.json` `description_length`
-  validators. Wired into `eval-ci-deterministic`.
-- `init/SKILL.md` § "Skill Listing Budget" advisory for
-  200K-context users (raise `skillListingBudgetFraction` or set
-  `SLASH_COMMAND_TOOL_CHAR_BUDGET`). 1M-context users covered by
-  default.
-- `intro/references/tutorial-content.md` Section 7 — skill listing budget mechanic.
+- `make eval-skill-budget` gate (`lab/eval/skill_budget.py`). Audits
+  aggregate `description` + `when_to_use` chars across model-visible
+  skills vs CC `skillListingBudgetFraction` × context (10,000 chars
+  on 1M default). Wired into `eval-ci-deterministic`. Per-skill 1,536
+  cap stays in `lab/eval/evals/*.json` `description_length`.
+- `init/SKILL.md` § "Skill Listing Budget" — advisory for 200K-context
+  users.
+- `intro/references/tutorial-content.md` Section 7 — listing budget
+  mechanic.
+- `skills/investigate/references/incident-playbook.md` — production
+  incident triage flow (payload → reproduce → fix → verify → capture).
+  Cross-refs from `investigate`, `review`, `rb-trace` skills.
+- `agents/security-analyzer.md` § "Evidence Mode (mandatory)" — enum
+  (`static-signal | runtime-confirmed | configuration-risk |
+  requires-human-validation`) + read-only-confirmation rule (no
+  destructive code to upgrade evidence). Schema example carries field.
+- `skills/security/SKILL.md` § "Evidence Mode" + Gotchas.
+- `skills/triage/SKILL.md` — order security findings within bucket by
+  `evidence_mode`; non-security retain agent-emitted order.
+- `skills/review/references/review-playbook.md` § "Size-Tier Dispatch",
+  § "Compute diff LOC", § "Boundary cases".
+- `skills/review/SKILL.md` size-tier classification (Simple ≤200 LOC /
+  Medium 201-1000 / Complex >1000) + Gotchas section.
+- `Counts:` mandatory prefix block on all 12 reviewer agents.
 
 ### Changed
 
 - 12 manually-invoked skills marked `disable-model-invocation: true`
-  (slash command preserved; hidden from listing budget): `intro`,
-  `examples`, `permissions`, `provenance-scan`, `compression-report`,
-  `learn`, `secrets-scan`, `document`, `rubydoc-fetcher`,
-  `challenge`, `quick`, `iron-laws`.
-- 12 rare-use domain skills aggressively trimmed (≤120 chars
-  combined): `hotwire-native`, `karafka`, `async-patterns`,
+  (slash preserved, hidden from listing): `intro`, `examples`,
+  `permissions`, `provenance-scan`, `compression-report`, `learn`,
+  `secrets-scan`, `document`, `rubydoc-fetcher`, `challenge`, `quick`,
+  `iron-laws`.
+- 12 rare-use domain skill descriptions trimmed (≤120 chars combined),
+  reverted to "Use when" prefix per repo policy and Anthropic
+  superpowers convention: `hotwire-native`, `karafka`, `async-patterns`,
   `sequel-patterns`, `dry-rb-patterns`, `runtime-integration`,
   `request-state-audit`, `safe-migrations`, `techdebt`, `audit`,
-  `deploy`, `intent-detection`. Trigger keywords kept first per
-  Anthropic Building Skills Guide.
-- `references/compression/README.md` TACO citation correction:
-  TACO (arxiv:2604.19572) reports 1-4% accuracy gains under same
-  token budget; the 26-54% peak-token reduction figure belongs to
-  ACON (already cited adjacent).
-- `intro/references/tutorial-content.md` and
-  `testing/references/discipline.md` Anthropic skill-formation
-  citation refresh — clarified RCT (n=52, Trio) measures human
-  mastery; agent-mode users still benefit from comprehension framing.
+  `deploy`, `intent-detection`. Aggregate listing 9,684 / 10,000.
+- `references/compression/README.md` TACO citation: 1-4% accuracy gains
+  under same token budget; 26-54% peak-token reduction belongs to ACON.
+- `intro/references/tutorial-content.md` + `testing/references/discipline.md`
+  Anthropic skill-formation RCT framing (n=52, Trio).
+
+### Fixed
+
+- `DIFF_LOC` awk in `review/SKILL.md` + `review-playbook.md`: empty
+  diff returns `0`, not empty string. Pattern:
+  `awk '{n=$4+$6} END{print n+0}'`.
+- `.claude/skills/docs-check/references/validation-rules.md`: `color`
+  moved from supported plugin-agent frontmatter to "documented but
+  inert for plugin agents" bucket alongside `initialPrompt`. Repo
+  policy `.github/instructions/plugin-review.instructions.md` is
+  authoritative; CC silently drops `color` on plugin-shipped agents.
+- `triage/SKILL.md` `evidence_mode` rule scope: applies to security
+  findings only (originator agent is `security-analyzer`); other
+  reviewers keep agent-emitted order.
 
 ### Removed
 
 - `compound-docs` standalone skill. Content moved to
-  `compound/references/schema.md` and
-  `compound/references/resolution-template.md`. `/rb:compound-docs`
-  slash command no longer available; consult `compound` skill
-  references directly. Cross-refs updated repo-wide
-  (`compound/SKILL.md`, `compound/references/compound-workflow.md`,
-  `plan/SKILL.md`, `CLAUDE.md`, `README.md`).
-- Tracked eval JSONs for the removed skill:
-  `lab/eval/evals/compound-docs.json`,
-  `lab/eval/triggers/compound-docs.json`. Generated trigger caches
+  `compound/references/schema.md` + `compound/references/resolution-template.md`.
+  `/rb:compound-docs` slash command gone; cross-refs updated in
+  `compound/SKILL.md`, `compound/references/compound-workflow.md`,
+  `plan/SKILL.md`, `CLAUDE.md`, `README.md`.
+- Tracked eval JSONs: `lab/eval/evals/compound-docs.json`,
+  `lab/eval/triggers/compound-docs.json`. Generated caches
   (`_hard_corpus.json`, `_semantic_pairs.json`, `triggers/results/*`)
-  regenerate automatically on next eval run; not tracked in this
-  repo.
+  regenerate on next eval run; not tracked.
 
 ## [1.16.7] - 2026-05-04
 
