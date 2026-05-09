@@ -135,6 +135,19 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 - **Medium**: Likely violation, needs context (`update_columns` in controller)
 - **Low**: Might be okay, flag for review (`raw()` with hardcoded string)
 
+## Counts (mandatory prefix)
+
+Findings file MUST start with:
+
+`**Counts:** N findings (X blocker, Y warning, Z suggestion); M notes`
+
+Empty state:
+
+`**Counts:** 0 findings — All clean.`
+
+Counts line is first content after frontmatter and any header metadata.
+Consolidator parses for severity bucket totals.
+
 ## Output Format
 
 When invoked by `/rb:review`, write `.claude/reviews/iron-law-judge/{review-slug}-{datesuffix}.md`.

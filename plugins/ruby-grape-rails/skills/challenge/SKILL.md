@@ -4,6 +4,7 @@ description: "Use when you want rigorous adversarial scrutiny of Active Record c
 when_to_use: "Triggers: \"challenge this\", \"stress test this code\", \"adversarial review\", \"devil's advocate\", \"really scrutinize\". Does NOT handle: routine code review, planning, auditing."
 argument-hint: active record | hotwire | pr
 effort: high
+disable-model-invocation: true
 ---
 # Challenge Mode Reviews
 

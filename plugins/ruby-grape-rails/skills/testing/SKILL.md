@@ -18,6 +18,23 @@ effort: medium
 - factories or fixtures that stay small and deterministic
 - explicit time and randomness control in flaky paths
 
+## Gotchas
+
+- Factory cycles. `create(:user)` triggers `create(:account)` triggers
+  `create(:user)` — silent infinite loop. Detect via FactoryBot's
+  `:build_stubbed` strategy or explicit `:user_without_account`
+  factory.
+- DatabaseCleaner truncation drift. `truncation` strategy doesn't
+  reset sequences. Tests asserting on auto-increment IDs fail
+  randomly. Use `transaction` or
+  `ActiveRecord::Base.connection.reset_pk_sequence!`.
+- Time-sensitive flakies. `Time.current` in factory +
+  `expect(record.created_at).to eq Time.current` — race on test
+  runner clock. Use `freeze_time` or `Timecop.freeze`.
+- RSpec random order seed. Test passing alone but failing in suite is
+  order-dependent. Reproduce with `rspec --seed <N>`; fix via
+  `before(:each) do; reset_state; end` or split tests.
+
 ## References
 
 | Need | Reference |

@@ -1,7 +1,7 @@
 # Full Cycle Execution Steps
 
 The canonical state machine lives in
-`${CLAUDE_SKILL_DIR}/references/state-machine.md`. This file documents
+`state-machine.md`. This file documents
 only execution-time observations and patterns NOT covered there.
 
 ## Execution Notes

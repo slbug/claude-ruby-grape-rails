@@ -65,7 +65,7 @@ claude-ruby-grape-rails/
 │   ├── hooks/hooks.json
 │   ├── lib/                         # Shared Ruby modules (stdlib only)
 │   ├── references/                  # Shipped reference docs
-│   └── skills/                      # 53 skills
+│   └── skills/                      # 52 skills
 ├── lab/eval/                        # Contributor-only deterministic eval tooling
 ├── CLAUDE.md
 └── README.md
@@ -128,11 +128,10 @@ Required structure for `plan`, `work`, `review`, `compound`, `full`:
 
 | Skill | Role |
 |---|---|
-| `compound-docs` | Schema + reference for solution documentation |
-| `compound` (`/rb:compound`) | Post-fix knowledge capture |
+| `compound` (`/rb:compound`) | Post-fix knowledge capture; references include schema + template |
 
 Solution docs use YAML frontmatter — schema:
-`plugins/ruby-grape-rails/skills/compound-docs/references/schema.md`.
+`plugins/ruby-grape-rails/skills/compound/references/schema.md`.
 
 ## Checklist
 

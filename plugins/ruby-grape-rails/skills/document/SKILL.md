@@ -4,6 +4,7 @@ description: "Use when generating documentation for implemented features — YAR
 when_to_use: "Triggers: \"document\", \"YARD\", \"RDoc\", \"README\", \"ADR\", \"write docs\"."
 argument-hint: "[plan-file OR feature-name]"
 effort: low
+disable-model-invocation: true
 ---
 # Document
 

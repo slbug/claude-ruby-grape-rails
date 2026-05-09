@@ -30,3 +30,4 @@ This is a **skill** (`/rb:trace`), not an agent. Do NOT spawn `rb-trace` or
 | where tracing begins (controllers, Grape endpoints, jobs, rake, webhooks, middleware) | `${CLAUDE_SKILL_DIR}/references/entry-points.md` |
 | extracting argument patterns from call sites | `${CLAUDE_SKILL_DIR}/references/argument-extraction.md` |
 | Prism, TracePoint, RuboCop AST, Steep, Pronto | `${CLAUDE_SKILL_DIR}/references/static-analysis-tools.md` |
+| production-incident triage flow (when trace is for a live failure) | `${CLAUDE_PLUGIN_ROOT}/skills/investigate/references/incident-playbook.md` |

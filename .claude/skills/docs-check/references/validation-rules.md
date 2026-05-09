@@ -57,6 +57,8 @@ Currently-supported plugin-agent frontmatter:
 - `memory`
 - `background`
 - `isolation`
+- `color`
+- `initialPrompt`
 
 Important constraints:
 

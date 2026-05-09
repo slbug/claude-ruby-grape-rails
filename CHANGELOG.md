@@ -7,6 +7,63 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.8] - 2026-05-09
+
+### Added
+
+- `make eval-skill-budget` deterministic gate at
+  `lab/eval/skill_budget.py`. Audits aggregate combined
+  `description` + `when_to_use` chars across model-visible skills
+  against CC `skillListingBudgetFraction` × context window (10,000
+  chars target on plugin's 1M-context default). Per-skill 1,536 cap
+  stays in existing `lab/eval/evals/*.json` `description_length`
+  validators. Wired into `eval-ci-deterministic`.
+- `init/SKILL.md` § "Skill Listing Budget" advisory for
+  200K-context users (raise `skillListingBudgetFraction` or set
+  `SLASH_COMMAND_TOOL_CHAR_BUDGET`). 1M-context users covered by
+  default.
+- `intro/references/tutorial-content.md` Section 7 — skill listing budget mechanic.
+- Optional `waza` doctor check in
+  `scripts/check-contributor-prereqs.sh` (informational; not part of
+  the budget gate).
+
+### Changed
+
+- 12 manually-invoked skills marked `disable-model-invocation: true`
+  (slash command preserved; hidden from listing budget): `intro`,
+  `examples`, `permissions`, `provenance-scan`, `compression-report`,
+  `learn`, `secrets-scan`, `document`, `rubydoc-fetcher`,
+  `challenge`, `quick`, `iron-laws`.
+- 12 rare-use domain skills aggressively trimmed (≤120 chars
+  combined): `hotwire-native`, `karafka`, `async-patterns`,
+  `sequel-patterns`, `dry-rb-patterns`, `runtime-integration`,
+  `request-state-audit`, `safe-migrations`, `techdebt`, `audit`,
+  `deploy`, `intent-detection`. Trigger keywords kept first per
+  Anthropic Building Skills Guide.
+- `references/compression/README.md` TACO citation correction:
+  TACO (arxiv:2604.19572) reports 1-4% accuracy gains under same
+  token budget; the 26-54% peak-token reduction figure belongs to
+  ACON (already cited adjacent).
+- `intro/references/tutorial-content.md` and
+  `testing/references/discipline.md` Anthropic skill-formation
+  citation refresh — clarified RCT (n=52, Trio) measures human
+  mastery; agent-mode users still benefit from comprehension framing.
+
+### Removed
+
+- `compound-docs` standalone skill. Content moved to
+  `compound/references/schema.md` and
+  `compound/references/resolution-template.md`. `/rb:compound-docs`
+  slash command no longer available; consult `compound` skill
+  references directly. Cross-refs updated repo-wide
+  (`compound/SKILL.md`, `compound/references/compound-workflow.md`,
+  `plan/SKILL.md`, `CLAUDE.md`, `README.md`,
+  `lab/eval/triggers/_hard_corpus.json` -12 prompts,
+  `lab/eval/triggers/_semantic_pairs.json`).
+- Stale eval JSONs: `lab/eval/evals/compound-docs.json`,
+  `lab/eval/triggers/compound-docs.json`,
+  `lab/eval/triggers/results/{apfel,haiku}/compound-docs.json`.
+
 ## [1.16.7] - 2026-05-04
 
 ### Changed
@@ -2575,7 +2632,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.7...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.8...HEAD
+[1.16.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.7...v1.16.8
 [1.16.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.6...v1.16.7
 [1.16.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.5...v1.16.6
 [1.16.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.4...v1.16.5

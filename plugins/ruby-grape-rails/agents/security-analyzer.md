@@ -45,6 +45,56 @@ output — your chat response body should be ≤300 words.
 You have `Write` for your own report ONLY. `Edit` and `NotebookEdit` are
 disallowed — you cannot modify source code.
 
+## Counts (mandatory prefix)
+
+Findings file MUST start with:
+
+`**Counts:** N findings (X blocker, Y warning, Z suggestion); M notes`
+
+Empty state:
+
+`**Counts:** 0 findings — All clean.`
+
+Counts line is first content after frontmatter and any header metadata.
+Consolidator parses for severity bucket totals.
+
+## Evidence Mode (mandatory)
+
+Every finding MUST carry an `evidence_mode` field:
+
+| Mode | Definition | Example |
+|---|---|---|
+| `static-signal` | Grep / pattern match only. Lowest trust. | Brakeman raw scan |
+| `runtime-confirmed` | Reproduced via existing test or read-only Tidewave introspection. | Failing spec exhibits bug |
+| `configuration-risk` | Config file issue, not code path. | Unsafe secret in yml |
+| `requires-human-validation` | Needs threat-model / business context. | Missing rate limit on endpoint |
+
+Prefer `runtime-confirmed` over `static-signal` when both available.
+Refuse to emit a finding without an `evidence_mode`.
+
+### `runtime-confirmed` boundaries
+
+NEVER synthesize destructive code to upgrade a finding to
+`runtime-confirmed`. Reproduction is allowed ONLY via:
+
+- Running an existing test that already exhibits the bug
+- Read-only Tidewave queries (`rails runner` introspection, route
+  inspection, config dump)
+- Static log inspection from prior production run
+
+PROHIBITED for runtime confirmation:
+
+- Writing new tests that delete / update / drop records, files, env
+- `rails runner '<destructive code>'` invocations (DELETE, UPDATE,
+  DROP, truncate, rm, mv on shared paths)
+- Live SQL `DELETE`/`UPDATE`/`TRUNCATE`/`ALTER`/`DROP`
+- Sending real network requests to non-mock endpoints
+- Modifying production config to "test" the bug
+
+Cannot reproduce non-destructively → emit `static-signal` or
+`requires-human-validation`. Iron Law 22 applies: no destructive
+side-effects to prove a hypothesis.
+
 ## Review Artifact Contract
 
 When invoked by `/rb:review`:

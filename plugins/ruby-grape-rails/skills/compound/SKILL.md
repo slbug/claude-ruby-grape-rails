@@ -40,7 +40,7 @@ START ──▶ VALIDATE AGAINST SCHEMA ──▶ USE RESOLUTION TEMPLATE ──
 
 ## Document Structure
 
-Solution documents use YAML frontmatter defined in `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/schema.md` and follow the template in `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/resolution-template.md`.
+Solution documents use YAML frontmatter defined in `${CLAUDE_SKILL_DIR}/references/schema.md` and follow the template in `${CLAUDE_SKILL_DIR}/references/resolution-template.md`.
 
 ### Required Frontmatter Fields
 
@@ -209,9 +209,8 @@ Use both: Compound first for the instance, Learn to generalize.
 ## References
 
 - `${CLAUDE_SKILL_DIR}/references/compound-workflow.md` — Detailed capture workflow
-- `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/SKILL.md` — Knowledge-base conventions and search expectations
-- `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/schema.md` — Solution frontmatter schema
-- `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/resolution-template.md` — Canonical solution template
+- `${CLAUDE_SKILL_DIR}/references/schema.md` — Solution frontmatter schema
+- `${CLAUDE_SKILL_DIR}/references/resolution-template.md` — Canonical solution template
 
 ## Decision Menu
 
@@ -256,3 +255,18 @@ Use kebab-case, descriptive names:
 
 Filename convention: `{sanitized-symptom}-{module}-{YYYYMMDD}.md`
 Example: `association-not-loaded-accounts-20260322.md`
+
+## Gotchas
+
+- Partial-fix capture. Solution doc must describe complete fix (root
+  cause + replacement strategy + verification), not the first commit
+  that touched the file.
+- Wrong category tag. `category: active-record` for a Sidekiq fix
+  wastes retrieval budget. Re-check category against the actual Iron
+  Law violated.
+- Missing `last_confirmed`. Cards without `last_confirmed: <date>`
+  decay rapidly in retrieval (recency bonus → 0). Update on every
+  confirmed reuse.
+- Trust-state drift. `trust_state: clean` on a sidecar with 0 sources
+  or empty claims promotes weak evidence as authoritative. Run
+  `make eval-output` to surface mismatches.

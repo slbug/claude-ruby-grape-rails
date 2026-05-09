@@ -55,7 +55,7 @@ Each phase reads from the previous phase's output. Plans become checkboxes. Chec
 | Feature | What It Does |
 |---------|-------------|
 | 19 specialist agents | ActiveRecord, Hotwire, security, Sidekiq, deployment, provenance experts |
-| 53 skills | Commands for every phase of development |
+| 52 skills | Commands for every phase of development |
 | 22 Iron Laws | Non-negotiable rules enforced automatically |
 | Auto-loaded references | Context-aware docs loaded when you edit relevant files |
 | Runtime tooling integration | Runtime debugging when runtime tooling is connected |
@@ -422,7 +422,15 @@ These are Claude Code native, not plugin. They complement the plugin.
   - `Default` — plugin's normal behavior
   - `Explanatory` — Claude narrates thought process; good for learning
   - `Learning` — interactive pair-programming; Claude stops for user to write `#TODO` sections
-  - Recommend `Explanatory` or `Learning` when comprehension matters more than speed (Anthropic skill-formation study: conceptual-inquiry patterns score 86% mastery vs delegation <40%).
+  - Recommend `Explanatory` or `Learning` when comprehension matters
+    more than speed. Anthropic skill-formation RCT (n=52, Trio):
+    conceptual-inquiry users score 65-86% mastery vs delegation <40%;
+    agent-mode users still benefit from comprehension framing.
+- **`skillListingBudgetFraction`** — caps combined `description` +
+  `when_to_use` per skill in the listing block. Default 1% of context
+  window (or 8K fallback). Plugin targets 1M context, so default fits
+  shipped skills. 200K-context users should raise per `init/SKILL.md`
+  § "Skill Listing Budget".
 
 Each is a CC-native feature — the plugin does not reimplement any of them.
 

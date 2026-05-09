@@ -44,7 +44,12 @@ Next Action
 ## Severity Classification
 
 Map review buckets (`BLOCKER | WARNING | SUGGESTION`) to triage
-priorities:
+priorities. Within each bucket, order by `evidence_mode`:
+
+1. `runtime-confirmed` — act first
+2. `configuration-risk`
+3. `static-signal`
+4. `requires-human-validation` — surface to user for decision
 
 ### BLOCKER → Always Include
 

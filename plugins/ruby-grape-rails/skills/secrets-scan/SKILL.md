@@ -4,6 +4,7 @@ description: "Use when scanning code for leaked secrets, API keys, and credentia
 when_to_use: "Triggers: \"secrets\", \"leaked\", \"API key\", \"credentials\", \"betterleaks\", \"before commit\"."
 argument-hint: "[path] [--baseline FILE] [--validate]"
 effort: medium
+disable-model-invocation: true
 ---
 # Secrets Scan
 

@@ -242,3 +242,25 @@ relevant.
 
 See `${CLAUDE_PLUGIN_ROOT}/skills/intro/references/tutorial-content.md`
 (Section 8) for the rule-of-thumb checklist and the scoped-rule template.
+
+## Skill Listing Budget
+
+Plugin targets 1M context (sonnet[1m] / opus 4.7 1M). Default
+`skillListingBudgetFraction=0.01` × 1M = 10,000-char budget covers
+shipped skills.
+
+**200K-context users** (`claude-sonnet-4-5` / `claude-opus-4-7` without
+`[1m]`): default 1% × 200K = 2,000-char budget overflows. Either raise
+in `~/.claude/settings.json`:
+
+```json
+{ "skillListingBudgetFraction": 0.05 }
+```
+
+…or set `SLASH_COMMAND_TOOL_CHAR_BUDGET=10000`.
+
+CC truncates combined `description` + `when_to_use` per skill at 1,536
+chars regardless of budget; aggregate truncation drops tail-skill
+descriptions silently when over budget. See
+[Claude Code skills docs](https://code.claude.com/docs/en/skills),
+"Skill descriptions are cut short" troubleshooting section.

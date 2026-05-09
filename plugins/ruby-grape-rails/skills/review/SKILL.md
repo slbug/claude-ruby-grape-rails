@@ -106,32 +106,44 @@ message.
 
 ## Complexity Classification
 
-Classify the review before spawning agents. File count determines base tier;
-critical-path files force escalation regardless of count.
+Classify the review before spawning agents. Tier = `max(file_tier, loc_tier)`.
+Critical-path files force escalation regardless of count or LOC.
 
-| Tier | Files Changed | Depth | Agents |
-|------|--------------|-------|--------|
-| **Simple** | 1-3 | Core reviewers only, concise output | 4 |
-| **Medium** | 4-10 | Core + conditional by file type | 4-8 |
-| **Complex** | 11+ | All relevant reviewers, detailed output | 8-11 |
+| Tier | Files Changed | Diff LOC | Depth | Agents |
+|------|--------------|----------|-------|--------|
+| **Simple** | 1-3 | ≤ 200 | Lean: correctness + security only | 2 |
+| **Medium** | 4-10 | 201-1000 | Core + conditional by file type | 4-8 |
+| **Complex** | 11+ | > 1000 | All relevant reviewers, detailed output | 8-11 |
+
+Compute `DIFF_LOC = git diff --shortstat <BASE_REF> -- | awk '{print $4 + $6}'`
+where columns 4 + 6 are insertions + deletions.
 
 Log the classification in the consolidated review header:
-`**Complexity**: Simple (2 files) | Medium (7 files) | Complex (15 files, escalated: db/migrate)`
+`**Complexity**: Simple (2 files, 87 LOC) | Medium (7 files, 412 LOC) | Complex (15 files, 1834 LOC, escalated: db/migrate)`
+
+**Work-phase-clean signal.** If review follows `/rb:work` AND the
+work-phase run-manifest at `.claude/plans/<slug>/RUN-CURRENT.json`
+shows `verification_state: clean`, skip `iron-law-judge` regardless of
+tier. Iron Laws already verified at work-phase exit; saves ~30K tokens.
 
 ## Reviewer Selection Matrix
 
 Spawn from main session in single parallel block based on tier + file patterns:
 
-### Core Reviewers (Always — all tiers)
+### Lean Reviewers (Simple tier minimum)
 
 - `ruby-reviewer` - Ruby idioms, syntax, correctness
 - `security-analyzer` - Security vulnerabilities
+
+### Core Reviewers (added at Medium + Complex tiers)
+
 - `testing-reviewer` - Test coverage and quality
 - `verification-runner` - Automated checks pass
 
 ### Conditional Reviewers (Medium + Complex tiers)
 
 - `iron-law-judge` - When diff is risky or touches critical paths
+  (skipped if work-phase manifest shows `verification_state: clean`)
 - `sidekiq-specialist` - When workers or jobs changed
 - `deployment-validator` - When container or deploy config changed
 - `rails-architect` - When service layer, Grape APIs, or architecture changed
@@ -344,6 +356,21 @@ When a finding cites a sidecar, read the sidecar's `trust_state` (see
 - `weak`: keep severity; add a provenance note.
 - `clean`: proceed silently.
 
+## Gotchas
+
+- Per-reviewer manifest path confusion. Per-agent artifact lives at
+  `.claude/reviews/<agent-slug>/<review-slug>-<datesuffix>.md`.
+  Consolidated lives at
+  `.claude/reviews/<review-slug>-<datesuffix>.md`. Don't read per-agent
+  files into main session synthesis — use consolidated.
+- Stale base-ref. Run-manifest pins `base_ref` at fanout start. User
+  rebase mid-review → recovery state mismatch. Re-fanout if base shifts.
+- Recovery-state misclassification. `stub-no-output` (agent ran but
+  produced empty file) is NOT `pending` (agent never ran). Distinguish
+  before retry vs respawn.
+- Missing `**Counts:**` line. Reviewers MUST emit Counts: first.
+  Missing line breaks consolidator severity-bucket counts.
+
 ## References
 
 | Need | Reference |
@@ -351,3 +378,4 @@ When a finding cites a sidecar, read the sidecar's `trust_state` (see
 | reviewer focus areas, file-type checklists, anti-patterns, severity, verdict, mandatory finding table, chat scripts, deduplication | `${CLAUDE_SKILL_DIR}/references/review-playbook.md` |
 | review-slug derivation + filesystem-safe slug rules | `${CLAUDE_SKILL_DIR}/references/conventions.md` |
 | worked example of consolidated review output | `${CLAUDE_SKILL_DIR}/references/example-review.md` |
+| production-incident review context (when review covers a live failure) | `${CLAUDE_PLUGIN_ROOT}/skills/investigate/references/incident-playbook.md` |

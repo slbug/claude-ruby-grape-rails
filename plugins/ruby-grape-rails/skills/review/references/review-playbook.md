@@ -16,6 +16,7 @@ file-type-specific checklists without bloating the main routing surface.
 - SQL injection vectors
 - XSS in views and serializers
 - mass assignment, auth bypasses, authorization holes, secrets exposure
+- every finding carries `evidence_mode`: `static-signal | runtime-confirmed | configuration-risk | requires-human-validation`
 
 ### `testing-reviewer`
 
@@ -649,3 +650,40 @@ When multiple agents find the same issue:
 3. Use most specific description
 4. Keep highest severity
 5. List all affected lines
+
+## Size-Tier Dispatch
+
+Tier = `max(file_tier, loc_tier)` per `Complexity Classification` in
+parent SKILL.md.
+
+| Tier | Diff LOC | Agents | Rationale |
+|---|---|---|---|
+| Simple | ≤ 200 | ruby-reviewer + security-analyzer | Tight diffs rarely need full panel |
+| Medium | 201-1000 | + testing-reviewer + verification-runner + conditionals | Standard panel |
+| Complex | > 1000 | full xhigh fanout | Architectural scope |
+
+### Compute diff LOC
+
+```
+DIFF_LOC=$(git diff --shortstat "$BASE_REF" -- | awk '{print $4 + $6}')
+```
+
+Columns 4 + 6 are insertions + deletions. Empty diff (`DIFF_LOC=0`)
+should reject; require explicit `--all` flag.
+
+### Work-phase signal
+
+Review following `/rb:work` reads the work-phase run-manifest at
+`.claude/plans/<slug>/RUN-CURRENT.json`. If `verification_state:
+clean`, skip `iron-law-judge` regardless of tier — Iron Laws already
+verified at work-phase exit.
+
+### Boundary cases
+
+| Diff LOC | File count | Tier |
+|---|---|---|
+| 199 | 2 | Simple |
+| 200 | 2 | Simple (≤ 200, inclusive) |
+| 201 | 2 | Medium |
+| 50 | 11 | Complex (file count override) |
+| 1500 | 3 | Complex (LOC override) |

@@ -197,7 +197,7 @@ unusable, do the research yourself with Read/Grep from main session.
 Mark manifest `status: complete` after `plan.md` is written.
 
 Manifest schema + helper subcommands:
-`${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
+`plugins/ruby-grape-rails/references/run-manifest.md`.
 
 ## Infrastructure Knowledge Persistence
 
@@ -293,7 +293,7 @@ specifying the method signature — this causes issues.
 **Scratchpad**: Create `.claude/plans/{slug}/scratchpad.md`
 at the start of planning with initial context (feature name, brief
 description, plan file path). Use the canonical structure from
-`${CLAUDE_SKILL_DIR}/references/scratchpad-template.md` for:
+`scratchpad-template.md` for:
 
 - `## Decisions` → `### Clarifications`
 - `## Decisions` → `### Research Cache Reuse`

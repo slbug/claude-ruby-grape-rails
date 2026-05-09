@@ -51,3 +51,16 @@ Imperative-only. Tables for command/option lists.
 - `make eval-output` or `npm run eval:output`
 - Scores tracked fixture artifacts under `lab/eval/fixtures/output/`
 - Canonical contributor check for provenance/report contract changes
+
+## Deterministic-First Ordering
+
+For skill / agent / hook quality assessment, run in order:
+
+1. `claude plugin validate plugins/ruby-grape-rails`
+2. `make eval-ci-deterministic`
+3. `make eval-output`
+4. `/docs-check`
+5. Session analytics (`.claude/skills/session-scan/`, `skill-monitor`) — heuristic, observational
+
+Do NOT draw conclusions from session analytics alone. Corroborate via
+deterministic eval signals or manual transcript review.

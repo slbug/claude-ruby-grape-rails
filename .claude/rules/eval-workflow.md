@@ -6,6 +6,11 @@ Imperative-only. Tables for command/option lists.
 
 Minimum runtime: python3 3.14+ for `lab/eval/`.
 
+Session analytics under `.claude/skills/session-scan/` and `skill-monitor`
+are heuristic + observational. Use as corroborating evidence ONLY,
+after deterministic gates pass. See `.claude/rules/development.md`
+§ "Deterministic-First Ordering".
+
 ## Eval Entrypoints
 
 | Command | Description |

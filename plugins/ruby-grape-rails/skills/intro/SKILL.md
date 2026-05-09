@@ -4,6 +4,7 @@ description: "Use when users want a tutorial walkthrough of plugin commands and 
 when_to_use: "Triggers: \"tutorial\", \"what can you do\", \"show commands\", \"help with plugin\", \"getting started\"."
 argument-hint: "[--section N]"
 effort: low
+disable-model-invocation: true
 ---
 # Intro
 
@@ -18,7 +19,7 @@ Interactive introduction to the Ruby/Rails/Grape plugin for new users.
 ## What You Get
 
 - **19 specialist agents**: ActiveRecord, Hotwire, security, Sidekiq, provenance experts
-- **53 skills**: Commands for every phase of development
+- **52 skills**: Commands for every phase of development
 - **22 Iron Laws**: Non-negotiable rules enforced automatically
 - **Auto-loaded references**: Context-aware docs loaded when editing relevant files
 

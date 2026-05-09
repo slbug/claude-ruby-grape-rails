@@ -2,7 +2,7 @@
 
 **Claude Code is great. But it doesn't know that `default_scope` will bite you later, that `t.float` will corrupt your money fields, or that your Sidekiq job isn't idempotent.**
 
-This plugin does. It coordinates **19 specialist agents** and **53 skills** that plan, implement,
+This plugin does. It coordinates **19 specialist agents** and **52 skills** that plan, implement,
 review, and verify your Ruby/Rails/Grape code in parallel -- each with domain
 expertise, fresh context, and enforced [Iron Laws](#iron-laws-non-negotiable-rules)
 that catch the bugs your tests won't. It is now stack-aware enough to handle
@@ -49,7 +49,7 @@ checks.
 │  💎 Ruby/Rails/Grape Plugin for Claude Code                         │
 │                                                                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐           │
-│  │    19    │    53    │   100+   │    14    │    22    │           │
+│  │    19    │    52    │   100+   │    14    │    22    │           │
 │  │  Agents  │  Skills  │   Refs   │  Events  │Iron Laws │           │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘           │
 │                                                                     │
@@ -690,7 +690,6 @@ These load automatically based on file context -- no commands needed:
 | `deploy`                  | Dockerfile, fly.toml, production config          |
 | `runtime-integration`     | Runtime debugging, live process inspection       |
 | `intent-detection`        | First message routing to /rb: commands           |
-| `compound-docs`           | Solution documentation lookups                   |
 
 ## Runtime Tooling Integration
 

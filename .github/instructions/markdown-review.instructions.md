@@ -50,6 +50,18 @@ These are NOT errors — they are resolved at runtime by Claude Code:
 - `${CLAUDE_PLUGIN_ROOT}` — path to the plugin root
 - `${CLAUDE_PLUGIN_DATA}` — persistent plugin data directory
 
+**Substitution scope (per CC docs + Anthropic's official skills repo):**
+
+| Surface | `${CLAUDE_*}` substitutes? | Pattern |
+|---|---|---|
+| SKILL.md body (any text + bash injection) | ✅ | OK to use |
+| `hooks.json` `command` field | ✅ | OK to use |
+| MCP/LSP/monitor config commands | ✅ | OK to use |
+| `references/*.md` plain Markdown text | ❌ | Use plain relative paths (sibling), `../SKILL.md` (parent), or `plugins/<plugin>/skills/<skill>/...` (cross-skill) |
+| `references/*.md` Bash code blocks for agent to run | ✅ at shell level | Env vars set by CC for Bash invocations |
+
+Flag any `${CLAUDE_*}` literal in `references/*.md` plain prose / cross-reference paths as broken — Anthropic's `anthropics/skills` repo uses zero such literals in references.
+
 ## Consistency Checks
 
 - Skill description + when_to_use combined must be <= 1,536 characters

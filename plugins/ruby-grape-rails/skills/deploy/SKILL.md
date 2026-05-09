@@ -1,7 +1,7 @@
 ---
 name: deploy
-description: "Use when deploying Ruby/Rails/Grape apps with Kamal, Docker, Thruster, Solid Queue, or cloud platforms. Covers Rails 8+ Solid Trifecta, migrations, assets, workers, and environment configuration."
-when_to_use: "Triggers: \"deploy\", \"Kamal\", \"Docker\", \"production\", \"Thruster\", \"Solid Queue\"."
+description: "Deploy Rails: Kamal, Docker, Thruster, Solid Queue, migrations."
+when_to_use: "Triggers: deploy, Kamal, Docker, production, Thruster."
 user-invocable: false
 effort: medium
 paths:
