@@ -19,7 +19,7 @@ Is the lesson specific to THIS project's codebase?
 
 Check in this order (stop if found):
 
-1. `${CLAUDE_SKILL_DIR}/references/common-mistakes.md` — shipped reference
+1. `common-mistakes.md` — shipped reference
 2. Project `CLAUDE.md` — grep for keywords from the root cause
 3. `.claude/solutions/` — grep for symptom or error message
 4. Auto-memory — check `~/.claude/projects/{hash}/memory/MEMORY.md`

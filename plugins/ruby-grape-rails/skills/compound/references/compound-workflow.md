@@ -98,14 +98,14 @@ Gathering strategy:
 
 ### Phase 4: Schema Validation
 
-Validate frontmatter against `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/schema.md`.
+Validate frontmatter against `schema.md`.
 Use suggested values when they fit; create descriptive labels when
 they don't. Only `severity` is a strict enum.
 
 ### Phase 5: File Creation
 
 Create in `.claude/solutions/{category}/` using the template from
-`${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/resolution-template.md`.
+`resolution-template.md`.
 
 Filename: `{sanitized-symptom}-{module}-{YYYYMMDD}.md`
 

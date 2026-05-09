@@ -5,6 +5,7 @@ when_to_use: "Triggers: \"scan provenance\", \"audit research quality\", \"check
 argument-hint: "[--root PATH]"
 effort: low
 user-invocable: true
+disable-model-invocation: true
 ---
 
 # Provenance Scan

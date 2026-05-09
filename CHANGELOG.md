@@ -7,6 +7,79 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.8] - 2026-05-09
+
+### Added
+
+- `make eval-skill-budget` gate (`lab/eval/skill_budget.py`). Audits
+  aggregate `description` + `when_to_use` chars across model-visible
+  skills vs CC `skillListingBudgetFraction` × context (10,000 chars
+  on 1M default). Wired into `eval-ci-deterministic`. Per-skill 1,536
+  cap stays in `lab/eval/evals/*.json` `description_length`.
+- `init/SKILL.md` § "Skill Listing Budget" — advisory for 200K-context
+  users.
+- `intro/references/tutorial-content.md` Section 7 — listing budget
+  mechanic.
+- `skills/investigate/references/incident-playbook.md` — production
+  incident triage flow (payload → reproduce → fix → verify → capture).
+  Cross-refs from `investigate`, `review`, `rb-trace` skills.
+- `agents/security-analyzer.md` § "Evidence Mode (mandatory)" — enum
+  (`static-signal | runtime-confirmed | configuration-risk |
+  requires-human-validation`) + read-only-confirmation rule (no
+  destructive code to upgrade evidence). Schema example carries field.
+- `skills/security/SKILL.md` § "Evidence Mode" + Gotchas.
+- `skills/triage/SKILL.md` — order security findings within bucket by
+  `evidence_mode`; non-security retain agent-emitted order.
+- `skills/review/references/review-playbook.md` § "Size-Tier Dispatch",
+  § "Compute diff LOC", § "Boundary cases".
+- `skills/review/SKILL.md` size-tier classification (Simple ≤200 LOC /
+  Medium 201-1000 / Complex >1000) + Gotchas section.
+- `Counts:` mandatory prefix block on all 12 reviewer agents.
+
+### Changed
+
+- 12 manually-invoked skills marked `disable-model-invocation: true`
+  (slash preserved, hidden from listing): `intro`, `examples`,
+  `permissions`, `provenance-scan`, `compression-report`, `learn`,
+  `secrets-scan`, `document`, `rubydoc-fetcher`, `challenge`, `quick`,
+  `iron-laws`.
+- 12 rare-use domain skill descriptions trimmed (≤120 chars combined),
+  reverted to "Use when" prefix per repo policy and Anthropic
+  superpowers convention: `hotwire-native`, `karafka`, `async-patterns`,
+  `sequel-patterns`, `dry-rb-patterns`, `runtime-integration`,
+  `request-state-audit`, `safe-migrations`, `techdebt`, `audit`,
+  `deploy`, `intent-detection`. Aggregate listing 9,684 / 10,000.
+- `references/compression/README.md` TACO citation: 1-4% accuracy gains
+  under same token budget; 26-54% peak-token reduction belongs to ACON.
+- `intro/references/tutorial-content.md` + `testing/references/discipline.md`
+  Anthropic skill-formation RCT framing (n=52, Trio).
+
+### Fixed
+
+- `DIFF_LOC` awk in `review/SKILL.md` + `review-playbook.md`: empty
+  diff returns `0`, not empty string. Pattern:
+  `awk '{n=$4+$6} END{print n+0}'`.
+- `.claude/skills/docs-check/references/validation-rules.md`: `color`
+  moved from supported plugin-agent frontmatter to "documented but
+  inert for plugin agents" bucket alongside `initialPrompt`. Repo
+  policy `.github/instructions/plugin-review.instructions.md` is
+  authoritative; CC silently drops `color` on plugin-shipped agents.
+- `triage/SKILL.md` `evidence_mode` rule scope: applies to security
+  findings only (originator agent is `security-analyzer`); other
+  reviewers keep agent-emitted order.
+
+### Removed
+
+- `compound-docs` standalone skill. Content moved to
+  `compound/references/schema.md` + `compound/references/resolution-template.md`.
+  `/rb:compound-docs` slash command gone; cross-refs updated in
+  `compound/SKILL.md`, `compound/references/compound-workflow.md`,
+  `plan/SKILL.md`, `CLAUDE.md`, `README.md`.
+- Tracked eval JSONs: `lab/eval/evals/compound-docs.json`,
+  `lab/eval/triggers/compound-docs.json`. Generated caches
+  (`_hard_corpus.json`, `_semantic_pairs.json`, `triggers/results/*`)
+  regenerate on next eval run; not tracked.
+
 ## [1.16.7] - 2026-05-04
 
 ### Changed
@@ -2575,7 +2648,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.7...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.8...HEAD
+[1.16.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.7...v1.16.8
 [1.16.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.6...v1.16.7
 [1.16.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.5...v1.16.6
 [1.16.5]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.4...v1.16.5

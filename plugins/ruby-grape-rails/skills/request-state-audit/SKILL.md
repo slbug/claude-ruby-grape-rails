@@ -1,7 +1,7 @@
 ---
 name: rb:state-audit
-description: "Use when auditing Rails request state, CurrentAttributes, Turbo stream flows, session usage, caching, and Redis-backed state for leaks, duplication, or confusion."
-when_to_use: "Triggers: \"request state\", \"CurrentAttributes\", \"session leak\", \"Redis state\", \"caching bug\"."
+description: "Use when reviewing Rails request state: CurrentAttributes, sessions, caching, Redis."
+when_to_use: "Triggers: request state, CurrentAttributes, session leak."
 argument-hint: "[path|feature]"
 effort: medium
 ---

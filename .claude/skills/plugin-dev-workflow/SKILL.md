@@ -10,6 +10,12 @@ effort: medium
 
 Imperative-only. Tables for command/option lists.
 
+## Verification ordering
+
+Run deterministic gates before drawing conclusions from session
+analytics. See `.claude/rules/development.md` § "Deterministic-First
+Ordering".
+
 ## Surface Boundary
 
 Two surfaces, kept separate in implementation + validation:

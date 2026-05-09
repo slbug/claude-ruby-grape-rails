@@ -3,6 +3,7 @@ name: rubydoc-fetcher
 description: "Use when looking up Ruby or gem documentation via WebFetch. Covers rubydoc.info, Rails Guides, official gem docs, and API references."
 when_to_use: "Triggers: \"rubydoc\", \"gem docs\", \"API reference\", \"Rails Guides\", \"look up method\"."
 effort: low
+disable-model-invocation: true
 ---
 # Ruby Doc Fetcher
 

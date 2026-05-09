@@ -30,7 +30,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "Before the sprint, inventory what cleanup work we've been deferring",
+      "prompt": "Make a list of stuff we have been putting off in the services layer",
       "axis": "confusable"
     },
     {

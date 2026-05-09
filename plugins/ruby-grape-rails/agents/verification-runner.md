@@ -99,6 +99,19 @@ Operational selection rules:
 
 Stop on the first failure, summarize the key error, and suggest the narrowest rerun command.
 
+## Counts (mandatory prefix)
+
+Findings file MUST start with:
+
+`**Counts:** N findings (X blocker, Y warning, Z suggestion); M notes`
+
+Empty state:
+
+`**Counts:** 0 findings — All clean.`
+
+Counts line is first content after frontmatter and any header metadata.
+Consolidator parses for severity bucket totals.
+
 ## Review Artifact Contract
 
 When invoked by `/rb:review`:

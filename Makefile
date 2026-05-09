@@ -1,4 +1,4 @@
-.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate doctor eval eval-all eval-ci-deterministic eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-ablation eval-neighbor eval-hygiene eval-behavioral eval-behavioral-verbose eval-behavioral-fresh eval-behavioral-fresh-verbose eval-behavioral-compare eval-behavioral-passk eval-behavioral-rotations eval-sensitivity eval-stress eval-tests eval-tests-pytest eval-tests-unittest eval-trigger-expand eval-compression check-refs ci
+.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate doctor eval eval-all eval-ci-deterministic eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-ablation eval-neighbor eval-hygiene eval-behavioral eval-behavioral-verbose eval-behavioral-fresh eval-behavioral-fresh-verbose eval-behavioral-compare eval-behavioral-passk eval-behavioral-rotations eval-sensitivity eval-stress eval-tests eval-tests-pytest eval-tests-unittest eval-trigger-expand eval-compression eval-skill-budget check-refs ci
 
 lint:
 	npm run lint
@@ -52,8 +52,11 @@ eval-all:
 # Modules excluded (LLM-bearing — must NEVER appear here):
 #   lab.eval.behavioral_scorer, lab.eval.epistemic_suite,
 #   lab.eval.trigger_scorer --semantic, lab.tournament.*
-eval-ci-deterministic: eval-output check-refs eval-compression
+eval-ci-deterministic: eval-output check-refs eval-compression eval-skill-budget
 	bash lab/eval/run_eval.sh --ci
+
+eval-skill-budget:
+	python3 -m lab.eval.skill_budget
 
 eval-skills:
 	bash lab/eval/run_eval.sh --skills

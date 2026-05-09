@@ -38,5 +38,5 @@ Add the ones that matter. Document the ones you skipped (why).
 
 ## References
 
-- Anthropic skill-formation study: conceptual-inquiry patterns score 86% mastery vs delegation <40%. Writing tests yourself > reading-only review.
+- Anthropic skill-formation RCT (n=52, Trio): conceptual-inquiry users score 65-86% mastery vs delegation <40%. Writing tests yourself > reading-only review.
 - Parent skill: `testing` (auto-loaded for files under `spec/` or `test/`)

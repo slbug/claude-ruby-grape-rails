@@ -5,6 +5,7 @@ when_to_use: "Triggers: \"share my compression stats\", \"send compression repor
 argument-hint: "[--log PATH]"
 effort: medium
 user-invocable: true
+disable-model-invocation: true
 ---
 
 # Compression Telemetry Report

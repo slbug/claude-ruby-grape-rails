@@ -1,7 +1,7 @@
 ---
 name: sequel-patterns
-description: "Use when working with Sequel ORM: datasets, migrations, associations, and choosing Sequel over ActiveRecord for high-performance Ruby apps."
-when_to_use: "Triggers: \"Sequel\", \"dataset\", \"Sequel ORM\", \"Sequel migration\"."
+description: "Use when applying Sequel ORM: datasets, migrations, associations."
+when_to_use: "Triggers: Sequel, dataset, Sequel ORM, migration."
 user-invocable: false
 effort: medium
 paths:

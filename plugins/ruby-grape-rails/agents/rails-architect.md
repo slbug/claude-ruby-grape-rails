@@ -39,6 +39,19 @@ output — your chat response body should be ≤300 words.
 You have `Write` for your own report ONLY. `Edit` and `NotebookEdit` are
 disallowed — you cannot modify source code.
 
+## Counts (mandatory prefix)
+
+Findings file MUST start with:
+
+`**Counts:** N findings (X blocker, Y warning, Z suggestion); M notes`
+
+Empty state:
+
+`**Counts:** 0 findings — All clean.`
+
+Counts line is first content after frontmatter and any header metadata.
+Consolidator parses for severity bucket totals.
+
 ## Review Artifact Contract
 
 When invoked by `/rb:review`:

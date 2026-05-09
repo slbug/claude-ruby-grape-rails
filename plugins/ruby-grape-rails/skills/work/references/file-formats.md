@@ -33,7 +33,7 @@ Plans must follow this structure for parsing:
 
 - `[Pn-Tm]`: Phase n, Task m (for resume)
 - `[annotation]`: Routing annotation from canonical Set A (per
-  `${CLAUDE_PLUGIN_ROOT}/skills/plan/references/planning-workflow.md`
+  `plugins/ruby-grape-rails/skills/plan/references/planning-workflow.md`
   § "Plan Generation"): `[direct]`, `[active record]`, `[hotwire]`,
   `[sidekiq]`, `[concurrency]`, `[security]`, `[test]`
 

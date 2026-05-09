@@ -55,6 +55,19 @@ If the agent's return text matches the pause signature in
 `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`, follow that protocol
 to resume the agent before treating the artifact as missing.
 
+## Gotchas
+
+- Re-probing ruled-out hypotheses. Check `## Ruled Out` scratchpad
+  section FIRST. Don't re-run grep / Read on file already eliminated.
+- "Looks like X" without backtrace. Stack frame top-to-bottom is the
+  only acceptable evidence for "the cause is in module X". Pattern
+  matching against error message text is hypothesis, not evidence.
+- Premature root-cause naming. State observed symptoms before
+  hypothesizing cause. "Test fails on line 42 with NameError" is fact;
+  "the bug is in Y constant" is hypothesis until reproduced.
+- Skipping reproduction step. Always write a minimal failing spec
+  before any code change. Cannot reproduce → no root cause.
+
 ## References
 
 | Need | Reference |
@@ -63,3 +76,4 @@ to resume the agent before treating the artifact as missing.
 | investigation report template (Ralph Wiggum checklist + Root Cause + Fix) | `${CLAUDE_SKILL_DIR}/references/investigation-template.md` |
 | common error-pattern catalog | `${CLAUDE_SKILL_DIR}/references/error-patterns.md` |
 | quick debug commands + common-fix recipes (string vs atom keys, eager-load gaps, nil propagation) | `${CLAUDE_SKILL_DIR}/references/debug-commands.md` |
+| production-incident triage flow (payload → reproduction → fix → verify → capture) | `${CLAUDE_SKILL_DIR}/references/incident-playbook.md` |

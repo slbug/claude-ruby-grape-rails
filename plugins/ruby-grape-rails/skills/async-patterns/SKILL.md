@@ -1,7 +1,7 @@
 ---
 name: async-patterns
-description: "Use when implementing fiber-based concurrency with the async gem, Falcon server, or concurrent I/O-bound Ruby operations."
-when_to_use: "Triggers: \"async\", \"fiber\", \"Falcon\", \"concurrent\", \"async gem\"."
+description: "Use when implementing fiber concurrency: async gem, Falcon, I/O-bound ops."
+when_to_use: "Triggers: async, fiber, Falcon, concurrent, async gem."
 user-invocable: false
 effort: medium
 paths:

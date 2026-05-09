@@ -125,7 +125,7 @@ decision.
 Reference benchmarks (bytes-into-the-model, NOT this collector's
 direct metric):
 
-- TACO (Ren et al., arxiv:2604.19572) — ~10% token-overhead reduction
+- TACO (Ren et al., arxiv:2604.19572) — 1-4% accuracy gains under same token budget
 - ACON (Kang et al., arxiv:2510.00615) — 26-54% peak-token reduction
   on long-horizon agent tasks
 

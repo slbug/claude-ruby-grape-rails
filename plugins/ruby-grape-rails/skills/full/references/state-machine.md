@@ -130,7 +130,7 @@ EOF
 
 After /rb:review writes .claude/reviews/{review-slug}-{datesuffix}.md,
 /rb:full parses the consolidated `**Verdict**:` line (canonical 4-set
-per `${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
+per `plugins/ruby-grape-rails/skills/review/references/review-playbook.md`
 § "Verdict Decision Rules"). The verdict line sits immediately after
 the `## Summary` table:
 
@@ -277,8 +277,8 @@ unconditionally via `active-plan-marker.sh set` after `plan.md` write.
 
 ## Completion Criteria
 
-Read `${CLAUDE_PLUGIN_ROOT}/skills/full/SKILL.md` § "Completion
-Criteria". Do NOT duplicate the list here.
+Read `../SKILL.md` § "Completion Criteria". Do NOT duplicate the list
+here.
 
 ## Integration Points
 

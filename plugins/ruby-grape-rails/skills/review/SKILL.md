@@ -106,26 +106,33 @@ message.
 
 ## Complexity Classification
 
-Classify the review before spawning agents. File count determines base tier;
-critical-path files force escalation regardless of count.
+Classify the review before spawning agents. Tier = `max(file_tier, loc_tier)`.
+Critical-path files force escalation regardless of count or LOC.
 
-| Tier | Files Changed | Depth | Agents |
-|------|--------------|-------|--------|
-| **Simple** | 1-3 | Core reviewers only, concise output | 4 |
-| **Medium** | 4-10 | Core + conditional by file type | 4-8 |
-| **Complex** | 11+ | All relevant reviewers, detailed output | 8-11 |
+| Tier | Files Changed | Diff LOC | Depth | Agents |
+|------|--------------|----------|-------|--------|
+| **Simple** | 1-3 | ≤ 200 | Lean: correctness + security only | 2 |
+| **Medium** | 4-10 | 201-1000 | Core + conditional by file type | 4-8 |
+| **Complex** | 11+ | > 1000 | All relevant reviewers, detailed output | 8-11 |
+
+Compute `DIFF_LOC = git diff --shortstat "$MERGE_BASE"...HEAD | awk '{n=$4+$6} END{print n+0}'`.
+Columns 4 + 6 are insertions + deletions. `END{print n+0}` emits `0`
+on empty diff. Range matches `$DIFF_STAT` and `$CHANGED_FILES`.
 
 Log the classification in the consolidated review header:
-`**Complexity**: Simple (2 files) | Medium (7 files) | Complex (15 files, escalated: db/migrate)`
+`**Complexity**: Simple (2 files, 87 LOC) | Medium (7 files, 412 LOC) | Complex (15 files, 1834 LOC, escalated: db/migrate)`
 
 ## Reviewer Selection Matrix
 
 Spawn from main session in single parallel block based on tier + file patterns:
 
-### Core Reviewers (Always — all tiers)
+### Lean Reviewers (Simple tier minimum)
 
 - `ruby-reviewer` - Ruby idioms, syntax, correctness
 - `security-analyzer` - Security vulnerabilities
+
+### Core Reviewers (added at Medium + Complex tiers)
+
 - `testing-reviewer` - Test coverage and quality
 - `verification-runner` - Automated checks pass
 
@@ -344,6 +351,21 @@ When a finding cites a sidecar, read the sidecar's `trust_state` (see
 - `weak`: keep severity; add a provenance note.
 - `clean`: proceed silently.
 
+## Gotchas
+
+- Per-reviewer manifest path confusion. Per-agent artifact at
+  `.claude/reviews/<agent-slug>/<review-slug>-<datesuffix>.md`.
+  Consolidated at `.claude/reviews/<review-slug>-<datesuffix>.md`.
+  Consolidation reads per-agent. Downstream (compound, triage,
+  follow-up) reads consolidated only.
+- Stale base-ref. Run-manifest pins `base_ref` at fanout start. User
+  rebase mid-review → recovery state mismatch. Re-fanout if base shifts.
+- Recovery-state misclassification. `stub-no-output` (agent ran but
+  produced empty file) is NOT `pending` (agent never ran). Distinguish
+  before retry vs respawn.
+- Missing `**Counts:**` line. Reviewers MUST emit Counts: first.
+  Missing line breaks consolidator severity-bucket counts.
+
 ## References
 
 | Need | Reference |
@@ -351,3 +373,4 @@ When a finding cites a sidecar, read the sidecar's `trust_state` (see
 | reviewer focus areas, file-type checklists, anti-patterns, severity, verdict, mandatory finding table, chat scripts, deduplication | `${CLAUDE_SKILL_DIR}/references/review-playbook.md` |
 | review-slug derivation + filesystem-safe slug rules | `${CLAUDE_SKILL_DIR}/references/conventions.md` |
 | worked example of consolidated review output | `${CLAUDE_SKILL_DIR}/references/example-review.md` |
+| production-incident review context (when review covers a live failure) | `${CLAUDE_PLUGIN_ROOT}/skills/investigate/references/incident-playbook.md` |

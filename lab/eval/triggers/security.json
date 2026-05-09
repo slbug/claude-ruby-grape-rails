@@ -8,7 +8,7 @@
       "prompt": "Check the authentication and authorization implementation"
     },
     {
-      "prompt": "Audit the security of the API endpoints"
+      "prompt": "User input goes straight into a where clause via string interpolation — is that a problem?"
     },
     {
       "prompt": "Check this endpoint for CSRF and mass assignment vulnerabilities"

@@ -67,7 +67,7 @@ stage and priorities:
 Pre-existing findings (review's `New? = Pre-existing` column) keep
 their bucket but are excluded from `## Summary`, `## Reviewer
 Coverage`, and the consolidated verdict per
-`${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
+`plugins/ruby-grape-rails/skills/review/references/review-playbook.md`
 § "Pre-existing Issues". Triage routes them to the plan's
 `## Pre-existing Issues (informational)` section only. NEVER
 auto-include in any Phase. Do NOT relabel a pre-existing BLOCKER as

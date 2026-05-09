@@ -303,7 +303,7 @@ solved problems, known risks, and prevention ideas:
 When you need pattern reminders while reading those solutions, check these
 references:
 
-1. `compound-docs` - KB conventions, schema, and search expectations
+1. `compound` skill — KB conventions; schema at `${CLAUDE_PLUGIN_ROOT}/skills/compound/references/schema.md`
 2. `ruby-idioms` - Ruby 3.4+ features, `it` keyword, pattern matching
 3. `rails-idioms` - Rails 8 patterns, Solid Queue, Thruster
 4. `active-record-patterns` - Transactions, N+1 prevention, enums

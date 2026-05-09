@@ -4,6 +4,7 @@ description: "Use when making trivial one-line fixes, typos, and tiny config cha
 when_to_use: "Triggers: \"quick fix\", \"typo\", \"one-liner\", \"tiny change\", \"simple fix\"."
 argument-hint: <task>
 effort: low
+disable-model-invocation: true
 ---
 # Quick Path
 

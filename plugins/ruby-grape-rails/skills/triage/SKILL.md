@@ -44,7 +44,18 @@ Next Action
 ## Severity Classification
 
 Map review buckets (`BLOCKER | WARNING | SUGGESTION`) to triage
-priorities:
+priorities. Within each bucket, order **security findings only** by
+`evidence_mode` (defined in
+`${CLAUDE_PLUGIN_ROOT}/skills/security/SKILL.md` § "Evidence Mode" and
+`${CLAUDE_PLUGIN_ROOT}/agents/security-analyzer.md` § "Evidence Mode (mandatory)"):
+
+1. `runtime-confirmed` — act first
+2. `configuration-risk`
+3. `static-signal`
+4. `requires-human-validation` — surface to user for decision
+
+Non-security findings carry no `evidence_mode`. Retain agent-emitted
+order within the bucket.
 
 ### BLOCKER → Always Include
 

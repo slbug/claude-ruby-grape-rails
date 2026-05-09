@@ -16,6 +16,7 @@ file-type-specific checklists without bloating the main routing surface.
 - SQL injection vectors
 - XSS in views and serializers
 - mass assignment, auth bypasses, authorization holes, secrets exposure
+- every finding carries `evidence_mode`: `static-signal | runtime-confirmed | configuration-risk | requires-human-validation`
 
 ### `testing-reviewer`
 
@@ -349,7 +350,7 @@ path, git pins. Archives any prior manifest. Outputs absolute
 manifest path on stdout.
 
 Schema + per-skill staleness rules:
-`${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
+`plugins/ruby-grape-rails/references/run-manifest.md`.
 
 ## Severity Levels
 
@@ -649,3 +650,41 @@ When multiple agents find the same issue:
 3. Use most specific description
 4. Keep highest severity
 5. List all affected lines
+
+## Size-Tier Dispatch
+
+Tier = `max(file_tier, loc_tier)` per `Complexity Classification` in
+parent SKILL.md.
+
+| Tier | Diff LOC | Agents | Rationale |
+|---|---|---|---|
+| Simple | ≤ 200 | ruby-reviewer + security-analyzer | Tight diffs rarely need full panel |
+| Medium | 201-1000 | + testing-reviewer + verification-runner + conditionals | Standard panel |
+| Complex | > 1000 | full xhigh fanout | Architectural scope |
+
+### Compute diff LOC
+
+```
+DIFF_LOC=$(git diff --shortstat "$MERGE_BASE"...HEAD | awk '{n=$4+$6} END{print n+0}')
+```
+
+Columns 4 + 6 are insertions + deletions. `END{print n+0}` emits `0`
+on empty diff. Range matches `$DIFF_STAT` + `$CHANGED_FILES` (Diff
+Collection step).
+
+On `DIFF_LOC=0` (legitimate via pure rename / mode change / binary diff):
+
+- Run `git diff --numstat "$MERGE_BASE"...HEAD`
+- File count > 0 → tier by file count (Simple minimum)
+- File count = 0 AND zero `--numstat` entries → reject; require `all`
+  argument (per `argument-hint:`)
+
+### Boundary cases
+
+| Diff LOC | File count | Tier |
+|---|---|---|
+| 199 | 2 | Simple |
+| 200 | 2 | Simple (≤ 200, inclusive) |
+| 201 | 2 | Medium |
+| 50 | 11 | Complex (file count override) |
+| 1500 | 3 | Complex (LOC override) |

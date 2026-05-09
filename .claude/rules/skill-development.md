@@ -29,6 +29,25 @@ skills/{name}/
 - No `triggers:` field — use `description` for auto-loading
 - Description <= 1,536 characters (combined `description` + `when_to_use` truncates at 1,536; front-load key use case)
 - For plugin-wide executables in `bin/`, use explicit `${CLAUDE_PLUGIN_ROOT}/bin/<cmd>` when the skill also references `${CLAUDE_SKILL_DIR}` (bare names can be conflated with skill-local files)
+- **Cross-reference path rules** (substitution scope per CC docs):
+
+  | Source file | Target | Pattern |
+  |---|---|---|
+  | SKILL.md body | sibling reference (same skill) | plain `references/<name>.md` (Anthropic standard) |
+  | SKILL.md body | bash injection (`!`backtick) | `${CLAUDE_SKILL_DIR}/...` or `${CLAUDE_PLUGIN_ROOT}/...` (substituted at render) |
+  | SKILL.md body | cross-skill or plugin-root file | `${CLAUDE_PLUGIN_ROOT}/...` (substituted at render) |
+  | `references/*.md` | sibling in same `references/` dir | **plain filename only** — `discipline.md` |
+  | `references/*.md` | parent SKILL.md | **`../SKILL.md`** |
+  | `references/*.md` | cross-skill file | **repo-rooted** `plugins/ruby-grape-rails/skills/<skill>/...` |
+  | `references/*.md` | bash command for agent to run | `${CLAUDE_PLUGIN_ROOT}/bin/...` (env var expands at shell level) |
+  | `hooks.json` `command` | any plugin file | `${CLAUDE_PLUGIN_ROOT}/...` (CC documents this) |
+  | Skill `hooks` frontmatter | bundled script | `${CLAUDE_PLUGIN_ROOT}/...` only — `${CLAUDE_SKILL_DIR}` not exposed there |
+
+  CC substitution scope: (a) SKILL.md content rendered before send,
+  (b) plugin-config-layer fields (hooks / MCP / LSP / monitors). NOT
+  reference files — those load via Read tool with no substitution
+  layer. Anthropic's `anthropics/skills` uses zero `${CLAUDE_*}`
+  literals in any reference file.
 - Artifact paths: use `${REPO_ROOT}/.claude/...` only in imperative
   spawn / write steps where main session constructs the absolute path
   passed to subagents. Use relative `.claude/...` in contract docs,

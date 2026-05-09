@@ -1,7 +1,7 @@
 ---
 name: dry-rb-patterns
-description: "Use when applying dry-rb gems in Rails: dry-validation, dry-types, dry-structs, dry-monads, and dry transactions."
-when_to_use: "Triggers: \"dry-rb\", \"dry-validation\", \"dry-types\", \"dry-monads\", \"dry-struct\"."
+description: "Use when applying dry-rb gems: dry-validation, dry-types, dry-monads."
+when_to_use: "Triggers: dry-rb, dry-validation, dry-types."
 user-invocable: false
 effort: medium
 ---

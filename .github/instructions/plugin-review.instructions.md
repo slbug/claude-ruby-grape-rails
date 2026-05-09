@@ -68,7 +68,10 @@ Exception files (human-facing, narrative OK): `README.md`,
   instead ("Run `bundle exec rspec`")
 - Combined description + when_to_use must be <= 1,536 characters
 - Descriptions should start with "Use when" for consistent routing signal
-- `${CLAUDE_SKILL_DIR}` is a valid runtime variable, not an error
+- `${CLAUDE_SKILL_DIR}` is a valid runtime variable in SKILL.md body
+  ONLY (substituted at render). NOT substituted in `references/*.md`.
+  In references, use plain relative paths for siblings; `../SKILL.md`
+  for parent; `plugins/<plugin>/skills/<skill>/...` for cross-skill.
 - Iron Laws sections contain numbered non-negotiable rules — do not suggest
   making them optional or softer
 - Large workflow skills may be acceptable only when routing-critical;
@@ -80,7 +83,10 @@ Exception files (human-facing, narrative OK): `README.md`,
 - Each `if` filter uses a single pattern per hook entry — do NOT combine
   with `|` OR syntax
 - `async: true` is only valid on `type: "command"` hooks
-- `${CLAUDE_PLUGIN_ROOT}` is a valid runtime variable in hook commands
+- `${CLAUDE_PLUGIN_ROOT}` is a valid runtime variable in hook commands,
+  MCP/LSP/monitor configs, and SKILL.md body. NOT substituted in
+  `references/*.md` plain Markdown prose — flag such usage; Anthropic's
+  `anthropics/skills` uses zero such literals in references.
 
 ## bin/ Executables (plugins/**/bin/*)
 

@@ -4,6 +4,7 @@ description: "Use when the user corrects your approach or teaches a pattern -- c
 when_to_use: "Triggers: \"learn from this\", \"remember this mistake\", \"don't do that again\", \"that's wrong because\", \"correct approach is\". Does NOT handle: post-fix archival, solution documentation, project auditing."
 argument-hint: <description of what was fixed>
 effort: low
+disable-model-invocation: true
 ---
 
 # Learn From the Fix

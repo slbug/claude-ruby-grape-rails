@@ -40,7 +40,7 @@ START ──▶ VALIDATE AGAINST SCHEMA ──▶ USE RESOLUTION TEMPLATE ──
 
 ## Document Structure
 
-Solution documents use YAML frontmatter defined in `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/schema.md` and follow the template in `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/resolution-template.md`.
+Solution documents use YAML frontmatter defined in `${CLAUDE_SKILL_DIR}/references/schema.md` and follow the template in `${CLAUDE_SKILL_DIR}/references/resolution-template.md`.
 
 ### Required Frontmatter Fields
 
@@ -209,9 +209,8 @@ Use both: Compound first for the instance, Learn to generalize.
 ## References
 
 - `${CLAUDE_SKILL_DIR}/references/compound-workflow.md` — Detailed capture workflow
-- `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/SKILL.md` — Knowledge-base conventions and search expectations
-- `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/schema.md` — Solution frontmatter schema
-- `${CLAUDE_PLUGIN_ROOT}/skills/compound-docs/references/resolution-template.md` — Canonical solution template
+- `${CLAUDE_SKILL_DIR}/references/schema.md` — Solution frontmatter schema
+- `${CLAUDE_SKILL_DIR}/references/resolution-template.md` — Canonical solution template
 
 ## Decision Menu
 
@@ -256,3 +255,23 @@ Use kebab-case, descriptive names:
 
 Filename convention: `{sanitized-symptom}-{module}-{YYYYMMDD}.md`
 Example: `association-not-loaded-accounts-20260322.md`
+
+## Gotchas
+
+- Partial-fix capture. Solution doc must describe complete fix (root
+  cause + replacement strategy), not the first commit that touched
+  the file. See `references/schema.md` for required fields.
+- Off-list `problem_type` label. Schema permits free-form labels but
+  suggested values (`build_error`, `test_failure`, `runtime_error`,
+  `performance_issue`, `database_issue`, `security_issue`,
+  `hotwire_bug`, `sidekiq_issue`, `service_issue`, `action_cable_issue`,
+  `logic_error`, `deployment_issue`, `iron_law_violation`) aid
+  retrieval grep. Use closest suggested value when one applies.
+- `root_cause` describes WHAT, not WHY. Per
+  `references/schema.md`, root_cause must explain the underlying
+  reason, not restate the symptom.
+- Vague `symptoms`. Must be specific + observable (exact error
+  string, exact failing assertion). Generic phrases ("test fails")
+  break retrieval grep.
+- Missing or stale `tags`. Tags drive search; cards without
+  retrieval-anchor keywords sit unfound.

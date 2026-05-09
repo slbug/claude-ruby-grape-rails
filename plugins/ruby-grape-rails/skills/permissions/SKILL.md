@@ -4,6 +4,7 @@ description: "Use when analyzing recent Claude Code sessions to recommend safe B
 when_to_use: "Triggers: \"permissions\", \"allow command\", \"approval prompts\", \"settings.json\", \"stop asking\"."
 argument-hint: "[--days=14] [--limit=30] [--include-global] [--dry-run]"
 effort: low
+disable-model-invocation: true
 ---
 # Permission Analyzer
 

@@ -82,6 +82,7 @@ DETERMINISTIC_PATH_FILES = (
     "lab/eval/artifact_scorer.py",
     "lab/eval/output_checks.py",
     "lab/eval/check_refs.py",
+    "lab/eval/skill_budget.py",
     "lab/eval/compression_eval.py",
     "lab/eval/frontmatter.py",
     "lab/eval/results_dir.py",

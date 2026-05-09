@@ -2,16 +2,16 @@
   "skill": "async-patterns",
   "should_trigger": [
     {
-      "prompt": "What's the best pattern for async processing in Rails?"
+      "prompt": "I have 100 sequential external API calls slowing down a single request — how do I parallelize without threads?"
     },
     {
-      "prompt": "Help me with background job patterns and async workflows"
+      "prompt": "My Ruby web process is I/O-bound waiting on external services and I want more concurrency in one process"
     },
     {
-      "prompt": "How should I handle async callbacks in my service objects?"
+      "prompt": "Fan out 50 concurrent network calls inside a single endpoint and gather results"
     },
     {
-      "prompt": "I need to chain multiple background steps that depend on each other"
+      "prompt": "Process a long-running stream of websocket messages with low overhead per connection"
     }
   ],
   "should_not_trigger": [
@@ -30,17 +30,17 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "I need to process uploads in the background without blocking the request",
+      "prompt": "How do I avoid blocking the event loop while pulling data from many slow upstream services?",
       "axis": "confusable"
     },
     {
-      "prompt": "After fixing the bug, also check if async patterns needs updating",
+      "prompt": "After fixing the bug, also check if our concurrency story is still right",
       "axis": "multi_step"
     }
   ],
   "hard_should_not_trigger": [
     {
-      "prompt": "Set up a Sidekiq worker for email sending",
+      "prompt": "Schedule an email-sending worker that retries on failure",
       "axis": "confusable"
     },
     {
