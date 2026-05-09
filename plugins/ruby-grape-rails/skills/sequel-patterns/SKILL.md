@@ -1,6 +1,6 @@
 ---
 name: sequel-patterns
-description: "Apply Sequel ORM patterns. Use when working with datasets, migrations, associations."
+description: "Use when applying Sequel ORM: datasets, migrations, associations."
 when_to_use: "Triggers: Sequel, dataset, Sequel ORM, migration."
 user-invocable: false
 effort: medium

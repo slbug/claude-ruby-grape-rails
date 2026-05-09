@@ -115,8 +115,9 @@ Critical-path files force escalation regardless of count or LOC.
 | **Medium** | 4-10 | 201-1000 | Core + conditional by file type | 4-8 |
 | **Complex** | 11+ | > 1000 | All relevant reviewers, detailed output | 8-11 |
 
-Compute `DIFF_LOC = git diff --shortstat "$BASE_REF" -- | awk '{print $4 + $6}'`
-where columns 4 + 6 are insertions + deletions.
+Compute `DIFF_LOC = git diff --shortstat "$BASE_REF" -- | awk '{n=$4+$6} END{print n+0}'`.
+Columns 4 + 6 are insertions + deletions. `END{print n+0}` emits `0`
+on empty diff.
 
 Log the classification in the consolidated review header:
 `**Complexity**: Simple (2 files, 87 LOC) | Medium (7 files, 412 LOC) | Complex (15 files, 1834 LOC, escalated: db/migrate)`

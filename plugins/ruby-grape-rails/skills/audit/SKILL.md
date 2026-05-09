@@ -1,6 +1,6 @@
 ---
 name: rb:audit
-description: "Project-wide audit: architecture, security, performance, testing, ops risk."
+description: "Use when running project-wide audit: architecture, security, perf, testing, ops risk."
 when_to_use: "Triggers: audit project, codebase health, architecture review, security audit."
 effort: xhigh
 ---

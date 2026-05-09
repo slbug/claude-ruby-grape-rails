@@ -1,6 +1,6 @@
 ---
 name: rb:techdebt
-description: "Tech debt: overgrown services, query repetition, callback sprawl."
+description: "Use when reviewing tech debt: overgrown services, query repetition, callback sprawl."
 when_to_use: "Triggers: tech debt, cleanup, callback sprawl, stale code."
 effort: medium
 ---

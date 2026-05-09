@@ -1,6 +1,6 @@
 ---
 name: hotwire-native
-description: "Build native iOS/Android with Hotwire. Use when working on path config, bridge components."
+description: "Use when building native iOS/Android with Hotwire: path config, bridge components."
 when_to_use: "Triggers: Hotwire Native, Turbo Native, bridge."
 user-invocable: false
 effort: medium

@@ -1,6 +1,6 @@
 ---
 name: safe-migrations
-description: "Author safe Rails migrations. Use when planning zero-downtime, strong_migrations, backfill."
+description: "Use when planning safe Rails migrations: zero-downtime, strong_migrations, backfill."
 when_to_use: "Triggers: migration, zero-downtime, strong_migrations."
 user-invocable: false
 paths:

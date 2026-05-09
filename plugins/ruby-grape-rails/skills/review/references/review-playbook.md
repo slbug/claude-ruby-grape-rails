@@ -665,11 +665,11 @@ parent SKILL.md.
 ### Compute diff LOC
 
 ```
-DIFF_LOC=$(git diff --shortstat "$BASE_REF" -- | awk '{print $4 + $6}')
+DIFF_LOC=$(git diff --shortstat "$BASE_REF" -- | awk '{n=$4+$6} END{print n+0}')
 ```
 
-Columns 4 + 6 are insertions + deletions. Empty diff (`DIFF_LOC=0`)
-should reject; require explicit `--all` flag.
+Columns 4 + 6 are insertions + deletions. `END{print n+0}` emits `0`
+on empty diff. Reject `DIFF_LOC=0`; require explicit `--all` flag.
 
 ### Boundary cases
 
