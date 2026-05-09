@@ -7,7 +7,7 @@ Buckets use canonical review vocabulary
 in any phase.
 
 Task line format MUST be `- [ ] [Pn-Tm][annotation] Description` per
-`${CLAUDE_PLUGIN_ROOT}/skills/work/references/file-formats.md` so
+`plugins/ruby-grape-rails/skills/work/references/file-formats.md` so
 `/rb:work` can parse, route, and resume via `--from Pn-Tm`. Phase
 mapping:
 
@@ -23,7 +23,7 @@ Issues (informational)` lists `New? = Pre-existing` rows as bullets;
 NEVER as `- [ ]` task lines.
 
 The `[annotation]` value MUST be one of the canonical Set A per
-`${CLAUDE_PLUGIN_ROOT}/skills/plan/references/planning-workflow.md`
+`plugins/ruby-grape-rails/skills/plan/references/planning-workflow.md`
 § "Plan Generation": `[direct]`, `[active record]`, `[hotwire]`,
 `[sidekiq]`, `[concurrency]`, `[security]`, `[test]`. Do NOT emit
 `[ruby]`, `[testing]`, `[grape]`, or other off-list labels — those

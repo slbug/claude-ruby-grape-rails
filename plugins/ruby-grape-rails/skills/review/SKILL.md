@@ -353,11 +353,11 @@ When a finding cites a sidecar, read the sidecar's `trust_state` (see
 
 ## Gotchas
 
-- Per-reviewer manifest path confusion. Per-agent artifact lives at
+- Per-reviewer manifest path confusion. Per-agent artifact at
   `.claude/reviews/<agent-slug>/<review-slug>-<datesuffix>.md`.
-  Consolidated lives at
-  `.claude/reviews/<review-slug>-<datesuffix>.md`. Don't read per-agent
-  files into main session synthesis — use consolidated.
+  Consolidated at `.claude/reviews/<review-slug>-<datesuffix>.md`.
+  Consolidation reads per-agent. Downstream (compound, triage,
+  follow-up) reads consolidated only.
 - Stale base-ref. Run-manifest pins `base_ref` at fanout start. User
   rebase mid-review → recovery state mismatch. Re-fanout if base shifts.
 - Recovery-state misclassification. `stub-no-output` (agent ran but

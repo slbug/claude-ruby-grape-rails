@@ -35,6 +35,25 @@ def normalize_prompt(prompt: str) -> str:
     return " ".join(sorted(tokenize(prompt)))
 
 
+def load_hidden_skills() -> set[str]:
+    """Skills with `disable-model-invocation: true` are excluded from NL routing.
+
+    Trigger fixtures measure whether NL routing picks the right skill;
+    fixtures for hidden skills score routing the runtime cannot perform.
+    """
+    hidden: set[str] = set()
+    for skill_dir in SKILLS_DIR.iterdir():
+        if not skill_dir.is_dir():
+            continue
+        skill_file = skill_dir / "SKILL.md"
+        if not skill_file.is_file():
+            continue
+        fm = parse_frontmatter(skill_file.read_text(encoding="utf-8"))
+        if isinstance(fm, dict) and fm.get("disable-model-invocation") is True:
+            hidden.add(skill_dir.name)
+    return hidden
+
+
 def load_all_descriptions() -> dict[str, str]:
     """Load top-level skill descriptions only."""
     descriptions: dict[str, str] = {}
@@ -402,10 +421,17 @@ def _merge_pairs(
 
 
 def score_all(semantic: bool = False) -> dict[str, Any]:
-    descriptions = load_all_routing_descriptions()
+    hidden = load_hidden_skills()
+    descriptions = {
+        name: desc
+        for name, desc in load_all_routing_descriptions().items()
+        if name not in hidden
+    }
     scores = {}
     for path in sorted(TRIGGERS_DIR.glob("*.json")):
         if path.name.startswith("_"):
+            continue
+        if path.stem in hidden:
             continue
         scores[path.stem] = score_trigger_file(path.stem, json.loads(path.read_text(encoding="utf-8")))
     token_pairs = build_confusable_pairs(descriptions)
@@ -416,6 +442,7 @@ def score_all(semantic: bool = False) -> dict[str, Any]:
     return {
         "skills": scores,
         "confusable_pairs": pairs,
+        "hidden_skills_excluded": sorted(hidden),
     }
 
 
@@ -429,7 +456,12 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.overlap:
-        descriptions = load_all_routing_descriptions()
+        hidden = load_hidden_skills()
+        descriptions = {
+            name: desc
+            for name, desc in load_all_routing_descriptions().items()
+            if name not in hidden
+        }
         if args.semantic:
             pairs = build_semantic_confusable_pairs(descriptions)
         else:
@@ -438,6 +470,8 @@ def main() -> None:
         return
 
     if args.skill:
+        if args.skill in load_hidden_skills():
+            raise SystemExit(f"skill {args.skill} is hidden (disable-model-invocation: true); trigger scoring not applicable")
         data = load_trigger_file(args.skill)
         if data is None:
             raise SystemExit(f"missing trigger file for {args.skill}")

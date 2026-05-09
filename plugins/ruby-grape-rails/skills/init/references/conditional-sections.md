@@ -159,7 +159,7 @@ belongs in `/rb:secrets` skill body, not in project `CLAUDE.md`.
 | `{PACKWERK_SECTION}` | Render per rules above; empty string if no project-specific content |
 | `{BETTERLEAKS_SECTION}` | Render per rules above; empty string if no project-specific content |
 | `{BETTERLEAKS_STATUS}` | `command -v betterleaks` result | available / missing |
-| `{PLUGIN_VERSION}` | `jq -r '.version // empty' "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"` | 1.16.7 |
+| `{PLUGIN_VERSION}` | `jq -r '.version // empty' "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"` | semver string |
 
 Read `KARAFKA_VERSION`, `HOTWIRE_VERSION`, `SEQUEL_VERSION`,
 `ACTIVERECORD_VERSION` from `detect-stack` only when composing

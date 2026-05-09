@@ -350,7 +350,7 @@ path, git pins. Archives any prior manifest. Outputs absolute
 manifest path on stdout.
 
 Schema + per-skill staleness rules:
-`${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.
+`plugins/ruby-grape-rails/references/run-manifest.md`.
 
 ## Severity Levels
 
@@ -670,8 +670,14 @@ DIFF_LOC=$(git diff --shortstat "$MERGE_BASE"...HEAD | awk '{n=$4+$6} END{print 
 
 Columns 4 + 6 are insertions + deletions. `END{print n+0}` emits `0`
 on empty diff. Range matches `$DIFF_STAT` + `$CHANGED_FILES` (Diff
-Collection step). Reject `DIFF_LOC=0`; require explicit `all`
-argument (per `argument-hint:`).
+Collection step).
+
+On `DIFF_LOC=0` (legitimate via pure rename / mode change / binary diff):
+
+- Run `git diff --numstat "$MERGE_BASE"...HEAD`
+- File count > 0 → tier by file count (Simple minimum)
+- File count = 0 AND zero `--numstat` entries → reject; require `all`
+  argument (per `argument-hint:`)
 
 ### Boundary cases
 
