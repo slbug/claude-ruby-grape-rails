@@ -54,12 +54,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   slash command no longer available; consult `compound` skill
   references directly. Cross-refs updated repo-wide
   (`compound/SKILL.md`, `compound/references/compound-workflow.md`,
-  `plan/SKILL.md`, `CLAUDE.md`, `README.md`,
-  `lab/eval/triggers/_hard_corpus.json` -12 prompts,
-  `lab/eval/triggers/_semantic_pairs.json`).
-- Stale eval JSONs: `lab/eval/evals/compound-docs.json`,
-  `lab/eval/triggers/compound-docs.json`,
-  `lab/eval/triggers/results/{apfel,haiku}/compound-docs.json`.
+  `plan/SKILL.md`, `CLAUDE.md`, `README.md`).
+- Tracked eval JSONs for the removed skill:
+  `lab/eval/evals/compound-docs.json`,
+  `lab/eval/triggers/compound-docs.json`. Generated trigger caches
+  (`_hard_corpus.json`, `_semantic_pairs.json`, `triggers/results/*`)
+  regenerate automatically on next eval run; not tracked in this
+  repo.
 
 ## [1.16.7] - 2026-05-04
 
