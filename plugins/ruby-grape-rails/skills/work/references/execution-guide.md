@@ -236,7 +236,7 @@ After each task passes verification:
    Example:
    `- [x] [P2-T2][active record] Add password validations — used bcrypt, 12 rounds, added virtual :password`
    `[annotation]` is REQUIRED per
-   `plugins/ruby-grape-rails/skills/work/references/file-formats.md`
+   `file-formats.md`
    § "Plan File Format" (canonical Set A from
    `planning-workflow.md`). These notes survive context compaction
    since the plan is re-read on resume.

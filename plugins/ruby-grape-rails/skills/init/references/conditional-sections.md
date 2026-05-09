@@ -159,7 +159,7 @@ belongs in `/rb:secrets` skill body, not in project `CLAUDE.md`.
 | `{PACKWERK_SECTION}` | Render per rules above; empty string if no project-specific content |
 | `{BETTERLEAKS_SECTION}` | Render per rules above; empty string if no project-specific content |
 | `{BETTERLEAKS_STATUS}` | `command -v betterleaks` result | available / missing |
-| `{PLUGIN_VERSION}` | `jq -r '.version // empty' "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"` | semver string |
+| `{PLUGIN_VERSION}` | See "Detection Commands" below | semver string |
 
 Read `KARAFKA_VERSION`, `HOTWIRE_VERSION`, `SEQUEL_VERSION`,
 `ACTIVERECORD_VERSION` from `detect-stack` only when composing
@@ -170,6 +170,7 @@ Read `KARAFKA_VERSION`, `HOTWIRE_VERSION`, `SEQUEL_VERSION`,
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/bin/detect-stack
 command -v betterleaks &>/dev/null && echo "betterleaks"
+jq -r '.version // empty' "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"
 ```
 
 Compose the header from `detect-stack` output:
