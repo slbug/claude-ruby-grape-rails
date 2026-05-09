@@ -261,12 +261,12 @@ Example: `association-not-loaded-accounts-20260322.md`
 - Partial-fix capture. Solution doc must describe complete fix (root
   cause + replacement strategy), not the first commit that touched
   the file. See `references/schema.md` for required fields.
-- Wrong `problem_type` enum value. Schema lists allowed values
-  (`build_error`, `test_failure`, `runtime_error`, `performance_issue`,
-  `database_issue`, `security_issue`, `hotwire_bug`, `sidekiq_issue`,
-  `service_issue`, `action_cable_issue`, `logic_error`,
-  `deployment_issue`, `iron_law_violation`); free-form labels weaken
-  retrieval.
+- Off-list `problem_type` label. Schema permits free-form labels but
+  suggested values (`build_error`, `test_failure`, `runtime_error`,
+  `performance_issue`, `database_issue`, `security_issue`,
+  `hotwire_bug`, `sidekiq_issue`, `service_issue`, `action_cable_issue`,
+  `logic_error`, `deployment_issue`, `iron_law_violation`) aid
+  retrieval grep. Use closest suggested value when one applies.
 - `root_cause` describes WHAT, not WHY. Per
   `references/schema.md`, root_cause must explain the underlying
   reason, not restate the symptom.

@@ -665,11 +665,13 @@ parent SKILL.md.
 ### Compute diff LOC
 
 ```
-DIFF_LOC=$(git diff --shortstat "$BASE_REF" -- | awk '{n=$4+$6} END{print n+0}')
+DIFF_LOC=$(git diff --shortstat "$MERGE_BASE"...HEAD | awk '{n=$4+$6} END{print n+0}')
 ```
 
 Columns 4 + 6 are insertions + deletions. `END{print n+0}` emits `0`
-on empty diff. Reject `DIFF_LOC=0`; require explicit `--all` flag.
+on empty diff. Range matches `$DIFF_STAT` + `$CHANGED_FILES` (Diff
+Collection step). Reject `DIFF_LOC=0`; require explicit `all`
+argument (per `argument-hint:`).
 
 ### Boundary cases
 
