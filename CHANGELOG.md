@@ -23,9 +23,6 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `SLASH_COMMAND_TOOL_CHAR_BUDGET`). 1M-context users covered by
   default.
 - `intro/references/tutorial-content.md` Section 7 — skill listing budget mechanic.
-- Optional `waza` doctor check in
-  `scripts/check-contributor-prereqs.sh` (informational; not part of
-  the budget gate).
 
 ### Changed
 

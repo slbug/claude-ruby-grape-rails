@@ -110,7 +110,6 @@ check_required claude "required for 'npm run validate' and 'make validate' (inst
 check_optional betterleaks "optional for local secret-scan coverage outside CI"
 check_optional ollama "optional unless you run fresh behavioral/neighbor evals with the default Ollama provider; default model is gemma4:26b-a4b-it-q8_0 (~28GB RAM). Set RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest for low-RAM fallback (10GB)."
 check_optional apfel "optional only if you run behavioral/neighbor evals with --provider apfel or RUBY_PLUGIN_EVAL_PROVIDER=apfel"
-check_optional waza "optional. Speeds up 'make eval-skill-budget' (skill listing budget audit). Falls back to lab/eval/skill_budget.py if absent. Install: curl -fsSL https://raw.githubusercontent.com/microsoft/waza/main/install.sh | bash"
 
 if [[ "$MISSING" -eq 1 ]]; then
   echo "ERROR: contributor prerequisites are incomplete." >&2

@@ -1,9 +1,13 @@
 """Audit aggregate skill-listing budget. Run via `make eval-skill-budget`.
 
-Per-skill 80-1536 char range already enforced by `description_length`
-validators in `lab/eval/evals/*.json` (existing). This tool covers only
-the AGGREGATE gap: total listing chars across model-visible skills must
-fit CC `skillListingBudgetFraction=0.01` × plugin's 1M-context target.
+Per-skill `description_length` already enforced elsewhere:
+- `lab/eval/scorer.py::default_eval` applies min 60 / max 1536 to
+  every skill;
+- per-skill `lab/eval/evals/*.json` may override min within that range.
+
+This tool covers only the AGGREGATE gap: total listing chars across
+model-visible skills must fit CC
+`skillListingBudgetFraction=0.01` × plugin's 1M-context target.
 
 Skills marked `disable-model-invocation: true` excluded (CC removes
 them from listing per frontmatter reference docs).

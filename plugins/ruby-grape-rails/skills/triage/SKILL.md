@@ -44,7 +44,10 @@ Next Action
 ## Severity Classification
 
 Map review buckets (`BLOCKER | WARNING | SUGGESTION`) to triage
-priorities. Within each bucket, order by `evidence_mode`:
+priorities. Within each bucket, order by `evidence_mode` (enum +
+read-only-confirmation rule defined in
+`${CLAUDE_PLUGIN_ROOT}/skills/security/SKILL.md` § "Evidence Mode" and
+`${CLAUDE_PLUGIN_ROOT}/agents/security-analyzer.md` § "Evidence Mode (mandatory)"):
 
 1. `runtime-confirmed` — act first
 2. `configuration-risk`
