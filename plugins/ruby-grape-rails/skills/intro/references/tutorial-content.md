@@ -429,8 +429,8 @@ These are Claude Code native, not plugin. They complement the plugin.
 - **`skillListingBudgetFraction`** — caps combined `description` +
   `when_to_use` per skill in the listing block. Default 1% of context
   window (or 8K fallback). Plugin targets 1M context, so default fits
-  shipped skills. 200K-context users should raise per `init/SKILL.md`
-  § "Skill Listing Budget".
+  shipped skills. 200K-context users should raise per the `/rb:init`
+  skill's "Skill Listing Budget" advisory.
 
 Each is a CC-native feature — the plugin does not reimplement any of them.
 

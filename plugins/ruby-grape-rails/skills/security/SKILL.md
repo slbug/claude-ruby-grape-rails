@@ -68,7 +68,7 @@ beneath plugin permission rules; applies to all Bash tool calls. See
   hits are LOWER priority than `runtime-confirmed` SQL injection in
   failing test.
 - `evidence_mode` missing. Every finding MUST carry `evidence_mode`
-  enum (see § Evidence Mode below). Refuse to emit findings without it.
+  enum (defined in § Evidence Mode above). Refuse to emit findings without it.
 - Pundit policy-scope omission. Authorize EVERY controller action
   (Iron Law 13). `before_action :authorize` alone is insufficient —
   verify per-action `policy_scope` or per-action `authorize` call.

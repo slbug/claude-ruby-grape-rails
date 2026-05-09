@@ -671,13 +671,6 @@ DIFF_LOC=$(git diff --shortstat "$BASE_REF" -- | awk '{print $4 + $6}')
 Columns 4 + 6 are insertions + deletions. Empty diff (`DIFF_LOC=0`)
 should reject; require explicit `--all` flag.
 
-### Work-phase signal
-
-Review following `/rb:work` reads the work-phase run-manifest at
-`.claude/plans/<slug>/RUN-CURRENT.json`. If `verification_state:
-clean`, skip `iron-law-judge` regardless of tier — Iron Laws already
-verified at work-phase exit.
-
 ### Boundary cases
 
 | Diff LOC | File count | Tier |

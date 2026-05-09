@@ -121,11 +121,6 @@ where columns 4 + 6 are insertions + deletions.
 Log the classification in the consolidated review header:
 `**Complexity**: Simple (2 files, 87 LOC) | Medium (7 files, 412 LOC) | Complex (15 files, 1834 LOC, escalated: db/migrate)`
 
-**Work-phase-clean signal.** If review follows `/rb:work` AND the
-work-phase run-manifest at `.claude/plans/<slug>/RUN-CURRENT.json`
-shows `verification_state: clean`, skip `iron-law-judge` regardless of
-tier. Iron Laws already verified at work-phase exit; saves ~30K tokens.
-
 ## Reviewer Selection Matrix
 
 Spawn from main session in single parallel block based on tier + file patterns:
@@ -143,7 +138,6 @@ Spawn from main session in single parallel block based on tier + file patterns:
 ### Conditional Reviewers (Medium + Complex tiers)
 
 - `iron-law-judge` - When diff is risky or touches critical paths
-  (skipped if work-phase manifest shows `verification_state: clean`)
 - `sidekiq-specialist` - When workers or jobs changed
 - `deployment-validator` - When container or deploy config changed
 - `rails-architect` - When service layer, Grape APIs, or architecture changed

@@ -259,14 +259,19 @@ Example: `association-not-loaded-accounts-20260322.md`
 ## Gotchas
 
 - Partial-fix capture. Solution doc must describe complete fix (root
-  cause + replacement strategy + verification), not the first commit
-  that touched the file.
-- Wrong category tag. `category: active-record` for a Sidekiq fix
-  wastes retrieval budget. Re-check category against the actual Iron
-  Law violated.
-- Missing `last_confirmed`. Cards without `last_confirmed: <date>`
-  decay rapidly in retrieval (recency bonus → 0). Update on every
-  confirmed reuse.
-- Trust-state drift. `trust_state: clean` on a sidecar with 0 sources
-  or empty claims promotes weak evidence as authoritative. Run
-  `make eval-output` to surface mismatches.
+  cause + replacement strategy), not the first commit that touched
+  the file. See `references/schema.md` for required fields.
+- Wrong `problem_type` enum value. Schema lists allowed values
+  (`build_error`, `test_failure`, `runtime_error`, `performance_issue`,
+  `database_issue`, `security_issue`, `hotwire_bug`, `sidekiq_issue`,
+  `service_issue`, `action_cable_issue`, `logic_error`,
+  `deployment_issue`, `iron_law_violation`); free-form labels weaken
+  retrieval.
+- `root_cause` describes WHAT, not WHY. Per
+  `references/schema.md`, root_cause must explain the underlying
+  reason, not restate the symptom.
+- Vague `symptoms`. Must be specific + observable (exact error
+  string, exact failing assertion). Generic phrases ("test fails")
+  break retrieval grep.
+- Missing or stale `tags`. Tags drive search; cards without
+  retrieval-anchor keywords sit unfound.
