@@ -1,6 +1,6 @@
 ---
 name: intent-detection
-description: "Use when planning Ruby/Rails task w/o slash command: route to /rb: command. Does NOT handle: known slash command."
+description: "Use when planning Ruby/Rails task without slash command: route to /rb: command. Does NOT handle: known slash command."
 when_to_use: "Triggers: what command, which rb, suggest command."
 user-invocable: false
 effort: low

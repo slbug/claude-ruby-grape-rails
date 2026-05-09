@@ -17,8 +17,9 @@ import sys
 from pathlib import Path
 
 from lab.eval.frontmatter import parse_frontmatter
+from lab.eval.matchers import PLUGIN_ROOT
 
-SKILLS_DIR = Path("plugins/ruby-grape-rails/skills")
+SKILLS_DIR = PLUGIN_ROOT / "skills"
 SKILL_AGGREGATE_TARGET_CHARS = 10_000
 
 
