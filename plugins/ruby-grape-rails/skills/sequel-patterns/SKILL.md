@@ -1,7 +1,7 @@
 ---
 name: sequel-patterns
-description: "Sequel ORM: datasets, migrations, associations; vs ActiveRecord."
-when_to_use: "Triggers: Sequel, dataset, Sequel ORM, Sequel migration."
+description: "Apply Sequel ORM patterns. Use when working with datasets, migrations, associations."
+when_to_use: "Triggers: Sequel, dataset, Sequel ORM, migration."
 user-invocable: false
 effort: medium
 paths:

@@ -1,7 +1,7 @@
 ---
 name: rb:runtime
-description: "Tidewave Rails: runtime context, code exec, SQL, introspection."
-when_to_use: "Triggers: Tidewave, runtime, live Rails, running server."
+description: "Integrate Tidewave runtime debugging. Use when working with code exec, SQL queries."
+when_to_use: "Triggers: Tidewave, runtime, live Rails, running server, introspection."
 argument-hint: "[inspect|execute|query|docs|logs|models|source]"
 effort: low
 ---

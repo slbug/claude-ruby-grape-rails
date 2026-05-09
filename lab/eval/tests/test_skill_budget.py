@@ -8,21 +8,6 @@ from lab.eval import skill_budget
 
 
 class SkillBudgetTests(unittest.TestCase):
-    def test_parses_frontmatter(self) -> None:
-        text = "---\nname: foo\ndescription: bar\nwhen_to_use: baz\n---\nbody"
-        fm = skill_budget.parse_frontmatter(text)
-        self.assertIsNotNone(fm)
-        self.assertEqual(fm["name"], "foo")
-        self.assertEqual(fm["description"], "bar")
-        self.assertEqual(fm["when_to_use"], "baz")
-
-    def test_returns_none_on_no_frontmatter(self) -> None:
-        self.assertIsNone(skill_budget.parse_frontmatter("no frontmatter here"))
-
-    def test_returns_none_on_invalid_yaml(self) -> None:
-        text = "---\n: : :invalid\n---\nbody"
-        self.assertIsNone(skill_budget.parse_frontmatter(text))
-
     def test_measure_skill_combined_chars(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             skill_dir = Path(tmp) / "myskill"
@@ -32,10 +17,34 @@ class SkillBudgetTests(unittest.TestCase):
             )
             result = skill_budget.measure_skill(skill_dir)
             self.assertIsNotNone(result)
-            name, combined, hidden = result
-            self.assertEqual(name, "myskill")
+            label, combined, hidden = result
+            self.assertEqual(label, "myskill")
             self.assertEqual(combined, 10)
             self.assertFalse(hidden)
+
+    def test_measure_skill_uses_frontmatter_name(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill_dir = Path(tmp) / "review"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text(
+                "---\nname: rb:review\ndescription: x\n---\n"
+            )
+            result = skill_budget.measure_skill(skill_dir)
+            self.assertIsNotNone(result)
+            label, _, _ = result
+            self.assertEqual(label, "rb:review")
+
+    def test_measure_skill_falls_back_to_dir_name(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill_dir = Path(tmp) / "noname"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text(
+                "---\ndescription: x\n---\n"
+            )
+            result = skill_budget.measure_skill(skill_dir)
+            self.assertIsNotNone(result)
+            label, _, _ = result
+            self.assertEqual(label, "noname")
 
     def test_measure_skill_detects_disable_model_invocation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

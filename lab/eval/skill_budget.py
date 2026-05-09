@@ -9,24 +9,13 @@ Skills marked `disable-model-invocation: true` excluded (CC removes
 them from listing per frontmatter reference docs).
 """
 
-import re
 import sys
 from pathlib import Path
 
-import yaml
+from lab.eval.frontmatter import parse_frontmatter
 
 SKILLS_DIR = Path("plugins/ruby-grape-rails/skills")
 SKILL_AGGREGATE_TARGET_CHARS = 10_000
-
-
-def parse_frontmatter(text: str) -> dict | None:
-    match = re.match(r"^---\n(.*?)\n---", text, re.DOTALL)
-    if not match:
-        return None
-    try:
-        return yaml.safe_load(match.group(1)) or {}
-    except yaml.YAMLError:
-        return None
 
 
 def measure_skill(skill_dir: Path) -> tuple[str, int, bool] | None:
@@ -34,13 +23,14 @@ def measure_skill(skill_dir: Path) -> tuple[str, int, bool] | None:
     if not skill_md.is_file():
         return None
     fm = parse_frontmatter(skill_md.read_text(encoding="utf-8", errors="replace"))
-    if fm is None:
+    if not isinstance(fm, dict):
         return None
+    label = str(fm.get("name") or skill_dir.name)
     desc = str(fm.get("description") or "").strip()
     wtu = str(fm.get("when_to_use") or "").strip()
     combined = len(desc) + len(wtu)
     hidden = bool(fm.get("disable-model-invocation", False))
-    return (skill_dir.name, combined, hidden)
+    return (label, combined, hidden)
 
 
 def main() -> int:

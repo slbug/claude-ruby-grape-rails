@@ -1,6 +1,6 @@
 ---
 name: karafka
-description: "Karafka Kafka consumers/producers; multi-threaded, batch, Rails."
+description: "Build Kafka consumers w/ Karafka. Use when working on multi-threaded batch processing, Rails."
 when_to_use: "Triggers: Kafka, Karafka, consumer, event streaming."
 user-invocable: false
 effort: medium

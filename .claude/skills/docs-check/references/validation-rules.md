@@ -58,7 +58,12 @@ Currently-supported plugin-agent frontmatter:
 - `background`
 - `isolation`
 - `color`
-- `initialPrompt`
+
+Documented but irrelevant for plugin subagents (spawned via Agent
+tool, not as main session): `initialPrompt`. CC fires it only when an
+agent runs as the main session agent via `--agent` / settings, so the
+field is silently inert for plugin-shipped agents — do NOT recommend
+it.
 
 Important constraints:
 

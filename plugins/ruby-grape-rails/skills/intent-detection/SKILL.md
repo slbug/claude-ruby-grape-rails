@@ -1,7 +1,7 @@
 ---
 name: intent-detection
-description: "Detect intent + route to /rb: command for Ruby/Rails task."
-when_to_use: "Triggers: what command, which rb, suggest command, help me pick."
+description: "Route Ruby/Rails task to /rb: command. Use to plan when user describes feature/bug w/o slash. Does NOT handle: known slash command."
+when_to_use: "Triggers: what command, which rb, suggest command."
 user-invocable: false
 effort: low
 ---

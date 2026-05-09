@@ -30,7 +30,7 @@
   ],
   "hard_should_trigger": [
     {
-      "prompt": "Before we start the big refactor, assess the overall codebase health",
+      "prompt": "Onboarding a new team — how healthy is the codebase across the major dimensions?",
       "axis": "confusable"
     },
     {

@@ -8,7 +8,7 @@
       "prompt": "Help me with a complex AR query using joins and includes"
     },
     {
-      "prompt": "Best patterns for ActiveRecord callbacks in Rails"
+      "prompt": "Two users updating the same record in parallel — how do I prevent stale writes?"
     },
     {
       "prompt": "How should I structure this has_many through relationship?"

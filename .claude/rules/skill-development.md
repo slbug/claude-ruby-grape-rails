@@ -43,11 +43,11 @@ skills/{name}/
   | `hooks.json` `command` | any plugin file | `${CLAUDE_PLUGIN_ROOT}/...` (CC documents this) |
   | Skill `hooks` frontmatter | bundled script | `${CLAUDE_PLUGIN_ROOT}/...` only — `${CLAUDE_SKILL_DIR}` not exposed there |
 
-  Reason: CC substitutes `${CLAUDE_*}` only in (a) SKILL.md content
-  rendered before send, (b) plugin-config-layer fields
-  (hooks/MCP/LSP/monitors). Reference files load via Read tool — no
-  substitution layer. Anthropic's official `anthropics/skills` repo
-  uses **zero** `${CLAUDE_*}` literals in any reference file.
+  CC substitution scope: (a) SKILL.md content rendered before send,
+  (b) plugin-config-layer fields (hooks / MCP / LSP / monitors). NOT
+  reference files — those load via Read tool with no substitution
+  layer. Anthropic's `anthropics/skills` uses zero `${CLAUDE_*}`
+  literals in any reference file.
 - Artifact paths: use `${REPO_ROOT}/.claude/...` only in imperative
   spawn / write steps where main session constructs the absolute path
   passed to subagents. Use relative `.claude/...` in contract docs,

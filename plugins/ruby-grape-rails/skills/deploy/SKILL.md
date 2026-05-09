@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: "Deploy Rails: Kamal, Docker, Thruster, Solid Queue, migrations."
+description: "Configure Rails deployment. Use when working on Kamal, Docker, Thruster, Solid Queue. Not for app-level perf tuning."
 when_to_use: "Triggers: deploy, Kamal, Docker, production, Thruster."
 user-invocable: false
 effort: medium

@@ -1,7 +1,7 @@
 ---
 name: dry-rb-patterns
-description: "dry-rb: dry-validation, dry-types, dry-monads, dry-struct."
-when_to_use: "Triggers: dry-rb, dry-validation, dry-types, dry-monads."
+description: "Apply dry-rb gems. Use when working with dry-validation, dry-types, dry-monads."
+when_to_use: "Triggers: dry-rb, dry-validation, dry-types."
 user-invocable: false
 effort: medium
 ---
