@@ -1,0 +1,230 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Skill-discovery telemetry reader. Reads ${CLAUDE_PLUGIN_DATA}/discovery.jsonl
+# (or --log <path>) and prints aggregate statistics: total events;
+# per-rule match counts; per-suggested-skill counts; per-event-kind counts.
+# Report capability: match rate per pattern + heuristic-miss candidates +
+# review-sample summary. NOT precision/recall — that needs labeled fixtures.
+#
+# Default behavior: print human-readable summary. Flags:
+#   --redact            : strip excerpts even when present
+#   --purge             : truncate the log file (and rotated logs) to zero
+#   --json              : emit machine-readable summary
+#   --log PATH          : explicit log path (override env + default-glob lookup)
+
+require 'json'
+require 'optparse'
+
+DEFAULT_GLOB = File.join(
+  Dir.home, '.claude', 'plugins', 'data', 'ruby-grape-rails*',
+  'discovery.jsonl'
+).freeze
+
+def default_log_path
+  data_dir = ENV.fetch('CLAUDE_PLUGIN_DATA', nil)
+  return File.join(data_dir, 'discovery.jsonl') if data_dir && !data_dir.empty?
+
+  candidates = Dir.glob(DEFAULT_GLOB).select { |p| File.file?(p) }
+  return if candidates.empty?
+  return candidates.first if candidates.length == 1
+  candidates.max_by { |p| File.mtime(p) }
+end
+
+def parse_options(argv)
+  options = { redact: false, purge: false, json: false, log: nil }
+  OptionParser.new do |opts|
+    opts.banner = 'Usage: discovery-stats [options]'
+    opts.on('--redact')      { options[:redact] = true }
+    opts.on('--purge')       { options[:purge] = true }
+    opts.on('--json')        { options[:json] = true }
+    opts.on('--log PATH')    { |path| options[:log] = path }
+    opts.on('-h', '--help')  { puts opts; exit 0 }
+  end.parse!(argv)
+  options
+end
+
+def load_rows(path)
+  rows = []
+  File.foreach(path) do |line|
+    line = line.strip
+    next if line.empty?
+    begin
+      rows << JSON.parse(line)
+    rescue JSON::ParserError
+      next
+    end
+  end
+  rows
+end
+
+def aggregate(rows, all_rule_ids: nil)
+  by_rule          = Hash.new(0)
+  by_skill         = Hash.new(0)
+  by_event         = Hash.new(0)
+  sessions         = {}
+  throttled_total  = 0
+  inject_chars_sum = 0
+  inject_chars_n   = 0
+  rows.each do |row|
+    rule = row['matched_rule'].to_s
+    by_rule[rule] += 1
+    by_event[row['hook_event'].to_s] += 1
+    suggest = row['suggest']
+    if suggest.is_a?(Array)
+      suggest.each { |s| by_skill[s.to_s] += 1 }
+    else
+      by_skill[suggest.to_s] += 1
+    end
+    sessions[row['session_id'].to_s] = true
+    throttled_total += 1 if row['would_throttle']
+    if row['would_inject_chars'].is_a?(Numeric)
+      inject_chars_sum += row['would_inject_chars']
+      inject_chars_n   += 1
+    end
+  end
+  total = rows.length
+  match_rate_per_rule = by_rule.transform_values do |count|
+    total.positive? ? (count.to_f / total).round(4) : 0.0
+  end
+  silent_rules = if all_rule_ids
+                   (all_rule_ids - by_rule.keys).sort
+                 else
+                   []
+                 end
+  {
+    'total_events'        => total,
+    'unique_sessions'     => sessions.size,
+    'throttle_simulated'  => throttled_total,
+    'avg_would_inject_chars' => inject_chars_n.positive? ? (inject_chars_sum.to_f / inject_chars_n).round(2) : 0.0,
+    'by_rule'             => by_rule.sort_by { |_, v| -v }.to_h,
+    'match_rate_per_rule' => match_rate_per_rule.sort_by { |_, v| -v }.to_h,
+    'silent_rules'        => silent_rules,
+    'by_skill'            => by_skill.sort_by { |_, v| -v }.to_h,
+    'by_event_kind'       => by_event.sort_by { |_, v| -v }.to_h,
+  }
+end
+
+# Load configured trigger rule IDs from the triggers.yml so the report
+# can surface silent rules — patterns that never matched anything in
+# this telemetry window. Surfacing silent rules is the heuristic-miss
+# signal: a rule that fires zero times in a busy session window is a
+# candidate to loosen or retire.
+def load_rule_ids(plugin_root)
+  require 'yaml'
+  path = File.join(plugin_root, 'references/discovery/triggers.yml')
+  return [] unless File.file?(path)
+  data = YAML.load_file(path)
+  return [] unless data.is_a?(Hash) && data['triggers'].is_a?(Array)
+  data['triggers'].map { |t| t.is_a?(Hash) ? t['id'].to_s : nil }.compact
+rescue StandardError, SystemCallError
+  []
+end
+
+def review_sample(rows, n: 5)
+  rows.last(n).map do |row|
+    {
+      'ts'           => row['ts'],
+      'hook_event'   => row['hook_event'],
+      'matched_rule' => row['matched_rule'],
+      'suggest'      => row['suggest'],
+      'excerpt'      => row['excerpt'],
+    }
+  end
+end
+
+def emit_text(report, sample)
+  out = []
+  out << "discovery-stats — log: #{report['log_path']}"
+  out << "total events:           #{report['total_events']}"
+  out << "unique sessions:        #{report['unique_sessions']}"
+  out << "rotated logs:           #{report['rotated_logs']}"
+  out << "throttle simulated:     #{report['throttle_simulated']} match(es) would-throttle"
+  out << "avg would_inject_chars: #{report['avg_would_inject_chars']}"
+  out << ""
+  out << "Match rate per rule (count / total events):"
+  report['match_rate_per_rule'].first(10).each do |id, rate|
+    count = report['by_rule'][id] || 0
+    out << "  rate=#{format('%.4f', rate)}  count=#{count.to_s.rjust(4)}  #{id}"
+  end
+  out << ""
+  out << "Silent rules (configured but never matched in this window):"
+  if report['silent_rules'].empty?
+    out << "  (none — every configured rule matched at least once)"
+  else
+    report['silent_rules'].each { |id| out << "  - #{id}" }
+  end
+  out << ""
+  out << "Top suggested skills:"
+  report['by_skill'].first(10).each { |s, n| out << "  #{n.to_s.rjust(5)}  #{s}" }
+  out << ""
+  out << "Events by hook kind:"
+  report['by_event_kind'].each { |k, n| out << "  #{n.to_s.rjust(5)}  #{k}" }
+  out << ""
+  out << "Recent #{sample.length} sample(s):"
+  sample.each do |s|
+    suggest = Array(s['suggest']).join(', ')
+    excerpt = s['excerpt'] ? " — #{s['excerpt']}" : ''
+    throttle = s['would_throttle'] ? ' [throttled]' : ''
+    out << "  #{s['ts']}  [#{s['hook_event']}]  #{s['matched_rule']} → #{suggest}#{throttle}#{excerpt}"
+  end
+  $stdout.write(out.join("\n") + "\n")
+end
+
+def remove_excerpts!(report, sample)
+  sample.each { |row| row.delete('excerpt') }
+  report
+end
+
+def purge_logs(path)
+  return unless path
+  files = [path] + Dir.glob("#{path}.*").sort
+  files.each do |f|
+    next unless File.file?(f)
+    File.truncate(f, 0) if f == path
+    File.delete(f) if f != path
+  end
+end
+
+opts = parse_options(ARGV)
+log_path = opts[:log] || default_log_path
+
+log_exists = log_path && File.file?(log_path)
+
+if opts[:purge]
+  if log_exists
+    purge_logs(log_path)
+    $stdout.write("discovery-stats: purged #{log_path} (and rotated logs)\n")
+  else
+    $stdout.write("discovery-stats: no log file found at #{log_path || DEFAULT_GLOB} (nothing to purge)\n")
+  end
+  exit 0
+end
+
+rotated = log_exists ? Dir.glob("#{log_path}.*").length : 0
+rows    = log_exists ? load_rows(log_path) : []
+
+plugin_root = ENV.fetch('CLAUDE_PLUGIN_ROOT', nil)
+all_rule_ids = plugin_root ? load_rule_ids(plugin_root) : []
+
+report = aggregate(rows, all_rule_ids: all_rule_ids).merge(
+  'log_path'     => log_path || DEFAULT_GLOB,
+  'rotated_logs' => rotated,
+)
+sample = review_sample(rows)
+remove_excerpts!(report, sample) if opts[:redact]
+
+if !log_exists
+  report['note'] = 'no log file found — set RUBY_PLUGIN_DISCOVERY_LOG=1 and re-run a session to generate one'
+end
+
+if opts[:json]
+  $stdout.write(JSON.pretty_generate(report.merge('sample' => sample)) + "\n")
+else
+  if !log_exists
+    $stdout.write("discovery-stats: #{report['note']}\n")
+    $stdout.write("discovery-stats: searched #{report['log_path']}\n")
+  end
+  emit_text(report, sample)
+end
+exit 0

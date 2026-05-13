@@ -21,7 +21,9 @@ IMPORTANT: Present ALL content in each section — every paragraph, table, and c
 
 ### What This Plugin Does
 
-This plugin adds **specialist Ruby/Rails/Grape agents**, **auto-loaded knowledge**, and **Iron Laws** to Claude Code. It turns a general-purpose AI into an opinionated Ruby pair programmer.
+This plugin adds **specialist Ruby/Rails/Grape agents**, **domain skills**,
+**a pushy intent-detection router**, and **Iron Laws** to Claude Code. It
+turns a general-purpose AI into an opinionated Ruby pair programmer.
 
 ### The Core Concept
 
@@ -57,7 +59,7 @@ Each phase reads from the previous phase's output. Plans become checkboxes. Chec
 | 19 specialist agents | ActiveRecord, Hotwire, security, Sidekiq, deployment, provenance experts |
 | 52 skills | Commands for every phase of development |
 | 22 Iron Laws | Non-negotiable rules enforced automatically |
-| Auto-loaded references | Context-aware docs loaded when you edit relevant files |
+| Domain reference skills | Routed to via NL on the description layer; reach manually via `/rb:*` slash invocation |
 | Runtime tooling integration | Runtime debugging when runtime tooling is connected |
 
 ---
@@ -130,8 +132,8 @@ This spawns specialist agents to analyze your existing plan and enhance it with 
 
 The plugin includes targeted references and guidance for common editing contexts:
 
-| You're editing... | Plugin loads... |
-|-------------------|----------------|
+| You're editing... | Relevant domain skill |
+|-------------------|-----------------------|
 | `app/views/*.html.erb` | Hotwire/Turbo patterns, async/streams, components |
 | `*_spec.rb`, `*_test.rb` | RSpec/Minitest patterns, factories |
 | `db/migrate/*` | Migration patterns, safe operations |
@@ -140,9 +142,12 @@ The plugin includes targeted references and guidance for common editing contexts
 | `*_job.rb`, `app/jobs/*` | Sidekiq patterns, idempotency rules |
 
 These are the references Claude should use for those file types.
-File-pattern loading is behavioral guidance plus skill `paths:`
-auto-loading; the strongest signal still comes from invoking the
-matching workflow command directly.
+File-pattern guidance is behavioral; the routing signal comes from the
+skill `description` (NL routing on the description layer) or from
+invoking the matching workflow command directly. Project-level
+`.claude/rules/*.md` files can use `paths:` to load context on file
+access — that is a separate, functional mechanism distinct from plugin
+SKILL.md.
 
 <!-- IRON_LAWS_START -->
 
@@ -231,17 +236,22 @@ Claude is instructed to **stop and explain** before writing code that violates t
 
 This is behavioral — it works because the rules are in Claude's context, not because code enforces them. It's effective but not 100% guaranteed.
 
-### Layer 3: Skill Loading by File Type (Behavioral)
+### Layer 3: Skill Loading by Description (NL routing)
 
-Two activation paths exist for domain skills:
+Domain skills load through description-based NL routing. Every visible
+skill carries a single `description` field (≤1,024 chars per the
+agentskills.io canon). The routing prompt advertises that description
+to the model; the model picks the matching skill when the user
+describes work whose triggers overlap. `intent-detection` is the pushy
+gateway that suggests the right `/rb:*` command up front.
 
-| Path | Trigger |
-|---|---|
-| CC auto-activation | Skill declares `paths:` in its frontmatter; CC loads the skill when files matching the glob are open or being edited. ~16 shipped skills declare `paths:` (hotwire-patterns, active-record-patterns, testing, sidekiq, security, karafka, grape-idioms, ar-n1-check, deploy, hotwire-native, async-patterns, sequel-patterns, safe-migrations, rails-idioms, ruby-idioms, active-record-constraint-debug). Read each skill's frontmatter for the exact glob set. |
-| Description-based | Skill omits `paths:`; CC matches on description text (less reliable). Examples: `rails-contexts`, `ruby-contexts`. |
+DMI skills (`disable-model-invocation: true`) never appear in the
+routing prompt. Reach them via slash invocation when the signal
+matches — see the "DMI roster" routing table in
+`intent-detection/SKILL.md`.
 
-Invoke `/rb:<workflow>` directly when the file you are editing is
-not covered by any skill's `paths:` glob.
+Invoke `/rb:<workflow>` directly when you already know which command
+fits — that is always the strongest signal.
 
 ---
 
@@ -426,9 +436,9 @@ These are Claude Code native, not plugin. They complement the plugin.
     more than speed. Anthropic skill-formation RCT (n=52, Trio):
     conceptual-inquiry users score 65-86% mastery vs delegation <40%;
     agent-mode users still benefit from comprehension framing.
-- **`skillListingBudgetFraction`** — caps combined `description` +
-  `when_to_use` per skill in the listing block. Default 1% of context
-  window (or 8K fallback). Plugin targets 1M context, so default fits
+- **`skillListingBudgetFraction`** — caps the aggregate routing-prompt
+  skill-listing block. Default 1% of context window (or 8K hard-ceiling
+  fallback). Plugin targets 1M context, so default fits
   shipped skills. 200K-context users should raise per the `/rb:init`
   skill's "Skill Listing Budget" advisory.
 

@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import sys
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -69,11 +70,12 @@ def load_all_descriptions() -> dict[str, str]:
 
 
 def load_all_routing_descriptions() -> dict[str, dict[str, str]]:
-    """Load routing text fields used by LLM-based skill routing.
+    """Load the single ``description`` routing field per agentskills.io canon.
 
-    ``description`` explains broad intent; ``when_to_use`` carries trigger
-    phrases and negative routing notes. Behavioral and confusable-pair evals
-    need both to match the real routing surface.
+    Returns a dict-of-dicts shape (one key per skill, holding a single
+    ``description`` entry) for downstream callers that consume the structured
+    routing-field map rather than the flat string returned by
+    :func:`load_descriptions`.
     """
     descriptions: dict[str, dict[str, str]] = {}
     for skill_dir in sorted(SKILLS_DIR.iterdir()):
@@ -85,37 +87,26 @@ def load_all_routing_descriptions() -> dict[str, dict[str, str]]:
         fm = parse_frontmatter(skill_file.read_text(encoding="utf-8"))
         descriptions[skill_dir.name] = {
             "description": str(fm.get("description", "")).strip(),
-            "when_to_use": str(fm.get("when_to_use", "")).strip(),
         }
     return descriptions
 
 
 def routing_description_text(value: RoutingDescription) -> str:
-    """Return full routing text from a description string or routing-field dict."""
+    """Return the routing description text from a string or routing-field dict."""
     if isinstance(value, Mapping):
-        desc = str(value.get("description", "")).strip()
-        when = str(value.get("when_to_use", "")).strip()
-        if desc and when:
-            return f"{desc} When to use: {when}"
-        return desc or when
+        return str(value.get("description", "")).strip()
     return str(value).strip()
 
 
 def routing_text_sources(value: RoutingDescription) -> list[tuple[str, str]]:
-    """Return individual routing text fields as (field_name, text) pairs.
+    """Return the routing description as a (field_name, text) pair.
 
-    Used by hygiene and trigger_expand quality gates to check each routing
-    field independently (e.g., description echo detection).
+    Used by hygiene + corpus-quality gates to check the routing field
+    independently (e.g., description echo detection).
     """
     if isinstance(value, Mapping):
-        sources: list[tuple[str, str]] = []
         desc = str(value.get("description", "")).strip()
-        when = str(value.get("when_to_use", "")).strip()
-        if desc:
-            sources.append(("description", desc))
-        if when:
-            sources.append(("when_to_use", when))
-        return sources
+        return [("description", desc)] if desc else []
     text = str(value).strip()
     return [("description", text)] if text else []
 
@@ -227,16 +218,6 @@ def build_confusable_pairs(
     return pairs[:limit]
 
 
-_SEMANTIC_CACHE_PATH = TRIGGERS_DIR / "_semantic_pairs.json"
-
-_SEMANTIC_SYSTEM_PROMPT = (
-    "You identify semantically confusable skill pairs. Reply with ONLY "
-    "pipe-separated lines in this exact format: skill-a | skill-b | 7 | "
-    "brief reason. Include a numeric confusability score (1-10) and a short "
-    "reason on every line. NEVER add headers, numbering, or explanations."
-)
-
-
 def routing_descriptions_blob(descriptions: RoutingDescriptions) -> str:
     """Serialize routing descriptions to a stable JSON string.
 
@@ -254,64 +235,40 @@ def _descriptions_hash(descriptions: RoutingDescriptions) -> str:
     return hashlib.sha256(routing_descriptions_blob(descriptions).encode()).hexdigest()[:16]
 
 
-def build_semantic_confusable_pairs(
-    descriptions: RoutingDescriptions,
-    token_pairs: list[dict[str, Any]] | None = None,
-) -> list[dict[str, Any]]:
-    """Build semantic confusable pairs via a single Haiku call.
+_SEMANTIC_CACHE_PATH = TRIGGERS_DIR / "_semantic_pairs.json"
 
-    Asks Haiku to identify pairs that are semantically confusable but
-    not caught by token overlap. Merges with token_pairs, deduplicates,
-    returns top 15.
-
-    Returns cached results if descriptions haven't changed.
-    Requires 'claude' CLI — returns empty list if unavailable.
-    """
-    desc_hash = _descriptions_hash(descriptions)
-
-    if token_pairs is None:
-        token_pairs = build_confusable_pairs(descriptions, limit=10)
-
-    # Check cache — stores only semantic additions, not merged token pairs.
-    # Token pairs are always recomputed fresh (they depend on trigger corpora).
-    cached_semantic: list[dict[str, Any]] = []
-    cache_hit = False
-    if _SEMANTIC_CACHE_PATH.is_file():
-        try:
-            cached = json.loads(_SEMANTIC_CACHE_PATH.read_text(encoding="utf-8"))
-            if cached.get("descriptions_hash") == desc_hash:
-                cached_semantic = cached.get("semantic_pairs", [])
-                cache_hit = True
-        except (json.JSONDecodeError, OSError):
-            pass
-
-    if cache_hit:
-        semantic_pairs = cached_semantic
-    else:
-        semantic_pairs = _fetch_semantic_pairs(descriptions, token_pairs)
-
-    return _merge_pairs(token_pairs, semantic_pairs, desc_hash)
+_SEMANTIC_SYSTEM_PROMPT = (
+    "You identify semantically confusable skill pairs. Reply with ONLY "
+    "pipe-separated lines in this exact format: skill-a | skill-b | 7 | "
+    "brief reason. Include a numeric confusability score (1-10) and a short "
+    "reason on every line. NEVER add headers, numbering, or explanations."
+)
 
 
 def _fetch_semantic_pairs(
     descriptions: RoutingDescriptions,
     token_pairs: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Call Haiku once to identify semantic confusable pairs."""
-    import subprocess, sys
+    """Call Ollama once to identify additional semantically-confusable pairs.
 
-    # Build the prompt
+    Token-overlap pairs from `build_confusable_pairs` catch lexical
+    similarity; this asks the model to surface pairs that overlap by
+    meaning even when they share few tokens. Returns a list of pair
+    dicts with keys: left, right, score, reason, source.
+    """
+    from .behavioral_scorer import ollama_chat
+
     desc_lines = "\n".join(
         f"- {name}: {routing_description_text(desc)[:150]}"
         for name, desc in sorted(descriptions.items())
     )
-    known_lines = "\n".join(
-        f"{p['left']} | {p['right']} | {p['overlap']:.2f}"
-        for p in token_pairs[:10]
+    token_lines = "\n".join(
+        f"- {p['left']} | {p['right']} (overlap={p.get('overlap')})"
+        for p in token_pairs[:15]
     )
     user_prompt = (
-        f"Here are {len(descriptions)} skill descriptions:\n{desc_lines}\n\n"
-        f"These pairs were already found by token overlap:\n{known_lines}\n\n"
+        f"Skills:\n{desc_lines}\n\n"
+        f"Already-found token-overlap pairs (deprioritize, do not repeat):\n{token_lines}\n\n"
         "Name 10-15 additional skill pairs that are SEMANTICALLY confusable "
         "(a user prompt could reasonably route to either skill) but were NOT "
         "in the list above. Rate each pair 1-10 for confusability.\n\n"
@@ -319,71 +276,59 @@ def _fetch_semantic_pairs(
         "skill-a | skill-b | 7 | both handle database queries"
     )
 
-    from .behavioral_scorer import _resolved_settings_path
-    settings_path = _resolved_settings_path
-
     try:
-        result = subprocess.run(
-            [
-                "claude", "--bare",
-                "--settings", settings_path,
-                "-p", "-",
-                "--model", "haiku",
-                "--system-prompt", _SEMANTIC_SYSTEM_PROMPT,
-                "--tools", "",
-                "--max-turns", "1",
-                "--output-format", "json",
-                "--max-budget-usd", "0.10",
-                "--no-session-persistence",
-            ],
-            input=user_prompt,
-            capture_output=True, text=True, timeout=120,
+        text = ollama_chat(
+            _SEMANTIC_SYSTEM_PROMPT,
+            user_prompt,
+            max_tokens=512,
+            reasoning_effort="none",
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+    except Exception as exc:
         print(f"WARNING: semantic pairs call failed ({exc})", file=sys.stderr)
         return []
 
-    if result.returncode != 0:
-        print(f"WARNING: semantic pairs call returned rc={result.returncode}", file=sys.stderr)
-        return []
-
-    try:
-        data = json.loads(result.stdout)
-        text = data.get("result", "")
-    except json.JSONDecodeError:
-        text = result.stdout
-
-    valid_skills = set(descriptions.keys())
     pairs: list[dict[str, Any]] = []
-    for line in text.strip().split("\n"):
-        parts = [p.strip() for p in line.split("|")]
+    skill_names = set(descriptions.keys())
+    for raw in text.split("\n"):
+        line = raw.strip().lstrip("-*0123456789.) ").strip()
+        if not line or "|" not in line:
+            continue
+        parts = [seg.strip() for seg in line.split("|")]
         if len(parts) < 2:
             continue
         left, right = parts[0], parts[1]
-        if left not in valid_skills or right not in valid_skills:
+        if left not in skill_names or right not in skill_names or left == right:
             continue
-        if left == right:
-            continue
-        score = 0.5
+        # Score on 1-10 from the prompt → normalize to 0-1 for parity with
+        # token-overlap pairs. Default 0.5 on malformed score (incl. fractions
+        # like "8/10" or words like "high").
+        overlap = 0.5
         if len(parts) >= 3:
-            raw = parts[2].strip()
-            if "/" in raw:
-                raw = raw.split("/", 1)[0].strip()
+            raw_score = parts[2]
+            if "/" in raw_score:
+                raw_score = raw_score.split("/", 1)[0].strip()
             try:
-                score = max(1.0, min(10.0, float(raw))) / 10.0
+                overlap = max(1.0, min(10.0, float(raw_score))) / 10.0
             except ValueError:
-                score = 0.5
+                overlap = 0.5
         reason = " | ".join(parts[3:]) if len(parts) > 3 else ""
-        if left > right:
-            left, right = right, left
+        ordered = tuple(sorted((left, right)))
         pairs.append({
-            "left": left,
-            "right": right,
-            "overlap": round(score, 4),
-            "source": "semantic",
+            "left": ordered[0],
+            "right": ordered[1],
+            "overlap": round(overlap, 4),
             "reason": reason,
+            "source": "semantic",
         })
     return pairs
+
+
+_MERGED_PAIR_LIMIT = 15
+
+
+def _normalize_pair(p: dict[str, Any]) -> tuple[str, str]:
+    """Return a canonical ordered key for a pair (alphabetical)."""
+    return tuple(sorted((p["left"], p["right"])))
 
 
 def _merge_pairs(
@@ -391,33 +336,79 @@ def _merge_pairs(
     semantic_pairs: list[dict[str, Any]],
     desc_hash: str,
 ) -> list[dict[str, Any]]:
-    """Merge token-overlap and semantic pairs, deduplicate, cache semantic additions."""
+    """Merge token-overlap and semantic pairs. Cache semantic pairs.
+
+    - Canonical ordering: (left, right) is sorted alphabetically before
+      dedup so the same pair surfacing in either order collapses.
+    - Token pairs win on duplicates so their `overlap` is preserved.
+    - Result is sorted by `overlap` descending and capped at
+      ``_MERGED_PAIR_LIMIT`` (15) — the cap the trigger-reviewer UI
+      depends on.
+    - Cache is written only when fresh_semantic is non-empty so transient
+      Ollama failures don't clobber previously-good cached pairs.
+    """
     seen: set[tuple[str, str]] = set()
     merged: list[dict[str, Any]] = []
-    for p in (token_pairs or []):
-        key = (min(p["left"], p["right"]), max(p["left"], p["right"]))
-        if key not in seen:
-            seen.add(key)
-            merged.append(p)
+    for p in token_pairs:
+        key = _normalize_pair(p)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append({**p, "left": key[0], "right": key[1]})
+    fresh_semantic: list[dict[str, Any]] = []
     for p in semantic_pairs:
-        key = (min(p["left"], p["right"]), max(p["left"], p["right"]))
-        if key not in seen:
-            seen.add(key)
-            merged.append(p)
+        key = _normalize_pair(p)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append({**p, "left": key[0], "right": key[1]})
+        fresh_semantic.append(p)
 
-    merged.sort(key=lambda x: (-x["overlap"], x["left"], x["right"]))
-    merged = merged[:15]
+    merged.sort(key=lambda r: -(r.get("overlap") or 0.0))
+    merged = merged[:_MERGED_PAIR_LIMIT]
 
-    # Cache only semantic additions (token pairs change with triggers).
-    # Don't clobber existing cache with empty result from a failed fetch.
-    if semantic_pairs:
-        _SEMANTIC_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        _SEMANTIC_CACHE_PATH.write_text(json.dumps({
-            "descriptions_hash": desc_hash,
-            "semantic_pairs": semantic_pairs,
-        }, indent=2) + "\n", encoding="utf-8")
+    # Skip cache write when fresh_semantic is empty — preserves
+    # previously-cached pairs on a transient Ollama failure rather than
+    # clobbering them with an empty list.
+    if fresh_semantic:
+        try:
+            _SEMANTIC_CACHE_PATH.write_text(
+                json.dumps(
+                    {"desc_hash": desc_hash, "pairs": fresh_semantic},
+                    indent=2,
+                    sort_keys=True,
+                ),
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            print(f"WARNING: failed to write semantic pair cache ({exc})", file=sys.stderr)
 
     return merged
+
+
+def build_semantic_confusable_pairs(
+    descriptions: RoutingDescriptions,
+    token_pairs: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Build merged token + semantic confusable pairs via a single Ollama call.
+
+    Caches semantic pairs in `_semantic_pairs.json` keyed by description
+    content hash; cached pairs are reused until any description changes.
+    Ollama is currently the only wired provider — future providers plug
+    in through `behavioral_scorer.ollama_chat`'s sibling helpers.
+    """
+    desc_hash = _descriptions_hash(descriptions)
+    token_pairs = token_pairs or build_confusable_pairs(descriptions)
+    cached: list[dict[str, Any]] = []
+    if _SEMANTIC_CACHE_PATH.is_file():
+        try:
+            data = json.loads(_SEMANTIC_CACHE_PATH.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and data.get("desc_hash") == desc_hash:
+                cached = data.get("pairs") or []
+        except (json.JSONDecodeError, OSError):
+            cached = []
+    semantic = cached if cached else _fetch_semantic_pairs(descriptions, token_pairs)
+    return _merge_pairs(token_pairs, semantic, desc_hash)
 
 
 def score_all(semantic: bool = False) -> dict[str, Any]:
@@ -451,7 +442,7 @@ def main() -> None:
     parser.add_argument("--all", action="store_true", help="Score all trigger files")
     parser.add_argument("--skill", help="Score a single skill trigger file")
     parser.add_argument("--overlap", action="store_true", help="Print confusable pairs only")
-    parser.add_argument("--semantic", action="store_true", help="Include Haiku-rated semantic pairs (one API call)")
+    parser.add_argument("--semantic", action="store_true", help="Include Ollama-rated semantic pairs (one local call)")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON output")
     args = parser.parse_args()
 
@@ -462,10 +453,11 @@ def main() -> None:
             for name, desc in load_all_routing_descriptions().items()
             if name not in hidden
         }
-        if args.semantic:
-            pairs = build_semantic_confusable_pairs(descriptions)
-        else:
-            pairs = build_confusable_pairs(descriptions)
+        pairs = (
+            build_semantic_confusable_pairs(descriptions)
+            if args.semantic
+            else build_confusable_pairs(descriptions)
+        )
         print(json.dumps(pairs, indent=2 if args.pretty else None))
         return
 

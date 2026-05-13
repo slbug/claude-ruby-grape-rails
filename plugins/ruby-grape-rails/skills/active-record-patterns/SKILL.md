@@ -1,16 +1,8 @@
 ---
 name: active-record-patterns
-description: "Use when working with Active Record models, migrations, queries, associations, transactions, locking, search, or data integrity patterns."
-when_to_use: "Triggers: \"Active Record\", \"migration\", \"query\", \"association\", \"model\", \"database\", \"transaction\"."
+description: "Active Record patterns: models, queries, associations, transactions, locking, migration design. Triggers: \"AR scope\", \"has_many through\", \"optimistic locking\", \"polymorphic\". Do NOT use for: Sequel, N+1 diagnosis."
 user-invocable: false
 effort: medium
-paths:
-  - "app/{models,repositories}/**"
-  - "db/**"
-  - "**/app/{models,repositories}/**"
-  - "**/db/**"
-  - "{packs,engines,components}/*/{models,repositories}/**"
-  - "app/{packages,packs}/*/{models,repositories}/**"
 ---
 # Active Record Patterns
 
@@ -39,3 +31,9 @@ paths:
 | query composition, scopes, subqueries, batched inserts | `${CLAUDE_SKILL_DIR}/references/queries.md` |
 | production-safe migration recipes | `${CLAUDE_SKILL_DIR}/references/migrations.md` |
 | PostgreSQL full-text + trigram + hybrid search | `${CLAUDE_SKILL_DIR}/references/fulltext-search.md` |
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Sequel ORM (non-Active Record) work → `/rb:sequel-patterns` (Sequel ORM patterns)
+<!-- END-GENERATED related-footer -->

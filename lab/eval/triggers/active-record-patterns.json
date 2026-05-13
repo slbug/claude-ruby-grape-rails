@@ -8,10 +8,22 @@
       "prompt": "Help me with a complex AR query using joins and includes"
     },
     {
-      "prompt": "Two users updating the same record in parallel — how do I prevent stale writes?"
+      "prompt": "Two users updating the same record in parallel \u2014 how do I prevent stale writes?"
     },
     {
       "prompt": "How should I structure this has_many through relationship?"
+    },
+    {
+      "prompt": "I'm losing my mind, why is this optimistic locking not working when two workers hit the same row?!"
+    },
+    {
+      "prompt": "Implement a polymorphic association for comments."
+    },
+    {
+      "prompt": "How to use AR scope for filtering?"
+    },
+    {
+      "prompt": "Need help with migration design for new table."
     }
   ],
   "should_not_trigger": [
@@ -26,6 +38,18 @@
     },
     {
       "prompt": "Add a Stimulus controller for the form"
+    },
+    {
+      "prompt": "How do I fix N+1 queries in my view?"
+    },
+    {
+      "prompt": "Write a Sequel migration for this schema."
+    },
+    {
+      "prompt": "How to use transactions in raw SQL?"
+    },
+    {
+      "prompt": "Optimize my database indexing strategy."
     }
   ],
   "hard_should_trigger": [

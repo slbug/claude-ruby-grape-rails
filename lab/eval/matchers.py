@@ -52,13 +52,11 @@ def frontmatter_field(content: str, field: str, expected: Any | None = None, **_
     return True, f"Frontmatter '{field}' present"
 
 
-def description_length(content: str, min: int = 50, max: int = 1536, **_: Any) -> tuple[bool, str]:
+def description_length(content: str, min: int = 50, max: int = 1024, **_: Any) -> tuple[bool, str]:
     fm = parse_frontmatter(content)
     desc = str(fm.get("description", ""))
-    when = str(fm.get("when_to_use", ""))
-    combined = len(desc) + len(when)
-    passed = min <= combined <= max
-    return passed, f"description+when_to_use length={combined} (desc={len(desc)}, when={len(when)}, expected {min}-{max})"
+    passed = min <= len(desc) <= max
+    return passed, f"description length={len(desc)} (expected {min}-{max}; agentskills.io cap 1024)"
 
 
 def description_keywords(content: str, min: int = 4, keywords: list[str] | None = None, **_: Any) -> tuple[bool, str]:
@@ -97,13 +95,10 @@ def description_keywords(content: str, min: int = 4, keywords: list[str] | None 
 
 
 def description_structure(content: str, **_: Any) -> tuple[bool, str]:
-    desc = str(parse_frontmatter(content).get("description", "")).lower()
-    passed = ("use for" in desc or "use when" in desc or "use to" in desc) and (
-        "plan" in desc or "review" in desc or "verify" in desc or "work" in desc
-    )
-    if passed:
-        return True, "description has explicit use/intent framing"
-    return False, "missing explicit use/intent framing"
+    desc = str(parse_frontmatter(content).get("description", ""))
+    if not desc.strip():
+        return False, "description empty"
+    return True, "description present (routing-trigger rules enforced via length + keywords matchers)"
 
 
 def has_iron_laws(content: str, min_count: int = 1, **_: Any) -> tuple[bool, str]:
@@ -242,14 +237,17 @@ def valid_file_refs(content: str, skill_path: str = "", **_: Any) -> tuple[bool,
 
 
 def no_dangerous_patterns(content: str, **_: Any) -> tuple[bool, str]:
+    # Bare-root `rm -rf /` patterns flag iff `/` is followed by whitespace,
+    # end-of-line, a quote, or `*` — `rm -rf /var/lib/apt/lists/*` (Dockerfile
+    # apt cleanup) and similar pathed forms are legitimate and must not match.
     patterns = [
-        r"rm\s+-rf\s+/",
-        r"rm\s+-fr\s+/",
+        r"rm\s+-rf\s+/(?:\s|$|['\"]|\*)",
+        r"rm\s+-fr\s+/(?:\s|$|['\"]|\*)",
         r"git reset --hard",
         r"curl\s+[^|]+\|\s*sh",
         r"sudo\s+rm",
     ]
-    hits = [pattern for pattern in patterns if re.search(pattern, content)]
+    hits = [pattern for pattern in patterns if re.search(pattern, content, re.MULTILINE)]
     return not hits, "no catastrophic patterns" if not hits else f"dangerous patterns: {hits}"
 
 

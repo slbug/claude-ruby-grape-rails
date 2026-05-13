@@ -1,15 +1,8 @@
 ---
-name: hotwire-native
-description: "Use when building native iOS/Android with Hotwire: path config, bridge components."
-when_to_use: "Triggers: Hotwire Native, Turbo Native, bridge."
-user-invocable: false
+name: rb:hotwire-native
+description: "Building native iOS/Android shells with Hotwire Native: path configuration, bridge components, native navigation, Turbo Native bridges. Triggers: \"mobile app wrapper\", \"iOS shell for Rails\", \"native screen path config\", \"camera access from web view\", \"push notifications native bridge\". Do NOT use for: web Hotwire/Turbo Frames, API design."
 effort: medium
-paths:
-  - "app/views/**/*.{erb,haml,slim}"
-  - "app/{javascript,components,channels}/**"
-  - "**/app/views/**/*.{erb,haml,slim}"
-  - "**/app/{javascript,components,channels}/**"
-  - "{ios,android,native}/**"
+disable-model-invocation: true
 ---
 # Hotwire Native
 
@@ -144,6 +137,6 @@ See [Bridge Components](references/bridge-components.md) for component authoring
 
 ## See Also
 
-- [Hotwire Patterns](../hotwire-patterns/SKILL.md) — Turbo Frames, Streams, Stimulus
-- [Rails Contexts](../rails-contexts/SKILL.md) — Controllers, routing, contexts
-- [Request State Audit](../request-state-audit/SKILL.md) — Audit state management
+- [/hotwire-patterns](../hotwire-patterns/SKILL.md) — Turbo Frames, Streams, Stimulus
+- [/rails-contexts](../rails-contexts/SKILL.md) — Controllers, routing, contexts
+- [/rb:state-audit](../request-state-audit/SKILL.md) — Audit state management

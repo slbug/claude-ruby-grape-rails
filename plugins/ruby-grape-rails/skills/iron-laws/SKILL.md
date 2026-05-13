@@ -1,7 +1,6 @@
 ---
 name: iron-laws
-description: "Use when checking or enforcing the 22 Iron Laws of Ruby/Rails/Grape development. Non-negotiable rules that prevent common, costly mistakes."
-when_to_use: "Triggers: \"iron law\", \"non-negotiable rule\", \"Ruby safety rules\", \"iron-law-judge\"."
+description: "Checking or enforcing the canonical Iron Laws of Ruby/Rails/Grape development: non-negotiable rules covering Active Record, Sidekiq, security, Hotwire, and verification discipline. Triggers: \"iron law\", \"non-negotiable rule\", \"Ruby safety rules\", \"iron-law-judge\". Do NOT use for: advisory preferences (those ride alongside Iron Laws via inject-rules.sh)."
 effort: medium
 disable-model-invocation: true
 ---

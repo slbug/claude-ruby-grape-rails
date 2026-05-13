@@ -1,16 +1,8 @@
 ---
-name: sequel-patterns
-description: "Use when applying Sequel ORM: datasets, migrations, associations."
-when_to_use: "Triggers: Sequel, dataset, Sequel ORM, migration."
-user-invocable: false
+name: rb:sequel-patterns
+description: "Applying Sequel ORM patterns: datasets, migrations, associations, plugins, transactions, Sequel-vs-AR boundary decisions. Triggers: \"Sequel\", \"Sequel ORM\", \"Sequel dataset\", \"Sequel migration\", \"DB.from\". Do NOT use for: Active Record, Sidekiq jobs."
 effort: medium
-paths:
-  - "app/{models,repositories}/**"
-  - "db/**"
-  - "**/app/{models,repositories}/**"
-  - "**/db/**"
-  - "{packs,engines,components}/*/{models,repositories}/**"
-  - "app/{packages,packs}/*/{models,repositories}/**"
+disable-model-invocation: true
 ---
 # Sequel Patterns
 

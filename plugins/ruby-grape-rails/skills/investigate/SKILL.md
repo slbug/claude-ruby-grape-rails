@@ -1,7 +1,6 @@
 ---
 name: rb:investigate
-description: "Use when something is broken and the cause is unknown -- root-cause analysis for bugs, errors, and failures. NOT for performance tuning (use /rb:perf) or code flow tracing (use /rb:trace)."
-when_to_use: "Triggers: \"why is this broken\", \"investigate this bug\", \"root cause\", \"error analysis\", \"find the cause\". Does NOT handle: performance tuning, code flow tracing, code review."
+description: "Root-cause analysis for Ruby/Rails/Grape bugs whose cause is unknown. Triggers: \"why is this broken\", \"root cause\", \"error analysis\". Do NOT use for: perf, tracing."
 argument-hint: <bug description>
 effort: high
 ---
@@ -77,3 +76,14 @@ to resume the agent before treating the artifact as missing.
 | common error-pattern catalog | `${CLAUDE_SKILL_DIR}/references/error-patterns.md` |
 | quick debug commands + common-fix recipes (string vs atom keys, eager-load gaps, nil propagation) | `${CLAUDE_SKILL_DIR}/references/debug-commands.md` |
 | production-incident triage flow (payload → reproduction → fix → verify → capture) | `${CLAUDE_SKILL_DIR}/references/incident-playbook.md` |
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Slow / latency / memory regression → `/rb:perf` (performance analysis)
+- Library or approach comparison → `/rb:research` (evidence-based research)
+- Gem or Rails Guide lookup → `/rubydoc-fetcher` (cheap doc lookup)
+- Request-state / session-leak hygiene check → `/rb:state-audit` (request-state hygiene)
+- Live runtime introspection (Tidewave) → `/rb:runtime` (Tidewave runtime introspection)
+- Adjacent debt noticed but out of scope → `/rb:techdebt` (tech-debt logging)
+<!-- END-GENERATED related-footer -->

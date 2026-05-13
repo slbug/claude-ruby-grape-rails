@@ -8,10 +8,25 @@
       "prompt": "Check the authentication and authorization implementation"
     },
     {
-      "prompt": "User input goes straight into a where clause via string interpolation — is that a problem?"
+      "prompt": "User input goes straight into a where clause via string interpolation \u2014 is that a problem?"
     },
     {
       "prompt": "Check this endpoint for CSRF and mass assignment vulnerabilities"
+    },
+    {
+      "prompt": "I'm losing my mind, why is Brakeman flagging this controller as having an SSRF risk?"
+    },
+    {
+      "prompt": "Check for XSS in this view."
+    },
+    {
+      "prompt": "Can u check if this auth logic has any holes?"
+    },
+    {
+      "prompt": "Please review this code for potential injection risks and unauthorized access."
+    },
+    {
+      "prompt": "Is this Grape endpoint safe from SQL injection?"
     }
   ],
   "should_not_trigger": [
@@ -26,6 +41,21 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "Scan the config files for any hardcoded passwords or tokens."
+    },
+    {
+      "prompt": "How do I implement a new login feature?"
+    },
+    {
+      "prompt": "Check if the database schema is optimized for performance."
+    },
+    {
+      "prompt": "Find all the AWS secret keys in this directory."
+    },
+    {
+      "prompt": "Write a unit test for the user authentication flow."
     }
   ],
   "hard_should_trigger": [

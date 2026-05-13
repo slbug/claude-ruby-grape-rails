@@ -1,4 +1,4 @@
-.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate doctor eval eval-all eval-ci-deterministic eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-ablation eval-neighbor eval-hygiene eval-behavioral eval-behavioral-verbose eval-behavioral-fresh eval-behavioral-fresh-verbose eval-behavioral-compare eval-behavioral-passk eval-behavioral-rotations eval-sensitivity eval-stress eval-tests eval-tests-pytest eval-tests-unittest eval-trigger-expand eval-compression eval-skill-budget check-refs ci
+.PHONY: lint lint-markdown validate-yaml validate-json validate-shell security-injection release-metadata validate doctor eval eval-all eval-ci-deterministic eval-skills eval-agents eval-triggers eval-output eval-baseline eval-compare eval-overlap eval-confusable eval-hard-corpus eval-ablation eval-neighbor eval-hygiene eval-behavioral eval-behavioral-verbose eval-behavioral-fresh eval-behavioral-fresh-verbose eval-behavioral-compare eval-behavioral-passk eval-behavioral-rotations eval-sensitivity eval-stress eval-tests eval-tests-pytest eval-tests-unittest eval-trigger-expand eval-trigger-expand-fragile eval-trigger-expand-all eval-compression eval-skill-budget check-refs ci
 
 lint:
 	npm run lint
@@ -97,6 +97,25 @@ eval-neighbor:
 eval-hygiene:
 	python3 -m lab.eval.triggers.hygiene --all --summary
 
+eval-trigger-expand:
+	@if [ -z "$(SKILL)" ]; then \
+		echo "Error: SKILL is required. Usage: make eval-trigger-expand SKILL=<skill-name>"; \
+		exit 1; \
+	fi
+	@case "$(SKILL)" in \
+		*[!A-Za-z0-9:_-]*) \
+			echo "Error: SKILL contains invalid characters. Allowed: letters, digits, :, _, -"; \
+			exit 1; \
+			;; \
+	esac
+	python3 -m lab.eval.trigger_expand --skill "$(SKILL)"
+
+eval-trigger-expand-fragile:
+	python3 -m lab.eval.trigger_expand --fragile
+
+eval-trigger-expand-all:
+	python3 -m lab.eval.trigger_expand --all
+
 eval-behavioral:
 	python3 -m lab.eval.behavioral_scorer --all --cache --summary
 	python3 -m lab.eval.scorer --all --behavioral --pretty
@@ -121,19 +140,6 @@ eval-behavioral-passk:
 
 eval-behavioral-rotations:
 	python3 -m lab.eval.behavioral_scorer --all --rotations 5 --summary
-
-eval-trigger-expand:
-	@if [ -z "$(SKILL)" ]; then \
-		echo "Error: SKILL is required. Usage: make eval-trigger-expand SKILL=<skill-name>"; \
-		exit 1; \
-	fi
-	@case "$(SKILL)" in \
-		*[!A-Za-z0-9:_-]*) \
-			echo "Error: SKILL contains invalid characters. Allowed: letters, digits, :, _, -"; \
-			exit 1; \
-			;; \
-	esac
-	python3 -m lab.eval.trigger_expand --skill "$(SKILL)"
 
 eval-sensitivity:
 	python3 -m lab.eval.eval_sensitivity --all --summary

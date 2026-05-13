@@ -36,11 +36,11 @@ Imperative-only. Map CC changelog entries to specific plugin components.
 | CC Change Pattern | Plugin Files to Check |
 |-------------------|-----------------------|
 | Skill format changes | All 52 skills in `plugins/ruby-grape-rails/skills/` |
-| `description` / `when_to_use` length | All SKILL.md frontmatter (1,536 char combined cap) |
-| `paths:` field behavior | Skills with `paths:` for auto-loading |
-| Skill listing/truncation | Skill descriptions and ordering |
+| `description` length | All SKILL.md frontmatter (1,024-char agentskills.io cap; single `description` field, no `when_to_use`) |
+| Skill listing/truncation | Skill descriptions and ordering; aggregate 8,000-char routing-prompt ceiling |
 | `argument-hint:` | Command skills with argument hints |
 | `effort:` level support | All skills with effort levels |
+| `disable-model-invocation:` | DMI skills (hidden from routing prompt, reachable via slash) |
 
 ### Plugin Config
 

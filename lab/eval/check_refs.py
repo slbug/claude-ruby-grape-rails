@@ -508,6 +508,7 @@ def _collect_reference_sites(
     for registry_rel in (
         "references/iron-laws.yml",
         "references/preferences.yml",
+        "references/skill-registry.yml",
     ):
         if (plugin_root / registry_rel).is_file():
             plugin_closure.add(registry_rel)

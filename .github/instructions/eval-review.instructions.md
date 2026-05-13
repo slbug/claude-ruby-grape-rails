@@ -32,10 +32,11 @@ Imperative-only.
 
 ## Context Budget (lab/eval/context_budget.py)
 
-- Advisory checks for CLAUDE.md size and framework skill paths: coverage
+- Advisory checks for CLAUDE.md size and aggregate routing-prompt char
+  budget (8,000-char hard ceiling on the skill listing per CC routing
+  budget)
 - Zero API cost — file reads and frontmatter scanning only
 - Wired into `--changed`, `--all`, and `--ci` modes in run_eval.sh
-- `EXPECTED_PATHS_SKILLS` list must be updated when adding framework skills
 
 ## Module Map
 
@@ -60,16 +61,13 @@ Provider conventions (apply when reviewing LLM-bearing changes):
 - `behavioral_scorer.py` — provider via `--provider` flag →
   `RUBY_PLUGIN_EVAL_PROVIDER` → `ollama` default (Gemma4, model tag
   `RUBY_PLUGIN_EVAL_OLLAMA_MODEL`, default `gemma4:26b-a4b-it-q8_0`).
-  Alt: `apfel` (on-device, reference-only), `haiku` (paid Anthropic
-  API, prompt-cache via `ENABLE_PROMPT_CACHING_1H=1` /
-  `FORCE_PROMPT_CACHING_5M=1`).
+  Ollama is currently the only wired provider; future providers (e.g.,
+  Microsoft Waza) plug in via `_PROVIDER_SETTINGS` +
+  `_run_provider` dispatch + `SUPPORTED_PROVIDERS` in `results_dir.py`.
 - `epistemic_suite.py` — captures baselines at
   `lab/eval/baselines/epistemic/{namespace}/pre-posture.json`
   (gitignored). Refuses to run when baseline is missing or injector
-  hash matches baseline. Gate providers: `ollama` and `haiku` only;
-  `apfel` is reference-only.
-- `eval_auth.py` — `claude --bare` auth resolution (keychain via
-  `bare_settings.json` → cached OAuth).
+  hash matches baseline.
 
 Shared infrastructure to reuse (do not re-implement):
 
@@ -121,8 +119,6 @@ Shared infrastructure to reuse (do not re-implement):
   `lab/eval/tests/test_eval_ci_determinism.py::DETERMINISTIC_PATH_FILES`.
   Reviewers rely on the canonical `ls lab/eval/*.py` set re-derived each
   pass, not a frozen list in this file.
-- `EXPECTED_PATHS_SKILLS` in `context_budget.py` must include any new
-  framework skill paths
 
 ## Do NOT Flag
 
@@ -130,7 +126,6 @@ Shared infrastructure to reuse (do not re-implement):
 - `**_: Any` in matcher signatures (kwargs forwarding pattern)
 - `_template.json` files (not scored, used as contributor reference)
 - Files starting with `_` in triggers/ (special corpus files)
-- `bare_settings.json` (eval auth fixture, not a runtime secret)
 - Gitignored `lab/eval/baselines/` snapshots being absent from the repo
 - `lab/eval/fixtures/epistemic/` scenarios that look adversarial — they
   are intentional baseline-vs-current contrasts for posture metrics

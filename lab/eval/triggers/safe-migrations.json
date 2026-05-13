@@ -12,6 +12,21 @@
     },
     {
       "prompt": "Will this rename_column lock the table during deploy?"
+    },
+    {
+      "prompt": "Ugh, why is this migration taking forever? Is it gonna lock the whole users table or what?"
+    },
+    {
+      "prompt": "Suggest a backfill strategy for this."
+    },
+    {
+      "prompt": "how to add NOT NULL col without downtime"
+    },
+    {
+      "prompt": "Please provide a multi-step plan to rename this column safely."
+    },
+    {
+      "prompt": "Analyze this migration for potential long-held locks."
     }
   ],
   "should_not_trigger": [
@@ -26,11 +41,26 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "How do I write a Rails model class for a new table?"
+    },
+    {
+      "prompt": "Explain how to use ActiveRecord associations."
+    },
+    {
+      "prompt": "Help me fix this syntax error in my model."
+    },
+    {
+      "prompt": "What is the best way to seed my database?"
+    },
+    {
+      "prompt": "How do I rollback my last git commit?"
     }
   ],
   "hard_should_trigger": [
     {
-      "prompt": "I'm adding an index on a large table — will this lock the table?",
+      "prompt": "I'm adding an index on a large table \u2014 will this lock the table?",
       "axis": "confusable"
     },
     {
@@ -40,7 +70,7 @@
   ],
   "hard_should_not_trigger": [
     {
-      "prompt": "Write a migration to add a new column to users",
+      "prompt": "Generate the User model file from this schema.",
       "axis": "confusable"
     },
     {

@@ -1,9 +1,9 @@
 ---
 name: rb:boundaries
-description: "Use when analyzing context and service boundaries in Rails applications. Detect coupling, misplaced logic, and violations of architectural boundaries. Use when refactoring services, splitting monoliths, or reviewing layer interactions."
-when_to_use: "Triggers: \"coupling\", \"service boundaries\", \"split monolith\", \"fat controller\", \"misplaced logic\"."
+description: "Analyzing context and service boundaries in Rails apps: detect coupling, misplaced logic, layer-interaction violations. For refactors, monolith splits, package extraction. Triggers: \"coupling\", \"service boundaries\", \"split monolith\", \"fat controller\", \"misplaced logic\", \"package boundary\". Do NOT use for: where-does-this-go decisions for one object, tech-debt logging."
 argument-hint: "[path|service|context] [--focus controllers|models|services|grape]"
 effort: medium
+disable-model-invocation: true
 ---
 # Rails Boundary Analysis
 
@@ -103,3 +103,9 @@ dependencies:
 - Add policy layer for authorization (currently in controllers)
 - Consider Packwerk for packs/billing/ isolation
 ```
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Adjacent debt noticed but out of scope → `/rb:techdebt` (tech-debt logging)
+<!-- END-GENERATED related-footer -->

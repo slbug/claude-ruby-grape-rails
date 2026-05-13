@@ -1,7 +1,6 @@
 ---
 name: rb:permissions
-description: "Use when analyzing recent Claude Code sessions to recommend safe Bash permission entries for Ruby/Rails/Grape workflows in settings.json. Use when approval prompts slow work or you want to reduce prompts, allow commands, or fix permissions."
-when_to_use: "Triggers: \"permissions\", \"allow command\", \"approval prompts\", \"settings.json\", \"stop asking\"."
+description: "Analyzing recent Claude Code sessions to recommend safe Bash permission entries for Ruby/Rails/Grape workflows in settings.json. Reduces approval prompts by promoting frequently-used safe commands. Triggers: \"permissions\", \"allow command\", \"approval prompts\", \"settings.json\", \"stop asking\". Do NOT use for: editing arbitrary settings, troubleshooting hook failures."
 argument-hint: "[--days=14] [--limit=30] [--include-global] [--dry-run]"
 effort: low
 disable-model-invocation: true

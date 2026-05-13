@@ -1,7 +1,6 @@
 ---
 name: rb:research
-description: "Use when the team needs evidence-based research on Ruby/Rails/Grape/Sidekiq gems, upgrade paths, security-sensitive choices, or architectural trade-offs before implementation or adopting a pattern."
-when_to_use: "Triggers: \"research this gem\", \"compare approaches\", \"what are the options\", \"upgrade path\", \"evidence for\". Does NOT handle: debugging, implementation, code review, brainstorming."
+description: "Producing evidence-based research with citations on Ruby/Rails/Grape/Sidekiq gems, upgrade paths, security-sensitive choices, or architectural trade-offs before implementation. Triggers: \"research this gem\", \"compare approaches\", \"what are the options\", \"upgrade path\", \"evidence for\". Do NOT use for: debugging, implementation, code review, open-ended brainstorming."
 argument-hint: <topic>
 disable-model-invocation: true
 effort: high
@@ -320,3 +319,10 @@ Planning reuses fresh research conservatively:
 | Need | Reference |
 |---|---|
 | structured library evaluation template (RubyGems facts + maintenance + recommendation) | `${CLAUDE_SKILL_DIR}/references/library-evaluation.md` |
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Gem or Rails Guide lookup → `/rubydoc-fetcher` (cheap doc lookup)
+- Research trust / source-quality audit → `/rb:provenance-scan` (research-trust audit)
+<!-- END-GENERATED related-footer -->

@@ -1,7 +1,6 @@
 ---
 name: rb:challenge
-description: "Use when you want rigorous adversarial scrutiny of Active Record changes, Hotwire/Turbo events, or PR readiness -- challenge mode questioning before approving."
-when_to_use: "Triggers: \"challenge this\", \"stress test this code\", \"adversarial review\", \"devil's advocate\", \"really scrutinize\". Does NOT handle: routine code review, planning, auditing."
+description: "Running rigorous adversarial scrutiny on Active Record changes, Hotwire/Turbo events, or PR readiness — devil's-advocate questioning before approval. Triggers: \"challenge this\", \"stress test this code\", \"adversarial review\", \"devil's advocate\", \"really scrutinize\". Do NOT use for: routine code review, planning, full project audit."
 argument-hint: active record | hotwire | pr
 effort: high
 disable-model-invocation: true
@@ -174,3 +173,9 @@ Example workflow:
 1. Run `/rb:challenge active record` after migration changes
 2. Answer each question with code references or test results
 3. Address all concerns before proceeding to PR
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Iron Law violation suspected → `/iron-laws` (SessionStart-injected; review BLOCKED path)
+<!-- END-GENERATED related-footer -->

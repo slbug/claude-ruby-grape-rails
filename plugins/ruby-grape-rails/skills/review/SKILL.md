@@ -1,7 +1,6 @@
 ---
 name: rb:review
-description: "Use when you need code review of changed files with parallel specialist agents for correctness, security, testing, Active Record, Grape, and Sidekiq boundaries. Use after implementation before commit or PR."
-when_to_use: "Triggers: \"review my changes\", \"code review\", \"review before commit\", \"check this PR\", \"review for security\". Does NOT handle: fixing code, full project audit, planning, verification/test runs."
+description: "Reviewing Ruby/Rails/Grape changes via parallel specialists: correctness, security, tests, AR, Grape, Sidekiq. Triggers: \"review my changes\", \"code review\", \"check this PR\"."
 argument-hint: "[test|security|sidekiq|deploy|iron-laws|all]"
 effort: xhigh
 ---
@@ -374,3 +373,18 @@ When a finding cites a sidecar, read the sidecar's `trust_state` (see
 | review-slug derivation + filesystem-safe slug rules | `${CLAUDE_SKILL_DIR}/references/conventions.md` |
 | worked example of consolidated review output | `${CLAUDE_SKILL_DIR}/references/example-review.md` |
 | production-incident review context (when review covers a live failure) | `${CLAUDE_PLUGIN_ROOT}/skills/investigate/references/incident-playbook.md` |
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Adversarial review needed → `/rb:challenge` (adversarial-mode review)
+- API or internal docs needed → `/rb:document` (post-implementation docs)
+- Iron Law violation suspected → `/iron-laws` (SessionStart-injected; review BLOCKED path)
+- Mistake worth capturing as a rule → `/rb:learn` (in-flight lesson capture)
+- Slow / latency / memory regression → `/rb:perf` (performance analysis)
+- PR review comments to address → `/rb:pr-review` (PR review-comment handling)
+- Pre-push secret check → `/rb:secrets` (pre-push secret scan)
+- Codebase health snapshot → `/rb:audit` (project-wide audit)
+- Research trust / source-quality audit → `/rb:provenance-scan` (research-trust audit)
+- Adjacent debt noticed but out of scope → `/rb:techdebt` (tech-debt logging)
+<!-- END-GENERATED related-footer -->

@@ -1,14 +1,17 @@
 """Single source of truth for behavioral trigger result locations.
 
 Behavioral routing results live under ``lab/eval/triggers/results/{namespace}/``.
-For haiku and apfel providers, the namespace is the provider name. For
-Ollama, the namespace is model-derived
+For Ollama, the namespace is model-derived
 (``gemma4:26b-a4b-it-q8_0`` -> ``gemma4-26b-a4b-it-q8_0``) so cache
-comparisons stay model-specific while the CLI provider remains ``ollama``.
-This module owns the active provider state so all tools
-(behavioral_scorer, dimensions/behavioral, eval_sensitivity,
+comparisons stay model-specific. This module owns the active provider state
+so all tools (behavioral_scorer, dimensions/behavioral, eval_sensitivity,
 neighbor_regression) read and write the same directory without coordinating
 their own module-level bindings.
+
+Provider abstraction is kept pluggable: SUPPORTED_PROVIDERS is the gate;
+adding a provider means appending its name there, adding a ProviderSettings
+entry in behavioral_scorer._PROVIDER_SETTINGS, and adding a dispatch branch
+in behavioral_scorer._run_provider. Future migration target: Microsoft Waza.
 
 Public API:
 
@@ -38,7 +41,7 @@ _log = logging.getLogger("results_dir")
 RESULTS_BASE: Path = TRIGGERS_DIR / "results"
 
 DEFAULT_PROVIDER: str = "ollama"
-SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"ollama", "apfel", "haiku"})
+SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"ollama"})
 PROVIDER_ENV_VAR: str = "RUBY_PLUGIN_EVAL_PROVIDER"
 OLLAMA_MODEL_ENV_VAR: str = "RUBY_PLUGIN_EVAL_OLLAMA_MODEL"
 DEFAULT_OLLAMA_MODEL: str = "gemma4:26b-a4b-it-q8_0"

@@ -32,21 +32,18 @@ SAMPLE_DESCRIPTIONS = {
 
 SAMPLE_ROUTING_DESCRIPTIONS = {
     "plan": {
-        "description": "Plan implementation approach for Ruby/Rails features",
-        "when_to_use": "Use for architecture, task breakdown, and sequencing.",
+        "description": "Plan implementation for Ruby/Rails features: architecture, task breakdown, and sequencing.",
     },
     "work": {
-        "description": "Execute plan tasks with structured progress tracking",
-        "when_to_use": "Use when the task requires direct code changes.",
+        "description": "Execute plan tasks with structured progress tracking. Use when the task requires direct code changes.",
     },
     "review": {
-        "description": "Review code changes with parallel specialist agents",
-        "when_to_use": "Use when checking diffs for defects and regressions.",
+        "description": "Review code changes with parallel specialist agents — checking diffs for defects and regressions.",
     },
 }
 
 
-# Tests mock run_haiku; force haiku provider at the shared state so
+# Tests mock run_ollama; force ollama provider at the shared state so
 # _run_provider dispatches there.
 _ORIGINAL_PROVIDER: str | None = None
 
@@ -54,7 +51,7 @@ _ORIGINAL_PROVIDER: str | None = None
 def setUpModule() -> None:
     global _ORIGINAL_PROVIDER
     _ORIGINAL_PROVIDER = _rd.get_active_provider()
-    _rd.set_active_provider("haiku")
+    _rd.set_active_provider("ollama")
 
 
 def tearDownModule() -> None:
@@ -63,7 +60,7 @@ def tearDownModule() -> None:
 
 
 def _cr(skills: list[str] | None) -> CallResult:
-    """Shorthand to build a CallResult for mocking run_haiku."""
+    """Shorthand to build a CallResult for mocking run_ollama."""
     return CallResult(skills=skills)
 
 
@@ -94,14 +91,14 @@ class TestContentHash(unittest.TestCase):
         self.assertNotEqual(h1, h2)
 
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_hash_changes_with_when_to_use(self, mock_trigger):
-        """Different when_to_use text invalidates behavioral caches."""
+    def test_hash_changes_with_routing_description(self, mock_trigger):
+        """Different routing-description text invalidates behavioral caches."""
         mock_trigger.return_value = {"should_trigger": ["plan a feature"]}
         h1 = content_hash("plan", SAMPLE_ROUTING_DESCRIPTIONS)
         modified = dict(SAMPLE_ROUTING_DESCRIPTIONS)
         modified["plan"] = {
             **SAMPLE_ROUTING_DESCRIPTIONS["plan"],
-            "when_to_use": "Use for unrelated routing text.",
+            "description": "Completely different routing description text.",
         }
         h2 = content_hash("plan", modified)
         self.assertNotEqual(h1, h2)
@@ -126,31 +123,12 @@ class TestRoutingPrompt(unittest.TestCase):
             self.assertIn(name, prompt)
             self.assertIn(desc[:50], prompt)
 
-    def test_includes_when_to_use(self):
-        """Prompt contains routing when_to_use text when present."""
+    def test_includes_description_only(self):
+        """Prompt renders the single ``description`` field per agentskills.io canon."""
         prompt = build_routing_prompt(SAMPLE_ROUTING_DESCRIPTIONS, "plan a feature")
-        self.assertIn("When to use:", prompt)
+        self.assertNotIn("When to use:", prompt)
         self.assertIn("architecture, task breakdown", prompt)
         self.assertIn("checking diffs for defects", prompt)
-
-    def test_apfel_strip_to_size_limits_each_routing_field(self):
-        """Apfel keeps bounded text from description and when_to_use."""
-        old_provider = _rd.get_active_provider()
-        _rd.set_active_provider("apfel")
-        try:
-            descriptions = {
-                "plan": {
-                    "description": "D" * 90,
-                    "when_to_use": "W" * 90,
-                }
-            }
-            prompt = build_routing_prompt(descriptions, "plan a feature")
-        finally:
-            _rd.set_active_provider(old_provider)
-        self.assertIn("D" * 67 + "...", prompt)
-        self.assertIn("When to use: " + "W" * 67 + "...", prompt)
-        self.assertNotIn("D" * 80, prompt)
-        self.assertNotIn("W" * 80, prompt)
 
     def test_includes_user_prompt(self):
         """Prompt contains the user's input."""
@@ -244,15 +222,15 @@ class TestBehavioralDimension(unittest.TestCase):
 class TestScoreSkill(unittest.TestCase):
     """Tests for the behavioral scorer's score_skill function."""
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_score_skill_with_mock_haiku(self, mock_triggers, mock_haiku):
-        """Scores correctly with mocked haiku responses."""
+    def test_score_skill_with_mock_ollama(self, mock_triggers, mock_ollama):
+        """Scores correctly with mocked ollama responses."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature", "design an implementation"],
             "should_not_trigger": ["review my code", "fix this bug"],
         }
-        mock_haiku.side_effect = [
+        mock_ollama.side_effect = [
             _cr(["plan"]),    # should_trigger: correct
             _cr(["plan"]),    # should_trigger: correct
             _cr(["review"]),  # should_not_trigger: correct (plan not in list)
@@ -296,9 +274,9 @@ class TestScoreSkill(unittest.TestCase):
         self.assertEqual(result["cache_namespace"], "gemma4-26b-a4b-it-q8_0")
         self.assertEqual(result["accuracy"], 1.0)
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_all_failed_error_includes_failure_types(self, mock_triggers, mock_haiku):
+    def test_all_failed_error_includes_failure_types(self, mock_triggers, mock_ollama):
         """When every call fails, error message surfaces the failure_types breakdown.
 
         Regression: previously the all-failed path returned a generic
@@ -309,7 +287,7 @@ class TestScoreSkill(unittest.TestCase):
             "should_trigger": ["plan a feature", "design something"],
             "should_not_trigger": ["fix a bug"],
         }
-        mock_haiku.side_effect = [
+        mock_ollama.side_effect = [
             CallResult(skills=None, error_type="timeout"),
             CallResult(skills=None, error_type="server_unavailable"),
             CallResult(skills=None, error_type="timeout"),
@@ -331,9 +309,9 @@ class TestScoreSkill(unittest.TestCase):
 class TestDifficultyTiers(unittest.TestCase):
     """Tests for P1a difficulty-stratified reporting."""
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_hard_tier_included_in_results(self, mock_triggers, mock_haiku):
+    def test_hard_tier_included_in_results(self, mock_triggers, mock_ollama):
         """Hard-tier prompts are scored and reported separately."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],
@@ -341,7 +319,7 @@ class TestDifficultyTiers(unittest.TestCase):
             "hard_should_trigger": [{"prompt": "ambiguous planning request", "axis": "confusable"}],
             "hard_should_not_trigger": [{"prompt": "keep working on checklist", "axis": "confusable"}],
         }
-        mock_haiku.side_effect = [
+        mock_ollama.side_effect = [
             _cr(["plan"]),  # easy should_trigger: correct
             _cr(["work"]),  # easy should_not: correct
             _cr(["plan"]),  # hard should_trigger: correct
@@ -358,9 +336,9 @@ class TestDifficultyTiers(unittest.TestCase):
         self.assertEqual(result["hard_accuracy"], 1.0)
         self.assertEqual(result["total"], 4)
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_hard_tier_failure_reported(self, mock_triggers, mock_haiku):
+    def test_hard_tier_failure_reported(self, mock_triggers, mock_ollama):
         """Hard-tier misses show up in hard_accuracy."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],
@@ -368,7 +346,7 @@ class TestDifficultyTiers(unittest.TestCase):
             "hard_should_trigger": [{"prompt": "ambiguous request", "axis": "confusable"}],
             "hard_should_not_trigger": [{"prompt": "keep working", "axis": "confusable"}],
         }
-        mock_haiku.side_effect = [
+        mock_ollama.side_effect = [
             _cr(["plan"]),       # easy should_trigger: correct
             _cr(["work"]),       # easy should_not: correct
             _cr(["brainstorm"]), # hard should_trigger: MISS
@@ -469,9 +447,9 @@ class TestForkLockRouting(unittest.TestCase):
         self.assertTrue(_check_correct("plan", ["plan"], True, None, []))
         self.assertFalse(_check_correct("plan", ["brainstorm"], True, None, []))
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_fork_prompt_scores_correct(self, mock_triggers, mock_haiku):
+    def test_fork_prompt_scores_correct(self, mock_triggers, mock_ollama):
         """Fork prompt counts as correct when returned skill is in valid_skills."""
         mock_triggers.return_value = {
             "should_trigger": [],
@@ -484,7 +462,7 @@ class TestForkLockRouting(unittest.TestCase):
             }],
             "hard_should_not_trigger": [],
         }
-        mock_haiku.return_value = _cr(["brainstorm"])  # not "plan" but in valid_skills
+        mock_ollama.return_value = _cr(["brainstorm"])  # not "plan" but in valid_skills
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
@@ -498,9 +476,9 @@ class TestForkLockRouting(unittest.TestCase):
 class TestParallelWorkers(unittest.TestCase):
     """Tests for P5b parallel workers."""
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_workers_preserves_results(self, mock_triggers, mock_haiku):
+    def test_workers_preserves_results(self, mock_triggers, mock_ollama):
         """--workers > 1 produces same results as sequential."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature", "design an approach"],
@@ -509,13 +487,13 @@ class TestParallelWorkers(unittest.TestCase):
             "hard_should_not_trigger": [],
         }
         # Use a function so thread execution order doesn't matter
-        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+        mock_ollama.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 seq_result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, workers=1))
 
-        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+        mock_ollama.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
@@ -525,9 +503,9 @@ class TestParallelWorkers(unittest.TestCase):
         self.assertEqual(seq_result["total"], par_result["total"])
         self.assertEqual(seq_result["correct"], par_result["correct"])
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_workers_all_prompts_processed(self, mock_triggers, mock_haiku):
+    def test_workers_all_prompts_processed(self, mock_triggers, mock_ollama):
         """All prompts are processed with parallel workers."""
         mock_triggers.return_value = {
             "should_trigger": ["p1", "p2", "p3", "p4"],
@@ -535,7 +513,7 @@ class TestParallelWorkers(unittest.TestCase):
             "hard_should_trigger": [],
             "hard_should_not_trigger": [],
         }
-        mock_haiku.return_value = _cr(["plan"])
+        mock_ollama.return_value = _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
@@ -583,22 +561,22 @@ class TestCyclicRotation(unittest.TestCase):
         self.assertFalse(_majority_vote([True, False]))
         self.assertFalse(_majority_vote([True, True, False, False]))
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_rotations_expand_work_items(self, mock_triggers, mock_haiku):
-        """--rotations 3 triples the number of haiku calls."""
+    def test_rotations_expand_work_items(self, mock_triggers, mock_ollama):
+        """--rotations 3 triples the number of ollama calls."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],
             "should_not_trigger": ["fix a bug"],
         }
-        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+        mock_ollama.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=3))
 
-        # 2 base prompts, each run 3 times = 6 haiku calls
-        self.assertEqual(mock_haiku.call_count, 6)
+        # 2 base prompts, each run 3 times = 6 ollama calls
+        self.assertEqual(mock_ollama.call_count, 6)
         # But aggregated to 2 results
         self.assertEqual(result["total"], 2)
         self.assertEqual(result["rotations"], 3)
@@ -606,9 +584,9 @@ class TestCyclicRotation(unittest.TestCase):
         self.assertIn("order_range", result)
         self.assertIn("routing_consistency", result)
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_rotations_majority_vote(self, mock_triggers, mock_haiku):
+    def test_rotations_majority_vote(self, mock_triggers, mock_ollama):
         """Majority vote across rotations determines correctness."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],
@@ -621,7 +599,7 @@ class TestCyclicRotation(unittest.TestCase):
             if call_count[0] % 3 == 2:  # 2nd call misses
                 return _cr(["brainstorm"])
             return _cr(["plan"])
-        mock_haiku.side_effect = _side_effect
+        mock_ollama.side_effect = _side_effect
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
@@ -633,29 +611,29 @@ class TestCyclicRotation(unittest.TestCase):
 class TestPassAtK(unittest.TestCase):
     """Tests for P3 pass@k routing robustness."""
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_samples_expand_work_items(self, mock_triggers, mock_haiku):
-        """--samples 3 triples the number of haiku calls."""
+    def test_samples_expand_work_items(self, mock_triggers, mock_ollama):
+        """--samples 3 triples the number of ollama calls."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],
             "should_not_trigger": ["fix a bug"],
         }
-        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+        mock_ollama.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
 
-        self.assertEqual(mock_haiku.call_count, 6)
+        self.assertEqual(mock_ollama.call_count, 6)
         self.assertEqual(result["total"], 2)
         self.assertEqual(result["samples"], 3)
         self.assertIn("pass_at_k", result)
         self.assertIn("sample_consistency", result)
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_pass_at_k_recovers_inconsistent(self, mock_triggers, mock_haiku):
+    def test_pass_at_k_recovers_inconsistent(self, mock_triggers, mock_ollama):
         """pass@k is 1.0 when at least one sample is correct."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],
@@ -668,7 +646,7 @@ class TestPassAtK(unittest.TestCase):
             if call_count[0] % 3 == 2:  # 2nd sample correct
                 return _cr(["plan"])
             return _cr(["brainstorm"])
-        mock_haiku.side_effect = _side_effect
+        mock_ollama.side_effect = _side_effect
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
@@ -680,15 +658,15 @@ class TestPassAtK(unittest.TestCase):
         self.assertEqual(result["sample_consistency"], 0.0)  # not all agree
         self.assertTrue(result["inconsistent_routing"])
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_sample_consistency_all_agree(self, mock_triggers, mock_haiku):
+    def test_sample_consistency_all_agree(self, mock_triggers, mock_ollama):
         """sample_consistency is 1.0 when all samples agree."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],
             "should_not_trigger": [],
         }
-        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+        mock_ollama.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
@@ -701,9 +679,9 @@ class TestPassAtK(unittest.TestCase):
 class TestPromptIdAggregation(unittest.TestCase):
     """Regression test: duplicate prompt text with different prompt_ids must not merge."""
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_same_text_different_buckets_not_merged(self, mock_triggers, mock_haiku):
+    def test_same_text_different_buckets_not_merged(self, mock_triggers, mock_ollama):
         """Identical prompt in should_trigger AND hard_should_trigger stays separate."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],       # prompt_id=0, tier=easy
@@ -712,7 +690,7 @@ class TestPromptIdAggregation(unittest.TestCase):
             "hard_should_not_trigger": [],
         }
         # Rotation 0: both correct, Rotation 1: both correct
-        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+        mock_ollama.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
@@ -755,25 +733,25 @@ class TestModeSpecificCache(unittest.TestCase):
         """Samples mode uses {skill}_s{N}.json."""
         self.assertEqual(_result_filename("plan", samples=3), "plan_s3.json")
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_modes_write_separate_files(self, mock_triggers, mock_haiku):
+    def test_modes_write_separate_files(self, mock_triggers, mock_ollama):
         """Different modes write to different result files, not overwriting each other."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],
             "should_not_trigger": ["fix a bug"],
         }
-        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+        mock_ollama.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 # Run baseline
                 score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=1, samples=1)
                 # Run rotations
-                mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+                mock_ollama.side_effect = lambda *a, **kw: _cr(["plan"])
                 score_skill("plan", SAMPLE_DESCRIPTIONS, rotations=3)
                 # Run samples
-                mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+                mock_ollama.side_effect = lambda *a, **kw: _cr(["plan"])
                 score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3)
 
                 # All three files should exist
@@ -781,15 +759,15 @@ class TestModeSpecificCache(unittest.TestCase):
                 self.assertTrue((Path(tmpdir) / "plan_r3.json").is_file())
                 self.assertTrue((Path(tmpdir) / "plan_s3.json").is_file())
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_cache_reads_correct_mode(self, mock_triggers, mock_haiku):
+    def test_cache_reads_correct_mode(self, mock_triggers, mock_ollama):
         """--cache returns mode-specific results, not cross-mode artifacts."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],
             "should_not_trigger": ["fix a bug"],
         }
-        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+        mock_ollama.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
@@ -833,38 +811,38 @@ class TestModeSpecificCache(unittest.TestCase):
         self.assertIn("error", cached)
         self.assertIn("no valid cache", cached["error"])
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_mode_metadata_in_artifact(self, mock_triggers, mock_haiku):
+    def test_mode_metadata_in_artifact(self, mock_triggers, mock_ollama):
         """Result artifact includes mode and provider/profile metadata."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],
             "should_not_trigger": [],
         }
-        mock_haiku.side_effect = lambda *a, **kw: _cr(["plan"])
+        mock_ollama.side_effect = lambda *a, **kw: _cr(["plan"])
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
                 result = _unpack(score_skill("plan", SAMPLE_DESCRIPTIONS, samples=3))
                 self.assertEqual(result["mode"], {"rotations": 1, "samples": 3})
-                self.assertEqual(result["provider"], "haiku")
-                self.assertEqual(result["model"], "haiku")
-                self.assertEqual(result["cache_namespace"], "haiku")
+                self.assertEqual(result["provider"], "ollama")
+                self.assertEqual(result["model"], _rd.DEFAULT_OLLAMA_MODEL)
+                self.assertEqual(result["cache_namespace"], _rd.cache_namespace("ollama"))
                 self.assertEqual(result["routing_fields"], list(ROUTING_FIELDS))
                 self.assertEqual(result["routing_prompt_version"], ROUTING_PROMPT_VERSION)
                 self.assertEqual(result["prompt_policy"], "full")
                 self.assertEqual(
                     result["prompt_limits"],
-                    {"description": None, "when_to_use": None},
+                    {"description": None},
                 )
 
 
 class TestMissingSample0(unittest.TestCase):
     """Regression test: sample 0 fails, later samples survive."""
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_sample0_fails_later_survive(self, mock_triggers, mock_haiku):
+    def test_sample0_fails_later_survive(self, mock_triggers, mock_ollama):
         """When sample 0 fails (None), accuracy uses conservative False, pass@k uses survivors."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],
@@ -877,7 +855,7 @@ class TestMissingSample0(unittest.TestCase):
             if call_count[0] % 3 == 1:  # 1st call (sample 0) fails
                 return CallResult(skills=None)
             return _cr(["plan"])
-        mock_haiku.side_effect = _side_effect
+        mock_ollama.side_effect = _side_effect
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):
@@ -892,9 +870,9 @@ class TestMissingSample0(unittest.TestCase):
         if results_list:
             self.assertTrue(results_list[0].get("sample0_missing", False))
 
-    @patch("lab.eval.behavioral_scorer.run_haiku")
+    @patch("lab.eval.behavioral_scorer.run_ollama")
     @patch("lab.eval.behavioral_scorer.load_trigger_file")
-    def test_sample0_succeeds_later_fail(self, mock_triggers, mock_haiku):
+    def test_sample0_succeeds_later_fail(self, mock_triggers, mock_ollama):
         """When sample 0 succeeds but later samples fail, accuracy preserves sample 0."""
         mock_triggers.return_value = {
             "should_trigger": ["plan a feature"],
@@ -907,7 +885,7 @@ class TestMissingSample0(unittest.TestCase):
             if call_count[0] % 3 == 2:  # 2nd call (sample 1) fails
                 return CallResult(skills=None)
             return _cr(["plan"])
-        mock_haiku.side_effect = _side_effect
+        mock_ollama.side_effect = _side_effect
 
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch("lab.eval.results_dir.active_results_dir", return_value=Path(tmpdir)):

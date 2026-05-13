@@ -32,6 +32,9 @@ after deterministic gates pass. See `.claude/rules/development.md`
 | `make eval-ablation` / `npm run eval:ablation` | Leave-one-out matcher signal/noise (deterministic) |
 | `make eval-neighbor` / `npm run eval:neighbor` | Confusable-pair regression on changed skills |
 | `make eval-hygiene` / `npm run eval:hygiene` | Trigger corpus contamination scanning |
+| `make eval-trigger-expand SKILL=<name>` | Self-sampled trigger corpus expansion for one skill via Ollama |
+| `make eval-trigger-expand-fragile` / `npm run eval:trigger-expand:fragile` | Same, fragile skills (from eval sensitivity) |
+| `make eval-trigger-expand-all` / `npm run eval:trigger-expand:all` | Same, all skills |
 | `make eval-baseline` | Baseline snapshot |
 | `make eval-compare` | Compare against baseline |
 | `make eval-overlap` | Overlap analysis |
@@ -49,10 +52,17 @@ after deterministic gates pass. See `.claude/rules/development.md`
 
 ## Current Scope
 
-- 53/53 skill eval coverage and trigger corpora
-- Structural scoring for all shipped agents
+- Structural scoring + budget gates for all 52 shipped skills and all shipped agents
+- Trigger corpora + behavioral routing scoring scoped to non-DMI skills only.
+  Skills with `disable-model-invocation: true` have their descriptions stripped
+  from Claude Code's routing context per [CC docs](https://code.claude.com/docs/en/skills),
+  so routing eval against them measures behavior the runtime cannot perform.
+  Helpers `load_hidden_skills()` in `trigger_scorer.py` and the matching filter
+  in `behavioral_scorer.py`, `neighbor_confusion.py`, `neighbor_regression.py`,
+  `triggers/generate_confusable_pairs.py`, `triggers/generate_hard_corpus.py`
+  enforce the exclusion.
 - Deterministic trigger corpora and confusable-pair analysis
-- Optional behavioral routing dimension (cached Ollama model namespace, apfel, or haiku results per `RUBY_PLUGIN_EVAL_PROVIDER`)
+- Optional behavioral routing dimension (cached Ollama-model namespace results; the provider dispatch in `behavioral_scorer._run_provider` is pluggable for future additions such as Microsoft Waza)
 
 ## Contributor Workflow Order
 
@@ -82,17 +92,15 @@ baseline and this PR.
 
 1. **Start PR from fresh main.** Pull latest.
 
-2. **Capture baseline** against current injector state, per provider you plan to measure. Delete stale baselines from previous PR first; capture per provider:
+2. **Capture baseline** against current injector state. Delete the stale baseline from the previous PR first, then capture:
 
    ```bash
    rm -f lab/eval/baselines/epistemic/*/pre-posture.json
 
    python3 -m lab.eval.epistemic_suite --baseline-only --provider ollama --workers 6 --summary --pretty
-   python3 -m lab.eval.epistemic_suite --baseline-only --provider apfel  --workers 6 --summary --pretty
-   python3 -m lab.eval.epistemic_suite --baseline-only --provider haiku  --workers 6 --summary --pretty
    ```
 
-   Outputs auto-resolve to `lab/eval/baselines/epistemic/{namespace}/pre-posture.json`. Baselines are gitignored (local snapshot, same convention as `make eval-baseline`).
+   Output auto-resolves to `lab/eval/baselines/epistemic/{namespace}/pre-posture.json`. Baselines are gitignored (local snapshot, same convention as `make eval-baseline`).
 
 3. **Make `preferences.yml` / `iron-laws.yml` edits.**
 
@@ -125,7 +133,7 @@ baseline and this PR.
 
 ### Env vars
 
-- `RUBY_PLUGIN_EVAL_PROVIDER` — `ollama` (default) / `apfel` / `haiku`.
+- `RUBY_PLUGIN_EVAL_PROVIDER` — currently `ollama` only. Pluggable: future providers (e.g., Microsoft Waza) extend `SUPPORTED_PROVIDERS` in `lab/eval/results_dir.py` + add a dispatch branch in `behavioral_scorer._run_provider`.
 - `RUBY_PLUGIN_EVAL_OLLAMA_MODEL` — model tag (default
   `gemma4:26b-a4b-it-q8_0`, ~28GB, MoE with 4B active tokens).
   Namespace derived from tag (`gemma4:26b-a4b-it-q8_0` →
@@ -163,7 +171,6 @@ baseline and this PR.
   quit Ollama.app) → suite autostarts with eval-tuned env. Override
   individual values when VRAM tight:
   `OLLAMA_NUM_PARALLEL=1 make eval-epistemic`.
-- `ENABLE_PROMPT_CACHING_1H=1` / `FORCE_PROMPT_CACHING_5M=1` — Haiku-only cost controls (CC 2.1.108+).
 
 ### Metrics
 
@@ -174,13 +181,13 @@ baseline and this PR.
 
 ### Provider notes
 
-- **Apfel:** kept in provider set for future expansion of Apple Foundation Model capabilities (larger context, stronger on-device reasoning). Currently of limited practical use for epistemic eval:
-  - 4096-token context window overflows on several fixtures (baseline errors on a rotating subset each run — fixtures + system prompt ~3.6-4k tokens combined).
-  - Apple FM 4B is too weak to serve as a reliable LLM-judge (observed `unsupported_agreement_rate=1.0` on baseline fixtures where haiku scored 0.0).
-  - Weak model over-literalizes posture preferences: observed
-    "Acknowledge mistakes once" turning into a full `### Apology`
-    heading + paragraph in delta runs, increasing apology_density vs
-    baseline (opposite of intended posture effect).
-  - **Apfel is NOT a gate input.** Gate providers are ollama and haiku only. Apfel results captured for reference / future expansion but do NOT block merge.
-- **Haiku:** cloud Claude, cheap per run. Use prompt caching env vars for repeated runs. Most reliable LLM-judge of the three providers.
-- **Ollama:** fully local. First run starts `ollama serve` automatically; model gets pulled on first use if missing. Gemma4 26b+ MoE with `reasoning_effort` control is the recommended local judge.
+- **Ollama:** fully local, $0 per run. First run starts `ollama serve`
+  automatically. The eval suite does NOT auto-pull missing models; run
+  `ollama pull gemma4:26b-a4b-it-q8_0` (or the value of
+  `RUBY_PLUGIN_EVAL_OLLAMA_MODEL` if overridden) once before the first
+  fresh eval. Gemma4 26b+ MoE with `reasoning_effort` control is the
+  recommended local judge.
+- **Future providers:** the dispatch in
+  `behavioral_scorer._run_provider` is pluggable. Microsoft Waza is the
+  planned next target; a Waza migration spec will land its dispatch
+  entry + auth helpers when ready.

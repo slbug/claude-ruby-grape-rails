@@ -12,6 +12,21 @@
     },
     {
       "prompt": "Where should I put business logic that spans multiple models?"
+    },
+    {
+      "prompt": "I'm losing my mind, should this logic be in a service or a form object?"
+    },
+    {
+      "prompt": "Where does this go?"
+    },
+    {
+      "prompt": "extract svc for this"
+    },
+    {
+      "prompt": "I am not sure if this logic belongs in controller or policy"
+    },
+    {
+      "prompt": "Refactor this complex conditional into a dedicated Pundit policy class"
     }
   ],
   "should_not_trigger": [
@@ -26,11 +41,26 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "How do I install the rails gem?"
+    },
+    {
+      "prompt": "Write a migration to add a column to users"
+    },
+    {
+      "prompt": "Explain how polymorphic associations work in Rails"
+    },
+    {
+      "prompt": "Help me debug this syntax error in my controller"
+    },
+    {
+      "prompt": "How do I deploy my Rails app to Heroku?"
     }
   ],
   "hard_should_trigger": [
     {
-      "prompt": "My controller is 200 lines — help me extract services and interactors",
+      "prompt": "My controller is 200 lines \u2014 help me extract services and interactors",
       "axis": "confusable"
     },
     {

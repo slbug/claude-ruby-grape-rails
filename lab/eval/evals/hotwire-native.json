@@ -8,8 +8,8 @@
         {
           "type": "frontmatter_field",
           "field": "name",
-          "expected": "hotwire-native",
-          "desc": "Has hotwire-native name"
+          "expected": "rb:hotwire-native",
+          "desc": "Has rb:hotwire-native name"
         },
         {
           "type": "frontmatter_field",
@@ -62,8 +62,8 @@
         {
           "type": "description_length",
           "min": 60,
-          "max": 1536,
-          "desc": "Description + when_to_use length"
+          "max": 1024,
+          "desc": "Description length (agentskills.io cap)"
         },
         {
           "type": "description_keywords",

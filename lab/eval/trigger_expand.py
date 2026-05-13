@@ -1,4 +1,4 @@
-"""Self-sampled trigger corpus expansion via Haiku.
+"""Self-sampled trigger corpus expansion via Ollama.
 
 Generates candidate trigger prompts with style diversity constraints,
 applies quality gates, and writes to candidates/ for manual review.
@@ -10,19 +10,19 @@ Usage:
     python3 -m lab.eval.trigger_expand --fragile            # Expand fragile skills (from eval sensitivity)
     python3 -m lab.eval.trigger_expand --all                # Expand all skills
 
-Cost: ~$0.01/skill (one bare-mode Haiku call per skill, ~$0.51 for all 51).
+Cost: $0 — runs locally via the active Ollama model (one chat call per skill).
 """
 
 
 import argparse
 import json
-import subprocess
 import sys
 
 from .trigger_scorer import (
     TRIGGERS_DIR,
     extract_prompt,
     load_all_routing_descriptions,
+    load_hidden_skills,
     load_trigger_file,
     routing_text_sources,
     RoutingDescription,
@@ -82,7 +82,7 @@ def _quality_gate(
         pattern = r"\b" + re.escape(skill_lower) + r"\b"
         if re.search(pattern, prompt_lower):
             return "skill_name_leak"
-    # Routing text echo: >50% token overlap with description or when_to_use.
+    # Routing text echo: >50% token overlap with the skill's description.
     for _, routing_text in routing_text_sources(skill_routing_description):
         if _token_overlap(candidate, routing_text) > 0.50:
             return "description_echo"
@@ -137,38 +137,17 @@ def expand_skill(
         'Reply as JSON: {"should_trigger": ["..."], "should_not_trigger": ["..."]}'
     )
 
-    from .behavioral_scorer import _resolved_settings_path
-    settings_path = _resolved_settings_path
+    from .behavioral_scorer import ollama_chat
 
     try:
-        result = subprocess.run(
-            [
-                "claude", "--bare",
-                "--settings", settings_path,
-                "-p", "-",
-                "--model", "haiku",
-                "--system-prompt", _EXPAND_SYSTEM_PROMPT,
-                "--tools", "",
-                "--max-turns", "1",
-                "--output-format", "json",
-                "--max-budget-usd", "0.10",
-                "--no-session-persistence",
-            ],
-            input=user_prompt,
-            capture_output=True, text=True, timeout=60,
+        text = ollama_chat(
+            _EXPAND_SYSTEM_PROMPT,
+            user_prompt,
+            max_tokens=2048,
+            reasoning_effort="none",
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+    except Exception as exc:
         return {"skill": skill_name, "error": str(exc)}
-
-    if result.returncode != 0:
-        return {"skill": skill_name, "error": f"rc={result.returncode}"}
-
-    # Parse response
-    try:
-        data = json.loads(result.stdout)
-        text = data.get("result", "")
-    except json.JSONDecodeError:
-        text = result.stdout
 
     # Extract JSON from response text
     try:
@@ -228,7 +207,7 @@ def expand_skill(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate candidate trigger prompts via Haiku",
+        description="Generate candidate trigger prompts via Ollama",
     )
     parser.add_argument("--skill", help="Expand one skill")
     parser.add_argument("--fragile", action="store_true",
@@ -239,19 +218,24 @@ def main() -> None:
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON")
     args = parser.parse_args()
 
-    # Resolve auth once via shared helper — the same mechanism used by
-    # behavioral_scorer and epistemic_suite so all three eval entry points
-    # share a single source of truth for bare-mode settings resolution.
-    import atexit
-    import lab.eval.behavioral_scorer as bs
-    from .eval_auth import cleanup_settings, resolve_settings_path
-
-    bs._resolved_settings_path, _is_temp = resolve_settings_path()
-    atexit.register(cleanup_settings, bs._resolved_settings_path, _is_temp)
-
-    descriptions = load_all_routing_descriptions()
+    # Ollama is the only wired provider. The shared autostart chain in
+    # behavioral_scorer._get_ollama_client() handles server + model
+    # bootstrap on first ollama_chat call; no auth resolution needed.
+    hidden = load_hidden_skills()
+    descriptions = {
+        name: desc
+        for name, desc in load_all_routing_descriptions().items()
+        if name not in hidden
+    }
 
     if args.skill:
+        if args.skill in hidden:
+            print(
+                f"skill {args.skill} is hidden (disable-model-invocation: true); "
+                "trigger expansion not applicable",
+                file=sys.stderr,
+            )
+            raise SystemExit(1)
         result = expand_skill(args.skill, descriptions)
         print(json.dumps(result, indent=2 if args.pretty else None))
         return

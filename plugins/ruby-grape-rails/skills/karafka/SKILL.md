@@ -1,18 +1,8 @@
 ---
-name: karafka
-description: "Use when building Kafka consumers with Karafka: multi-threaded batch, Rails."
-when_to_use: "Triggers: Kafka, Karafka, consumer, event streaming."
-user-invocable: false
+name: rb:karafka
+description: "Building Kafka consumers and producers with Karafka in Rails: multi-threaded batch processing, message handlers, OffsetStore. Triggers: \"process events from topic\", \"idempotent consumption\", \"dead letter queue\", \"partition rebalance handling\", \"batch process upstream messages\". Do NOT use for: Sidekiq/Solid Queue jobs, synchronous HTTP endpoints."
 effort: medium
-paths:
-  - "app/{consumers,producers,message_handlers}/**"
-  - karafka.rb
-  - "lib/message_handlers/**"
-  - "**/app/{consumers,producers,message_handlers}/**"
-  - "**/karafka.rb"
-  - "**/lib/message_handlers/**"
-  - "{packs,engines,components}/*/{consumers,producers,message_handlers}/**"
-  - "app/{packages,packs}/*/{consumers,producers,message_handlers}/**"
+disable-model-invocation: true
 ---
 # Karafka
 

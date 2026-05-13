@@ -1,7 +1,6 @@
 ---
 name: rb:compound
-description: "Use when you have just solved a non-trivial Ruby/Rails/Grape problem and want to capture it as reusable knowledge for future sessions."
-when_to_use: "Triggers: \"compound this\", \"save this solution\", \"capture this fix\", \"knowledge base\", \"reusable pattern\". Does NOT handle: corrections during work, general learning, documentation."
+description: "Capturing a solved Ruby/Rails/Grape problem as reusable knowledge. YAML solution doc. Triggers: \"compound this\", \"save this solution\", \"capture this fix\"."
 argument-hint: "[path to fix|review|plan]"
 effort: low
 ---
@@ -275,3 +274,9 @@ Example: `association-not-loaded-accounts-20260322.md`
   break retrieval grep.
 - Missing or stale `tags`. Tags drive search; cards without
   retrieval-anchor keywords sit unfound.
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Mistake worth capturing as a rule → `/rb:learn` (in-flight lesson capture)
+<!-- END-GENERATED related-footer -->

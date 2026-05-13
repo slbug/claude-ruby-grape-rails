@@ -1,14 +1,8 @@
 ---
 name: security
-description: "Use when applying Rails and Grape security patterns: authorization, SQL injection prevention, XSS, SSRF, secret handling, and secure background job workflows."
-when_to_use: "Triggers: \"security\", \"authorization\", \"SQL injection\", \"XSS\", \"SSRF\", \"Brakeman\"."
+description: "Rails/Grape security review: auth/role checks, injection risk, output sanitization, SSRF. Triggers: \"is this vulnerable\", \"SQL injection\", \"XSS\", \"Brakeman warning\", \"unauthorized access\". Do NOT use for: secret scans."
 user-invocable: false
 effort: medium
-paths:
-  - "app/{policies,middleware,middlewares}/**"
-  - "**/app/{policies,middleware,middlewares}/**"
-  - "{packs,engines,components}/*/{policies,middleware,middlewares}/**"
-  - "app/{packages,packs}/*/{policies,middleware,middlewares}/**"
 ---
 # Security
 

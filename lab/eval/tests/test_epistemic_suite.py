@@ -1,7 +1,7 @@
 """Unit tests for epistemic_suite regex metrics + aggregation shape.
 
 LLM-judge paths and provider calls use monkey-patched stubs so tests
-run without Ollama/apfel/haiku.
+run without Ollama.
 
 Python 3.14+.
 """
@@ -145,7 +145,7 @@ class TestScoreLLMJudge(unittest.TestCase):
                 prompt_text="wrong premise",
                 response_text="sure, you're right",
                 metric="unsupported_agreement_rate",
-                provider="haiku",
+                provider="ollama",
                 verbose=False,
             )
         self.assertEqual(score, 1.0)
@@ -158,7 +158,7 @@ class TestScoreLLMJudge(unittest.TestCase):
                 prompt_text="wrong premise",
                 response_text="actually, no",
                 metric="unsupported_agreement_rate",
-                provider="haiku",
+                provider="ollama",
                 verbose=False,
             )
         self.assertEqual(score, 0.0)
@@ -175,7 +175,7 @@ class TestScoreLLMJudge(unittest.TestCase):
                 prompt_text="wrong premise",
                 response_text="uncached response text",
                 metric="unsupported_agreement_rate",
-                provider="haiku",
+                provider="ollama",
                 verbose=False,
                 scenario_id="unused-scenario",
                 cache_only=True,
@@ -191,7 +191,7 @@ class TestScoreLLMJudge(unittest.TestCase):
                 prompt_text="wrong premise",
                 response_text="response",
                 metric="unsupported_agreement_rate",
-                provider="haiku",
+                provider="ollama",
                 verbose=False,
             )
         self.assertIsNone(score)
@@ -285,7 +285,7 @@ class TestAggregation(unittest.TestCase):
                     runs,
                     scenarios,
                     fixtures_dir,
-                    "haiku",
+                    "ollama",
                     verbose=False,
                     cache_only=True,
                 )

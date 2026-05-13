@@ -1,16 +1,8 @@
 ---
 name: sidekiq
-description: "Use when designing Sidekiq jobs for Ruby apps: JSON-safe args, idempotency, retries, testing, and commit-safe enqueue patterns. Covers Sidekiq 6.x-8.x and Solid Queue."
-when_to_use: "Triggers: \"Sidekiq\", \"background job\", \"worker\", \"queue\", \"retry\", \"Solid Queue\"."
+description: "Sidekiq / Solid Queue jobs: idempotency, JSON-safe args, after_commit enqueue, retries. Triggers: \"perform_async\", \"worker stalled\", \"retry on failure\", \"job stuck\". Do NOT use for: HTTP endpoints, Kafka."
 user-invocable: false
 effort: medium
-paths:
-  - "app/{jobs,workers,sidekiq}/**"
-  - config/sidekiq.yml
-  - "**/app/{jobs,workers,sidekiq}/**"
-  - "**/config/sidekiq.yml"
-  - "{packs,engines,components}/*/{jobs,workers,sidekiq}/**"
-  - "app/{packages,packs}/*/{jobs,workers,sidekiq}/**"
 ---
 # Sidekiq
 
@@ -389,3 +381,9 @@ See: [ActiveJob::Continuation Documentation](https://api.rubyonrails.org/classes
 | profiling + optimization | `${CLAUDE_SKILL_DIR}/references/performance-tuning.md` |
 | queue config + concurrency + cron-scheduling + production checklist | `${CLAUDE_SKILL_DIR}/references/queue-config.md` |
 | testing patterns (RSpec, Minitest, Sidekiq::Testing) | `${CLAUDE_SKILL_DIR}/references/testing-patterns.md` |
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Kafka consumer / event-streaming work → `/rb:karafka` (Kafka consumer patterns)
+<!-- END-GENERATED related-footer -->

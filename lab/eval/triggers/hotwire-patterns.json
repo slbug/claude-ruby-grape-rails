@@ -12,6 +12,21 @@
     },
     {
       "prompt": "I want to broadcast model changes to the page in real time"
+    },
+    {
+      "prompt": "I've been trying for hours but my turbo stream isn't broadcasting the model update and I'm losing my mind!"
+    },
+    {
+      "prompt": "Implement real-time dashboard using Action Cable."
+    },
+    {
+      "prompt": "How to use stimlus ctrl for toggle?"
+    },
+    {
+      "prompt": "I want to make my web app update without reload."
+    },
+    {
+      "prompt": "Configure Turbo Stream broadcasting for the Comment model upon creation."
     }
   ],
   "should_not_trigger": [
@@ -26,11 +41,26 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "How do I build a real-time chat for my native mobile app?"
+    },
+    {
+      "prompt": "Write a background job to process these records."
+    },
+    {
+      "prompt": "Can you help me find a job in Rails development?"
+    },
+    {
+      "prompt": "How to implement WebSockets in a Node.js environment?"
+    },
+    {
+      "prompt": "Optimize the database indexing for my large tables."
     }
   ],
   "hard_should_trigger": [
     {
-      "prompt": "The form submits but the page doesn't update — I think the Turbo Frame targeting is wrong",
+      "prompt": "The form submits but the page doesn't update \u2014 I think the Turbo Frame targeting is wrong",
       "axis": "confusable"
     },
     {

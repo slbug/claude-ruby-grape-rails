@@ -1,7 +1,6 @@
 ---
 name: rb:secrets
-description: "Use when scanning code for leaked secrets, API keys, and credentials using betterleaks. Use before committing to check for accidentally exposed passwords, tokens, or sensitive data."
-when_to_use: "Triggers: \"secrets\", \"leaked\", \"API key\", \"credentials\", \"betterleaks\", \"before commit\"."
+description: "Scanning code for leaked secrets, API keys, tokens, and credentials using betterleaks. Pre-commit/pre-push reflex; baseline + validate flows. Triggers: \"secrets\", \"leaked\", \"API key\", \"credentials\", \"betterleaks\", \"before commit\". Do NOT use for: applying authorization patterns, reviewing PRs."
 argument-hint: "[path] [--baseline FILE] [--validate]"
 effort: medium
 disable-model-invocation: true

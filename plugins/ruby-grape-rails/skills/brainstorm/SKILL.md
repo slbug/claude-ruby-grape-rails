@@ -1,7 +1,6 @@
 ---
 name: rb:brainstorm
-description: "Use when you have a vague idea and want to explore approaches, compare options, and gather requirements before planning a Ruby/Rails/Grape feature."
-when_to_use: "Triggers: \"brainstorm\", \"explore ideas\", \"not sure how to approach\", \"discuss before planning\", \"what if we\". Does NOT handle: detailed planning, implementation, research with citations."
+description: "Exploring approaches, comparing options, and gathering requirements for a vague Ruby/Rails/Grape feature idea before /rb:plan. Interview-style discovery; emits interview.md. Triggers: \"brainstorm\", \"explore ideas\", \"not sure how to approach\", \"discuss before planning\", \"what if we\". Do NOT use for: detailed planning, implementation, evidence-based research with citations."
 effort: high
 argument-hint: <topic or feature idea>
 disable-model-invocation: true
@@ -193,3 +192,9 @@ Key sections: Summary, Coverage Details (per dimension), Codebase Context
 ```
 
 Position in workflow: Optional upstream of `/rb:plan`.
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Pattern reference needed → `/rb:examples` (codebase pattern surface)
+<!-- END-GENERATED related-footer -->

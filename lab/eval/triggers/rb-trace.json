@@ -12,6 +12,21 @@
     },
     {
       "prompt": "Show me every method that gets called when this endpoint runs"
+    },
+    {
+      "prompt": "I've been staring at this for hours, just tell me where this damn value is being modified in the service layer!"
+    },
+    {
+      "prompt": "Follow the execution path for this job."
+    },
+    {
+      "prompt": "trace this sidekiq worker flow"
+    },
+    {
+      "prompt": "Please show me the sequence of calls for this API request."
+    },
+    {
+      "prompt": "Identify the exact point in the lifecycle where this attribute is mutated."
     }
   ],
   "should_not_trigger": [
@@ -26,6 +41,21 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "Write a unit test for this controller"
+    },
+    {
+      "prompt": "Optimize the database query performance"
+    },
+    {
+      "prompt": "Refactor this class to use dependency injection"
+    },
+    {
+      "prompt": "Explain how this Grape API works"
+    },
+    {
+      "prompt": "Update the documentation for this endpoint"
     }
   ],
   "hard_should_trigger": [

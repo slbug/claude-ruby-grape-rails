@@ -12,6 +12,21 @@
     },
     {
       "prompt": "Configure queue priorities and concurrency for the workers"
+    },
+    {
+      "prompt": "I'm losing my mind, why is my perform_async call not triggering the worker even after the transaction commits?!"
+    },
+    {
+      "prompt": "Ensure all job arguments are JSON-safe."
+    },
+    {
+      "prompt": "sidekiq job stuck in retry loop"
+    },
+    {
+      "prompt": "Please make sure the worker enqueues only after the database commit is finished."
+    },
+    {
+      "prompt": "Implement idempotency for the background worker."
     }
   ],
   "should_not_trigger": [
@@ -26,6 +41,21 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "How do I handle retries in Kafka consumers?"
+    },
+    {
+      "prompt": "Create a RESTful API endpoint for users."
+    },
+    {
+      "prompt": "Set up a webhook listener for Stripe."
+    },
+    {
+      "prompt": "Optimize my SQL queries for the dashboard."
+    },
+    {
+      "prompt": "Configure a RabbitMQ exchange for messaging."
     }
   ],
   "hard_should_trigger": [

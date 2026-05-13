@@ -12,6 +12,21 @@
     },
     {
       "prompt": "Sort these review findings by severity so I know what to fix first"
+    },
+    {
+      "prompt": "Ugh, there are way too many issues here, just tell me which ones are actually blockers and which I can ignore for now"
+    },
+    {
+      "prompt": "Which findings to fix immediately?"
+    },
+    {
+      "prompt": "pls triage these findings"
+    },
+    {
+      "prompt": "I am not sure how to handle these review results, please help me decide what to fix or defer"
+    },
+    {
+      "prompt": "Categorize the current review findings into fix now, skip, or defer based on severity"
     }
   ],
   "should_not_trigger": [
@@ -26,11 +41,26 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "Can you write a summary of the code review findings?"
+    },
+    {
+      "prompt": "How do I fix a security vulnerability in this function?"
+    },
+    {
+      "prompt": "Please refactor this code to be more efficient"
+    },
+    {
+      "prompt": "Create a roadmap for the next sprint based on these bugs"
+    },
+    {
+      "prompt": "Run the linter and show me the errors"
     }
   ],
   "hard_should_trigger": [
     {
-      "prompt": "The review found 15 issues — help me decide which to fix now vs later",
+      "prompt": "The review found 15 issues \u2014 help me decide which to fix now vs later",
       "axis": "confusable"
     },
     {

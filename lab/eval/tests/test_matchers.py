@@ -85,15 +85,15 @@ Additional notes.
         passed, _ = matchers.description_structure(SAMPLE)
         self.assertTrue(passed)
 
-    def test_description_structure_returns_failure_specific_evidence(self) -> None:
+    def test_description_structure_rejects_empty_description(self) -> None:
         content = """---
 name: rb:sample
-description: Ruby workflow helper for local changes.
+description: ""
 ---
 """
         passed, evidence = matchers.description_structure(content)
         self.assertFalse(passed)
-        self.assertIn("missing explicit use/intent framing", evidence)
+        self.assertIn("description empty", evidence)
 
     def test_valid_skill_refs_accepts_frontmatter_command_aliases(self) -> None:
         content = "Use /rb:runtime and /rb:trace when runtime debugging needs live inspection."

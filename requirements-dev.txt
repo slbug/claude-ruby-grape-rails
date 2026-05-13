@@ -2,4 +2,11 @@
 # Python 3.14+ required (see .claude/rules/eval-workflow.md).
 # Tests run via stdlib unittest discovery (`scripts/run-eval-tests.sh`); no
 # third-party test runner required.
+#
+# Ollama eval provider talks to the local server via its OpenAI-compatible
+# endpoint, so `openai` + `httpx` are required by behavioral, neighbor,
+# semantic-pair, trigger-expand, and epistemic suites. `make eval-ci-deterministic`
+# does NOT need them (no provider calls).
 pyyaml>=6.0.3
+openai>=2.0.0
+httpx>=0.27.0

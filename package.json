@@ -1,6 +1,6 @@
 {
   "name": "ruby-grape-rails-plugin",
-  "version": "1.16.8",
+  "version": "1.16.9",
   "private": true,
   "description": "Specialist agents, Iron Laws, parallel code review, and plan→work→verify→review→compound workflow for Ruby, Rails, Grape, Sidekiq, Hotwire, Active Record, and Sequel projects.",
   "scripts": {
@@ -30,6 +30,8 @@
     "eval:ablation": "python3 -m lab.eval.matcher_ablation --pretty",
     "eval:neighbor": "python3 -m lab.eval.neighbor_regression --changed",
     "eval:hygiene": "python3 -m lab.eval.triggers.hygiene --all --summary",
+    "eval:trigger-expand:fragile": "python3 -m lab.eval.trigger_expand --fragile",
+    "eval:trigger-expand:all": "python3 -m lab.eval.trigger_expand --all",
     "eval:behavioral": "python3 -m lab.eval.behavioral_scorer --all --cache --summary && python3 -m lab.eval.scorer --all --behavioral --pretty",
     "eval:behavioral:verbose": "python3 -m lab.eval.behavioral_scorer --all --cache --summary --verbose && python3 -m lab.eval.scorer --all --behavioral --pretty",
     "eval:behavioral:fresh": "python3 -m lab.eval.behavioral_scorer --all --summary && python3 -m lab.eval.scorer --all --behavioral --pretty",
@@ -37,8 +39,6 @@
     "eval:behavioral:compare": "python3 -m lab.eval.scorer --compare",
     "eval:behavioral:passk": "python3 -m lab.eval.behavioral_scorer --all --samples 3 --summary",
     "eval:behavioral:rotations": "python3 -m lab.eval.behavioral_scorer --all --rotations 5 --summary",
-    "eval:trigger-expand": "bash -c 'test -n \"$npm_config_skill\" || { echo \"Usage: npm run eval:trigger-expand --skill=<name>\" >&2; exit 1; }; python3 -m lab.eval.trigger_expand --skill \"$npm_config_skill\"'",
-    "eval:trigger-expand:all": "python3 -m lab.eval.trigger_expand --all",
     "eval:sensitivity": "python3 -m lab.eval.eval_sensitivity --all --summary",
     "eval:sensitivity:skill": "python3 -m lab.eval.eval_sensitivity",
     "eval:stress": "python3 -m lab.eval.evaluator_stress_test",

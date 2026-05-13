@@ -47,9 +47,28 @@ check_python_version_314() {
 # Verify the required Python modules. Module names are hardcoded — never
 # pass a function argument here; the module name flows into a `python3 -c`
 # string and would be a code-injection vector if user-influenced.
+#
+# `yaml` is required by every `lab/eval/` entrypoint (frontmatter parsing,
+# trigger corpus loading, eval orchestration).
+#
+# `openai` + `httpx` are required by Ollama-bearing eval suites
+# (behavioral, neighbor, semantic-pair, trigger-expand, epistemic) — the
+# Ollama provider talks to the local server via its OpenAI-compatible
+# endpoint. `make eval-ci-deterministic` does NOT need them, but the
+# moment a contributor runs anything fresh against Ollama these imports
+# must resolve. Doctor flags them as MISSING so first-fresh-eval does not
+# crash deep inside the suite.
 check_dev_python_modules() {
   if ! python3 -c "import yaml" >/dev/null 2>&1; then
     echo "MISSING: python3 module 'yaml' — install with: python3 -m pip install -r requirements-dev.txt" >&2
+    MISSING=1
+  fi
+  if ! python3 -c "import openai" >/dev/null 2>&1; then
+    echo "MISSING: python3 module 'openai' — install with: python3 -m pip install -r requirements-dev.txt" >&2
+    MISSING=1
+  fi
+  if ! python3 -c "import httpx" >/dev/null 2>&1; then
+    echo "MISSING: python3 module 'httpx' — install with: python3 -m pip install -r requirements-dev.txt" >&2
     MISSING=1
   fi
 }
@@ -109,7 +128,6 @@ check_required shellcheck "required for local shell linting and pre-commit shell
 check_required claude "required for 'npm run validate' and 'make validate' (install with: npm install -g @anthropic-ai/claude-code)"
 check_optional betterleaks "optional for local secret-scan coverage outside CI"
 check_optional ollama "optional unless you run fresh behavioral/neighbor evals with the default Ollama provider; default model is gemma4:26b-a4b-it-q8_0 (~28GB RAM). Set RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest for low-RAM fallback (10GB)."
-check_optional apfel "optional only if you run behavioral/neighbor evals with --provider apfel or RUBY_PLUGIN_EVAL_PROVIDER=apfel"
 
 if [[ "$MISSING" -eq 1 ]]; then
   echo "ERROR: contributor prerequisites are incomplete." >&2

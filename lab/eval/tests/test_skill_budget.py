@@ -8,19 +8,31 @@ from lab.eval import skill_budget
 
 
 class SkillBudgetTests(unittest.TestCase):
-    def test_measure_skill_combined_chars(self) -> None:
+    def test_measure_skill_description_chars(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             skill_dir = Path(tmp) / "myskill"
             skill_dir.mkdir()
             (skill_dir / "SKILL.md").write_text(
-                "---\nname: myskill\ndescription: abcde\nwhen_to_use: 12345\n---\n"
+                "---\nname: myskill\ndescription: abcde\n---\n"
             )
             result = skill_budget.measure_skill(skill_dir)
             self.assertIsNotNone(result)
-            label, combined, hidden = result
+            label, chars, hidden = result
             self.assertEqual(label, "myskill")
-            self.assertEqual(combined, 10)
+            self.assertEqual(chars, 5)
             self.assertFalse(hidden)
+
+    def test_measure_skill_ignores_legacy_when_to_use(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            skill_dir = Path(tmp) / "legacy"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text(
+                "---\nname: legacy\ndescription: abc\nwhen_to_use: ignored-12345\n---\n"
+            )
+            result = skill_budget.measure_skill(skill_dir)
+            self.assertIsNotNone(result)
+            _, chars, _ = result
+            self.assertEqual(chars, 3)
 
     def test_measure_skill_uses_frontmatter_name(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

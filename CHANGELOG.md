@@ -7,6 +7,94 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.9] - 2026-05-14
+
+### Changed
+
+- Migrated all plugin skill frontmatters from two-field
+  (`description` + `when_to_use`) to single `description` field per the
+  agentskills.io canon. Triggers and negative-exclusion clauses fold
+  into that single field.
+- Re-allocated skill visibility: 23 visible + 29 DMI'd + 1 merged
+  (52 active skills after merging `ruby-contexts` into `ruby-idioms`).
+  Newly DMI'd: full, audit, compression-report, provenance-scan,
+  rb-boundaries, request-state-audit, runtime-integration, techdebt,
+  karafka, hotwire-native, async-patterns, dry-rb-patterns,
+  sequel-patterns, deploy.
+- Replaced `intent-detection` description with a tightened pushy
+  gateway version and expanded its routing table with a DMI roster
+  block (28 rows) generated from the new `skill-registry.yml`. Split
+  the prior `audit`/`review` collision row.
+- Expanded `techdebt` body from a 15-line stub to a ~120-line structure
+  with debt categories, scan procedure, output template, routing.
+  Added `references/callback-sprawl.md`, `references/service-bloat.md`,
+  `references/dead-code-scan.md`.
+- Trimmed every visible skill description to keep the aggregate
+  routing-prompt listing under the conservative 8,000-char target.
+- Renamed six bare-name skills to use the `rb:` prefix for consistent
+  slash invocation: `deploy` → `rb:deploy`, `karafka` → `rb:karafka`,
+  `sequel-patterns` → `rb:sequel-patterns`, `async-patterns` →
+  `rb:async-patterns`, `dry-rb-patterns` → `rb:dry-rb-patterns`,
+  `hotwire-native` → `rb:hotwire-native`.
+- `.claude/rules/*.md` `paths:` mechanism is unaffected and remains
+  functional — distinct from the plugin-skill `paths:` field that was
+  removed.
+
+### Added
+
+- `references/skill-registry.yml` — single source of truth for skill
+  name, visibility, advertisement points.
+- `scripts/generate-skill-routing.sh` (and `.rb` helper) — registry-
+  driven regeneration of the `intent-detection` routing-table block,
+  hub-body "Related — invoke manually if needed" footers, and the
+  `intro/references/tutorial-content.md` inventory section.
+- `references/discovery/triggers.yml`,
+  `hooks/scripts/skill-discovery-observer.rb`, and
+  `bin/discovery-stats` — opt-in JSONL telemetry layer. Default OFF;
+  enable via `RUBY_PLUGIN_DISCOVERY_LOG=1` (metadata only) and
+  optionally `RUBY_PLUGIN_DISCOVERY_LOG_EXCERPTS=1` (redacted excerpt).
+  Hooked into UserPromptSubmit, UserPromptExpansion, PostToolUse,
+  PostToolUseFailure, PostToolBatch.
+- `skills/skill-discovery-report/SKILL.md` — companion DMI'd skill
+  (`/rb:discovery-report`) that drafts a redacted report from the
+  telemetry log.
+- Unit tests: description-length cap (1,024), no `when_to_use`, no
+  `paths:` on SKILL.md, DMI skills must keep `user-invocable: true`,
+  every advertised `/rb:*` resolves to an existing skill, no stale
+  "auto-load based on file context" phrasing, skill-registry in sync
+  with generated artifacts.
+- `lab/eval/fixtures/neighbor_confusion.json` and
+  `lab/eval/neighbor_confusion.py` — standalone neighbor-confusion +
+  forbidden-load eval runner.
+
+### Fixed
+
+- DMI skills no longer routed through behavioral / neighbor-routing
+  eval or baked into confusable-pair + hard-corpus generators. Per
+  [CC docs](https://code.claude.com/docs/en/skills),
+  `disable-model-invocation: true` strips a skill's description from
+  routing context, so simulating LLM routing against those descriptions
+  measures behavior the runtime cannot perform. `trigger_scorer.py`
+  already excluded hidden skills; `behavioral_scorer.py`,
+  `neighbor_confusion.py`, `neighbor_regression.py`,
+  `triggers/generate_confusable_pairs.py`, and
+  `triggers/generate_hard_corpus.py` now apply the same
+  `load_hidden_skills()` filter. Stale trigger fixtures, candidate
+  files, and behavioral results for the 28 DMI skills with prior
+  trigger files removed; `_confusable_pairs.json` + `_hard_corpus.json`
+  regenerated against the 23 non-DMI skills.
+
+### Removed
+
+- `paths:` frontmatter from all plugin SKILL.md files. Empirically
+  non-functional at plugin scope: declaring `paths:` on a plugin skill
+  did not trigger harness-side body auto-activation when files matching
+  the glob were read or edited. The field is dropped to align with that
+  empirical reality.
+- The legacy `when_to_use:` frontmatter field on every plugin skill.
+- `skills/ruby-contexts/` directory — merged into `skills/ruby-idioms/`
+  as a "Plain-Ruby Boundaries" section.
+
 ## [1.16.8] - 2026-05-09
 
 ### Added
@@ -2648,7 +2736,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.8...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.9...HEAD
+[1.16.9]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.8...v1.16.9
 [1.16.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.7...v1.16.8
 [1.16.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.6...v1.16.7
 [1.16.6]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.5...v1.16.6

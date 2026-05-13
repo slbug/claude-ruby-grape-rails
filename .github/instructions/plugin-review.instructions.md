@@ -60,14 +60,20 @@ Exception files (human-facing, narrative OK): `README.md`,
 - Skills use YAML frontmatter. Required: name, description. Common:
   argument-hint (command skills), arguments (positional `$name`
   substitution, space-separated string or YAML list), effort,
-  user-invocable, disable-model-invocation, paths (framework-specific
-  skills), when_to_use (trigger phrases and negative routing). Also
-  valid per CC docs: allowed-tools, model, context, agent, hooks, shell
+  user-invocable, disable-model-invocation. Also valid per CC docs:
+  allowed-tools, model, context, agent, hooks, shell
 - No `triggers:` field — skills docs do not support it
+- No `when_to_use:` field — single `description` field per agentskills.io
+  canon
+- No plugin-scope `paths:` field — empirically non-functional at plugin
+  scope (project-level `.claude/rules/*.md` `paths:` is a distinct,
+  functional mechanism)
 - No executable bash blocks (``` bash) — use inline prose instructions
   instead ("Run `bundle exec rspec`")
-- Combined description + when_to_use must be <= 1,536 characters
-- Descriptions should start with "Use when" for consistent routing signal
+- `description` must be <= 1,024 characters (agentskills.io cap)
+- Descriptions are gerund-led ("Designing...", "Reviewing...") with
+  front-loaded WHEN-the-skill-applies + real-query Triggers + negative
+  exclusion clauses
 - `${CLAUDE_SKILL_DIR}` is a valid runtime variable in SKILL.md body
   ONLY (substituted at render). NOT substituted in `references/*.md`.
   In references, use plain relative paths for siblings; `../SKILL.md`
@@ -129,6 +135,13 @@ Exception files (human-facing, narrative OK): `README.md`,
   paste-anywhere artifact (the skill's drafted markdown is what the
   user reviews + shares). Stdlib only — no `lib/` dependency,
   contributor or otherwise
+- `discovery-stats` (Ruby) — end-user reader for skill-discovery
+  telemetry. Reads `${CLAUDE_PLUGIN_DATA}/discovery.jsonl` (default)
+  or `--log <path>`. Default mode prints a human-readable report;
+  `--json` emits machine-readable aggregate JSON; `--redact` emits
+  privacy-reduced JSON for the `/rb:discovery-report` skill —
+  intermediate input for the report drafter, NOT a final
+  paste-anywhere artifact. Stdlib only
 - `provenance-scan` (Ruby) — end-user provenance-sidecar auditor.
   Walks `.claude/{research,reviews,audit,plans/*/{research,reviews}}`,
   classifies each `*.provenance.md` via the 4-state algorithm

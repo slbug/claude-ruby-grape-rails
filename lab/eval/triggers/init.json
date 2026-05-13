@@ -11,7 +11,22 @@
       "prompt": "Configure the plugin for first use"
     },
     {
-      "prompt": "This is a fresh Rails project — get the plugin ready to use"
+      "prompt": "This is a fresh Rails project \u2014 get the plugin ready to use"
+    },
+    {
+      "prompt": "Ugh, just give me the rails plugin setup already, I don't have all day!"
+    },
+    {
+      "prompt": "Run the ruby plugin init process now."
+    },
+    {
+      "prompt": "plz setup ruby plugin for me"
+    },
+    {
+      "prompt": "I want to configure Claude for Rails in this directory."
+    },
+    {
+      "prompt": "Execute the initialization sequence for the Ruby/Grape plugin to populate CLAUDE.md."
     }
   ],
   "should_not_trigger": [
@@ -26,11 +41,26 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "How do I write a Grape API endpoint?"
+    },
+    {
+      "prompt": "Show me the current stack notes in CLAUDE.md."
+    },
+    {
+      "prompt": "Can you help me debug this Rails controller?"
+    },
+    {
+      "prompt": "List all the installed ruby gems."
+    },
+    {
+      "prompt": "Update the documentation for the existing plugin."
     }
   ],
   "hard_should_trigger": [
     {
-      "prompt": "I just installed the plugin — how do I get it running on my project?",
+      "prompt": "I just installed the plugin \u2014 how do I get it running on my project?",
       "axis": "confusable"
     },
     {

@@ -1,0 +1,149 @@
+# Skill-discovery telemetry trigger table.
+#
+# Each rule fires when:
+#   - The current hook event is in `event_kinds`
+#   - The number of matching `match` clauses meets `confidence_min`
+#
+# On match the observer appends a JSONL row naming the candidate skill and
+# rule id. No `additionalContext` injection — this is a logging-only layer.
+
+triggers:
+  - id: rb-perf-signals
+    event_kinds: [UserPromptSubmit, PostToolUse]
+    match:
+      - type: regex
+        extractor: prompt
+        pattern: '\b(slow|N\+1|memory leak|latency|queue.{0,15}backup|p95)\b'
+    confidence_min: 1
+    suggest: rb:perf
+    reason: "Performance signals — /rb:perf available"
+
+  - id: rb-sidekiq-job-file-touched
+    event_kinds: [PostToolUse]
+    match:
+      - type: structured
+        extractor: tool_input.file_path
+        operator: glob
+        value: "app/jobs/**/*.rb"
+    confidence_min: 1
+    suggest: sidekiq
+    reason: "Job file touched — Sidekiq idempotency patterns available"
+
+  - id: rb-safe-migration-file-touched
+    event_kinds: [PostToolUse]
+    match:
+      - type: structured
+        extractor: tool_input.file_path
+        operator: glob
+        value: "db/migrate/*.rb"
+    confidence_min: 1
+    suggest: safe-migrations
+    reason: "Migration touched — safe-migrations zero-downtime patterns available"
+
+  - id: rb-investigate-test-failure
+    event_kinds: [PostToolUseFailure]
+    match:
+      - type: regex
+        extractor: tool_input.command
+        pattern: '(rspec|minitest|rails\s+test)'
+    confidence_min: 1
+    suggest: rb:investigate
+    reason: "Test command failed — /rb:investigate root-cause flow available"
+
+  - id: rb-techdebt-signals
+    event_kinds: [UserPromptSubmit, PostToolUse]
+    match:
+      - type: regex
+        extractor: prompt
+        pattern: '\b(tech debt|callback sprawl|stale code|edge case.{0,20}not covered|overgrown service|decorative abstraction)\b'
+    confidence_min: 1
+    suggest: rb:techdebt
+    reason: "Tech-debt signals — log via /rb:techdebt"
+
+  - id: rb-secrets-precommit-signal
+    event_kinds: [UserPromptSubmit]
+    match:
+      - type: regex
+        extractor: prompt
+        pattern: '\b(commit|push)\b'
+      - type: regex
+        extractor: prompt
+        pattern: '\b(secret|api key|token|credential|leak)\b'
+    confidence_min: 2
+    suggest: rb:secrets
+    reason: "Pre-commit secret-scan signal — /rb:secrets available"
+
+  - id: rb-karafka-consumer-touched
+    event_kinds: [PostToolUse]
+    match:
+      - type: structured
+        extractor: tool_input.file_path
+        operator: glob
+        value: "app/consumers/**/*.rb"
+    confidence_min: 1
+    suggest: rb:karafka
+    reason: "Kafka consumer file touched — /rb:karafka patterns available"
+
+  - id: rb-sequel-model-touched
+    event_kinds: [PostToolUse]
+    match:
+      - type: regex
+        extractor: tool_input.file_path
+        pattern: '\.rb$'
+      - type: regex
+        extractor: tool_input.content
+        pattern: 'Sequel::Model'
+    confidence_min: 2
+    suggest: rb:sequel-patterns
+    reason: "Sequel::Model code touched — /rb:sequel-patterns available"
+
+  - id: rb-hotwire-view-touched
+    event_kinds: [PostToolUse]
+    match:
+      - type: structured
+        extractor: tool_input.file_path
+        operator: glob
+        value: "app/views/**/*.{erb,haml,slim}"
+      - type: regex
+        extractor: tool_input.content
+        pattern: 'turbo_(frame|stream)_tag|data-controller'
+    confidence_min: 2
+    suggest: hotwire-patterns
+    reason: "Hotwire view touched — hotwire-patterns available"
+
+  - id: rb-work-completion
+    event_kinds: [UserPromptExpansion]
+    match:
+      - type: structured
+        extractor: command_name
+        operator: equals
+        value: "rb:work"
+      - type: structured
+        extractor: completion_marker
+        operator: equals
+        value: true
+    confidence_min: 2
+    suggest_list:
+      - rb:learn
+      - rb:compound
+      - rb:document
+      - rb:techdebt
+    reason: "Work cycle complete — capture + document options"
+
+  - id: rb-review-pass-followups
+    event_kinds: [UserPromptExpansion]
+    match:
+      - type: structured
+        extractor: command_name
+        operator: equals
+        value: "rb:review"
+      - type: structured
+        extractor: verdict
+        operator: equals
+        value: PASS
+    confidence_min: 2
+    suggest_list:
+      - rb:challenge
+      - rb:compound
+      - rb:full
+    reason: "Review PASS — adversarial check + compound capture available"

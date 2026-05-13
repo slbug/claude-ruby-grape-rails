@@ -1,7 +1,6 @@
 ---
 name: rb:brief
-description: "Use when a user wants a concise explanation of a plan, implementation, or review outcome. Use after /rb:plan, /rb:work, or /rb:review for a high-signal walkthrough."
-when_to_use: "Triggers: \"explain plan\", \"summarize review\", \"walk me through\", \"what did we do\"."
+description: "Walking through a Ruby/Rails/Grape plan, diff, or review in a concise summary. Triggers: \"explain plan\", \"summarize review\", \"walk me through\"."
 argument-hint: "[plan|diff|review path]"
 effort: low
 ---

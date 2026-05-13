@@ -35,16 +35,15 @@ Metrics:
 Usage::
 
     python3 -m lab.eval.epistemic_suite                        # default run
-    python3 -m lab.eval.epistemic_suite --provider haiku       # specific provider
     python3 -m lab.eval.epistemic_suite --baseline-only        # capture current state as baseline
     python3 -m lab.eval.epistemic_suite --workers 6            # parallel
     python3 -m lab.eval.epistemic_suite --cache                # skip provider calls
 
 Provider resolution matches ``behavioral_scorer.py``: Ollama
 ``gemma4:26b-a4b-it-q8_0`` by default (28GB, MoE with 4B active tokens —
-strong judge on ~32GB+ RAM hardware), ``apfel`` / ``haiku`` via
-``RUBY_PLUGIN_EVAL_PROVIDER`` env or ``--provider`` flag. 4 regex metrics
-never hit the provider; the 2 LLM-judge metrics do.
+strong judge on ~32GB+ RAM hardware). 4 regex metrics never hit the
+provider; the 2 LLM-judge metrics do. Future providers (e.g., Microsoft
+Waza) plug in through the shared dispatch in ``call_provider``.
 
 Low-RAM override: set ``RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest`` (10GB)
 to run on smaller machines — judge accuracy drops but regex metrics are
@@ -55,7 +54,6 @@ Python 3.14+. No backward-compatibility shims.
 
 
 import argparse
-import atexit
 import json
 import logging
 import os
@@ -70,11 +68,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import results_dir as rd
-from .eval_auth import (
-    BARE_SETTINGS_PATH,
-    cleanup_settings,
-    resolve_settings_path,
-)
 from .eval_logging import emit_info, verbose_lock
 
 log = logging.getLogger("epistemic_suite")
@@ -96,19 +89,9 @@ INJECTOR_SCRIPT: Path = (
     / "inject-rules.sh"
 )
 
-# Module-level settings path for claude --bare invocations. Resolved once
-# in main() so worker threads don't re-hit the keychain under --workers > 1.
-_resolved_settings_path: str = str(BARE_SETTINGS_PATH)
-
-# Per-provider request timeout constants (seconds). Each transport picks
-# its own — ollama speaks to a local server running a 26B MoE model where
-# long fixtures take minutes; haiku subprocess usually returns within
-# seconds but the one-shot subprocess has its own connect/network
-# envelope. Apfel is on-device and uses its shared client's default plus
-# a retry loop on explicit timeout errors. Constants are hardcoded (not
-# CLI-configurable) because callers don't benefit from varying them.
+# Ollama request timeout — local server running a 26B MoE model, long
+# fixtures can take minutes. Hardcoded; not CLI-configurable.
 _OLLAMA_REQUEST_TIMEOUT_SECONDS: float = 600.0
-_HAIKU_REQUEST_TIMEOUT_SECONDS: float = 120.0
 
 # Strip HTML comments from fixtures before sending to the model. The
 # fixture files contain ``<!-- Ground truth: ... -->`` blocks intended for
@@ -127,8 +110,8 @@ def active_baseline_path() -> Path:
     ``lab/eval/baselines/epistemic/{namespace}/pre-posture.json`` where
     namespace is derived from the provider and (for Ollama) the model tag —
     e.g. ``gemma4-26b-a4b-it-q8_0`` for the default Ollama model,
-    ``gemma4`` for ``gemma4:latest``, ``haiku``, ``apfel``. Mirrors the
-    per-provider layout of ``active_results_dir()``.
+    ``gemma4`` for ``gemma4:latest``. Mirrors the per-provider layout of
+    ``active_results_dir()``.
     """
     return BASELINES_BASE / rd.get_active_cache_namespace() / "pre-posture.json"
 
@@ -211,13 +194,6 @@ _MAX_JUDGE_OUTPUT_TOKENS: int = 128
 _FIXTURE_REASONING_EFFORT: str = "none"
 _JUDGE_REASONING_EFFORT: str = "none"
 
-# Apfel-specific output reserve within the ~4096-token Apple Foundation
-# Model context. Not the same as max_tokens — this splits context between
-# input and output. Hardcoded matching behavioral_scorer.run_apfel's style
-# (they use 64 for short routing output). Epistemic responses are longer,
-# so 512 is the reserve; input headroom is ~3584 tokens which fits our
-# Iron Laws system prompt + fixture prompt comfortably.
-_APFEL_OUTPUT_RESERVE: int = 512
 
 
 @dataclass
@@ -339,30 +315,13 @@ def call_provider(
 ) -> str:
     """Send prompt to provider; return raw response text.
 
-    All three providers share the same shape (system + user messages,
-    single-turn) — only the transport and token budgeting differ:
+    Currently only ``ollama`` is wired: HTTP via shared OpenAI-compatible
+    client; ``max_tokens`` maps to ``max_tokens`` on ``chat.completions.create``.
+    Per-request timeout is hardcoded (``_OLLAMA_REQUEST_TIMEOUT_SECONDS``).
 
-    - haiku: subprocess `claude --bare --model haiku -p -`; ``max_tokens``
-      is advisory only (the Claude CLI caps via ``--max-budget-usd`` and
-      does not expose a direct token cap flag).
-    - ollama: HTTP via shared OpenAI-compatible client; ``max_tokens``
-      maps to ``max_tokens`` on ``chat.completions.create``.
-    - apfel: HTTP via shared OpenAI-compatible client; ``max_tokens``
-      influences ``x_context_output_reserve`` so the on-device model
-      leaves enough room for the expected response length.
-
-    Per-request timeout is not caller-configurable — each provider picks
-    its own hardcoded constant (see ``_OLLAMA_REQUEST_TIMEOUT_SECONDS`` /
-    ``_HAIKU_REQUEST_TIMEOUT_SECONDS``). Apfel uses its client default
-    plus a retry loop on explicit timeout errors.
+    Adding a provider: append to ``results_dir.SUPPORTED_PROVIDERS``,
+    add a `_call_<name>` helper, and add a dispatch branch below.
     """
-    if provider == "haiku":
-        return _call_haiku(
-            prompt,
-            system_prompt,
-            max_tokens=max_tokens,
-            verbose=verbose,
-        )
     if provider == "ollama":
         return _call_ollama(
             prompt,
@@ -371,121 +330,7 @@ def call_provider(
             reasoning_effort=reasoning_effort,
             verbose=verbose,
         )
-    if provider == "apfel":
-        return _call_apfel(
-            prompt, system_prompt, max_tokens=max_tokens, verbose=verbose
-        )
     raise ValueError(f"unsupported provider: {provider}")
-
-
-def _call_haiku(
-    prompt: str,
-    system_prompt: str,
-    *,
-    max_tokens: int,
-    verbose: bool,
-) -> str:
-    # max_tokens is advisory on haiku — `claude --bare` caps generation via
-    # --max-budget-usd, not an explicit token flag. Param kept in signature
-    # for provider-wrapper symmetry; dropped here.
-    _ = max_tokens
-    cmd = [
-        "claude",
-        "--bare",
-        "--settings",
-        _resolved_settings_path,
-        "-p",
-        "-",
-        "--model",
-        "haiku",
-        "--tools",
-        "",
-        "--max-turns",
-        "1",
-        "--output-format",
-        "json",
-        "--max-budget-usd",
-        "0.25",
-        "--no-session-persistence",
-    ]
-    if system_prompt:
-        cmd.extend(["--system-prompt", system_prompt])
-    result = subprocess.run(
-        cmd,
-        input=prompt,
-        capture_output=True,
-        text=True,
-        timeout=_HAIKU_REQUEST_TIMEOUT_SECONDS,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"haiku subprocess failed (rc={result.returncode}): "
-            f"{(result.stderr.strip() or result.stdout.strip())[:200]}"
-        )
-    try:
-        data = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"haiku returned non-JSON: {exc}") from exc
-    if data.get("is_error"):
-        raise RuntimeError(f"haiku reported error: {data.get('result', 'unknown')}")
-    cost = float(data.get("total_cost_usd", 0.0))
-    _accumulate_cost(cost)
-    text = str(data.get("result", "")).strip()
-    if verbose:
-        log.info("haiku cost=$%.4f response=%s", cost, text)
-    return text
-
-
-def _call_apfel(
-    prompt: str, system_prompt: str, *, max_tokens: int, verbose: bool
-) -> str:
-    from lab.eval.behavioral_scorer import _get_apfel_client
-
-    client = _get_apfel_client()
-    last_exc: Exception | None = None
-    resp = None
-    # Hardcoded reserve, decoupled from max_tokens — see
-    # _APFEL_OUTPUT_RESERVE rationale at module top.
-    reserve = {"x_context_output_reserve": _APFEL_OUTPUT_RESERVE}
-    for _ in range(3):
-        try:
-            if system_prompt:
-                resp = client.chat.completions.create(
-                    model="apple-foundationmodel",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt},
-                    ],
-                    max_tokens=max_tokens,
-                    extra_body=reserve,
-                )
-            else:
-                resp = client.chat.completions.create(
-                    model="apple-foundationmodel",
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=max_tokens,
-                    extra_body=reserve,
-                )
-            break
-        except Exception as exc:
-            if "timed out" in str(exc).lower() or "timeout" in str(exc).lower():
-                last_exc = exc
-                continue
-            raise
-    if resp is None:
-        raise RuntimeError(f"apfel call failed: {last_exc}") from last_exc
-    text = (resp.choices[0].message.content or "").strip()
-    if text.startswith("```"):
-        text = "\n".join(
-            line for line in text.split("\n") if not line.strip().startswith("```")
-        )
-    if verbose:
-        usage = resp.usage
-        in_tok = usage.prompt_tokens if usage else 0
-        out_tok = usage.completion_tokens if usage else 0
-        log.info("apfel in=%d out=%d response=%s", in_tok, out_tok, text)
-    return text
 
 
 def _call_ollama(
@@ -1133,9 +978,8 @@ def _parse_args() -> argparse.Namespace:
         choices=sorted(rd.SUPPORTED_PROVIDERS),
         help=(
             "Provider: ollama (local gemma4:26b-a4b-it-q8_0 default; set "
-            "RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest for low-RAM), "
-            "apfel (on-device), haiku (API, paid). Default: "
-            "RUBY_PLUGIN_EVAL_PROVIDER env or ollama."
+            "RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest for low-RAM). "
+            "Default: RUBY_PLUGIN_EVAL_PROVIDER env or ollama."
         ),
     )
     parser.add_argument(
@@ -1184,18 +1028,10 @@ def main() -> int:
     provider = rd.resolve_provider(args.provider)
     rd.set_active_provider(provider)
 
-    # Resolve auth once — avoids concurrent keychain access under workers > 1.
-    # Skip for --cache (no provider calls) and non-haiku providers.
-    global _resolved_settings_path
-    if not args.cache and provider == "haiku":
-        _resolved_settings_path, _is_temp = resolve_settings_path()
-        atexit.register(cleanup_settings, _resolved_settings_path, _is_temp)
-
     # Eager server start for local providers — workers otherwise race on the
     # shared module-level state and emit "calling" lines before "server ready".
     if not args.cache:
         from lab.eval.behavioral_scorer import (
-            _ensure_apfel_server,
             _ensure_ollama_model_available,
             _ensure_ollama_server,
         )
@@ -1203,8 +1039,6 @@ def main() -> int:
         if provider == "ollama":
             _ensure_ollama_server()
             _ensure_ollama_model_available()
-        elif provider == "apfel":
-            _ensure_apfel_server()
 
     # Capture runtime system prompt from the real injector. Done for BOTH
     # fresh and --cache runs — the hash is required to:

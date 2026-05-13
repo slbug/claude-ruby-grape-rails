@@ -33,9 +33,10 @@ handoffs.
 # Deduplicates findings. Flags pre-existing issues separately.
 ```
 
-No prompt engineering. No "please check for N+1 queries." The plugin auto-loads
-the right domain knowledge based on what files you're editing and enforces rules
-that prevent the mistakes Ruby developers actually make in production.
+No prompt engineering. No "please check for N+1 queries." The plugin routes
+Ruby/Rails/Grape work to the right `/rb:*` workflow command via NL routing on
+the description layer, and enforces rules that prevent the mistakes Ruby
+developers actually make in production.
 
 Hook prerequisites: core hook guardrails expect `bash`, `jq`, `grep`, and
 standard Unix utilities available on macOS/Linux/WSL such as `head`,
@@ -76,7 +77,7 @@ checks.
 │    dependency-analyzer             /rb:pr-review /rb:challenge      │
 │                                    /rb:research  /rb:document       │
 │                                                                     │
-│  Domain (sonnet)                 Knowledge (auto-loaded)            │
+│  Domain (sonnet)                 Reference / Manual deep dives      │
 │    sidekiq-specialist              hotwire-patterns                 │
 │    deployment-validator            active-record-patterns           │
 │    ruby-gem-researcher             ruby-idioms      security        │
@@ -114,6 +115,23 @@ broadens that to recent-change sweeps and also fails closed when that broader
 coverage cannot be trusted.
 [hooks.json](plugins/ruby-grape-rails/hooks/hooks.json)
 is the current wiring source of truth.
+
+## Migrating from older installs
+
+Six bare-name skills were renamed to use the `rb:` prefix for consistent
+slash invocation. **Breaking change** — invoking the old slash name returns
+"no skill found":
+
+| Old | New |
+|---|---|
+| `/deploy` | `/rb:deploy` |
+| `/karafka` | `/rb:karafka` |
+| `/sequel-patterns` | `/rb:sequel-patterns` |
+| `/async-patterns` | `/rb:async-patterns` |
+| `/dry-rb-patterns` | `/rb:dry-rb-patterns` |
+| `/hotwire-native` | `/rb:hotwire-native` |
+
+Update any saved aliases or invocation muscle memory.
 
 ## Installation
 
@@ -252,9 +270,11 @@ Skip to any section with `/rb:intro --section N`.
 /rb:audit
 ```
 
-The plugin auto-loads domain knowledge based on what files you're editing
-(Rails patterns for `*_controller.rb`, Active Record patterns for models, security rules for auth code)
-and enforces [Iron Laws](#iron-laws-non-negotiable-rules) that prevent common Ruby/Rails mistakes.
+Domain skills cover Rails patterns, Active Record patterns, Hotwire, Grape,
+Sidekiq, security, and testing. `intent-detection` (the pushy routing
+gateway) suggests the right `/rb:*` command when the user describes work in
+natural language. The plugin enforces [Iron Laws](#iron-laws-non-negotiable-rules)
+that prevent common Ruby/Rails mistakes.
 
 ## How It Works
 
@@ -674,22 +694,26 @@ After the orchestrator cleanup, no shipped agent uses `memory: project`.
 The field remains supported as a future extension for pattern-analyst
 agents that need cross-session continuity.
 
-## Reference Skills (Auto-Loaded)
+## Reference Skills / Manual Deep Dives
 
-These load automatically based on file context -- no commands needed:
+Domain skills load through description-based NL routing. Visible in every
+session: `intent-detection` is the pushy gateway that suggests the right
+`/rb:*` command. Manual deep dives reach the remaining DMI skills via
+`/rb:<name>`.
 
-| Skill                     | Triggers On                                      |
-| ------------------------- | ------------------------------------------------ |
-| `ruby-idioms`             | Any `.rb` file                                   |
-| `rails-contexts`          | Context modules, router, controllers, services   |
-| `hotwire-patterns`        | Views, Turbo frames, Stimulus controllers        |
-| `active-record-patterns`  | Models, migrations, queries, associations        |
-| `testing`                 | `*_spec.rb`, `*_test.rb`, factories              |
-| `sidekiq`                 | Sidekiq jobs, workers, queue config              |
-| `security`                | Auth, sessions, CSRF/CSP, input validation       |
-| `deploy`                  | Dockerfile, fly.toml, production config          |
-| `runtime-integration`     | Runtime debugging, live process inspection       |
-| `intent-detection`        | First message routing to /rb: commands           |
+| Visible skill | Domain |
+| ------------- | ------ |
+| `ruby-idioms`             | Core Ruby idioms + plain-Ruby boundaries           |
+| `rails-idioms`            | Idiomatic Rails controllers, callbacks, routes     |
+| `rails-contexts`          | Where business logic belongs in Rails              |
+| `hotwire-patterns`        | Turbo Frames, Streams, Stimulus, Action Cable      |
+| `active-record-patterns`  | Active Record models, migrations, queries          |
+| `grape-idioms`            | Grape API endpoint design                          |
+| `sidekiq`                 | Sidekiq + Solid Queue background jobs              |
+| `security`                | Authorization, SQL injection, XSS, secrets         |
+| `safe-migrations`         | Zero-downtime migration patterns                   |
+| `testing`                 | RSpec, fixtures, factories, anti-flake             |
+| `intent-detection`        | NL → `/rb:*` routing gateway                       |
 
 ## Runtime Tooling Integration
 
@@ -789,28 +813,18 @@ Common entrypoints:
 - `make eval-behavioral-verbose` / `npm run eval:behavioral:verbose` — same with
   verbose cache/score output
 - `make eval-behavioral-fresh` / `npm run eval:behavioral:fresh` — ignore
-  cache, re-run via the default provider (local Ollama `gemma4:26b-a4b-it-q8_0`).
-  The npm script is a composite (`cmd1 && cmd2`), so
-  `npm run ... -- --provider haiku`
-  would append to the wrong target; `make` doesn't forward args either.
-  To switch provider prefix with `RUBY_PLUGIN_EVAL_PROVIDER=haiku` or
-  `RUBY_PLUGIN_EVAL_PROVIDER=apfel`; change the default Ollama model with
-  `RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest` (low-RAM fallback,
-  10GB instead of 28GB) or any other Ollama tag; or
-  call the module directly with
-  `python3 -m lab.eval.behavioral_scorer --all --summary --provider haiku`
+  cache, re-run via Ollama (`gemma4:26b-a4b-it-q8_0` by default; switch
+  via `RUBY_PLUGIN_EVAL_OLLAMA_MODEL=gemma4:latest` for the 10GB low-RAM
+  fallback or any other Ollama tag). Ollama is currently the only wired
+  provider; Microsoft Waza is the planned next provider via the
+  pluggable `behavioral_scorer._run_provider` dispatch.
 - `make eval-behavioral-fresh-verbose` / `npm run eval:behavioral:fresh:verbose`
   — fresh run with full prompt/response debug output
 - `make eval-ablation` or `npm run eval:ablation` for matcher signal/noise
   classification (deterministic, no API calls)
 - `make eval-neighbor` or `npm run eval:neighbor` for confusable-pair
-  regression detection on changed skills (requires the active provider —
-  local Ollama `gemma4:26b-a4b-it-q8_0` by default). `make` doesn't forward args;
-  `npm run eval:neighbor -- --provider haiku` does (single-command script).
-  For a cross-wrapper option prefix with `RUBY_PLUGIN_EVAL_PROVIDER=haiku`
-  or `RUBY_PLUGIN_EVAL_PROVIDER=apfel`,
-  or call the module directly with
-  `python3 -m lab.eval.neighbor_regression --changed --provider haiku`
+  regression detection on changed skills (requires Ollama running locally;
+  default model `gemma4:26b-a4b-it-q8_0`).
 - `make eval-hygiene` or `npm run eval:hygiene` for trigger corpus
   contamination scanning
 - contributor eval tooling requires `python3` 3.14+

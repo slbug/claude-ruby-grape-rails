@@ -92,11 +92,10 @@ Authoritative cached docs:
 - `skills.md`
 - `hooks.md` + `hooks-guide.md` (skill-scoped hooks)
 
-Currently-supported skill frontmatter:
+Currently-supported skill frontmatter (per agentskills.io canon):
 
 - `name`
-- `description`
-- `when_to_use`
+- `description` (single field; replaces former `description` + `when_to_use` split)
 - `argument-hint`
 - `disable-model-invocation`
 - `user-invocable`
@@ -106,16 +105,26 @@ Currently-supported skill frontmatter:
 - `context`
 - `agent`
 - `hooks`
-- `paths`
 - `shell`
+
+Notes:
+
+- `when_to_use` is no longer a supported field — content folds into the
+  single `description` field
+- `paths:` is documented in CC skill schema but empirically non-functional
+  at plugin scope; project-level `.claude/rules/*.md` `paths:` is a
+  separate, functional mechanism
 
 Checks:
 
 1. Flag undocumented skill frontmatter as docs issue.
-2. Do NOT flag documented fields (`effort`, `paths`, `shell`).
+2. Do NOT flag documented fields (`effort`, `shell`).
 3. Continue treating `triggers:` as invalid — skills docs do not support it.
-4. `paths:` present → confirm globs are repo-relevant; do NOT treat the field as suspicious.
-5. Skill descriptions over 250 characters → `WARNING` (cached docs say Claude truncates them in skill listing).
+4. Flag `when_to_use:` on a plugin SKILL.md as drift — single `description` only.
+5. Flag plugin-scope `paths:` as drift (non-functional at plugin scope).
+6. Skill `description` over 1,024 characters → `ERROR` (agentskills.io cap).
+   Over 250 characters → `WARNING` (cached docs say Claude truncates them
+   in skill listing).
 
 ## Hook Validation
 

@@ -1,7 +1,6 @@
 ---
 name: rb:learn
-description: "Use when the user corrects your approach or teaches a pattern -- capture lessons after fixing a bug or receiving a correction about ActiveRecord, Rails, Grape, or Sidekiq mistakes."
-when_to_use: "Triggers: \"learn from this\", \"remember this mistake\", \"don't do that again\", \"that's wrong because\", \"correct approach is\". Does NOT handle: post-fix archival, solution documentation, project auditing."
+description: "Capturing in-flight lessons when the user corrects your approach or teaches a pattern: ActiveRecord, Rails, Grape, Sidekiq mistakes during work. Writes lightweight learning notes. Triggers: \"learn from this\", \"remember this mistake\", \"don't do that again\", \"that's wrong because\", \"correct approach is\". Do NOT use for: post-fix knowledge archival, API docs, project audit."
 argument-hint: <description of what was fixed>
 effort: low
 disable-model-invocation: true

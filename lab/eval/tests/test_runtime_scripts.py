@@ -451,11 +451,17 @@ class RuntimeScriptTests(unittest.TestCase):
             for hook in hook_entries
             if hook.get("command", "").endswith("/compress-verify-output.rb")
         ]
+        discovery_hooks = [
+            hook
+            for hook in hook_entries
+            if hook.get("command", "").endswith("/skill-discovery-observer.rb")
+        ]
         self.assertEqual(
-            len(ruby_failure_hooks) + len(compression_hooks),
+            len(ruby_failure_hooks) + len(compression_hooks) + len(discovery_hooks),
             len(hook_entries),
             "PostToolUseFailure has unexpected hook entries beyond "
-            "ruby-post-tool-use-failure.sh and compress-verify-output.rb",
+            "ruby-post-tool-use-failure.sh, compress-verify-output.rb, "
+            "and skill-discovery-observer.rb",
         )
 
         expected_filters = {

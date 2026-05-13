@@ -1,0 +1,268 @@
+# Single source of truth for skill name, visibility, and advertisement.
+#
+# Generated artifacts read from this file:
+# - intent-detection/SKILL.md routing-table block
+# - hub-body "Related — invoke manually if needed" footers
+# - intro/references/tutorial-content.md inventory section
+#
+# Run scripts/generate-skill-routing.sh after editing.
+
+visible_skills:
+  - name: rb:plan
+    folder: plan
+    rationale: workflow core — multi-file feature planning
+  - name: rb:work
+    folder: work
+    rationale: workflow core — plan execution
+  - name: rb:review
+    folder: review
+    rationale: workflow core — parallel-specialist code review
+  - name: rb:verify
+    folder: verify
+    rationale: workflow core — verification stack
+  - name: rb:triage
+    folder: triage
+    rationale: workflow core — review-finding triage
+  - name: rb:compound
+    folder: compound
+    rationale: workflow core — solution knowledge capture
+  - name: rb:investigate
+    folder: investigate
+    rationale: workflow core — root-cause analysis
+  - name: rb:init
+    folder: init
+    rationale: first-run discoverability
+  - name: rb:brief
+    folder: brief
+    rationale: workflow walkthrough
+
+  - name: active-record-patterns
+    folder: active-record-patterns
+    rationale: domain pattern — Active Record
+  - name: sidekiq
+    folder: sidekiq
+    rationale: domain pattern — Sidekiq/Solid Queue jobs
+  - name: hotwire-patterns
+    folder: hotwire-patterns
+    rationale: domain pattern — Hotwire/Turbo/Stimulus
+  - name: grape-idioms
+    folder: grape-idioms
+    rationale: domain pattern — Grape API design
+  - name: rails-idioms
+    folder: rails-idioms
+    rationale: domain pattern — idiomatic Rails
+  - name: ruby-idioms
+    folder: ruby-idioms
+    rationale: domain pattern — core Ruby idioms
+  - name: rails-contexts
+    folder: rails-contexts
+    rationale: domain pattern — where-does-this-go decisions
+
+  - name: rb:n1-check
+    folder: ar-n1-check
+    rationale: debug — N+1 diagnosis
+  - name: rb:constraint-debug
+    folder: active-record-constraint-debug
+    rationale: debug — constraint failure diagnosis
+  - name: rb:trace
+    folder: rb-trace
+    rationale: debug — code-path tracing
+
+  - name: security
+    folder: security
+    rationale: specialty — security patterns
+  - name: safe-migrations
+    folder: safe-migrations
+    rationale: specialty — zero-downtime migrations
+  - name: testing
+    folder: testing
+    rationale: specialty — test design + anti-flake
+
+  - name: intent-detection
+    folder: intent-detection
+    rationale: routing gateway — pushy NL → /rb:* mapping
+
+hidden_skills:
+  # Already-DMI workflow on-ramps + meta tools
+  - name: rb:brainstorm
+    folder: brainstorm
+    aliases: [interview, brainstorm, discovery, explore ideas]
+    advertise_in: [plan, intro, intent-detection]
+    symptom: Feature still fuzzy
+    rationale: workflow on-ramp; pre-plan discovery
+  - name: rb:challenge
+    folder: challenge
+    aliases: [adversarial review, devil's advocate, stress test]
+    advertise_in: [review, triage, intent-detection]
+    symptom: Adversarial review needed
+    rationale: adversarial-mode review
+  - name: rb:document
+    folder: document
+    aliases: [YARD, RDoc, ADR, write docs]
+    advertise_in: [work, plan, review, intent-detection]
+    symptom: API or internal docs needed
+    rationale: post-implementation docs
+  - name: rb:examples
+    folder: examples
+    aliases: [show examples, codebase patterns, representative code]
+    advertise_in: [intro, brainstorm, plan, intent-detection]
+    symptom: Pattern reference needed
+    rationale: codebase pattern surface
+  - name: rb:intro
+    folder: intro
+    aliases: [tutorial, getting started, what can you do]
+    advertise_in: [init, intent-detection]
+    symptom: Onboarding new contributor
+    rationale: onboarding
+  - name: iron-laws
+    folder: iron-laws
+    aliases: [iron law, non-negotiable rule, Ruby safety rules]
+    advertise_in: [review, challenge, triage]
+    symptom: Iron Law violation suspected
+    rationale: SessionStart-injected; review BLOCKED path
+  - name: rb:learn
+    folder: learn
+    aliases: [learn from this, remember this mistake, correction]
+    advertise_in: [work, compound, review, intent-detection]
+    symptom: Mistake worth capturing as a rule
+    rationale: in-flight lesson capture
+  - name: rb:perf
+    folder: perf
+    aliases: [slow, latency, memory, p95, queue backup]
+    advertise_in: [intent-detection, investigate, audit, review]
+    symptom: Slow / latency / memory regression
+    rationale: performance analysis
+  - name: rb:permissions
+    folder: permissions
+    aliases: [permissions, allow command, approval prompts, settings.json]
+    advertise_in: [init, intent-detection]
+    symptom: Permission prompts noisy / need tuning
+    rationale: permission tuning
+  - name: rb:pr-review
+    folder: pr-review
+    aliases: [PR feedback, review comments, reviewer said]
+    advertise_in: [review, triage, intent-detection]
+    symptom: PR review comments to address
+    rationale: PR review-comment handling
+  - name: rb:quick
+    folder: quick
+    aliases: [quick fix, typo, one-liner]
+    advertise_in: [plan, intent-detection, work]
+    symptom: Single-line / trivial fix
+    rationale: trivial-fix path
+  - name: rb:research
+    folder: research
+    aliases: [research gem, compare approaches, upgrade path]
+    advertise_in: [plan, investigate, intent-detection]
+    symptom: Library or approach comparison
+    rationale: evidence-based research
+  - name: rubydoc-fetcher
+    folder: rubydoc-fetcher
+    aliases: [rubydoc, gem docs, API reference, Rails Guides]
+    advertise_in: [investigate, research, plan, intent-detection]
+    symptom: Gem or Rails Guide lookup
+    rationale: cheap doc lookup
+  - name: rb:secrets
+    folder: secrets-scan
+    aliases: [secrets, leaked, API key, credentials, betterleaks]
+    advertise_in: [verify, review, init, intent-detection]
+    symptom: Pre-push secret check
+    rationale: pre-push secret scan
+
+  # Newly-DMI per Phase B.7 (post-A.5 gate, full spec list)
+  - name: rb:full
+    folder: full
+    aliases: [do everything, full lifecycle, end to end, hands-off]
+    advertise_in: [intent-detection, plan, work]
+    symptom: Run full plan-work-verify-review-compound cycle autonomously
+    rationale: full lifecycle orchestration
+  - name: rb:audit
+    folder: audit
+    aliases: [audit project, codebase health, architecture review]
+    advertise_in: [intent-detection, init, review]
+    symptom: Codebase health snapshot
+    rationale: project-wide audit
+  - name: rb:compression-report
+    folder: compression-report
+    aliases: [compression report, share compression stats]
+    advertise_in: [audit]
+    symptom: Compression telemetry summary
+    rationale: internal QA (telemetry report)
+  - name: rb:provenance-scan
+    folder: provenance-scan
+    aliases: [scan provenance, audit research quality, trust state]
+    advertise_in: [research, plan, audit, review]
+    symptom: Research trust / source-quality audit
+    rationale: research-trust audit
+  - name: rb:boundaries
+    folder: rb-boundaries
+    aliases: [service boundaries, split monolith, fat controller, package boundary]
+    advertise_in: [intent-detection, audit, techdebt, plan]
+    symptom: Service-boundary or split-monolith decision
+    rationale: service-boundary analysis
+  - name: rb:state-audit
+    folder: request-state-audit
+    aliases: [request state, CurrentAttributes, session leak, Redis state]
+    advertise_in: [intent-detection, investigate, audit, hotwire-patterns]
+    symptom: Request-state / session-leak hygiene check
+    rationale: request-state hygiene
+  - name: rb:runtime
+    folder: runtime-integration
+    aliases: [Tidewave, live runtime, introspect models, running app]
+    advertise_in: [intent-detection, investigate, plan, rb-trace]
+    symptom: Live runtime introspection (Tidewave)
+    rationale: Tidewave runtime introspection
+  - name: rb:techdebt
+    folder: techdebt
+    aliases: [tech debt, cleanup, callback sprawl, stale code, overgrown service, decorative abstraction]
+    advertise_in: [intent-detection, audit, review, rb-boundaries, investigate, quick, work]
+    symptom: Adjacent debt noticed but out of scope
+    rationale: tech-debt logging
+  - name: rb:karafka
+    folder: karafka
+    aliases: [Karafka, Kafka consumer, event streaming]
+    advertise_in: [intent-detection, sidekiq]
+    symptom: Kafka consumer / event-streaming work
+    rationale: Kafka consumer patterns
+  - name: rb:hotwire-native
+    folder: hotwire-native
+    aliases: [Hotwire Native, Turbo Native, iOS bridge, Android Hotwire]
+    advertise_in: [intent-detection, hotwire-patterns]
+    symptom: iOS / Android Hotwire bridge work
+    rationale: native mobile Hotwire
+  - name: rb:async-patterns
+    folder: async-patterns
+    aliases: [async gem, fiber concurrency, Falcon server, I/O-bound]
+    advertise_in: [intent-detection, ruby-idioms]
+    symptom: Fiber concurrency / async-gem work
+    rationale: fiber concurrency
+  - name: rb:dry-rb-patterns
+    folder: dry-rb-patterns
+    aliases: [dry-rb, dry-validation, dry-types, dry-monads]
+    advertise_in: [intent-detection, rails-contexts]
+    symptom: dry-rb gem patterns (validation, types, monads)
+    rationale: dry-rb gem patterns
+  - name: rb:sequel-patterns
+    folder: sequel-patterns
+    aliases: [Sequel, Sequel ORM, Sequel dataset, Sequel migration]
+    advertise_in: [intent-detection, active-record-patterns]
+    symptom: Sequel ORM (non-Active Record) work
+    rationale: Sequel ORM patterns
+  - name: rb:deploy
+    folder: deploy
+    aliases: [Kamal deploy, Docker deploy, Thruster, release Rails]
+    advertise_in: [intent-detection, verify]
+    symptom: Kamal / Docker deploy configuration
+    rationale: deployment configuration
+
+  - name: rb:discovery-report
+    folder: skill-discovery-report
+    aliases: [discovery report, trigger-table tuning, injection telemetry]
+    advertise_in: [audit, intent-detection]
+    symptom: Skill-router telemetry summary
+    rationale: internal eval-tuning tool — drafts a redacted report from skill-discovery telemetry
+
+merged_skills:
+  - name: ruby-contexts
+    merged_into: ruby-idioms
+    rationale: orphan stub; 4 principles absorbed as "Plain-Ruby Boundaries" section

@@ -12,6 +12,7 @@ if __package__ in (None, ""):
 from lab.eval.trigger_scorer import (
     build_confusable_pairs,
     load_all_routing_descriptions,
+    load_hidden_skills,
 )
 
 
@@ -19,7 +20,13 @@ OUTPUT = Path(__file__).resolve().parent / "_confusable_pairs.json"
 
 
 def main() -> None:
-    pairs = build_confusable_pairs(load_all_routing_descriptions(), limit=15)
+    hidden = load_hidden_skills()
+    descriptions = {
+        name: desc
+        for name, desc in load_all_routing_descriptions().items()
+        if name not in hidden
+    }
+    pairs = build_confusable_pairs(descriptions, limit=15)
     payload = {"pairs": pairs, "count": len(pairs)}
     OUTPUT.write_text(json.dumps(payload, indent=2) + "\n")
     print(str(OUTPUT))

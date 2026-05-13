@@ -26,8 +26,10 @@ skills/{name}/
 ## Rules
 
 - Include an "Iron Laws" section for critical rules
-- No `triggers:` field — use `description` for auto-loading
-- Description <= 1,536 characters (combined `description` + `when_to_use` truncates at 1,536; front-load key use case)
+- No `triggers:` field — use `description` for routing
+- No `when_to_use:` field — single `description` field per agentskills.io canon
+- No `paths:` field on plugin SKILL.md — empirically non-functional at plugin scope (the `.claude/rules/*.md` `paths:` mechanism is distinct and remains functional)
+- Description <= 1,024 chars (agentskills.io cap); front-load WHEN the skill applies, include real-query phrases as Triggers, include negative exclusion clauses as Do NOT use for
 - For plugin-wide executables in `bin/`, use explicit `${CLAUDE_PLUGIN_ROOT}/bin/<cmd>` when the skill also references `${CLAUDE_SKILL_DIR}` (bare names can be conflated with skill-local files)
 - **Cross-reference path rules** (substitution scope per CC docs):
 
@@ -66,7 +68,26 @@ skills/{name}/
 
 ## Colon Naming
 
-Colons in skill names (e.g., `rb:plan`) work via frontmatter `name` field (stabilized CC 2.1.94). If character restrictions are ever enforced, migrate to hyphen names with aliases.
+Colons in skill names (e.g., `rb:plan`) work via the frontmatter `name` field. If character restrictions are ever enforced, migrate to hyphen names with aliases.
+
+## Description = routing trigger
+
+Tell the model WHEN to load the skill, not WHAT the skill does. Front-load the real-query phrase. Include negative exclusion clauses.
+
+- Pattern: gerund-led "`{What it does}. Triggers: \"phrase1\", \"phrase2\". Do NOT use for: <exclusion>.`"
+- Single `description` field, ≤1,024 chars
+- Real-query phrasing wins over polished marketing prose
+- Negative examples can matter more than positive examples
+- Action-at-a-distance: changing one description shifts routing of unrelated skills; run the eval before merge
+- LLM-generated descriptions tend to be low-quality; require human curation
+
+## Body discipline — every skill is a tax
+
+Every sentence costs context every session. Apply the test to each sentence: would the agent get this wrong without this instruction? Delete sentences that fail.
+
+## Append-mostly maintenance
+
+Skills are append-mostly. The gotchas / anti-patterns section accrues the most value over time. Add gotchas; do not rewrite history.
 
 ## Workflow Skills
 

@@ -53,7 +53,6 @@ BANNED_IMPORTS = (
     # deterministic-path file.
     "behavioral_scorer",   # LLM provider call for trigger routing
     "epistemic_suite",     # LLM provider call for posture metrics
-    "trigger_expand",      # LLM provider call for corpus expansion
 )
 
 # Hardcoded allowlist of files transitively executed by
