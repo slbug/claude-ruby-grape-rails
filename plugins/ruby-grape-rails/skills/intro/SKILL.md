@@ -20,7 +20,6 @@ Interactive introduction to the Ruby/Rails/Grape plugin for new users.
 - **19 specialist agents**: ActiveRecord, Hotwire, security, Sidekiq, provenance experts
 - **52 skills**: Commands for every phase of development
 - **22 Iron Laws**: Non-negotiable rules enforced automatically
-- **Domain reference skills**: Routed via NL on description; reach manually via `/rb:*` slash invocation
 
 ## Installation Notes
 

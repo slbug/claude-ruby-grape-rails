@@ -5,29 +5,26 @@ defines them.
 
 ## Methods with zero callers
 
-For each public method defined in `app/` outside controllers/jobs, grep for
-calls to that method elsewhere. A method whose only reference is its own
-definition is a dead-code candidate.
+Use [`debride`](https://github.com/seattlerb/debride) (MIT, seattlerb) —
+Ruby static analyzer for uncalled methods, with Rails-aware knowledge
+of callbacks, route helpers, and view bindings.
 
 ```bash
-rg --no-heading -n '^\s*def\s+([a-z_][a-z_0-9?!]*)' app/ \
-  --replace '$1' -o \
-  | sort -u \
-  > /tmp/method-names.txt
-
-while read -r name; do
-  count=$(rg --no-heading -c "\b${name}\b" app/ lib/ 2>/dev/null | wc -l)
-  if [ "${count:-0}" -le 1 ]; then
-    echo "candidate dead method: ${name}"
-  fi
-done < /tmp/method-names.txt
+gem install debride
+debride --rails --whitelist whitelist.txt .
 ```
 
-Reduce false positives by:
+`whitelist.txt` suppresses known-good false positives — one method
+name per line, `/regexp/` delimiters for patterns. Seed migration
+methods (`up`, `down`, `change`) and add protocol / dynamic-dispatch
+methods as the scan flags them.
 
-- Skipping protocol methods (`call`, `to_s`, `==`, `<=>`, `inspect`, …)
-- Skipping Rails callbacks invoked by name (`before_action :name`)
-- Skipping serializer/jbuilder method references (declared elsewhere)
+Companion gem `debride_rails_whitelist` builds an empirical whitelist
+from production logs:
+
+```bash
+debride_rails_whitelist routes.txt log/production.log | sort -u > whitelist.txt
+```
 
 Severity: INFO.
 

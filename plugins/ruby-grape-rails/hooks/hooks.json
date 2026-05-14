@@ -132,7 +132,29 @@
         ]
       },
       {
-        "matcher": "Edit|Write|Bash",
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "timeout": 15,
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "timeout": 15,
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
