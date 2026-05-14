@@ -236,7 +236,8 @@ def main(argv)
   OptionParser.new do |p|
     p.on('--log PATH') { |v| opts[:log] = v }
     p.on('--json') { opts[:json] = true }
-    p.on('--redact', 'Emit privacy-reduced JSON for the report-drafter skill; review the drafted markdown report before sharing publicly') do
+    p.on('--redact',
+         'Emit privacy-reduced JSON for the report-drafter skill; review the drafted markdown report before sharing publicly') do
       opts[:redact] = true
       opts[:json] = true
     end

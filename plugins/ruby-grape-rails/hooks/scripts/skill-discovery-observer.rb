@@ -82,9 +82,11 @@ begin
     next unless rule.is_a?(Hash)
     next unless Array(rule['event_kinds']).include?(hook_event)
     next unless rule_matches?(rule, data)
+
     suggest_list = Array(rule['suggest'] || rule['suggest_list'])
     suggest_list.each do |suggest|
       next if suggest.to_s.empty?
+
       throttle = update_cache_count!(cache, session_id, suggest.to_s)
       entry = build_entry(rule, data, hook_event, suggest.to_s, throttle)
       append_jsonl(log_path, entry)
@@ -101,6 +103,7 @@ BEGIN {
   def rotate_if_needed(path)
     return unless File.exist?(path)
     return if File.size(path) < LOG_ROTATE_BYTES
+
     n = 1
     n += 1 while File.exist?("#{path}.#{n}")
     File.rename(path, "#{path}.#{n}")
@@ -111,6 +114,7 @@ BEGIN {
   def rule_matches?(rule, data)
     clauses = Array(rule['match'])
     return false if clauses.empty?
+
     threshold = rule['confidence_min'].to_i.clamp(1, 10)
     hits = clauses.count { |clause| clause_matches?(clause, data) }
     hits >= threshold
@@ -118,6 +122,7 @@ BEGIN {
 
   def clause_matches?(clause, data)
     return false unless clause.is_a?(Hash)
+
     case clause['type']
     when 'regex'      then regex_match?(clause, data)
     when 'structured' then structured_match?(clause, data)
@@ -128,6 +133,7 @@ BEGIN {
   def regex_match?(clause, data)
     text = extract_field(clause['extractor'], data).to_s
     return false if text.empty?
+
     Regexp.new(clause['pattern']).match?(text)
   rescue RegexpError
     false
@@ -145,6 +151,7 @@ BEGIN {
 
   def extract_field(path, data)
     return nil if path.nil?
+
     path.to_s.split('.').reduce(data) { |acc, key| acc.is_a?(Hash) ? acc[key] : nil }
   end
 
@@ -162,20 +169,20 @@ BEGIN {
   end
 
   def build_entry(rule, data, hook_event, suggest, throttle)
-    reason   = rule['reason'].to_s
+    reason = rule['reason'].to_s
     would_chars = (reason.length + suggest.length + 80).clamp(0, WOULD_INJECT_MAX_CHARS)
     entry = {
-      'ts'                  => Time.now.utc.iso8601,
-      'session_id'          => data['session_id'].to_s,
-      'hook_event'          => hook_event,
-      'matched_rule'        => rule['id'],
-      'suggest'             => suggest,
-      'reason'              => reason,
-      'would_inject'        => true,
-      'would_inject_chars'  => would_chars,
-      'would_throttle'      => throttle[:would_throttle],
-      'throttle_reason'     => throttle[:throttle_reason],
-      'session_skill_count' => throttle[:count],
+      'ts' => Time.now.utc.iso8601,
+      'session_id' => data['session_id'].to_s,
+      'hook_event' => hook_event,
+      'matched_rule' => rule['id'],
+      'suggest' => suggest,
+      'reason' => reason,
+      'would_inject' => true,
+      'would_inject_chars' => would_chars,
+      'would_throttle' => throttle[:would_throttle],
+      'throttle_reason' => throttle[:throttle_reason],
+      'session_skill_count' => throttle[:count]
     }
     if ENV['RUBY_PLUGIN_DISCOVERY_LOG_EXCERPTS'] == '1'
       raw = (data.dig('prompt') || data.dig('tool_input', 'command') || data.dig('tool_input', 'file_path')).to_s
@@ -194,6 +201,7 @@ BEGIN {
   def load_cache(path)
     return {} unless File.exist?(path)
     return {} unless File.lstat(path).file?
+
     text = File.read(path)
     data = JSON.parse(text)
     data.is_a?(Hash) ? data : {}

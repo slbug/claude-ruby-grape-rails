@@ -28,6 +28,7 @@ def default_log_path
   candidates = Dir.glob(DEFAULT_GLOB).select { |p| File.file?(p) }
   return if candidates.empty?
   return candidates.first if candidates.length == 1
+
   candidates.max_by { |p| File.mtime(p) }
 end
 
@@ -39,7 +40,10 @@ def parse_options(argv)
     opts.on('--purge')       { options[:purge] = true }
     opts.on('--json')        { options[:json] = true }
     opts.on('--log PATH')    { |path| options[:log] = path }
-    opts.on('-h', '--help')  { puts opts; exit 0 }
+    opts.on('-h', '--help')  do
+      puts opts
+      exit 0
+    end
   end.parse!(argv)
   options
 end
@@ -49,6 +53,7 @@ def load_rows(path)
   File.foreach(path) do |line|
     line = line.strip
     next if line.empty?
+
     begin
       rows << JSON.parse(line)
     rescue JSON::ParserError
@@ -93,15 +98,15 @@ def aggregate(rows, all_rule_ids: nil)
                    []
                  end
   {
-    'total_events'        => total,
-    'unique_sessions'     => sessions.size,
-    'throttle_simulated'  => throttled_total,
+    'total_events' => total,
+    'unique_sessions' => sessions.size,
+    'throttle_simulated' => throttled_total,
     'avg_would_inject_chars' => inject_chars_n.positive? ? (inject_chars_sum.to_f / inject_chars_n).round(2) : 0.0,
-    'by_rule'             => by_rule.sort_by { |_, v| -v }.to_h,
+    'by_rule' => by_rule.sort_by { |_, v| -v }.to_h,
     'match_rate_per_rule' => match_rate_per_rule.sort_by { |_, v| -v }.to_h,
-    'silent_rules'        => silent_rules,
-    'by_skill'            => by_skill.sort_by { |_, v| -v }.to_h,
-    'by_event_kind'       => by_event.sort_by { |_, v| -v }.to_h,
+    'silent_rules' => silent_rules,
+    'by_skill' => by_skill.sort_by { |_, v| -v }.to_h,
+    'by_event_kind' => by_event.sort_by { |_, v| -v }.to_h
   }
 end
 
@@ -114,8 +119,10 @@ def load_rule_ids(plugin_root)
   require 'yaml'
   path = File.join(plugin_root, 'references/discovery/triggers.yml')
   return [] unless File.file?(path)
+
   data = YAML.load_file(path)
   return [] unless data.is_a?(Hash) && data['triggers'].is_a?(Array)
+
   data['triggers'].map { |t| t.is_a?(Hash) ? t['id'].to_s : nil }.compact
 rescue StandardError, SystemCallError
   []
@@ -124,11 +131,12 @@ end
 def review_sample(rows, n: 5)
   rows.last(n).map do |row|
     {
-      'ts'           => row['ts'],
-      'hook_event'   => row['hook_event'],
+      'ts' => row['ts'],
+      'hook_event' => row['hook_event'],
       'matched_rule' => row['matched_rule'],
-      'suggest'      => row['suggest'],
-      'excerpt'      => row['excerpt'],
+      'suggest' => row['suggest'],
+      'would_throttle' => row['would_throttle'],
+      'excerpt' => row['excerpt']
     }
   end
 end
@@ -141,26 +149,26 @@ def emit_text(report, sample)
   out << "rotated logs:           #{report['rotated_logs']}"
   out << "throttle simulated:     #{report['throttle_simulated']} match(es) would-throttle"
   out << "avg would_inject_chars: #{report['avg_would_inject_chars']}"
-  out << ""
-  out << "Match rate per rule (count / total events):"
+  out << ''
+  out << 'Match rate per rule (count / total events):'
   report['match_rate_per_rule'].first(10).each do |id, rate|
     count = report['by_rule'][id] || 0
     out << "  rate=#{format('%.4f', rate)}  count=#{count.to_s.rjust(4)}  #{id}"
   end
-  out << ""
-  out << "Silent rules (configured but never matched in this window):"
+  out << ''
+  out << 'Silent rules (configured but never matched in this window):'
   if report['silent_rules'].empty?
-    out << "  (none — every configured rule matched at least once)"
+    out << '  (none — every configured rule matched at least once)'
   else
     report['silent_rules'].each { |id| out << "  - #{id}" }
   end
-  out << ""
-  out << "Top suggested skills:"
+  out << ''
+  out << 'Top suggested skills:'
   report['by_skill'].first(10).each { |s, n| out << "  #{n.to_s.rjust(5)}  #{s}" }
-  out << ""
-  out << "Events by hook kind:"
+  out << ''
+  out << 'Events by hook kind:'
   report['by_event_kind'].each { |k, n| out << "  #{n.to_s.rjust(5)}  #{k}" }
-  out << ""
+  out << ''
   out << "Recent #{sample.length} sample(s):"
   sample.each do |s|
     suggest = Array(s['suggest']).join(', ')
@@ -178,9 +186,11 @@ end
 
 def purge_logs(path)
   return unless path
+
   files = [path] + Dir.glob("#{path}.*").sort
   files.each do |f|
     next unless File.file?(f)
+
     File.truncate(f, 0) if f == path
     File.delete(f) if f != path
   end
@@ -208,20 +218,20 @@ plugin_root = ENV.fetch('CLAUDE_PLUGIN_ROOT', nil)
 all_rule_ids = plugin_root ? load_rule_ids(plugin_root) : []
 
 report = aggregate(rows, all_rule_ids: all_rule_ids).merge(
-  'log_path'     => log_path || DEFAULT_GLOB,
-  'rotated_logs' => rotated,
+  'log_path' => log_path || DEFAULT_GLOB,
+  'rotated_logs' => rotated
 )
 sample = review_sample(rows)
 remove_excerpts!(report, sample) if opts[:redact]
 
-if !log_exists
+unless log_exists
   report['note'] = 'no log file found — set RUBY_PLUGIN_DISCOVERY_LOG=1 and re-run a session to generate one'
 end
 
 if opts[:json]
   $stdout.write(JSON.pretty_generate(report.merge('sample' => sample)) + "\n")
 else
-  if !log_exists
+  unless log_exists
     $stdout.write("discovery-stats: #{report['note']}\n")
     $stdout.write("discovery-stats: searched #{report['log_path']}\n")
   end

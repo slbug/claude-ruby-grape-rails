@@ -5,34 +5,6 @@
   "runs_per_query": 3,
   "pairs": [
     {
-      "a": "audit",
-      "b": "review",
-      "queries_for_a": [
-        "audit the project",
-        "codebase health check",
-        "architecture review of the whole repo"
-      ],
-      "queries_for_b": [
-        "review my changes before commit",
-        "review this PR",
-        "review the diff"
-      ]
-    },
-    {
-      "a": "sidekiq",
-      "b": "karafka",
-      "queries_for_a": [
-        "Sidekiq job retry strategy",
-        "background worker idempotency",
-        "perform_async after_commit"
-      ],
-      "queries_for_b": [
-        "Kafka consumer with Karafka",
-        "Karafka batch processing",
-        "event streaming consumer"
-      ]
-    },
-    {
       "a": "ruby-idioms",
       "b": "rails-idioms",
       "queries_for_a": [
@@ -58,76 +30,6 @@
         "execute the plan",
         "implement the checklist",
         "resume implementation"
-      ]
-    },
-    {
-      "a": "investigate",
-      "b": "perf",
-      "queries_for_a": [
-        "why is this broken",
-        "trace the bug to root cause",
-        "stack trace analysis"
-      ],
-      "queries_for_b": [
-        "slow endpoint",
-        "memory bloat",
-        "queue backup latency"
-      ]
-    },
-    {
-      "a": "ar-n1-check",
-      "b": "perf",
-      "queries_for_a": [
-        "N+1 query problem",
-        "bullet warning",
-        "preload associations"
-      ],
-      "queries_for_b": [
-        "latency budget regression",
-        "throughput regression",
-        "p95 spike"
-      ]
-    },
-    {
-      "a": "security",
-      "b": "secrets-scan",
-      "queries_for_a": [
-        "authorization gap",
-        "Brakeman finding",
-        "SQL injection check"
-      ],
-      "queries_for_b": [
-        "API key leaked in repo",
-        "credentials check before push",
-        "pre-push secret scan"
-      ]
-    },
-    {
-      "a": "active-record-patterns",
-      "b": "sequel-patterns",
-      "queries_for_a": [
-        "Active Record migration",
-        "AR association",
-        "ActiveRecord scope"
-      ],
-      "queries_for_b": [
-        "Sequel dataset",
-        "Sequel ORM model",
-        "Sequel migration file"
-      ]
-    },
-    {
-      "a": "runtime-integration",
-      "b": "rb-trace",
-      "queries_for_a": [
-        "Tidewave introspection",
-        "live runtime exec",
-        "running app query"
-      ],
-      "queries_for_b": [
-        "trace this request",
-        "follow the code path",
-        "where does the value change"
       ]
     }
   ],

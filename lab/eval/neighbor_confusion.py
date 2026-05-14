@@ -302,6 +302,24 @@ def main() -> int:
         print("neighbor_confusion: no skill descriptions loaded", file=sys.stderr)
         return 2
 
+    fixture_skills: set[str] = set()
+    for pair in fixture.get("pairs", []) or []:
+        for key in ("a", "b"):
+            if pair.get(key):
+                fixture_skills.add(str(pair[key]))
+    for skill in (fixture.get("forbidden") or {}).keys():
+        fixture_skills.add(str(skill))
+    hidden_in_fixture = sorted(fixture_skills & hidden)
+    if hidden_in_fixture:
+        print(
+            "neighbor_confusion: fixture references hidden (DMI) skills whose "
+            "descriptions are stripped from routing context — those probes are "
+            "structurally unwinnable. Drop or replace: "
+            + ", ".join(hidden_in_fixture),
+            file=sys.stderr,
+        )
+        return 2
+
     probes = _build_probes(fixture)
     if not probes:
         print("neighbor_confusion: no probes derived from fixture", file=sys.stderr)
