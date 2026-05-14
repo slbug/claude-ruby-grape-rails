@@ -137,6 +137,6 @@ See [Bridge Components](references/bridge-components.md) for component authoring
 
 ## See Also
 
-- [/hotwire-patterns](../hotwire-patterns/SKILL.md) — Turbo Frames, Streams, Stimulus
-- [/rails-contexts](../rails-contexts/SKILL.md) — Controllers, routing, contexts
+- [hotwire-patterns](../hotwire-patterns/SKILL.md) — Turbo Frames, Streams, Stimulus (NL-routed)
+- [rails-contexts](../rails-contexts/SKILL.md) — Controllers, routing, contexts (NL-routed)
 - [/rb:state-audit](../request-state-audit/SKILL.md) — Audit state management

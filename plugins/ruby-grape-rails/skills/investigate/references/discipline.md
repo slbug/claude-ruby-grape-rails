@@ -27,7 +27,3 @@ Practical rules for root-cause analysis. Not general debugging theory.
 2. **Minimal diff.** Change only what's needed to make the red test green. No adjacent "improvements".
 3. **Verify in runtime** — Tidewave / `rails runner` / `bin/rails console` — confirm the production-shaped path.
 4. **Check for similar bugs.** Same pattern elsewhere? Add coverage.
-
-## References
-
-- Parent skill: `/rb:investigate`

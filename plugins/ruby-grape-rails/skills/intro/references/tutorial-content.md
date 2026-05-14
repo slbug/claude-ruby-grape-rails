@@ -59,7 +59,6 @@ Each phase reads from the previous phase's output. Plans become checkboxes. Chec
 | 19 specialist agents | ActiveRecord, Hotwire, security, Sidekiq, deployment, provenance experts |
 | 52 skills | Commands for every phase of development |
 | 22 Iron Laws | Non-negotiable rules enforced automatically |
-| Domain reference skills | Routed to via NL on the description layer; reach manually via `/rb:*` slash invocation |
 | Runtime tooling integration | Runtime debugging when runtime tooling is connected |
 
 ---
