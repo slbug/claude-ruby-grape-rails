@@ -20,6 +20,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   failing (logged `[WARN] Skill 'X' specified in frontmatter was not
   found`). Un-DMI'ing makes the preloads valid and restores the
   intended skill-body context for both reviewer agents.
+- Moved `iron-laws` + `rb:research` from `hidden_skills` to
+  `visible_skills` in `references/skill-registry.yml`; regenerated
+  routing artifacts dropped them from the DMI roster table in
+  `intent-detection/SKILL.md` and from "Related — invoke manually if
+  needed" footers in hub skills (now auto-routed via description).
 - Trimmed visible-skill descriptions (iron-laws, research,
   intent-detection, testing, plan, security, active-record-patterns,
   hotwire-patterns) to fit the 25-visible skill set under the
