@@ -1,6 +1,6 @@
 ---
 name: rb:permissions
-description: "Analyzing recent Claude Code sessions to recommend safe Bash permission entries for Ruby/Rails/Grape workflows in settings.json. Reduces approval prompts by promoting frequently-used safe commands."
+description: "Analyzing recent Claude Code sessions to recommend safe Bash permissions entries for Ruby/Rails/Grape workflows in settings.json. Reduces approval prompts by promoting frequently-used safe commands into permissions allowlist."
 argument-hint: "[--days=14] [--limit=30] [--include-global] [--dry-run]"
 effort: low
 disable-model-invocation: true
