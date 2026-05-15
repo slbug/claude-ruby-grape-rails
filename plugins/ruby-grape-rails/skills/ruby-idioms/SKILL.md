@@ -1,14 +1,8 @@
 ---
 name: ruby-idioms
-description: "Use when writing core Ruby 3.4+/4.0-ready idioms: value objects, service objects, error handling, pattern matching, ractors, and frozen string patterns."
-when_to_use: "Triggers: \"Ruby idiom\", \"Ruby 3\", \"frozen string\", \"pattern matching\", \"ractor\"."
+description: "Plain Ruby idioms: value objects, error handling, pattern matching, ractors, YJIT. Triggers: \"frozen string literal\", \"plain Ruby code\", \"endless method\", \"value object\". Do NOT use for: Rails patterns."
 user-invocable: false
 effort: medium
-paths:
-  - "app/{errors,types,contracts,events,clients,chewy}/**"
-  - "**/app/{errors,types,contracts,events,clients,chewy}/**"
-  - "{packs,engines,components}/*/{errors,types,contracts,events,clients,chewy}/**"
-  - "app/{packages,packs}/*/{errors,types,contracts,events,clients,chewy}/**"
 ---
 # Ruby Idioms
 
@@ -259,6 +253,13 @@ end
 - Rescue Exception — rescue StandardError or specific types
 - Use eval with user input — use JSON.parse or YAML.safe_load
 
+## Plain-Ruby Boundaries
+
+- One object should have one reason to change
+- Boundary objects should make side effects obvious
+- Integration points should be wrapped behind project-owned APIs
+- Avoid framework leakage in plain Ruby business code where practical
+
 ## References
 
 | Need | Reference |
@@ -272,3 +273,9 @@ end
 | Rake task + Thor patterns | `${CLAUDE_SKILL_DIR}/references/rake-tasks.md` |
 | Ruby 3.4+ language features (`it`, endless methods, Data classes, Ractor, YJIT, ZJIT) | `${CLAUDE_SKILL_DIR}/references/ruby-34-features.md` |
 | anti-patterns / troubleshooting | `${CLAUDE_SKILL_DIR}/references/anti-patterns.md`, `${CLAUDE_SKILL_DIR}/references/troubleshooting.md` |
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Fiber concurrency / async-gem work → `/rb:async-patterns` (fiber concurrency)
+<!-- END-GENERATED related-footer -->

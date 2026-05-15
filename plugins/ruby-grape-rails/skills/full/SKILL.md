@@ -1,9 +1,9 @@
 ---
 name: rb:full
-description: "Use when running the end-to-end lifecycle: plan, work, verify, review, and compound chained in one command. Runs autonomously on the happy path; halts and asks the user on `/rb:verify --full` gate failure (HALTED_VERIFY_FAILED), review verdict BLOCKED (HALTED_REVIEW_BLOCKED), REQUIRES CHANGES (HALTED_REVIEW_REQUIRES_CHANGES), or missing/unparsable consolidated review (HALTED_REVIEW_UNKNOWN). Reaches COMPLETED autonomously once the compound solution doc is written — no final user-acknowledgment prompt."
-when_to_use: "Triggers: \"do everything\", \"full lifecycle\", \"hands-off\", \"plan and implement\", \"end to end\"."
+description: "Running the end-to-end Ruby/Rails/Grape lifecycle in one shot: plan → work → verify → review → compound, chained. Autonomous on happy path; halts on /rb:verify --full failure (HALTED_VERIFY_FAILED), BLOCKED review (HALTED_REVIEW_BLOCKED), REQUIRES CHANGES review (HALTED_REVIEW_REQUIRES_CHANGES), or unparsable review (HALTED_REVIEW_UNKNOWN)."
 argument-hint: "<feature description OR plan path>"
 effort: xhigh
+disable-model-invocation: true
 ---
 # Full Workflow
 

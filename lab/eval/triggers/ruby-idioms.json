@@ -12,6 +12,24 @@
     },
     {
       "prompt": "Rewrite this loop using blocks and enumerables"
+    },
+    {
+      "prompt": "I'm sick of this mess, just make it a proper value object already!"
+    },
+    {
+      "prompt": "Use endless method syntax here."
+    },
+    {
+      "prompt": "how to use frozen string literal?"
+    },
+    {
+      "prompt": "Please rewrite this using pattern matching."
+    },
+    {
+      "prompt": "Refactor this logic to utilize Ractors for parallelism."
+    },
+    {
+      "prompt": "Implement a service object for this controller."
     }
   ],
   "should_not_trigger": [
@@ -26,11 +44,23 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "How do I define a scope in ActiveRecord?"
+    },
+    {
+      "prompt": "Show me the Rails way to handle params."
+    },
+    {
+      "prompt": "What is the best way to use Devise?"
+    },
+    {
+      "prompt": "How do I add a migration for this table?"
     }
   ],
   "hard_should_trigger": [
     {
-      "prompt": "This method works but it's not very Rubyish — show me the elegant version",
+      "prompt": "This method works but it's not very Rubyish \u2014 show me the elegant version",
       "axis": "confusable"
     },
     {

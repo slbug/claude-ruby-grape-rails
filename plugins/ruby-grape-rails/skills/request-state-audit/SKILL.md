@@ -1,9 +1,9 @@
 ---
 name: rb:state-audit
-description: "Use when reviewing Rails request state: CurrentAttributes, sessions, caching, Redis."
-when_to_use: "Triggers: request state, CurrentAttributes, session leak."
+description: "Auditing Rails request-scoped state hygiene: CurrentAttributes, sessions, caching policies, Redis usage, request-lifecycle leaks between calls."
 argument-hint: "[path|feature]"
 effort: medium
+disable-model-invocation: true
 ---
 # Request State Audit
 

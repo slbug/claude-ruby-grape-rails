@@ -1,14 +1,8 @@
 ---
 name: hotwire-patterns
-description: "Use when implementing Hotwire, Turbo Frames, Turbo Streams, Stimulus controllers, Action Cable broadcasts, or server-rendered interaction patterns in Rails 7+ and 8+."
-when_to_use: "Triggers: \"Hotwire\", \"Turbo Frame\", \"Turbo Stream\", \"Stimulus\", \"Action Cable\", \"broadcast\"."
+description: "Hotwire in Rails: Turbo Frames, Streams, Stimulus, Action Cable. Triggers: \"live update no reload\", \"broadcast model changes\", \"stimulus controller\", \"real-time dashboard\". Do NOT use for: native mobile, jobs."
 user-invocable: false
 effort: medium
-paths:
-  - "app/views/**/*.{erb,haml,slim}"
-  - "app/{javascript,components,channels}/**"
-  - "**/app/views/**/*.{erb,haml,slim}"
-  - "**/app/{javascript,components,channels}/**"
 ---
 # Hotwire Patterns
 
@@ -169,6 +163,13 @@ connect() {
 
 ## See Also
 
-- [Hotwire Native](../hotwire-native/SKILL.md) — Mobile app patterns
+- [/rb:hotwire-native](../hotwire-native/SKILL.md) — Mobile app patterns
 - [Rails Contexts](../rails-contexts/SKILL.md) — Controllers and routing
 - [Request State Audit](../request-state-audit/SKILL.md) — Audit state management
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Request-state / session-leak hygiene check → `/rb:state-audit` (request-state hygiene)
+- iOS / Android Hotwire bridge work → `/rb:hotwire-native` (native mobile Hotwire)
+<!-- END-GENERATED related-footer -->

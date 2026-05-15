@@ -1,7 +1,6 @@
 ---
 name: rb:compression-report
-description: "Use when sharing verify-output compression telemetry with the plugin maintainers as an anonymized GitHub-issue-ready report. Drafts a redacted, actionable PII-safe report for the user to copy into a GitHub issue."
-when_to_use: "Triggers: \"share my compression stats\", \"send compression report\", \"compression telemetry report\", \"file compression issue\", \"contribute compression data\". Does NOT handle: per-run compression diagnosis (use Bash tool against compression-stats directly), changing rules.yml (edit the file)."
+description: "Drafting an anonymized GitHub-issue-ready report from verify-output compression telemetry: PII-redacted, actionable, user copies into a maintainer issue."
 argument-hint: "[--log PATH]"
 effort: medium
 user-invocable: true

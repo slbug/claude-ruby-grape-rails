@@ -1,7 +1,6 @@
 ---
 name: rb:init
-description: "Use when initializing the Ruby/Rails/Grape plugin in a project. Writes a managed block of project-specific stack notes (queue list, ORM-per-package map, package layout) into CLAUDE.md. Reaches the MAIN session and any subagents that opt in to CLAUDE.md; specialist subagents with `omitClaudeMd: true` (most reviewers/analyzers) do NOT see the block. Iron Laws + Advisory Preferences reach all subagents via the `inject-rules.sh` SessionStart + SubagentStart hooks regardless."
-when_to_use: "Triggers: \"initialize plugin\", \"setup ruby plugin\", \"install plugin\", \"configure Claude for Rails\"."
+description: "Initializing the Ruby/Rails/Grape plugin: writes stack notes (queues, ORM-per-package, layout) into CLAUDE.md. Triggers: \"initialize plugin\", \"setup ruby plugin\", \"configure Claude for Rails\"."
 argument-hint: "[--update]"
 effort: low
 ---
@@ -67,10 +66,10 @@ Use Ruby for detection (avoids fragile shell pipelines):
 
 When building the injected header:
 
-- compose the stack-version comment line from `{STACK_HEADER}` per
-  `${CLAUDE_SKILL_DIR}/references/conditional-sections.md`
-  § "Placeholder Substitution". Omit absent `*_VERSION` keys; never
-  emit bare label without version
+- compose the stack-version comment line from `{STACK_HEADER}` per the
+  Placeholder Substitution section of
+  `${CLAUDE_SKILL_DIR}/references/conditional-sections.md`. Omit absent
+  `*_VERSION` keys; never emit bare label without version
 - prefer detected version values from `detect-stack` / cached runtime state instead of hardcoded examples
 - avoid degrading locked versions to `detected`
 - use `DETECTED_ORMS` to distinguish Active Record, Sequel, and mixed ORM repositories
@@ -150,8 +149,7 @@ Inject ONLY project-specific stack notes:
 
 - stack-version comment header: `{STACK_HEADER}` +
   `Betterleaks: {BETTERLEAKS_STATUS}` + `plugin v{PLUGIN_VERSION}`.
-  Composition rule:
-  `${CLAUDE_SKILL_DIR}/references/conditional-sections.md`
+  Composition rule: see `${CLAUDE_SKILL_DIR}/references/conditional-sections.md`
   § "Placeholder Substitution".
 - conditional sections from `detect-stack` output + targeted
   interview answers — queue list, ORM-per-package map, Karafka
@@ -259,8 +257,17 @@ in `~/.claude/settings.json`:
 
 …or set `SLASH_COMMAND_TOOL_CHAR_BUDGET=10000`.
 
-CC truncates combined `description` + `when_to_use` per skill at 1,536
-chars regardless of budget; aggregate truncation drops tail-skill
-descriptions silently when over budget. See
+CC caps `description` per skill (agentskills.io canon: ≤1,024 chars).
+When the aggregate listing exceeds the routing-prompt budget, CC drops
+tail-skill descriptions silently. See
 [Claude Code skills docs](https://code.claude.com/docs/en/skills),
 "Skill descriptions are cut short" troubleshooting section.
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Onboarding new contributor → `/rb:intro` (onboarding)
+- Permission prompts noisy / need tuning → `/rb:permissions` (permission tuning)
+- Pre-push secret check → `/rb:secrets` (pre-push secret scan)
+- Codebase health snapshot → `/rb:audit` (project-wide audit)
+<!-- END-GENERATED related-footer -->

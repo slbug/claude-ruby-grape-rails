@@ -1,7 +1,6 @@
 ---
 name: rails-contexts
-description: "Use when deciding where business logic belongs in Rails: controllers, services, forms, queries, policies, serializers, and mounted Grape APIs."
-when_to_use: "Triggers: \"where does this go\", \"service object\", \"form object\", \"query object\", \"policy\", \"serializer\"."
+description: "Deciding where Rails logic belongs: controllers, services, forms, queries, policies, serializers. Triggers: \"where does this go\", \"extract service\", \"form object pattern\", \"Pundit policy\"."
 user-invocable: false
 effort: medium
 ---
@@ -32,3 +31,9 @@ effort: medium
 | JSON / API controller, serializer, JSON:API, JWT auth | `${CLAUDE_SKILL_DIR}/references/json-api-patterns.md` |
 | middleware + before-action filter patterns | `${CLAUDE_SKILL_DIR}/references/middleware-before-action-patterns.md` |
 | Pundit / CanCanCan + manual authorization + multi-tenant scopes | `${CLAUDE_SKILL_DIR}/references/scopes-auth.md` |
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- dry-rb gem patterns (validation, types, monads) → `/rb:dry-rb-patterns` (dry-rb gem patterns)
+<!-- END-GENERATED related-footer -->

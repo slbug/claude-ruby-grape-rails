@@ -1,7 +1,6 @@
 ---
 name: rb:verify
-description: "Use when you need to verify completed code with the project's strongest check stack. Prefer a repo-native CI wrapper when present, otherwise run Zeitwerk, lint, tests, Brakeman, security, and migration checks."
-when_to_use: "Triggers: \"verify my work\", \"run checks\", \"run tests and lint\", \"is my code passing\", \"CI check\". Does NOT handle: code review, planning, implementation."
+description: "Strongest check stack on Ruby/Rails/Grape: CI wrapper if present, else Zeitwerk + lint + tests + Brakeman. Stops at first failure. Triggers: \"verify my work\", \"run checks\", \"CI check\"."
 argument-hint: "[--quick|--full]"
 effort: low
 ---
@@ -354,3 +353,10 @@ See: [references/ci-cd-troubleshooting.md](references/ci-cd-troubleshooting.md) 
 | `bundle exec rspec` | Run tests |
 | `bundle exec rails test` | Run Minitest |
 | `bundle exec rails db:migrate:status` | Check migrations |
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Pre-push secret check → `/rb:secrets` (pre-push secret scan)
+- Kamal / Docker deploy configuration → `/rb:deploy` (deployment configuration)
+<!-- END-GENERATED related-footer -->

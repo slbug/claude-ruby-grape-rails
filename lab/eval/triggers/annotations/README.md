@@ -12,7 +12,7 @@ Each file is `{skill}_annotations.json`:
   "annotations": {
     "Plan a new Sidekiq retry workflow|true": {
       "failure_attribution": "router_defect",
-      "note": "Haiku consistently preferred brainstorm"
+      "note": "router consistently preferred brainstorm"
     }
   }
 }
@@ -25,7 +25,7 @@ Key format: `{prompt_text}|{expected_bool}` (stable across reruns).
 - `router_defect` -- skill description needs tuning
 - `corpus_defect` -- test prompt is misleading or wrong
 - `ambiguity_mislabel` -- should be fork, not lock (or vice versa)
-- `judge_artifact` -- order-bias or stochastic Haiku behavior
+- `judge_artifact` -- order-bias or stochastic router behavior
 - `unknown` -- needs further investigation
 
 ## Workflow

@@ -130,6 +130,39 @@
             "async": true
           }
         ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "timeout": 15,
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "timeout": 15,
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "timeout": 15,
+            "async": true
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -422,6 +455,12 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/compress-verify-output.rb",
             "timeout": 30,
             "async": true
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "timeout": 15,
+            "async": true
           }
         ]
       }
@@ -531,6 +570,36 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session-title.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "timeout": 15,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "timeout": 15,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolBatch": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "timeout": 15,
+            "async": true
           }
         ]
       }

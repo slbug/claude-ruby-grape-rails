@@ -1,9 +1,21 @@
 ---
-applyTo: "**/*.sh"
+applyTo:
+  - "**/*.sh"
+  - "**/hooks/scripts/*.rb"
+  - "**/bin/*"
 excludeAgent: "coding-agent"
 ---
 
 # Shell Script and Hook Review Rules
+
+Scope: shell hook scripts under `plugins/**/hooks/scripts/*.sh`, Ruby hook
+scripts under `plugins/**/hooks/scripts/*.rb` (e.g.
+`compress-verify-output.rb`, `skill-discovery-observer.rb`), and shipped
+binaries under `plugins/**/bin/*`. Shell-specific rules below apply to
+`.sh` scripts; Ruby hooks follow the cross-cutting hook conventions
+(`# Policy:` header, opt-in env var short-circuit before side effects,
+file mode 0o600 on telemetry artifacts, symlink-refusal on
+`${CLAUDE_PLUGIN_DATA}` before mkdir_p/writes).
 
 ## Audience: Agents, Not Humans
 
@@ -129,6 +141,23 @@ zero residue on the user's data dir, transcript, or context.
   `rm`-ready nudge when telemetry on disk crosses
   `references/compression/rules.yml` `advisory.size_threshold_bytes`
   or `advisory.sample_threshold`.
+- `RUBY_PLUGIN_DISCOVERY_LOG=1` — `skill-discovery-observer.rb`.
+  When unset (default), the skill-discovery telemetry collector is a
+  no-op. When set, the hook appends to
+  `${CLAUDE_PLUGIN_DATA}/discovery.jsonl` per matched trigger row from
+  `references/discovery/triggers.yml`. Logs `would_inject` candidates
+  only — never actually injects, never alters main-session context.
+  Registered on `UserPromptSubmit`, `UserPromptExpansion`,
+  `PostToolUse:Edit/Write/Bash`, `PostToolUseFailure:Bash`, and
+  `PostToolBatch`. Refuses symlinked `${CLAUDE_PLUGIN_DATA}` before
+  `mkdir_p`/writes. File mode 0o600. 8 MiB input cap; per-event
+  throttle simulation keyed by `session_id::skill` (20-event cap per
+  session × skill pair, not per session overall).
+- `RUBY_PLUGIN_DISCOVERY_LOG_EXCERPTS=1` — opt-in companion to
+  `RUBY_PLUGIN_DISCOVERY_LOG`. When set, captures short matched-text
+  excerpts (truncated, redacted per skill policy) into the same JSONL
+  for later trigger-row tuning. When unset, only structural fields
+  (skill candidate, hook event, trigger row hash) are logged.
 
 When reviewing changes that introduce a new opt-in env var, also
 update this list and ensure the hook's `# Policy:` header documents

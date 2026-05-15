@@ -1,7 +1,6 @@
 ---
 name: rb:provenance-scan
-description: "Use when auditing existing research/review `*.provenance.md` sidecars under `.claude/`. Classifies each by `trust_state` (clean / weak / conflicted / missing) and writes a dated Markdown report of the distribution and per-file breakdown."
-when_to_use: "Triggers: \"scan provenance\", \"audit research quality\", \"check trust states\", \"provenance distribution\", \"how clean is my research\". Pure post-hoc analysis of artifacts already on disk; no model calls, no network. Does NOT handle: producing sidecars (use `/rb:research` / `/rb:review`), fixing weak claims (re-run the producing skill), grading code or factual accuracy of claims."
+description: "Auditing research/review `*.provenance.md` sidecars under `.claude/`: classifies each by trust_state (clean / weak / conflicted / missing) and writes a dated report. Pure post-hoc disk analysis; no model calls, no network."
 argument-hint: "[--root PATH]"
 effort: low
 user-invocable: true

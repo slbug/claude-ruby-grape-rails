@@ -7,7 +7,7 @@ from lab.eval import matchers
 
 SAMPLE = """---
 name: rb:sample
-description: Use for Ruby verification and review workflows with Rails context.
+description: "Verifying Ruby/Rails work. Triggers: \\"run checks\\", \\"verify my work\\". Do NOT use for: writing tests."
 tools:
   - Read
 ---
@@ -85,15 +85,36 @@ Additional notes.
         passed, _ = matchers.description_structure(SAMPLE)
         self.assertTrue(passed)
 
-    def test_description_structure_returns_failure_specific_evidence(self) -> None:
+    def test_description_structure_rejects_empty_description(self) -> None:
         content = """---
 name: rb:sample
-description: Ruby workflow helper for local changes.
+description: ""
 ---
 """
         passed, evidence = matchers.description_structure(content)
         self.assertFalse(passed)
-        self.assertIn("missing explicit use/intent framing", evidence)
+        self.assertIn("description empty", evidence)
+
+    def test_description_structure_rejects_missing_triggers_marker(self) -> None:
+        content = """---
+name: rb:sample
+description: "Verifying Ruby work without any structured marker."
+---
+"""
+        passed, evidence = matchers.description_structure(content)
+        self.assertFalse(passed)
+        self.assertIn("Triggers:", evidence)
+
+    def test_description_structure_exempts_dmi_skills(self) -> None:
+        content = """---
+name: rb:dmi-sample
+description: "Manual-only verification skill."
+disable-model-invocation: true
+---
+"""
+        passed, evidence = matchers.description_structure(content)
+        self.assertTrue(passed)
+        self.assertIn("DMI", evidence)
 
     def test_valid_skill_refs_accepts_frontmatter_command_aliases(self) -> None:
         content = "Use /rb:runtime and /rb:trace when runtime debugging needs live inspection."

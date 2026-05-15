@@ -13,6 +13,7 @@ from lab.eval.trigger_scorer import (
     PROMPT_BUCKETS,
     build_confusable_pairs,
     load_all_routing_descriptions,
+    load_hidden_skills,
     load_trigger_file,
 )
 
@@ -28,7 +29,12 @@ def _extract_prompt(item):
 
 
 def main() -> None:
-    descriptions = load_all_routing_descriptions()
+    hidden = load_hidden_skills()
+    descriptions = {
+        name: desc
+        for name, desc in load_all_routing_descriptions().items()
+        if name not in hidden
+    }
     confusable = build_confusable_pairs(descriptions, limit=15)
     corpus = []
 

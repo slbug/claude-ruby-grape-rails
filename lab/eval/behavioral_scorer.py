@@ -1,8 +1,10 @@
 """Behavioral trigger evaluation.
 
 Tests whether an LLM routes user prompts to the correct skill by sending all
-skill routing descriptions + one test prompt to the active provider (Ollama
-Gemma4 by default, apfel/haiku as alternatives).
+skill routing descriptions + one test prompt to the active provider. Ollama
+(local Gemma4 by default) is the only provider currently wired. Adding a
+new provider is pluggable: extend `results_dir.SUPPORTED_PROVIDERS`, add a
+`_PROVIDER_SETTINGS` entry, and add a dispatch branch in `_run_provider`.
 
 Usage:
     python3 -m lab.eval.behavioral_scorer --skill plan          # Test one skill
@@ -13,10 +15,8 @@ Usage:
     python3 -m lab.eval.behavioral_scorer --skill plan --rotations 5  # Order-bias control
     python3 -m lab.eval.behavioral_scorer --skill plan --samples 3    # pass@k robustness
 
-Cost: Provider-dependent. Ollama and apfel run locally at $0. Haiku uses
---bare mode (~$0.006/call avg, varies by skill complexity). Full 51-skill run
-with haiku (621 prompts): ~$3.70 single-shot, ~$19 with rotations 5, ~$11
-with samples 3.
+Cost: Ollama runs locally at $0. Future cloud providers (e.g., Microsoft
+Waza) plug into the same dispatch and add their own per-call cost notes.
 """
 
 
@@ -39,6 +39,7 @@ from . import results_dir as rd
 from .results_dir import SUPPORTED_PROVIDERS
 from .trigger_scorer import (
     load_all_routing_descriptions,
+    load_hidden_skills,
     load_trigger_file,
     routing_descriptions_blob,
     RoutingDescription,
@@ -54,14 +55,6 @@ log = logging.getLogger("behavioral_scorer")
 # rd.active_results_dir() at use-sites so CLI --provider flips and env-var
 # overrides propagate without per-module synchronization.
 
-# Resolved settings path — defaults to bare_settings.json, replaced at
-# startup when a temp auth settings file is needed (see eval_auth).
-from .eval_auth import BARE_SETTINGS_PATH
-from .eval_auth import cleanup_settings as _shared_cleanup_settings
-from .eval_auth import resolve_settings_path as _shared_resolve_settings_path
-
-_resolved_settings_path: str = str(BARE_SETTINGS_PATH)
-
 _ROUTING_SYSTEM_PROMPT = (
     "You are a skill router. Given a list of skills and a user message, "
     "reply with ONLY the skill name(s) that should be loaded, one per line. "
@@ -69,8 +62,8 @@ _ROUTING_SYSTEM_PROMPT = (
     "NEVER add explanations, code examples, or commentary. Output ONLY skill names or 'none'."
 )
 
-ROUTING_PROMPT_VERSION = "description_when_to_use_v1"
-ROUTING_FIELDS = ("description", "when_to_use")
+ROUTING_PROMPT_VERSION = "description_only_v1"
+ROUTING_FIELDS = ("description",)
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -78,22 +71,14 @@ class ProviderSettings:
     model: str
     prompt_policy: str
     description_limit: int | None = None
-    when_to_use_limit: int | None = None
 
 
+# Pluggable provider table. Add a new provider by appending its name to
+# `results_dir.SUPPORTED_PROVIDERS`, adding a ProviderSettings entry here,
+# and adding a dispatch branch in `_run_provider`.
 _PROVIDER_SETTINGS: dict[str, ProviderSettings] = {
     "ollama": ProviderSettings(
         model=rd.DEFAULT_OLLAMA_MODEL,
-        prompt_policy="full",
-    ),
-    "apfel": ProviderSettings(
-        model="apple-foundationmodel",
-        prompt_policy="strip_to_size",
-        description_limit=70,
-        when_to_use_limit=70,
-    ),
-    "haiku": ProviderSettings(
-        model="haiku",
         prompt_policy="full",
     ),
 }
@@ -168,23 +153,13 @@ def _format_routing_description_for_prompt(
     """Format one skill's routing text for the active provider prompt policy."""
     if isinstance(value, Mapping):
         desc = str(value.get("description", "")).strip()
-        when = str(value.get("when_to_use", "")).strip()
         if settings.prompt_policy == "strip_to_size":
             desc = _truncate_for_prompt(desc, settings.description_limit)
-            when = _truncate_for_prompt(when, settings.when_to_use_limit)
-        parts = []
-        if desc:
-            parts.append(desc)
-        if when:
-            parts.append(f"When to use: {when}")
-        return " ".join(parts)
+        return desc
 
     text = routing_description_text(value)
     if settings.prompt_policy == "strip_to_size":
-        limit = None
-        if settings.description_limit is not None and settings.when_to_use_limit is not None:
-            limit = settings.description_limit + settings.when_to_use_limit
-        return _truncate_for_prompt(text, limit)
+        return _truncate_for_prompt(text, settings.description_limit)
     return text
 
 
@@ -219,7 +194,6 @@ def _prompt_limits(settings: ProviderSettings) -> dict[str, int | None]:
     """Return prompt-size limits that affect cache compatibility."""
     return {
         "description": settings.description_limit,
-        "when_to_use": settings.when_to_use_limit,
     }
 
 
@@ -260,198 +234,8 @@ _executor_lock = threading.Lock()
 from .eval_logging import emit_info as _emit_info, verbose_lock as _verbose_lock
 
 
-def run_haiku(
-    prompt: str, verbose: bool = False, log_buf: list[str] | None = None
-) -> CallResult:
-    """Ask haiku which skill(s) to route to. Returns CallResult."""
-
-    def _log(msg: str) -> None:
-        if log_buf is not None:
-            log_buf.append(msg)
-        else:
-            _emit_info(msg)
-
-    settings_path = _resolved_settings_path
-    try:
-        result = subprocess.run(
-            [
-                "claude",
-                "--bare",
-                "--settings",
-                settings_path,
-                "-p",
-                "-",
-                "--model",
-                "haiku",
-                "--system-prompt",
-                _ROUTING_SYSTEM_PROMPT,
-                "--tools",
-                "",
-                "--max-turns",
-                "1",
-                "--output-format",
-                "json",
-                "--max-budget-usd",
-                "0.10",
-                "--no-session-persistence",
-            ],
-            input=prompt,
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        # Try parsing JSON even on non-zero exit (claude returns JSON with error info)
-        error_type = None
-        try:
-            data = json.loads(result.stdout)
-        except json.JSONDecodeError:
-            data = None
-
-        if result.returncode != 0 or (data and data.get("is_error")):
-            if data:
-                subtype = data.get("subtype", "")
-                message = str(data.get("message", "")).lower()
-                blob = f"{subtype} {message}".lower()
-                if "budget" in blob:
-                    error_type = "budget"
-                elif "max_turns" in blob:
-                    error_type = "max_turns"
-                elif (
-                    "context_length" in blob
-                    or "context_overflow" in blob
-                    or "too_large" in blob
-                ):
-                    error_type = "context_overflow"
-                elif "safety" in blob or "policy" in blob or "guardrail" in blob:
-                    error_type = "guardrail_blocked"
-                elif "rate_limit" in blob or "rate-limit" in blob:
-                    error_type = "rate_limited"
-                else:
-                    error_type = "unknown"
-            else:
-                error_type = "unknown"
-            if verbose:
-                _log(f"--- RESPONSE (rc={result.returncode}, error={error_type}) ---")
-                _log(result.stdout.strip()[:200] or "(empty)")
-                if result.stderr.strip():
-                    _log(f"STDERR: {result.stderr.strip()[:200]}")
-                _log("--- END RESPONSE ---")
-            return CallResult(skills=None, error_type=error_type)
-
-        if data is None:
-            if verbose:
-                _log("ERROR: could not parse JSON response")
-            return CallResult(skills=None, error_type="parse_error")
-
-        text = data.get("result", "")
-        cost = data.get("total_cost_usd", 0)
-        usage = data.get("usage", {})
-        in_tok = (
-            usage.get("input_tokens", 0)
-            + usage.get("cache_creation_input_tokens", 0)
-            + usage.get("cache_read_input_tokens", 0)
-        )
-        out_tok = usage.get("output_tokens", 0)
-
-        if verbose:
-            _log(f"--- RESPONSE (${cost:.4f}, {in_tok}in/{out_tok}out) ---")
-            _log(text.strip() or "(empty)")
-            _log("--- END RESPONSE ---")
-
-        skills = []
-        for line in text.strip().split("\n"):
-            line = line.strip().lstrip("-*0123456789.) ").strip()
-            if " — " in line:
-                line = line.split(" — ")[0].strip()
-            if " (" in line:
-                line = line.split(" (")[0].strip()
-            if " -" in line:
-                line = line.split(" -")[0].strip()
-            line = line.strip("`").strip()
-            if line and line.lower() != "none" and not line.startswith("No "):
-                skills.append(line)
-        return CallResult(
-            skills=skills, cost=cost, input_tokens=in_tok, output_tokens=out_tok
-        )
-
-    except subprocess.TimeoutExpired:
-        if verbose:
-            _log("TIMEOUT after 60s")
-        return CallResult(skills=None, error_type="timeout")
-    except FileNotFoundError as exc:
-        # `claude` CLI not on PATH.
-        if verbose:
-            _log(f"ERROR: {exc}")
-        return CallResult(skills=None, error_type="dependency_missing")
-    except Exception as exc:
-        exc_lower = str(exc).lower()
-        # Coarse classification mirrors run_apfel so failure_types stays
-        # actionable across providers.
-        if "rate" in exc_lower and "limit" in exc_lower:
-            et = "rate_limited"
-        elif "connection" in exc_lower or "refused" in exc_lower:
-            et = "server_unavailable"
-        elif "timed out" in exc_lower or "timeout" in exc_lower:
-            et = "timeout"
-        else:
-            et = "unknown"
-        if verbose:
-            _log(f"ERROR ({et}): {exc}")
-        return CallResult(skills=None, error_type=et)
-
-
-_apfel_client = None
-_apfel_server_proc = None
-# Path to the temp file receiving spawned apfel's stderr. Kept so we can
-# surface its tail in the RuntimeError on startup/readiness failure, and
-# unlink it in _stop_apfel_server. Written only under _apfel_server_lock.
-_apfel_stderr_path: str | None = None
-_apfel_server_lock = threading.Lock()
-_apfel_client_lock = threading.Lock()
-
-
-def _get_apfel_port() -> int:
-    """Parse APFEL_PORT env var, falling back to default on invalid values.
-
-    Validates the parsed value is within the TCP port range (1-65535); a
-    negative or out-of-range number would later cause confusing urlopen
-    failures rather than a clear config error.
-    """
-    default_port = 11434
-    raw_port = os.environ.get("APFEL_PORT")
-    if raw_port is None:
-        return default_port
-    try:
-        port = int(raw_port)
-    except ValueError:
-        log.warning(
-            "Invalid APFEL_PORT %r; falling back to default port %d",
-            raw_port,
-            default_port,
-        )
-        return default_port
-    if not 1 <= port <= 65535:
-        log.warning(
-            "APFEL_PORT %r is out of TCP port range (1-65535); "
-            "falling back to default port %d",
-            raw_port,
-            default_port,
-        )
-        return default_port
-    return port
-
-
-def _get_apfel_host() -> str:
-    """Return APFEL_HOST env var, defaulting to loopback.
-
-    Deferred like _get_apfel_port() so haiku-only / cache-only runs never
-    touch apfel config at import time.
-    """
-    return os.environ.get("APFEL_HOST", "127.0.0.1")
-
-
-def _normalize_apfel_base_url(url: str) -> str:
-    """Normalize APFEL_BASE_URL for urlsplit parsing.
+def _normalize_openai_compatible_base_url(url: str) -> str:
+    """Normalize an OpenAI-compatible base URL for urlsplit parsing.
 
     Users commonly set values like ``127.0.0.1:11434/v1`` or
     ``localhost:11434/v1`` (no scheme). urlsplit mis-parses both — the first
@@ -468,35 +252,13 @@ def _normalize_apfel_base_url(url: str) -> str:
     parsed = urllib.parse.urlsplit(candidate)
     if not parsed.hostname:
         raise RuntimeError(
-            f"Invalid APFEL_BASE_URL {url!r}: could not parse host. "
+            f"Invalid OpenAI-compatible base URL {url!r}: could not parse host. "
             f"Expected form: http://host:port/v1"
         )
     return candidate
 
 
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
-
-
-# APFEL_BASE_URL is resolved lazily: haiku-only and cache-only runs must not
-# fail at import just because a user has an invalid APFEL_BASE_URL set.
-_apfel_base_url_cache: str | None = None
-
-
-def _get_apfel_base_url() -> str:
-    """Return the normalized APFEL_BASE_URL, validating once.
-
-    Lazy so importing this module never throws on bad apfel config — only
-    paths that actually use apfel (_ensure_apfel_server, _get_apfel_client)
-    hit the validation. Cached after first successful call.
-    """
-    global _apfel_base_url_cache
-    if _apfel_base_url_cache is None:
-        raw = os.environ.get(
-            "APFEL_BASE_URL",
-            f"http://{_get_apfel_host()}:{_get_apfel_port()}/v1",
-        )
-        _apfel_base_url_cache = _normalize_apfel_base_url(raw)
-    return _apfel_base_url_cache
 
 
 _ollama_client = None
@@ -519,7 +281,7 @@ def _normalize_ollama_base_url(url: str) -> str:
     import urllib.parse
 
     try:
-        candidate = _normalize_apfel_base_url(url)
+        candidate = _normalize_openai_compatible_base_url(url)
     except RuntimeError as exc:
         raise RuntimeError(
             f"Invalid RUBY_PLUGIN_EVAL_OLLAMA_BASE_URL {url!r}: could not "
@@ -554,7 +316,7 @@ def _get_ollama_base_url() -> str:
 
 
 def _derive_health_url(base_url: str) -> str:
-    """Derive an apfel /health URL from an OpenAI-style base URL.
+    """Derive a /health URL from an OpenAI-style base URL.
 
     Strips a trailing /v1 (the OpenAI chat endpoint path) and replaces it with
     /health so the probe hits the same host:port the client will talk to.
@@ -706,8 +468,8 @@ def _ensure_ollama_server():
         if not is_localhost:
             raise RuntimeError(
                 f"Remote Ollama at {version_url} is unreachable. "
-                "Start the remote server, unset RUBY_PLUGIN_EVAL_OLLAMA_BASE_URL "
-                "to auto-spawn locally, or pass --provider haiku/apfel."
+                "Start the remote server or unset RUBY_PLUGIN_EVAL_OLLAMA_BASE_URL "
+                "to auto-spawn locally."
             )
 
         ollama_host = url_parts.hostname
@@ -753,7 +515,7 @@ def _ensure_ollama_server():
             _ollama_stderr_path = None
             raise RuntimeError(
                 "Failed to start Ollama server: 'ollama' was not found on PATH. "
-                "Install Ollama or pass --provider haiku/apfel."
+                "Install Ollama from https://ollama.com."
             ) from exc
         except OSError as exc:
             try:
@@ -763,8 +525,7 @@ def _ensure_ollama_server():
             _ollama_stderr_path = None
             raise RuntimeError(
                 f"Failed to start Ollama server with 'ollama serve': {exc}. "
-                "Check that the ollama binary is executable or pass "
-                "--provider haiku/apfel."
+                "Check that the ollama binary is executable."
             ) from exc
         finally:
             os.close(stderr_fd)
@@ -877,6 +638,39 @@ def _get_ollama_client():
     return _ollama_client
 
 
+def ollama_chat(
+    system_prompt: str,
+    user_prompt: str,
+    *,
+    max_tokens: int = 256,
+    reasoning_effort: str = "none",
+    timeout: float | None = None,
+) -> str:
+    """Single-shot Ollama chat call. Returns raw response text.
+
+    Thin generic helper for callers that need a non-routing prompt
+    (e.g. semantic-confusable-pairs generation, future tools). Reuses the
+    same client + server lifecycle as run_ollama. Caller picks max_tokens
+    + reasoning_effort to fit the task. Raises on transport errors.
+    """
+    model = rd.resolve_ollama_model()
+    client = _get_ollama_client()
+    create_kwargs = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0,
+        "max_tokens": max_tokens,
+        "extra_body": {"reasoning_effort": reasoning_effort},
+    }
+    if timeout is not None:
+        create_kwargs["timeout"] = timeout
+    resp = client.chat.completions.create(**create_kwargs)
+    return (resp.choices[0].message.content or "").strip()
+
+
 def run_ollama(
     prompt: str, verbose: bool = False, log_buf: list[str] | None = None
 ) -> CallResult:
@@ -976,360 +770,18 @@ def run_ollama(
         return CallResult(skills=None, error_type=error_type)
 
 
-def _ensure_apfel_server():
-    """Start apfel --serve if not already running, wait for readiness.
-
-    Safe to call from worker threads via _get_apfel_client(): the module-level
-    lock keeps the check+spawn atomic so concurrent callers don't race to
-    spawn multiple apfel processes on the same port.
-
-    When APFEL_BASE_URL points at a non-loopback host, the user is pointing at
-    a remote apfel — health-probe it but do not auto-spawn anything locally.
-    """
-    global _apfel_server_proc
-    import urllib.parse
-    import urllib.request
-    import urllib.error
-
-    base_url = _get_apfel_base_url()
-    url_parts = urllib.parse.urlsplit(base_url)
-    health_url = _derive_health_url(base_url)
-    is_localhost = _is_loopback_base_url(base_url)
-
-    # Reject unsupported localhost path prefixes that would cause auto-spawn
-    # to listen at root while probes go to a prefixed path (guaranteed timeout).
-    if is_localhost:
-        normalized_path = (url_parts.path or "").rstrip("/") or "/"
-        if normalized_path not in {"/", "/v1"}:
-            raise RuntimeError(
-                f"Unsupported localhost APFEL_BASE_URL path prefix "
-                f"{url_parts.path!r}. Local apfel auto-spawn only works with a root "
-                "base URL such as 'http://localhost:11434' or "
-                "'http://localhost:11434/v1'. If you are using a proxied/prefixed "
-                "endpoint, manage that server separately and point APFEL_BASE_URL at "
-                "the remote/proxied service, or pass --provider haiku."
-            )
-
-    with _apfel_server_lock:
-        if _apfel_server_proc is not None:
-            if _apfel_server_proc.poll() is None:
-                return
-            # Cached handle but process has exited — clear and respawn.
-            log.warning("Cached apfel server process exited; restarting.")
-            _apfel_server_proc = None
-
-        # Check if already up
-        try:
-            with urllib.request.urlopen(health_url, timeout=2):
-                return  # server already running
-        except (urllib.error.URLError, OSError):
-            pass
-
-        # Remote APFEL_BASE_URL: the user manages the server elsewhere. Don't
-        # try to spawn locally — surface a clear error so they fix config or
-        # start their remote apfel.
-        if not is_localhost:
-            raise RuntimeError(
-                f"Remote apfel at {health_url} is unreachable. "
-                f"Start the remote server, unset APFEL_BASE_URL to auto-spawn "
-                f"locally, or pass --provider haiku."
-            )
-
-        # Start server — fixed --max-concurrent 16 covers typical worker counts
-        # (--workers is capped at 32 but typical runs use 1-10); --permissive
-        # reduces guardrail false positives on technical prompts.
-        # Use already-parsed host/port so the spawned server listens on
-        # the same address the probe will check (respects APFEL_BASE_URL config).
-        apfel_host = url_parts.hostname
-        apfel_port = str(url_parts.port) if url_parts.port is not None else None
-        if apfel_host is None or apfel_port is None:
-            raise RuntimeError(
-                f"Cannot auto-start local apfel for malformed APFEL_BASE_URL: "
-                f"{base_url!r}. Set a valid local host:port or unset "
-                f"APFEL_BASE_URL/APFEL_HOST/APFEL_PORT."
-            )
-
-        serve_cmd = [
-            "apfel",
-            "--serve",
-            "--host",
-            apfel_host,
-            "--port",
-            apfel_port,
-            "--max-concurrent",
-            "16",
-            "--permissive",
-        ]
-        _emit_info(
-            f"Starting apfel --serve --host {apfel_host} --port {apfel_port} ..."
-        )
-        # Route apfel's stderr to a temp file so we can surface its tail when
-        # spawn fails, readiness times out, or the process exits early. Using
-        # a file (not PIPE) avoids blocking on a full pipe buffer while apfel
-        # runs successfully and writes normal stderr chatter.
-        import tempfile
-        global _apfel_stderr_path
-        stderr_fd, stderr_path = tempfile.mkstemp(
-            prefix="apfel-stderr-", suffix=".log"
-        )
-        _apfel_stderr_path = stderr_path
-        try:
-            _apfel_server_proc = subprocess.Popen(
-                serve_cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=stderr_fd,
-            )
-        except FileNotFoundError as exc:
-            # fd and tempfile are cleaned up below in `finally`; here we just
-            # remove the temp file that's now useless and re-raise with an
-            # actionable message.
-            try:
-                os.unlink(stderr_path)
-            except OSError:
-                pass
-            _apfel_stderr_path = None
-            raise RuntimeError(
-                "Failed to start apfel server: 'apfel' was not found on PATH. "
-                "Install apfel or pass --provider haiku."
-            ) from exc
-        finally:
-            # Subprocess has its own dup'd fd on success; on failure our fd
-            # is still open. Single close covers both paths.
-            os.close(stderr_fd)
-        atexit.register(_stop_apfel_server)
-
-        def _read_apfel_stderr_tail(limit: int = 1000) -> str:
-            try:
-                with open(stderr_path, encoding="utf-8", errors="replace") as fh:
-                    data = fh.read()
-            except OSError:
-                return ""
-            tail = data[-limit:]
-            if len(data) > limit:
-                tail = f"...\n{tail}"
-            return tail.strip()
-
-        # Wait for readiness (up to 10s). Poll process liveness each tick so
-        # an early exit (e.g., port-in-use) surfaces immediately instead of
-        # waiting out the full readiness window.
-        import time
-        for _ in range(20):
-            exit_code = _apfel_server_proc.poll()
-            if exit_code is not None:
-                stderr_tail = _read_apfel_stderr_tail()
-                _stop_apfel_server()
-                msg = (
-                    f"apfel --serve exited with code {exit_code} before "
-                    f"becoming ready."
-                )
-                if stderr_tail:
-                    msg += f" stderr tail:\n{stderr_tail}"
-                raise RuntimeError(msg)
-            try:
-                with urllib.request.urlopen(health_url, timeout=1):
-                    _emit_info("apfel server ready.")
-                    return
-            except (urllib.error.URLError, OSError):
-                time.sleep(0.5)
-        # Readiness timed out — tear down the half-started process so we don't
-        # leak it and so the next _ensure_apfel_server() call can retry.
-        stderr_tail = _read_apfel_stderr_tail()
-        _stop_apfel_server()
-        msg = "apfel --serve failed to start within 10s"
-        if stderr_tail:
-            msg += f". stderr tail:\n{stderr_tail}"
-        raise RuntimeError(msg)
-
-
-def _stop_apfel_server():
-    """Kill apfel server if we started it. Always clears the cached handle
-    and removes the stderr temp file."""
-    global _apfel_server_proc, _apfel_stderr_path
-    proc = _apfel_server_proc
-    try:
-        if proc and proc.poll() is None:
-            proc.terminate()
-            try:
-                proc.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait(timeout=3)
-    finally:
-        _apfel_server_proc = None
-        if _apfel_stderr_path is not None:
-            try:
-                os.unlink(_apfel_stderr_path)
-            except OSError:
-                pass
-            _apfel_stderr_path = None
-
-
-def _get_apfel_client():
-    """Lazy-init OpenAI client for apfel server. Auto-starts server if needed.
-
-    Safe for programmatic callers (score_skill, neighbor_regression) that do
-    not go through main(): _ensure_apfel_server() short-circuits when the
-    server is already running. Client construction is guarded by a dedicated
-    lock so workers>1 don't race and leak parallel httpx pools.
-    """
-    global _apfel_client
-    _ensure_apfel_server()
-    with _apfel_client_lock:
-        if _apfel_client is None:
-            try:
-                from openai import OpenAI
-                import httpx as _httpx
-            except ImportError:
-                raise RuntimeError(
-                    "openai and httpx packages required for apfel provider. "
-                    "Install: .venv/bin/pip install openai httpx"
-                )
-            _apfel_client = OpenAI(
-                base_url=_get_apfel_base_url(),
-                api_key="unused",
-                timeout=_httpx.Timeout(60.0, connect=5.0),
-                max_retries=0,
-            )
-    return _apfel_client
-
-
-def run_apfel(
-    prompt: str, verbose: bool = False, log_buf: list[str] | None = None
-) -> CallResult:
-    """Ask Apple Foundation Model which skill(s) to route to via apfel server.
-
-    Auto-starts `apfel --serve` if not running. On-device, zero cost, ~4096 token context.
-    """
-    global _apfel_server_proc
-
-    def _log(msg: str) -> None:
-        if log_buf is not None:
-            log_buf.append(msg)
-        else:
-            _emit_info(msg)
-
-    try:
-        client = _get_apfel_client()
-        # Retry on timeout up to 2 times (Apple FM can get into transient slow states)
-        last_exc = None
-        resp = None
-        for attempt in range(3):
-            try:
-                resp = client.chat.completions.create(
-                    model="apple-foundationmodel",
-                    messages=[
-                        {"role": "system", "content": _ROUTING_SYSTEM_PROMPT},
-                        {"role": "user", "content": prompt},
-                    ],
-                    extra_body={"x_context_output_reserve": 64},
-                )
-                break
-            except Exception as e:
-                msg = str(e).lower()
-                if "timed out" in msg or "timeout" in msg:
-                    last_exc = e
-                    if verbose and attempt < 2:
-                        _log(
-                            f"--- APFEL TIMEOUT (attempt {attempt + 1}/3, retrying) ---"
-                        )
-                    continue
-                raise
-        if resp is None:
-            raise (
-                last_exc
-                if last_exc
-                else RuntimeError("apfel call failed without exception")
-            )
-
-        text = resp.choices[0].message.content or ""
-        usage = resp.usage
-        in_tok = usage.prompt_tokens if usage else 0
-        out_tok = usage.completion_tokens if usage else 0
-
-        if verbose:
-            _log(f"--- APFEL RESPONSE (on-device, $0, {in_tok}in/{out_tok}out) ---")
-            _log(text.strip() or "(empty)")
-            _log("--- END RESPONSE ---")
-
-        # Strip markdown code fences apfel sometimes wraps output in
-        cleaned = text.strip()
-        if cleaned.startswith("```"):
-            cleaned = "\n".join(
-                l for l in cleaned.split("\n") if not l.strip().startswith("```")
-            )
-
-        skills = []
-        seen: set[str] = set()
-        for line in cleaned.strip().split("\n"):
-            line = line.strip().lstrip("-*0123456789.) ").strip()
-            if " — " in line:
-                line = line.split(" — ")[0].strip()
-            if " (" in line:
-                line = line.split(" (")[0].strip()
-            if " -" in line:
-                line = line.split(" -")[0].strip()
-            line = line.strip("`").strip()
-            if (
-                line
-                and line.lower() != "none"
-                and not line.startswith("No ")
-                and line not in seen
-            ):
-                skills.append(line)
-                seen.add(line)
-        return CallResult(
-            skills=skills, cost=0.0, input_tokens=in_tok, output_tokens=out_tok
-        )
-
-    except Exception as exc:
-        exc_str = str(exc)
-        exc_lower = exc_str.lower()
-        error_type = "unknown"
-        # Missing openai/httpx deps surface as ImportError (or our own
-        # RuntimeError wrapping it from _get_apfel_client).
-        if (
-            isinstance(exc, (ModuleNotFoundError, ImportError))
-            or "openai and httpx" in exc_lower
-        ):
-            error_type = "dependency_missing"
-        elif "apfel" in exc_lower and "not found on path" in exc_lower:
-            error_type = "dependency_missing"
-        elif "remote apfel" in exc_lower and "unreachable" in exc_lower:
-            error_type = "server_unavailable"
-        elif "context" in exc_lower or "overflow" in exc_lower or "4096" in exc_str:
-            error_type = "context_overflow"
-        elif "guardrail" in exc_lower or "safety" in exc_lower:
-            error_type = "guardrail_blocked"
-        elif "timed out" in exc_lower or "timeout" in exc_lower:
-            error_type = "timeout"
-        elif "connection" in exc_lower or "refused" in exc_lower:
-            error_type = "server_unavailable"
-        if error_type == "server_unavailable":
-            # Server may have crashed — try to restart for subsequent calls
-            if _apfel_server_proc and _apfel_server_proc.poll() is not None:
-                _apfel_server_proc = None
-                try:
-                    _ensure_apfel_server()
-                except RuntimeError:
-                    pass  # restart failed, will error again on next call
-        if verbose:
-            _log(f"--- APFEL ERROR ({error_type}) ---")
-            _log(exc_str[:300])
-            _log("--- END ---")
-        return CallResult(skills=None, error_type=error_type)
-
-
 def _run_provider(
     prompt: str, verbose: bool = False, log_buf: list[str] | None = None
 ) -> CallResult:
-    """Dispatch to active provider."""
+    """Dispatch to the active provider.
+
+    To add a provider, extend `results_dir.SUPPORTED_PROVIDERS`, add a
+    `_PROVIDER_SETTINGS` entry, and add a dispatch branch below that calls
+    the provider's run_* helper (which should return a CallResult).
+    """
     provider = rd.get_active_provider()
     if provider == "ollama":
         return run_ollama(prompt, verbose=verbose, log_buf=log_buf)
-    if provider == "apfel":
-        return run_apfel(prompt, verbose=verbose, log_buf=log_buf)
-    if provider == "haiku":
-        return run_haiku(prompt, verbose=verbose, log_buf=log_buf)
     return CallResult(skills=None, error_type="unknown")
 
 
@@ -1974,7 +1426,7 @@ def score_skill(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Test skill trigger accuracy with Ollama Gemma4 (default), apfel, or haiku"
+        description="Test skill trigger accuracy with Ollama Gemma4 (default)"
     )
     parser.add_argument("--skill", help="Test one skill")
     parser.add_argument(
@@ -2028,9 +1480,10 @@ def main() -> None:
         default=None,
         choices=sorted(SUPPORTED_PROVIDERS),
         help=(
-            "Routing provider: ollama (local Gemma4 by default), apfel "
-            "(on-device), or haiku (API, paid). Default: "
-            "RUBY_PLUGIN_EVAL_PROVIDER env var or ollama."
+            "Routing provider. Currently only `ollama` (local Gemma4 by "
+            "default) is wired; future providers plug in via "
+            "results_dir.SUPPORTED_PROVIDERS + _PROVIDER_SETTINGS + "
+            "_run_provider. Default: RUBY_PLUGIN_EVAL_PROVIDER env var or ollama."
         ),
     )
     args = parser.parse_args()
@@ -2054,8 +1507,6 @@ def main() -> None:
         if rd.get_active_provider() == "ollama":
             _ensure_ollama_server()
             _ensure_ollama_model_available()
-        elif rd.get_active_provider() == "apfel":
-            _ensure_apfel_server()
 
     # Signal handler: cancel pending futures, wait for running workers.
     # Use non-blocking acquire — signal runs on main thread which may
@@ -2081,23 +1532,23 @@ def main() -> None:
     signal.signal(signal.SIGINT, _shutdown_handler)
     signal.signal(signal.SIGTERM, _shutdown_handler)
 
-    # Resolve auth once — avoids concurrent keychain access with --workers > 1
-    # Skip for --cache (documented as "no provider calls" — no keychain touches)
-    # Also skip for local providers (no Claude CLI credentials needed)
-    global _resolved_settings_path
-    if not args.cache and rd.get_active_provider() == "haiku":
-        _resolved_settings_path, _is_temp = _shared_resolve_settings_path()
-        atexit.register(
-            _shared_cleanup_settings, _resolved_settings_path, _is_temp
-        )
-
-    descriptions = load_all_routing_descriptions()
+    hidden_skills = load_hidden_skills()
+    descriptions = {
+        name: desc
+        for name, desc in load_all_routing_descriptions().items()
+        if name not in hidden_skills
+    }
     descriptions_blob = _routing_descriptions_blob(descriptions)
 
     # Collect all CallResults for cost aggregation (single-threaded, no lock needed)
     all_call_results: list[CallResult] = []
 
     if args.skill:
+        if args.skill in hidden_skills:
+            raise SystemExit(
+                f"skill {args.skill} is hidden (disable-model-invocation: true); "
+                "behavioral routing scoring not applicable"
+            )
         result, crs = score_skill(
             args.skill,
             descriptions,

@@ -1,7 +1,6 @@
 ---
 name: rb:triage
-description: "Use when triaging review findings interactively. Use after /rb:review to decide what to fix now, skip, or defer in a Ruby/Rails project. Prioritizes BLOCKER findings (Iron Law violations, security risks, migration safety) and routes selected items into a fix plan for /rb:work."
-when_to_use: "Triggers: \"triage\", \"which to fix\", \"prioritize findings\", \"after review\"."
+description: "Triaging review findings: pick fix now, skip, or defer. Prioritizes BLOCKER (Iron Law violations, security). Triggers: \"triage\", \"which to fix\", \"prioritize findings\"."
 argument-hint: "[path to review file]"
 effort: low
 ---
@@ -466,3 +465,11 @@ When triaging a review with a provenance sidecar, read the sidecar's
 - `weak`: include findings but sort after `runtime-confirmed`
   evidence.
 - `clean`: proceed with normal triage.
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Adversarial review needed → `/rb:challenge` (adversarial-mode review)
+- Iron Law violation suspected → `/iron-laws` (SessionStart-injected; review BLOCKED path)
+- PR review comments to address → `/rb:pr-review` (PR review-comment handling)
+<!-- END-GENERATED related-footer -->

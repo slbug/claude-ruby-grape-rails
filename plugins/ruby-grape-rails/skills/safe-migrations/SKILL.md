@@ -1,11 +1,7 @@
 ---
 name: safe-migrations
-description: "Use when planning safe Rails migrations: zero-downtime, strong_migrations, backfill."
-when_to_use: "Triggers: migration, zero-downtime, strong_migrations."
+description: "Zero-downtime Rails migrations: strong_migrations, backfill, locking, multi-step rename/drop/add-NOT-NULL. Triggers: \"is migration safe\", \"will it lock table\", \"backfill strategy\", \"add NOT NULL prod\"."
 user-invocable: false
-paths:
-  - "db/**"
-  - "**/db/**"
 effort: medium
 ---
 # Safe Migrations

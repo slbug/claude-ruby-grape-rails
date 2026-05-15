@@ -1,7 +1,6 @@
 ---
 name: rb:intro
-description: "Use when users want a tutorial walkthrough of plugin commands and capabilities. Use when users want to learn what the plugin offers, not when they already have a specific task to work on."
-when_to_use: "Triggers: \"tutorial\", \"what can you do\", \"show commands\", \"help with plugin\", \"getting started\"."
+description: "Walking a user through the Ruby/Rails/Grape plugin commands, capabilities, and workflow. Tutorial-style intro for newcomers who want to learn what the plugin offers rather than tackle a specific task."
 argument-hint: "[--section N]"
 effort: low
 disable-model-invocation: true
@@ -21,7 +20,6 @@ Interactive introduction to the Ruby/Rails/Grape plugin for new users.
 - **19 specialist agents**: ActiveRecord, Hotwire, security, Sidekiq, provenance experts
 - **52 skills**: Commands for every phase of development
 - **22 Iron Laws**: Non-negotiable rules enforced automatically
-- **Auto-loaded references**: Context-aware docs loaded when editing relevant files
 
 ## Installation Notes
 
@@ -63,3 +61,10 @@ See `${CLAUDE_SKILL_DIR}/references/tutorial-content.md` for the complete walkth
 - Claude Code built-in features (`xhigh`, `/focus`, `/recap`,
   `/less-permission-prompts`, `/output-styles`)
 - Keeping `CLAUDE.md` small + scoped-rule pattern
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Feature still fuzzy → `/rb:brainstorm` (workflow on-ramp; pre-plan discovery)
+- Pattern reference needed → `/rb:examples` (codebase pattern surface)
+<!-- END-GENERATED related-footer -->

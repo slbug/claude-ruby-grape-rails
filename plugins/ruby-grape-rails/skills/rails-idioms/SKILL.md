@@ -1,28 +1,8 @@
 ---
 name: rails-idioms
-description: "Use when applying idiomatic Rails patterns for controllers, params, callbacks, jobs, routes, and application structure across Rails 7.x and 8.x."
-when_to_use: "Triggers: \"Rails pattern\", \"controller\", \"callback\", \"job\", \"routes\", \"Rails way\"."
+description: "Rails framework idioms: controllers, before_action, callbacks, autoloading, jobs, routes. Triggers: \"Rails way\", \"callback order\", \"autoload constant\", \"route helper\". Do NOT use for: plain Ruby."
 user-invocable: false
 effort: medium
-paths:
-  - "app/{controllers,models,jobs,helpers,services,mailers,concerns}/**"
-  - "config/{routes.rb,routes/**}"
-  - "**/app/{controllers,models,jobs,helpers,services,mailers,concerns}/**"
-  - "**/config/{routes.rb,routes/**}"
-  - "app/{policies,queries,decorators,presenters,validators}/**"
-  - "app/{interactors,operations,commands,structs,value_objects}/**"
-  - "app/{mappers,builders,forms,view_objects,conductors}/**"
-  - "**/app/{policies,queries,decorators,presenters,validators}/**"
-  - "**/app/{interactors,operations,commands,structs,value_objects}/**"
-  - "**/app/{mappers,builders,forms,view_objects,conductors}/**"
-  - "{packs,engines,components}/*/{controllers,models,jobs,helpers,services,mailers,concerns}/**"
-  - "{packs,engines,components}/*/{policies,queries,decorators,presenters,validators}/**"
-  - "{packs,engines,components}/*/{interactors,operations,commands,structs,value_objects}/**"
-  - "{packs,engines,components}/*/{mappers,builders,forms,view_objects,conductors}/**"
-  - "app/{packages,packs}/*/{controllers,models,jobs,helpers,services,mailers,concerns}/**"
-  - "app/{packages,packs}/*/{policies,queries,decorators,presenters,validators}/**"
-  - "app/{packages,packs}/*/{interactors,operations,commands,structs,value_objects}/**"
-  - "app/{packages,packs}/*/{mappers,builders,forms,view_objects,conductors}/**"
 ---
 # Rails Idioms
 
@@ -156,4 +136,4 @@ See [Callbacks Guide](references/callbacks.md) for patterns.
 - [Active Record Patterns](../active-record-patterns/SKILL.md) — Database patterns
 - [Hotwire Patterns](../hotwire-patterns/SKILL.md) — Frontend integration
 - [Sidekiq](../sidekiq/SKILL.md) — When you need more than Solid Queue
-- [Deploy](../deploy/SKILL.md) — Production deployment
+- [/rb:deploy](../deploy/SKILL.md) — Production deployment

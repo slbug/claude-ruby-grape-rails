@@ -8,10 +8,25 @@
       "prompt": "Help me debug this foreign key constraint violation in Rails"
     },
     {
-      "prompt": "ActiveRecord constraint error on save — how to diagnose?"
+      "prompt": "ActiveRecord constraint error on save \u2014 how to diagnose?"
     },
     {
       "prompt": "I get a NOT NULL violation but the value is definitely set"
+    },
+    {
+      "prompt": "I've been staring at this for hours and I'm losing my mind, why does this PG::UniqueViolation keep popping up even though the record doesn't exist?!"
+    },
+    {
+      "prompt": "Debugging a foreign key constraint error."
+    },
+    {
+      "prompt": "help me fix this unique violatn in rails"
+    },
+    {
+      "prompt": "I am getting error of constraint for foreign key in my database"
+    },
+    {
+      "prompt": "Analyze the stack trace for a database-level NOT NULL violation during a bulk insert operation."
     }
   ],
   "should_not_trigger": [
@@ -26,6 +41,21 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "How do I add a unique index to my table?"
+    },
+    {
+      "prompt": "Write a validation for email uniqueness in the model"
+    },
+    {
+      "prompt": "Explain how foreign keys work in relational databases"
+    },
+    {
+      "prompt": "My database is running slow when I save records"
+    },
+    {
+      "prompt": "How to use ActiveRecord to find a user by ID"
     }
   ],
   "hard_should_trigger": [

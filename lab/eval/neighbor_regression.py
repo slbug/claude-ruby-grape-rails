@@ -21,6 +21,7 @@ from .results_dir import SUPPORTED_PROVIDERS
 from .trigger_scorer import (
     TRIGGERS_DIR,
     load_all_routing_descriptions,
+    load_hidden_skills,
     load_trigger_file,
     routing_descriptions_blob,
     RoutingDescriptions,
@@ -257,11 +258,23 @@ def main() -> None:
     rd.set_active_provider(args.provider)
 
     neighbor_map = build_neighbor_map()
-    descriptions = load_all_routing_descriptions()
+    hidden = load_hidden_skills()
+    descriptions = {
+        name: desc
+        for name, desc in load_all_routing_descriptions().items()
+        if name not in hidden
+    }
     descriptions_blob = routing_descriptions_blob(descriptions)
     all_passed = True
 
     if args.skill:
+        if args.skill in hidden:
+            print(
+                f"skill {args.skill} is hidden (disable-model-invocation: true); "
+                "neighbor regression not applicable",
+                file=sys.stderr,
+            )
+            raise SystemExit(1)
         if args.skill not in descriptions:
             print(f"Unknown skill: {args.skill}", file=sys.stderr)
             raise SystemExit(1)

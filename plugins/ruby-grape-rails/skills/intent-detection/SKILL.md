@@ -1,7 +1,6 @@
 ---
 name: intent-detection
-description: "Use when planning Ruby/Rails task without slash command: route to /rb: command. Does NOT handle: known slash command."
-when_to_use: "Triggers: what command, which rb, suggest command."
+description: "Routing any Ruby/Rails/Grape/Sidekiq/AR/Sequel/Hotwire/Karafka work to the correct /rb: command BEFORE doing it. Pushy gateway: consult at session start, suggest the right command, never blocks. Triggers: \"this Ruby project\", \"my Rails app\", \"how should I approach\", \"which command\", informal multi-step task descriptions. Do NOT use when user typed /rb:<name>."
 user-invocable: false
 effort: low
 ---
@@ -9,13 +8,14 @@ effort: low
 
 When user describes work WITHOUT specifying a `/rb:` command, analyze their intent and suggest the appropriate workflow BEFORE starting work.
 
-## Routing Table
+## Routing Table — Visible Skills
 
-| Signal | Detected Intent | Suggest |
-|--------|----------------|---------|
+| Signal phrase | Detected intent | Workflow target |
+|---|---|---|
 | "bug", "error", "crash", "failing", "broken", stack trace | Bug investigation | `/rb:investigate` |
 | "add", "implement", "build", "create" + multi-step | New feature | `/rb:plan` |
-| "review", "check", "audit" code | Code review | `/rb:review` |
+| "review", "check" code | Code review (changed files) | `/rb:review` |
+| "audit code", "audit project", "codebase health" | Project audit (whole codebase) | `/rb:audit` |
 | "fix" + small/specific scope | Quick fix | handle directly or `/rb:quick` |
 | "refactor", "clean up", "improve" | Refactoring | `/rb:plan` (needs scope) |
 | "research", "how to", "what's the best" | Research | `/rb:research` |
@@ -30,6 +30,46 @@ When user describes work WITHOUT specifying a `/rb:` command, analyze their inte
 | "enhance plan", "more detail", "deepen" | Plan enhancement | `/rb:plan --existing` |
 | "triage", "which findings", "prioritize fixes" | Finding triage | `/rb:triage` |
 | "brainstorm", "explore options", "not sure how", "multiple approaches", "what's the best way to architect" | Design exploration | `/rb:brainstorm` |
+
+## Routing Table (DMI roster — slash-only)
+
+Skills below carry `disable-model-invocation: true`. They never auto-load
+through the routing prompt; reach them via `/rb:<name>` slash invocation
+when the signal matches. Suggest the right command when triggers appear.
+
+<!-- BEGIN-GENERATED routing-table -->
+| Signal | Detected Intent | Suggest |
+|---|---|---|
+| "interview", "brainstorm", "discovery", "explore ideas" | workflow on-ramp; pre-plan discovery | `/rb:brainstorm` |
+| "adversarial review", "devil's advocate", "stress test" | adversarial-mode review | `/rb:challenge` |
+| "YARD", "RDoc", "ADR", "write docs" | post-implementation docs | `/rb:document` |
+| "show examples", "codebase patterns", "representative code" | codebase pattern surface | `/rb:examples` |
+| "tutorial", "getting started", "what can you do" | onboarding | `/rb:intro` |
+| "iron law", "non-negotiable rule", "Ruby safety rules" | SessionStart-injected; review BLOCKED path | `/iron-laws` |
+| "learn from this", "remember this mistake", "correction" | in-flight lesson capture | `/rb:learn` |
+| "slow", "latency", "memory", "p95", "queue backup" | performance analysis | `/rb:perf` |
+| "permissions", "allow command", "approval prompts", "settings.json" | permission tuning | `/rb:permissions` |
+| "PR feedback", "review comments", "reviewer said" | PR review-comment handling | `/rb:pr-review` |
+| "quick fix", "typo", "one-liner" | trivial-fix path | `/rb:quick` |
+| "research gem", "compare approaches", "upgrade path" | evidence-based research | `/rb:research` |
+| "rubydoc", "gem docs", "API reference", "Rails Guides" | cheap doc lookup | `/rubydoc-fetcher` |
+| "secrets", "leaked", "API key", "credentials", "betterleaks" | pre-push secret scan | `/rb:secrets` |
+| "do everything", "full lifecycle", "end to end", "hands-off" | full lifecycle orchestration | `/rb:full` |
+| "audit project", "codebase health", "architecture review" | project-wide audit | `/rb:audit` |
+| "compression report", "share compression stats" | internal QA (telemetry report) | `/rb:compression-report` |
+| "scan provenance", "audit research quality", "trust state" | research-trust audit | `/rb:provenance-scan` |
+| "service boundaries", "split monolith", "fat controller", "package boundary" | service-boundary analysis | `/rb:boundaries` |
+| "request state", "CurrentAttributes", "session leak", "Redis state" | request-state hygiene | `/rb:state-audit` |
+| "Tidewave", "live runtime", "introspect models", "running app" | Tidewave runtime introspection | `/rb:runtime` |
+| "tech debt", "cleanup", "callback sprawl", "stale code", "overgrown service", "decorative abstraction" | tech-debt logging | `/rb:techdebt` |
+| "Karafka", "Kafka consumer", "event streaming" | Kafka consumer patterns | `/rb:karafka` |
+| "Hotwire Native", "Turbo Native", "iOS bridge", "Android Hotwire" | native mobile Hotwire | `/rb:hotwire-native` |
+| "async gem", "fiber concurrency", "Falcon server", "I/O-bound" | fiber concurrency | `/rb:async-patterns` |
+| "dry-rb", "dry-validation", "dry-types", "dry-monads" | dry-rb gem patterns | `/rb:dry-rb-patterns` |
+| "Sequel", "Sequel ORM", "Sequel dataset", "Sequel migration" | Sequel ORM patterns | `/rb:sequel-patterns` |
+| "Kamal deploy", "Docker deploy", "Thruster", "release Rails" | deployment configuration | `/rb:deploy` |
+| "discovery report", "trigger-table tuning", "injection telemetry" | internal eval-tuning tool — drafts a redacted report from skill-discovery telemetry | `/rb:discovery-report` |
+<!-- END-GENERATED routing-table -->
 
 ## Behavior
 

@@ -32,7 +32,8 @@ Imperative-only. Tables for command/option lists.
 - `npm run validate` — plugin structure and manifest
 - `python3 scripts/check-release-metadata.py` — version alignment + changelog integrity
 - `npm run check:refs` — cross-reference, registry, orphan, traversal, and broken-path gates (failure-by-default)
-- All three should pass before committing
+- `claude plugin details ruby-grape-rails` — component inventory + projected per-session token cost
+- All checks should pass before committing
 
 ## Adding a New Agent
 

@@ -12,6 +12,21 @@
     },
     {
       "prompt": "How should I structure shared contexts and let blocks in RSpec?"
+    },
+    {
+      "prompt": "I am so sick of these damn flaky tests failing randomly in CI, how do I fix this?"
+    },
+    {
+      "prompt": "Optimize my RSpec factory setup"
+    },
+    {
+      "prompt": "how to write request specs for grape api"
+    },
+    {
+      "prompt": "Please help me with the creation of shared context for my service tests"
+    },
+    {
+      "prompt": "Implement a robust testing strategy for this Sidekiq worker using RSpec patterns"
     }
   ],
   "should_not_trigger": [
@@ -26,11 +41,23 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "Execute the rspec command now"
+    },
+    {
+      "prompt": "How do I install the rspec gem?"
+    },
+    {
+      "prompt": "Write a script to run my tests"
+    },
+    {
+      "prompt": "Debug this production error in my Rails app"
     }
   ],
   "hard_should_trigger": [
     {
-      "prompt": "My test suite is slow — what factory and setup patterns will speed it up?",
+      "prompt": "My test suite is slow \u2014 what factory and setup patterns will speed it up?",
       "axis": "confusable"
     },
     {

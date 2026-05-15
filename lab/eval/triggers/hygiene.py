@@ -100,7 +100,7 @@ def check_description_echo(
     triggers: dict[str, Any],
     threshold: float = 0.5,
 ) -> list[dict[str, Any]]:
-    """Find should_not_trigger prompts that echo description or when_to_use text."""
+    """Find should_not_trigger prompts that echo the skill's description text."""
     flags: list[dict[str, Any]] = []
     routing_sources = [
         (source, tokens)

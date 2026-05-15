@@ -8,10 +8,25 @@
       "prompt": "Brief me on the plan.md before I start working"
     },
     {
-      "prompt": "Explain this plan interactively — I have questions"
+      "prompt": "Explain this plan interactively \u2014 I have questions"
     },
     {
       "prompt": "Can you give me a summary of what this plan involves?"
+    },
+    {
+      "prompt": "Ugh, just explain plan real quick, I don't have all day."
+    },
+    {
+      "prompt": "Summarize review of this Grape API diff."
+    },
+    {
+      "prompt": "walk me thru the ruby changes"
+    },
+    {
+      "prompt": "Please, can you explain plan for me?"
+    },
+    {
+      "prompt": "Provide a concise technical walkthrough of the proposed Rails architectural changes."
     }
   ],
   "should_not_trigger": [
@@ -26,6 +41,21 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "Write a new plan for the Grape endpoint."
+    },
+    {
+      "prompt": "Can you refactor this Ruby code to be more efficient?"
+    },
+    {
+      "prompt": "Summarize the git commit history for this week."
+    },
+    {
+      "prompt": "Explain how Ruby on Rails works in general."
+    },
+    {
+      "prompt": "Review my code for any potential security vulnerabilities."
     }
   ],
   "hard_should_trigger": [

@@ -12,6 +12,21 @@
     },
     {
       "prompt": "Review this PR patch with a correctness mindset"
+    },
+    {
+      "prompt": "Ugh, just review my changes already, I'm stuck"
+    },
+    {
+      "prompt": "Please code review this diff"
+    },
+    {
+      "prompt": "can u check this pr pls"
+    },
+    {
+      "prompt": "I have make changes, please review them for me"
+    },
+    {
+      "prompt": "Perform a comprehensive code review focusing on Sidekiq job reliability and ActiveRecord query efficiency"
     }
   ],
   "should_not_trigger": [
@@ -26,6 +41,21 @@
     },
     {
       "prompt": "Research current library options for background jobs"
+    },
+    {
+      "prompt": "How do I write a Ruby on Rails test?"
+    },
+    {
+      "prompt": "Explain how Grape middleware works"
+    },
+    {
+      "prompt": "Write a Sidekiq worker for processing images"
+    },
+    {
+      "prompt": "Fix the bugs in this Rails controller"
+    },
+    {
+      "prompt": "Show me how to refactor this Ruby method"
     }
   ],
   "hard_should_trigger": [

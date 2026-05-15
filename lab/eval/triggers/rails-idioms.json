@@ -12,6 +12,21 @@
     },
     {
       "prompt": "Refactor this to use proper Rails conventions"
+    },
+    {
+      "prompt": "I'm so sick of this mess, just make it follow the Rails way already!"
+    },
+    {
+      "prompt": "Explain the callback order here."
+    },
+    {
+      "prompt": "How do I autoload constant?"
+    },
+    {
+      "prompt": "Please show me the correct route helper for this."
+    },
+    {
+      "prompt": "What is the idiomatic implementation for a background job in this framework?"
     }
   ],
   "should_not_trigger": [
@@ -26,11 +41,26 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "How do I write a Ruby loop?"
+    },
+    {
+      "prompt": "Refactor this plain Ruby class."
+    },
+    {
+      "prompt": "Fix my React component lifecycle."
+    },
+    {
+      "prompt": "How to use the Rails router in a frontend app?"
+    },
+    {
+      "prompt": "Explain how Ruby inheritance works."
     }
   ],
   "hard_should_trigger": [
     {
-      "prompt": "This works but it doesn't feel like the Rails way — show me the convention",
+      "prompt": "This works but it doesn't feel like the Rails way \u2014 show me the convention",
       "axis": "confusable"
     },
     {

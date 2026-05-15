@@ -12,6 +12,21 @@
     },
     {
       "prompt": "How do I structure error handling across Grape endpoints?"
+    },
+    {
+      "prompt": "I am so sick of this, why won't my grape-entity fields show up in the response?!"
+    },
+    {
+      "prompt": "Explain Grape param coercion logic."
+    },
+    {
+      "prompt": "how do i do api versioning in grape?"
+    },
+    {
+      "prompt": "Please assist me with the design of my Grape API endpoints."
+    },
+    {
+      "prompt": "Implement a custom type coercion for a Grape parameter."
     }
   ],
   "should_not_trigger": [
@@ -26,6 +41,21 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "How do I use strong params in my Rails controller?"
+    },
+    {
+      "prompt": "Show me how to define an entity class in ActiveRecord."
+    },
+    {
+      "prompt": "Can you help me design a RESTful Rails controller?"
+    },
+    {
+      "prompt": "How do I version my Rails application routes?"
+    },
+    {
+      "prompt": "Write a custom validator for a Rails model."
     }
   ],
   "hard_should_trigger": [

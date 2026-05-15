@@ -1,7 +1,6 @@
 ---
 name: rb:work
-description: "Use when implementing an existing plan checklist, resuming active code changes, or verifying each step in Active Record or Sequel work. Use after /rb:plan. Can resume the newest active plan automatically."
-when_to_use: "Triggers: \"implement plan\", \"start coding\", \"resume work\", \"continue plan\", \"execute plan\"."
+description: "Executing a Ruby/Rails/Grape plan checklist: reads plan.md, runs tasks, ticks checkboxes. Resumes newest active plan. Triggers: \"implement plan\", \"resume work\", \"execute plan\"."
 argument-hint: <path to plan file>
 effort: high
 ---
@@ -334,3 +333,13 @@ and log it in `.claude/plans/<slug>/progress.md`:
 | critic-refiner pattern + harness-as-action-verifier (programmatic verification beats unstructured retry) | `${CLAUDE_SKILL_DIR}/references/harness-patterns.md` |
 | plan + progress markdown formats consumed by `/rb:work` | `${CLAUDE_SKILL_DIR}/references/file-formats.md` |
 | plan-checkbox-as-state + auto-resume + idempotent task execution | `${CLAUDE_SKILL_DIR}/references/resume-strategies.md` |
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- API or internal docs needed → `/rb:document` (post-implementation docs)
+- Mistake worth capturing as a rule → `/rb:learn` (in-flight lesson capture)
+- Single-line / trivial fix → `/rb:quick` (trivial-fix path)
+- Run full plan-work-verify-review-compound cycle autonomously → `/rb:full` (full lifecycle orchestration)
+- Adjacent debt noticed but out of scope → `/rb:techdebt` (tech-debt logging)
+<!-- END-GENERATED related-footer -->

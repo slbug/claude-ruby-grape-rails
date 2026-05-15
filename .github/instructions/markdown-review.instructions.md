@@ -26,10 +26,13 @@ Files under `plugins/**/skills/` and `plugins/**/agents/` use YAML
 frontmatter between `---` delimiters. This is Claude Code plugin syntax,
 not standard markdown metadata.
 
-Valid frontmatter fields for skills: name, description, when_to_use,
-argument-hint, arguments, effort, disable-model-invocation,
-user-invocable, allowed-tools, model, context, agent, hooks, paths,
-shell
+Valid frontmatter fields for skills: name, description (single field
+per agentskills.io canon — no `when_to_use`), argument-hint, arguments,
+effort, disable-model-invocation, user-invocable, allowed-tools, model,
+context, agent, hooks, shell. The `paths:` field is documented in CC
+skill schema but empirically non-functional at plugin scope; do NOT
+add it to plugin SKILL.md (project-level `.claude/rules/*.md` `paths:`
+remains functional and is a separate mechanism).
 
 Valid frontmatter fields for agents (general subagent surface, see
 <https://docs.claude.com/en/docs/claude-code/sub-agents>): name,
@@ -64,7 +67,8 @@ Flag any `${CLAUDE_*}` literal in `references/*.md` plain prose / cross-referenc
 
 ## Consistency Checks
 
-- Skill description + when_to_use combined must be <= 1,536 characters
+- Skill `description` must be <= 1,024 characters (agentskills.io cap;
+  single field, no `when_to_use`)
 - Agent description must be <= 250 characters
 - Skill names use `rb:` prefix for user-invocable commands
 - Agent names use plain kebab-case (no prefix)

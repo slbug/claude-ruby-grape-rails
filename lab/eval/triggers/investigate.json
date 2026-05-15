@@ -12,6 +12,21 @@
     },
     {
       "prompt": "Something is wrong with checkout but I can't tell where it breaks"
+    },
+    {
+      "prompt": "ugh why is this stupid grape api throwing a 422 for no reason??"
+    },
+    {
+      "prompt": "Perform root cause analysis on this error"
+    },
+    {
+      "prompt": "find root cause of rails error"
+    },
+    {
+      "prompt": "The system is not working correctly, please find the reason why"
+    },
+    {
+      "prompt": "Analyze the stack trace to determine the underlying cause of this exception"
     }
   ],
   "should_not_trigger": [
@@ -26,6 +41,21 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "Optimize this Rails controller for better performance"
+    },
+    {
+      "prompt": "Trace the execution path of this method"
+    },
+    {
+      "prompt": "Optimize this slow query with proper preloading."
+    },
+    {
+      "prompt": "Add logging to see the request flow"
+    },
+    {
+      "prompt": "Profile the memory usage of this Grape endpoint"
     }
   ],
   "hard_should_trigger": [
@@ -35,7 +65,7 @@
       "routing": "lock"
     },
     {
-      "prompt": "Users report intermittent 500s on checkout — diagnose whether it's a race condition or a stale cache",
+      "prompt": "Users report intermittent 500s on checkout \u2014 diagnose whether it's a race condition or a stale cache",
       "axis": "multi_step",
       "routing": "lock"
     }

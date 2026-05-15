@@ -1,17 +1,8 @@
 ---
-name: deploy
-description: "Use when configuring Rails deploy: Kamal, Docker, Thruster, Solid Queue. Not for app-level perf tuning."
-when_to_use: "Triggers: deploy, Kamal, Docker, production, Thruster."
-user-invocable: false
+name: rb:deploy
+description: "Configuring Rails deployment: Kamal, Docker, Thruster, Solid Queue, Procfile, container layout."
 effort: medium
-paths:
-  - "{Dockerfile,docker-compose.yml,.travis.yml,.travis.yaml,.gitlab-ci.yml,.gitlab-ci.yaml}"
-  - "cloudbuild*.{yaml,yml}"
-  - "config/{deploy.rb,environments/**}"
-  - ".{github/workflows,gitlab}/**"
-  - "**/{Dockerfile,docker-compose.yml,.travis.yml,.travis.yaml,.gitlab-ci.yml,.gitlab-ci.yaml}"
-  - "**/cloudbuild*.{yaml,yml}"
-  - "**/config/{deploy.rb,environments/**}"
+disable-model-invocation: true
 ---
 # Deploy
 

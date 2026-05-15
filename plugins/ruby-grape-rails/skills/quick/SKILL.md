@@ -1,7 +1,6 @@
 ---
 name: rb:quick
-description: "Use when making trivial one-line fixes, typos, and tiny config changes. Skips planning ceremony — just inspect, fix, verify. Use for obvious changes under ~20 lines."
-when_to_use: "Triggers: \"quick fix\", \"typo\", \"one-liner\", \"tiny change\", \"simple fix\"."
+description: "Making trivial one-line fixes, typos, and tiny config changes in a Ruby/Rails/Grape codebase. Skips planning ceremony: inspect, fix, verify. For obvious changes under ~20 lines."
 argument-hint: <task>
 effort: low
 disable-model-invocation: true
@@ -15,3 +14,9 @@ Still do three things:
 1. inspect the existing code path first
 2. implement directly
 3. verify with the narrowest correct command set
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Adjacent debt noticed but out of scope → `/rb:techdebt` (tech-debt logging)
+<!-- END-GENERATED related-footer -->

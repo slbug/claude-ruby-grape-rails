@@ -12,6 +12,18 @@
     },
     {
       "prompt": "The index page fires hundreds of queries for 20 records"
+    },
+    {
+      "prompt": "Ugh, why is this serializer hitting the DB for every single item in the list?? Fix the N+1 now!"
+    },
+    {
+      "prompt": "I see bullet warning in logs."
+    },
+    {
+      "prompt": "My API response is slow because of many small queries for each relation."
+    },
+    {
+      "prompt": "Analyze the Grape endpoint for missing includes or preloads."
     }
   ],
   "should_not_trigger": [
@@ -26,6 +38,21 @@
     },
     {
       "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "How do I add a new index to my PostgreSQL table?"
+    },
+    {
+      "prompt": "Optimize the database connection pool settings."
+    },
+    {
+      "prompt": "Write a migration to add a foreign key to users."
+    },
+    {
+      "prompt": "Explain how ActiveRecord works with associations."
+    },
+    {
+      "prompt": "Help me debug a 500 error in my Grape API."
     }
   ],
   "hard_should_trigger": [

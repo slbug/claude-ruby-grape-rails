@@ -12,6 +12,21 @@
     },
     {
       "prompt": "Resume execution from the scratchpad and plan checklist"
+    },
+    {
+      "prompt": "Ugh, just execute the plan already, I'm tired of waiting"
+    },
+    {
+      "prompt": "Resume work on the current plan"
+    },
+    {
+      "prompt": "imlement plan now"
+    },
+    {
+      "prompt": "Please do the tasks in the plan file"
+    },
+    {
+      "prompt": "Parse plan.md and execute all pending checklist items sequentially"
     }
   ],
   "should_not_trigger": [
@@ -26,6 +41,21 @@
     },
     {
       "prompt": "Research whether this gem is still the best option"
+    },
+    {
+      "prompt": "Can you write a new plan for this feature?"
+    },
+    {
+      "prompt": "Explain how the Grape API works in Rails"
+    },
+    {
+      "prompt": "Help me debug this Ruby syntax error"
+    },
+    {
+      "prompt": "Create a markdown file for my project tasks"
+    },
+    {
+      "prompt": "Review my code for any potential security vulnerabilities"
     }
   ],
   "hard_should_trigger": [

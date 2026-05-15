@@ -92,7 +92,7 @@ class TestMergePairs(unittest.TestCase):
 
 
 class TestSemanticPairParsing(unittest.TestCase):
-    """Tests for Haiku response parsing via _fetch_semantic_pairs mock."""
+    """Tests for Ollama response parsing via _fetch_semantic_pairs mock."""
 
     def _parse_response_lines(self, lines: list[str], descriptions: dict[str, str]) -> list[dict]:
         """Simulate the parsing logic from _fetch_semantic_pairs.
@@ -199,57 +199,42 @@ class TestSemanticPairParsing(unittest.TestCase):
 
 
 class TestFetchSemanticPairs(unittest.TestCase):
-    """Integration tests for _fetch_semantic_pairs with mocked subprocess."""
+    """Integration tests for _fetch_semantic_pairs with mocked ollama_chat."""
 
     def test_valid_response_parsed(self):
-        """Mocked Haiku response produces valid semantic pairs."""
+        """Mocked ollama response produces valid semantic pairs."""
         from lab.eval.trigger_scorer import _fetch_semantic_pairs
-        mock_response = json.dumps({
-            "result": "plan | brainstorm | 8 | both explore ideas\nreview | work | 6 | sequential phases",
-        })
-        mock_run = MagicMock()
-        mock_run.returncode = 0
-        mock_run.stdout = mock_response
-        with patch("subprocess.run", return_value=mock_run):
-            with patch("lab.eval.behavioral_scorer._resolved_settings_path", "fake.json"):
-                pairs = _fetch_semantic_pairs(SAMPLE_DESCRIPTIONS, [])
+        response_text = (
+            "plan | brainstorm | 8 | both explore ideas\n"
+            "review | work | 6 | sequential phases"
+        )
+        with patch("lab.eval.behavioral_scorer.ollama_chat", return_value=response_text):
+            pairs = _fetch_semantic_pairs(SAMPLE_DESCRIPTIONS, [])
         self.assertEqual(len(pairs), 2)
         names = {(p["left"], p["right"]) for p in pairs}
         self.assertIn(("brainstorm", "plan"), names)
 
     def test_malformed_lines_skipped(self):
-        """Malformed lines in Haiku response are skipped, valid ones kept."""
+        """Malformed lines in ollama response are skipped, valid ones kept."""
         from lab.eval.trigger_scorer import _fetch_semantic_pairs
-        mock_response = json.dumps({
-            "result": "garbage line\n\nplan | brainstorm | 7 | valid\ninvalid | fakeskill | 5 | bad",
-        })
-        mock_run = MagicMock()
-        mock_run.returncode = 0
-        mock_run.stdout = mock_response
-        with patch("subprocess.run", return_value=mock_run):
-            with patch("lab.eval.behavioral_scorer._resolved_settings_path", "fake.json"):
-                pairs = _fetch_semantic_pairs(SAMPLE_DESCRIPTIONS, [])
+        response_text = (
+            "garbage line\n\n"
+            "plan | brainstorm | 7 | valid\n"
+            "invalid | fakeskill | 5 | bad"
+        )
+        with patch("lab.eval.behavioral_scorer.ollama_chat", return_value=response_text):
+            pairs = _fetch_semantic_pairs(SAMPLE_DESCRIPTIONS, [])
         self.assertEqual(len(pairs), 1)
         self.assertEqual(pairs[0]["left"], "brainstorm")
 
-    def test_subprocess_failure_returns_empty(self):
-        """Failed subprocess returns empty list, not crash."""
+    def test_ollama_failure_returns_empty(self):
+        """ollama_chat raising returns empty list, not crash."""
         from lab.eval.trigger_scorer import _fetch_semantic_pairs
-        mock_run = MagicMock()
-        mock_run.returncode = 1
-        mock_run.stdout = ""
-        with patch("subprocess.run", return_value=mock_run):
-            with patch("lab.eval.behavioral_scorer._resolved_settings_path", "fake.json"):
-                pairs = _fetch_semantic_pairs(SAMPLE_DESCRIPTIONS, [])
-        self.assertEqual(pairs, [])
-
-    def test_timeout_returns_empty(self):
-        """Subprocess timeout returns empty list."""
-        import subprocess as sp
-        from lab.eval.trigger_scorer import _fetch_semantic_pairs
-        with patch("subprocess.run", side_effect=sp.TimeoutExpired("claude", 60)):
-            with patch("lab.eval.behavioral_scorer._resolved_settings_path", "fake.json"):
-                pairs = _fetch_semantic_pairs(SAMPLE_DESCRIPTIONS, [])
+        with patch(
+            "lab.eval.behavioral_scorer.ollama_chat",
+            side_effect=RuntimeError("connection refused"),
+        ):
+            pairs = _fetch_semantic_pairs(SAMPLE_DESCRIPTIONS, [])
         self.assertEqual(pairs, [])
 
 
@@ -257,45 +242,76 @@ class TestBuildSemanticConfusablePairs(unittest.TestCase):
     """Integration test for the full build_semantic_confusable_pairs path."""
 
     def test_cache_hit_skips_fetch(self):
-        """When cache is valid, no subprocess call is made."""
-        from lab.eval.trigger_scorer import build_semantic_confusable_pairs
+        """When cache is valid, ollama_chat is not called."""
+        from lab.eval.trigger_scorer import (
+            _descriptions_hash,
+            build_semantic_confusable_pairs,
+        )
         desc_hash = _descriptions_hash(SAMPLE_DESCRIPTIONS)
         cached = {
-            "descriptions_hash": desc_hash,
-            "semantic_pairs": [{"left": "plan", "right": "brainstorm", "overlap": 0.8, "source": "semantic", "reason": ""}],
+            "desc_hash": desc_hash,
+            "pairs": [{
+                "left": "brainstorm",
+                "right": "plan",
+                "score": 8.0,
+                "reason": "both explore ideas",
+                "source": "semantic",
+            }],
         }
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "_semantic_pairs.json"
             cache_path.write_text(json.dumps(cached))
             with patch("lab.eval.trigger_scorer._SEMANTIC_CACHE_PATH", cache_path):
-                with patch("subprocess.run") as mock_run:
-                    pairs = build_semantic_confusable_pairs(SAMPLE_DESCRIPTIONS, [])
-                    mock_run.assert_not_called()
-        # Should have the cached semantic pair merged with token pairs
-        self.assertTrue(any(p.get("source") == "semantic" for p in pairs))
+                with patch("lab.eval.behavioral_scorer.ollama_chat") as mock_chat:
+                    build_semantic_confusable_pairs(SAMPLE_DESCRIPTIONS, [])
+                    mock_chat.assert_not_called()
 
     def test_cache_miss_triggers_fetch(self):
-        """When cache hash doesn't match, subprocess is called."""
+        """When cache hash doesn't match, ollama_chat is called."""
         from lab.eval.trigger_scorer import build_semantic_confusable_pairs
-        stale_cache = {
-            "descriptions_hash": "stale_hash",
-            "semantic_pairs": [],
-        }
-        mock_response = json.dumps({
-            "result": "plan | brainstorm | 9 | both pre-implementation",
-        })
-        mock_result = MagicMock()
-        mock_result.returncode = 0
-        mock_result.stdout = mock_response
+        stale_cache = {"desc_hash": "stale_hash", "pairs": []}
+        response_text = "plan | brainstorm | 9 | both pre-implementation"
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "_semantic_pairs.json"
             cache_path.write_text(json.dumps(stale_cache))
             with patch("lab.eval.trigger_scorer._SEMANTIC_CACHE_PATH", cache_path):
-                with patch("subprocess.run", return_value=mock_result) as mock_run:
-                    with patch("lab.eval.behavioral_scorer._resolved_settings_path", "fake.json"):
-                        pairs = build_semantic_confusable_pairs(SAMPLE_DESCRIPTIONS, [])
-                        self.assertTrue(mock_run.called)
-        self.assertTrue(any(p.get("source") == "semantic" for p in pairs))
+                with patch(
+                    "lab.eval.behavioral_scorer.ollama_chat",
+                    return_value=response_text,
+                ) as mock_chat:
+                    build_semantic_confusable_pairs(SAMPLE_DESCRIPTIONS, [])
+                    self.assertTrue(mock_chat.called)
+
+    def test_cache_hit_with_empty_pairs_skips_fetch(self):
+        """Cached empty `pairs` with matching desc_hash counts as a hit."""
+        from lab.eval.trigger_scorer import (
+            _descriptions_hash,
+            build_semantic_confusable_pairs,
+        )
+        desc_hash = _descriptions_hash(SAMPLE_DESCRIPTIONS)
+        cached = {"desc_hash": desc_hash, "pairs": []}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "_semantic_pairs.json"
+            cache_path.write_text(json.dumps(cached))
+            with patch("lab.eval.trigger_scorer._SEMANTIC_CACHE_PATH", cache_path):
+                with patch("lab.eval.behavioral_scorer.ollama_chat") as mock_chat:
+                    build_semantic_confusable_pairs(SAMPLE_DESCRIPTIONS, [])
+                    mock_chat.assert_not_called()
+
+    def test_explicit_empty_token_pairs_preserved(self):
+        """Caller passing `token_pairs=[]` is honored; token pairs not recomputed."""
+        from lab.eval.trigger_scorer import build_semantic_confusable_pairs
+        desc_hash_fn = "lab.eval.trigger_scorer.build_confusable_pairs"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "_semantic_pairs.json"
+            with patch("lab.eval.trigger_scorer._SEMANTIC_CACHE_PATH", cache_path):
+                with patch(
+                    "lab.eval.behavioral_scorer.ollama_chat",
+                    return_value="",
+                ):
+                    with patch(desc_hash_fn) as mock_build:
+                        build_semantic_confusable_pairs(SAMPLE_DESCRIPTIONS, [])
+                        mock_build.assert_not_called()
 
 
 class TestSemanticPairCache(unittest.TestCase):
@@ -305,20 +321,24 @@ class TestSemanticPairCache(unittest.TestCase):
         """Empty semantic pairs don't overwrite existing cache."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_path = Path(tmpdir) / "_semantic_pairs.json"
-            # Write a valid cache
             existing = {
-                "descriptions_hash": _descriptions_hash(SAMPLE_DESCRIPTIONS),
-                "semantic_pairs": [{"left": "plan", "right": "brainstorm", "overlap": 0.8, "source": "semantic", "reason": ""}],
+                "desc_hash": _descriptions_hash(SAMPLE_DESCRIPTIONS),
+                "pairs": [{
+                    "left": "brainstorm",
+                    "right": "plan",
+                    "score": 8.0,
+                    "reason": "",
+                    "source": "semantic",
+                }],
             }
             cache_path.write_text(json.dumps(existing))
 
-            # _merge_pairs with empty semantic should not clobber
+            # _merge_pairs with empty fresh_semantic must not rewrite the file.
             with patch("lab.eval.trigger_scorer._SEMANTIC_CACHE_PATH", cache_path):
                 _merge_pairs([], [], _descriptions_hash(SAMPLE_DESCRIPTIONS))
 
-            # Cache should still have the original data
             cached = json.loads(cache_path.read_text())
-            self.assertEqual(len(cached["semantic_pairs"]), 1)
+            self.assertEqual(len(cached["pairs"]), 1)
 
 
 if __name__ == "__main__":

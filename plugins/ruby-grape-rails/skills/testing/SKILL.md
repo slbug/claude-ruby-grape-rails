@@ -1,11 +1,7 @@
 ---
 name: testing
-description: "Use when writing tests for Ruby, Rails, Grape, or Sidekiq: request specs, model/service tests, factories, fixtures, minitest, and anti-flake practices."
-when_to_use: "Triggers: \"test\", \"RSpec\", \"spec\", \"factory\", \"fixture\", \"minitest\", \"flaky test\"."
+description: "Authoring Ruby/Rails/Grape/Sidekiq tests: request specs, model/service tests, factories, anti-flake. Triggers: \"RSpec patterns\", \"factory setup\", \"flaky test\", \"shared context\". Do NOT use for: running tests, executing rspec, fixing failing tests."
 user-invocable: false
-paths:
-  - "{spec,test}/**"
-  - "**/{spec,test}/**"
 effort: medium
 ---
 # Testing

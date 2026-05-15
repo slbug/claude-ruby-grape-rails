@@ -1,16 +1,8 @@
 ---
 name: rb:constraint-debug
-description: "Use when diagnosing Active Record constraint failures, unique index violations, foreign-key errors, and migration/data mismatches."
-when_to_use: "Triggers: \"constraint error\", \"unique violation\", \"foreign key\", \"PG::UniqueViolation\", \"migration failed\"."
+description: "Diagnosing Active Record constraint failures: unique-index, foreign-key, NOT-NULL violations. Triggers: \"constraint error\", \"unique violation\", \"foreign key\", \"PG::UniqueViolation\"."
 argument-hint: "[error|path]"
 effort: medium
-paths:
-  - "app/models/**"
-  - "db/**"
-  - "**/app/models/**"
-  - "**/db/**"
-  - "{packs,engines,components}/*/models/**"
-  - "app/{packages,packs}/*/models/**"
 ---
 # Constraint Debug
 

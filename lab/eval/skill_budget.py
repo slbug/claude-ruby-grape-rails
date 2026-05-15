@@ -1,16 +1,24 @@
 """Audit aggregate skill-listing budget. Run via `make eval-skill-budget`.
 
 Per-skill `description_length` already enforced elsewhere:
-- `lab/eval/scorer.py::default_eval` applies min 60 / max 1536 to
-  every skill;
+- `lab/eval/scorer.py::default_eval` applies min 50 / max 1024 chars
+  (agentskills.io canonical cap) to every skill;
 - per-skill `lab/eval/evals/*.json` may override min within that range.
 
 This tool covers only the AGGREGATE gap: total listing chars across
-model-visible skills must fit CC
-`skillListingBudgetFraction=0.01` × plugin's 1M-context target.
+model-visible skills must fit the conservative portable target of
+8,000 chars (the CC routing-prompt skill-listing hard-ceiling fallback
+that applies when no consumer override raises the budget).
+
+Per-skill consumption = description + XML wrapper overhead (skill name
++ plugin namespace + tag scaffolding). Empirical overhead ≈ 133 chars
+per listed skill (Anthropic skill-listing render format).
+
+`when_to_use` field is no longer accounted; single `description` field
+per agentskills.io canon.
 
 Skills marked `disable-model-invocation: true` excluded (CC removes
-them from listing per frontmatter reference docs).
+them from routing-prompt injection per debug log evidence).
 """
 
 import sys
@@ -20,7 +28,8 @@ from lab.eval.frontmatter import parse_frontmatter
 from lab.eval.matchers import PLUGIN_ROOT
 
 SKILLS_DIR = PLUGIN_ROOT / "skills"
-SKILL_AGGREGATE_TARGET_CHARS = 10_000
+SKILL_AGGREGATE_TARGET_CHARS = 8_000
+PER_SKILL_XML_OVERHEAD = 133
 
 
 def measure_skill(skill_dir: Path) -> tuple[str, int, bool] | None:
@@ -32,10 +41,8 @@ def measure_skill(skill_dir: Path) -> tuple[str, int, bool] | None:
         return None
     label = str(fm.get("name") or skill_dir.name)
     desc = str(fm.get("description") or "").strip()
-    wtu = str(fm.get("when_to_use") or "").strip()
-    combined = len(desc) + len(wtu)
     hidden = bool(fm.get("disable-model-invocation", False))
-    return (label, combined, hidden)
+    return (label, len(desc), hidden)
 
 
 def main() -> int:
@@ -54,18 +61,23 @@ def main() -> int:
         return 1
     listed = [(n, c) for n, c, h in rows if not h]
     hidden = [(n, c) for n, c, h in rows if h]
-    aggregate = sum(c for _, c in listed)
+    desc_total = sum(c for _, c in listed)
+    overhead = len(listed) * PER_SKILL_XML_OVERHEAD
+    aggregate = desc_total + overhead
 
     print(f"Skills total: {len(rows)} (listed: {len(listed)}, hidden: {len(hidden)})")
+    print(f"Description chars: {desc_total}")
+    print(f"XML wrapper overhead: {len(listed)} x {PER_SKILL_XML_OVERHEAD} = {overhead}")
     print(f"Aggregate listing chars: {aggregate}")
-    print(f"Target: <= {SKILL_AGGREGATE_TARGET_CHARS} (CC 1% x 1M context)")
+    print(f"Target: <= {SKILL_AGGREGATE_TARGET_CHARS} (CC routing-budget hard-ceiling fallback)")
 
     if aggregate > SKILL_AGGREGATE_TARGET_CHARS:
         print(f"\nFAIL: aggregate {aggregate} > target {SKILL_AGGREGATE_TARGET_CHARS}")
         listed_sorted = sorted(listed, key=lambda x: -x[1])
-        print("\nTop 10 listed skills by chars:")
+        print("\nTop 10 listed skills by description chars:")
         for n, c in listed_sorted[:10]:
-            print(f"  {c:5d}  {n}")
+            total = c + PER_SKILL_XML_OVERHEAD
+            print(f"  {c:5d} (+{PER_SKILL_XML_OVERHEAD} = {total})  {n}")
         return 1
 
     print(f"\nPASS: aggregate {aggregate} <= {SKILL_AGGREGATE_TARGET_CHARS}")

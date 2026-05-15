@@ -1,8 +1,8 @@
 ---
 name: rb:audit
-description: "Use when running project-wide audit: architecture, security, perf, testing, ops risk."
-when_to_use: "Triggers: audit project, codebase health, architecture review, security audit."
+description: "Running a project-wide audit of a Ruby/Rails/Grape codebase: architecture, security, performance, testing coverage, ops risk. Emits findings to .claude/audit/."
 effort: xhigh
+disable-model-invocation: true
 ---
 # Audit
 
@@ -34,3 +34,15 @@ Review five areas:
 |---|---|
 | service-object health matrix, fan-in/out scoring, boundary violation checks | `${CLAUDE_SKILL_DIR}/references/architecture-checks.md` |
 | A-F grade scoring per category + weighted overall score | `${CLAUDE_SKILL_DIR}/references/scoring-methodology.md` |
+
+## Related — invoke manually if needed
+
+<!-- BEGIN-GENERATED related-footer -->
+- Slow / latency / memory regression → `/rb:perf` (performance analysis)
+- Compression telemetry summary → `/rb:compression-report` (internal QA (telemetry report))
+- Research trust / source-quality audit → `/rb:provenance-scan` (research-trust audit)
+- Service-boundary or split-monolith decision → `/rb:boundaries` (service-boundary analysis)
+- Request-state / session-leak hygiene check → `/rb:state-audit` (request-state hygiene)
+- Adjacent debt noticed but out of scope → `/rb:techdebt` (tech-debt logging)
+- Skill-router telemetry summary → `/rb:discovery-report` (internal eval-tuning tool — drafts a redacted report from skill-discovery telemetry)
+<!-- END-GENERATED related-footer -->

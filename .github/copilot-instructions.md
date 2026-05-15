@@ -47,6 +47,7 @@ PR review: flag prose that violates this rule.
 | `extract-permissions` (Ruby) | transcript-based Bash permission recommender |
 | `resolve-base-ref` (bash) | eval-able BASE_REF resolver for diff comparisons |
 | `compression-stats` (Ruby) | end-user reader for verify-output telemetry; `--redact` mode emits intermediate input for `/rb:compression-report` skill (NOT a final paste-anywhere artifact — skill drafts the final markdown) |
+| `discovery-stats` (Ruby) | end-user reader for skill-discovery telemetry (`${CLAUDE_PLUGIN_DATA}/discovery.jsonl`); `--redact` mode emits intermediate input for `/rb:discovery-report` skill |
 | `provenance-scan` (Ruby) | end-user provenance-sidecar auditor; classifies `*.provenance.md` via 4-state algorithm; surfaced via `/rb:provenance-scan` |
 | `manifest-update` (Ruby) | atomic JSON manifest writer for spawn-fanout `RUN-CURRENT.json`; subcommands: `prepare-run`, `field`, `spawn-paths`, `init`, `patch`, `prepare-respawn`, `archive`, `resume-check`, `status`; path-allowlist gate, symlink refusal, fsync + POSIX rename. Main session calls this — NOT raw `mv` / `cp` / `jq -i` / `rm` |
 
@@ -151,10 +152,9 @@ the PR.
   `.claude/rules/eval-workflow.md`,
   `.github/instructions/eval-review.instructions.md` "Additional
   Modules" list.
-- **Skill / agent description text change** → check combined
-  `description + when_to_use` length against ceilings (skills: 1,536;
-  agents: 250). Flag if unchanged sibling field pushes total over limit
-  after the edit.
+- **Skill / agent description text change** → check `description`
+  length against ceilings (skills: 1,024 per agentskills.io canon —
+  single `description` field, no `when_to_use`; agents: 250).
 - **`compute_trust_state` schema change** in
   `lab/eval/output_checks.py` → also update fixtures under
   `lab/eval/fixtures/output/` + `lab/eval/fixtures/trust-states/` +

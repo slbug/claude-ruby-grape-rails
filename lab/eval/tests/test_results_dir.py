@@ -17,16 +17,21 @@ class TestResolveProvider(unittest.TestCase):
 
     def test_explicit_supported(self) -> None:
         self.assertEqual(rd.resolve_provider("ollama"), "ollama")
-        self.assertEqual(rd.resolve_provider("apfel"), "apfel")
-        self.assertEqual(rd.resolve_provider("haiku"), "haiku")
 
     def test_explicit_invalid_returns_default(self) -> None:
         # Programmatic caller bad-input: fall through to default, no warning.
         self.assertEqual(rd.resolve_provider("bogus"), rd.DEFAULT_PROVIDER)
 
+    def test_unknown_provider_names_fall_back(self) -> None:
+        # Any name outside SUPPORTED_PROVIDERS falls through to the default.
+        # Pluggability stays — adding a real provider means appending to
+        # SUPPORTED_PROVIDERS + wiring a dispatch in _run_provider.
+        self.assertEqual(rd.resolve_provider("unwired-provider-a"), rd.DEFAULT_PROVIDER)
+        self.assertEqual(rd.resolve_provider("unwired-provider-b"), rd.DEFAULT_PROVIDER)
+
     def test_none_reads_env(self) -> None:
-        with patch.dict("os.environ", {rd.PROVIDER_ENV_VAR: "haiku"}, clear=False):
-            self.assertEqual(rd.resolve_provider(None), "haiku")
+        with patch.dict("os.environ", {rd.PROVIDER_ENV_VAR: "ollama"}, clear=False):
+            self.assertEqual(rd.resolve_provider(None), "ollama")
 
     def test_none_unset_env_falls_back_to_default(self) -> None:
         import os
@@ -47,11 +52,11 @@ class TestResolveProvider(unittest.TestCase):
 
     def test_invalid_env_warns_per_distinct_value(self) -> None:
         """Different bad values each warn once."""
-        with patch.dict("os.environ", {rd.PROVIDER_ENV_VAR: "haik"}, clear=False):
+        with patch.dict("os.environ", {rd.PROVIDER_ENV_VAR: "ollma"}, clear=False):
             with self.assertLogs(rd._log, level=logging.WARNING) as captured:
                 rd.resolve_provider(None)
             self.assertEqual(len(captured.records), 1)
-        with patch.dict("os.environ", {rd.PROVIDER_ENV_VAR: "apfl"}, clear=False):
+        with patch.dict("os.environ", {rd.PROVIDER_ENV_VAR: "ollamma"}, clear=False):
             with self.assertLogs(rd._log, level=logging.WARNING) as captured:
                 rd.resolve_provider(None)
             self.assertEqual(len(captured.records), 1)
@@ -79,8 +84,6 @@ class TestResultsDir(unittest.TestCase):
                 rd.results_dir("ollama"),
                 rd.RESULTS_BASE / "gemma4-26b-a4b-it-q8_0",
             )
-            self.assertEqual(rd.results_dir("apfel"), rd.RESULTS_BASE / "apfel")
-            self.assertEqual(rd.results_dir("haiku"), rd.RESULTS_BASE / "haiku")
 
     def test_invalid_provider_uses_default(self) -> None:
         with patch.dict("os.environ", {rd.OLLAMA_MODEL_ENV_VAR: ""}, clear=False):
@@ -90,8 +93,8 @@ class TestResultsDir(unittest.TestCase):
             )
 
     def test_none_uses_env(self) -> None:
-        with patch.dict("os.environ", {rd.PROVIDER_ENV_VAR: "haiku"}, clear=False):
-            self.assertEqual(rd.results_dir(None), rd.RESULTS_BASE / "haiku")
+        with patch.dict("os.environ", {rd.PROVIDER_ENV_VAR: "ollama", rd.OLLAMA_MODEL_ENV_VAR: ""}, clear=False):
+            self.assertEqual(rd.results_dir(None), rd.RESULTS_BASE / "gemma4-26b-a4b-it-q8_0")
 
     def test_explicit_ollama_model(self) -> None:
         self.assertEqual(

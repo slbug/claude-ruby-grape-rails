@@ -1,14 +1,8 @@
 ---
 name: grape-idioms
-description: "Use when building Grape APIs: endpoint design, param coercion, declared params, versioning, error handling, grape-entity presentation, and Rails integration."
-when_to_use: "Triggers: \"Grape\", \"API endpoint\", \"grape-entity\", \"API versioning\", \"param coercion\"."
+description: "Grape APIs: endpoint design, param coercion, versioning, grape-entity. Triggers: \"API versioning\", \"param coercion\", \"endpoint design\", \"Grape::Entity\". Do NOT use for: Rails controllers."
 user-invocable: false
 effort: medium
-paths:
-  - "app/{api,apis,resources,representers,serializers,blueprints,endpoints,deserializers}/**"
-  - "**/app/{api,apis,resources,representers,serializers,blueprints,endpoints,deserializers}/**"
-  - "{packs,engines,components}/*/{api,apis,resources,representers,serializers,blueprints,endpoints,deserializers}/**"
-  - "app/{packages,packs}/*/{api,apis,resources,representers,serializers,blueprints,endpoints,deserializers}/**"
 ---
 # Grape Idioms
 

@@ -12,6 +12,21 @@
     },
     {
       "prompt": "Turn this review file into an implementation plan"
+    },
+    {
+      "prompt": "ugh i hate this legacy code just plan this feature for me so i dont break everything"
+    },
+    {
+      "prompt": "design before code for Grape API"
+    },
+    {
+      "prompt": "pln this feature for the new sidekiq job"
+    },
+    {
+      "prompt": "I require a technical implementation plan for the upcoming database migration"
+    },
+    {
+      "prompt": "Please create a plan.md for the new user authentication flow"
     }
   ],
   "should_not_trigger": [
@@ -26,6 +41,21 @@
     },
     {
       "prompt": "Analyze my Bash permission prompts and suggest settings.json entries"
+    },
+    {
+      "prompt": "Write the Ruby code for this Sidekiq worker"
+    },
+    {
+      "prompt": "How do I fix a migration error in Rails?"
+    },
+    {
+      "prompt": "Review my recent pull request for style issues"
+    },
+    {
+      "prompt": "Run the test suite for the Grape endpoints"
+    },
+    {
+      "prompt": "Explain how Sidekiq handles retries in production"
     }
   ],
   "hard_should_trigger": [

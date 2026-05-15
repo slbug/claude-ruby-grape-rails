@@ -1,0 +1,175 @@
+{
+  "description": "Neighbor-confusion + forbidden-load fixture for description boundary regression. Targets are SKILL folder names (matches load_all_routing_descriptions() key convention used by every other behavioral eval).",
+  "threshold_routing": 0.80,
+  "threshold_forbidden": 0.20,
+  "runs_per_query": 3,
+  "pairs": [
+    {
+      "a": "ruby-idioms",
+      "b": "rails-idioms",
+      "queries_for_a": [
+        "frozen string literal",
+        "pattern matching in plain Ruby",
+        "Ractor concurrency"
+      ],
+      "queries_for_b": [
+        "controller before_action",
+        "Rails callbacks order",
+        "Rails autoloading config"
+      ]
+    },
+    {
+      "a": "plan",
+      "b": "work",
+      "queries_for_a": [
+        "plan a multi-file feature",
+        "design before coding",
+        "implementation strategy"
+      ],
+      "queries_for_b": [
+        "execute the plan",
+        "implement the checklist",
+        "resume implementation"
+      ]
+    }
+  ],
+  "forbidden": {
+    "plan": [
+      "fix this typo",
+      "rename this variable",
+      "what's the weather today",
+      "show me the Gemfile"
+    ],
+    "review": [
+      "plan a new feature",
+      "explain how Active Record callbacks work",
+      "deploy to production",
+      "what is Ruby"
+    ],
+    "verify": [
+      "explain N+1 queries",
+      "what does Brakeman find",
+      "describe Hotwire architecture",
+      "list my open PRs"
+    ],
+    "work": [
+      "design a new feature from scratch",
+      "compare ORMs",
+      "research a gem",
+      "write a brand-new spec"
+    ],
+    "triage": [
+      "implement this feature",
+      "write the migration",
+      "deploy the app",
+      "explain Sidekiq"
+    ],
+    "compound": [
+      "plan the next feature",
+      "review my PR",
+      "deploy",
+      "explain Hotwire"
+    ],
+    "investigate": [
+      "design a new endpoint",
+      "plan a migration",
+      "write a job",
+      "review this PR"
+    ],
+    "init": [
+      "fix this bug",
+      "review my changes",
+      "implement feature X",
+      "audit security"
+    ],
+    "brief": [
+      "fix the bug",
+      "implement feature",
+      "deploy",
+      "review changes"
+    ],
+    "active-record-patterns": [
+      "Sequel dataset",
+      "Karafka consumer",
+      "Hotwire Turbo Frame",
+      "secret scan"
+    ],
+    "sidekiq": [
+      "synchronous HTTP endpoint",
+      "Sequel migration",
+      "Hotwire stream",
+      "frontend rendering"
+    ],
+    "hotwire-patterns": [
+      "Sidekiq job",
+      "Karafka consumer",
+      "Sequel model",
+      "Brakeman finding"
+    ],
+    "grape-idioms": [
+      "Sidekiq job",
+      "Hotwire stream",
+      "deploy script",
+      "Karafka consumer"
+    ],
+    "rails-idioms": [
+      "plain Ruby pattern matching",
+      "Sequel dataset",
+      "Kafka consumer",
+      "Brakeman config"
+    ],
+    "ruby-idioms": [
+      "Rails callback",
+      "Sequel migration",
+      "Hotwire stream",
+      "Sidekiq queue"
+    ],
+    "rails-contexts": [
+      "Sequel ORM",
+      "Karafka consumer",
+      "Brakeman finding",
+      "deploy script"
+    ],
+    "ar-n1-check": [
+      "memory leak",
+      "latency unrelated to queries",
+      "secrets check",
+      "code review"
+    ],
+    "active-record-constraint-debug": [
+      "N+1 query",
+      "Sequel dataset",
+      "Sidekiq queue",
+      "Hotwire stream"
+    ],
+    "rb-trace": [
+      "bug with unknown cause",
+      "perf tuning",
+      "code review",
+      "deploy"
+    ],
+    "security": [
+      "API key in repo",
+      "N+1 query",
+      "code style",
+      "deploy"
+    ],
+    "safe-migrations": [
+      "AR callback",
+      "review PR",
+      "deploy",
+      "Karafka consumer"
+    ],
+    "testing": [
+      "deploy",
+      "security audit",
+      "Sequel migration",
+      "Karafka consumer"
+    ],
+    "intent-detection": [
+      "the user already typed slash plan directly",
+      "the user already typed slash work running",
+      "the user already typed slash review verdict"
+    ]
+  }
+}

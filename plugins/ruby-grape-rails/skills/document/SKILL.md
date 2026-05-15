@@ -1,7 +1,6 @@
 ---
 name: rb:document
-description: "Use when generating documentation for implemented features — YARD/RDoc, README updates, ADRs. Use after implementing new modules or features to ensure proper documentation coverage. Run after /rb:review passes."
-when_to_use: "Triggers: \"document\", \"YARD\", \"RDoc\", \"README\", \"ADR\", \"write docs\"."
+description: "Generating documentation for implemented Ruby/Rails/Grape features: YARD/RDoc method docs, README updates, ADRs. Runs after /rb:review passes."
 argument-hint: "[plan-file OR feature-name]"
 effort: low
 disable-model-invocation: true

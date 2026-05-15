@@ -1,3 +1,0 @@
-{
-  "apiKeyHelper": "security find-generic-password -s 'Claude Code-credentials' -w | jq -r '.claudeAiOauth.accessToken'"
-}
