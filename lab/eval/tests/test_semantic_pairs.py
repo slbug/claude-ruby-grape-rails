@@ -282,6 +282,37 @@ class TestBuildSemanticConfusablePairs(unittest.TestCase):
                     build_semantic_confusable_pairs(SAMPLE_DESCRIPTIONS, [])
                     self.assertTrue(mock_chat.called)
 
+    def test_cache_hit_with_empty_pairs_skips_fetch(self):
+        """Cached empty `pairs` with matching desc_hash counts as a hit."""
+        from lab.eval.trigger_scorer import (
+            _descriptions_hash,
+            build_semantic_confusable_pairs,
+        )
+        desc_hash = _descriptions_hash(SAMPLE_DESCRIPTIONS)
+        cached = {"desc_hash": desc_hash, "pairs": []}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "_semantic_pairs.json"
+            cache_path.write_text(json.dumps(cached))
+            with patch("lab.eval.trigger_scorer._SEMANTIC_CACHE_PATH", cache_path):
+                with patch("lab.eval.behavioral_scorer.ollama_chat") as mock_chat:
+                    build_semantic_confusable_pairs(SAMPLE_DESCRIPTIONS, [])
+                    mock_chat.assert_not_called()
+
+    def test_explicit_empty_token_pairs_preserved(self):
+        """Caller passing `token_pairs=[]` is honored; token pairs not recomputed."""
+        from lab.eval.trigger_scorer import build_semantic_confusable_pairs
+        desc_hash_fn = "lab.eval.trigger_scorer.build_confusable_pairs"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_path = Path(tmpdir) / "_semantic_pairs.json"
+            with patch("lab.eval.trigger_scorer._SEMANTIC_CACHE_PATH", cache_path):
+                with patch(
+                    "lab.eval.behavioral_scorer.ollama_chat",
+                    return_value="",
+                ):
+                    with patch(desc_hash_fn) as mock_build:
+                        build_semantic_confusable_pairs(SAMPLE_DESCRIPTIONS, [])
+                        mock_build.assert_not_called()
+
 
 class TestSemanticPairCache(unittest.TestCase):
     """Tests for cache hit/miss behavior."""

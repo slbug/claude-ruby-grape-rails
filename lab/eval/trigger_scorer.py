@@ -398,16 +398,19 @@ def build_semantic_confusable_pairs(
     in through `behavioral_scorer.ollama_chat`'s sibling helpers.
     """
     desc_hash = _descriptions_hash(descriptions)
-    token_pairs = token_pairs or build_confusable_pairs(descriptions)
+    if token_pairs is None:
+        token_pairs = build_confusable_pairs(descriptions)
     cached: list[dict[str, Any]] = []
+    cache_hit = False
     if _SEMANTIC_CACHE_PATH.is_file():
         try:
             data = json.loads(_SEMANTIC_CACHE_PATH.read_text(encoding="utf-8"))
             if isinstance(data, dict) and data.get("desc_hash") == desc_hash:
                 cached = data.get("pairs") or []
+                cache_hit = True
         except (json.JSONDecodeError, OSError):
             cached = []
-    semantic = cached if cached else _fetch_semantic_pairs(descriptions, token_pairs)
+    semantic = cached if cache_hit else _fetch_semantic_pairs(descriptions, token_pairs)
     return _merge_pairs(token_pairs, semantic, desc_hash)
 
 
