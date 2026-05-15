@@ -11,7 +11,7 @@ problem crosses those boundaries.
 The fetch script maintains:
 
 - `llms.txt` as the discovery index
-- 46 detailed cached pages under `.claude/docs-check/docs-cache/` (includes nested `whats-new/` and `agent-sdk/` subdirectories)
+- 56 detailed cached pages under `.claude/docs-check/docs-cache/` (includes nested `whats-new/` and `agent-sdk/` subdirectories)
 
 Primary cached pages (plugin-critical):
 
@@ -46,6 +46,10 @@ Primary cached pages (plugin-critical):
 | `ultraplan.md` | Bundled `/ultraplan` — overlap check with plugin `/rb:plan` |
 | `ultrareview.md` | Bundled `/ultrareview` — overlap check with plugin `/rb:review` |
 | `changelog.md` | Canonical CC changelog — authoritative source for `cc-changelog` skill |
+| `worktrees.md` | `isolation: worktree` agent frontmatter, Agent-tool `isolation` parameter, `.worktreeinclude`, subagent isolation semantics |
+| `channels.md` | `channels` field in `plugin.json` — push events into running session |
+| `channels-reference.md` | MCP-server channel contract: capability declaration, notification events, reply tools, sender gating, permission relay |
+| `debug-your-config.md` | `/context`, `/doctor`, `/hooks`, `/mcp`, `/plugin details` enumeration of loaded plugin items — cross-ref for surface visibility claims |
 
 Additional cached pages (context/reference):
 
@@ -68,6 +72,12 @@ Additional cached pages (context/reference):
 | `agent-sdk/plugins.md` | SDK plugin packaging parity |
 | `agent-sdk/subagents.md` | SDK subagent frontmatter parity |
 | `agent-sdk/slash-commands.md` | SDK slash command parity |
+| `agent-sdk/skills.md` | SDK-side skill schema parity check |
+| `agent-sdk/permissions.md` | SDK permission shape parity with `permissions.md` |
+| `glossary.md` | Term definitions — anchor terminology drift for hooks/subagents/MCP/skills |
+| `goal.md` | `/goal` slash command — overlap check with plugin `/rb:full` |
+| `routines.md` | Remote routines / scheduled remote agents — `schedule` skill cross-ref |
+| `auto-mode-config.md` | Auto-mode env context, block/allow rules — permissions adjacent |
 
 ## Which Pages To Read
 
@@ -77,11 +87,13 @@ Use:
 
 - `plugins-reference.md`
 - `sub-agents.md`
+- `worktrees.md` when the agent uses `isolation: worktree` or the finding touches subagent worktree semantics
 
 Questions this answers:
 
 - Which frontmatter fields are supported for plugin-shipped agents?
 - Is a given tool name or `Agent(...)` restriction documented?
+- Is `isolation: worktree` valid for this agent's tool set?
 - Is a reported agent-field issue real or just stale local guidance?
 
 ### Skills
@@ -119,6 +131,7 @@ Use:
 - `plugin-dependencies.md` when the question touches version constraints
 - `plugins.md`
 - `mcp.md` when MCP config is involved
+- `channels.md` + `channels-reference.md` when `channels` field adoption is in question
 - `settings.md` only when a conclusion depends on settings behavior
 - `discover-plugins.md` when the marketplace install flow is in question
 
@@ -128,6 +141,7 @@ Questions this answers:
 - Are `userConfig`, `channels`, or `dependencies` documented?
 - Should a recommendation use `${CLAUDE_PLUGIN_ROOT}` or
   `${CLAUDE_PLUGIN_DATA}`?
+- Does a `channels` adoption shape (capability decl, reply tools, sender gating) match the documented MCP contract?
 
 ### Commands and `.claude/` Layout
 
@@ -270,6 +284,8 @@ Use (only when the finding crosses plugin/SDK boundaries):
 - `agent-sdk/plugins.md`
 - `agent-sdk/subagents.md`
 - `agent-sdk/slash-commands.md`
+- `agent-sdk/skills.md`
+- `agent-sdk/permissions.md`
 
 Questions this answers:
 
@@ -278,6 +294,44 @@ Questions this answers:
 - Does a plugin slash-command shape match the SDK command interface?
 - Is a hook event or payload field documented equivalently in plugin and
   SDK surfaces?
+- Does a skill frontmatter field match the SDK-side skill schema?
+- Does a permission rule shape match the SDK permission surface?
+
+### Loaded-Config Enumeration
+
+Use:
+
+- `debug-your-config.md`
+
+Questions this answers:
+
+- Does `/plugin details` / `claude plugin details` surface the field a
+  changelog entry claims it does (e.g., LSP servers, monitors)?
+- Does `/hooks` / `/mcp` / `/context` enumerate the plugin item under the
+  expected name?
+
+### Auto Mode
+
+Use:
+
+- `auto-mode-config.md`
+
+Questions this answers:
+
+- Does a plugin permission rule align with documented auto-mode block/allow
+  semantics?
+- Does plugin guidance reference auto-mode env context correctly?
+
+### Terminology Anchor
+
+Use:
+
+- `glossary.md`
+
+Questions this answers:
+
+- Has the definition of `agentic loop`, `compaction`, `subagent`, `hook`,
+  or `MCP` drifted from what plugin docs assume?
 
 ## Practical Loading Rules
 
