@@ -43,15 +43,17 @@ def routing_table_rows(reg)
   rows = []
   reg.fetch('hidden_skills').each do |entry|
     next if entry['aliases'].to_a.empty?
+
     signal = entry['aliases'].map { |a| %("#{a}") }.join(', ')
     rows << "| #{signal} | #{entry['rationale']} | `/#{entry['name']}` |"
   end
-  ["| Signal | Detected Intent | Suggest |", "|---|---|---|", *rows].join("\n")
+  ['| Signal | Detected Intent | Suggest |', '|---|---|---|', *rows].join("\n")
 end
 
 def related_footer_for_hub(reg, hub_name)
   hits = reg.fetch('hidden_skills').select { |e| Array(e['advertise_in']).include?(hub_name) }
   return nil if hits.empty?
+
   bullets = hits.map { |e| "- #{e.fetch('symptom', e['rationale'])} → `/#{e['name']}` (#{e['rationale']})" }
   bullets.join("\n")
 end
@@ -60,13 +62,13 @@ def inventory_section(reg)
   visible = reg.fetch('visible_skills').map { |e| "- `/#{e['name']}` — #{e['rationale']}" }
   hidden  = reg.fetch('hidden_skills').map  { |e| "- `/#{e['name']}` — #{e['rationale']}" }
   [
-    "**Visible (in routing budget):**",
-    "",
+    '**Visible (in routing budget):**',
+    '',
     *visible,
-    "",
-    "**Hidden (DMI, slash-invocable):**",
-    "",
-    *hidden,
+    '',
+    '**Hidden (DMI, slash-invocable):**',
+    '',
+    *hidden
   ].join("\n")
 end
 
@@ -82,6 +84,7 @@ def scan_targets
   SKILLS_DIR.glob('*/SKILL.md').sort.each do |skill_md|
     folder = skill_md.parent.basename.to_s
     next if folder == 'intent-detection'
+
     targets << [skill_md, folder]
   end
   targets
@@ -92,13 +95,13 @@ def expected_content(block_name, hub_folder, reg)
   when 'routing-table'  then routing_table_rows(reg)
   when 'inventory'      then inventory_section(reg)
   when 'related-footer' then related_footer_for_hub(reg, hub_folder)
-  else nil
   end
 end
 
 def splice(text, block_name, content)
   marker_re = /(<!-- BEGIN-GENERATED #{Regexp.escape(block_name)} -->)(.*?)(<!-- END-GENERATED #{Regexp.escape(block_name)} -->)/m
   return text unless text.match?(marker_re)
+
   text.sub(marker_re) { "#{Regexp.last_match(1)}\n#{content}\n#{Regexp.last_match(3)}" }
 end
 
@@ -120,6 +123,7 @@ def ensure_related_footer_marker(text, hub_folder, reg)
   return text if text.include?('<!-- BEGIN-GENERATED related-footer -->')
   return text unless hub_folder
   return text if related_footer_for_hub(reg, hub_folder).nil?
+
   trimmed = text.sub(/\s*\z/, "\n")
   trimmed + FOOTER_HEADING
 end
@@ -127,6 +131,7 @@ end
 def strip_related_footer_section(text)
   pattern = /\n*## Related — invoke manually if needed\n+<!-- BEGIN-GENERATED related-footer -->.*?<!-- END-GENERATED related-footer -->\n*/m
   return text unless text.match?(pattern)
+
   text.sub(pattern, "\n")
 end
 
@@ -135,9 +140,11 @@ def run(mode:)
   drift = []
   scan_targets.each do |path, hub_folder|
     next unless path.file?
+
     text = path.read
     text_with_markers = ensure_related_footer_marker(text, hub_folder, reg)
     next unless text_with_markers.include?('<!-- BEGIN-GENERATED ')
+
     if text_with_markers != text && mode == :check
       drift << "#{path.relative_path_from(REPO_ROOT)} :: missing related-footer marker"
     end
@@ -149,25 +156,33 @@ def run(mode:)
       # hub body doesn't carry a dangling heading. ensure_related_footer_marker
       # re-adds the section if a future registry entry advertises here.
       if content.nil? && block_name == 'related-footer'
-        updated = strip_related_footer_section(updated)
+        stripped = strip_related_footer_section(updated)
+        if stripped != updated
+          drift << "#{path.relative_path_from(REPO_ROOT)} :: #{block_name} (stale section)" if mode == :check
+          updated = stripped
+        end
         next
       end
       next if content.nil?
+
       after = splice(updated, block_name, content)
-      drift << "#{path.relative_path_from(REPO_ROOT)} :: #{block_name}" if after != updated && mode == :check && after != text_with_markers
+      if after != updated && mode == :check && after != text_with_markers
+        drift << "#{path.relative_path_from(REPO_ROOT)} :: #{block_name}"
+      end
       updated = after
     end
     next if updated == text
+
     if mode == :write
       path.write(updated)
       puts "wrote #{path.relative_path_from(REPO_ROOT)}"
     end
   end
-  if mode == :check && !drift.empty?
-    warn "registry vs generated drift:"
-    drift.each { |row| warn "  #{row}" }
-    exit 1
-  end
+  return unless mode == :check && !drift.empty?
+
+  warn 'registry vs generated drift:'
+  drift.each { |row| warn "  #{row}" }
+  exit 1
 end
 
 mode = ARGV.include?('--check') ? :check : :write
