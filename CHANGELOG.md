@@ -19,6 +19,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   variants never fired. The paired plain-prefix handlers
   (`Bash(bundle *)`, `Bash(rails *)`, etc.) already match the
   stripped form, so removal is zero behavior change.
+  `lab/eval/tests/test_runtime_scripts.py` `expected_filters`
+  updated to the 20 remaining plain-prefix entries with a
+  regression guard asserting `Bash(*=* ...)` variants stay absent.
 
 ### Changed
 

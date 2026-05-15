@@ -464,52 +464,42 @@ class RuntimeScriptTests(unittest.TestCase):
             "and skill-discovery-observer.rb",
         )
 
+        # Plain-prefix filters only. CC strips leading `VAR=value` assignments
+        # from each Bash subcommand before evaluating `if` patterns (per
+        # https://code.claude.com/docs/en/hooks#common-fields), so the prior
+        # `Bash(*=* <cmd> *)` variants never fired and were removed in 1.16.11.
         expected_filters = {
             "Bash(bundle *)",
-            "Bash(*=* bundle *)",
             "Bash(rails *)",
-            "Bash(*=* rails *)",
             "Bash(bin/rails *)",
-            "Bash(*=* bin/rails *)",
             "Bash(./bin/rails *)",
-            "Bash(*=* ./bin/rails *)",
             "Bash(rake *)",
-            "Bash(*=* rake *)",
             "Bash(bin/rake *)",
-            "Bash(*=* bin/rake *)",
             "Bash(./bin/rake *)",
-            "Bash(*=* ./bin/rake *)",
             "Bash(ruby *)",
-            "Bash(*=* ruby *)",
             "Bash(rspec *)",
-            "Bash(*=* rspec *)",
             "Bash(bin/rspec *)",
-            "Bash(*=* bin/rspec *)",
             "Bash(./bin/rspec *)",
-            "Bash(*=* ./bin/rspec *)",
             "Bash(standardrb *)",
-            "Bash(*=* standardrb *)",
             "Bash(bin/standardrb *)",
-            "Bash(*=* bin/standardrb *)",
             "Bash(./bin/standardrb *)",
-            "Bash(*=* ./bin/standardrb *)",
             "Bash(rubocop *)",
-            "Bash(*=* rubocop *)",
             "Bash(bin/rubocop *)",
-            "Bash(*=* bin/rubocop *)",
             "Bash(./bin/rubocop *)",
-            "Bash(*=* ./bin/rubocop *)",
             "Bash(brakeman *)",
-            "Bash(*=* brakeman *)",
             "Bash(bin/brakeman *)",
-            "Bash(*=* bin/brakeman *)",
             "Bash(./bin/brakeman *)",
-            "Bash(*=* ./bin/brakeman *)",
         }
         seen_filters = {hook.get("if") for hook in ruby_failure_hooks}
         self.assertEqual(seen_filters, expected_filters)
         self.assertTrue(all(hook.get("if") for hook in ruby_failure_hooks))
         self.assertEqual(len(ruby_failure_hooks), len(expected_filters))
+        # Regression guard: env-assignment variants must stay absent because
+        # the matcher strips `VAR=value` before evaluation, making them dead.
+        self.assertFalse(
+            any("*=*" in (hook.get("if") or "") for hook in ruby_failure_hooks),
+            "Bash(*=* ...) filters are dead code per CC matcher rules; do not re-add",
+        )
 
         self.assertEqual(len(compression_hooks), 1)
         self.assertIsNone(compression_hooks[0].get("if"))
