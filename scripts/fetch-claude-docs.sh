@@ -95,6 +95,16 @@ PAGES=(
   "agent-sdk/plugins.md"        # SDK plugin packaging parity
   "agent-sdk/subagents.md"      # SDK subagent frontmatter parity
   "agent-sdk/slash-commands.md" # SDK slash command parity
+  "agent-sdk/skills.md"         # SDK-side skill schema parity (matches hooks/plugins/subagents parity caches)
+  "agent-sdk/permissions.md"    # SDK permission shape parity with permissions.md
+  "worktrees.md"                # `isolation: worktree` agent frontmatter + Agent-tool isolation parameter
+  "channels.md"                 # plugin.json `channels` field (newly documented; config-report I4)
+  "channels-reference.md"       # MCP-server channel contract (capability decl, reply tools, sender gating)
+  "debug-your-config.md"        # /context, /doctor, /hooks, /mcp, /plugin enumeration — validation cross-ref
+  "glossary.md"                 # Term definitions — anchor terminology drift for hooks/subagents/MCP/skills
+  "goal.md"                     # /goal slash command — overlap check with /rb:full workflow
+  "routines.md"                 # Remote routines / scheduled remote agents — schedule skill cross-ref
+  "auto-mode-config.md"         # Auto-mode env context + block/allow rules — permissions adjacent
 )
 
 # Parse arguments

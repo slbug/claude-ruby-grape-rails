@@ -7,6 +7,48 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.11] - 2026-05-15
+
+### Fixed
+
+- Removed 20 dead `Bash(*=* <cmd> *)` `if`-handlers from
+  `hooks/hooks.json` `PostToolUseFailure` block. Per
+  [CC hooks reference](https://code.claude.com/docs/en/hooks#common-fields),
+  the matcher strips leading `VAR=value` assignments from each Bash
+  subcommand before evaluating `if` patterns, so `*=*`-prefixed
+  variants never fired. The paired plain-prefix handlers
+  (`Bash(bundle *)`, `Bash(rails *)`, etc.) already match the
+  stripped form, so removal is zero behavior change.
+  `lab/eval/tests/test_runtime_scripts.py` `expected_filters`
+  updated to the 20 remaining plain-prefix entries with a
+  regression guard asserting `Bash(*=* ...)` variants stay absent.
+
+### Changed
+
+- `/cc-changelog` bumped last-checked CC version to 2.1.142
+  (no BLOCKER, no DEPRECATION affecting plugin).
+- `/docs-check` cache expanded from 46 to 56 pages. Added
+  `worktrees.md`, `channels.md`, `channels-reference.md`,
+  `debug-your-config.md`, `glossary.md`, `agent-sdk/skills.md`,
+  `agent-sdk/permissions.md`, `goal.md`, `routines.md`,
+  `auto-mode-config.md`. Surface→cached-doc maps in
+  `.claude/skills/docs-check/SKILL.md` +
+  `.claude/skills/docs-check/references/doc-pages.md` updated
+  accordingly.
+- Hardened `.claude/skills/docs-check/references/validation-rules.md`
+  with four anti-false-positive rules: (1) two-layer skill
+  substitution clarification (skill-scope dynamic in `skills.md` vs
+  plugin-scope path vars in `plugins-reference.md` § Environment
+  variables); (2) `name: rb:<slug>` colon-policy override; (3)
+  marketplace plugin entries inherit the full `plugin.json` author
+  schema, NOT the quick-summary `(name, email)` shorthand; (4)
+  reviewer-class agents intentionally retain `Write` to produce
+  findings files — `disallowedTools` outlier checks must compare
+  against sibling agents before flagging.
+- `.claude/agents/docs-surface-validator.md` updated with operating
+  rules #5–#8 mirroring those four protections; workers must read
+  `validation-rules.md` before classification.
+
 ## [1.16.10] - 2026-05-15
 
 ### Changed
@@ -2777,7 +2819,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.10...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.11...HEAD
+[1.16.11]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.10...v1.16.11
 [1.16.10]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.9...v1.16.10
 [1.16.9]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.8...v1.16.9
 [1.16.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.7...v1.16.8

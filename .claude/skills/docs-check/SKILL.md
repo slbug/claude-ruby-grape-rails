@@ -72,10 +72,10 @@ Map each validation question to smallest cached-doc set:
 
 | Surface | Cached docs |
 |---|---|
-| agents | `plugins-reference.md`, `sub-agents.md` |
-| skills | `skills.md`, `hooks.md` (only if skill hooks matter) |
-| hooks | `hooks.md`, `hooks-guide.md` |
-| config | `plugins-reference.md`, `plugin-marketplaces.md`, `plugins.md`, `mcp.md` (if needed), `settings.md` (if needed) |
+| agents | `plugins-reference.md`, `sub-agents.md`, `worktrees.md` (if `isolation:` is in scope) |
+| skills | `skills.md`, `hooks.md` (only if skill hooks matter), `agent-sdk/skills.md` (SDK parity) |
+| hooks | `hooks.md`, `hooks-guide.md`, `agent-sdk/hooks.md` (SDK parity) |
+| config | `plugins-reference.md`, `plugin-marketplaces.md`, `plugins.md`, `channels.md` + `channels-reference.md` (if `channels:` in scope), `mcp.md` (if needed), `settings.md` (if needed), `debug-your-config.md` (loaded-config cross-ref) |
 
 Do NOT paste full cached pages into worker prompts.
 
