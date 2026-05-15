@@ -166,7 +166,7 @@ Checks:
 4. Flag `when_to_use:` on a plugin SKILL.md as drift — single `description` only.
 5. Flag plugin-scope `paths:` as drift (non-functional at plugin scope).
 6. Colon names (`rb:<slug>`) are repo policy — classify INFO, not WARNING.
-6. Skill `description` over 1,024 characters → `ERROR` (agentskills.io cap).
+7. Skill `description` over 1,024 characters → `ERROR` (agentskills.io cap).
    Over 250 characters → `WARNING` (cached docs say Claude truncates them
    in skill listing).
 
