@@ -1,6 +1,6 @@
 ---
 name: iron-laws
-description: "22 Iron Laws of Ruby/Rails/Grape (AR, Sidekiq, security, Ruby, Hotwire, verify). Non-negotiable rules. Triggers: \"iron law\", \"non-negotiable rule\", \"iron-law-judge\"."
+description: "Iron Laws of Ruby/Rails/Grape (AR, Sidekiq, security, Ruby, Hotwire, verify). Non-negotiable rules. Triggers: \"iron law\", \"non-negotiable rule\", \"iron-law-judge\"."
 effort: medium
 ---
 # Iron Laws

@@ -9,19 +9,39 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.16.10] - 2026-05-15
 
-### Fixed
+### Changed
 
-- Dropped DMI skills from subagent `skills:` preload lists. Per
+- Un-DMI'd `iron-laws` and `research` skills (removed
+  `disable-model-invocation: true` from their frontmatters). Per
   [CC docs](https://code.claude.com/docs/en/skills),
   `disable-model-invocation: true` "prevents the skill from being
-  preloaded into subagents", so the listed preload silently failed
-  and emitted `[WARN] Skill 'X' specified in frontmatter was not
-  found`. Removed:
-  - `agents/iron-law-judge.md` no longer lists `iron-laws`
-    (DMI) — Iron Laws content reaches the subagent via the
-    SubagentStart inject-rules hook instead.
-  - `agents/ruby-gem-researcher.md` no longer lists `research`
-    (DMI).
+  preloaded into subagents", so the existing `skills:` preload
+  entries in `iron-law-judge` and `ruby-gem-researcher` were silently
+  failing (logged `[WARN] Skill 'X' specified in frontmatter was not
+  found`). Un-DMI'ing makes the preloads valid and restores the
+  intended skill-body context for both reviewer agents.
+- Trimmed visible-skill descriptions (iron-laws, research,
+  intent-detection, testing, plan, security, active-record-patterns,
+  hotwire-patterns) to fit the 25-visible skill set under the
+  8000-char routing-prompt budget.
+- Expanded trigger corpora across 20 skills (88 new probes:
+  33 should_trigger + 55 should_not_trigger) via the trigger-expand
+  pass against the new visible-skill set.
+
+### Fixed
+
+- `pr-review` description: `categorizes by severity` →
+  `categorizes by comment type (code change / question / nit / etc.)`
+  to match implementation (categorizes by TYPE, not severity).
+- `secrets-scan` description: dropped misleading
+  `Pre-commit/pre-push reflex` claim (that's the separate
+  `hooks/scripts/secret-scan.sh` PostToolUse hook, not this manual
+  skill).
+- `dry-rb-patterns` description: replaced `dry-effects` with the
+  gems actually covered in the body (`dry-struct`,
+  `dry-transaction`, `dry-system`).
+- `iron-laws` description: added `Ruby` category (body has 6
+  categories, description had 5).
 
 ## [1.16.9] - 2026-05-14
 
