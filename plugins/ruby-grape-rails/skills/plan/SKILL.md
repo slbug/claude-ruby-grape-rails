@@ -1,6 +1,6 @@
 ---
 name: rb:plan
-description: "Planning Ruby/Rails/Grape features, Sidekiq, migrations before code. Accepts plan.md, interview.md, REQUIRES CHANGES review. Triggers: \"plan this feature\", \"implementation plan\", \"plan before coding\", \"design before code\"."
+description: "Planning Ruby/Rails/Grape features, Sidekiq, migrations before code. Accepts plan.md, interview.md, REQUIRES CHANGES review. Triggers: \"plan this feature\", \"implementation plan\", \"design before code\"."
 argument-hint: <feature description OR path to existing plan.md OR path to interview.md OR path to .claude/reviews/...md (REQUIRES CHANGES verdict only)>
 effort: xhigh
 ---
@@ -484,7 +484,6 @@ When `--existing` references a research sidecar, read the sidecar's
 - API or internal docs needed → `/rb:document` (post-implementation docs)
 - Pattern reference needed → `/rb:examples` (codebase pattern surface)
 - Single-line / trivial fix → `/rb:quick` (trivial-fix path)
-- Library or approach comparison → `/rb:research` (evidence-based research)
 - Gem or Rails Guide lookup → `/rubydoc-fetcher` (cheap doc lookup)
 - Run full plan-work-verify-review-compound cycle autonomously → `/rb:full` (full lifecycle orchestration)
 - Research trust / source-quality audit → `/rb:provenance-scan` (research-trust audit)

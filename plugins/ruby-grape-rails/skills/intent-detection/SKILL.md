@@ -1,6 +1,6 @@
 ---
 name: intent-detection
-description: "Routing any Ruby/Rails/Grape/Sidekiq/AR/Sequel/Hotwire/Karafka work to the correct /rb: command BEFORE doing it. Pushy gateway: consult at session start, suggest the right command, never blocks. Triggers: \"this Ruby project\", \"my Rails app\", \"how should I approach\", \"which command\", informal multi-step task descriptions. Do NOT use when user typed /rb:<name>."
+description: "Routing Ruby/Rails/Grape/Sidekiq/AR/Sequel/Hotwire work to the correct /rb: command BEFORE doing it. Pushy gateway, never blocks. Triggers: \"my Rails app\", \"which command\", multi-step task. Do NOT use when user typed /rb:<name>."
 user-invocable: false
 effort: low
 ---
@@ -45,13 +45,11 @@ when the signal matches. Suggest the right command when triggers appear.
 | "YARD", "RDoc", "ADR", "write docs" | post-implementation docs | `/rb:document` |
 | "show examples", "codebase patterns", "representative code" | codebase pattern surface | `/rb:examples` |
 | "tutorial", "getting started", "what can you do" | onboarding | `/rb:intro` |
-| "iron law", "non-negotiable rule", "Ruby safety rules" | SessionStart-injected; review BLOCKED path | `/iron-laws` |
 | "learn from this", "remember this mistake", "correction" | in-flight lesson capture | `/rb:learn` |
 | "slow", "latency", "memory", "p95", "queue backup" | performance analysis | `/rb:perf` |
 | "permissions", "allow command", "approval prompts", "settings.json" | permission tuning | `/rb:permissions` |
 | "PR feedback", "review comments", "reviewer said" | PR review-comment handling | `/rb:pr-review` |
 | "quick fix", "typo", "one-liner" | trivial-fix path | `/rb:quick` |
-| "research gem", "compare approaches", "upgrade path" | evidence-based research | `/rb:research` |
 | "rubydoc", "gem docs", "API reference", "Rails Guides" | cheap doc lookup | `/rubydoc-fetcher` |
 | "secrets", "leaked", "API key", "credentials", "betterleaks" | pre-push secret scan | `/rb:secrets` |
 | "do everything", "full lifecycle", "end to end", "hands-off" | full lifecycle orchestration | `/rb:full` |

@@ -27,6 +27,12 @@
     },
     {
       "prompt": "What is the idiomatic implementation for a background job in this framework?"
+    },
+    {
+      "prompt": "I'm losing my mind, why won't this before_action run in the right order?!"
+    },
+    {
+      "prompt": "How do I fix the autoload constant error?"
     }
   ],
   "should_not_trigger": [
@@ -56,6 +62,15 @@
     },
     {
       "prompt": "Explain how Ruby inheritance works."
+    },
+    {
+      "prompt": "How do I implement a singleton pattern in Ruby?"
+    },
+    {
+      "prompt": "How do I set up a Sidekiq worker in my app?"
+    },
+    {
+      "prompt": "Explain the difference between a module and a class in Ruby."
     }
   ],
   "hard_should_trigger": [

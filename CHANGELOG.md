@@ -7,6 +7,47 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.10] - 2026-05-15
+
+### Changed
+
+- Un-DMI'd `iron-laws` and `research` skills (removed
+  `disable-model-invocation: true` from their frontmatters). Per
+  [CC docs](https://code.claude.com/docs/en/skills),
+  `disable-model-invocation: true` "prevents the skill from being
+  preloaded into subagents", so the existing `skills:` preload
+  entries in `iron-law-judge` and `ruby-gem-researcher` were silently
+  failing (logged `[WARN] Skill 'X' specified in frontmatter was not
+  found`). Un-DMI'ing makes the preloads valid and restores the
+  intended skill-body context for both reviewer agents.
+- Moved `iron-laws` + `rb:research` from `hidden_skills` to
+  `visible_skills` in `references/skill-registry.yml`; regenerated
+  routing artifacts dropped them from the DMI roster table in
+  `intent-detection/SKILL.md` and from "Related — invoke manually if
+  needed" footers in hub skills (now auto-routed via description).
+- Trimmed visible-skill descriptions (iron-laws, research,
+  intent-detection, testing, plan, security, active-record-patterns,
+  hotwire-patterns) to fit the 25-visible skill set under the
+  8000-char routing-prompt budget.
+- Expanded trigger corpora across 20 skills (88 new probes:
+  33 should_trigger + 55 should_not_trigger) via the trigger-expand
+  pass against the new visible-skill set.
+
+### Fixed
+
+- `pr-review` description: `categorizes by severity` →
+  `categorizes by comment type (code change / question / nit / etc.)`
+  to match implementation (categorizes by TYPE, not severity).
+- `secrets-scan` description: dropped misleading
+  `Pre-commit/pre-push reflex` claim (that's the separate
+  `hooks/scripts/secret-scan.sh` PostToolUse hook, not this manual
+  skill).
+- `dry-rb-patterns` description: replaced `dry-effects` with the
+  gems actually covered in the body (`dry-struct`,
+  `dry-transaction`, `dry-system`).
+- `iron-laws` description: added `Ruby` category (body has 6
+  categories, description had 5).
+
 ## [1.16.9] - 2026-05-14
 
 ### Changed
@@ -2736,7 +2777,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.9...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.10...HEAD
+[1.16.10]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.9...v1.16.10
 [1.16.9]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.8...v1.16.9
 [1.16.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.7...v1.16.8
 [1.16.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.6...v1.16.7

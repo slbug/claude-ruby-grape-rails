@@ -96,6 +96,14 @@ the PR.
   `lab/eval/triggers/_confusable_pairs.json`,
   `lab/eval/triggers/_semantic_pairs.json`, `README.md`, `CHANGELOG.md`,
   cross-skill `/rb:<name>` mentions in other skills/agents.
+- **Skill `disable-model-invocation` toggle, rename, add, or remove** →
+  also update `plugins/ruby-grape-rails/references/skill-registry.yml`
+  (move between `visible_skills` ↔ `hidden_skills` buckets per the new
+  DMI state) and regenerate routing artifacts via
+  `bash scripts/generate-skill-routing.sh`. Drift defect when SKILL.md
+  flag and registry bucket disagree — caught by
+  `lab/eval/tests/test_registry_visibility_sync.py`; generator/artifact
+  drift caught by `lab/eval/tests/test_registry_in_sync.py`.
 - **Agent rename / removal / description change** → also check skill-body
   fanout owners
   (`plugins/ruby-grape-rails/skills/{review,plan,full}/SKILL.md`,

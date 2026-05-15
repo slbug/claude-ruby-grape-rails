@@ -1,6 +1,6 @@
 ---
 name: active-record-patterns
-description: "Active Record patterns: models, queries, associations, transactions, locking, migration design. Triggers: \"AR scope\", \"has_many through\", \"optimistic locking\", \"polymorphic\". Do NOT use for: Sequel, N+1 diagnosis."
+description: "Active Record patterns: models, queries, associations, transactions, locking, migrations. Triggers: \"AR scope\", \"has_many through\", \"polymorphic\". Do NOT use for: Sequel, N+1."
 user-invocable: false
 effort: medium
 ---

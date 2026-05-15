@@ -27,6 +27,12 @@
     },
     {
       "prompt": "Configure Turbo Stream broadcasting for the Comment model upon creation."
+    },
+    {
+      "prompt": "I've tried everything but my stimulus controller just won't trigger the event on click, help!"
+    },
+    {
+      "prompt": "How I can make page update automatically when data change?"
     }
   ],
   "should_not_trigger": [

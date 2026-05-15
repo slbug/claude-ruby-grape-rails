@@ -27,6 +27,9 @@
     },
     {
       "prompt": "Implement idempotency for the background worker."
+    },
+    {
+      "prompt": "My background job is not working because the arguments are not JSON safe."
     }
   ],
   "should_not_trigger": [
@@ -56,6 +59,9 @@
     },
     {
       "prompt": "Configure a RabbitMQ exchange for messaging."
+    },
+    {
+      "prompt": "Create a new HTTP endpoint for the API."
     }
   ],
   "hard_should_trigger": [

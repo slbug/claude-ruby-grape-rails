@@ -56,6 +56,15 @@
     },
     {
       "prompt": "Review my code for any potential security vulnerabilities"
+    },
+    {
+      "prompt": "How do I implement a Grape API in a Rails app?"
+    },
+    {
+      "prompt": "Please review my plan.md for any logical errors"
+    },
+    {
+      "prompt": "Explain the steps needed to refactor this Ruby code"
     }
   ],
   "hard_should_trigger": [

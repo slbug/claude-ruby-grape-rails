@@ -470,6 +470,5 @@ When triaging a review with a provenance sidecar, read the sidecar's
 
 <!-- BEGIN-GENERATED related-footer -->
 - Adversarial review needed → `/rb:challenge` (adversarial-mode review)
-- Iron Law violation suspected → `/iron-laws` (SessionStart-injected; review BLOCKED path)
 - PR review comments to address → `/rb:pr-review` (PR review-comment handling)
 <!-- END-GENERATED related-footer -->

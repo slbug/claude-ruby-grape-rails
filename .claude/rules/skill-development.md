@@ -29,6 +29,11 @@ skills/{name}/
 - No `triggers:` field — use `description` for routing
 - No `when_to_use:` field — single `description` field per agentskills.io canon
 - No `paths:` field on plugin SKILL.md — empirically non-functional at plugin scope (the `.claude/rules/*.md` `paths:` mechanism is distinct and remains functional)
+- **Registry sync on visibility flips**: toggling `disable-model-invocation`, renaming, or adding/removing a skill REQUIRES updating `plugins/ruby-grape-rails/references/skill-registry.yml`:
+  - DMI on → entry under `hidden_skills` with `aliases:`, `advertise_in:`, `symptom:`, `rationale:`
+  - DMI off (or absent) → entry under `visible_skills` with `name`, `folder`, `rationale` only (no `advertise_in` — auto-routed via description)
+  - After edit: run `bash scripts/generate-skill-routing.sh` to propagate to intent-detection routing table, hub footers, and tutorial inventory
+  - `test_registry_visibility_sync.py` catches drift between SKILL.md DMI flag and registry bucket; `test_registry_in_sync.py` catches drift between registry and generated artifacts
 - Description <= 1,024 chars (agentskills.io cap); front-load WHEN the skill applies, include real-query phrases as Triggers, include negative exclusion clauses as Do NOT use for
 - For plugin-wide executables in `bin/`, use explicit `${CLAUDE_PLUGIN_ROOT}/bin/<cmd>` when the skill also references `${CLAUDE_SKILL_DIR}` (bare names can be conflated with skill-local files)
 - **Cross-reference path rules** (substitution scope per CC docs):

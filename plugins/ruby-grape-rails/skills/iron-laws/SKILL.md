@@ -1,8 +1,7 @@
 ---
 name: iron-laws
-description: "Checking or enforcing the canonical Iron Laws of Ruby/Rails/Grape development: non-negotiable rules covering Active Record, Sidekiq, security, Ruby, Hotwire, and verification discipline."
+description: "Iron Laws of Ruby/Rails/Grape (AR, Sidekiq, security, Ruby, Hotwire, verify). Non-negotiable rules. Triggers: \"iron law\", \"non-negotiable rule\", \"iron-law-judge\"."
 effort: medium
-disable-model-invocation: true
 ---
 # Iron Laws
 

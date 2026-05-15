@@ -1,6 +1,6 @@
 ---
 name: testing
-description: "Authoring Ruby/Rails/Grape/Sidekiq tests: request specs, model/service tests, factories, anti-flake. Triggers: \"RSpec patterns\", \"factory setup\", \"flaky test\", \"shared context\". Do NOT use for: running tests, executing rspec, fixing failing tests."
+description: "Authoring Ruby/Rails/Grape/Sidekiq tests: request specs, factories, anti-flake. Triggers: \"RSpec patterns\", \"factory setup\", \"flaky test\". Do NOT use for: running tests, executing rspec."
 user-invocable: false
 effort: medium
 ---

@@ -56,6 +56,15 @@
     },
     {
       "prompt": "Update the documentation for the existing plugin."
+    },
+    {
+      "prompt": "How do I initialize a new Rails controller?"
+    },
+    {
+      "prompt": "Show me the layout of the current ruby project."
+    },
+    {
+      "prompt": "Can you help me configure my database connection?"
     }
   ],
   "hard_should_trigger": [

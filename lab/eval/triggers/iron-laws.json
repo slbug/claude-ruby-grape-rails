@@ -1,0 +1,81 @@
+{
+  "skill": "iron-laws",
+  "should_trigger": [
+    {
+      "prompt": "What are the Iron Laws for this project?"
+    },
+    {
+      "prompt": "Check if my code violates any Iron Laws"
+    },
+    {
+      "prompt": "Show me the non-negotiable rules"
+    },
+    {
+      "prompt": "List every mandatory rule I must follow in this project"
+    },
+    {
+      "prompt": "I am so sick of these constant errors, just tell me which iron law I am breaking right now!"
+    },
+    {
+      "prompt": "Apply the iron-law-judge to this block."
+    },
+    {
+      "prompt": "Pls check if this violates an iron law"
+    },
+    {
+      "prompt": "Please tell me the non-negotiable rule for Sidekiq."
+    },
+    {
+      "prompt": "Evaluate the following Ruby implementation against the established iron laws."
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "prompt": "Review the code for general quality"
+    },
+    {
+      "prompt": "Plan a new feature"
+    },
+    {
+      "prompt": "Fix the test failure"
+    },
+    {
+      "prompt": "Commit the current changes and push to the remote branch"
+    },
+    {
+      "prompt": "How do I optimize my Rails database queries?"
+    },
+    {
+      "prompt": "Write a unit test for this Grape API endpoint."
+    },
+    {
+      "prompt": "What are the best practices for Ruby security?"
+    },
+    {
+      "prompt": "Can you help me refactor this Sidekiq worker?"
+    },
+    {
+      "prompt": "Explain how Hotwire works in a Rails application."
+    }
+  ],
+  "hard_should_trigger": [
+    {
+      "prompt": "Is there a rule that says I can't do this?",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "After fixing the bug, also check if iron laws needs updating",
+      "axis": "multi_step"
+    }
+  ],
+  "hard_should_not_trigger": [
+    {
+      "prompt": "Add a security check to the authorization flow",
+      "axis": "confusable"
+    },
+    {
+      "prompt": "Fix this bug then run the test suite and review the results",
+      "axis": "multi_step"
+    }
+  ]
+}

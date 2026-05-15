@@ -113,6 +113,13 @@ Shared infrastructure to reuse (do not re-implement):
   (otherwise `default_eval()` fallback hides regressions)
 - Removed skill/agent → require removal of corresponding eval/trigger
   JSONs; `check_refs.py` will fail on stale cross-references
+- Skill `disable-model-invocation` flip → trigger file must mirror new
+  visibility. Un-DMI'd: trigger file required (otherwise behavioral
+  scorer skips it). DMI'd: trigger file should be removed (both
+  deterministic and behavioral scorers exclude DMI skills via
+  `load_hidden_skills()` in `trigger_scorer.py`). Registry sync
+  (`skill-registry.yml` `visible_skills` ↔ `hidden_skills`) covered by
+  `test_registry_visibility_sync.py` and `test_registry_in_sync.py`.
 - Added/renamed module under `lab/eval/` → also update `run_eval.sh`,
   `Makefile`, `package.json` scripts, and (if the new module is reached
   by `make eval-ci-deterministic`)

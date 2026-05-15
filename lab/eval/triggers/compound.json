@@ -56,6 +56,9 @@
     },
     {
       "prompt": "Save the current file to the disk"
+    },
+    {
+      "prompt": "Explain the difference between Grape and Sinatra"
     }
   ],
   "hard_should_trigger": [
