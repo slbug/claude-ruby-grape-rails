@@ -173,9 +173,3 @@ Example workflow:
 1. Run `/rb:challenge active record` after migration changes
 2. Answer each question with code references or test results
 3. Address all concerns before proceeding to PR
-
-## Related — invoke manually if needed
-
-<!-- BEGIN-GENERATED related-footer -->
-- Iron Law violation suspected → `/iron-laws` (SessionStart-injected; review BLOCKED path)
-<!-- END-GENERATED related-footer -->

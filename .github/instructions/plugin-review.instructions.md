@@ -82,6 +82,19 @@ Exception files (human-facing, narrative OK): `README.md`,
   making them optional or softer
 - Large workflow skills may be acceptable only when routing-critical;
   prefer references/ for long templates and examples
+- **Registry sync (skill-registry.yml)**: any `disable-model-invocation`
+  flip, rename, add, or remove on a SKILL.md requires a matching entry
+  move/add/remove in
+  `plugins/ruby-grape-rails/references/skill-registry.yml`
+  (`visible_skills` ↔ `hidden_skills` buckets) AND regeneration via
+  `bash scripts/generate-skill-routing.sh` so the intent-detection
+  routing table, hub footers, and tutorial inventory propagate.
+  `visible_skills` entries carry `name` + `folder` + `rationale` only;
+  `hidden_skills` entries also carry `aliases:`, `advertise_in:`,
+  `symptom:`. PR diff with SKILL.md frontmatter flip but no registry
+  edit → drift defect (caught by
+  `lab/eval/tests/test_registry_visibility_sync.py` +
+  `test_registry_in_sync.py`).
 
 ## Hook Conventions (plugins/**/hooks/)
 

@@ -124,6 +124,12 @@ def ensure_related_footer_marker(text, hub_folder, reg)
   trimmed + FOOTER_HEADING
 end
 
+def strip_related_footer_section(text)
+  pattern = /\n*## Related — invoke manually if needed\n+<!-- BEGIN-GENERATED related-footer -->.*?<!-- END-GENERATED related-footer -->\n*/m
+  return text unless text.match?(pattern)
+  text.sub(pattern, "\n")
+end
+
 def run(mode:)
   reg = load_registry
   drift = []
@@ -138,6 +144,14 @@ def run(mode:)
     updated = text_with_markers.dup
     each_block(text_with_markers) do |block_name|
       content = expected_content(block_name, hub_folder, reg)
+      # related-footer with no source-of-truth content → strip the entire
+      # `## Related — invoke manually if needed` section + markers so the
+      # hub body doesn't carry a dangling heading. ensure_related_footer_marker
+      # re-adds the section if a future registry entry advertises here.
+      if content.nil? && block_name == 'related-footer'
+        updated = strip_related_footer_section(updated)
+        next
+      end
       next if content.nil?
       after = splice(updated, block_name, content)
       drift << "#{path.relative_path_from(REPO_ROOT)} :: #{block_name}" if after != updated && mode == :check && after != text_with_markers

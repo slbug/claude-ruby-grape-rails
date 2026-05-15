@@ -117,6 +117,15 @@ no longer ships `IRON_LAWS_START/END` or `PREFERENCES_START/END` blocks
   `.claude/skills/docs-check/SKILL.md`) and agent count claims.
   Init injectable template carries no skill or agent names; renames
   do not touch it.
+- Skill `disable-model-invocation` flip, rename, add, or remove →
+  also update
+  `plugins/ruby-grape-rails/references/skill-registry.yml`
+  (`visible_skills` ↔ `hidden_skills`) and regenerate via
+  `bash scripts/generate-skill-routing.sh`. Generated artifacts
+  affected: `intent-detection/SKILL.md` routing table block, hub
+  "Related — invoke manually if needed" footers in
+  `{plan,investigate,review,triage}/SKILL.md`,
+  `intro/references/tutorial-content.md` inventory.
 - Iron Law count claim ("22 Total", "N Iron Laws") in any markdown →
   verify against `plugins/ruby-grape-rails/references/iron-laws.yml`
 - Plugin version mentioned in markdown → align with manifest trio
