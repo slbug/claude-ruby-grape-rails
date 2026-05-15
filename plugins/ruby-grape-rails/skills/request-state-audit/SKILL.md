@@ -1,6 +1,6 @@
 ---
 name: rb:state-audit
-description: "Auditing Rails request-scoped state hygiene: CurrentAttributes, sessions, caching policies, Redis usage, request-lifecycle leaks between calls. Triggers: \"request state\", \"CurrentAttributes\", \"session leak\", \"Redis state\", \"cache key leak\". Do NOT use for: Hotwire stream design, Sidekiq job state."
+description: "Auditing Rails request-scoped state hygiene: CurrentAttributes, sessions, caching policies, Redis usage, request-lifecycle leaks between calls."
 argument-hint: "[path|feature]"
 effort: medium
 disable-model-invocation: true

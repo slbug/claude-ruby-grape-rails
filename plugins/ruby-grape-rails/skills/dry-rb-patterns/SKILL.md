@@ -1,6 +1,6 @@
 ---
 name: rb:dry-rb-patterns
-description: "Applying dry-rb gems: dry-validation contracts, dry-types coercion, dry-monads Result/Maybe, dry-effects, dry-struct. Triggers: \"replace ActiveModel validation with dry\", \"railway-oriented flow\", \"Result/Failure monad\", \"strict type coercion\", \"dependency injection container\". Do NOT use for: Rails form objects without dry-rb, plain Ruby value objects."
+description: "Applying dry-rb gems: dry-validation contracts, dry-types coercion, dry-monads Result/Maybe, dry-struct value objects, dry-transaction pipelines, dry-system DI."
 effort: medium
 disable-model-invocation: true
 ---

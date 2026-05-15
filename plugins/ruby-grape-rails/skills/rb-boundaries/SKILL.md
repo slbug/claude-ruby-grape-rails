@@ -1,6 +1,6 @@
 ---
 name: rb:boundaries
-description: "Analyzing context and service boundaries in Rails apps: detect coupling, misplaced logic, layer-interaction violations. For refactors, monolith splits, package extraction. Triggers: \"coupling\", \"service boundaries\", \"split monolith\", \"fat controller\", \"misplaced logic\", \"package boundary\". Do NOT use for: where-does-this-go decisions for one object, tech-debt logging."
+description: "Analyzing context and service boundaries in Rails apps: detect coupling, misplaced logic, layer-interaction violations. For refactors, monolith splits, package extraction."
 argument-hint: "[path|service|context] [--focus controllers|models|services|grape]"
 effort: medium
 disable-model-invocation: true

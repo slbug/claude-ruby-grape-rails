@@ -1,6 +1,6 @@
 ---
 name: rb:research
-description: "Producing evidence-based research with citations on Ruby/Rails/Grape/Sidekiq gems, upgrade paths, security-sensitive choices, or architectural trade-offs before implementation. Triggers: \"research this gem\", \"compare approaches\", \"what are the options\", \"upgrade path\", \"evidence for\". Do NOT use for: debugging, implementation, code review, open-ended brainstorming."
+description: "Producing evidence-based research with citations on Ruby/Rails/Grape/Sidekiq gems, upgrade paths, security-sensitive choices, or architectural trade-offs before implementation."
 argument-hint: <topic>
 disable-model-invocation: true
 effort: high

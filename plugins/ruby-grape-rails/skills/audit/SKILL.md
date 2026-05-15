@@ -1,6 +1,6 @@
 ---
 name: rb:audit
-description: "Running a project-wide audit of a Ruby/Rails/Grape codebase: architecture, security, performance, testing coverage, ops risk. Emits findings to .claude/audit/. Triggers: \"audit project\", \"codebase health\", \"architecture review\", \"security audit\", \"full project audit\". Do NOT use for: reviewing recent changes, triaging an existing review, logging tech-debt items."
+description: "Running a project-wide audit of a Ruby/Rails/Grape codebase: architecture, security, performance, testing coverage, ops risk. Emits findings to .claude/audit/."
 effort: xhigh
 disable-model-invocation: true
 ---

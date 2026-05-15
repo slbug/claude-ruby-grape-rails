@@ -1,6 +1,6 @@
 ---
 name: rb:runtime
-description: "Integrating the Tidewave runtime for live Rails introspection: code exec, SQL queries, model inspection, log retrieval against a running server. Triggers: \"Tidewave\", \"live runtime\", \"introspect models\", \"running app\", \"runtime exec\". Do NOT use for: static code-path tracing, unknown-cause bugs."
+description: "Integrating the Tidewave runtime for live Rails introspection: code exec, SQL queries, model inspection, log retrieval against a running server."
 argument-hint: "[inspect|execute|query|docs|logs|models|source]"
 effort: low
 disable-model-invocation: true

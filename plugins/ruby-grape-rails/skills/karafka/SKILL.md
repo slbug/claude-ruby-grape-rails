@@ -1,6 +1,6 @@
 ---
 name: rb:karafka
-description: "Building Kafka consumers and producers with Karafka in Rails: multi-threaded batch processing, message handlers, OffsetStore. Triggers: \"process events from topic\", \"idempotent consumption\", \"dead letter queue\", \"partition rebalance handling\", \"batch process upstream messages\". Do NOT use for: Sidekiq/Solid Queue jobs, synchronous HTTP endpoints."
+description: "Building Kafka consumers and producers with Karafka in Rails: multi-threaded batch processing, message handlers, OffsetStore."
 effort: medium
 disable-model-invocation: true
 ---

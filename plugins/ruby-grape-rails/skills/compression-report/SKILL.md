@@ -1,6 +1,6 @@
 ---
 name: rb:compression-report
-description: "Drafting an anonymized GitHub-issue-ready report from verify-output compression telemetry: PII-redacted, actionable, user copies into a maintainer issue. Triggers: \"share my compression stats\", \"send compression report\", \"compression telemetry report\", \"file compression issue\", \"contribute compression data\". Do NOT use for: per-run compression diagnosis, editing rules.yml directly."
+description: "Drafting an anonymized GitHub-issue-ready report from verify-output compression telemetry: PII-redacted, actionable, user copies into a maintainer issue."
 argument-hint: "[--log PATH]"
 effort: medium
 user-invocable: true

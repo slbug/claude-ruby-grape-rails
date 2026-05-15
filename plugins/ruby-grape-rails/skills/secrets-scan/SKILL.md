@@ -1,6 +1,6 @@
 ---
 name: rb:secrets
-description: "Scanning code for leaked secrets, API keys, tokens, and credentials using betterleaks. Pre-commit/pre-push reflex; baseline + validate flows. Triggers: \"secrets\", \"leaked\", \"API key\", \"credentials\", \"betterleaks\", \"before commit\". Do NOT use for: applying authorization patterns, reviewing PRs."
+description: "Scanning code for leaked secrets, API keys, tokens, and credentials using betterleaks. Manual on-demand scan with baseline + validate + git-history flows."
 argument-hint: "[path] [--baseline FILE] [--validate]"
 effort: medium
 disable-model-invocation: true

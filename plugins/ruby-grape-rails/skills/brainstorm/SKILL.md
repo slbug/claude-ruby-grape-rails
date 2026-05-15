@@ -1,6 +1,6 @@
 ---
 name: rb:brainstorm
-description: "Exploring approaches, comparing options, and gathering requirements for a vague Ruby/Rails/Grape feature idea before /rb:plan. Interview-style discovery; emits interview.md. Triggers: \"brainstorm\", \"explore ideas\", \"not sure how to approach\", \"discuss before planning\", \"what if we\". Do NOT use for: detailed planning, implementation, evidence-based research with citations."
+description: "Exploring approaches, comparing options, and gathering requirements for a vague Ruby/Rails/Grape feature idea before /rb:plan. Interview-style discovery; emits interview.md."
 effort: high
 argument-hint: <topic or feature idea>
 disable-model-invocation: true

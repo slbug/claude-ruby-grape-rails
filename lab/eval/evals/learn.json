@@ -69,10 +69,6 @@
           "type": "description_keywords",
           "min": 3,
           "desc": "Domain keywords"
-        },
-        {
-          "type": "description_structure",
-          "desc": "Use-for framing"
         }
       ]
     },

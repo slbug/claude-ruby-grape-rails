@@ -1,6 +1,6 @@
 ---
 name: rb:quick
-description: "Making trivial one-line fixes, typos, and tiny config changes in a Ruby/Rails/Grape codebase. Skips planning ceremony: inspect, fix, verify. For obvious changes under ~20 lines. Triggers: \"quick fix\", \"typo\", \"one-liner\", \"tiny change\", \"simple fix\". Do NOT use for: multi-file features, refactors, bug investigation."
+description: "Making trivial one-line fixes, typos, and tiny config changes in a Ruby/Rails/Grape codebase. Skips planning ceremony: inspect, fix, verify. For obvious changes under ~20 lines."
 argument-hint: <task>
 effort: low
 disable-model-invocation: true

@@ -1,6 +1,6 @@
 ---
 name: rb:challenge
-description: "Running rigorous adversarial scrutiny on Active Record changes, Hotwire/Turbo events, or PR readiness — devil's-advocate questioning before approval. Triggers: \"challenge this\", \"stress test this code\", \"adversarial review\", \"devil's advocate\", \"really scrutinize\". Do NOT use for: routine code review, planning, full project audit."
+description: "Running rigorous adversarial scrutiny on Active Record changes, Hotwire/Turbo events, or PR readiness — devil's-advocate questioning before approval."
 argument-hint: active record | hotwire | pr
 effort: high
 disable-model-invocation: true

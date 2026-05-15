@@ -1,6 +1,6 @@
 ---
 name: rb:examples
-description: "Surfacing representative example areas and patterns inside the current Ruby/Rails/Grape codebase. Triggers: \"show me examples\", \"how does this codebase\", \"patterns in this project\", \"representative code\". Do NOT use for: writing new code, researching external gems."
+description: "Surfacing representative example areas and patterns inside the current Ruby/Rails/Grape codebase."
 effort: low
 disable-model-invocation: true
 ---

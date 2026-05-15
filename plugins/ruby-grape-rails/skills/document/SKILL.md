@@ -1,6 +1,6 @@
 ---
 name: rb:document
-description: "Generating documentation for implemented Ruby/Rails/Grape features: YARD/RDoc method docs, README updates, ADRs. Runs after /rb:review passes. Triggers: \"write documentation\", \"document this feature\", \"public method docs\", \"architecture decision record\", \"add inline docs\". Do NOT use for: capturing solution knowledge, capturing corrections."
+description: "Generating documentation for implemented Ruby/Rails/Grape features: YARD/RDoc method docs, README updates, ADRs. Runs after /rb:review passes."
 argument-hint: "[plan-file OR feature-name]"
 effort: low
 disable-model-invocation: true

@@ -1,6 +1,6 @@
 ---
 name: rb:async-patterns
-description: "Implementing Ruby fiber concurrency: async gem, Falcon server, I/O-bound parallelism, fiber-safe locking. Triggers: \"async gem\", \"fiber concurrency\", \"Falcon server\", \"I/O-bound concurrency\", \"Async::Task\". Do NOT use for: Sidekiq jobs, CPU-bound parallelism via Ractor."
+description: "Implementing Ruby fiber concurrency: async gem, Falcon server, I/O-bound parallelism, fiber-safe locking."
 effort: medium
 disable-model-invocation: true
 ---

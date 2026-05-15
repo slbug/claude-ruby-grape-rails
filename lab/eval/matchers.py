@@ -95,10 +95,20 @@ def description_keywords(content: str, min: int = 4, keywords: list[str] | None 
 
 
 def description_structure(content: str, **_: Any) -> tuple[bool, str]:
-    desc = str(parse_frontmatter(content).get("description", ""))
-    if not desc.strip():
+    fm = parse_frontmatter(content)
+    desc = str(fm.get("description", ""))
+    stripped = desc.strip()
+    if not stripped:
         return False, "description empty"
-    return True, "description present (routing-trigger rules enforced via length + keywords matchers)"
+    # DMI skills' descriptions are stripped from routing context by CC, so
+    # the routing-trigger schema (`Triggers:` + `Do NOT use for:`) is
+    # scaffolding for the routing model only. DMI descriptions only feed
+    # the `/skill` menu; require non-empty and stop there.
+    if fm.get("disable-model-invocation") is True:
+        return True, "description present (DMI — routing schema not required)"
+    if "Triggers:" not in stripped:
+        return False, "description missing `Triggers:` marker (routing-trigger schema)"
+    return True, "description has `Triggers:` marker"
 
 
 def has_iron_laws(content: str, min_count: int = 1, **_: Any) -> tuple[bool, str]:

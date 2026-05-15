@@ -67,7 +67,7 @@
         },
         {
           "type": "description_structure",
-          "desc": "Use-for framing"
+          "desc": "Description carries `Triggers:` marker"
         }
       ]
     },

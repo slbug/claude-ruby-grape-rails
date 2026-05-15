@@ -1,6 +1,6 @@
 ---
 name: rb:learn
-description: "Capturing in-flight lessons when the user corrects your approach or teaches a pattern: ActiveRecord, Rails, Grape, Sidekiq mistakes during work. Writes lightweight learning notes. Triggers: \"learn from this\", \"remember this mistake\", \"don't do that again\", \"that's wrong because\", \"correct approach is\". Do NOT use for: post-fix knowledge archival, API docs, project audit."
+description: "Capturing in-flight lessons when the user corrects your approach or teaches a pattern: ActiveRecord, Rails, Grape, Sidekiq mistakes during work. Writes lightweight learning notes."
 argument-hint: <description of what was fixed>
 effort: low
 disable-model-invocation: true

@@ -1,6 +1,6 @@
 ---
 name: rb:hotwire-native
-description: "Building native iOS/Android shells with Hotwire Native: path configuration, bridge components, native navigation, Turbo Native bridges. Triggers: \"mobile app wrapper\", \"iOS shell for Rails\", \"native screen path config\", \"camera access from web view\", \"push notifications native bridge\". Do NOT use for: web Hotwire/Turbo Frames, API design."
+description: "Building native iOS/Android shells with Hotwire Native: path configuration, bridge components, native navigation, Turbo Native bridges."
 effort: medium
 disable-model-invocation: true
 ---

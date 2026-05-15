@@ -1,6 +1,6 @@
 ---
 name: rb:discovery-report
-description: "Drafting an internal report from skill-discovery telemetry collected when RUBY_PLUGIN_DISCOVERY_LOG=1 is set. Reads ${CLAUDE_PLUGIN_DATA}/discovery.jsonl, summarizes hook events that matched trigger patterns, lists candidate-skill suggestions, computes per-rule match rate, suggests trigger-table tweaks. Use to evaluate whether to flip the layer from log-only to actively-injecting in a future release. Triggers: \"discovery report\", \"trigger-table tuning\", \"injection telemetry\", \"skill-discovery report\". Do NOT use for: end-user routing problems, per-run compression diagnosis."
+description: "Drafting an internal report from skill-discovery telemetry collected when RUBY_PLUGIN_DISCOVERY_LOG=1 is set. Reads ${CLAUDE_PLUGIN_DATA}/discovery.jsonl, summarizes hook events that matched trigger patterns, lists candidate-skill suggestions, computes per-rule match rate, suggests trigger-table tweaks. Use to evaluate whether to flip the layer from log-only to actively-injecting in a future release."
 argument-hint: "[--log PATH]"
 effort: medium
 user-invocable: true

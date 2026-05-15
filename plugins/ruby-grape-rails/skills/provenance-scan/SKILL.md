@@ -1,6 +1,6 @@
 ---
 name: rb:provenance-scan
-description: "Auditing research/review `*.provenance.md` sidecars under `.claude/`: classifies each by trust_state (clean / weak / conflicted / missing) and writes a dated report. Pure post-hoc disk analysis; no model calls, no network. Triggers: \"scan provenance\", \"audit research quality\", \"check trust states\", \"provenance distribution\", \"how clean is my research\". Do NOT use for: producing sidecars, fixing weak claims, grading factual accuracy."
+description: "Auditing research/review `*.provenance.md` sidecars under `.claude/`: classifies each by trust_state (clean / weak / conflicted / missing) and writes a dated report. Pure post-hoc disk analysis; no model calls, no network."
 argument-hint: "[--root PATH]"
 effort: low
 user-invocable: true

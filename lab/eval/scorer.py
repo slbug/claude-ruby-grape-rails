@@ -51,7 +51,7 @@ def default_eval(skill_path: str) -> EvalDefinition:
                     "checks": [
                         {"type": "description_length", "min": 60, "max": 1024, "desc": "Description length (agentskills.io cap)"},
                         {"type": "description_keywords", "min": 3, "desc": "Domain keywords"},
-                        {"type": "description_structure", "desc": "Description has use/intent framing"},
+                        {"type": "description_structure", "desc": "Description carries `Triggers:` marker"},
                     ],
                 },
                 "safety": {

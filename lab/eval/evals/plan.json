@@ -32,7 +32,7 @@
       "checks": [
         { "type": "description_length", "min": 80, "max": 1024, "desc": "Description length (agentskills.io cap)" },
         { "type": "description_keywords", "min": 5, "desc": "Planning keywords" },
-        { "type": "description_structure", "desc": "Use-for framing" }
+        { "type": "description_structure", "desc": "Description carries `Triggers:` marker" }
       ]
     },
     "safety": {

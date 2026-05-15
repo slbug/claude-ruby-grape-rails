@@ -1,6 +1,6 @@
 ---
 name: rb:perf
-description: "Analyzing performance issues in Rails, Grape, Active Record, Redis, and Sidekiq: slow endpoints, queue latency, cache misses, object churn, memory bloat, p95 spikes. Triggers: \"slow\", \"performance\", \"latency\", \"memory\", \"cache miss\", \"queue backup\", \"p95\", \"throughput\". Do NOT use for: confirmed N+1, unknown-cause bugs, code review."
+description: "Analyzing performance issues in Rails, Grape, Active Record, Redis, and Sidekiq: slow endpoints, queue latency, cache misses, object churn, memory bloat, p95 spikes."
 argument-hint: "[path|area] [--focus ar|rails|grape|sidekiq|redis]"
 disable-model-invocation: true
 effort: high

@@ -1,6 +1,6 @@
 ---
 name: rb:full
-description: "Running the end-to-end Ruby/Rails/Grape lifecycle in one shot: plan → work → verify → review → compound, chained. Autonomous on happy path; halts on /rb:verify --full failure (HALTED_VERIFY_FAILED), BLOCKED review (HALTED_REVIEW_BLOCKED), REQUIRES CHANGES review (HALTED_REVIEW_REQUIRES_CHANGES), or unparsable review (HALTED_REVIEW_UNKNOWN). Triggers: \"do everything\", \"full lifecycle\", \"hands-off\", \"plan and implement\", \"end to end\". Do NOT use for: just planning, just reviewing, single-step work."
+description: "Running the end-to-end Ruby/Rails/Grape lifecycle in one shot: plan → work → verify → review → compound, chained. Autonomous on happy path; halts on /rb:verify --full failure (HALTED_VERIFY_FAILED), BLOCKED review (HALTED_REVIEW_BLOCKED), REQUIRES CHANGES review (HALTED_REVIEW_REQUIRES_CHANGES), or unparsable review (HALTED_REVIEW_UNKNOWN)."
 argument-hint: "<feature description OR plan path>"
 effort: xhigh
 disable-model-invocation: true

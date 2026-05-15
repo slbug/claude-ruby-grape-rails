@@ -1,6 +1,6 @@
 ---
 name: rb:techdebt
-description: "Scanning a Ruby/Rails/Grape codebase for tech-debt items: overgrown services, query repetition, callback sprawl, decorative abstractions, dead code, missing tests around legacy seams. Read-only — logs items, routes fixes elsewhere. Triggers: \"tech debt\", \"cleanup\", \"callback sprawl\", \"stale code\", \"overgrown service\", \"decorative abstraction\". Do NOT use for: applying fixes, full project audit, one-line cleanup."
+description: "Scanning a Ruby/Rails/Grape codebase for tech-debt items: overgrown services, query repetition, callback sprawl, decorative abstractions, dead code, missing tests around legacy seams. Read-only — logs items, routes fixes elsewhere."
 effort: medium
 disable-model-invocation: true
 ---

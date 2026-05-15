@@ -1,6 +1,6 @@
 ---
 name: rb:intro
-description: "Walking a user through the Ruby/Rails/Grape plugin commands, capabilities, and workflow. Tutorial-style intro for newcomers who want to learn what the plugin offers rather than tackle a specific task. Triggers: \"tutorial\", \"what can you do\", \"show commands\", \"help with plugin\", \"getting started\". Do NOT use for: working on a specific task (route via intent-detection)."
+description: "Walking a user through the Ruby/Rails/Grape plugin commands, capabilities, and workflow. Tutorial-style intro for newcomers who want to learn what the plugin offers rather than tackle a specific task."
 argument-hint: "[--section N]"
 effort: low
 disable-model-invocation: true

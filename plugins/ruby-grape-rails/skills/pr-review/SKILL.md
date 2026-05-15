@@ -1,6 +1,6 @@
 ---
 name: rb:pr-review
-description: "Addressing GitHub PR review comments: fetches them via gh, categorizes by severity, drafts responses, and optionally fixes code. Use when a reviewer leaves comments or shares a PR number/URL. Triggers: \"PR feedback\", \"review comments\", \"reviewer said\", \"address PR\", \"PR #\". Do NOT use for: producing the review, planning new work."
+description: "Addressing GitHub PR review comments: fetches them via gh, categorizes by comment type (code change / question / nit / etc.), drafts responses, and optionally fixes code. Use when a reviewer leaves comments or shares a PR number/URL."
 argument-hint: <PR number or URL> [--fix]
 disable-model-invocation: true
 effort: high

@@ -1,6 +1,6 @@
 ---
 name: rubydoc-fetcher
-description: "Looking up Ruby or gem documentation cheaply via WebFetch: rubydoc.info, Rails Guides, official gem docs, API references. Low-MCP-token doc retrieval. Triggers: \"rubydoc\", \"gem docs\", \"API reference\", \"Rails Guides\", \"look up method\". Do NOT use for: gem-vs-gem evaluation, implementing the API."
+description: "Looking up Ruby or gem documentation cheaply via WebFetch: rubydoc.info, Rails Guides, official gem docs, API references. Low-MCP-token doc retrieval."
 effort: low
 disable-model-invocation: true
 ---

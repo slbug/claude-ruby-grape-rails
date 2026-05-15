@@ -1,6 +1,6 @@
 ---
 name: rb:deploy
-description: "Configuring Rails deployment: Kamal, Docker, Thruster, Solid Queue, Procfile, container layout. Triggers: \"deploy to production\", \"set up deployment\", \"deployment configuration\", \"release Rails app\", \"container build slow\". Do NOT use for: app-level perf tuning, security review."
+description: "Configuring Rails deployment: Kamal, Docker, Thruster, Solid Queue, Procfile, container layout."
 effort: medium
 disable-model-invocation: true
 ---

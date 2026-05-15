@@ -1,6 +1,6 @@
 ---
 name: rb:sequel-patterns
-description: "Applying Sequel ORM patterns: datasets, migrations, associations, plugins, transactions, Sequel-vs-AR boundary decisions. Triggers: \"Sequel\", \"Sequel ORM\", \"Sequel dataset\", \"Sequel migration\", \"DB.from\". Do NOT use for: Active Record, Sidekiq jobs."
+description: "Applying Sequel ORM patterns: datasets, migrations, associations, plugins, transactions, Sequel-vs-AR boundary decisions."
 effort: medium
 disable-model-invocation: true
 ---
