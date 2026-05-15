@@ -1,5 +1,8 @@
 ---
-applyTo: "**/*.sh,**/hooks/scripts/*.rb,**/bin/*"
+applyTo:
+  - "**/*.sh"
+  - "**/hooks/scripts/*.rb"
+  - "**/bin/*"
 excludeAgent: "coding-agent"
 ---
 
@@ -148,7 +151,8 @@ zero residue on the user's data dir, transcript, or context.
   `PostToolUse:Edit/Write/Bash`, `PostToolUseFailure:Bash`, and
   `PostToolBatch`. Refuses symlinked `${CLAUDE_PLUGIN_DATA}` before
   `mkdir_p`/writes. File mode 0o600. 8 MiB input cap; per-event
-  throttle simulation; 20-event per-session cap.
+  throttle simulation keyed by `session_id::skill` (20-event cap per
+  session × skill pair, not per session overall).
 - `RUBY_PLUGIN_DISCOVERY_LOG_EXCERPTS=1` — opt-in companion to
   `RUBY_PLUGIN_DISCOVERY_LOG`. When set, captures short matched-text
   excerpts (truncated, redacted per skill policy) into the same JSONL

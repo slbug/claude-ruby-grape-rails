@@ -22,6 +22,7 @@
 
 require 'json'
 require 'fileutils'
+require 'time'
 
 MAX_HOOK_INPUT_BYTES   = 8 * 1024 * 1024
 EXCERPT_MAX_CHARS      = 200
