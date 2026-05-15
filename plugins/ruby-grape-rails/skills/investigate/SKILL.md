@@ -81,7 +81,6 @@ to resume the agent before treating the artifact as missing.
 
 <!-- BEGIN-GENERATED related-footer -->
 - Slow / latency / memory regression → `/rb:perf` (performance analysis)
-- Library or approach comparison → `/rb:research` (evidence-based research)
 - Gem or Rails Guide lookup → `/rubydoc-fetcher` (cheap doc lookup)
 - Request-state / session-leak hygiene check → `/rb:state-audit` (request-state hygiene)
 - Live runtime introspection (Tidewave) → `/rb:runtime` (Tidewave runtime introspection)

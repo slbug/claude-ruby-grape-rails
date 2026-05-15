@@ -484,7 +484,6 @@ When `--existing` references a research sidecar, read the sidecar's
 - API or internal docs needed → `/rb:document` (post-implementation docs)
 - Pattern reference needed → `/rb:examples` (codebase pattern surface)
 - Single-line / trivial fix → `/rb:quick` (trivial-fix path)
-- Library or approach comparison → `/rb:research` (evidence-based research)
 - Gem or Rails Guide lookup → `/rubydoc-fetcher` (cheap doc lookup)
 - Run full plan-work-verify-review-compound cycle autonomously → `/rb:full` (full lifecycle orchestration)
 - Research trust / source-quality audit → `/rb:provenance-scan` (research-trust audit)

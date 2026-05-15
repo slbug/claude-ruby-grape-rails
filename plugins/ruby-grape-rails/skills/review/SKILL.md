@@ -379,7 +379,6 @@ When a finding cites a sidecar, read the sidecar's `trust_state` (see
 <!-- BEGIN-GENERATED related-footer -->
 - Adversarial review needed → `/rb:challenge` (adversarial-mode review)
 - API or internal docs needed → `/rb:document` (post-implementation docs)
-- Iron Law violation suspected → `/iron-laws` (SessionStart-injected; review BLOCKED path)
 - Mistake worth capturing as a rule → `/rb:learn` (in-flight lesson capture)
 - Slow / latency / memory regression → `/rb:perf` (performance analysis)
 - PR review comments to address → `/rb:pr-review` (PR review-comment handling)

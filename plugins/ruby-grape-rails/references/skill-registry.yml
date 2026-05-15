@@ -82,6 +82,13 @@ visible_skills:
     folder: intent-detection
     rationale: routing gateway — pushy NL → /rb:* mapping
 
+  - name: iron-laws
+    folder: iron-laws
+    rationale: specialty — Iron Law enforcement (iron-law-judge preload)
+  - name: rb:research
+    folder: research
+    rationale: specialty — evidence-based research with citations
+
 hidden_skills:
   # Already-DMI workflow on-ramps + meta tools
   - name: rb:brainstorm
@@ -114,12 +121,6 @@ hidden_skills:
     advertise_in: [init, intent-detection]
     symptom: Onboarding new contributor
     rationale: onboarding
-  - name: iron-laws
-    folder: iron-laws
-    aliases: [iron law, non-negotiable rule, Ruby safety rules]
-    advertise_in: [review, challenge, triage]
-    symptom: Iron Law violation suspected
-    rationale: SessionStart-injected; review BLOCKED path
   - name: rb:learn
     folder: learn
     aliases: [learn from this, remember this mistake, correction]
@@ -150,12 +151,6 @@ hidden_skills:
     advertise_in: [plan, intent-detection, work]
     symptom: Single-line / trivial fix
     rationale: trivial-fix path
-  - name: rb:research
-    folder: research
-    aliases: [research gem, compare approaches, upgrade path]
-    advertise_in: [plan, investigate, intent-detection]
-    symptom: Library or approach comparison
-    rationale: evidence-based research
   - name: rubydoc-fetcher
     folder: rubydoc-fetcher
     aliases: [rubydoc, gem docs, API reference, Rails Guides]
