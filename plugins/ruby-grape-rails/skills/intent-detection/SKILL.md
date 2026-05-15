@@ -1,6 +1,6 @@
 ---
 name: intent-detection
-description: "Routing any Ruby/Rails/Grape/Sidekiq/AR/Sequel/Hotwire/Karafka work to the correct /rb: command BEFORE doing it. Pushy gateway: consult at session start, suggest the right command, never blocks. Triggers: \"this Ruby project\", \"my Rails app\", \"how should I approach\", \"which command\", informal multi-step task descriptions. Do NOT use when user typed /rb:<name>."
+description: "Routing Ruby/Rails/Grape/Sidekiq/AR/Sequel/Hotwire work to the correct /rb: command BEFORE doing it. Pushy gateway, never blocks. Triggers: \"my Rails app\", \"which command\", multi-step task. Do NOT use when user typed /rb:<name>."
 user-invocable: false
 effort: low
 ---

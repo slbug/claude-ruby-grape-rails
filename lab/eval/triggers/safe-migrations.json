@@ -56,6 +56,12 @@
     },
     {
       "prompt": "How do I rollback my last git commit?"
+    },
+    {
+      "prompt": "Can you help me write a complex SQL join for my report?"
+    },
+    {
+      "prompt": "Explain the difference between a migration and a seed file."
     }
   ],
   "hard_should_trigger": [

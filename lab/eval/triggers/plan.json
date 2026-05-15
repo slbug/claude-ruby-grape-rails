@@ -27,6 +27,9 @@
     },
     {
       "prompt": "Please create a plan.md for the new user authentication flow"
+    },
+    {
+      "prompt": "Generate a comprehensive implementation plan based on the attached interview.md"
     }
   ],
   "should_not_trigger": [

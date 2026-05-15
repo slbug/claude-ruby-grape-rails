@@ -27,6 +27,15 @@
     },
     {
       "prompt": "Refactor this complex conditional into a dedicated Pundit policy class"
+    },
+    {
+      "prompt": "refactor this into a query object pls"
+    },
+    {
+      "prompt": "I am wanting to know if this logic belongs in serializer or controller"
+    },
+    {
+      "prompt": "Determine the appropriate architectural layer for a multi-step checkout process involving complex state transitions and external API calls."
     }
   ],
   "should_not_trigger": [
@@ -56,6 +65,15 @@
     },
     {
       "prompt": "How do I deploy my Rails app to Heroku?"
+    },
+    {
+      "prompt": "Explain the difference between a service and a background job"
+    },
+    {
+      "prompt": "How do I fix a 500 error in my production environment?"
+    },
+    {
+      "prompt": "What is the best way to optimize my database indexes?"
     }
   ],
   "hard_should_trigger": [

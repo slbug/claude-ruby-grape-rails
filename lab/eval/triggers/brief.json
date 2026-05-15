@@ -27,6 +27,9 @@
     },
     {
       "prompt": "Provide a concise technical walkthrough of the proposed Rails architectural changes."
+    },
+    {
+      "prompt": "I'm drowning in this diff, just summarize review it for me now."
     }
   ],
   "should_not_trigger": [
@@ -56,6 +59,18 @@
     },
     {
       "prompt": "Review my code for any potential security vulnerabilities."
+    },
+    {
+      "prompt": "How do I implement a Grape API in Rails?"
+    },
+    {
+      "prompt": "Refactor this Ruby code to be more concise."
+    },
+    {
+      "prompt": "Create a summary of my daily standup notes."
+    },
+    {
+      "prompt": "Explain the difference between Ruby and Python."
     }
   ],
   "hard_should_trigger": [

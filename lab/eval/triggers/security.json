@@ -27,6 +27,12 @@
     },
     {
       "prompt": "Is this Grape endpoint safe from SQL injection?"
+    },
+    {
+      "prompt": "Is this code vuln to SQLi?"
+    },
+    {
+      "prompt": "Does this code have any security holes?"
     }
   ],
   "should_not_trigger": [
@@ -56,6 +62,15 @@
     },
     {
       "prompt": "Write a unit test for the user authentication flow."
+    },
+    {
+      "prompt": "How do I add a new middleware to my Rails app?"
+    },
+    {
+      "prompt": "Check if my database queries are running slow."
+    },
+    {
+      "prompt": "Write a script to automate my deployment process."
     }
   ],
   "hard_should_trigger": [

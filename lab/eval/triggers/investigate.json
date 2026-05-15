@@ -27,6 +27,12 @@
     },
     {
       "prompt": "Analyze the stack trace to determine the underlying cause of this exception"
+    },
+    {
+      "prompt": "I am losing my mind, why is this rails app acting up all of a sudden??"
+    },
+    {
+      "prompt": "Conduct a formal root-cause analysis of the NilClass error in the Grape middleware"
     }
   ],
   "should_not_trigger": [

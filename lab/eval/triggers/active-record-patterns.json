@@ -24,6 +24,15 @@
     },
     {
       "prompt": "Need help with migration design for new table."
+    },
+    {
+      "prompt": "I'm freaking out because my transaction is rolling back everything even when the error is caught!"
+    },
+    {
+      "prompt": "Can you show me how to implement a database migration for adding a foreign key?"
+    },
+    {
+      "prompt": "Demonstrate the implementation of a pessimistic locking mechanism within an ActiveRecord transaction block."
     }
   ],
   "should_not_trigger": [
@@ -50,6 +59,9 @@
     },
     {
       "prompt": "Optimize my database indexing strategy."
+    },
+    {
+      "prompt": "What is the best way to use Redis for caching?"
     }
   ],
   "hard_should_trigger": [

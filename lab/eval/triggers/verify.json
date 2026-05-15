@@ -56,6 +56,9 @@
     },
     {
       "prompt": "Review my code for any logical errors"
+    },
+    {
+      "prompt": "Can you verify if this gem is secure?"
     }
   ],
   "hard_should_trigger": [

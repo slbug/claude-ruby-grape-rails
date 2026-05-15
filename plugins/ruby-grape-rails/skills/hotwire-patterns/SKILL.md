@@ -1,6 +1,6 @@
 ---
 name: hotwire-patterns
-description: "Hotwire in Rails: Turbo Frames, Streams, Stimulus, Action Cable. Triggers: \"live update no reload\", \"broadcast model changes\", \"stimulus controller\", \"real-time dashboard\". Do NOT use for: native mobile, jobs."
+description: "Hotwire in Rails: Turbo Frames, Streams, Stimulus, Action Cable. Triggers: \"live update no reload\", \"broadcast model\", \"stimulus controller\". Do NOT use for: native mobile, jobs."
 user-invocable: false
 effort: medium
 ---

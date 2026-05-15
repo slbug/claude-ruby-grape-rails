@@ -7,6 +7,22 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.10] - 2026-05-15
+
+### Fixed
+
+- Dropped DMI skills from subagent `skills:` preload lists. Per
+  [CC docs](https://code.claude.com/docs/en/skills),
+  `disable-model-invocation: true` "prevents the skill from being
+  preloaded into subagents", so the listed preload silently failed
+  and emitted `[WARN] Skill 'X' specified in frontmatter was not
+  found`. Removed:
+  - `agents/iron-law-judge.md` no longer lists `iron-laws`
+    (DMI) — Iron Laws content reaches the subagent via the
+    SubagentStart inject-rules hook instead.
+  - `agents/ruby-gem-researcher.md` no longer lists `research`
+    (DMI).
+
 ## [1.16.9] - 2026-05-14
 
 ### Changed
@@ -2736,7 +2752,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.9...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.10...HEAD
+[1.16.10]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.9...v1.16.10
 [1.16.9]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.8...v1.16.9
 [1.16.8]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.7...v1.16.8
 [1.16.7]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.6...v1.16.7

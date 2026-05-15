@@ -30,6 +30,12 @@
     },
     {
       "prompt": "Implement a service object for this controller."
+    },
+    {
+      "prompt": "Show me how to use YJIT."
+    },
+    {
+      "prompt": "how do i use pattern matchin in ruby?"
     }
   ],
   "should_not_trigger": [
@@ -56,6 +62,21 @@
     },
     {
       "prompt": "How do I add a migration for this table?"
+    },
+    {
+      "prompt": "How do I implement a many-to-many relationship in Rails?"
+    },
+    {
+      "prompt": "What is the best way to use ActiveRecord callbacks?"
+    },
+    {
+      "prompt": "Show me how to write a RSpec test for this model."
+    },
+    {
+      "prompt": "How do I add a foreign key to this migration?"
+    },
+    {
+      "prompt": "Can you help me optimize this SQL query?"
     }
   ],
   "hard_should_trigger": [

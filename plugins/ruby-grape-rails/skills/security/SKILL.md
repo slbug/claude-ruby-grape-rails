@@ -1,6 +1,6 @@
 ---
 name: security
-description: "Rails/Grape security review: auth/role checks, injection risk, output sanitization, SSRF. Triggers: \"is this vulnerable\", \"SQL injection\", \"XSS\", \"Brakeman warning\", \"unauthorized access\". Do NOT use for: secret scans."
+description: "Rails/Grape security review: authz, injection, output sanitization, SSRF. Triggers: \"is this vulnerable\", \"SQL injection\", \"XSS\", \"Brakeman warning\". Do NOT use for: secret scans."
 user-invocable: false
 effort: medium
 ---

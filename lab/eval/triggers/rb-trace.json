@@ -27,6 +27,9 @@
     },
     {
       "prompt": "Identify the exact point in the lifecycle where this attribute is mutated."
+    },
+    {
+      "prompt": "where does this val change in the code?"
     }
   ],
   "should_not_trigger": [
@@ -56,6 +59,15 @@
     },
     {
       "prompt": "Update the documentation for this endpoint"
+    },
+    {
+      "prompt": "How do I write a trace for my logs?"
+    },
+    {
+      "prompt": "Explain the logic inside this method."
+    },
+    {
+      "prompt": "Debug the connection error in my database."
     }
   ],
   "hard_should_trigger": [

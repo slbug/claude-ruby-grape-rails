@@ -27,6 +27,9 @@
     },
     {
       "prompt": "Categorize the current review findings into fix now, skip, or defer based on severity"
+    },
+    {
+      "prompt": "Perform a triage of the current review findings to identify Iron Law violations"
     }
   ],
   "should_not_trigger": [
@@ -56,6 +59,9 @@
     },
     {
       "prompt": "Run the linter and show me the errors"
+    },
+    {
+      "prompt": "Write a detailed report of all the bugs found"
     }
   ],
   "hard_should_trigger": [

@@ -24,6 +24,9 @@
     },
     {
       "prompt": "Analyze the Grape endpoint for missing includes or preloads."
+    },
+    {
+      "prompt": "Fix the n+1 in my grape api"
     }
   ],
   "should_not_trigger": [
@@ -53,6 +56,15 @@
     },
     {
       "prompt": "Help me debug a 500 error in my Grape API."
+    },
+    {
+      "prompt": "Add a database index to the email column."
+    },
+    {
+      "prompt": "My Rails app is running out of memory."
+    },
+    {
+      "prompt": "The API response is returning a 404 error."
     }
   ],
   "hard_should_trigger": [

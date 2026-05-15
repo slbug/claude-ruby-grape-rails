@@ -1,6 +1,6 @@
 ---
 name: rb:plan
-description: "Planning Ruby/Rails/Grape features, Sidekiq, migrations before code. Accepts plan.md, interview.md, REQUIRES CHANGES review. Triggers: \"plan this feature\", \"implementation plan\", \"plan before coding\", \"design before code\"."
+description: "Planning Ruby/Rails/Grape features, Sidekiq, migrations before code. Accepts plan.md, interview.md, REQUIRES CHANGES review. Triggers: \"plan this feature\", \"implementation plan\", \"design before code\"."
 argument-hint: <feature description OR path to existing plan.md OR path to interview.md OR path to .claude/reviews/...md (REQUIRES CHANGES verdict only)>
 effort: xhigh
 ---

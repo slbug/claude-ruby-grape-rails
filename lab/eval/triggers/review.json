@@ -27,6 +27,9 @@
     },
     {
       "prompt": "Perform a comprehensive code review focusing on Sidekiq job reliability and ActiveRecord query efficiency"
+    },
+    {
+      "prompt": "Please review this PR for security vulnerabilities."
     }
   ],
   "should_not_trigger": [
@@ -56,6 +59,18 @@
     },
     {
       "prompt": "Show me how to refactor this Ruby method"
+    },
+    {
+      "prompt": "How do I set up a new Rails project?"
+    },
+    {
+      "prompt": "Write a unit test for this Ruby class"
+    },
+    {
+      "prompt": "Explain the difference between Sidekiq and Resque"
+    },
+    {
+      "prompt": "Help me debug this ActiveRecord error"
     }
   ],
   "hard_should_trigger": [

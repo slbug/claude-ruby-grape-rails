@@ -56,6 +56,12 @@
     },
     {
       "prompt": "Write a custom validator for a Rails model."
+    },
+    {
+      "prompt": "Show me how to define a serializer for an ActiveRecord model."
+    },
+    {
+      "prompt": "Write a controller action to handle user registration."
     }
   ],
   "hard_should_trigger": [
