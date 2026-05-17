@@ -25,6 +25,7 @@ emit_missing_dependency_block() {
 }
 
 command -v jq >/dev/null 2>&1 || emit_missing_dependency_block "jq"
+command -v head >/dev/null 2>&1 || emit_missing_dependency_block "head"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
 [[ -r "$ROOT_LIB" && ! -L "$ROOT_LIB" ]] || emit_missing_dependency_block "workspace-root-lib.sh"
