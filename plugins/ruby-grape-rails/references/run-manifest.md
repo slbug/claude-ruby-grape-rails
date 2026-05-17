@@ -53,11 +53,14 @@ afterwards. Read pre-rotation content via Read tool before
 
 `{agent-slug}` is the manifest entry key — for review it equals the
 subagent_type (e.g. `ruby-reviewer`); for plan/brainstorm it equals
-the research topic identifier (e.g. `active-record-patterns`).
+the research topic identifier (e.g. `active-record-patterns`); for
+research it equals the per-aspect identifier (e.g. `docs`, `blogs`,
+`benchmarks`).
 
-Slug charset: `{slug}`, `{review-slug}`, `{plan-slug}`, and
-`{agent-slug}` MUST match `[a-z0-9._-]+`. Helper rejects mixed-case,
-spaces, slashes, or other characters with hard exit.
+Slug charset: `{slug}`, `{review-slug}`, `{plan-slug}`,
+`{topic-slug}`, and `{agent-slug}` MUST match `[a-z0-9._-]+`. Helper
+rejects mixed-case, spaces, slashes, or other characters with hard
+exit.
 
 ## Schema
 
@@ -264,6 +267,7 @@ Helper enforces:
 | `/rb:review` | Active | `reviews/{review-slug}` | TTL + HEAD + base + branch |
 | `/rb:plan` (research fanout) | Active | `plans/{plan-slug}/research-fanout` | TTL only (research iterates across days) |
 | `/rb:brainstorm` | Active | `plans/{plan-slug}/brainstorm-fanout` | TTL only |
+| `/rb:research` | Active | `research-fanout/{topic-slug}` | TTL only |
 | `/rb:full` | N/A | — | Orchestrator; reads phase manifests, owns none |
 | `/rb:work` | N/A | — | Tracks via plan `progress.md`, not manifest |
 | `/rb:verify` | N/A | — | Subprocess, no agent fanout |
@@ -279,7 +283,7 @@ body uses output for subsequent `field` / `spawn-paths` / `patch` /
 
 ```bash
 MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
-  --skill=<rb:review|rb:plan|rb:brainstorm> --slug="$SLUG" \
+  --skill=<rb:review|rb:plan|rb:brainstorm|rb:research> --slug="$SLUG" \
   [--base-ref="$BASE_REF"] \
   --agents="$AGENTS_CSV")
 ```

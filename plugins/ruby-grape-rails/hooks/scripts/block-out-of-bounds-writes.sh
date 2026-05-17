@@ -41,7 +41,7 @@ INPUT="$HOOK_INPUT_VALUE"
 if [[ -z "$INPUT" ]]; then
   case "${HOOK_INPUT_STATUS:-empty}" in
     truncated|invalid)
-      echo "BLOCKED: block-out-of-bounds-writes.sh could not safely inspect a ${HOOK_INPUT_STATUS} hook payload." >&2
+      echo "BLOCKED: block-out-of-bounds-writes.sh could not safely inspect hook payload (status: ${HOOK_INPUT_STATUS})." >&2
       echo "Increase RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES or fix the hook input before re-running this Write." >&2
       exit 2
       ;;
