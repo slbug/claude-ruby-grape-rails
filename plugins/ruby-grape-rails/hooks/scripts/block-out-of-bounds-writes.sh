@@ -142,6 +142,10 @@ agent_path_allowed() {
   case "$agent" in
     web-researcher|ruby-gem-researcher)
       # Topic research files only: cross-plan root or plan-local research dir.
+      # Provenance sidecars (`*.provenance.md`) are output-verifier territory
+      # — refuse so a researcher consuming untrusted web content cannot forge
+      # the sidecar that the verifier is meant to own.
+      [[ "$rel" == *.provenance.md ]] && return 1
       match_research_root "$rel" || match_plan_research "$rel"
       ;;
     output-verifier)
@@ -276,19 +280,10 @@ if ! reject_symlink_ancestors "$REPO_ROOT" "$ABS_TARGET"; then
     "$ABS_TARGET"
 fi
 
-# Per plugin convention (CC subagent overwrite-bug workaround) the target
-# MUST NOT exist: prepare-respawn rotates prior files before spawn. Covers
-# regular file, directory, AND pre-symlinked-target attack at the leaf.
-if [[ -e "$ABS_TARGET" ]] || [[ -L "$ABS_TARGET" ]]; then
-  respond_to_danger "target_exists" \
-    "BLOCKED: ${AGENT_TYPE} attempted to Write an existing target: ${ABS_TARGET}. Per plugin convention (CC subagent overwrite-bug workaround) Write targets must be non-existing. Main session calls prepare-respawn to rotate prior files before re-spawn." \
-    "$ABS_TARGET"
-fi
-
 # Compute canonical target by walking up to the nearest existing parent,
 # canonicalizing that, then re-appending the lexical remainder. Used for
-# repo-containment check + canonical logging only — ancestor-symlink
-# refusal above is the primary defense against escape.
+# repo-containment check + canonical logging — ancestor-symlink refusal
+# above is the primary defense against escape.
 parent_dir=$(path_dirname "$ABS_TARGET") || parent_dir=""
 if [[ -n "$parent_dir" && -d "$parent_dir" ]]; then
   canonical_parent=$(cd "$parent_dir" >/dev/null 2>&1 && pwd -P) || canonical_parent="$parent_dir"
@@ -300,6 +295,13 @@ canonical_target="${canonical_parent%/}/${base}"
 
 canonical_root=$(cd "$REPO_ROOT" >/dev/null 2>&1 && pwd -P) || canonical_root="$REPO_ROOT"
 
+# Containment + allowlist checks come BEFORE target_exists. Order matters:
+# running `-e`/`-L` against outside-repo paths first would let scoped agents
+# distinguish existing outside paths (target_exists denial) from non-existing
+# ones (out_of_repo denial) by observing the rejection message/log pattern,
+# turning denied Writes into a filesystem-existence oracle for /etc, $HOME,
+# etc. Refuse containment-violation and allowlist-violation uniformly before
+# touching the disk.
 if [[ "$canonical_target" != "${canonical_root}/"* ]]; then
   respond_to_danger "out_of_repo" \
     "BLOCKED: ${AGENT_TYPE} attempted to Write outside the repo root: ${canonical_target}." \
@@ -311,6 +313,17 @@ if ! agent_path_allowed "$AGENT_TYPE" "$relative_target"; then
   respond_to_danger "out_of_allowlist" \
     "BLOCKED: ${AGENT_TYPE} attempted to Write to a path outside its per-agent allowlist: ${canonical_target}." \
     "$canonical_target"
+fi
+
+# Per plugin convention (CC subagent overwrite-bug workaround) the target
+# MUST NOT exist: prepare-respawn rotates prior files before spawn. Covers
+# regular file, directory, AND pre-symlinked-target attack at the leaf.
+# Only reached for paths that already passed containment + allowlist, so
+# this exists-or-not signal is confined to the agent's own output namespace.
+if [[ -e "$ABS_TARGET" ]] || [[ -L "$ABS_TARGET" ]]; then
+  respond_to_danger "target_exists" \
+    "BLOCKED: ${AGENT_TYPE} attempted to Write an existing target: ${ABS_TARGET}. Per plugin convention (CC subagent overwrite-bug workaround) Write targets must be non-existing. Main session calls prepare-respawn to rotate prior files before re-spawn." \
+    "$ABS_TARGET"
 fi
 
 exit 0

@@ -83,7 +83,7 @@ message.
 - Helper computes absolute paths from `--skill` + `--slug` +
   `--agents` + datesuffix.
 - Skill body reads paths via `manifest-update spawn-paths "$MANIFEST"`.
-- Pass each path verbatim in the spawn prompt.
+- Pass each absolute path verbatim in the spawn prompt.
 - Agents use the exact path received. No filename invention,
   truncation, or extension change.
 - Path is per-second-unique (datesuffix). Always points at a
@@ -209,9 +209,9 @@ review itself are enough and no provenance sidecar is needed.
 When used:
 
 1. write the draft consolidated review
-2. run `output-verifier` against the draft. Pass
-   `.claude/reviews/{review-slug}-{datesuffix}.provenance.md` verbatim
-   in the spawn prompt
+2. run `output-verifier` against the draft. Pass the absolute
+   `.claude/reviews/{review-slug}-{datesuffix}.provenance.md` path
+   verbatim in the spawn prompt
 3. verifier writes the provenance sidecar; main session reads it
 4. remove or soften unsupported external claims before presenting the final review
 

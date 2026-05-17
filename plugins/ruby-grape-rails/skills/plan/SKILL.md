@@ -359,7 +359,7 @@ Every research Agent() call must:
   iterative across days; `prepare-respawn` rotates prior files to
   `.stale-<ts>.md` siblings).
 - Skill body reads paths via `manifest-update spawn-paths "$MANIFEST"`.
-- Pass each path verbatim in the spawn prompt.
+- Pass each absolute path verbatim in the spawn prompt.
 - Agents use the exact path received. No filename invention.
 
 ## Artifact Recovery

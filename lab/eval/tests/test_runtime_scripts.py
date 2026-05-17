@@ -5053,6 +5053,58 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("per-agent allowlist", result.stderr)
 
+    def test_web_researcher_research_provenance_blocks(self) -> None:
+        """Researchers must not forge provenance sidecars in their own
+        research path. `.provenance.md` is output-verifier territory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/topic.provenance.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_ruby_gem_researcher_plan_provenance_blocks(self) -> None:
+        """Same boundary applies in plan-local research dir."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "ruby-gem-researcher",
+                ".claude/plans/feat/research/topic.provenance.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_existence_oracle_outside_repo_is_uniform(self) -> None:
+        """Containment check must precede `-e`/`-L` so outside-repo paths
+        deny uniformly regardless of whether the file exists, denying
+        scoped agents a filesystem-existence oracle over /etc, $HOME, etc."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            existing_payload = _write_payload(
+                "PreToolUse", "web-researcher", "/etc/passwd", repo
+            )
+            nonexistent_payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                "/etc/this-file-does-not-exist-92837465",
+                repo,
+            )
+            r1 = run_block_writes_hook(existing_payload, repo)
+            r2 = run_block_writes_hook(nonexistent_payload, repo)
+            self.assertEqual(r1.returncode, 2)
+            self.assertEqual(r2.returncode, 2)
+            # Both must yield the same denial category (out_of_repo).
+            self.assertIn("outside the repo root", r1.stderr)
+            self.assertIn("outside the repo root", r2.stderr)
+
     def test_nested_research_path_blocks(self) -> None:
         """Bash `case *` matches `/`; segment-boundary matcher must reject
         nested paths under `.claude/research/<subdir>/`."""
@@ -5216,7 +5268,7 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
             entry = entries[0]
             self.assertEqual(entry["agent_type"], "web-researcher")
             self.assertEqual(entry["path"], "/etc/passwd")
-            self.assertEqual(entry["pattern"], "target_exists")
+            self.assertEqual(entry["pattern"], "out_of_repo")
             self.assertEqual(entry["classifier_reason"], "Auto mode denied")
 
 
