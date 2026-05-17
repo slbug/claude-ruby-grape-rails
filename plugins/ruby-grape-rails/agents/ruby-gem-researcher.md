@@ -43,3 +43,10 @@ only legitimate Write target for this run.
 - whether the existing stack already solves it
 
 End with a recommendation, not just a summary.
+
+## Artifact Freshness Header
+
+Every artifact MUST start with a parseable `Last Updated: {YYYY-MM-DD}`
+header (or `Date:` equivalent) near the top. Planning + research cache
+reuse skips files without parseable freshness metadata, so missing the
+header causes downstream duplicate gem research.

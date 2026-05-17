@@ -75,6 +75,8 @@ Write the artifact as a concise synthesis. Do not dump full page contents.
 ```markdown
 # {Topic}
 
+Last Updated: {YYYY-MM-DD}
+
 Tier key: T1=official docs · T2=first-party · T3=community · T4=low quality · T5=rejected
 
 ## Sources ({count} fetched, {t1_count} T1, {t2_count} T2, {t3_count} T3)
@@ -98,3 +100,8 @@ Tier key: T1=official docs · T2=first-party · T3=community · T4=low quality �
 
 Return conflicts and version notes explicitly. When source quality is weak,
 say so instead of sounding certain.
+
+Every artifact MUST include a parseable `Last Updated: {YYYY-MM-DD}`
+header (or `Date:` equivalent) near the top. Planning + research cache
+reuse skips files without parseable freshness metadata, so missing the
+header causes downstream duplicate research.

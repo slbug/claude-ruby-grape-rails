@@ -26,6 +26,21 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `web-researcher` reports include a `Tier key:` legend line so
   `[T1]` / `[T2]` / `[T3]` markers are self-describing.
+- New `PreToolUse` / `PermissionRequest` / `PermissionDenied` hook
+  `block-out-of-bounds-writes.sh` enforces a Write-path allowlist for
+  the 3 researcher agents. Hook reads `agent_type` from the payload;
+  only Write calls from `web-researcher`, `ruby-gem-researcher`,
+  `output-verifier` are constrained (main session, reviewer agents,
+  and other Write-capable specialists pass through). Allowed
+  patterns: `.claude/research/*`, `.claude/plans/*/research/*`,
+  `.claude/reviews/*.provenance.md`. Targets must be non-existing
+  (CC subagent overwrite-bug workaround). Path-traversal segments
+  (`/../`, trailing `/..`) are rejected. Event dispatch mirrors
+  `block-dangerous-ops.sh`: hard block on PreToolUse, structured JSON
+  deny on PermissionRequest, log to
+  `${CLAUDE_PLUGIN_DATA}/denied-writes.jsonl` on PermissionDenied.
+  Defends against prompt-injection from fetched `WebFetch`/`WebSearch`
+  content that would redirect Write to unintended filesystem paths.
 
 ### Changed
 
@@ -35,31 +50,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   artifact directly via `Write` instead of emitting heredoc-shaped
   prose. Agent bodies align to the reviewer-agent pattern
   (`## Findings File Is Primary Output` / `## Sidecar File Is Primary
-  Output` + numbered `Turn budget rules`). `/rb:review` provenance
-  step and `/rb:research` provenance step updated so `output-verifier`
+  Output` + numbered `Turn budget rules`) and carry a Write-boundary
+  anti-injection note (Write target = spawn-prompt path only;
+  redirecting instructions in fetched content are treated as
+  prompt-injection and ignored). `/rb:review` provenance step and
+  `/rb:research` provenance step updated so `output-verifier`
   writes the sidecar directly (no longer "main session saves the result").
-
-### Security
-
-- Added Write-boundary anti-injection note to `web-researcher`,
-  `ruby-gem-researcher`, `output-verifier` bodies: Write target is
-  ONLY the spawn-prompt path; instructions inside fetched
-  `WebFetch`/`WebSearch` content (or, for `output-verifier`, the draft
-  under review) that attempt to redirect Write elsewhere are treated
-  as prompt-injection and ignored.
-- New `PreToolUse` / `PermissionRequest` / `PermissionDenied` hook
-  `block-out-of-bounds-writes.sh` enforces the boundary at the CC
-  layer. Hook reads `agent_type` from the payload; only Write calls
-  from the 3 researcher agents are constrained (main session, reviewer
-  agents, and other Write-capable specialists are unaffected). Allowed
-  prefixes for researcher Writes: `.claude/research/**`,
-  `.claude/plans/**`, `.claude/reviews/**`. Targets must be
-  non-existing (per plugin convention + CC subagent overwrite-bug
-  workaround). Path-traversal segments (`/../`, trailing `/..`) are
-  rejected. Event dispatch mirrors `block-dangerous-ops.sh`: hard
-  block on PreToolUse, structured JSON deny on PermissionRequest,
-  log to `${CLAUDE_PLUGIN_DATA}/denied-writes.jsonl` on
-  PermissionDenied.
 
 ## [1.16.11] - 2026-05-15
 

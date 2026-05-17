@@ -130,6 +130,11 @@ def run_block_writes_hook(
     extra_env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
+    # Mirror production: CC sets CLAUDE_PROJECT_DIR to the session repo
+    # and resolve_workspace_root gives the env var precedence over the
+    # payload `.cwd`. Bind the env var to the test repo so the hook
+    # exercises the env-wins path instead of inheriting the host repo.
+    env["CLAUDE_PROJECT_DIR"] = cwd
     if extra_env:
         env.update(extra_env)
     return subprocess.run(
@@ -4953,6 +4958,64 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
                 "PreToolUse",
                 "web-researcher",
                 ".claude/audit/leak.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("research-output allowlist", result.stderr)
+
+    def test_scoped_agent_plan_root_blocks(self) -> None:
+        """plan.md / scratchpad.md / interview.md live at
+        `.claude/plans/<slug>/` root — outside research/ subtree → block."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/plans/feat/plan.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("research-output allowlist", result.stderr)
+
+    def test_scoped_agent_plan_research_path_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/plans/feat/research/web-research.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+
+    def test_output_verifier_review_provenance_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "output-verifier",
+                ".claude/reviews/feat-20260517-103000.provenance.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+
+    def test_output_verifier_review_non_provenance_blocks(self) -> None:
+        """Reviewer artifacts at `.claude/reviews/<agent>/{slug}-{date}.md`
+        belong to reviewer agents, not output-verifier. Output-verifier
+        scoped allowlist only covers `*.provenance.md` at the reviews
+        consolidated root."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "output-verifier",
+                ".claude/reviews/ruby-reviewer/feat-20260517-103000.md",
                 repo,
             )
             result = run_block_writes_hook(payload, repo)

@@ -15,10 +15,17 @@ set -o pipefail
 # top of script returns exit 0 for any caller outside the scoped set.
 
 SCOPED_AGENT_TYPES=(web-researcher ruby-gem-researcher output-verifier)
-ALLOWED_WRITE_PREFIXES=(
-  ".claude/research/"
-  ".claude/plans/"
-  ".claude/reviews/"
+# Allowed Write patterns (case-glob, relative to repo root). Tighter than
+# bare-prefix allowlist: plan namespace is constrained to the per-plan
+# research/ subtree, and review namespace is constrained to provenance
+# sidecars at the consolidated-review path (the only output-verifier
+# product). Anything else under .claude/plans/<slug>/ or .claude/reviews/
+# (scratchpad, plan.md, per-reviewer artifacts, etc.) belongs to other
+# agents or main-session writes and is refused for the 3 scoped agents.
+ALLOWED_WRITE_PATTERNS=(
+  ".claude/research/*"
+  ".claude/plans/*/research/*"
+  ".claude/reviews/*.provenance.md"
 )
 
 emit_missing_dependency_block() {
@@ -192,21 +199,21 @@ fi
 
 if [[ "$canonical_target" != "${canonical_root}/"* ]]; then
   respond_to_danger "out_of_repo" \
-    "BLOCKED: ${AGENT_TYPE} attempted to Write outside the repo root: ${canonical_target}. Allowed prefixes (relative to repo root): ${ALLOWED_WRITE_PREFIXES[*]}."
+    "BLOCKED: ${AGENT_TYPE} attempted to Write outside the repo root: ${canonical_target}. Allowed patterns (relative to repo root): ${ALLOWED_WRITE_PATTERNS[*]}."
 fi
 
 relative_target="${canonical_target#"${canonical_root}/"}"
-prefix_match=0
-for prefix in "${ALLOWED_WRITE_PREFIXES[@]}"; do
-  if [[ "$relative_target" == "${prefix}"* ]]; then
-    prefix_match=1
-    break
-  fi
+pattern_match=0
+for pattern in "${ALLOWED_WRITE_PATTERNS[@]}"; do
+  # shellcheck disable=SC2254 # intentional glob match against fixed pattern set
+  case "$relative_target" in
+    $pattern) pattern_match=1; break ;;
+  esac
 done
 
-if [[ "$prefix_match" -ne 1 ]]; then
+if [[ "$pattern_match" -ne 1 ]]; then
   respond_to_danger "out_of_allowlist" \
-    "BLOCKED: ${AGENT_TYPE} attempted to Write to a path outside its research-output allowlist: ${canonical_target}. Allowed prefixes (relative to repo root): ${ALLOWED_WRITE_PREFIXES[*]}."
+    "BLOCKED: ${AGENT_TYPE} attempted to Write to a path outside its research-output allowlist: ${canonical_target}. Allowed patterns (relative to repo root): ${ALLOWED_WRITE_PATTERNS[*]}."
 fi
 
 exit 0
