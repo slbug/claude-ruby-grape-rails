@@ -209,10 +209,8 @@ review itself are enough and no provenance sidecar is needed.
 When used:
 
 1. write the draft consolidated review
-2. run `output-verifier` against the draft. Pass the absolute
-   `.claude/reviews/{review-slug}-{datesuffix}.provenance.md` path
-   verbatim in the spawn prompt
-3. verifier writes the provenance sidecar; main session reads it
+2. run `output-verifier` against the draft
+3. save the result to `.claude/reviews/{review-slug}-{datesuffix}.provenance.md`
 4. remove or soften unsupported external claims before presenting the final review
 
 Use the shared provenance contract:

@@ -4888,10 +4888,10 @@ class BlockDangerousOpsPermissionDeniedTests(unittest.TestCase):
 
 class BlockOutOfBoundsWritesTests(unittest.TestCase):
     """`block-out-of-bounds-writes.sh` enforces a per-agent path allowlist
-    for Write calls from `web-researcher`, `ruby-gem-researcher`, and
-    `output-verifier`. Other callers (main session, reviewer agents, etc.)
-    pass through. Targets must be non-existing (CC subagent overwrite-bug
-    workaround) and within `.claude/{research,plans,reviews}/`.
+    for Write calls from `web-researcher` and `ruby-gem-researcher`.
+    Other callers (main session, reviewer agents, output-verifier (convo-only),
+    etc.) pass through. Targets must be non-existing (CC subagent overwrite-bug
+    workaround) and within `.claude/{research,plans/*/research}/`.
 
     Event-name dispatch mirrors `block-dangerous-ops.sh`:
       PreToolUse / unset → exit 2 + stderr (hard block)
@@ -4992,55 +4992,28 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
             self.assertEqual(result.stderr, "")
 
-    def test_output_verifier_review_provenance_passes(self) -> None:
+    def test_output_verifier_unscoped_passes(self) -> None:
+        """output-verifier is convo-only on main (returns text; main session
+        writes any provenance). Hook MUST exit 0 unconditionally on verifier
+        Writes — verifier is not in SCOPED_AGENT_TYPES. Regression guard
+        against re-scoping verifier without revisiting the convo-only
+        contract."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
             payload = _write_payload(
                 "PreToolUse",
                 "output-verifier",
-                ".claude/reviews/feat-20260517-103000.provenance.md",
+                "/etc/passwd",
                 repo,
             )
             result = run_block_writes_hook(payload, repo)
             self.assertEqual(result.returncode, 0)
             self.assertEqual(result.stderr, "")
 
-    def test_output_verifier_review_non_provenance_blocks(self) -> None:
-        """Reviewer artifacts at `.claude/reviews/<agent>/{slug}-{date}.md`
-        belong to reviewer agents, not output-verifier. Output-verifier
-        scoped allowlist only covers `*.provenance.md` at the reviews
-        consolidated root."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            repo = self._make_repo(tmpdir)
-            payload = _write_payload(
-                "PreToolUse",
-                "output-verifier",
-                ".claude/reviews/ruby-reviewer/feat-20260517-103000.md",
-                repo,
-            )
-            result = run_block_writes_hook(payload, repo)
-            self.assertEqual(result.returncode, 2)
-            self.assertIn("per-agent allowlist", result.stderr)
-
-    def test_output_verifier_research_topic_file_blocks(self) -> None:
-        """output-verifier only writes provenance sidecars. A plain
-        research topic file (no .provenance.md suffix) belongs to the
-        researchers, not the verifier."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            repo = self._make_repo(tmpdir)
-            payload = _write_payload(
-                "PreToolUse",
-                "output-verifier",
-                ".claude/research/topic.md",
-                repo,
-            )
-            result = run_block_writes_hook(payload, repo)
-            self.assertEqual(result.returncode, 2)
-            self.assertIn("per-agent allowlist", result.stderr)
-
     def test_web_researcher_review_provenance_blocks(self) -> None:
-        """web-researcher does NOT write review provenance sidecars.
-        Per-agent split: only output-verifier writes under .claude/reviews/."""
+        """web-researcher allowlist covers `.claude/research/*` and
+        `.claude/plans/*/research/*` only. Writes under `.claude/reviews/`
+        are out of allowlist and must be refused."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
             payload = _write_payload(
@@ -5055,7 +5028,9 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
 
     def test_web_researcher_research_provenance_blocks(self) -> None:
         """Researchers must not forge provenance sidecars in their own
-        research path. `.provenance.md` is output-verifier territory."""
+        research path. `.provenance.md` is main-session territory
+        (output-verifier returns text; the calling skill body writes
+        the sidecar)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
             payload = _write_payload(
@@ -5076,6 +5051,38 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
                 "PreToolUse",
                 "ruby-gem-researcher",
                 ".claude/plans/feat/research/topic.provenance.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_dot_segment_plan_slug_blocks(self) -> None:
+        """`.claude/plans/./research/foo.md` normalizes to
+        `.claude/plans/research/foo.md` — outside per-plan namespace.
+        Reject `.` (and any `.`-leading) plan slug."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/plans/./research/foo.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("path-traversal", result.stderr)
+
+    def test_dotfile_research_file_blocks(self) -> None:
+        """Reject dotfile filenames under research path (e.g.
+        `.claude/research/.hidden.md`) — defense against hidden-file
+        forgery."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/.hidden.md",
                 repo,
             )
             result = run_block_writes_hook(payload, repo)
@@ -5128,21 +5135,6 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
                 "PreToolUse",
                 "web-researcher",
                 ".claude/plans/feat/research/sub/file.md",
-                repo,
-            )
-            result = run_block_writes_hook(payload, repo)
-            self.assertEqual(result.returncode, 2)
-            self.assertIn("per-agent allowlist", result.stderr)
-
-    def test_nested_review_provenance_blocks(self) -> None:
-        """Reject `.claude/reviews/<subdir>/foo.provenance.md` — provenance
-        sidecar lives at the consolidated-review root, not nested."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            repo = self._make_repo(tmpdir)
-            payload = _write_payload(
-                "PreToolUse",
-                "output-verifier",
-                ".claude/reviews/ruby-reviewer/foo.provenance.md",
                 repo,
             )
             result = run_block_writes_hook(payload, repo)

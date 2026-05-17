@@ -273,11 +273,10 @@ provenance is optional.
 When you use it:
 
 1. Write the draft research artifact first.
-2. Spawn `output-verifier` against that artifact. Pass the absolute
-   sidecar path verbatim in the spawn prompt:
+2. Spawn `output-verifier` against that artifact.
+3. Save the verifier result alongside the research as:
    - `.claude/research/{topic-slug}.provenance.md` for reusable research
    - `.claude/plans/{slug}/research/{topic-slug}.provenance.md` for plan-local research
-3. Verifier writes the provenance sidecar; main session reads it.
 4. Apply the report:
    - remove unsupported claims
    - soften weakly sourced claims

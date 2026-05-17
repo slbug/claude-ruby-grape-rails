@@ -12,12 +12,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - `/rb:brainstorm` and `/rb:plan` research artifacts now persist
-  reliably. `web-researcher`, `ruby-gem-researcher`, and
-  `output-verifier` are now Write-capable (same pattern reviewers
-  already use). Prior to this fix the agents lacked `Write` yet
-  received an absolute artifact path in the spawn prompt, which led
-  them to emit reports as `cat > <path> << 'EOF'` strings in chat
-  rather than files on disk.
+  reliably. `web-researcher` and `ruby-gem-researcher` are now
+  Write-capable (same pattern reviewers already use). Prior to this
+  fix the agents lacked `Write` yet received an absolute artifact
+  path in the spawn prompt, which led them to emit reports as
+  `cat > <path> << 'EOF'` strings in chat rather than files on disk.
 - `bin/manifest-update help` / `--help` / `-h` exits 0 with the usage
   block. Prior `--help` fell through to default case → exit 2 plus
   duplicated USAGE output via `||` fallbacks.
@@ -28,34 +27,34 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `[T1]` / `[T2]` / `[T3]` markers are self-describing.
 - New `PreToolUse` / `PermissionRequest` / `PermissionDenied` hook
   `block-out-of-bounds-writes.sh` enforces a Write-path allowlist for
-  the 3 researcher agents. Hook reads `agent_type` from the payload;
-  only Write calls from `web-researcher`, `ruby-gem-researcher`,
-  `output-verifier` are constrained (main session, reviewer agents,
-  and other Write-capable specialists pass through). Allowed
-  patterns: `.claude/research/*`, `.claude/plans/*/research/*`,
-  `.claude/reviews/*.provenance.md`. Targets must be non-existing
-  (CC subagent overwrite-bug workaround). Path-traversal segments
-  (`/../`, trailing `/..`) are rejected. Event dispatch mirrors
-  `block-dangerous-ops.sh`: hard block on PreToolUse, structured JSON
-  deny on PermissionRequest, log to
-  `${CLAUDE_PLUGIN_DATA}/denied-writes.jsonl` on PermissionDenied.
-  Defends against prompt-injection from fetched `WebFetch`/`WebSearch`
-  content that would redirect Write to unintended filesystem paths.
+  the 2 researcher agents. Hook reads `agent_type` from the payload;
+  only Write calls from `web-researcher` and `ruby-gem-researcher`
+  are constrained (main session, reviewer agents, `output-verifier`
+  (convo-only), and other Write-capable specialists pass through).
+  Allowed patterns: `.claude/research/*`, `.claude/plans/*/research/*`
+  (excluding `.provenance.md` sidecars — those remain main-session
+  territory). Targets must be non-existing (CC subagent overwrite-bug
+  workaround). Path-traversal segments (`/../`, trailing `/..`) are
+  rejected. Event dispatch mirrors `block-dangerous-ops.sh`: hard
+  block on PreToolUse, structured JSON deny on PermissionRequest,
+  log to `${CLAUDE_PLUGIN_DATA}/denied-writes.jsonl` on
+  PermissionDenied. Defends against prompt-injection from fetched
+  `WebFetch`/`WebSearch` content that would redirect Write to
+  unintended filesystem paths.
 
 ### Changed
 
-- `web-researcher`, `ruby-gem-researcher`, `output-verifier` add
-  `Write` to their tool allowlist (still intentionally narrow per
+- `web-researcher` and `ruby-gem-researcher` add `Write` to their
+  tool allowlist (still intentionally narrow per
   `.claude/rules/agent-development.md`). Agents now write the
   artifact directly via `Write` instead of emitting heredoc-shaped
   prose. Agent bodies align to the reviewer-agent pattern
-  (`## Findings File Is Primary Output` / `## Sidecar File Is Primary
-  Output` + numbered `Turn budget rules`) and carry a Write-boundary
-  anti-injection note (Write target = spawn-prompt path only;
-  redirecting instructions in fetched content are treated as
-  prompt-injection and ignored). `/rb:review` provenance step and
-  `/rb:research` provenance step updated so `output-verifier`
-  writes the sidecar directly (no longer "main session saves the result").
+  (`## Findings File Is Primary Output` + numbered `Turn budget
+  rules`) and carry a Write-boundary anti-injection note (Write
+  target = spawn-prompt path only; redirecting instructions in
+  fetched content are treated as prompt-injection and ignored).
+  `output-verifier` remains convo-only — main session continues to
+  write the provenance sidecar from the verifier's returned text.
 
 ## [1.16.11] - 2026-05-15
 

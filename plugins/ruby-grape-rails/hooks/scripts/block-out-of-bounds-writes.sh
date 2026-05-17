@@ -5,16 +5,15 @@ set -o pipefail
 
 # Policy: security-sensitive — fail closed when input/payload cannot be inspected.
 # Scope: PreToolUse + PermissionRequest + PermissionDenied on Write calls.
-# Enforces a per-agent path allowlist for the 3 research/verification agents
-# that consume untrusted WebFetch/WebSearch content (and, for output-verifier,
-# untrusted draft artifacts). Defense in depth against prompt-injection that
-# tries to redirect Write to filesystem paths outside research output.
+# Enforces a per-agent path allowlist for the 2 researcher agents that consume
+# untrusted WebFetch/WebSearch content. Defense in depth against prompt-injection
+# that tries to redirect Write to filesystem paths outside research output.
 #
-# Other Write callers (main session, reviewer agents, rails-patterns-analyst,
-# etc.) are unaffected — the agent_type gate returns exit 0 for any caller
-# outside the scoped set.
+# Other Write callers (main session, reviewer agents, output-verifier (convo-only,
+# no Write), rails-patterns-analyst, etc.) are unaffected — the agent_type gate
+# returns exit 0 for any caller outside the scoped set.
 
-SCOPED_AGENT_TYPES=(web-researcher ruby-gem-researcher output-verifier)
+SCOPED_AGENT_TYPES=(web-researcher ruby-gem-researcher)
 
 emit_missing_dependency_block() {
   local dependency="$1"
@@ -95,7 +94,8 @@ EVENT=$(printf '%s' "$INPUT" | jq -r '.hook_event_name // empty' 2>/dev/null || 
 # segment counts explicitly so the allowlist matches the documented artifact
 # shape and nothing wider.
 
-# .claude/research/<file>  (file is single segment; no nested dirs).
+# .claude/research/<file>  (file is single segment; no nested dirs; no
+# dotfile leading segment to prevent hidden-file forgery).
 match_research_root() {
   local rel="$1"
   case "$rel" in
@@ -103,10 +103,12 @@ match_research_root() {
     *) return 1 ;;
   esac
   local tail="${rel#.claude/research/}"
-  [[ -n "$tail" && "$tail" != */* ]]
+  [[ -n "$tail" && "$tail" != */* && "$tail" != .* ]]
 }
 
-# .claude/plans/<slug>/research/<file>  (slug + file each single segment).
+# .claude/plans/<slug>/research/<file>  (slug + file each single segment;
+# slug must not start with `.` to refuse `.claude/plans/./research/...`
+# and dotfile slug names that would bypass per-plan isolation).
 match_plan_research() {
   local rel="$1"
   case "$rel" in
@@ -115,25 +117,14 @@ match_plan_research() {
   esac
   local after_plans="${rel#.claude/plans/}"
   local slug="${after_plans%%/*}"
-  [[ -n "$slug" && "$slug" != */* ]] || return 1
+  [[ -n "$slug" && "$slug" != */* && "$slug" != .* ]] || return 1
   local after_slug="${after_plans#"$slug"/}"
   case "$after_slug" in
     research/*) ;;
     *) return 1 ;;
   esac
   local tail="${after_slug#research/}"
-  [[ -n "$tail" && "$tail" != */* ]]
-}
-
-# .claude/reviews/<file>.provenance.md  (file is single segment).
-match_review_provenance() {
-  local rel="$1"
-  case "$rel" in
-    .claude/reviews/*) ;;
-    *) return 1 ;;
-  esac
-  local tail="${rel#.claude/reviews/}"
-  [[ -n "$tail" && "$tail" != */* && "$tail" == *.provenance.md ]]
+  [[ -n "$tail" && "$tail" != */* && "$tail" != .* ]]
 }
 
 # Per-agent map: which segment-bounded matchers apply to which agent.
@@ -143,22 +134,12 @@ agent_path_allowed() {
   case "$agent" in
     web-researcher|ruby-gem-researcher)
       # Topic research files only: cross-plan root or plan-local research dir.
-      # Provenance sidecars (`*.provenance.md`) are output-verifier territory
-      # — refuse so a researcher consuming untrusted web content cannot forge
-      # the sidecar that the verifier is meant to own.
+      # Provenance sidecars (`*.provenance.md`) are main-session territory
+      # (output-verifier is convo-only and returns text; the calling skill body
+      # writes the sidecar). Refuse so a researcher consuming untrusted web
+      # content cannot forge a provenance sidecar.
       [[ "$rel" == *.provenance.md ]] && return 1
       match_research_root "$rel" || match_plan_research "$rel"
-      ;;
-    output-verifier)
-      # Provenance sidecars only — for research artifacts AND review verdicts.
-      # A `.provenance.md` co-located with the topic file at either research
-      # location is allowed; the review provenance sidecar lives at the
-      # consolidated-review root.
-      if match_research_root "$rel" || match_plan_research "$rel"; then
-        [[ "$rel" == *.provenance.md ]] && return 0
-        return 1
-      fi
-      match_review_provenance "$rel"
       ;;
     *)
       return 1
@@ -262,10 +243,12 @@ else
 fi
 
 # Reject path-traversal segments BEFORE prefix/glob checks. Lexical prefix
-# match cannot see through `..`. Use respond_to_danger so strict-perm mode
-# + denied-jsonl log behave the same as other rejection branches.
+# match cannot see through `.` / `..` segments. Use respond_to_danger so
+# strict-perm mode + denied-jsonl log behave the same as other rejection
+# branches. Covers `/../` (parent-traversal), trailing `/..`, `/./`
+# (no-op segment that skips per-plan slug), and trailing `/.`.
 case "$ABS_TARGET" in
-  *'/../'*|*'/..')
+  *'/../'*|*'/..'|*'/./'*|*'/.')
     respond_to_danger "path_traversal" \
       "BLOCKED: ${AGENT_TYPE} attempted to Write with a path-traversal segment: ${FILE_PATH}." \
       "$ABS_TARGET"
@@ -316,14 +299,17 @@ if ! agent_path_allowed "$AGENT_TYPE" "$relative_target"; then
     "$canonical_target"
 fi
 
-# Per plugin convention (CC subagent overwrite-bug workaround) the target
-# MUST NOT exist: prepare-respawn rotates prior files before spawn. Covers
-# regular file, directory, AND pre-symlinked-target attack at the leaf.
-# Only reached for paths that already passed containment + allowlist, so
-# this exists-or-not signal is confined to the agent's own output namespace.
+# Fresh-write contract for scoped researchers. CC subagent Edit is broken
+# (cannot update existing files at all), and CC subagent Write also has
+# known reliability issues on existing paths. Defense: every scoped Write
+# goes to a non-existing target. Research artifact paths are stable
+# (`{topic-slug}.md`); the existence guard forces researchers to fail loud
+# when a previous artifact already lives at the same path so the main
+# session can rotate the run rather than silently dropping a Write.
+# Covers regular file, directory, AND pre-symlinked-target attack at the leaf.
 if [[ -e "$ABS_TARGET" ]] || [[ -L "$ABS_TARGET" ]]; then
   respond_to_danger "target_exists" \
-    "BLOCKED: ${AGENT_TYPE} attempted to Write an existing target: ${ABS_TARGET}. Per plugin convention (CC subagent overwrite-bug workaround) Write targets must be non-existing. Main session calls prepare-respawn to rotate prior files before re-spawn." \
+    "BLOCKED: ${AGENT_TYPE} attempted to Write an existing target: ${ABS_TARGET}. Scoped Write targets must be non-existing (CC subagent Edit/Write cannot update existing files reliably). Rotate to a fresh path." \
     "$ABS_TARGET"
 fi
 
