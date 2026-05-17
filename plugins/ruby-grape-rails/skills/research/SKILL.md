@@ -332,13 +332,20 @@ Use the research filesystem deliberately:
   (example: `sidekiq-vs-solid-queue`)
 - `{slug}` = plan slug for one `/rb:plan` namespace
 
-- `.claude/research/{topic-slug}.md` (consolidated synthesis;
-  main session writes after fanout) and
-  `.claude/research/{topic-slug}/{aspect-slug}.md` (per-aspect
-  researcher artifacts)
-  - cross-plan research that may be reused by future `/rb:plan` runs
+- `.claude/research/{topic-slug}.md`
+  - consolidated synthesis; main session writes after fanout
+  - cross-plan reusable unit; `/rb:plan` cache-reuse globs
+    `.claude/research/*.md` and picks this up when fresh
   - best for gem evaluations, upgrade paths, framework/tooling
     comparisons, and community research
+- `.claude/research/{topic-slug}/{aspect-slug}.md`
+  - per-aspect researcher artifacts produced during fanout
+  - intermediate inputs to the consolidated synthesis; NOT reused
+    by `/rb:plan` cache (subdir is intentionally outside the
+    `*.md` reuse glob to prevent partial aspect files from
+    suppressing fresh research)
+  - kept for traceability/audit; safe to discard once synthesis
+    is written
 - `.claude/plans/{slug}/research/*.md`
   - feature-specific research scoped to a single plan namespace
     (it remains associated with that plan even after the plan is no
