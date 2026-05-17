@@ -103,11 +103,17 @@ EVENT=$(printf '%s' "$INPUT" | jq -r '.hook_event_name // empty' 2>/dev/null || 
 # segment counts explicitly so the allowlist matches the documented artifact
 # shape and nothing wider.
 
+# Slug shape per `bin/manifest-update#slug_pattern_check`:
+# `[a-z0-9][a-z0-9._-]*` — leading alphanumeric, then a-z/0-9/`.`/`_`/`-`.
+# Rejects empty, dotfile-leading, glob-meta (`*`/`?`/`[`), uppercase,
+# whitespace, slashes, and any other characters.
+SLUG_PATTERN='^[a-z0-9][a-z0-9._-]*$'
+
 # .claude/research/<topic-slug>/<aspect-slug>.md  (exactly 2 segments:
-# topic dir + aspect file; no nested deeper; no dotfile leading either
-# segment to prevent hidden-file forgery; aspect file must be `*.md`).
-# Flat .claude/research/<file>.md (consolidated synthesis) is main-session
-# territory — researchers MUST NOT write at that level.
+# topic dir + aspect file; no nested deeper; both slugs match SLUG_PATTERN;
+# aspect file must end in `.md`). Flat .claude/research/<file>.md
+# (consolidated synthesis) is main-session territory — researchers MUST
+# NOT write at that level.
 match_research_aspect() {
   local rel="$1"
   case "$rel" in
@@ -116,16 +122,17 @@ match_research_aspect() {
   esac
   local after_research="${rel#.claude/research/}"
   local topic="${after_research%%/*}"
-  [[ -n "$topic" && "$topic" != */* && "$topic" != .* ]] || return 1
+  [[ "$topic" =~ $SLUG_PATTERN ]] || return 1
   local tail="${after_research#"$topic"/}"
-  [[ -n "$tail" && "$tail" != */* && "$tail" != .* && "$tail" == *.md ]]
+  [[ "$tail" == *.md ]] || return 1
+  local aspect="${tail%.md}"
+  [[ "$aspect" =~ $SLUG_PATTERN ]]
 }
 
 # .claude/plans/<slug>/research/<file>.md  (slug + file each single segment;
-# slug must not start with `.` to refuse `.claude/plans/./research/...`
-# and dotfile slug names that would bypass per-plan isolation; file must
-# end in `.md` — extensions like `.rb` / `.json` are outside the documented
-# research artifact contract).
+# slug + aspect-slug match SLUG_PATTERN; file must end in `.md` —
+# extensions like `.rb` / `.json` are outside the documented research
+# artifact contract).
 match_plan_research() {
   local rel="$1"
   case "$rel" in
@@ -134,14 +141,16 @@ match_plan_research() {
   esac
   local after_plans="${rel#.claude/plans/}"
   local slug="${after_plans%%/*}"
-  [[ -n "$slug" && "$slug" != */* && "$slug" != .* ]] || return 1
+  [[ "$slug" =~ $SLUG_PATTERN ]] || return 1
   local after_slug="${after_plans#"$slug"/}"
   case "$after_slug" in
     research/*) ;;
     *) return 1 ;;
   esac
   local tail="${after_slug#research/}"
-  [[ -n "$tail" && "$tail" != */* && "$tail" != .* && "$tail" == *.md ]]
+  [[ "$tail" == *.md ]] || return 1
+  local aspect="${tail%.md}"
+  [[ "$aspect" =~ $SLUG_PATTERN ]]
 }
 
 # Per-agent map: which segment-bounded matchers apply to which agent.
@@ -186,9 +195,12 @@ reject_symlink_ancestors() {
   rel="${rel#/}"
   local cur="$repo_root"
   local part
-  local IFS='/'
-  # shellcheck disable=SC2206 # intentional word-split on slash boundaries
-  local parts=($rel)
+  local parts=()
+  # `read -ra` splits on IFS without performing pathname expansion —
+  # `local parts=($rel)` would glob `*` / `?` / `[...]` against cwd
+  # and walk expanded entries instead of literal path components,
+  # bypassing the symlink-ancestor refusal.
+  IFS='/' read -ra parts <<< "$rel"
   for part in "${parts[@]}"; do
     [[ -n "$part" ]] || continue
     cur="${cur}/${part}"

@@ -5210,6 +5210,31 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
             self.assertEqual(result.returncode, 2)
             self.assertIn("per-agent allowlist", result.stderr)
 
+    def test_glob_segment_in_path_does_not_expand(self) -> None:
+        """Path component with glob metacharacters (e.g. `*`) must be
+        treated as literal segment, not expanded against cwd. Defense
+        against `local parts=($rel)` pathname-expansion bug where a
+        target containing `*` would walk expanded cwd entries instead
+        of the actual path components, undermining symlink-ancestor
+        refusal."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            # Path contains literal `*` segment. Hook must reject via
+            # path-traversal/allowlist branch, not crash or glob-expand
+            # against repo cwd.
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/*/aspect.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            # Glob `*` is not a valid topic-slug (slug pattern is
+            # `[a-z0-9][a-z0-9._-]*` per match_research_aspect), so
+            # hook should reject via allowlist.
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
     def test_symlinked_ancestor_blocks(self) -> None:
         """Reject Write through any symlinked ancestor — catches
         `.claude` symlinked to a path outside the repo even when the
