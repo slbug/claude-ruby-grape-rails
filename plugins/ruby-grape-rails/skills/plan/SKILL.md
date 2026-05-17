@@ -328,14 +328,7 @@ Specialists are leaf workers: research, write artifact, return summary.
 6. Patch each entry `status: in-flight` via stdin `patch`.
 7. Spawn all agents in ONE parallel block. Read paths via
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update spawn-paths "$MANIFEST"`.
-   Pass absolute path verbatim in spawn prompt. For Write-capable
-   agents (denylist style, e.g. `rails-patterns-analyst`,
-   `active-record-schema-designer`) end the prompt with `Final turn
-   calls Write to <absolute-path>.` For convo-only agents (allowlist
-   without Write — `web-researcher`, `ruby-gem-researcher`,
-   `output-verifier`) end the prompt with `Return full report as
-   markdown in your final message. Main session persists at
-   <absolute-path>; do NOT attempt to write it yourself.`
+   Pass absolute path verbatim in spawn prompt.
 8. Wait for all agents to complete.
 9. Apply Artifact Recovery (see below). Patch each entry's `status`
    field with its recovery-state value (`artifact` |
@@ -373,12 +366,11 @@ Every research Agent() call must:
 
 For each manifest entry:
 
-1. **CHECK pause signature** per
+1. **CHECK pause signature first** per
    `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`. If matched,
-   apply that protocol — resume Write-capable agents via
-   `SendMessage` when available; skip resume for convo-only agents
-   (`web-researcher`, `ruby-gem-researcher`, `output-verifier`). All
-   paths fall through to the state machine below.
+   apply that protocol (resume via `SendMessage` if available, else
+   mark `stub-no-output`). The state machine below applies ONLY after
+   the resume attempt resolves or is skipped.
 
 2. **STAT the expected path.** Apply the state machine:
 

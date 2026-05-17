@@ -132,20 +132,15 @@ See `references/research-integration.md` for the full pattern.
 4. Read paths via `manifest-update spawn-paths "$MANIFEST"`.
 5. Spawn both via two Agent tool calls in ONE Tool Use block
    (foreground parallel, NOT `run_in_background: true`):
-   - **`rails-patterns-analyst`** (Write-capable) for `codebase-scan`
-     topic: "How does this codebase handle {topics}?" Prompt MUST end:
-     `Final turn calls Write to <absolute-path>.`
-   - **`web-researcher`** (convo-only) for `web-research` topic:
-     "Ruby/Rails approaches to {topics}". Prompt MUST end: `Return
-     full report as markdown in your final message. Main session
-     persists at <absolute-path>; do NOT attempt to write it
-     yourself.` Pass the path for context only.
-6. **CHECK pause signature** per
+   - **`rails-patterns-analyst`** for `codebase-scan` topic:
+     "How does this codebase handle {topics}?"
+   - **`web-researcher`** for `web-research` topic:
+     "Ruby/Rails approaches to {topics}".
+   Pass each absolute path verbatim in the spawn prompt.
+6. **CHECK pause signature first** per
    `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`. If matched,
-   apply that protocol — resume `rails-patterns-analyst` via
-   `SendMessage` when available (Write-capable). Skip resume for
-   `web-researcher` (convo-only). All paths fall through to Artifact
-   Recovery.
+   apply that protocol (resume via `SendMessage` if available, else
+   mark `stub-no-output`) BEFORE Artifact Recovery.
 7. Apply Artifact Recovery and patch each entry's `status` field
    with its recovery-state value (`artifact` | `stub-replaced` |
    `recovered-from-return` | `stub-no-output`).
@@ -186,14 +181,8 @@ Key sections: Summary, Coverage Details (per dimension), Codebase Context
    interview, after research, after discuss — always present options. Never
    skip the checkpoint
 6. **STOP after presenting options** — do not proceed without user input
-7. **Research cycle budgets**:
-   - Cycle 1: MAX 2 agents in parallel (one Tool Use block).
-   - Cycle 2: typically 1 agent on the narrowed gap; MAX 2 only when
-     cycle 1 surfaced two distinct unresolved questions.
-   - Cycle 3: 1 agent, narrow verification scope.
-   - Cycle 4+: hard stop. Present `Discuss` or `Store & exit` —
-     NOT `Research`. Convergence failure after 3 cycles signals
-     re-scoping, not more research.
+7. **MAX 2 agents in first research cycle** — deeper dives are subsequent
+   cycles (user picks "Research" again)
 
 ## Integration
 

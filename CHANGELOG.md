@@ -11,32 +11,33 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- `/rb:brainstorm` and `/rb:plan` research cycles lost artifacts when
-  `web-researcher` / `ruby-gem-researcher` / `output-verifier` returned
-  reports as `cat > <path> << 'EOF'` strings in chat instead of files
-  on disk. These agents are read-only by design (no `Write`, no
-  `Bash`); main session always extracts the report from the return
-  text. Agent bodies now state this contract explicitly and reject
-  heredoc-style fake-writes.
-- Agent-resume recovery no longer terminates with `stub-no-output`
-  when `SendMessage` is unavailable. Recovery now falls through to
-  the filesystem + return-text state machine, so research reports
-  survive sessions without `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
-- `bin/manifest-update help` / `--help` / `-h` now exits 0 with the
-  usage block. Prior `--help` exited 2 and triggered duplicated
-  output via `||` fallbacks.
+- `/rb:brainstorm` and `/rb:plan` research artifacts now persist
+  reliably. `web-researcher`, `ruby-gem-researcher`, and
+  `output-verifier` are now Write-capable (same pattern reviewers
+  already use). Prior to this fix the agents lacked `Write` yet
+  received an absolute artifact path in the spawn prompt, which led
+  them to emit reports as `cat > <path> << 'EOF'` strings in chat
+  rather than files on disk.
+- `bin/manifest-update help` / `--help` / `-h` exits 0 with the usage
+  block. Prior `--help` fell through to default case → exit 2 plus
+  duplicated USAGE output via `||` fallbacks.
+
+### Added
+
+- `web-researcher` reports include a `Tier key:` legend line so
+  `[T1]` / `[T2]` / `[T3]` markers are self-describing.
 
 ### Changed
 
-- `web-researcher` reports include a `Tier key:` legend line so the
-  `[T1]` / `[T2]` / `[T3]` markers are self-describing to readers.
-- `/rb:brainstorm` Iron Law 7 documents cycle 1 / 2 / 3 / 4+ agent
-  budgets explicitly. Cycle 1 MAX 2 (unchanged). Cycle 2 typically 1,
-  MAX 2 on two distinct gaps. Cycle 3 narrow verification only.
-  Cycle 4+ presents `Discuss` or `Store & exit`, never `Research`.
-- `agent-resume.md` documents the 32K subagent return-text cap and
-  the `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` prerequisite for
-  `SendMessage`-based resume.
+- `web-researcher`, `ruby-gem-researcher`, `output-verifier` add
+  `Write` to their tool allowlist (still intentionally narrow per
+  `.claude/rules/agent-development.md`). `Bash` added to
+  `disallowedTools` to close the fake-write heredoc fallback path.
+  Agent bodies align to the reviewer-agent pattern (`## Findings File
+  Is Primary Output` / `## Sidecar File Is Primary Output` +
+  numbered `Turn budget rules`). `/rb:review` provenance step and
+  `/rb:research` provenance step updated so `output-verifier` writes
+  the sidecar directly (no longer "main session saves the result").
 
 ## [1.16.11] - 2026-05-15
 

@@ -81,7 +81,8 @@ Sub-queries:
 
 ## Parallel Researcher Spawning
 
-Spawn multiple `web-researcher` agents in parallel:
+Spawn multiple `web-researcher` agents in parallel, each with its own
+per-aspect absolute path passed in the spawn prompt.
 
 ```
 Spawn Order:
@@ -108,7 +109,8 @@ Sources to check:
 - Recent blog posts (within 1 year)
 - Community discussions
 
-Output: Structured findings with sources
+Output: Write structured findings to the absolute path passed by the
+spawning skill body. Return text: ≤500-word summary.
 ```
 
 ## Primary Sources Priority
@@ -271,10 +273,11 @@ provenance is optional.
 When you use it:
 
 1. Write the draft research artifact first.
-2. Spawn `output-verifier` against that artifact.
-3. Save the verifier result alongside the research as:
+2. Spawn `output-verifier` against that artifact. Pass sidecar path
+   verbatim in the spawn prompt:
    - `.claude/research/{topic-slug}.provenance.md` for reusable research
    - `.claude/plans/{slug}/research/{topic-slug}.provenance.md` for plan-local research
+3. Verifier writes the provenance sidecar; main session reads it.
 4. Apply the report:
    - remove unsupported claims
    - soften weakly sourced claims

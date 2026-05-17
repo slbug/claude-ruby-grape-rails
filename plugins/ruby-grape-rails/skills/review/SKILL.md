@@ -209,8 +209,10 @@ review itself are enough and no provenance sidecar is needed.
 When used:
 
 1. write the draft consolidated review
-2. run `output-verifier` against the draft
-3. save the result to `.claude/reviews/{review-slug}-{datesuffix}.provenance.md`
+2. run `output-verifier` against the draft. Pass
+   `.claude/reviews/{review-slug}-{datesuffix}.provenance.md` verbatim
+   in the spawn prompt
+3. verifier writes the provenance sidecar; main session reads it
 4. remove or soften unsupported external claims before presenting the final review
 
 Use the shared provenance contract:
@@ -252,11 +254,11 @@ Output path:
 
 For each manifest entry:
 
-1. **CHECK pause signature** per
+1. **CHECK pause signature first** per
    `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`. If matched,
-   apply that protocol — resume Write-capable reviewers via
-   `SendMessage` when available. `output-verifier` (convo-only) skips
-   resume. All paths fall through to the state machine below.
+   apply that protocol (resume via `SendMessage` if available, else
+   mark `stub-no-output`). The state machine below applies ONLY after
+   the resume attempt resolves or is skipped.
 
 2. **STAT the expected path.** Apply the state machine:
 
