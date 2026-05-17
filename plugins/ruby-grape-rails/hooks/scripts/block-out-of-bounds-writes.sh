@@ -11,22 +11,10 @@ set -o pipefail
 # tries to redirect Write to filesystem paths outside research output.
 #
 # Other Write callers (main session, reviewer agents, rails-patterns-analyst,
-# active-record-schema-designer, etc.) are unaffected — agent_type gate at
-# top of script returns exit 0 for any caller outside the scoped set.
+# etc.) are unaffected — the agent_type gate returns exit 0 for any caller
+# outside the scoped set.
 
 SCOPED_AGENT_TYPES=(web-researcher ruby-gem-researcher output-verifier)
-# Allowed Write patterns (case-glob, relative to repo root). Tighter than
-# bare-prefix allowlist: plan namespace is constrained to the per-plan
-# research/ subtree, and review namespace is constrained to provenance
-# sidecars at the consolidated-review path (the only output-verifier
-# product). Anything else under .claude/plans/<slug>/ or .claude/reviews/
-# (scratchpad, plan.md, per-reviewer artifacts, etc.) belongs to other
-# agents or main-session writes and is refused for the 3 scoped agents.
-ALLOWED_WRITE_PATTERNS=(
-  ".claude/research/*"
-  ".claude/plans/*/research/*"
-  ".claude/reviews/*.provenance.md"
-)
 
 emit_missing_dependency_block() {
   local dependency="$1"
@@ -45,15 +33,17 @@ source "$ROOT_LIB"
 
 read_hook_input
 INPUT="$HOOK_INPUT_VALUE"
+# Mirror block-dangerous-ops.sh: explicitly fail closed on truncated/invalid
+# payloads. Empty payload falls through to the downstream tool_name check,
+# which fails closed via emit_payload_schema_block (TOOL ends up empty →
+# missing-field exit 2). Do NOT add an `empty) exit 0` branch — that would
+# fail open and bypass the guardrail.
 if [[ -z "$INPUT" ]]; then
   case "${HOOK_INPUT_STATUS:-empty}" in
     truncated|invalid)
       echo "BLOCKED: block-out-of-bounds-writes.sh could not safely inspect a ${HOOK_INPUT_STATUS} hook payload." >&2
       echo "Increase RUBY_PLUGIN_MAX_HOOK_INPUT_BYTES or fix the hook input before re-running this Write." >&2
       exit 2
-      ;;
-    empty)
-      exit 0
       ;;
   esac
 fi
@@ -95,56 +85,121 @@ REPO_ROOT="$(resolve_workspace_root "$INPUT" 2>/dev/null || true)"
 #   PermissionDenied    → log denial, exit 0
 EVENT=$(printf '%s' "$INPUT" | jq -r '.hook_event_name // empty' 2>/dev/null || true)
 
-# Compute target absolute path. Per plugin convention (and CC subagent
-# overwrite-bug workaround) the target MUST NOT exist: prepare-respawn rotates
-# any prior file before spawn. Existing target → refuse (covers regular file,
-# directory, symlink, and pre-symlinked-target attack in one check).
-if [[ "$FILE_PATH" == /* ]]; then
-  ABS_TARGET="$FILE_PATH"
-else
-  ABS_TARGET="${REPO_ROOT%/}/${FILE_PATH#./}"
-fi
+# ---------- Per-agent allowlist (segment-boundary aware) ----------
+#
+# Bash `case` patterns treat `*` as matching any string INCLUDING `/`. Using
+# bare `case` globs against the allowlist would let `.claude/reviews/foo/bar.provenance.md`
+# match `.claude/reviews/*.provenance.md` (nested) and `.claude/plans/x/y/research/z`
+# match `.claude/plans/*/research/*` (extra segments). These helpers validate
+# segment counts explicitly so the allowlist matches the documented artifact
+# shape and nothing wider.
 
-# Reject path-traversal segments (`/../` anywhere, or trailing `/..`). Lexical
-# prefix check below cannot see through `..`, so refuse before computing the
-# canonical target. Legitimate filenames containing `..` without surrounding
-# slashes (e.g. `foo..bar.md`) are not affected.
-case "$ABS_TARGET" in
-  *'/../'*|*'/..')
-    EVENT=$(printf '%s' "$INPUT" | jq -r '.hook_event_name // empty' 2>/dev/null || true)
-    case "$EVENT" in
-      PermissionRequest)
-        jq -nc --arg msg "BLOCKED: ${AGENT_TYPE} attempted to Write with a path-traversal segment: ${FILE_PATH}." \
-          '{ hookSpecificOutput: { hookEventName: "PermissionRequest", decision: { behavior: "deny", message: $msg, interrupt: false } } }'
-        exit 0
-        ;;
-      PermissionDenied)
-        exit 0
-        ;;
-      *)
-        echo "BLOCKED: ${AGENT_TYPE} attempted to Write with a path-traversal segment: ${FILE_PATH}." >&2
-        exit 2
-        ;;
-    esac
-    ;;
-esac
+# .claude/research/<file>  (file is single segment; no nested dirs).
+match_research_root() {
+  local rel="$1"
+  case "$rel" in
+    .claude/research/*) ;;
+    *) return 1 ;;
+  esac
+  local tail="${rel#.claude/research/}"
+  [[ -n "$tail" && "$tail" != */* ]]
+}
 
-target_exists=0
-{ [[ -e "$ABS_TARGET" ]] || [[ -L "$ABS_TARGET" ]]; } && target_exists=1
+# .claude/plans/<slug>/research/<file>  (slug + file each single segment).
+match_plan_research() {
+  local rel="$1"
+  case "$rel" in
+    .claude/plans/*/research/*) ;;
+    *) return 1 ;;
+  esac
+  local after_plans="${rel#.claude/plans/}"
+  local slug="${after_plans%%/*}"
+  [[ -n "$slug" && "$slug" != */* ]] || return 1
+  local after_slug="${after_plans#"$slug"/}"
+  case "$after_slug" in
+    research/*) ;;
+    *) return 1 ;;
+  esac
+  local tail="${after_slug#research/}"
+  [[ -n "$tail" && "$tail" != */* ]]
+}
 
-parent_dir=$(path_dirname "$ABS_TARGET") || parent_dir=""
-if [[ -n "$parent_dir" && -d "$parent_dir" ]]; then
-  canonical_parent=$(cd "$parent_dir" >/dev/null 2>&1 && pwd -P) || canonical_parent="$parent_dir"
-else
-  canonical_parent="$parent_dir"
-fi
-base=$(path_basename "$ABS_TARGET") || base=""
-canonical_target="${canonical_parent%/}/${base}"
+# .claude/reviews/<file>.provenance.md  (file is single segment).
+match_review_provenance() {
+  local rel="$1"
+  case "$rel" in
+    .claude/reviews/*) ;;
+    *) return 1 ;;
+  esac
+  local tail="${rel#.claude/reviews/}"
+  [[ -n "$tail" && "$tail" != */* && "$tail" == *.provenance.md ]]
+}
 
-canonical_root=$(cd "$REPO_ROOT" >/dev/null 2>&1 && pwd -P) || canonical_root="$REPO_ROOT"
+# Per-agent map: which segment-bounded matchers apply to which agent.
+agent_path_allowed() {
+  local agent="$1"
+  local rel="$2"
+  case "$agent" in
+    web-researcher|ruby-gem-researcher)
+      # Topic research files only: cross-plan root or plan-local research dir.
+      match_research_root "$rel" || match_plan_research "$rel"
+      ;;
+    output-verifier)
+      # Provenance sidecars only — for research artifacts AND review verdicts.
+      # A `.provenance.md` co-located with the topic file at either research
+      # location is allowed; the review provenance sidecar lives at the
+      # consolidated-review root.
+      if match_research_root "$rel" || match_plan_research "$rel"; then
+        [[ "$rel" == *.provenance.md ]] && return 0
+        return 1
+      fi
+      match_review_provenance "$rel"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+# ---------- Symlink-ancestor refusal ----------
+#
+# Bash analogue of `lib/path_safety.rb#reject_symlink_ancestors!` (canonical
+# Ruby implementation). Walks lexical components from repo root toward the
+# target. Returns 1 if any existing ancestor (or the target itself) is a
+# symlink. Stops at the first non-existent component — anything past that
+# point cannot have been resolved yet on disk, and the `target_exists`
+# check below already refuses pre-existing leafs.
+#
+# Why bash mirror instead of shelling out to Ruby: hooks fire on every
+# Write tool call; Ruby startup latency would tax every guarded write.
+# Pattern matches workspace-root-lib.sh which mirrors path_safety.rb
+# `canonical_existing_or_deepest` and `path_within_root?` in bash.
+reject_symlink_ancestors() {
+  local repo_root="$1"
+  local abs_target="$2"
+  local rel="${abs_target#"$repo_root"}"
+  rel="${rel#/}"
+  local cur="$repo_root"
+  local part
+  local IFS='/'
+  # shellcheck disable=SC2206 # intentional word-split on slash boundaries
+  local parts=($rel)
+  for part in "${parts[@]}"; do
+    [[ -n "$part" ]] || continue
+    cur="${cur}/${part}"
+    if [[ -L "$cur" ]]; then
+      return 1
+    fi
+    [[ -e "$cur" ]] || return 0
+  done
+  return 0
+}
+
+# ---------- Response helpers (define before any reject branch) ----------
 
 log_denied_write() {
   local our_reason="$1"
+  local logged_path="$2"
   local data_dir="${CLAUDE_PLUGIN_DATA:-}"
   [[ -n "$data_dir" ]] || return 0
   [[ -L "$data_dir" ]] && return 0
@@ -156,7 +211,7 @@ log_denied_write() {
   jq -nc \
     --arg agent "$AGENT_TYPE" \
     --arg path "$FILE_PATH" \
-    --arg canonical "$canonical_target" \
+    --arg canonical "$logged_path" \
     --arg pattern "$our_reason" \
     --arg classifier "$cc_reason" \
     '{ts: now, agent_type: $agent, path: $path, canonical: $canonical, pattern: $pattern, classifier_reason: $classifier}' \
@@ -166,6 +221,7 @@ log_denied_write() {
 respond_to_danger() {
   local reason="$1"
   local block_message="$2"
+  local logged_path="${3:-}"
   local interrupt="false"
   case "$EVENT" in
     PermissionRequest)
@@ -182,7 +238,7 @@ respond_to_danger() {
       exit 0
       ;;
     PermissionDenied)
-      log_denied_write "$reason"
+      log_denied_write "$reason" "$logged_path"
       exit 0
       ;;
     *)
@@ -192,28 +248,69 @@ respond_to_danger() {
   esac
 }
 
-if [[ "$target_exists" -eq 1 ]]; then
-  respond_to_danger "target_exists" \
-    "BLOCKED: ${AGENT_TYPE} attempted to Write an existing target: ${ABS_TARGET}. Per plugin convention (CC subagent overwrite-bug workaround) Write targets must be non-existing. Main session calls prepare-respawn to rotate prior files before re-spawn."
+# ---------- Main flow ----------
+
+if [[ "$FILE_PATH" == /* ]]; then
+  ABS_TARGET="$FILE_PATH"
+else
+  ABS_TARGET="${REPO_ROOT%/}/${FILE_PATH#./}"
 fi
+
+# Reject path-traversal segments BEFORE prefix/glob checks. Lexical prefix
+# match cannot see through `..`. Use respond_to_danger so strict-perm mode
+# + denied-jsonl log behave the same as other rejection branches.
+case "$ABS_TARGET" in
+  *'/../'*|*'/..')
+    respond_to_danger "path_traversal" \
+      "BLOCKED: ${AGENT_TYPE} attempted to Write with a path-traversal segment: ${FILE_PATH}." \
+      "$ABS_TARGET"
+    ;;
+esac
+
+# Refuse if any ancestor on the lexical path resolves to a symlink — catches
+# `.claude` (or any intermediate dir) symlinked to a location outside the
+# repo even when the leaf directory does not yet exist.
+if ! reject_symlink_ancestors "$REPO_ROOT" "$ABS_TARGET"; then
+  respond_to_danger "symlinked_ancestor" \
+    "BLOCKED: ${AGENT_TYPE} attempted to Write through a symlinked ancestor in: ${ABS_TARGET}. Refusing (symlink-attack defense)." \
+    "$ABS_TARGET"
+fi
+
+# Per plugin convention (CC subagent overwrite-bug workaround) the target
+# MUST NOT exist: prepare-respawn rotates prior files before spawn. Covers
+# regular file, directory, AND pre-symlinked-target attack at the leaf.
+if [[ -e "$ABS_TARGET" ]] || [[ -L "$ABS_TARGET" ]]; then
+  respond_to_danger "target_exists" \
+    "BLOCKED: ${AGENT_TYPE} attempted to Write an existing target: ${ABS_TARGET}. Per plugin convention (CC subagent overwrite-bug workaround) Write targets must be non-existing. Main session calls prepare-respawn to rotate prior files before re-spawn." \
+    "$ABS_TARGET"
+fi
+
+# Compute canonical target by walking up to the nearest existing parent,
+# canonicalizing that, then re-appending the lexical remainder. Used for
+# repo-containment check + canonical logging only — ancestor-symlink
+# refusal above is the primary defense against escape.
+parent_dir=$(path_dirname "$ABS_TARGET") || parent_dir=""
+if [[ -n "$parent_dir" && -d "$parent_dir" ]]; then
+  canonical_parent=$(cd "$parent_dir" >/dev/null 2>&1 && pwd -P) || canonical_parent="$parent_dir"
+else
+  canonical_parent="$parent_dir"
+fi
+base=$(path_basename "$ABS_TARGET") || base=""
+canonical_target="${canonical_parent%/}/${base}"
+
+canonical_root=$(cd "$REPO_ROOT" >/dev/null 2>&1 && pwd -P) || canonical_root="$REPO_ROOT"
 
 if [[ "$canonical_target" != "${canonical_root}/"* ]]; then
   respond_to_danger "out_of_repo" \
-    "BLOCKED: ${AGENT_TYPE} attempted to Write outside the repo root: ${canonical_target}. Allowed patterns (relative to repo root): ${ALLOWED_WRITE_PATTERNS[*]}."
+    "BLOCKED: ${AGENT_TYPE} attempted to Write outside the repo root: ${canonical_target}." \
+    "$canonical_target"
 fi
 
 relative_target="${canonical_target#"${canonical_root}/"}"
-pattern_match=0
-for pattern in "${ALLOWED_WRITE_PATTERNS[@]}"; do
-  # shellcheck disable=SC2254 # intentional glob match against fixed pattern set
-  case "$relative_target" in
-    $pattern) pattern_match=1; break ;;
-  esac
-done
-
-if [[ "$pattern_match" -ne 1 ]]; then
+if ! agent_path_allowed "$AGENT_TYPE" "$relative_target"; then
   respond_to_danger "out_of_allowlist" \
-    "BLOCKED: ${AGENT_TYPE} attempted to Write to a path outside its research-output allowlist: ${canonical_target}. Allowed patterns (relative to repo root): ${ALLOWED_WRITE_PATTERNS[*]}."
+    "BLOCKED: ${AGENT_TYPE} attempted to Write to a path outside its per-agent allowlist: ${canonical_target}." \
+    "$canonical_target"
 fi
 
 exit 0
