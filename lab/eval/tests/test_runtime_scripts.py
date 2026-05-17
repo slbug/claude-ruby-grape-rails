@@ -14,6 +14,9 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 BLOCK_DANGEROUS_OPS = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/block-dangerous-ops.sh"
 )
+BLOCK_OUT_OF_BOUNDS_WRITES = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/block-out-of-bounds-writes.sh"
+)
 IRON_LAW_VERIFIER = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/iron-law-verifier.sh"
 )
@@ -119,6 +122,42 @@ def run_block_hook(
         check=False,
         env=env,
     )
+
+
+def run_block_writes_hook(
+    payload: str,
+    cwd: str,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    env = dict(os.environ)
+    if extra_env:
+        env.update(extra_env)
+    return subprocess.run(
+        ["bash", str(BLOCK_OUT_OF_BOUNDS_WRITES)],
+        input=payload,
+        capture_output=True,
+        text=True,
+        cwd=cwd,
+        check=False,
+        env=env,
+    )
+
+
+def _write_payload(
+    event: str,
+    agent_type: str | None,
+    file_path: str,
+    cwd: str,
+) -> str:
+    body: dict[str, object] = {
+        "hook_event_name": event,
+        "tool_name": "Write",
+        "tool_input": {"file_path": file_path},
+        "cwd": cwd,
+    }
+    if agent_type is not None:
+        body["agent_type"] = agent_type
+    return json.dumps(body)
 
 
 def run_detect_stack(tmpdir: str, cwd: str | None = None) -> dict[str, str]:
@@ -4840,6 +4879,169 @@ class BlockDangerousOpsPermissionDeniedTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
             self.assertEqual(result.stdout, "")
             self.assertFalse((real_dir / "denied-commands.jsonl").exists())
+
+
+class BlockOutOfBoundsWritesTests(unittest.TestCase):
+    """`block-out-of-bounds-writes.sh` enforces a per-agent path allowlist
+    for Write calls from `web-researcher`, `ruby-gem-researcher`, and
+    `output-verifier`. Other callers (main session, reviewer agents, etc.)
+    pass through. Targets must be non-existing (CC subagent overwrite-bug
+    workaround) and within `.claude/{research,plans,reviews}/`.
+
+    Event-name dispatch mirrors `block-dangerous-ops.sh`:
+      PreToolUse / unset → exit 2 + stderr (hard block)
+      PermissionRequest  → structured JSON deny via stdout, exit 0
+      PermissionDenied   → log to `${CLAUDE_PLUGIN_DATA}/denied-writes.jsonl`, exit 0"""
+
+    def _make_repo(self, tmpdir: str) -> str:
+        repo = Path(tmpdir) / "repo"
+        repo.mkdir()
+        (repo / ".claude").mkdir()
+        subprocess.run(
+            ["git", "init", "-q"], cwd=repo, check=True, capture_output=True
+        )
+        return str(repo)
+
+    def test_main_session_write_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse", None, "/etc/passwd", repo
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            self.assertEqual(result.stderr, "")
+
+    def test_non_scoped_agent_write_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse", "ruby-reviewer", "/etc/passwd", repo
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+
+    def test_scoped_agent_allowed_path_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/topic.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+
+    def test_scoped_agent_absolute_outside_repo_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse", "web-researcher", "/etc/passwd", repo
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("BLOCKED", result.stderr)
+
+    def test_scoped_agent_outside_allowlist_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/audit/leak.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("research-output allowlist", result.stderr)
+
+    def test_scoped_agent_existing_target_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            target = Path(repo) / ".claude" / "research" / "exists.md"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("prior", encoding="utf-8")
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/exists.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("existing target", result.stderr)
+
+    def test_scoped_agent_traversal_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/../../etc/passwd",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("path-traversal", result.stderr)
+
+    def test_permission_request_emits_structured_deny(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PermissionRequest",
+                "web-researcher",
+                "/etc/passwd",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+            body = json.loads(result.stdout)
+            decision = body["hookSpecificOutput"]["decision"]
+            self.assertEqual(
+                body["hookSpecificOutput"]["hookEventName"],
+                "PermissionRequest",
+            )
+            self.assertEqual(decision["behavior"], "deny")
+            self.assertFalse(decision["interrupt"])
+            self.assertIn("BLOCKED", decision["message"])
+
+    def test_permission_denied_logs_jsonl(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            data_dir = Path(tmpdir) / "data"
+            payload_dict = {
+                "hook_event_name": "PermissionDenied",
+                "tool_name": "Write",
+                "agent_type": "web-researcher",
+                "tool_input": {"file_path": "/etc/passwd"},
+                "cwd": repo,
+                "reason": "Auto mode denied",
+            }
+            result = run_block_writes_hook(
+                json.dumps(payload_dict),
+                repo,
+                extra_env={"CLAUDE_PLUGIN_DATA": str(data_dir)},
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            log_path = data_dir / "denied-writes.jsonl"
+            self.assertTrue(log_path.is_file())
+            entries = [
+                json.loads(line)
+                for line in log_path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+            self.assertEqual(len(entries), 1)
+            entry = entries[0]
+            self.assertEqual(entry["agent_type"], "web-researcher")
+            self.assertEqual(entry["path"], "/etc/passwd")
+            self.assertEqual(entry["pattern"], "target_exists")
+            self.assertEqual(entry["classifier_reason"], "Auto mode denied")
 
 
 _TEST_PLUGIN_ROOT = "/test/plugin/root"

@@ -175,6 +175,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-out-of-bounds-writes.sh",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PermissionRequest": [
@@ -187,6 +197,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-out-of-bounds-writes.sh",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PermissionDenied": [
@@ -196,6 +216,16 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-dangerous-ops.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-out-of-bounds-writes.sh",
             "timeout": 10
           }
         ]

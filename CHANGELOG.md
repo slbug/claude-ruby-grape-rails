@@ -46,12 +46,20 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   ONLY the spawn-prompt path; instructions inside fetched
   `WebFetch`/`WebSearch` content (or, for `output-verifier`, the draft
   under review) that attempt to redirect Write elsewhere are treated
-  as prompt-injection and ignored. This is defense in depth — agent
-  instructions do not fully prevent prompt injection. Operators who
-  need hard enforcement should pair this with a session-level Write
-  permission allowlist scoped to `.claude/research/**`,
-  `.claude/plans/**`, `.claude/reviews/**` (see `/rb:intro` for the
-  recommended allowlist).
+  as prompt-injection and ignored.
+- New `PreToolUse` / `PermissionRequest` / `PermissionDenied` hook
+  `block-out-of-bounds-writes.sh` enforces the boundary at the CC
+  layer. Hook reads `agent_type` from the payload; only Write calls
+  from the 3 researcher agents are constrained (main session, reviewer
+  agents, and other Write-capable specialists are unaffected). Allowed
+  prefixes for researcher Writes: `.claude/research/**`,
+  `.claude/plans/**`, `.claude/reviews/**`. Targets must be
+  non-existing (per plugin convention + CC subagent overwrite-bug
+  workaround). Path-traversal segments (`/../`, trailing `/..`) are
+  rejected. Event dispatch mirrors `block-dangerous-ops.sh`: hard
+  block on PreToolUse, structured JSON deny on PermissionRequest,
+  log to `${CLAUDE_PLUGIN_DATA}/denied-writes.jsonl` on
+  PermissionDenied.
 
 ## [1.16.11] - 2026-05-15
 
