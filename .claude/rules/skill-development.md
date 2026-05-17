@@ -62,9 +62,11 @@ skills/{name}/
 - Spawn-fanout skills: use run manifest at
   `.claude/{namespace}/RUN-CURRENT.json` (where `{namespace}` already
   includes the per-skill slug fragment, e.g. `reviews/{review-slug}`,
-  `plans/{plan-slug}/research-fanout`). Per-run artifact paths use
-  `{slug}-{datesuffix}.md` (review) or stable `{topic-slug}.md`
-  (plan/brainstorm). See
+  `plans/{plan-slug}/research-fanout`, `plans/{plan-slug}/brainstorm-fanout`,
+  `research-fanout/{topic-slug}`). Per-run artifact paths use
+  `{slug}-{datesuffix}.md` (review), stable `{topic-slug}.md`
+  (plan/brainstorm), or stable `{topic-slug}/{agent-slug}.md`
+  subdir-per-topic (research per-aspect). See
   `plugins/ruby-grape-rails/references/run-manifest.md` for schema,
   staleness rules, and write protocol.
 - Agent dispatch: foreground only. Skill bodies MUST NOT pass

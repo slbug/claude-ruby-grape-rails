@@ -14,6 +14,9 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 BLOCK_DANGEROUS_OPS = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/block-dangerous-ops.sh"
 )
+BLOCK_OUT_OF_BOUNDS_WRITES = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/block-out-of-bounds-writes.sh"
+)
 IRON_LAW_VERIFIER = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/iron-law-verifier.sh"
 )
@@ -25,6 +28,7 @@ SECURITY_REMINDER = (
 )
 SECRET_SCAN = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/secret-scan.sh"
 DETECT_STACK = REPO_ROOT / "plugins/ruby-grape-rails/bin/detect-stack"
+MANIFEST_UPDATE = REPO_ROOT / "plugins/ruby-grape-rails/bin/manifest-update"
 DETECT_RUNTIME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime.sh"
 DETECT_RUNTIME_FAST = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime-fast.sh"
@@ -119,6 +123,47 @@ def run_block_hook(
         check=False,
         env=env,
     )
+
+
+def run_block_writes_hook(
+    payload: str,
+    cwd: str,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    env = dict(os.environ)
+    # Mirror production: CC sets CLAUDE_PROJECT_DIR to the session repo
+    # and resolve_workspace_root gives the env var precedence over the
+    # payload `.cwd`. Bind the env var to the test repo so the hook
+    # exercises the env-wins path instead of inheriting the host repo.
+    env["CLAUDE_PROJECT_DIR"] = cwd
+    if extra_env:
+        env.update(extra_env)
+    return subprocess.run(
+        ["bash", str(BLOCK_OUT_OF_BOUNDS_WRITES)],
+        input=payload,
+        capture_output=True,
+        text=True,
+        cwd=cwd,
+        check=False,
+        env=env,
+    )
+
+
+def _write_payload(
+    event: str,
+    agent_type: str | None,
+    file_path: str,
+    cwd: str,
+) -> str:
+    body: dict[str, object] = {
+        "hook_event_name": event,
+        "tool_name": "Write",
+        "tool_input": {"file_path": file_path},
+        "cwd": cwd,
+    }
+    if agent_type is not None:
+        body["agent_type"] = agent_type
+    return json.dumps(body)
 
 
 def run_detect_stack(tmpdir: str, cwd: str | None = None) -> dict[str, str]:
@@ -4840,6 +4885,643 @@ class BlockDangerousOpsPermissionDeniedTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
             self.assertEqual(result.stdout, "")
             self.assertFalse((real_dir / "denied-commands.jsonl").exists())
+
+
+class BlockOutOfBoundsWritesTests(unittest.TestCase):
+    """`block-out-of-bounds-writes.sh` enforces a per-agent path allowlist
+    for Write calls from `web-researcher` and `ruby-gem-researcher`.
+    Other callers (main session, reviewer agents, output-verifier (convo-only),
+    etc.) pass through. Targets must be non-existing (CC subagent overwrite-bug
+    workaround) and within `.claude/{research,plans/*/research}/`.
+
+    Event-name dispatch mirrors `block-dangerous-ops.sh`:
+      PreToolUse / unset → exit 2 + stderr (hard block)
+      PermissionRequest  → structured JSON deny via stdout, exit 0
+      PermissionDenied   → log to `${CLAUDE_PLUGIN_DATA}/denied-writes.jsonl`, exit 0"""
+
+    def _make_repo(self, tmpdir: str) -> str:
+        repo = Path(tmpdir) / "repo"
+        repo.mkdir()
+        (repo / ".claude").mkdir()
+        subprocess.run(
+            ["git", "init", "-q"], cwd=repo, check=True, capture_output=True
+        )
+        return str(repo)
+
+    def test_main_session_write_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse", None, "/etc/passwd", repo
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            self.assertEqual(result.stderr, "")
+
+    def test_non_scoped_agent_write_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse", "ruby-reviewer", "/etc/passwd", repo
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+
+    def test_scoped_agent_allowed_path_passes(self) -> None:
+        """`.claude/research/{topic}/{aspect}.md` per-aspect subdir
+        layout is the researcher-write target."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/topic/aspect.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+
+    def test_scoped_agent_flat_research_path_blocks(self) -> None:
+        """Flat `.claude/research/{topic}.md` is consolidated-synthesis
+        main-session territory. Researchers MUST write under subdir."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/topic.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_scoped_agent_absolute_outside_repo_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse", "web-researcher", "/etc/passwd", repo
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("BLOCKED", result.stderr)
+
+    def test_scoped_agent_outside_allowlist_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/audit/leak.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_scoped_agent_plan_root_blocks(self) -> None:
+        """plan.md / scratchpad.md / interview.md live at
+        `.claude/plans/<slug>/` root — outside research/ subtree → block."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/plans/feat/plan.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_scoped_agent_plan_research_path_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/plans/feat/research/web-research.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+
+    def test_scoped_agent_plan_research_non_md_blocks(self) -> None:
+        """Plan-local research allowlist accepts only `.md` artifacts.
+        Other extensions (`.rb`, `.json`) are outside the documented
+        contract and must be refused."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            for path in (
+                ".claude/plans/feat/research/leak.rb",
+                ".claude/plans/feat/research/leak.json",
+            ):
+                with self.subTest(path=path):
+                    payload = _write_payload(
+                        "PreToolUse", "web-researcher", path, repo
+                    )
+                    result = run_block_writes_hook(payload, repo)
+                    self.assertEqual(result.returncode, 2)
+                    self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_scoped_agent_research_aspect_non_md_blocks(self) -> None:
+        """Cross-plan per-aspect allowlist accepts only `.md` artifacts."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            for path in (
+                ".claude/research/topic/aspect.rb",
+                ".claude/research/topic/aspect.json",
+            ):
+                with self.subTest(path=path):
+                    payload = _write_payload(
+                        "PreToolUse", "web-researcher", path, repo
+                    )
+                    result = run_block_writes_hook(payload, repo)
+                    self.assertEqual(result.returncode, 2)
+                    self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_output_verifier_unscoped_passes(self) -> None:
+        """output-verifier is convo-only on main (returns text; main session
+        writes any provenance). Hook MUST exit 0 unconditionally on verifier
+        Writes — verifier is not in SCOPED_AGENT_TYPES. Regression guard
+        against re-scoping verifier without revisiting the convo-only
+        contract."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "output-verifier",
+                "/etc/passwd",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+
+    def test_web_researcher_review_provenance_blocks(self) -> None:
+        """web-researcher allowlist covers `.claude/research/*` and
+        `.claude/plans/*/research/*` only. Writes under `.claude/reviews/`
+        are out of allowlist and must be refused."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/reviews/feat-20260517-103000.provenance.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_web_researcher_research_provenance_blocks(self) -> None:
+        """Researchers must not forge provenance sidecars in their own
+        research path. `.provenance.md` is main-session territory
+        (output-verifier returns text; the calling skill body writes
+        the sidecar)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/topic/aspect.provenance.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_ruby_gem_researcher_plan_provenance_blocks(self) -> None:
+        """Same boundary applies in plan-local research dir."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "ruby-gem-researcher",
+                ".claude/plans/feat/research/topic.provenance.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_dot_segment_plan_slug_blocks(self) -> None:
+        """`.claude/plans/./research/foo.md` normalizes to
+        `.claude/plans/research/foo.md` — outside per-plan namespace.
+        Reject `.` (and any `.`-leading) plan slug."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/plans/./research/foo.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("path-traversal", result.stderr)
+
+    def test_dotfile_research_file_blocks(self) -> None:
+        """Reject dotfile aspect filenames under research subdir
+        (`.claude/research/topic/.hidden.md`) — defense against
+        hidden-file forgery."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/topic/.hidden.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_dotfile_research_topic_blocks(self) -> None:
+        """Reject dotfile topic slug under research subdir
+        (`.claude/research/.hidden/aspect.md`) — defense against
+        hidden-dir forgery."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/.hidden/aspect.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_existence_oracle_outside_repo_is_uniform(self) -> None:
+        """Containment check must precede `-e`/`-L` so outside-repo paths
+        deny uniformly regardless of whether the file exists, denying
+        scoped agents a filesystem-existence oracle over /etc, $HOME, etc."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            existing_payload = _write_payload(
+                "PreToolUse", "web-researcher", "/etc/passwd", repo
+            )
+            nonexistent_payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                "/etc/this-file-does-not-exist-92837465",
+                repo,
+            )
+            r1 = run_block_writes_hook(existing_payload, repo)
+            r2 = run_block_writes_hook(nonexistent_payload, repo)
+            self.assertEqual(r1.returncode, 2)
+            self.assertEqual(r2.returncode, 2)
+            # Both must yield the same denial category (out_of_repo).
+            self.assertIn("outside the repo root", r1.stderr)
+            self.assertIn("outside the repo root", r2.stderr)
+
+    def test_nested_research_path_blocks(self) -> None:
+        """Bash `case *` matches `/`; segment-boundary matcher must reject
+        deeper nesting beyond `.claude/research/<topic>/<aspect>.md`
+        (3+ levels under research/)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/topic/sub/file.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_nested_plan_research_path_blocks(self) -> None:
+        """Reject extra segments under `.claude/plans/<slug>/research/`."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/plans/feat/research/sub/file.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_glob_segment_in_path_does_not_expand(self) -> None:
+        """Path component with glob metacharacters (e.g. `*`) must be
+        treated as literal segment, not expanded against cwd. Defense
+        against `local parts=($rel)` pathname-expansion bug where a
+        target containing `*` would walk expanded cwd entries instead
+        of the actual path components, undermining symlink-ancestor
+        refusal."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            # Path contains literal `*` segment. Hook must reject via
+            # path-traversal/allowlist branch, not crash or glob-expand
+            # against repo cwd.
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/*/aspect.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            # Glob `*` is not a valid topic-slug (slug pattern is
+            # `[a-z0-9][a-z0-9._-]*` per match_research_aspect), so
+            # hook should reject via allowlist.
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_symlinked_ancestor_blocks(self) -> None:
+        """Reject Write through any symlinked ancestor — catches
+        `.claude` symlinked to a path outside the repo even when the
+        leaf directory does not yet exist."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            outside = Path(tmpdir) / "outside"
+            outside.mkdir()
+            # Replace .claude with a symlink to outside.
+            claude_dir = Path(repo) / ".claude"
+            claude_dir.rmdir()  # safe: _make_repo created an empty dir
+            claude_dir.symlink_to(outside)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/topic/aspect.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("symlinked ancestor", result.stderr)
+
+    def test_empty_payload_fails_closed(self) -> None:
+        """Empty hook input must fail closed via downstream `tool_name`
+        missing check (mirrors block-dangerous-ops.sh). No silent pass."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            result = run_block_writes_hook("", repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("tool_name was missing", result.stderr)
+
+    def test_invalid_json_payload_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            result = run_block_writes_hook("not-json-at-all", repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("invalid", result.stderr)
+
+    def test_scoped_agent_existing_target_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            target = Path(repo) / ".claude" / "research" / "topic" / "exists.md"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("prior", encoding="utf-8")
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/topic/exists.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("existing target", result.stderr)
+
+    def test_scoped_agent_traversal_blocks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/../../etc/passwd",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("path-traversal", result.stderr)
+
+    def test_permission_request_emits_structured_deny(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PermissionRequest",
+                "web-researcher",
+                "/etc/passwd",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+            body = json.loads(result.stdout)
+            decision = body["hookSpecificOutput"]["decision"]
+            self.assertEqual(
+                body["hookSpecificOutput"]["hookEventName"],
+                "PermissionRequest",
+            )
+            self.assertEqual(decision["behavior"], "deny")
+            self.assertFalse(decision["interrupt"])
+            self.assertIn("BLOCKED", decision["message"])
+
+    def test_permission_request_strict_perms_sets_interrupt(self) -> None:
+        """`RUBY_PLUGIN_STRICT_PERMS=1` flips `decision.interrupt` to true
+        on PermissionRequest denials. Mirrors `block-dangerous-ops.sh`
+        parity to prevent silent drift between the two hooks."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PermissionRequest",
+                "web-researcher",
+                "/etc/passwd",
+                repo,
+            )
+            result = run_block_writes_hook(
+                payload,
+                repo,
+                extra_env={"RUBY_PLUGIN_STRICT_PERMS": "1"},
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+            body = json.loads(result.stdout)
+            decision = body["hookSpecificOutput"]["decision"]
+            self.assertEqual(decision["behavior"], "deny")
+            self.assertTrue(decision["interrupt"])
+            self.assertIn("BLOCKED", decision["message"])
+
+    def test_hooks_json_wires_all_three_events(self) -> None:
+        """`hooks.json` must register block-out-of-bounds-writes.sh under
+        PreToolUse + PermissionRequest + PermissionDenied with a Write
+        matcher. Regression guard against accidental removal of the
+        security hook wiring while script tests still pass."""
+        hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]
+        for event in ("PreToolUse", "PermissionRequest", "PermissionDenied"):
+            groups = hooks.get(event, [])
+            write_groups = [g for g in groups if g.get("matcher") == "Write"]
+            commands = [
+                hook.get("command", "")
+                for group in write_groups
+                for hook in group.get("hooks", [])
+            ]
+            self.assertTrue(
+                any(
+                    cmd.endswith("/block-out-of-bounds-writes.sh")
+                    for cmd in commands
+                ),
+                f"{event} (matcher=Write) is not wired to block-out-of-bounds-writes.sh",
+            )
+
+    def test_permission_denied_logs_jsonl(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            data_dir = Path(tmpdir) / "data"
+            payload_dict = {
+                "hook_event_name": "PermissionDenied",
+                "tool_name": "Write",
+                "agent_type": "web-researcher",
+                "tool_input": {"file_path": "/etc/passwd"},
+                "cwd": repo,
+                "reason": "Auto mode denied",
+            }
+            result = run_block_writes_hook(
+                json.dumps(payload_dict),
+                repo,
+                extra_env={"CLAUDE_PLUGIN_DATA": str(data_dir)},
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            log_path = data_dir / "denied-writes.jsonl"
+            self.assertTrue(log_path.is_file())
+            entries = [
+                json.loads(line)
+                for line in log_path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
+            self.assertEqual(len(entries), 1)
+            entry = entries[0]
+            self.assertEqual(entry["agent_type"], "web-researcher")
+            self.assertEqual(entry["path"], "/etc/passwd")
+            self.assertEqual(entry["pattern"], "out_of_repo")
+            self.assertEqual(entry["classifier_reason"], "Auto mode denied")
+
+
+class ManifestUpdatePrepareRunCollisionTests(unittest.TestCase):
+    """`bin/manifest-update prepare-run` emits a non-blocking `NOTICE:`
+    stderr listing existing artifact paths at canonical locations.
+    Exit stays 0; the run proceeds. prepare-respawn handles rotation
+    afterwards. The NOTICE lets caller read pre-rotation content if it
+    may inform spawn prompts."""
+
+    def _make_repo(self, tmpdir: str) -> str:
+        repo = Path(tmpdir) / "repo"
+        repo.mkdir()
+        (repo / ".claude").mkdir()
+        subprocess.run(
+            ["git", "init", "-q"], cwd=repo, check=True, capture_output=True
+        )
+        return str(repo)
+
+    def _run(self, cwd: str, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [str(MANIFEST_UPDATE), "prepare-run", *args],
+            capture_output=True,
+            text=True,
+            cwd=cwd,
+            check=False,
+        )
+
+    def test_research_fresh_state_succeeds_no_notice(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            result = self._run(
+                repo,
+                "--skill=rb:research",
+                "--slug=test-topic",
+                "--agents=docs,blogs",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("NOTICE:", result.stderr)
+            manifest_path = result.stdout.strip()
+            self.assertTrue(Path(manifest_path).is_file())
+
+    def test_research_existing_artifact_emits_notice(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            topic_dir = Path(repo) / ".claude" / "research" / "test-topic"
+            topic_dir.mkdir(parents=True)
+            existing = topic_dir / "docs.md"
+            existing.write_text("prior research\n", encoding="utf-8")
+            result = self._run(
+                repo,
+                "--skill=rb:research",
+                "--slug=test-topic",
+                "--agents=docs,blogs",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("NOTICE:", result.stderr)
+            self.assertIn(str(existing), result.stderr)
+            self.assertIn("prepare-respawn", result.stderr)
+            manifest_path = result.stdout.strip()
+            self.assertTrue(Path(manifest_path).is_file())
+
+    def test_plan_existing_artifact_emits_notice_and_proceeds(self) -> None:
+        """Plan re-run with same slug: existing artifact at canonical
+        path triggers NOTICE but does not block. Manifest writes
+        normally so prepare-respawn can rotate after."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            research_dir = Path(repo) / ".claude" / "plans" / "feat-x" / "research"
+            research_dir.mkdir(parents=True)
+            existing = research_dir / "codebase-scan.md"
+            existing.write_text("prior\n", encoding="utf-8")
+            result = self._run(
+                repo,
+                "--skill=rb:plan",
+                "--slug=feat-x",
+                "--agents=codebase-scan,web-research",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("NOTICE:", result.stderr)
+            self.assertIn(str(existing), result.stderr)
+            manifest_path = result.stdout.strip()
+            self.assertTrue(Path(manifest_path).is_file())
+
+    def test_brainstorm_existing_artifact_emits_notice(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            research_dir = Path(repo) / ".claude" / "plans" / "feat-x" / "research"
+            research_dir.mkdir(parents=True)
+            existing = research_dir / "codebase-scan.md"
+            existing.write_text("prior\n", encoding="utf-8")
+            result = self._run(
+                repo,
+                "--skill=rb:brainstorm",
+                "--slug=feat-x",
+                "--agents=codebase-scan,web-research",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("NOTICE:", result.stderr)
+            self.assertIn(str(existing), result.stderr)
+
+    def test_notice_lists_only_existing_paths(self) -> None:
+        """When some agent paths exist and some do not, only existing
+        paths appear in NOTICE listing."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            topic_dir = Path(repo) / ".claude" / "research" / "topic"
+            topic_dir.mkdir(parents=True)
+            existing = topic_dir / "aspect-a.md"
+            existing.write_text("prior\n", encoding="utf-8")
+            result = self._run(
+                repo,
+                "--skill=rb:research",
+                "--slug=topic",
+                "--agents=aspect-a,aspect-b",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("NOTICE:", result.stderr)
+            self.assertIn(str(existing), result.stderr)
+            self.assertNotIn("aspect-b.md", result.stderr)
 
 
 _TEST_PLUGIN_ROOT = "/test/plugin/root"

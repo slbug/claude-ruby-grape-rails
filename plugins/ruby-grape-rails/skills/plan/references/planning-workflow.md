@@ -167,26 +167,9 @@ whether fresh research already exists:
 Wait for every agent to complete before plan generation.
 
 Apply Artifact Recovery for each agent in the run manifest at
-`.claude/plans/{plan-slug}/research-fanout/RUN-CURRENT.json`:
-
-- Exists, `size_bytes >= 1000` → trust. Do NOT overwrite. Patch
-  `status: artifact` into manifest.
-- Exists, `size_bytes < 1000`, return text substantially larger AND
-  parses as findings → replace stub. Patch `status: stub-replaced`.
-- Exists, `size_bytes < 1000`, return text empty/unusable → keep
-  stub, treat as coverage gap. Patch `status: stub-no-output`.
-- Missing, return text usable → extract findings from return text and
-  write. Patch `status: recovered-from-return`.
-- Missing, return text empty/unusable → write a stub with heading
-  `# {topic-slug} — recovery stub` and body `Run produced no
-  artifact and no usable return text. Research coverage gap.` Patch
-  `status: stub-no-output`.
-
-Status patch via
-`printf '%s\n' '<json>' | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"`.
-
-NEVER copy or symlink prior-run artifacts. Decide from filesystem;
-ignore return-text denial claims. Never re-spawn.
+`.claude/plans/{plan-slug}/research-fanout/RUN-CURRENT.json` per
+`plugins/ruby-grape-rails/references/artifact-recovery.md`
+(coverage-noun `Research`).
 
 Read each verified artifact + any reused cached files in scratchpad.md
 `## Decisions` → `### Research Cache Reuse`. Synthesize plan directly.

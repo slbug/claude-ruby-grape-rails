@@ -81,18 +81,63 @@ Sub-queries:
 
 ## Parallel Researcher Spawning
 
-Spawn multiple `web-researcher` agents in parallel:
+1. Compute `{topic-slug}` (semantic kebab-case, e.g.
+   `sidekiq-vs-solid-queue`). Pick `--agents=` CSV of aspect slugs —
+   one slug per narrow parallel scope (e.g. `docs`, `blogs`,
+   `benchmarks`, `migration-guide`, `github-issues`). Slugs MUST be
+   unique within a run (manifest is keyed by slug). To run multiple
+   agents on the same source-type, pick distinct slugs that encode
+   the additional scope dimension. Aspect-slug pattern:
+   `[a-z0-9][a-z0-9._-]*`.
+2. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run --skill=rb:research
+   --slug="$TOPIC_SLUG" --agents=<csv-of-aspect-slugs>`.
+   Capture stdout as `$MANIFEST` (absolute manifest path). `NOTICE:`
+   stderr lists any existing artifacts at canonical paths — Read
+   listed files before step 3 if partial content may inform spawn
+   prompts.
+3. Run
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn "$MANIFEST"`.
+4. For each aspect, patch `status: in-flight` via
+   `printf '{"agents":{"%s":{"status":"in-flight"}}}\n' "$ASPECT_SLUG" |
+   ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"`.
+5. Spawn all `web-researcher` agents in ONE parallel block. Read agent
+   paths via
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update spawn-paths "$MANIFEST"`
+   (tab-separated `aspect_slug<TAB>absolute_path`). Pass each absolute
+   path verbatim in the spawn prompt.
+6. Wait for all aspects to complete.
+7. Apply Artifact Recovery per
+   `${CLAUDE_PLUGIN_ROOT}/references/artifact-recovery.md`
+   (coverage-noun `Aspect`). Patch each aspect's `status` field with
+   its recovery-state value (`artifact` | `stub-replaced` |
+   `recovered-from-return` | `stub-no-output`).
+8. Read each verified aspect artifact. Read consolidated path via
+   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
+   Synthesize the consolidated research at that path.
+9. Patch manifest `status: complete`.
 
 ```
-Spawn Order:
-1. web-researcher (Gem A docs)      ──┐
-2. web-researcher (Gem B docs)       ├──▶ Wait all ──▶ Synthesize
-3. web-researcher (Comparison blog) ──┘
-4. web-researcher (GitHub issues)
-5. web-researcher (Performance benchmarks)
+Spawn Order (slugs vary per query; one agent per slug):
+1. web-researcher (docs)             ──┐
+2. web-researcher (blogs)             ├──▶ Wait all ──▶ Synthesize
+3. web-researcher (benchmarks)       ──┘
+4. web-researcher (github-issues)
+5. web-researcher (migration-guide)
 ```
 
-### Agent Briefing Template
+## Artifact Path Rules
+
+- Helper computes absolute paths from `--skill=rb:research` plus
+  `--slug` plus `--agents`. Path convention: per-aspect at
+  `.claude/research/{topic-slug}/{aspect-slug}.md`; consolidated
+  synthesis at `.claude/research/{topic-slug}.md` (main session
+  writes).
+- Skill body reads paths via `manifest-update spawn-paths "$MANIFEST"`.
+- Pass each absolute path verbatim in the spawn prompt.
+- Agents use the exact path received. No filename invention.
+
+## Agent Briefing Template
 
 ```
 Task: Research [specific aspect] of [topic]
@@ -108,7 +153,8 @@ Sources to check:
 - Recent blog posts (within 1 year)
 - Community discussions
 
-Output: Structured findings with sources
+Output: Write structured findings to the absolute path passed by the
+spawning skill body. Return text: ≤500-word summary.
 ```
 
 ## Primary Sources Priority
@@ -163,7 +209,9 @@ Rules:
 
 ## File-First Output Pattern
 
-Write reusable cross-plan research to `.claude/research/{topic-slug}.md`:
+Main session writes consolidated cross-plan synthesis to
+`.claude/research/{topic-slug}.md` after all per-aspect researchers
+return:
 
 ```markdown
 # Research: [Topic]
@@ -293,9 +341,19 @@ Use the research filesystem deliberately:
 - `{slug}` = plan slug for one `/rb:plan` namespace
 
 - `.claude/research/{topic-slug}.md`
-  - cross-plan research that may be reused by future `/rb:plan` runs
+  - consolidated synthesis; main session writes after fanout
+  - cross-plan reusable unit; `/rb:plan` cache-reuse globs
+    `.claude/research/*.md` and picks this up when fresh
   - best for gem evaluations, upgrade paths, framework/tooling
     comparisons, and community research
+- `.claude/research/{topic-slug}/{aspect-slug}.md`
+  - per-aspect researcher artifacts produced during fanout
+  - intermediate inputs to the consolidated synthesis; NOT reused
+    by `/rb:plan` cache (subdir is intentionally outside the
+    `*.md` reuse glob to prevent partial aspect files from
+    suppressing fresh research)
+  - kept for traceability/audit; safe to discard once synthesis
+    is written
 - `.claude/plans/{slug}/research/*.md`
   - feature-specific research scoped to a single plan namespace
     (it remains associated with that plan even after the plan is no

@@ -17,12 +17,14 @@ additional `{slug}` segment.
 | `/rb:review` | `reviews/{review-slug}` |
 | `/rb:plan` (fanout) | `plans/{plan-slug}/research-fanout` |
 | `/rb:brainstorm` | `plans/{plan-slug}/brainstorm-fanout` |
+| `/rb:research` | `research-fanout/{topic-slug}` |
 
 Resolved manifest paths:
 
 - `/rb:review`: `.claude/reviews/{review-slug}/RUN-CURRENT.json`
 - `/rb:plan`: `.claude/plans/{plan-slug}/research-fanout/RUN-CURRENT.json`
 - `/rb:brainstorm`: `.claude/plans/{plan-slug}/brainstorm-fanout/RUN-CURRENT.json`
+- `/rb:research`: `.claude/research-fanout/{topic-slug}/RUN-CURRENT.json`
 
 Per-agent artifact paths (computed by helper):
 
@@ -31,6 +33,7 @@ Per-agent artifact paths (computed by helper):
 | `/rb:review` | `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` | per-second-unique snapshot |
 | `/rb:plan` | `.claude/plans/{plan-slug}/research/{agent-slug}.md` | stable canonical (no datesuffix; iterative across days) |
 | `/rb:brainstorm` | `.claude/plans/{plan-slug}/research/{agent-slug}.md` | stable canonical |
+| `/rb:research` | `.claude/research/{topic-slug}/{agent-slug}.md` | stable per topic; subdir per aspect |
 
 Consolidated artifact paths (computed by helper, exposed as
 `consolidated_path` field):
@@ -40,14 +43,25 @@ Consolidated artifact paths (computed by helper, exposed as
 | `/rb:review` | `.claude/reviews/{review-slug}-{datesuffix}.md` |
 | `/rb:plan` | `.claude/plans/{plan-slug}/plan.md` |
 | `/rb:brainstorm` | `.claude/plans/{plan-slug}/interview.md` |
+| `/rb:research` | `.claude/research/{topic-slug}.md` |
+
+`prepare-run` always exits 0 on success. Stderr `NOTICE:` lists any
+existing artifact paths at canonical locations — advisory only;
+`prepare-respawn` rotates listed paths to `.stale-<ts>.md` siblings
+afterwards. Read pre-rotation content via Read tool before
+`prepare-respawn` runs if partial content may inform spawn prompts.
 
 `{agent-slug}` is the manifest entry key — for review it equals the
 subagent_type (e.g. `ruby-reviewer`); for plan/brainstorm it equals
-the research topic identifier (e.g. `active-record-patterns`).
+the research topic identifier (e.g. `active-record-patterns`); for
+research it equals the per-aspect identifier (e.g. `docs`, `blogs`,
+`benchmarks`).
 
-Slug charset: `{slug}`, `{review-slug}`, `{plan-slug}`, and
-`{agent-slug}` MUST match `[a-z0-9._-]+`. Helper rejects mixed-case,
-spaces, slashes, or other characters with hard exit.
+Slug charset: `{slug}`, `{review-slug}`, `{plan-slug}`,
+`{topic-slug}`, and `{agent-slug}` MUST match `[a-z0-9][a-z0-9._-]*`
+(leading alphanumeric; trailing chars may include `.`, `_`, `-`).
+Helper rejects mixed-case, spaces, slashes, leading dot/dash/underscore,
+or other characters with hard exit.
 
 ## Schema
 
@@ -80,9 +94,9 @@ spaces, slashes, or other characters with hard exit.
 Required fields (all skills): `skill`, `slug`, `datesuffix`,
 `status`, `agents`, `consolidated_path`, `started_at`, `updated_at`.
 
-Required fields (review only — git-pinned skills): `branch`,
-`branch_head_sha`, `base_ref`, `base_sha`. Omitted for plan +
-brainstorm (TTL-only staleness).
+Required fields (review only — git-pinned skill): `branch`,
+`branch_head_sha`, `base_ref`, `base_sha`. Omitted for plan,
+brainstorm, and research (TTL-only staleness).
 
 `base_sha` = output of `git merge-base HEAD "$BASE_REF"` at run start.
 Stored to detect rebase drift on resume.
@@ -117,9 +131,12 @@ Selection Matrix in `skills/review/SKILL.md`). It is NOT a fixed
 default in the helper — every spawn-fanout skill computes its own
 list per its own rules.
 
-Plan/brainstorm omit `--base-ref` (TTL-only). For plan, agent slugs
-are research topic identifiers (helper uses them as filename stems
-under `.claude/plans/<slug>/research/<topic>.md`).
+Plan/brainstorm/research omit `--base-ref` (TTL-only). For plan +
+brainstorm, agent slugs are research topic identifiers (helper uses
+them as filename stems under
+`.claude/plans/<slug>/research/<topic>.md`). For research, agent
+slugs are aspect identifiers under
+`.claude/research/<topic-slug>/<aspect>.md`.
 
 ### Read agent paths
 
@@ -140,9 +157,9 @@ Helper auto-stamps `updated_at`.
 
 ### Post-recovery
 
-After Artifact Recovery decides each agent's outcome, patch its
-`status` to one of `artifact`, `stub-replaced`, `recovered-from-return`,
-or `stub-no-output`:
+After Artifact Recovery (sibling `artifact-recovery.md`) decides each
+agent's outcome, patch its `status` to one of `artifact`,
+`stub-replaced`, `recovered-from-return`, or `stub-no-output`:
 
 ```bash
 printf '{"agents":{"%s":{"status":"%s"}}}\n' "$AGENT_SLUG" "$STATE" \
@@ -170,6 +187,7 @@ Per-skill rules:
 | `/rb:review` | 24h | yes | yes | yes |
 | `/rb:plan` | 168h (7d) | no | no | no |
 | `/rb:brainstorm` | 168h (7d) | no | no | no |
+| `/rb:research` | 168h (7d) | no | no | no |
 
 Stale = ANY applicable rule triggers:
 
@@ -254,6 +272,7 @@ Helper enforces:
 | `/rb:review` | Active | `reviews/{review-slug}` | TTL + HEAD + base + branch |
 | `/rb:plan` (research fanout) | Active | `plans/{plan-slug}/research-fanout` | TTL only (research iterates across days) |
 | `/rb:brainstorm` | Active | `plans/{plan-slug}/brainstorm-fanout` | TTL only |
+| `/rb:research` | Active | `research-fanout/{topic-slug}` | TTL only |
 | `/rb:full` | N/A | — | Orchestrator; reads phase manifests, owns none |
 | `/rb:work` | N/A | — | Tracks via plan `progress.md`, not manifest |
 | `/rb:verify` | N/A | — | Subprocess, no agent fanout |
@@ -269,7 +288,7 @@ body uses output for subsequent `field` / `spawn-paths` / `patch` /
 
 ```bash
 MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
-  --skill=<rb:review|rb:plan|rb:brainstorm> --slug="$SLUG" \
+  --skill=<rb:review|rb:plan|rb:brainstorm|rb:research> --slug="$SLUG" \
   [--base-ref="$BASE_REF"] \
   --agents="$AGENTS_CSV")
 ```

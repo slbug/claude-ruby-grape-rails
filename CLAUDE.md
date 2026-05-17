@@ -44,7 +44,9 @@ Native Windows unsupported.
 | Review per-agent | `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` |
 | Review manifest | `.claude/reviews/{review-slug}/RUN-CURRENT.json` + `RUN-HISTORY.jsonl` (schema: `references/run-manifest.md`) |
 | Audit | `.claude/audit/` |
-| Cross-plan research | `.claude/research/{topic-slug}.md` |
+| Cross-plan research consolidated | `.claude/research/{topic-slug}.md` |
+| Cross-plan research per-aspect | `.claude/research/{topic-slug}/{aspect-slug}.md` |
+| Research manifest | `.claude/research-fanout/{topic-slug}/RUN-CURRENT.json` + `RUN-HISTORY.jsonl` |
 | Investigations | `.claude/investigations/{agent}/{slug}-{datesuffix}.md` |
 | Skill metrics | `.claude/skill-metrics/` |
 | Solutions | `.claude/solutions/{category}/` |

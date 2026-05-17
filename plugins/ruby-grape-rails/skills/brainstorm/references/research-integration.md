@@ -19,10 +19,7 @@ namespace convention.
 
 2. **`web-researcher`** (topic `web-research`): "Ruby/Rails
    approaches to {topics}"
-   - Returns 500-word summary in Agent return text (Write tool
-     disallowed in agent frontmatter)
-   - Main session materializes the manifest path via Artifact
-     Recovery (`recovered-from-return`)
+   - Writes findings to the absolute path passed in the spawn prompt
    - Focus: proven patterns, trade-offs, library options
 
 **Iron Law: MAX 2 agents in first research cycle.** Keep it fast (~2-3 min).

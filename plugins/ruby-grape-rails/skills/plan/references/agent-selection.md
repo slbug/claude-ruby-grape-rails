@@ -67,7 +67,7 @@ fanout, see `planning-workflow.md` § "Agent Selection Matrix" +
 - Pass a focused 5-15 word query OR pre-searched URLs, NEVER raw text
 - If multiple web topics: spawn multiple agents in parallel (1 per topic)
 - Max 5 URLs per agent (diminishing returns beyond that)
-- Agent returns 500-800 word summary — synthesis happens in main session from per-agent research artifacts
+- Agent writes findings to the spawn-prompt path and returns a ≤500-word post-Write summary — synthesis happens in main session from per-agent research artifacts
 
 ## When to Spawn call-tracer
 

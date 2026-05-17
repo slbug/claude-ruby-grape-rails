@@ -146,17 +146,21 @@ Notes:
   `name`, `email`, `url`. Do NOT flag `author.url` in
   `marketplace.json` as drift.
 
-- **Reviewer-class agents intentionally retain `Write`.** Per
+- **Artifact-writing agents intentionally retain `Write`.** Per
   `.claude/rules/agent-development.md` § "Tool Access":
   artifact-writing agents add `Edit, NotebookEdit` to `disallowedTools`
   (NOT `Write`); conversation-only agents add `Write` on top. Plugin
   reviewer agents (ruby-reviewer, migration-safety-reviewer,
   security-analyzer, testing-reviewer, iron-law-judge,
-  data-integrity-reviewer, etc.) write their findings file to the
+  data-integrity-reviewer, etc.) AND the two researcher agents
+  (web-researcher, ruby-gem-researcher) write their artifact to the
   absolute path passed in the spawn prompt — Write is the canonical
-  output channel. Do NOT flag missing `Write` in `disallowedTools` for
-  reviewer agents. Verify by cross-checking sibling agents in the same
-  directory before classifying as drift.
+  output channel. Convo-only specialists (e.g. output-verifier,
+  active-record-schema-designer, call-tracer, dependency-analyzer)
+  return text; main session persists any artifact. Do NOT flag missing
+  `Write` in `disallowedTools` for artifact-writing agents. Verify by
+  cross-checking sibling agents in the same directory before
+  classifying as drift.
 
 Checks:
 

@@ -66,11 +66,12 @@ For each important claim, identify:
 
 ### 4. Return a Verification Report
 
-Write the sidecar using the shared provenance contract in:
+Return the sidecar content as chat text. Main session writes the
+provenance file. Use the shared provenance contract in:
 
 - `../references/output-verification/provenance-template.md`
 
-That means the sidecar should always include:
+The returned content should always include:
 
 - the verified artifact path
 - summary counts for verified / unsupported / conflicts / weak sourcing

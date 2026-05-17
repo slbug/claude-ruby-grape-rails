@@ -12,7 +12,9 @@ use this structured template instead of free-form research.
 
 ## Output Template
 
-Write to `.claude/research/{library-name}-evaluation.md`:
+Write to the absolute path passed in the spawn prompt. This template
+defines the content shape only; the path is determined by the
+spawning skill body via `manifest-update prepare-run`.
 
 ```markdown
 # Library Evaluation: {name}

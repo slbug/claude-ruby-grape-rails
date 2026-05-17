@@ -137,14 +137,12 @@ See `references/research-integration.md` for the full pattern.
    - **`web-researcher`** for `web-research` topic:
      "Ruby/Rails approaches to {topics}".
    Pass each absolute path verbatim in the spawn prompt.
-6. **CHECK pause signature first** per
-   `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`. If matched,
-   apply that protocol (resume via `SendMessage` if available, else
-   mark `stub-no-output`) BEFORE Artifact Recovery.
-7. Apply Artifact Recovery and patch each entry's `status` field
-   with its recovery-state value (`artifact` | `stub-replaced` |
+6. Apply Artifact Recovery per
+   `${CLAUDE_PLUGIN_ROOT}/references/artifact-recovery.md`
+   (coverage-noun `Research`). Patch each entry's `status` field with
+   its recovery-state value (`artifact` | `stub-replaced` |
    `recovered-from-return` | `stub-no-output`).
-8. Patch manifest `status: complete` after evaluation.
+7. Patch manifest `status: complete` after evaluation.
 
 Schema + helper subcommands:
 `${CLAUDE_PLUGIN_ROOT}/references/run-manifest.md`.

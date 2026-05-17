@@ -181,7 +181,8 @@ Exception files (human-facing, narrative OK): `README.md`,
   Path allowlist: suffix regex
   `.../.claude/<any-namespace>/RUN-CURRENT.json`. `prepare-run` also
   validates `<any-namespace>` against per-skill templates (e.g.
-  `reviews/<review-slug>`, `plans/<plan-slug>/research-fanout`)
+  `reviews/<review-slug>`, `plans/<plan-slug>/research-fanout`,
+  `plans/<plan-slug>/brainstorm-fanout`, `research-fanout/<topic-slug>`)
   via `--skill`. Lower-level subcommands accept any matching path.
   Containment check via repo-root resolution. Symlink refusal on
   target + parent dir. Atomic write via exclusive temp file (`O_EXCL`) + `fsync` + Ruby
