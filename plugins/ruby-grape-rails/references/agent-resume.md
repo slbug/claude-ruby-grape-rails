@@ -27,10 +27,10 @@ When signature detected:
 
 3. Wait for resumed agent return.
 
-4. Re-apply the shared Artifact Recovery state machine
-   (`${CLAUDE_PLUGIN_ROOT}/references/artifact-recovery.md`) on
-   post-resume filesystem state. Final per-agent status: `artifact` |
-   `stub-replaced` | `recovered-from-return` | `stub-no-output`.
+4. Re-apply the shared Artifact Recovery state machine (sibling
+   `artifact-recovery.md`) on post-resume filesystem state. Final
+   per-agent status: `artifact` | `stub-replaced` |
+   `recovered-from-return` | `stub-no-output`.
 
 5. NEVER call `SendMessage` twice for the same agent in one run.
    If resumed agent paused again, mark `stub-no-output`.

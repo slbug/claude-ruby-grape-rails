@@ -168,7 +168,7 @@ Wait for every agent to complete before plan generation.
 
 Apply Artifact Recovery for each agent in the run manifest at
 `.claude/plans/{plan-slug}/research-fanout/RUN-CURRENT.json` per
-`${CLAUDE_PLUGIN_ROOT}/references/artifact-recovery.md`
+`plugins/ruby-grape-rails/references/artifact-recovery.md`
 (coverage-noun `Research`).
 
 Read each verified artifact + any reused cached files in scratchpad.md

@@ -335,10 +335,15 @@ Every plan gets its own directory with its implementation-state artifacts:
 .claude/
 ├── plans/{slug}/          # Everything for ONE plan
 │   ├── plan.md            # The plan itself (checkboxes = state)
-│   ├── research/          # Research agent output
+│   ├── research/          # Research agent output (plan-local)
 │   ├── progress.md        # Session progress log
 │   └── scratchpad.md      # Structured dead ends, decisions, hypotheses, handoffs
-├── research/              # Reusable cross-plan topic research
+├── research/              # Cross-plan topic research
+│   ├── {topic-slug}.md    # Consolidated synthesis (main session writes)
+│   └── {topic-slug}/      # Per-aspect researcher artifacts
+│       └── {aspect}.md
+├── research-fanout/       # /rb:research run manifests
+│   └── {topic-slug}/RUN-CURRENT.json
 ├── reviews/               # Review artifacts (per-agent + consolidated)
 └── solutions/             # Compound knowledge (reusable across plans)
 ```

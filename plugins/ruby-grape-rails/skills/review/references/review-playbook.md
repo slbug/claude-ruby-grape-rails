@@ -223,7 +223,7 @@ Five steps, in order. Do NOT skip.
 
 For each manifest entry: STAT the expected path; apply the recovery
 state machine in
-`${CLAUDE_PLUGIN_ROOT}/references/artifact-recovery.md`
+`plugins/ruby-grape-rails/references/artifact-recovery.md`
 (coverage-noun `Reviewer`).
 
 ### STEP 2: Normalize each agent's verdict text

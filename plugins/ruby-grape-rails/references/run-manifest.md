@@ -157,8 +157,7 @@ Helper auto-stamps `updated_at`.
 
 ### Post-recovery
 
-After Artifact Recovery
-(`${CLAUDE_PLUGIN_ROOT}/references/artifact-recovery.md`) decides each
+After Artifact Recovery (sibling `artifact-recovery.md`) decides each
 agent's outcome, patch its `status` to one of `artifact`,
 `stub-replaced`, `recovered-from-return`, or `stub-no-output`:
 

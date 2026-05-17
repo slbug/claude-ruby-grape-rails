@@ -1,18 +1,20 @@
 # Artifact Recovery State Machine
 
-Shared by `/rb:plan`, `/rb:review`, `/rb:research`. Applied per
-manifest agent entry after fanout completes.
+Shared by `/rb:plan`, `/rb:review`, `/rb:brainstorm`, `/rb:research`.
+Applied per manifest agent entry after fanout completes.
 
 ## Order
 
-1. **CHECK pause signature first** per
-   `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`. If matched,
-   apply that protocol (resume via `SendMessage` if available, else
-   mark `stub-no-output`). State machine below applies ONLY after the
-   resume attempt resolves or is skipped.
+1. **CHECK pause signature first** per sibling `agent-resume.md`. If
+   matched, apply that protocol (resume via `SendMessage` if
+   available, else mark `stub-no-output`). State machine below applies
+   ONLY after the resume attempt resolves or is skipped.
 
-2. **STAT the expected path** (from
-   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update spawn-paths "$MANIFEST"`).
+2. **STAT the expected path.** Read agent paths via:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/bin/manifest-update spawn-paths "$MANIFEST"
+```
 
 ## State machine
 
@@ -41,8 +43,13 @@ plan/brainstorm: research topic; research: aspect identifier).
 - Decide from the filesystem, not Agent return-text claims.
 - NEVER copy or symlink prior-run artifacts to the current-run path.
 - Never re-spawn.
-- After each entry's recovery decision, patch its `status` via
-  `printf '{"agents":{"%s":{"status":"%s"}}}\n' "$AGENT_SLUG" "$STATE" |
-  ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"`. NEVER
-  edit `RUN-CURRENT.json` directly.
+- After each entry's recovery decision, patch its `status`:
+
+```bash
+printf '{"agents":{"%s":{"status":"%s"}}}\n' "$AGENT_SLUG" "$STATE" \
+  | ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"
+```
+
+NEVER edit `RUN-CURRENT.json` directly.
+
 - Synthesis runs on the verified manifest.
