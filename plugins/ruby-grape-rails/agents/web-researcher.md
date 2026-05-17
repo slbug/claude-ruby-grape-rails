@@ -18,7 +18,7 @@ Use focused queries and primary sources first.
 Your calling skill body reads research from the exact file path given
 in the spawn prompt (e.g.,
 `.claude/plans/{slug}/research/{agent-slug}.md` plan-local or
-`.claude/research/{topic-slug}-{agent-slug}.md` cross-plan per-aspect).
+`.claude/research/{topic-slug}/{aspect-slug}.md` cross-plan per-aspect).
 The file IS the real output — your chat response body should be ≤500
 words.
 

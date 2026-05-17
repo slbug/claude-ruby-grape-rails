@@ -33,7 +33,7 @@ Per-agent artifact paths (computed by helper):
 | `/rb:review` | `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` | per-second-unique snapshot |
 | `/rb:plan` | `.claude/plans/{plan-slug}/research/{agent-slug}.md` | stable canonical (no datesuffix; iterative across days) |
 | `/rb:brainstorm` | `.claude/plans/{plan-slug}/research/{agent-slug}.md` | stable canonical |
-| `/rb:research` | `.claude/research/{topic-slug}-{agent-slug}.md` | stable per topic + aspect |
+| `/rb:research` | `.claude/research/{topic-slug}/{agent-slug}.md` | stable per topic; subdir per aspect |
 
 Consolidated artifact paths (computed by helper, exposed as
 `consolidated_path` field):
@@ -58,9 +58,10 @@ research it equals the per-aspect identifier (e.g. `docs`, `blogs`,
 `benchmarks`).
 
 Slug charset: `{slug}`, `{review-slug}`, `{plan-slug}`,
-`{topic-slug}`, and `{agent-slug}` MUST match `[a-z0-9._-]+`. Helper
-rejects mixed-case, spaces, slashes, or other characters with hard
-exit.
+`{topic-slug}`, and `{agent-slug}` MUST match `[a-z0-9][a-z0-9._-]*`
+(leading alphanumeric; trailing chars may include `.`, `_`, `-`).
+Helper rejects mixed-case, spaces, slashes, leading dot/dash/underscore,
+or other characters with hard exit.
 
 ## Schema
 
@@ -93,9 +94,9 @@ exit.
 Required fields (all skills): `skill`, `slug`, `datesuffix`,
 `status`, `agents`, `consolidated_path`, `started_at`, `updated_at`.
 
-Required fields (review only — git-pinned skills): `branch`,
-`branch_head_sha`, `base_ref`, `base_sha`. Omitted for plan +
-brainstorm (TTL-only staleness).
+Required fields (review only — git-pinned skill): `branch`,
+`branch_head_sha`, `base_ref`, `base_sha`. Omitted for plan,
+brainstorm, and research (TTL-only staleness).
 
 `base_sha` = output of `git merge-base HEAD "$BASE_REF"` at run start.
 Stored to detect rebase drift on resume.
@@ -130,9 +131,12 @@ Selection Matrix in `skills/review/SKILL.md`). It is NOT a fixed
 default in the helper — every spawn-fanout skill computes its own
 list per its own rules.
 
-Plan/brainstorm omit `--base-ref` (TTL-only). For plan, agent slugs
-are research topic identifiers (helper uses them as filename stems
-under `.claude/plans/<slug>/research/<topic>.md`).
+Plan/brainstorm/research omit `--base-ref` (TTL-only). For plan +
+brainstorm, agent slugs are research topic identifiers (helper uses
+them as filename stems under
+`.claude/plans/<slug>/research/<topic>.md`). For research, agent
+slugs are aspect identifiers under
+`.claude/research/<topic-slug>/<aspect>.md`.
 
 ### Read agent paths
 
@@ -183,6 +187,7 @@ Per-skill rules:
 | `/rb:review` | 24h | yes | yes | yes |
 | `/rb:plan` | 168h (7d) | no | no | no |
 | `/rb:brainstorm` | 168h (7d) | no | no | no |
+| `/rb:research` | 168h (7d) | no | no | no |
 
 Stale = ANY applicable rule triggers:
 

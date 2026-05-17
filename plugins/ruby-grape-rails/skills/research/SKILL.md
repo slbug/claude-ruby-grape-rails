@@ -121,8 +121,10 @@ Spawn Order:
 ### Artifact path rules
 
 - Helper computes absolute paths from `--skill=rb:research` plus
-  `--slug` plus `--agents`. Path convention: `.claude/research/{topic-slug}-{aspect-slug}.md`
-  per aspect, with consolidated synthesis at `.claude/research/{topic-slug}.md`.
+  `--slug` plus `--agents`. Path convention: per-aspect at
+  `.claude/research/{topic-slug}/{aspect-slug}.md`; consolidated
+  synthesis at `.claude/research/{topic-slug}.md` (main session
+  writes).
 - Skill body reads paths via `manifest-update spawn-paths "$MANIFEST"`.
 - Pass each absolute path verbatim in the spawn prompt.
 - Agents use the exact path received. No filename invention.
@@ -199,7 +201,9 @@ Rules:
 
 ## File-First Output Pattern
 
-Write reusable cross-plan research to `.claude/research/{topic-slug}.md`:
+Main session writes consolidated cross-plan synthesis to
+`.claude/research/{topic-slug}.md` after all per-aspect researchers
+return:
 
 ```markdown
 # Research: [Topic]
@@ -328,7 +332,10 @@ Use the research filesystem deliberately:
   (example: `sidekiq-vs-solid-queue`)
 - `{slug}` = plan slug for one `/rb:plan` namespace
 
-- `.claude/research/{topic-slug}.md`
+- `.claude/research/{topic-slug}.md` (consolidated synthesis;
+  main session writes after fanout) and
+  `.claude/research/{topic-slug}/{aspect-slug}.md` (per-aspect
+  researcher artifacts)
   - cross-plan research that may be reused by future `/rb:plan` runs
   - best for gem evaluations, upgrade paths, framework/tooling
     comparisons, and community research

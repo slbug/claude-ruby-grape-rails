@@ -65,8 +65,8 @@ skills/{name}/
   `plans/{plan-slug}/research-fanout`, `plans/{plan-slug}/brainstorm-fanout`,
   `research-fanout/{topic-slug}`). Per-run artifact paths use
   `{slug}-{datesuffix}.md` (review), stable `{topic-slug}.md`
-  (plan/brainstorm), or stable `{topic-slug}-{agent-slug}.md`
-  (research per-aspect). See
+  (plan/brainstorm), or stable `{topic-slug}/{agent-slug}.md`
+  subdir-per-topic (research per-aspect). See
   `plugins/ruby-grape-rails/references/run-manifest.md` for schema,
   staleness rules, and write protocol.
 - Agent dispatch: foreground only. Skill bodies MUST NOT pass

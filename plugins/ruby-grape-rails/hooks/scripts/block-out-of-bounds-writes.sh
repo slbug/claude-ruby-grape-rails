@@ -9,7 +9,7 @@ set -o pipefail
 # untrusted WebFetch/WebSearch content. Enforces a per-agent directory allowlist
 # (`.claude/research/*`, `.claude/plans/*/research/*` excluding `.provenance.md`).
 # Blocks escape from the research namespace, path-traversal, and Writes to
-# pre-existing leafs.
+# pre-existing leaves.
 #
 # NOT a path-pinning defense: within the allowed namespace this hook cannot
 # verify the Write target equals the manifest-emitted spawn-prompt path —
@@ -97,22 +97,28 @@ EVENT=$(printf '%s' "$INPUT" | jq -r '.hook_event_name // empty' 2>/dev/null || 
 # ---------- Per-agent allowlist (segment-boundary aware) ----------
 #
 # Bash `case` patterns treat `*` as matching any string INCLUDING `/`. Using
-# bare `case` globs against the allowlist would let `.claude/reviews/foo/bar.provenance.md`
-# match `.claude/reviews/*.provenance.md` (nested) and `.claude/plans/x/y/research/z`
+# bare `case` globs against the allowlist would let `.claude/research/foo/bar/baz.md`
+# match `.claude/research/*/*` (nested deeper) and `.claude/plans/x/y/research/z`
 # match `.claude/plans/*/research/*` (extra segments). These helpers validate
 # segment counts explicitly so the allowlist matches the documented artifact
 # shape and nothing wider.
 
-# .claude/research/<file>  (file is single segment; no nested dirs; no
-# dotfile leading segment to prevent hidden-file forgery).
-match_research_root() {
+# .claude/research/<topic-slug>/<aspect-slug>.md  (exactly 2 segments:
+# topic dir + aspect file; no nested deeper; no dotfile leading either
+# segment to prevent hidden-file forgery; aspect file must be `*.md`).
+# Flat .claude/research/<file>.md (consolidated synthesis) is main-session
+# territory — researchers MUST NOT write at that level.
+match_research_aspect() {
   local rel="$1"
   case "$rel" in
-    .claude/research/*) ;;
+    .claude/research/*/*) ;;
     *) return 1 ;;
   esac
-  local tail="${rel#.claude/research/}"
-  [[ -n "$tail" && "$tail" != */* && "$tail" != .* ]]
+  local after_research="${rel#.claude/research/}"
+  local topic="${after_research%%/*}"
+  [[ -n "$topic" && "$topic" != */* && "$topic" != .* ]] || return 1
+  local tail="${after_research#"$topic"/}"
+  [[ -n "$tail" && "$tail" != */* && "$tail" != .* && "$tail" == *.md ]]
 }
 
 # .claude/plans/<slug>/research/<file>  (slug + file each single segment;
@@ -142,13 +148,15 @@ agent_path_allowed() {
   local rel="$2"
   case "$agent" in
     web-researcher|ruby-gem-researcher)
-      # Topic research files only: cross-plan root or plan-local research dir.
+      # Per-aspect research artifacts only:
+      #   .claude/research/<topic-slug>/<aspect-slug>.md (cross-plan)
+      #   .claude/plans/<plan-slug>/research/<aspect-slug>.md (plan-local)
       # Provenance sidecars (`*.provenance.md`) are main-session territory
       # (output-verifier is convo-only and returns text; the calling skill body
-      # writes the sidecar). Refuse so a researcher consuming untrusted web
-      # content cannot forge a provenance sidecar.
+      # writes the sidecar). Consolidated synthesis at `.claude/research/<slug>.md`
+      # is also main-session territory and refused for researcher Writes.
       [[ "$rel" == *.provenance.md ]] && return 1
-      match_research_root "$rel" || match_plan_research "$rel"
+      match_research_aspect "$rel" || match_plan_research "$rel"
       ;;
     *)
       return 1
@@ -163,7 +171,7 @@ agent_path_allowed() {
 # target. Returns 1 if any existing ancestor (or the target itself) is a
 # symlink. Stops at the first non-existent component — anything past that
 # point cannot have been resolved yet on disk, and the `target_exists`
-# check below already refuses pre-existing leafs.
+# check below already refuses pre-existing leaves.
 #
 # Why bash mirror instead of shelling out to Ruby: hooks fire on every
 # Write tool call; Ruby startup latency would tax every guarded write.
@@ -264,19 +272,35 @@ case "$ABS_TARGET" in
     ;;
 esac
 
+# Lexical containment check — pure string prefix, NO disk probe. Must run
+# before any `-d` / `cd` / canonicalization on user-controlled path
+# components. Probing parent dirs of outside-repo targets first would
+# leak whether those paths exist (or where symlinks resolve to) via the
+# denial message, turning denied Writes into a filesystem-existence
+# oracle for /etc, $HOME, etc. REPO_ROOT is already canonicalized by
+# `resolve_workspace_root`. ABS_TARGET is the raw lexical absolute path.
+case "$ABS_TARGET" in
+  "${REPO_ROOT}/"*|"$REPO_ROOT") ;;
+  *)
+    respond_to_danger "out_of_repo" \
+      "BLOCKED: ${AGENT_TYPE} attempted to Write outside the repo root: ${ABS_TARGET}." \
+      "$ABS_TARGET"
+    ;;
+esac
+
 # Refuse if any ancestor on the lexical path resolves to a symlink — catches
 # `.claude` (or any intermediate dir) symlinked to a location outside the
-# repo even when the leaf directory does not yet exist.
+# repo even when the leaf directory does not yet exist. Walk constrained to
+# repo_root; only probes within-repo paths.
 if ! reject_symlink_ancestors "$REPO_ROOT" "$ABS_TARGET"; then
   respond_to_danger "symlinked_ancestor" \
     "BLOCKED: ${AGENT_TYPE} attempted to Write through a symlinked ancestor in: ${ABS_TARGET}. Refusing (symlink-attack defense)." \
     "$ABS_TARGET"
 fi
 
-# Compute canonical target by walking up to the nearest existing parent,
-# canonicalizing that, then re-appending the lexical remainder. Used for
-# repo-containment check + canonical logging — ancestor-symlink refusal
-# above is the primary defense against escape.
+# Canonical target for logging + allowlist check. Safe to canonicalize
+# now: lexical containment above already guaranteed the target is inside
+# repo_root; canonicalization only probes within-repo paths.
 parent_dir=$(path_dirname "$ABS_TARGET") || parent_dir=""
 if [[ -n "$parent_dir" && -d "$parent_dir" ]]; then
   canonical_parent=$(cd "$parent_dir" >/dev/null 2>&1 && pwd -P) || canonical_parent="$parent_dir"
@@ -287,19 +311,6 @@ base=$(path_basename "$ABS_TARGET") || base=""
 canonical_target="${canonical_parent%/}/${base}"
 
 canonical_root=$(cd "$REPO_ROOT" >/dev/null 2>&1 && pwd -P) || canonical_root="$REPO_ROOT"
-
-# Containment + allowlist checks come BEFORE target_exists. Order matters:
-# running `-e`/`-L` against outside-repo paths first would let scoped agents
-# distinguish existing outside paths (target_exists denial) from non-existing
-# ones (out_of_repo denial) by observing the rejection message/log pattern,
-# turning denied Writes into a filesystem-existence oracle for /etc, $HOME,
-# etc. Refuse containment-violation and allowlist-violation uniformly before
-# touching the disk.
-if [[ "$canonical_target" != "${canonical_root}/"* ]]; then
-  respond_to_danger "out_of_repo" \
-    "BLOCKED: ${AGENT_TYPE} attempted to Write outside the repo root: ${canonical_target}." \
-    "$canonical_target"
-fi
 
 relative_target="${canonical_target#"${canonical_root}/"}"
 if ! agent_path_allowed "$AGENT_TYPE" "$relative_target"; then

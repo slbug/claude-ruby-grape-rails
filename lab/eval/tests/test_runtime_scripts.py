@@ -4930,6 +4930,23 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
             self.assertEqual(result.stderr, "")
 
     def test_scoped_agent_allowed_path_passes(self) -> None:
+        """`.claude/research/{topic}/{aspect}.md` per-aspect subdir
+        layout is the researcher-write target."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/topic/aspect.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+
+    def test_scoped_agent_flat_research_path_blocks(self) -> None:
+        """Flat `.claude/research/{topic}.md` is consolidated-synthesis
+        main-session territory. Researchers MUST write under subdir."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
             payload = _write_payload(
@@ -4939,8 +4956,8 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
                 repo,
             )
             result = run_block_writes_hook(payload, repo)
-            self.assertEqual(result.returncode, 0)
-            self.assertEqual(result.stderr, "")
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
 
     def test_scoped_agent_absolute_outside_repo_blocks(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -5037,7 +5054,7 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
             payload = _write_payload(
                 "PreToolUse",
                 "web-researcher",
-                ".claude/research/topic.provenance.md",
+                ".claude/research/topic/aspect.provenance.md",
                 repo,
             )
             result = run_block_writes_hook(payload, repo)
@@ -5075,15 +5092,31 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
             self.assertIn("path-traversal", result.stderr)
 
     def test_dotfile_research_file_blocks(self) -> None:
-        """Reject dotfile filenames under research path (e.g.
-        `.claude/research/.hidden.md`) — defense against hidden-file
-        forgery."""
+        """Reject dotfile aspect filenames under research subdir
+        (`.claude/research/topic/.hidden.md`) — defense against
+        hidden-file forgery."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
             payload = _write_payload(
                 "PreToolUse",
                 "web-researcher",
-                ".claude/research/.hidden.md",
+                ".claude/research/topic/.hidden.md",
+                repo,
+            )
+            result = run_block_writes_hook(payload, repo)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_dotfile_research_topic_blocks(self) -> None:
+        """Reject dotfile topic slug under research subdir
+        (`.claude/research/.hidden/aspect.md`) — defense against
+        hidden-dir forgery."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PreToolUse",
+                "web-researcher",
+                ".claude/research/.hidden/aspect.md",
                 repo,
             )
             result = run_block_writes_hook(payload, repo)
@@ -5115,13 +5148,14 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
 
     def test_nested_research_path_blocks(self) -> None:
         """Bash `case *` matches `/`; segment-boundary matcher must reject
-        nested paths under `.claude/research/<subdir>/`."""
+        deeper nesting beyond `.claude/research/<topic>/<aspect>.md`
+        (3+ levels under research/)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
             payload = _write_payload(
                 "PreToolUse",
                 "web-researcher",
-                ".claude/research/subdir/file.md",
+                ".claude/research/topic/sub/file.md",
                 repo,
             )
             result = run_block_writes_hook(payload, repo)
@@ -5157,7 +5191,7 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
             payload = _write_payload(
                 "PreToolUse",
                 "web-researcher",
-                ".claude/research/topic.md",
+                ".claude/research/topic/aspect.md",
                 repo,
             )
             result = run_block_writes_hook(payload, repo)
@@ -5183,13 +5217,13 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
     def test_scoped_agent_existing_target_blocks(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
-            target = Path(repo) / ".claude" / "research" / "exists.md"
+            target = Path(repo) / ".claude" / "research" / "topic" / "exists.md"
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text("prior", encoding="utf-8")
             payload = _write_payload(
                 "PreToolUse",
                 "web-researcher",
-                ".claude/research/exists.md",
+                ".claude/research/topic/exists.md",
                 repo,
             )
             result = run_block_writes_hook(payload, repo)
@@ -5255,6 +5289,28 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
             self.assertEqual(decision["behavior"], "deny")
             self.assertTrue(decision["interrupt"])
             self.assertIn("BLOCKED", decision["message"])
+
+    def test_hooks_json_wires_all_three_events(self) -> None:
+        """`hooks.json` must register block-out-of-bounds-writes.sh under
+        PreToolUse + PermissionRequest + PermissionDenied with a Write
+        matcher. Regression guard against accidental removal of the
+        security hook wiring while script tests still pass."""
+        hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]
+        for event in ("PreToolUse", "PermissionRequest", "PermissionDenied"):
+            groups = hooks.get(event, [])
+            write_groups = [g for g in groups if g.get("matcher") == "Write"]
+            commands = [
+                hook.get("command", "")
+                for group in write_groups
+                for hook in group.get("hooks", [])
+            ]
+            self.assertTrue(
+                any(
+                    cmd.endswith("/block-out-of-bounds-writes.sh")
+                    for cmd in commands
+                ),
+                f"{event} (matcher=Write) is not wired to block-out-of-bounds-writes.sh",
+            )
 
     def test_permission_denied_logs_jsonl(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -5332,8 +5388,9 @@ class ManifestUpdatePrepareRunCollisionTests(unittest.TestCase):
     def test_research_existing_artifact_emits_notice(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
-            (Path(repo) / ".claude" / "research").mkdir()
-            existing = Path(repo) / ".claude" / "research" / "test-topic-docs.md"
+            topic_dir = Path(repo) / ".claude" / "research" / "test-topic"
+            topic_dir.mkdir(parents=True)
+            existing = topic_dir / "docs.md"
             existing.write_text("prior research\n", encoding="utf-8")
             result = self._run(
                 repo,
@@ -5392,8 +5449,9 @@ class ManifestUpdatePrepareRunCollisionTests(unittest.TestCase):
         paths appear in NOTICE listing."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
-            (Path(repo) / ".claude" / "research").mkdir()
-            existing = Path(repo) / ".claude" / "research" / "topic-aspect-a.md"
+            topic_dir = Path(repo) / ".claude" / "research" / "topic"
+            topic_dir.mkdir(parents=True)
+            existing = topic_dir / "aspect-a.md"
             existing.write_text("prior\n", encoding="utf-8")
             result = self._run(
                 repo,

@@ -12,7 +12,9 @@ use this structured template instead of free-form research.
 
 ## Output Template
 
-Write to `.claude/research/{library-name}-evaluation.md`:
+Write to the absolute path passed in the spawn prompt (per-aspect
+researcher path computed by `manifest-update prepare-run`, e.g.
+`.claude/research/{topic-slug}/{aspect-slug}.md`):
 
 ```markdown
 # Library Evaluation: {name}

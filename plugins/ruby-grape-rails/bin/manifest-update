@@ -332,7 +332,7 @@ SKILL_CONVENTIONS = {
   'rb:research' => {
     namespace: ->(slug) { "research-fanout/#{slug}" },
     agent_path: lambda do |repo_root, slug, _datesuffix, agent_slug|
-      File.join(repo_root, '.claude', 'research', "#{slug}-#{agent_slug}.md")
+      File.join(repo_root, '.claude', 'research', slug, "#{agent_slug}.md")
     end,
     consolidated_path: lambda do |repo_root, slug, _datesuffix|
       File.join(repo_root, '.claude', 'research', "#{slug}.md")
@@ -356,7 +356,9 @@ rescue OptionParser::ParseError => e
 end
 
 def slug_pattern_check(slug, name)
-  die "#{name} invalid: must match [a-z0-9._-]+" unless slug =~ /\A[a-z0-9._-]+\z/
+  unless slug =~ /\A[a-z0-9][a-z0-9._-]*\z/
+    die "#{name} invalid: must match [a-z0-9][a-z0-9._-]* (no leading dot, dash, or underscore)"
+  end
 end
 
 def cmd_prepare_run(args)
@@ -392,6 +394,13 @@ def cmd_prepare_run(args)
     warn 'prepare-respawn will rotate these to .stale-<ts>.md siblings.'
     warn 'If partial content may inform the spawn prompts, read each file'
     warn 'before prepare-respawn runs.'
+  end
+
+  containment = containment_root
+  computed_paths.each do |_agent_slug, path|
+    parent = File.dirname(path)
+    RubyGrapeRails::PathSafety.reject_symlink_ancestors!(parent, stop_at: containment)
+    FileUtils.mkdir_p(parent)
   end
 
   archive_existing(manifest_path)

@@ -196,11 +196,12 @@ the PR.
   `.claude/rules/agent-development.md`. Manifest schema, staleness
   rules, atomic-write protocol, per-skill conventions MUST stay aligned
   across these surfaces. Per-run artifact paths use
-  `{slug}-{datesuffix}.md` (review) or stable `{topic-slug}.md`
-  (plan/brainstorm); shipped reference to `{slug}.md` (without
-  datesuffix) for review consolidated artifacts → drift defect. Schema
-  change without matching `bin/manifest-update` `SKILL_CONVENTIONS`
-  update → silent contract break.
+  `{slug}-{datesuffix}.md` (review), stable `{topic-slug}.md`
+  (plan/brainstorm), or stable `{topic-slug}/{agent-slug}.md`
+  subdir-per-topic (research per-aspect); shipped reference to
+  `{slug}.md` (without datesuffix) for review consolidated artifacts →
+  drift defect. Schema change without matching `bin/manifest-update`
+  `SKILL_CONVENTIONS` update → silent contract break.
 - **`plugins/ruby-grape-rails/references/preferences/tool-batching.md`**
   edited → verify link from `.claude/rules/agent-development.md` §
   "Bash Discipline" still resolves. The path is also injected into

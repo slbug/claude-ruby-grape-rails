@@ -298,6 +298,7 @@ Write artifacts to:
 - replace `/` and whitespace with `-`
 - strip characters outside `[a-z0-9._-]`
 - collapse repeated `-`
+- ensure leading char is `[a-z0-9]` (helper rejects leading `.`, `-`, `_`)
 
 Use the current branch name only after slugifying it. If the branch name is not meaningful, derive the slug from the reviewed diff or user-supplied target.
 
