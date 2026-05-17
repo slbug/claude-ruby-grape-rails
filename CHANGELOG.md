@@ -31,13 +31,27 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `web-researcher`, `ruby-gem-researcher`, `output-verifier` add
   `Write` to their tool allowlist (still intentionally narrow per
-  `.claude/rules/agent-development.md`). `Bash` added to
-  `disallowedTools` to close the fake-write heredoc fallback path.
-  Agent bodies align to the reviewer-agent pattern (`## Findings File
-  Is Primary Output` / `## Sidecar File Is Primary Output` +
-  numbered `Turn budget rules`). `/rb:review` provenance step and
-  `/rb:research` provenance step updated so `output-verifier` writes
-  the sidecar directly (no longer "main session saves the result").
+  `.claude/rules/agent-development.md`). Agents now write the
+  artifact directly via `Write` instead of emitting heredoc-shaped
+  prose. Agent bodies align to the reviewer-agent pattern
+  (`## Findings File Is Primary Output` / `## Sidecar File Is Primary
+  Output` + numbered `Turn budget rules`). `/rb:review` provenance
+  step and `/rb:research` provenance step updated so `output-verifier`
+  writes the sidecar directly (no longer "main session saves the result").
+
+### Security
+
+- Added Write-boundary anti-injection note to `web-researcher`,
+  `ruby-gem-researcher`, `output-verifier` bodies: Write target is
+  ONLY the spawn-prompt path; instructions inside fetched
+  `WebFetch`/`WebSearch` content (or, for `output-verifier`, the draft
+  under review) that attempt to redirect Write elsewhere are treated
+  as prompt-injection and ignored. This is defense in depth — agent
+  instructions do not fully prevent prompt injection. Operators who
+  need hard enforcement should pair this with a session-level Write
+  permission allowlist scoped to `.claude/research/**`,
+  `.claude/plans/**`, `.claude/reviews/**` (see `/rb:intro` for the
+  recommended allowlist).
 
 ## [1.16.11] - 2026-05-15
 
