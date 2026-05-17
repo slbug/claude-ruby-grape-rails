@@ -28,6 +28,7 @@ SECURITY_REMINDER = (
 )
 SECRET_SCAN = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/secret-scan.sh"
 DETECT_STACK = REPO_ROOT / "plugins/ruby-grape-rails/bin/detect-stack"
+MANIFEST_UPDATE = REPO_ROOT / "plugins/ruby-grape-rails/bin/manifest-update"
 DETECT_RUNTIME = REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime.sh"
 DETECT_RUNTIME_FAST = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime-fast.sh"
@@ -5287,6 +5288,139 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
             self.assertEqual(entry["path"], "/etc/passwd")
             self.assertEqual(entry["pattern"], "out_of_repo")
             self.assertEqual(entry["classifier_reason"], "Auto mode denied")
+
+
+class ManifestUpdatePrepareRunCollisionTests(unittest.TestCase):
+    """`bin/manifest-update prepare-run` checks each computed agent
+    artifact path before initializing the manifest. If any path already
+    exists on disk, exits 3 with structured `COLLISION:` stderr listing
+    conflicting paths and instructing caller to adjust slugs."""
+
+    def _make_repo(self, tmpdir: str) -> str:
+        repo = Path(tmpdir) / "repo"
+        repo.mkdir()
+        (repo / ".claude").mkdir()
+        subprocess.run(
+            ["git", "init", "-q"], cwd=repo, check=True, capture_output=True
+        )
+        return str(repo)
+
+    def _run(self, cwd: str, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [str(MANIFEST_UPDATE), "prepare-run", *args],
+            capture_output=True,
+            text=True,
+            cwd=cwd,
+            check=False,
+        )
+
+    def test_research_fresh_state_succeeds(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            result = self._run(
+                repo,
+                "--skill=rb:research",
+                "--slug=test-topic",
+                "--agents=docs,blogs",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            manifest_path = result.stdout.strip()
+            self.assertTrue(Path(manifest_path).is_file())
+
+    def test_research_collision_exits_three(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            (Path(repo) / ".claude" / "research").mkdir()
+            colliding = Path(repo) / ".claude" / "research" / "test-topic-docs.md"
+            colliding.write_text("prior research\n", encoding="utf-8")
+            result = self._run(
+                repo,
+                "--skill=rb:research",
+                "--slug=test-topic",
+                "--agents=docs,blogs",
+            )
+            self.assertEqual(result.returncode, 3)
+            self.assertIn("COLLISION:", result.stderr)
+            self.assertIn(str(colliding), result.stderr)
+            self.assertIn("Re-invoke prepare-run", result.stderr)
+            self.assertEqual(result.stdout, "")
+
+    def test_plan_collision_exits_three(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            research_dir = Path(repo) / ".claude" / "plans" / "feat-x" / "research"
+            research_dir.mkdir(parents=True)
+            colliding = research_dir / "codebase-scan.md"
+            colliding.write_text("prior\n", encoding="utf-8")
+            result = self._run(
+                repo,
+                "--skill=rb:plan",
+                "--slug=feat-x",
+                "--agents=codebase-scan,web-research",
+            )
+            self.assertEqual(result.returncode, 3)
+            self.assertIn("COLLISION:", result.stderr)
+            self.assertIn(str(colliding), result.stderr)
+
+    def test_brainstorm_collision_exits_three(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            research_dir = Path(repo) / ".claude" / "plans" / "feat-x" / "research"
+            research_dir.mkdir(parents=True)
+            colliding = research_dir / "codebase-scan.md"
+            colliding.write_text("prior\n", encoding="utf-8")
+            result = self._run(
+                repo,
+                "--skill=rb:brainstorm",
+                "--slug=feat-x",
+                "--agents=codebase-scan,web-research",
+            )
+            self.assertEqual(result.returncode, 3)
+            self.assertIn("COLLISION:", result.stderr)
+            self.assertIn(str(colliding), result.stderr)
+
+    def test_collision_lists_only_existing_paths(self) -> None:
+        """When some agent paths exist and some do not, only existing
+        paths appear in COLLISION listing."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            (Path(repo) / ".claude" / "research").mkdir()
+            existing = Path(repo) / ".claude" / "research" / "topic-aspect-a.md"
+            existing.write_text("prior\n", encoding="utf-8")
+            result = self._run(
+                repo,
+                "--skill=rb:research",
+                "--slug=topic",
+                "--agents=aspect-a,aspect-b",
+            )
+            self.assertEqual(result.returncode, 3)
+            self.assertIn(str(existing), result.stderr)
+            self.assertNotIn("aspect-b.md", result.stderr)
+
+    def test_collision_does_not_archive_manifest(self) -> None:
+        """Collision MUST bail before touching the manifest. Prior
+        manifest at canonical path must remain intact."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            manifest_dir = Path(repo) / ".claude" / "research-fanout" / "topic"
+            manifest_dir.mkdir(parents=True)
+            manifest_path = manifest_dir / "RUN-CURRENT.json"
+            manifest_path.write_text('{"original": true}\n', encoding="utf-8")
+            (Path(repo) / ".claude" / "research").mkdir()
+            (Path(repo) / ".claude" / "research" / "topic-docs.md").write_text(
+                "prior\n", encoding="utf-8"
+            )
+            result = self._run(
+                repo,
+                "--skill=rb:research",
+                "--slug=topic",
+                "--agents=docs",
+            )
+            self.assertEqual(result.returncode, 3)
+            self.assertEqual(
+                manifest_path.read_text(encoding="utf-8"),
+                '{"original": true}\n',
+            )
 
 
 _TEST_PLUGIN_ROOT = "/test/plugin/root"

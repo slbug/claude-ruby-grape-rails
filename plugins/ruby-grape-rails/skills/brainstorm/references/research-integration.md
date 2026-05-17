@@ -12,20 +12,6 @@ Both agents receive their absolute artifact path from
 `.claude/plans/{plan-slug}/research/<topic-slug>.md` per the brainstorm
 namespace convention.
 
-### Spawn-Path Collision Avoidance
-
-When `.claude/plans/{plan-slug}/research/<topic-slug>.md` already
-exists at spawn time:
-
-| Prior file relevance | Spawn path | Pass prior content as input? |
-|---|---|---|
-| fully covers query | skip spawn; main session reads + reuses | n/a |
-| partially relevant | `.claude/plans/{plan-slug}/research/<topic-slug>-{datesuffix}.md` | yes |
-| irrelevant | `.claude/plans/{plan-slug}/research/<topic-slug>-{datesuffix}.md` | no |
-
-`{datesuffix}` = `YYYYMMDD-HHMMSS` UTC. Empty stable path: use stable
-path unchanged.
-
 1. **`rails-patterns-analyst`** (topic `codebase-scan`): "How does
    this codebase handle {topics}?"
    - Writes findings to the absolute path passed in the spawn prompt

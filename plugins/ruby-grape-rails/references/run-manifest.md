@@ -17,12 +17,14 @@ additional `{slug}` segment.
 | `/rb:review` | `reviews/{review-slug}` |
 | `/rb:plan` (fanout) | `plans/{plan-slug}/research-fanout` |
 | `/rb:brainstorm` | `plans/{plan-slug}/brainstorm-fanout` |
+| `/rb:research` | `research-fanout/{topic-slug}` |
 
 Resolved manifest paths:
 
 - `/rb:review`: `.claude/reviews/{review-slug}/RUN-CURRENT.json`
 - `/rb:plan`: `.claude/plans/{plan-slug}/research-fanout/RUN-CURRENT.json`
 - `/rb:brainstorm`: `.claude/plans/{plan-slug}/brainstorm-fanout/RUN-CURRENT.json`
+- `/rb:research`: `.claude/research-fanout/{topic-slug}/RUN-CURRENT.json`
 
 Per-agent artifact paths (computed by helper):
 
@@ -31,6 +33,7 @@ Per-agent artifact paths (computed by helper):
 | `/rb:review` | `.claude/reviews/{agent-slug}/{review-slug}-{datesuffix}.md` | per-second-unique snapshot |
 | `/rb:plan` | `.claude/plans/{plan-slug}/research/{agent-slug}.md` | stable canonical (no datesuffix; iterative across days) |
 | `/rb:brainstorm` | `.claude/plans/{plan-slug}/research/{agent-slug}.md` | stable canonical |
+| `/rb:research` | `.claude/research/{topic-slug}-{agent-slug}.md` | stable per topic + aspect |
 
 Consolidated artifact paths (computed by helper, exposed as
 `consolidated_path` field):
@@ -40,6 +43,15 @@ Consolidated artifact paths (computed by helper, exposed as
 | `/rb:review` | `.claude/reviews/{review-slug}-{datesuffix}.md` |
 | `/rb:plan` | `.claude/plans/{plan-slug}/plan.md` |
 | `/rb:brainstorm` | `.claude/plans/{plan-slug}/interview.md` |
+| `/rb:research` | `.claude/research/{topic-slug}.md` |
+
+`prepare-run` exit codes:
+
+| Exit | Meaning | Required action |
+|---|---|---|
+| 0 | manifest path on stdout | proceed with `spawn-paths` |
+| 3 | `COLLISION:` stderr — one or more computed agent paths already exist | Read each listed file. Re-invoke `prepare-run` with adjusted `--slug` or `--agents`. |
+| other non-zero | helper error | Fix arguments per stderr. |
 
 `{agent-slug}` is the manifest entry key — for review it equals the
 subagent_type (e.g. `ruby-reviewer`); for plan/brainstorm it equals

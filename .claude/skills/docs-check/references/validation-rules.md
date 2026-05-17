@@ -155,11 +155,12 @@ Notes:
   data-integrity-reviewer, etc.) AND the two researcher agents
   (web-researcher, ruby-gem-researcher) write their artifact to the
   absolute path passed in the spawn prompt — Write is the canonical
-  output channel. `output-verifier` is the only specialist that
-  remains convo-only (returns text; main session writes the provenance
-  sidecar). Do NOT flag missing `Write` in `disallowedTools` for
-  artifact-writing agents. Verify by cross-checking sibling agents in
-  the same directory before classifying as drift.
+  output channel. Convo-only specialists (e.g. output-verifier,
+  active-record-schema-designer, call-tracer, dependency-analyzer)
+  return text; main session persists any artifact. Do NOT flag missing
+  `Write` in `disallowedTools` for artifact-writing agents. Verify by
+  cross-checking sibling agents in the same directory before
+  classifying as drift.
 
 Checks:
 
