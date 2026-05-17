@@ -45,13 +45,11 @@ Consolidated artifact paths (computed by helper, exposed as
 | `/rb:brainstorm` | `.claude/plans/{plan-slug}/interview.md` |
 | `/rb:research` | `.claude/research/{topic-slug}.md` |
 
-`prepare-run` exit codes:
-
-| Exit | Meaning | Required action |
-|---|---|---|
-| 0 | manifest path on stdout | proceed with `spawn-paths` |
-| 3 | `COLLISION:` stderr — one or more computed agent paths already exist | Read each listed file. Re-invoke `prepare-run` with adjusted `--slug` or `--agents`. |
-| other non-zero | helper error | Fix arguments per stderr. |
+`prepare-run` always exits 0 on success. Stderr `NOTICE:` lists any
+existing artifact paths at canonical locations — advisory only;
+`prepare-respawn` rotates listed paths to `.stale-<ts>.md` siblings
+afterwards. Read pre-rotation content via Read tool before
+`prepare-respawn` runs if partial content may inform spawn prompts.
 
 `{agent-slug}` is the manifest entry key — for review it equals the
 subagent_type (e.g. `ruby-reviewer`); for plan/brainstorm it equals

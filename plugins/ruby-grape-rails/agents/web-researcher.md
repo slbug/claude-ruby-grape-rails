@@ -16,9 +16,11 @@ Use focused queries and primary sources first.
 ## Findings File Is Primary Output
 
 Your calling skill body reads research from the exact file path given
-in the spawn prompt (e.g., `.claude/plans/{slug}/research/web-research.md`
-or `.claude/research/{topic-slug}.md`). The file IS the real output —
-your chat response body should be ≤500 words.
+in the spawn prompt (e.g.,
+`.claude/plans/{slug}/research/{agent-slug}.md` plan-local or
+`.claude/research/{topic-slug}-{agent-slug}.md` cross-plan per-aspect).
+The file IS the real output — your chat response body should be ≤500
+words.
 
 **Turn budget rules:**
 

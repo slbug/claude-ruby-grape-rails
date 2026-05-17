@@ -28,9 +28,10 @@ conventions — rule applies to markdown review checklist itself.
 - Library files (`*-lib.sh`) sourced by other scripts may omit these since
   the caller's settings apply
 - Do NOT add `set -e` / `set -o errexit` unless the script must abort on
-  any failure (only block-dangerous-ops.sh and active-plan-marker.sh use it).
-  Most hooks intentionally handle failures gracefully — advisory hooks
-  warn/skip, guardrails fail closed via explicit checks, not errexit
+  any failure. Current strict-abort hooks: `block-dangerous-ops.sh`,
+  `block-out-of-bounds-writes.sh`, `active-plan-marker.sh`. Most hooks
+  intentionally handle failures gracefully — advisory hooks warn/skip,
+  guardrails fail closed via explicit checks, not errexit
 - Use `command -v` to check for dependencies (jq, grep, etc) before use
 - Use `${var:?}` in deletion commands to prevent empty-variable disasters
 - Each script should have a `# Policy:` comment near the top documenting
@@ -203,3 +204,5 @@ Scripts resolve `timeout` → `gtimeout` → no-timeout fallback via
   `hookSpecificOutput.hookEventName`. Same body, two registrations
   (advisory injection, fail-open by design — see header comment)
 - `active-plan-marker.sh` using `set -e` (strict marker semantics)
+- `block-out-of-bounds-writes.sh` using `set -o errexit` (Write-path
+  security guardrail; same fail-closed posture as `block-dangerous-ops.sh`)

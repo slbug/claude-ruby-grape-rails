@@ -340,8 +340,6 @@ SKILL_CONVENTIONS = {
   }
 }.freeze
 
-EXIT_COLLISION = 3
-
 def parse_prepare_run_args(args)
   opts = {}
   parser = OptionParser.new do |o|
@@ -386,17 +384,14 @@ def cmd_prepare_run(args)
     [agent_slug, conv[:agent_path].call(repo_root, slug, datesuffix, agent_slug)]
   end
 
-  colliding = computed_paths.select { |_slug, path| File.exist?(path) || File.symlink?(path) }
-  unless colliding.empty?
-    warn 'COLLISION: existing artifact(s):'
-    colliding.each { |agent_slug, path| warn "  #{agent_slug}: #{path}" }
+  existing = computed_paths.select { |_slug, path| File.exist?(path) || File.symlink?(path) }
+  unless existing.empty?
+    warn 'NOTICE: existing artifact(s) at canonical path:'
+    existing.each { |agent_slug, path| warn "  #{agent_slug}: #{path}" }
     warn ''
-    warn 'Read each file. Re-invoke prepare-run with adjusted --slug or --agents'
-    warn 'values (e.g., {agent-slug}-followup, {agent-slug}-v2) so a fresh path'
-    warn 'is computed. Existing content may inform the new run as input context,'
-    warn 'but does NOT replace fresh research — stale, partial, or off-topic'
-    warn 'content does not satisfy a current task.'
-    exit EXIT_COLLISION
+    warn 'prepare-respawn will rotate these to .stale-<ts>.md siblings.'
+    warn 'If partial content may inform the spawn prompts, read each file'
+    warn 'before prepare-respawn runs.'
   end
 
   archive_existing(manifest_path)
@@ -561,9 +556,9 @@ USAGE = <<~USAGE
                                 # structured args. Helper computes path / datesuffix /
                                 # agent paths / consolidated path / git pins.
                                 # Outputs absolute manifest path on stdout.
-                                # Exit 3 + COLLISION: stderr when any computed agent
-                                # path already exists on disk. Caller reads conflicting
-                                # files and re-invokes with adjusted slugs.
+                                # Stderr NOTICE listing existing artifact paths is
+                                # advisory only — exit stays 0. prepare-respawn
+                                # rotates listed paths to .stale-<ts>.md siblings.
     manifest-update init             <manifest-path> <initial-json>
     manifest-update patch            <manifest-path>          # patch from stdin
     manifest-update archive          <manifest-path>

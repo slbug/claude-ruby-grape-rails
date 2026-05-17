@@ -5291,10 +5291,11 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
 
 
 class ManifestUpdatePrepareRunCollisionTests(unittest.TestCase):
-    """`bin/manifest-update prepare-run` checks each computed agent
-    artifact path before initializing the manifest. If any path already
-    exists on disk, exits 3 with structured `COLLISION:` stderr listing
-    conflicting paths and instructing caller to adjust slugs."""
+    """`bin/manifest-update prepare-run` emits a non-blocking `NOTICE:`
+    stderr listing existing artifact paths at canonical locations.
+    Exit stays 0; the run proceeds. prepare-respawn handles rotation
+    afterwards. The NOTICE lets caller read pre-rotation content if it
+    may inform spawn prompts."""
 
     def _make_repo(self, tmpdir: str) -> str:
         repo = Path(tmpdir) / "repo"
@@ -5314,7 +5315,7 @@ class ManifestUpdatePrepareRunCollisionTests(unittest.TestCase):
             check=False,
         )
 
-    def test_research_fresh_state_succeeds(self) -> None:
+    def test_research_fresh_state_succeeds_no_notice(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
             result = self._run(
@@ -5324,64 +5325,71 @@ class ManifestUpdatePrepareRunCollisionTests(unittest.TestCase):
                 "--agents=docs,blogs",
             )
             self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("NOTICE:", result.stderr)
             manifest_path = result.stdout.strip()
             self.assertTrue(Path(manifest_path).is_file())
 
-    def test_research_collision_exits_three(self) -> None:
+    def test_research_existing_artifact_emits_notice(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
             (Path(repo) / ".claude" / "research").mkdir()
-            colliding = Path(repo) / ".claude" / "research" / "test-topic-docs.md"
-            colliding.write_text("prior research\n", encoding="utf-8")
+            existing = Path(repo) / ".claude" / "research" / "test-topic-docs.md"
+            existing.write_text("prior research\n", encoding="utf-8")
             result = self._run(
                 repo,
                 "--skill=rb:research",
                 "--slug=test-topic",
                 "--agents=docs,blogs",
             )
-            self.assertEqual(result.returncode, 3)
-            self.assertIn("COLLISION:", result.stderr)
-            self.assertIn(str(colliding), result.stderr)
-            self.assertIn("Re-invoke prepare-run", result.stderr)
-            self.assertEqual(result.stdout, "")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("NOTICE:", result.stderr)
+            self.assertIn(str(existing), result.stderr)
+            self.assertIn("prepare-respawn", result.stderr)
+            manifest_path = result.stdout.strip()
+            self.assertTrue(Path(manifest_path).is_file())
 
-    def test_plan_collision_exits_three(self) -> None:
+    def test_plan_existing_artifact_emits_notice_and_proceeds(self) -> None:
+        """Plan re-run with same slug: existing artifact at canonical
+        path triggers NOTICE but does not block. Manifest writes
+        normally so prepare-respawn can rotate after."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
             research_dir = Path(repo) / ".claude" / "plans" / "feat-x" / "research"
             research_dir.mkdir(parents=True)
-            colliding = research_dir / "codebase-scan.md"
-            colliding.write_text("prior\n", encoding="utf-8")
+            existing = research_dir / "codebase-scan.md"
+            existing.write_text("prior\n", encoding="utf-8")
             result = self._run(
                 repo,
                 "--skill=rb:plan",
                 "--slug=feat-x",
                 "--agents=codebase-scan,web-research",
             )
-            self.assertEqual(result.returncode, 3)
-            self.assertIn("COLLISION:", result.stderr)
-            self.assertIn(str(colliding), result.stderr)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("NOTICE:", result.stderr)
+            self.assertIn(str(existing), result.stderr)
+            manifest_path = result.stdout.strip()
+            self.assertTrue(Path(manifest_path).is_file())
 
-    def test_brainstorm_collision_exits_three(self) -> None:
+    def test_brainstorm_existing_artifact_emits_notice(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
             research_dir = Path(repo) / ".claude" / "plans" / "feat-x" / "research"
             research_dir.mkdir(parents=True)
-            colliding = research_dir / "codebase-scan.md"
-            colliding.write_text("prior\n", encoding="utf-8")
+            existing = research_dir / "codebase-scan.md"
+            existing.write_text("prior\n", encoding="utf-8")
             result = self._run(
                 repo,
                 "--skill=rb:brainstorm",
                 "--slug=feat-x",
                 "--agents=codebase-scan,web-research",
             )
-            self.assertEqual(result.returncode, 3)
-            self.assertIn("COLLISION:", result.stderr)
-            self.assertIn(str(colliding), result.stderr)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("NOTICE:", result.stderr)
+            self.assertIn(str(existing), result.stderr)
 
-    def test_collision_lists_only_existing_paths(self) -> None:
+    def test_notice_lists_only_existing_paths(self) -> None:
         """When some agent paths exist and some do not, only existing
-        paths appear in COLLISION listing."""
+        paths appear in NOTICE listing."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)
             (Path(repo) / ".claude" / "research").mkdir()
@@ -5393,34 +5401,10 @@ class ManifestUpdatePrepareRunCollisionTests(unittest.TestCase):
                 "--slug=topic",
                 "--agents=aspect-a,aspect-b",
             )
-            self.assertEqual(result.returncode, 3)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("NOTICE:", result.stderr)
             self.assertIn(str(existing), result.stderr)
             self.assertNotIn("aspect-b.md", result.stderr)
-
-    def test_collision_does_not_archive_manifest(self) -> None:
-        """Collision MUST bail before touching the manifest. Prior
-        manifest at canonical path must remain intact."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            repo = self._make_repo(tmpdir)
-            manifest_dir = Path(repo) / ".claude" / "research-fanout" / "topic"
-            manifest_dir.mkdir(parents=True)
-            manifest_path = manifest_dir / "RUN-CURRENT.json"
-            manifest_path.write_text('{"original": true}\n', encoding="utf-8")
-            (Path(repo) / ".claude" / "research").mkdir()
-            (Path(repo) / ".claude" / "research" / "topic-docs.md").write_text(
-                "prior\n", encoding="utf-8"
-            )
-            result = self._run(
-                repo,
-                "--skill=rb:research",
-                "--slug=topic",
-                "--agents=docs",
-            )
-            self.assertEqual(result.returncode, 3)
-            self.assertEqual(
-                manifest_path.read_text(encoding="utf-8"),
-                '{"original": true}\n',
-            )
 
 
 _TEST_PLUGIN_ROOT = "/test/plugin/root"

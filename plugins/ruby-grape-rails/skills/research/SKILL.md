@@ -87,10 +87,10 @@ Sub-queries:
 2. Run
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run --skill=rb:research
    --slug="$TOPIC_SLUG" --agents=<csv-of-aspect-slugs>`.
-   Capture stdout as `$MANIFEST` (absolute manifest path). Exit 3 +
-   `COLLISION:` stderr: follow helper instructions verbatim (Read
-   each listed file; re-invoke prepare-run with adjusted `--slug` or
-   `--agents`).
+   Capture stdout as `$MANIFEST` (absolute manifest path). `NOTICE:`
+   stderr lists any existing artifacts at canonical paths — Read
+   listed files before step 3 if partial content may inform spawn
+   prompts.
 3. Run
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-respawn "$MANIFEST"`.
 4. For each aspect, patch `status: in-flight` via
