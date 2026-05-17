@@ -27,7 +27,8 @@ When signature detected:
 
 3. Wait for resumed agent return.
 
-4. Re-apply calling skill's Artifact Recovery state machine on
+4. Re-apply the shared Artifact Recovery state machine
+   (`${CLAUDE_PLUGIN_ROOT}/references/artifact-recovery.md`) on
    post-resume filesystem state. Final per-agent status: `artifact` |
    `stub-replaced` | `recovered-from-return` | `stub-no-output`.
 

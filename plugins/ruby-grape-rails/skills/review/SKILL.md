@@ -69,7 +69,9 @@ message.
    (tab-separated `agent_slug<TAB>absolute_path`). Pass each absolute
    path verbatim in the spawn prompt.
 7. Wait for all reviewers to complete.
-8. Apply Artifact Recovery (see below). Patch each agent's `status`
+8. Apply Artifact Recovery per
+   `${CLAUDE_PLUGIN_ROOT}/references/artifact-recovery.md` (coverage-noun
+   `Reviewer`). Patch each agent's `status`
    field with its recovery-state value (`artifact` |
    `stub-replaced` | `recovered-from-return` | `stub-no-output`).
 9. Read each verified artifact. Read consolidated path via
@@ -247,35 +249,6 @@ procedure verbatim.
 
 Output path:
 `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
-
-## Artifact Recovery
-
-For each manifest entry:
-
-1. **CHECK pause signature first** per
-   `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`. If matched,
-   apply that protocol (resume via `SendMessage` if available, else
-   mark `stub-no-output`). The state machine below applies ONLY after
-   the resume attempt resolves or is skipped.
-
-2. **STAT the expected path.** Apply the state machine:
-
-- Exists, `size_bytes >= 1000` → trust. Do NOT overwrite.
-- Exists, `size_bytes < 1000`, return text substantially larger AND
-  parses as findings → replace stub with extracted findings.
-- Exists, `size_bytes < 1000`, return text empty/unusable → keep
-  stub, treat as coverage gap (`stub-no-output`).
-- Missing, return text usable → extract findings from return text and write.
-- Missing, return text empty/unusable → write a stub with heading
-  `# {agent-slug} — recovery stub` and body `Run produced no
-  artifact and no usable return text. Reviewer coverage gap.`
-
-NEVER copy or symlink prior-run artifacts to the current-run path.
-Each run owns a per-second-unique path. Decide from the filesystem;
-ignore Agent return text denial claims. Never re-spawn.
-
-Full table + manifest status mapping:
-`${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Artifact Recovery".
 
 ## Confidence Levels
 

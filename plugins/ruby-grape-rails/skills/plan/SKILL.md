@@ -330,7 +330,9 @@ Specialists are leaf workers: research, write artifact, return summary.
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update spawn-paths "$MANIFEST"`.
    Pass absolute path verbatim in spawn prompt.
 8. Wait for all agents to complete.
-9. Apply Artifact Recovery (see below). Patch each entry's `status`
+9. Apply Artifact Recovery per
+   `${CLAUDE_PLUGIN_ROOT}/references/artifact-recovery.md` (coverage-noun
+   `Research`). Patch each entry's `status`
    field with its recovery-state value (`artifact` |
    `stub-replaced` | `recovered-from-return` | `stub-no-output`).
 10. Read each verified artifact + any reused cached files logged in
@@ -361,32 +363,6 @@ Every research Agent() call must:
 - Skill body reads paths via `manifest-update spawn-paths "$MANIFEST"`.
 - Pass each absolute path verbatim in the spawn prompt.
 - Agents use the exact path received. No filename invention.
-
-## Artifact Recovery
-
-For each manifest entry:
-
-1. **CHECK pause signature first** per
-   `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`. If matched,
-   apply that protocol (resume via `SendMessage` if available, else
-   mark `stub-no-output`). The state machine below applies ONLY after
-   the resume attempt resolves or is skipped.
-
-2. **STAT the expected path.** Apply the state machine:
-
-- Exists, `size_bytes >= 1000` → trust. Do NOT overwrite.
-- Exists, `size_bytes < 1000`, return text substantially larger AND
-  parses as findings → replace stub (`stub-replaced`).
-- Exists, `size_bytes < 1000`, return text empty/unusable → keep
-  stub, treat as coverage gap (`stub-no-output`).
-- Missing, return text usable → extract from return text and write.
-- Missing, return text empty/unusable → write a stub with heading
-  `# {topic-slug} — recovery stub` and body `Run produced no
-  artifact and no usable return text. Research coverage gap.`
-
-NEVER copy or symlink prior-run artifacts to the current-run path.
-Decide from filesystem; ignore Agent return-text denial claims.
-Never re-spawn.
 
 For selection matrix, briefing templates, and routing hints, see
 `${CLAUDE_SKILL_DIR}/references/planning-workflow.md`.

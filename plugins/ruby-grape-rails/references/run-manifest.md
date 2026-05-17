@@ -157,9 +157,10 @@ Helper auto-stamps `updated_at`.
 
 ### Post-recovery
 
-After Artifact Recovery decides each agent's outcome, patch its
-`status` to one of `artifact`, `stub-replaced`, `recovered-from-return`,
-or `stub-no-output`:
+After Artifact Recovery
+(`${CLAUDE_PLUGIN_ROOT}/references/artifact-recovery.md`) decides each
+agent's outcome, patch its `status` to one of `artifact`,
+`stub-replaced`, `recovered-from-return`, or `stub-no-output`:
 
 ```bash
 printf '{"agents":{"%s":{"status":"%s"}}}\n' "$AGENT_SLUG" "$STATE" \

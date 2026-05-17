@@ -82,8 +82,13 @@ Sub-queries:
 ## Parallel Researcher Spawning
 
 1. Compute `{topic-slug}` (semantic kebab-case, e.g.
-   `sidekiq-vs-solid-queue`). Pick `--agents=` CSV of aspect slugs
-   (e.g. `docs,blogs,benchmarks`).
+   `sidekiq-vs-solid-queue`). Pick `--agents=` CSV of aspect slugs —
+   one slug per narrow parallel scope (e.g. `docs`, `blogs`,
+   `benchmarks`, `migration-guide`, `github-issues`). Slugs MUST be
+   unique within a run (manifest is keyed by slug). To run multiple
+   agents on the same source-type, pick distinct slugs that encode
+   the additional scope dimension. Aspect-slug pattern:
+   `[a-z0-9][a-z0-9._-]*`.
 2. Run
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run --skill=rb:research
    --slug="$TOPIC_SLUG" --agents=<csv-of-aspect-slugs>`.
@@ -102,23 +107,26 @@ Sub-queries:
    (tab-separated `aspect_slug<TAB>absolute_path`). Pass each absolute
    path verbatim in the spawn prompt.
 6. Wait for all aspects to complete.
-7. Apply Artifact Recovery (see plan/review skills for the state
-   machine). Patch each aspect's `status` field with its recovery-state
-   value (`artifact` | `stub-replaced` | `recovered-from-return` |
-   `stub-no-output`).
+7. Apply Artifact Recovery per
+   `${CLAUDE_PLUGIN_ROOT}/references/artifact-recovery.md`
+   (coverage-noun `Aspect`). Patch each aspect's `status` field with
+   its recovery-state value (`artifact` | `stub-replaced` |
+   `recovered-from-return` | `stub-no-output`).
 8. Read each verified aspect artifact. Read consolidated path via
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
    Synthesize the consolidated research at that path.
 9. Patch manifest `status: complete`.
 
 ```
-Spawn Order:
-1. web-researcher (docs)        ──┐
-2. web-researcher (blogs)        ├──▶ Wait all ──▶ Synthesize
-3. web-researcher (benchmarks)  ──┘
+Spawn Order (slugs vary per query; one agent per slug):
+1. web-researcher (docs)             ──┐
+2. web-researcher (blogs)             ├──▶ Wait all ──▶ Synthesize
+3. web-researcher (benchmarks)       ──┘
+4. web-researcher (github-issues)
+5. web-researcher (migration-guide)
 ```
 
-### Artifact path rules
+## Artifact Path Rules
 
 - Helper computes absolute paths from `--skill=rb:research` plus
   `--slug` plus `--agents`. Path convention: per-aspect at
@@ -129,7 +137,7 @@ Spawn Order:
 - Pass each absolute path verbatim in the spawn prompt.
 - Agents use the exact path received. No filename invention.
 
-### Agent Briefing Template
+## Agent Briefing Template
 
 ```
 Task: Research [specific aspect] of [topic]

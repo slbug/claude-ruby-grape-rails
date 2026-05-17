@@ -324,11 +324,15 @@ fi
 # Fresh-write contract for scoped researchers. CC subagent Edit is broken
 # (cannot update existing files at all), and CC subagent Write also has
 # known reliability issues on existing paths. Defense: every scoped Write
-# goes to a non-existing target. Research artifact paths are stable
-# (`{topic-slug}.md`); the existence guard forces researchers to fail loud
-# when a previous artifact already lives at the same path so the main
-# session can rotate the run rather than silently dropping a Write.
-# Covers regular file, directory, AND pre-symlinked-target attack at the leaf.
+# goes to a non-existing target. Scoped researcher paths are
+# `.claude/research/<topic-slug>/<aspect-slug>.md` (cross-plan per-aspect)
+# and `.claude/plans/<plan-slug>/research/<agent-slug>.md` (plan-local) —
+# flat `.claude/research/<slug>.md` is consolidated-synthesis main-session
+# territory, refused by the allowlist above. Existence guard forces
+# researchers to fail loud when a previous artifact already lives at the
+# same path so the skill body's prepare-respawn step can rotate it
+# before retry rather than silently dropping a Write. Covers regular
+# file, directory, AND pre-symlinked-target attack at the leaf.
 if [[ -e "$ABS_TARGET" ]] || [[ -L "$ABS_TARGET" ]]; then
   respond_to_danger "target_exists" \
     "BLOCKED: ${AGENT_TYPE} attempted to Write an existing target: ${ABS_TARGET}. Scoped Write targets must be non-existing (CC subagent Edit/Write cannot update existing files reliably). Rotate to a fresh path." \

@@ -222,7 +222,9 @@ Five steps, in order. Do NOT skip.
 ### STEP 1: Read each agent artifact (post-recovery)
 
 For each manifest entry: STAT the expected path; apply the recovery
-state machine in § "Artifact Recovery" below.
+state machine in
+`${CLAUDE_PLUGIN_ROOT}/references/artifact-recovery.md`
+(coverage-noun `Reviewer`).
 
 ### STEP 2: Normalize each agent's verdict text
 
@@ -304,31 +306,6 @@ Format"). REQUIRES CHANGES chat script reads that section verbatim.
 - Sort findings: BLOCKER → WARNING → SUGGESTION;
   HIGH → MEDIUM → LOW within bucket.
 - Preserve "Pre-existing Issues" section.
-
-## Artifact Recovery
-
-For each reviewer in the manifest, stat the expected path:
-
-| State | Action | Manifest agent status |
-|---|---|---|
-| Exists, `size_bytes >= 1000` | Trust. Do NOT overwrite. | `artifact` |
-| Exists, `size_bytes < 1000`, return text substantially larger AND parses as findings (severity tags, `file:line` refs) | Replace stub with extracted findings. Add header `recovery: stub replaced from inline return`. | `stub-replaced` |
-| Exists, `size_bytes < 1000`, return text empty/unusable | Keep stub. Add header `recovery: stub kept — return text unusable`. Treat as coverage gap. | `stub-no-output` |
-| Missing, return text usable | Extract findings from return text and write. Add header `recovery: recovered from inline return — Write failed`. | `recovered-from-return` |
-| Missing, return text empty/unusable | Write stub with heading `# {agent-slug} — recovery stub` and body `Run produced no artifact and no usable return text. Reviewer coverage gap.` Add header `recovery: stub written — agent produced nothing`. | `stub-no-output` |
-
-Rules:
-
-- Decide from the filesystem, not Agent return text claims.
-- NEVER copy or symlink prior-run artifacts to the current-run path.
-  Each run owns a per-second-unique path. If current run produced
-  nothing, write a stub — never pull bytes from sibling runs.
-- Never re-spawn.
-- After each agent's recovery decision, patch its `status` via
-  `printf '{"agents":{"%s":{"status":"%s"}}}\n' "$AGENT_SLUG" "$STATE" |
-  ${CLAUDE_PLUGIN_ROOT}/bin/manifest-update patch "$MANIFEST"`. NEVER
-  edit `RUN-CURRENT.json` directly.
-- Synthesis runs on the verified manifest.
 
 ## Resume Protocol
 
