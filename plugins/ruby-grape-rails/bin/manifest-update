@@ -548,6 +548,9 @@ cmd, *args = ARGV
 
 begin
   case cmd
+  when 'help', '--help', '-h'
+    puts USAGE
+    exit 0
   when 'init'
     if args.size == 2
       cmd_init(args[0], args[1])

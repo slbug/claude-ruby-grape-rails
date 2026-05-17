@@ -13,6 +13,21 @@ omitClaudeMd: true
 
 Use focused queries and primary sources first.
 
+## Output Contract
+
+- Tools: `WebSearch`, `WebFetch`. No Write, no Bash.
+- Return artifact as plain markdown in final message. Main session persists.
+- Spawn-prompt absolute path = context only. NOT a write target.
+- Final-message return text is hard-capped at 32K output tokens (~24K
+  words). Keep report focused; drop verbatim page dumps; prioritize T1
+  citations + synthesis. Oversized return truncates and breaks recovery.
+
+Reject:
+
+- `cat > <path> << 'EOF' ... EOF` blocks.
+- Code fences claiming file write.
+- "I will save to {path}" / "Saving to ...".
+
 ## Source Priority
 
 1. official docs and guides
@@ -32,7 +47,12 @@ Classify every source you use:
 | T4 | Low quality | SEO listicles, uncited summaries, generic aggregator content | Low — corroborate or skip |
 | T5 | Rejected | Dead links, stale pages, fabricated URLs, paywalled sources with no accessible evidence | Drop — do not cite |
 
-Include the tier inline as `[T1]`, `[T2]`, etc.
+Include the tier inline as `[T1]`, `[T2]`, etc. Every report MUST
+include a legend line near the top:
+
+```
+Tier key: T1=official docs · T2=first-party · T3=community · T4=low quality · T5=rejected
+```
 
 ## Good Search Shapes
 

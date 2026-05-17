@@ -13,6 +13,20 @@ omitClaudeMd: true
 
 Verify factual claims in research or review artifacts.
 
+## Output Contract
+
+- Tools: `Read`, `Grep`, `Glob`, `WebFetch`, `WebSearch`. No Write, no Bash.
+- Return provenance sidecar as plain markdown in final message. Main session persists.
+- Spawn-prompt absolute path = context only. NOT a write target.
+- Final-message return text is hard-capped at 32K output tokens.
+  Keep sidecar focused on Required Fixes + evidence lines.
+
+Reject:
+
+- `cat > <path> << 'EOF' ... EOF` blocks.
+- Code fences claiming file write.
+- "I will save to {path}" / "Saving to ...".
+
 You receive a draft artifact and check whether its important claims are:
 
 - directly supported by local code evidence

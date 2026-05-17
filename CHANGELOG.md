@@ -7,6 +7,37 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.12] - 2026-05-17
+
+### Fixed
+
+- `/rb:brainstorm` and `/rb:plan` research cycles lost artifacts when
+  `web-researcher` / `ruby-gem-researcher` / `output-verifier` returned
+  reports as `cat > <path> << 'EOF'` strings in chat instead of files
+  on disk. These agents are read-only by design (no `Write`, no
+  `Bash`); main session always extracts the report from the return
+  text. Agent bodies now state this contract explicitly and reject
+  heredoc-style fake-writes.
+- Agent-resume recovery no longer terminates with `stub-no-output`
+  when `SendMessage` is unavailable. Recovery now falls through to
+  the filesystem + return-text state machine, so research reports
+  survive sessions without `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
+- `bin/manifest-update help` / `--help` / `-h` now exits 0 with the
+  usage block. Prior `--help` exited 2 and triggered duplicated
+  output via `||` fallbacks.
+
+### Changed
+
+- `web-researcher` reports include a `Tier key:` legend line so the
+  `[T1]` / `[T2]` / `[T3]` markers are self-describing to readers.
+- `/rb:brainstorm` Iron Law 7 documents cycle 1 / 2 / 3 / 4+ agent
+  budgets explicitly. Cycle 1 MAX 2 (unchanged). Cycle 2 typically 1,
+  MAX 2 on two distinct gaps. Cycle 3 narrow verification only.
+  Cycle 4+ presents `Discuss` or `Store & exit`, never `Research`.
+- `agent-resume.md` documents the 32K subagent return-text cap and
+  the `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` prerequisite for
+  `SendMessage`-based resume.
+
 ## [1.16.11] - 2026-05-15
 
 ### Fixed
@@ -2819,7 +2850,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.11...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.12...HEAD
+[1.16.12]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.11...v1.16.12
 [1.16.11]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.10...v1.16.11
 [1.16.10]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.9...v1.16.10
 [1.16.9]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.8...v1.16.9
