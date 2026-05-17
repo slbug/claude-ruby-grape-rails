@@ -5,9 +5,18 @@ set -o pipefail
 
 # Policy: security-sensitive — fail closed when input/payload cannot be inspected.
 # Scope: PreToolUse + PermissionRequest + PermissionDenied on Write calls.
-# Enforces a per-agent path allowlist for the 2 researcher agents that consume
-# untrusted WebFetch/WebSearch content. Defense in depth against prompt-injection
-# that tries to redirect Write to filesystem paths outside research output.
+# Layer: namespace-containment fallback for the 2 researcher agents that consume
+# untrusted WebFetch/WebSearch content. Enforces a per-agent directory allowlist
+# (`.claude/research/*`, `.claude/plans/*/research/*` excluding `.provenance.md`).
+# Blocks escape from the research namespace, path-traversal, and Writes to
+# pre-existing leafs.
+#
+# NOT a path-pinning defense: within the allowed namespace this hook cannot
+# verify the Write target equals the manifest-emitted spawn-prompt path —
+# the manifest is not available to hooks. Exact-path enforcement lives in
+# each researcher agent's body under "Write boundary (prompt-injection
+# defense)". This hook is the second line that prevents namespace escape
+# if the agent body clause is bypassed.
 #
 # Other Write callers (main session, reviewer agents, output-verifier (convo-only,
 # no Write), rails-patterns-analyst, etc.) are unaffected — the agent_type gate

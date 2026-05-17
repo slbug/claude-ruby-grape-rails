@@ -121,10 +121,11 @@ zero residue on the user's data dir, transcript, or context.
   but the active project is not Ruby/Rails/Grape. Short-circuits at
   the top of the script before reading stdin or sourcing
   `workspace-root-lib.sh`.
-- `RUBY_PLUGIN_STRICT_PERMS=1` — `block-dangerous-ops.sh`. Adds
-  `decision.interrupt: true` to the structured `PermissionRequest`
-  deny, stopping Claude rather than just denying the single command.
-  Pre-existing exit-2 hard-block on `PreToolUse` unchanged.
+- `RUBY_PLUGIN_STRICT_PERMS=1` — `block-dangerous-ops.sh` and
+  `block-out-of-bounds-writes.sh`. Adds `decision.interrupt: true` to
+  the structured `PermissionRequest` deny, stopping Claude rather than
+  just denying the single command/Write. Pre-existing exit-2
+  hard-block on `PreToolUse` unchanged in both hooks.
 - `RUBY_PLUGIN_COMPRESSION_TELEMETRY=1` — `compress-verify-output.rb`.
   When unset (default), the verify-output compression collector is a
   no-op. When set, the hook appends to
