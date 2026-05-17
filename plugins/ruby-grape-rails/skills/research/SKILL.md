@@ -79,10 +79,28 @@ Sub-queries:
 5. Operational requirements (Redis vs PostgreSQL)
 ```
 
+## Pre-Spawn Collision Avoidance
+
+Compute `{topic-slug}` from query (semantic kebab-case). Resolve candidate
+stable path:
+
+- cross-plan: `.claude/research/{topic-slug}.md`
+- plan-local: `.claude/plans/{slug}/research/{topic-slug}.md`
+
+| Pre-spawn state | Spawn path | Pass prior content as input? |
+|---|---|---|
+| stable path empty | stable path | n/a |
+| stable path exists, fully covers query | skip spawn; main session reads + reuses | n/a |
+| stable path exists, partially relevant | `{topic-slug}-{datesuffix}.md` variant | yes |
+| stable path exists, irrelevant | `{topic-slug}-{datesuffix}.md` variant | no |
+
+`{datesuffix}` = `YYYYMMDD-HHMMSS` UTC.
+
 ## Parallel Researcher Spawning
 
 Spawn multiple `web-researcher` agents in parallel, each with its own
-per-aspect absolute path passed in the spawn prompt.
+per-aspect absolute path (stable or variant per the table above) passed
+in the spawn prompt.
 
 ```
 Spawn Order:
@@ -294,7 +312,9 @@ Use the research filesystem deliberately:
   (example: `sidekiq-vs-solid-queue`)
 - `{slug}` = plan slug for one `/rb:plan` namespace
 
-- `.claude/research/{topic-slug}.md`
+- `.claude/research/{topic-slug}.md` (stable) and
+  `.claude/research/{topic-slug}-{datesuffix}.md` (variant per pre-spawn
+  collision-avoidance)
   - cross-plan research that may be reused by future `/rb:plan` runs
   - best for gem evaluations, upgrade paths, framework/tooling
     comparisons, and community research
@@ -312,6 +332,9 @@ Planning reuses fresh research conservatively:
   can suppress duplicate
   `web-researcher` / `ruby-gem-researcher` work when the topic clearly
   matches
+- when multiple variants for the same `{topic-slug}` prefix exist,
+  pick the freshest by parseable date; treat older variants as
+  background context only
 - stale files are background context only
 - files without parseable freshness metadata are background context only
 

@@ -5230,6 +5230,31 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
             self.assertFalse(decision["interrupt"])
             self.assertIn("BLOCKED", decision["message"])
 
+    def test_permission_request_strict_perms_sets_interrupt(self) -> None:
+        """`RUBY_PLUGIN_STRICT_PERMS=1` flips `decision.interrupt` to true
+        on PermissionRequest denials. Mirrors `block-dangerous-ops.sh`
+        parity to prevent silent drift between the two hooks."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            payload = _write_payload(
+                "PermissionRequest",
+                "web-researcher",
+                "/etc/passwd",
+                repo,
+            )
+            result = run_block_writes_hook(
+                payload,
+                repo,
+                extra_env={"RUBY_PLUGIN_STRICT_PERMS": "1"},
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stderr, "")
+            body = json.loads(result.stdout)
+            decision = body["hookSpecificOutput"]["decision"]
+            self.assertEqual(decision["behavior"], "deny")
+            self.assertTrue(decision["interrupt"])
+            self.assertIn("BLOCKED", decision["message"])
+
     def test_permission_denied_logs_jsonl(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             repo = self._make_repo(tmpdir)

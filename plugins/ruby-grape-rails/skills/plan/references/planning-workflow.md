@@ -162,6 +162,19 @@ whether fresh research already exists:
   `rails-patterns-analyst`, `call-tracer`, or
   schema/security/job specialists based only on cached research.
 
+### Spawn-Path Collision Avoidance
+
+When cache reuse decides "spawn fresh" AND
+`.claude/plans/{slug}/research/{agent-slug}.md` already exists:
+
+| Prior file relevance | Spawn path | Pass prior content as input? |
+|---|---|---|
+| partially relevant | `.claude/plans/{slug}/research/{agent-slug}-{datesuffix}.md` | yes |
+| irrelevant | `.claude/plans/{slug}/research/{agent-slug}-{datesuffix}.md` | no |
+
+`{datesuffix}` = `YYYYMMDD-HHMMSS` UTC. Empty stable path: spawn to
+stable path unchanged.
+
 ## Waiting for Agents
 
 Wait for every agent to complete before plan generation.
