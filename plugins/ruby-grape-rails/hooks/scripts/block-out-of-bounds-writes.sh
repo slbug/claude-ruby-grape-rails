@@ -121,9 +121,11 @@ match_research_aspect() {
   [[ -n "$tail" && "$tail" != */* && "$tail" != .* && "$tail" == *.md ]]
 }
 
-# .claude/plans/<slug>/research/<file>  (slug + file each single segment;
+# .claude/plans/<slug>/research/<file>.md  (slug + file each single segment;
 # slug must not start with `.` to refuse `.claude/plans/./research/...`
-# and dotfile slug names that would bypass per-plan isolation).
+# and dotfile slug names that would bypass per-plan isolation; file must
+# end in `.md` — extensions like `.rb` / `.json` are outside the documented
+# research artifact contract).
 match_plan_research() {
   local rel="$1"
   case "$rel" in
@@ -139,7 +141,7 @@ match_plan_research() {
     *) return 1 ;;
   esac
   local tail="${after_slug#research/}"
-  [[ -n "$tail" && "$tail" != */* && "$tail" != .* ]]
+  [[ -n "$tail" && "$tail" != */* && "$tail" != .* && "$tail" == *.md ]]
 }
 
 # Per-agent map: which segment-bounded matchers apply to which agent.

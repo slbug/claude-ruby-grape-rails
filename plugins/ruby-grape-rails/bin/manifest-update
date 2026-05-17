@@ -197,7 +197,8 @@ end
 TTL_DEFAULTS = {
   'rb:review' => 24,
   'rb:plan' => 168,
-  'rb:brainstorm' => 168
+  'rb:brainstorm' => 168,
+  'rb:research' => 168
 }.freeze
 TTL_FALLBACK = 24
 

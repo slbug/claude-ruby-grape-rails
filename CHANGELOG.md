@@ -31,16 +31,20 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   only Write calls from `web-researcher` and `ruby-gem-researcher`
   are constrained (main session, reviewer agents, `output-verifier`
   (convo-only), and other Write-capable specialists pass through).
-  Allowed patterns: `.claude/research/*`, `.claude/plans/*/research/*`
-  (excluding `.provenance.md` sidecars — those remain main-session
-  territory). Targets must be non-existing (CC subagent overwrite-bug
-  workaround). Path-traversal segments (`/../`, trailing `/..`) are
-  rejected. Event dispatch mirrors `block-dangerous-ops.sh`: hard
-  block on PreToolUse, structured JSON deny on PermissionRequest,
-  log to `${CLAUDE_PLUGIN_DATA}/denied-writes.jsonl` on
-  PermissionDenied. Defends against prompt-injection from fetched
-  `WebFetch`/`WebSearch` content that would redirect Write to
-  unintended filesystem paths.
+  Allowed patterns (`.md` extension required):
+  `.claude/research/<topic-slug>/<aspect-slug>.md` per-aspect subdir,
+  `.claude/plans/<plan-slug>/research/<agent-slug>.md` plan-local.
+  Flat `.claude/research/<slug>.md` (consolidated synthesis) and
+  `.provenance.md` sidecars are main-session territory and refused.
+  Targets must be non-existing (CC subagent overwrite-bug workaround).
+  Path-traversal segments (`/../`, trailing `/..`) and out-of-repo
+  paths refused via lexical containment check before any disk probe.
+  Event dispatch mirrors `block-dangerous-ops.sh`: hard block on
+  PreToolUse, structured JSON deny on PermissionRequest, log to
+  `${CLAUDE_PLUGIN_DATA}/denied-writes.jsonl` on PermissionDenied.
+  Layer: namespace-containment fallback. Exact-path enforcement lives
+  in each researcher agent body under "Write boundary
+  (prompt-injection defense)".
 
 ### Changed
 

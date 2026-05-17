@@ -5010,6 +5010,40 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
             self.assertEqual(result.stderr, "")
 
+    def test_scoped_agent_plan_research_non_md_blocks(self) -> None:
+        """Plan-local research allowlist accepts only `.md` artifacts.
+        Other extensions (`.rb`, `.json`) are outside the documented
+        contract and must be refused."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            for path in (
+                ".claude/plans/feat/research/leak.rb",
+                ".claude/plans/feat/research/leak.json",
+            ):
+                with self.subTest(path=path):
+                    payload = _write_payload(
+                        "PreToolUse", "web-researcher", path, repo
+                    )
+                    result = run_block_writes_hook(payload, repo)
+                    self.assertEqual(result.returncode, 2)
+                    self.assertIn("per-agent allowlist", result.stderr)
+
+    def test_scoped_agent_research_aspect_non_md_blocks(self) -> None:
+        """Cross-plan per-aspect allowlist accepts only `.md` artifacts."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = self._make_repo(tmpdir)
+            for path in (
+                ".claude/research/topic/aspect.rb",
+                ".claude/research/topic/aspect.json",
+            ):
+                with self.subTest(path=path):
+                    payload = _write_payload(
+                        "PreToolUse", "web-researcher", path, repo
+                    )
+                    result = run_block_writes_hook(payload, repo)
+                    self.assertEqual(result.returncode, 2)
+                    self.assertIn("per-agent allowlist", result.stderr)
+
     def test_output_verifier_unscoped_passes(self) -> None:
         """output-verifier is convo-only on main (returns text; main session
         writes any provenance). Hook MUST exit 0 unconditionally on verifier
