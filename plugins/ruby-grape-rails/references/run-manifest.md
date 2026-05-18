@@ -118,10 +118,13 @@ Main session calls `prepare-run` once with structured args. Helper
 computes everything: manifest path, datesuffix, agent paths,
 consolidated path, git pins. Outputs absolute manifest path.
 
+Substitute the captured `BASE_REF` value (from `resolve-base-ref`
+stdout) for `<BASE_REF>` before running:
+
 ```bash
 MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
   --skill=rb:review --slug="$SLUG" \
-  --base-ref="$BASE_REF" \
+  --base-ref=<BASE_REF> \
   --agents="$AGENTS_CSV")
 ```
 
@@ -286,10 +289,14 @@ any prior manifest, inits fresh, outputs the path on stdout. Skill
 body uses output for subsequent `field` / `spawn-paths` / `patch` /
 `prepare-respawn` calls.
 
+Substitute the captured `BASE_REF` value (from `resolve-base-ref`
+stdout) for `<BASE_REF>` before running (review skill only — plan /
+brainstorm / research skip the `--base-ref` flag):
+
 ```bash
 MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
   --skill=<rb:review|rb:plan|rb:brainstorm|rb:research> --slug="$SLUG" \
-  [--base-ref="$BASE_REF"] \
+  [--base-ref=<BASE_REF>] \
   --agents="$AGENTS_CSV")
 ```
 
