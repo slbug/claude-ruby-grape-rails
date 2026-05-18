@@ -69,7 +69,7 @@ Iron Law 14: NEVER use html_safe or raw with untrusted content — XSS vulnerabi
 Iron Law 15: NO SQL string concatenation — always use parameterized queries
 Iron Law 16: NO method_missing without respond_to_missing? — breaks introspection
 Iron Law 17: SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers
-Iron Law 18: DON'T `rescue Exception` — bare `rescue` defaults to StandardError and is safe; explicit class naming is style preference, not Law 18
+Iron Law 18: DON'T `rescue Exception` — bare `rescue` defaults to StandardError, not a Law 18 violation; explicit class naming is style preference
   `${CLAUDE_PLUGIN_ROOT}/skills/ruby-idioms/references/error-handling.md`
 Iron Law 19: NEVER query DB in Turbo Stream responses — pre-compute everything
   `${CLAUDE_PLUGIN_ROOT}/skills/hotwire-patterns/references/channels-presence.md`

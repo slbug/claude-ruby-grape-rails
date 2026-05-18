@@ -75,7 +75,7 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 
 16. **method_missing Requires respond_to_missing?** — NO method_missing without respond_to_missing? — breaks introspection
 17. **Supervise Background Processes** — SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers in production
-18. **No Rescue Exception** — DON'T `rescue Exception` — catches `SystemExit` / `SignalException`. Bare `rescue` defaults to `StandardError` and is safe.
+18. **No Rescue Exception** — DON'T `rescue Exception` — catches `SystemExit` / `SignalException`. Bare `rescue` defaults to `StandardError` and is not a Law 18 violation.
 
 ### Hotwire/Turbo (2 laws)
 

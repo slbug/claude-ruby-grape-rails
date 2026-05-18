@@ -70,8 +70,8 @@ For programmatic use, see [iron-laws.yml](../../../references/iron-laws.yml).
 17. **Supervise Background Processes** — SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers in production
    *Unsupervised processes crash silently and don't restart*
 
-18. **No Rescue Exception** — DON'T `rescue Exception` — catches `SystemExit` / `SignalException`. Bare `rescue` defaults to `StandardError` and is safe.
-   *`rescue Exception` swallows SIGTERM/SIGINT/exits; bare `rescue` and `rescue StandardError` are equivalent (StandardError subtree, no signals).*
+18. **No Rescue Exception** — DON'T `rescue Exception` — catches `SystemExit` / `SignalException`. Bare `rescue` defaults to `StandardError` and is not a Law 18 violation.
+   *`rescue Exception` swallows signals/exits. Bare `rescue` resolves to StandardError subtree (no signals). Silent swallow without re-raise is a separate bug, not Law 18.*
 
 ### Hotwire/Turbo (2 laws)
 

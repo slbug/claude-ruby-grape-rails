@@ -281,13 +281,13 @@ laws:
   - id: 18
     category: ruby
     title: "No Rescue Exception"
-    rule: "DON'T `rescue Exception` — catches `SystemExit` / `SignalException`. Bare `rescue` defaults to `StandardError` and is safe."
-    rationale: "`rescue Exception` swallows SIGTERM/SIGINT/exits; bare `rescue` and `rescue StandardError` are equivalent (StandardError subtree, no signals)."
+    rule: "DON'T `rescue Exception` — catches `SystemExit` / `SignalException`. Bare `rescue` defaults to `StandardError` and is not a Law 18 violation."
+    rationale: "`rescue Exception` swallows signals/exits. Bare `rescue` resolves to StandardError subtree (no signals). Silent swallow without re-raise is a separate bug, not Law 18."
     severity: high
     applies_to: ["*.rb"]
-    summary_text: "Never `rescue Exception`; bare `rescue` is safe (defaults to StandardError)"
-    init_text: "DON'T `rescue Exception` — bare `rescue` defaults to StandardError and is safe"
-    subagent_text: "Iron Law 18: DON'T `rescue Exception` — bare `rescue` defaults to StandardError and is safe; explicit class naming is style preference, not Law 18"
+    summary_text: "Never `rescue Exception`; bare `rescue` is not a Law 18 violation"
+    init_text: "DON'T `rescue Exception` — bare `rescue` defaults to StandardError, not a Law 18 violation"
+    subagent_text: "Iron Law 18: DON'T `rescue Exception` — bare `rescue` defaults to StandardError, not a Law 18 violation; explicit class naming is style preference"
     detector_id: null
     reference_files: ["skills/ruby-idioms/references/error-handling.md"]
 
