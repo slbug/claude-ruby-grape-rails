@@ -219,17 +219,17 @@ prompt, bucket shortcuts first then individual items:
 
 | Option label | Effect |
 |---|---|
-| `All Warning` | Select every NEW Warning. Leave Suggestion selections untouched. |
-| `All Suggestion` | Select every NEW Suggestion. Leave Warning selections untouched. |
-| `Skip all Warning` | Defer every NEW Warning. Leave Suggestion selections untouched. |
-| `Skip all Suggestion` | Defer every NEW Suggestion. Leave Warning selections untouched. |
+| `All Warnings` | Select every NEW Warning finding. Leave Suggestions selections untouched. |
+| `All Suggestions` | Select every NEW Suggestion finding. Leave Warnings selections untouched. |
+| `Skip all Warnings` | Defer every NEW Warning finding. Leave Suggestions selections untouched. |
+| `Skip all Suggestions` | Defer every NEW Suggestion finding. Leave Warnings selections untouched. |
 | `Group by file` | Re-render the option list grouped by file. Do NOT change selection state. |
 | `W<n>` / `S<n>` (one row per finding) | Select the individual NEW Warning / Suggestion. Description: file, line, one-line reason. |
 
 Accept combinations of shortcuts and individual picks in one
-response (e.g., `All Warning` + `S2` + `S5`). Resolve combinations
-in selection order: cancel an earlier `All Warning` when a later
-`Skip all Warning` follows; let individual `W<n>` / `S<n>` picks
+response (e.g., `All Warnings` + `S2` + `S5`). Resolve combinations
+in selection order: cancel an earlier `All Warnings` when a later
+`Skip all Warnings` follows; let individual `W<n>` / `S<n>` picks
 override their bucket-level skip. Split into multiple screens when
 > 6 selectable items.
 
@@ -294,8 +294,8 @@ Blocker" shortcut in the selection UI. Offer only Warning /
 Suggestion + cross-cutting filters:
 
 ```
-[Select All Warning]
-[Select All Suggestion]
+[Select All Warnings]
+[Select All Suggestions]
 [Select All in File: app/models/user.rb]
 [Select All of Type: N+1]
 ```
@@ -352,7 +352,7 @@ No findings selected. Options:
 [Cancel]
 ```
 
-### All Blocker
+### All Blockers
 
 If all findings are Blocker:
 
@@ -440,7 +440,7 @@ selected at Step 4.
 | `/rb:triage` | Triage most recent consolidated review |
 | `/rb:triage <file>` | Triage specific review file |
 
-For in-UI bucket shortcuts (`All Warning`, `Skip all Warning`,
+For in-UI bucket shortcuts (`All Warnings`, `Skip all Warnings`,
 `Group by file`, …), surface them as `AskUserQuestion` option labels
 per § "Step 4: Present Multi-Select UI"; never prompt the user to
 type them as commands.

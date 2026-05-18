@@ -75,10 +75,9 @@ message.
    `Reviewer`). Patch each agent's `status`
    field with its recovery-state value (`artifact` |
    `stub-replaced` | `recovered-from-return` | `stub-no-output`).
-9. Read each verified artifact directly via the absolute path from
-   `manifest-update spawn-paths "$MANIFEST"`. Per
-   `${CLAUDE_PLUGIN_ROOT}/references/preferences/tool-batching.md`,
-   issue one `Read` per path. Read consolidated path via
+9. Read each verified artifact via the absolute path from
+   `manifest-update spawn-paths "$MANIFEST"`. Read consolidated
+   path via
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
    Write the consolidated review to that path.
 10. Patch manifest `status: complete`.
@@ -348,11 +347,6 @@ When a finding cites a sidecar, read the sidecar's `trust_state` (see
   before retry vs respawn.
 - Missing `**Counts:**` line. Reviewers MUST emit Counts: first.
   Missing line breaks consolidator severity-bucket counts.
-- Bulk-cat of artifacts. Reviewer artifacts run ~6-8KB each;
-  up to 11 reviewers ≈ 65-90KB combined. Combined stream overflows
-  Read token cap. See
-  `${CLAUDE_PLUGIN_ROOT}/references/preferences/tool-batching.md`
-  for Read-over-cat discipline.
 
 ## References
 

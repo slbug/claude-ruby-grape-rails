@@ -45,7 +45,7 @@ disallowed — you cannot modify source code.
 
 Findings file MUST start with:
 
-`**Counts:** N findings (X Blocker, Y Warning, Z Suggestion); M notes`
+`**Counts:** N findings (X Blocker[s], Y Warning[s], Z Suggestion[s]); M notes` (singular when count == 1, plural otherwise — including 0)
 
 Empty state:
 

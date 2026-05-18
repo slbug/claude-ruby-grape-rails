@@ -233,16 +233,17 @@ _CANONICAL_VERDICTS = frozenset(
     {"PASS", "PASS WITH WARNINGS", "REQUIRES CHANGES", "BLOCKED"}
 )
 _COVERAGE_FINDINGS_RE = re.compile(
-    r"^\d+\s+Blocker\s*/\s*\d+\s+Warning\s*/\s*\d+\s+Suggestion$"
+    r"^\d+\s+Blockers?\s*/\s*\d+\s+Warnings?\s*/\s*\d+\s+Suggestions?$"
 )
 # Whitespace-tolerant zero-counts gate for `stub-no-output` rows.
 # Mirrors `_COVERAGE_FINDINGS_RE` shape but pins every count to 0,
-# so `0 Blocker  /  0 Warning /  0 Suggestion` (extra inner spaces)
-# matches the same way the shape-only check does.
+# so `0 Blockers  /  0 Warnings /  0 Suggestions` (extra inner spaces)
+# matches the same way the shape-only check does. 0 takes plural form
+# (count-aware grammar: singular only when count == 1).
 _STUB_NO_OUTPUT_FINDINGS_RE = re.compile(
-    r"^0\s+Blocker\s*/\s*0\s+Warning\s*/\s*0\s+Suggestion$"
+    r"^0\s+Blockers\s*/\s*0\s+Warnings\s*/\s*0\s+Suggestions$"
 )
-_STUB_NO_OUTPUT_FINDINGS = "0 Blocker / 0 Warning / 0 Suggestion"
+_STUB_NO_OUTPUT_FINDINGS = "0 Blockers / 0 Warnings / 0 Suggestions"
 
 
 def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
@@ -251,7 +252,8 @@ def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
         return False, "Missing ## Reviewer Coverage section"
     # Contract: `| <slug> | <recovery-state> | <findings-counts> |`
     # where recovery-state ∈ _RECOVERY_STATES and findings-counts matches
-    # `{n} Blocker / {n} Warning / {n} Suggestion`. `stub-no-output`
+    # `{n} Blocker[s] / {n} Warning[s] / {n} Suggestion[s]` (count-aware
+    # grammar: singular when count == 1, plural otherwise). `stub-no-output`
     # rows MUST carry the all-zero findings cell — synthesis recovered
     # no usable output, so the reviewer cannot have contributed findings.
     rows = _table_data_rows(body)
@@ -270,7 +272,7 @@ def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
             bad.append(f"{slug}: invalid recovery state {recovery!r}")
             continue
         if not _COVERAGE_FINDINGS_RE.match(findings):
-            bad.append(f"{slug}: findings cell {findings!r} not in `{{n}} Blocker / {{n}} Warning / {{n}} Suggestion` form")
+            bad.append(f"{slug}: findings cell {findings!r} not in `{{n}} Blocker[s] / {{n}} Warning[s] / {{n}} Suggestion[s]` form")
             continue
         if recovery == "stub-no-output" and not _STUB_NO_OUTPUT_FINDINGS_RE.match(findings):
             bad.append(
@@ -803,7 +805,7 @@ def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
 
 
 _COVERAGE_FINDINGS_PARSE_RE = re.compile(
-    r"^(\d+)\s+Blocker\s*/\s*(\d+)\s+Warning\s*/\s*(\d+)\s+Suggestion$"
+    r"^(\d+)\s+Blockers?\s*/\s*(\d+)\s+Warnings?\s*/\s*(\d+)\s+Suggestions?$"
 )
 
 

@@ -91,10 +91,14 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 
 ## Blocker Violations (Must Fix Immediately)
 
+All Iron Law violations are Blockers — non-negotiable per
+`triage-patterns.md` § "Always Fix".
+
 | Law | Pattern | Risk |
 |-----|---------|------|
 | 1 | `t.float :price` | Financial errors |
 | 2, 15 | `where("id = #{id}")` | SQL injection |
+| 3 | N+1 queries (loop without `includes`) | Performance / DB load |
 | 4, 11 | `after_save :enqueue_job` | Data races |
 | 6 | `update_columns`, `save(validate: false)` | Data integrity |
 | 7 | `default_scope` | Unexpected queries |
@@ -103,15 +107,9 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 | 13 | Missing `authorize` in controller | Unauthorized access |
 | 14 | `user_input.html_safe`, `raw(user_input)` | XSS attacks |
 | 16 | `method_missing` without `respond_to_missing?` | Broken introspection |
-
-## Warning Violations (Fix Before Merge)
-
-| Law | Pattern |
-|-----|---------|
-| 3 | N+1 queries (loop without `includes`) |
-| 18 | Bare `rescue` (catches Exception) |
-| 19 | DB queries in turbo_stream templates |
-| 20 | Missing `turbo_frame_tag` for partial updates |
+| 18 | Bare `rescue` (catches Exception) | Hidden bugs / lost interrupts |
+| 19 | DB queries in turbo_stream templates | Lock / deadlock under load |
+| 20 | Missing `turbo_frame_tag` for partial updates | Degraded UX, full page reloads |
 
 ## Detection Patterns
 
@@ -139,7 +137,7 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 
 Findings file MUST start with:
 
-`**Counts:** N findings (X Blocker, Y Warning, Z Suggestion); M notes`
+`**Counts:** N findings (X Blocker[s], Y Warning[s], Z Suggestion[s]); M notes` (singular when count == 1, plural otherwise — including 0)
 
 Empty state:
 
@@ -155,9 +153,9 @@ Always write an artifact, even for a clean pass. Never write review artifacts un
 
 ## Fix Priority
 
-1. **Blockers** (Laws 1, 2, 4, 6, 7, 10, 11, 12, 13, 14, 15, 16): Security, data integrity — Fix immediately
-2. **Warnings** (Laws 3, 18, 19, 20): Performance, maintainability — Fix before merge
-3. **Verification** (Law 21): Testing discipline — Required
+1. **Blockers** (Laws 1-16, 18-20): All Iron Law violations block merge
+2. **Verification** (Law 21): Testing discipline — Required
+3. **Surgical Changes** (Law 22): Out-of-scope edits flagged separately
 
 ## Additional Heuristics
 

@@ -143,7 +143,7 @@ What to do now:
 ```
 ## Review Brief: {Feature Name}
 
-**Summary**: {N} Blocker, {N} Warning, {N} Suggestion
+**Summary**: {N} Blocker[s], {N} Warning[s], {N} Suggestion[s]   <!-- singular when N == 1, plural otherwise -->
 
 **Blockers**:
 1. {description} ({file}:{line})

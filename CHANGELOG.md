@@ -12,18 +12,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Severity vocabulary normalized to title case across review,
-  triage, brief, work, full skill surfaces + all 12 reviewer agent
-  bodies + `lab/eval/output_checks.py` parsers + fixtures + tests +
+  triage, brief, work, full skill surfaces, all 11 `/rb:review`
+  reviewer agents (and `deep-bug-investigator` for `/rb:investigate`),
+  `lab/eval/output_checks.py` parsers, fixtures, tests, and
   contributor instructions (`.github/`, `.claude/`). Rule: title
-  case singular `Blocker | Warning | Suggestion` for per-finding
-  `Severity:` tags, `**Counts:**` prefix, Reviewer Coverage row
-  count, and At-a-Glance Severity column; title case plural
-  `Blockers | Warnings | Suggestions` for consolidated section
-  headers + Summary table. Verdict 4-set (`PASS | PASS WITH
-  WARNINGS | REQUIRES CHANGES | BLOCKED`) stays UPPERCASE. Drops
-  the prior 3-way UPPERCASE/lowercase/title-case split and the
-  `Critical | Warning | Info` worker-form vocabulary. Parsers use
-  strict equality (no case normalization); no backward compat.
+  case `Blocker / Warning / Suggestion` for per-finding `Severity:`
+  tags + At-a-Glance Severity column (always singular, one finding
+  per row); count-aware grammar for `**Counts:**` prefix +
+  Reviewer Coverage row count (singular when count == 1, plural
+  otherwise — `0 Blockers / 1 Warning / 0 Suggestions`); title
+  case plural `Blockers / Warnings / Suggestions` for consolidated
+  section headers + Summary table + triage multi-select labels
+  (`All Warnings`, `Skip all Suggestions`). Verdict 4-set
+  (`PASS / PASS WITH WARNINGS / REQUIRES CHANGES / BLOCKED`) stays
+  UPPERCASE. Drops the prior 3-way UPPERCASE/lowercase/title-case
+  split and the `Critical / Warning / Info` worker-form vocabulary.
+  Parsers use strict casing + alternation regex
+  (`Blockers?` / `Warnings?` / `Suggestions?`); no case
+  normalization, no backward compat.
 - `bin/resolve-base-ref` invocation unified across all 7 caller
   sites (`review`, `verify`, `document`, `plan`, `work` SKILL +
   `verification-runner` agent ×2): "Run script → 3 `KEY=value`
@@ -34,8 +40,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `<BASE_REF>` / `<MERGE_BASE>` literal-substitution markers
   instead of `$BASE_REF` / `$MERGE_BASE` shell vars (which would
   not persist across separate Bash tool calls).
-  `verify-profiles.md` retains `eval` — it runs as one
-  self-contained shell script.
+  `skills/verify/references/verification-profiles.md` retains
+  `eval` — it runs as one self-contained shell script.
+
+- `iron-law-judge`: Laws 3 (N+1), 18 (bare `rescue`), 19 (DB
+  queries in Turbo Streams), 20 (missing `turbo_frame_tag`)
+  promoted from Warning Violations to Blocker Violations. All
+  Iron Law violations are now Blockers — matches
+  `triage-patterns.md` § "Always Fix" doctrine. Fix Priority
+  section collapsed accordingly (Laws 1-16, 18-20 = Blockers; Law
+  21 = Verification; Law 22 = Surgical Changes).
 
 ### Removed
 

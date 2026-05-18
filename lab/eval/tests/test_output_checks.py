@@ -157,7 +157,7 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
 | testing-reviewer | artifact |
 """
         passed, reason = output_checks.has_review_reviewer_coverage(content)
@@ -171,7 +171,7 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | unknown-state | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | unknown-state | 0 Blockers / 0 Warnings / 0 Suggestions |
 """
         passed, reason = output_checks.has_review_reviewer_coverage(content)
         self.assertFalse(passed)
@@ -188,7 +188,7 @@ Use the maintained upstream path.
 """
         passed, reason = output_checks.has_review_reviewer_coverage(content)
         self.assertFalse(passed)
-        self.assertIn("Blocker / {n} Warning / {n} Suggestion", reason)
+        self.assertIn("Blocker[s] / {n} Warning[s] / {n} Suggestion[s]", reason)
 
     def test_reviewer_verdicts_rejects_non_canonical_verdict(self) -> None:
         content = """# Review: x
@@ -213,7 +213,7 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
 
 ## Reviewer Verdicts
 
@@ -234,7 +234,7 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings | Extra |
 |---|---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion | junk |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions | junk |
 """
         passed, reason = output_checks.has_review_reviewer_coverage(content)
         self.assertFalse(passed)
@@ -262,9 +262,9 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
-| testing-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
+| testing-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
 
 ## Reviewer Verdicts
 
@@ -286,7 +286,7 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
 
 ## Reviewer Verdicts
 
@@ -307,8 +307,8 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
-| testing-reviewer | artifact | 0 Blocker / 1 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
+| testing-reviewer | artifact | 0 Blockers / 1 Warning / 0 Suggestions |
 
 ## Reviewer Verdicts
 
@@ -356,7 +356,7 @@ Another instance:
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
 
 ## Reviewer Verdicts
 
@@ -384,8 +384,8 @@ Another instance:
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
-| security-analyzer | stub-no-output | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
+| security-analyzer | stub-no-output | 0 Blockers / 0 Warnings / 0 Suggestions |
 
 ## Reviewer Verdicts
 
@@ -407,7 +407,7 @@ Another instance:
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
 
 ## Reviewer Verdicts
 
@@ -444,8 +444,8 @@ Another instance:
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| testing-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| testing-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
 
 ## Reviewer Verdicts
 
@@ -578,7 +578,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
 
 ## Suggestions (1)
 
@@ -878,7 +878,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
 
 ## Reviewer Verdicts
 
@@ -908,12 +908,12 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| security-analyzer | stub-no-output | 1 Blocker / 0 Warning / 0 Suggestion |
+| security-analyzer | stub-no-output | 1 Blocker / 0 Warnings / 0 Suggestions |
 """
         passed, reason = output_checks.has_review_reviewer_coverage(content)
         self.assertFalse(passed)
         self.assertIn("stub-no-output", reason)
-        self.assertIn("0 Blocker / 0 Warning / 0 Suggestion", reason)
+        self.assertIn("0 Blockers / 0 Warnings / 0 Suggestions", reason)
 
     def test_reviewer_coverage_accepts_stub_no_output_with_all_zero_findings(self) -> None:
         content = """# Review: x
@@ -922,7 +922,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| security-analyzer | stub-no-output | 0 Blocker / 0 Warning / 0 Suggestion |
+| security-analyzer | stub-no-output | 0 Blockers / 0 Warnings / 0 Suggestions |
 """
         passed, _ = output_checks.has_review_reviewer_coverage(content)
         self.assertTrue(passed)
@@ -1026,7 +1026,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 1 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 1 Blocker / 0 Warnings / 0 Suggestions |
 
 ## At-a-Glance Finding Table
 
@@ -1047,8 +1047,8 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 1 Blocker / 0 Warning / 0 Suggestion |
-| testing-reviewer | artifact | 0 Blocker / 1 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 1 Blocker / 0 Warnings / 0 Suggestions |
+| testing-reviewer | artifact | 0 Blockers / 1 Warning / 0 Suggestions |
 
 ## At-a-Glance Finding Table
 
@@ -1071,7 +1071,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| security-analyzer | stub-no-output | 0 Blocker / 0 Warning / 0 Suggestion |
+| security-analyzer | stub-no-output | 0 Blockers / 0 Warnings / 0 Suggestions |
 
 ## At-a-Glance Finding Table
 
@@ -1094,7 +1094,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| security-analyzer | stub-no-output | 0 Blocker / 0 Warning / 0 Suggestion |
+| security-analyzer | stub-no-output | 0 Blockers / 0 Warnings / 0 Suggestions |
 
 ## At-a-Glance Finding Table
 
@@ -1117,8 +1117,8 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
-| security-analyzer | stub-no-output | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
+| security-analyzer | stub-no-output | 0 Blockers / 0 Warnings / 0 Suggestions |
 
 ## At-a-Glance Finding Table
 
@@ -1135,7 +1135,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
 """
         passed, _ = output_checks.has_review_coverage_excludes_preexisting(content)
         self.assertTrue(passed)
@@ -1150,7 +1150,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| security-analyzer | stub-no-output | 0 Blocker  /  0 Warning  /  0 Suggestion |
+| security-analyzer | stub-no-output | 0 Blockers / 0 Warnings / 0 Suggestions |
 """
         passed, _ = output_checks.has_review_reviewer_coverage(content)
         self.assertTrue(passed)
@@ -1213,7 +1213,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 0 Suggestions |
 
 ## At-a-Glance Finding Table
 
