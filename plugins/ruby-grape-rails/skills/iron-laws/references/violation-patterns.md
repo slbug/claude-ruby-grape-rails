@@ -4,12 +4,13 @@ Detailed patterns for detecting Iron Law violations.
 
 ## Blocker Violations (Must Fix)
 
-All Iron Law violations are Blockers per D1 doctrine. Subsections
-below cover grep-detectable patterns (Laws 1-4, 6, 7, 10-16, 18-20)
-by detection-pattern, not Law number. Laws 5, 8, 9, 17 require
-manual review — see `iron-law-judge.md` Blocker Violations table.
-Laws 21 + 22 (discipline rules) are equally Blockers — see
-`fix-priority.md`.
+All Iron Law violations are Blockers per
+`plugins/ruby-grape-rails/skills/triage/references/triage-patterns.md`
+§ "Always Fix". Subsections below cover grep-detectable patterns
+(Laws 1-4, 6, 7, 10-16, 18-20) by detection pattern, not Law number.
+Laws 5, 8, 9, 17 require manual review — see `iron-law-judge.md`
+Blocker Violations table. Laws 21 + 22 (discipline rules) are
+equally Blockers — see `fix-priority.md`.
 
 ### Law 1: Float for Money
 

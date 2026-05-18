@@ -43,8 +43,9 @@ Exception
 
 **Iron Law 18**: Never `rescue Exception` — catches `SystemExit` /
 `SignalException`. Bare `rescue` defaults to `StandardError` and is
-not a Law 18 violation; `rescue StandardError` and specific
-subclasses are equivalent.
+not a Law 18 violation. `rescue StandardError` (whole subtree) and
+`rescue SpecificError` (narrower) are both acceptable under Law 18;
+choose narrowest class that matches the failure mode.
 
 ## Custom Exceptions
 

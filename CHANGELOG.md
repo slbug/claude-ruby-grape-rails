@@ -50,12 +50,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `iron-law-judge`: Laws 3 (N+1), 18 (`rescue Exception`), 19 (DB
   queries in Turbo Streams), 20 (missing `turbo_frame_tag`)
   promoted from Warning Violations to Blocker Violations. All
-  Iron Law violations (Laws 1-20) are now Blockers — matches
-  `triage-patterns.md` § "Always Fix" doctrine. Fix Priority
-  section collapsed accordingly (Laws 1-20 = Blockers; Law 21 =
-  Verification gate; Law 22 = Surgical Changes gate). Blocker
-  pattern table extended to cover Laws 5, 8, 9, 17 (manual review
-  rows) so the judge has guidance for non-grep-detectable laws.
+  Iron Law violations are now Blockers — matches
+  `triage-patterns.md` § "Always Fix". Fix Priority section
+  collapsed accordingly: all 22 Iron Law violations block merge
+  (Laws 1-20 = code-pattern violation rules; Law 21 = verification
+  discipline; Law 22 = surgical-change discipline). Blocker pattern
+  table extended to cover Laws 5, 8, 9, 17 (manual review rows) so
+  the judge has guidance for non-grep-detectable laws.
 
 ### Removed
 
@@ -100,8 +101,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (detached bare-rescue style from Law 18 attribution).
 - `skills/iron-laws/references/fix-priority.md` + cross-ref label
   in `skills/iron-laws/SKILL.md` + `agents/iron-law-judge.md` Fix
-  Priority section rewritten to match D1 doctrine: all 22 Iron Law
-  violations are Blockers. Three rule groups: Laws 1-20
+  Priority section rewritten: all 22 Iron Law violations are
+  Blockers per `triage-patterns.md` § "Always Fix". Three rule
+  groups: Laws 1-20
   (code-pattern violation rules), Law 21 (verification discipline
   — "should work" claims without test/lint evidence block merge;
   failed tests/lint when run are themselves separate Blockers),
@@ -110,13 +112,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `skills/iron-laws/references/violation-patterns.md`: heading
   "## Critical Violations (Must Fix)" renamed to
   "## Blocker Violations (Must Fix)". Lead prose clarifies
-  subsections cover Laws 1-20 (code-pattern violation rules) by Law
-  number; Laws 21 + 22 (discipline rules) equally Blockers per
-  `fix-priority.md`.
+  subsections cover grep-detectable patterns (Laws 1-4, 6, 7, 10-16,
+  18-20); Laws 5, 8, 9, 17 require manual review (see
+  `iron-law-judge.md` Blocker table); Laws 21 + 22 (discipline rules)
+  equally Blockers per `fix-priority.md`.
 - `references/iron-laws.yml`: schema comment for `severity:` field
   clarified — `critical | high | medium` are intra-Blocker priority
   hints for fix ordering, NOT severity-bucket values. Every Iron
-  Law violation is a Blocker per D1.
+  Law violation is a Blocker per `triage-patterns.md` § "Always Fix".
 - `skills/full/SKILL.md:72` and `triage/SKILL.md` grammar agreement
   fixed to plural `Blockers`.
 - `output_checks.py` count-form validator paired with 4 new
