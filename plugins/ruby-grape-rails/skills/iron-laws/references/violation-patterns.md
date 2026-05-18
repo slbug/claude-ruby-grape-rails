@@ -5,8 +5,8 @@ Detailed patterns for detecting Iron Law violations.
 ## Blocker Violations (Must Fix)
 
 All Iron Law violations are Blockers per D1 doctrine. Subsections
-below cover Laws 1-20 (code-pattern violation rules) organized by
-Law number, not severity. Laws 21 (verification discipline) + 22
+below cover Laws 1-20 (code-pattern violation rules) by detection
+pattern, not Law number. Laws 21 (verification discipline) + 22
 (surgical-change discipline) are equally Blockers — see
 `fix-priority.md`.
 
@@ -169,7 +169,7 @@ end
 @users.each { |u| puts u.orders.count }
 ```
 
-### Law 18: Rescue Exception
+### Law 18: No Rescue Exception
 
 **Pattern**: `rescue Exception` — catches `SignalException` / `SystemExit`,
 hangs processes on interrupt, hides crashes. Bare `rescue` already

@@ -59,5 +59,8 @@ Document exceptions with comments:
 
 - `update_columns` for background migrations
 - `raw()` for trusted admin templates
-- `rescue Exception` in top-level error handlers
 - `eval` in controlled DSL contexts
+
+`rescue Exception` has NO valid exception per current Law 18 —
+top-level handlers must rescue specific subclasses or use
+`SignalException`/`SystemExit` handlers from the language explicitly.

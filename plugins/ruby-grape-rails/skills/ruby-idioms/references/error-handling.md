@@ -41,7 +41,7 @@ Exception
 └── SystemExit
 ```
 
-**Iron Law**: Never rescue `Exception` — always rescue `StandardError` or specific subclasses.
+**Iron Law 18**: Never `rescue Exception` — catches `SystemExit` / `SignalException`. Bare `rescue` defaults to `StandardError` and is safe; `rescue StandardError` and specific subclasses are also safe.
 
 ## Custom Exceptions
 
@@ -235,10 +235,15 @@ rescue Exception => e  # WRONG
 # DO: Rescue StandardError
 rescue StandardError => e  # Correct
 
-# DON'T: Empty rescue
+# STYLE: Bare `rescue` is technically safe (defaults to `StandardError`)
+# but explicit naming is preferred for clarity. Silent swallow is the
+# real danger — always handle or re-raise.
 begin
   risky_operation
-rescue  # Silent failure - dangerous!
+rescue => e  # Bare rescue: catches StandardError subtree, safe.
+  # Silent swallow is the bug, not the bare form. Always handle:
+  Rails.logger.error "Operation failed: #{e.message}"
+  raise
 end
 
 # DO: Always handle or re-raise

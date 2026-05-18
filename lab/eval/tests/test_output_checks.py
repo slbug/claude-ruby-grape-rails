@@ -1552,6 +1552,56 @@ Some prose.
         self.assertIn("Severity", reason)
         self.assertIn("CRITICAL", reason)
 
+    def test_summary_excludes_preexisting_rejects_uppercase_blocker(self) -> None:
+        # No backward compat: retired UPPERCASE vocabulary (`BLOCKER` /
+        # `WARNING` / `SUGGESTION`) MUST be rejected by the strict
+        # title-case parser. Regression guard against re-introducing
+        # case normalization.
+        content = """# Review: x
+
+## Summary
+
+| Severity | Count |
+|----------|-------|
+| Blockers | 0 |
+| Warnings | 0 |
+| Suggestions | 0 |
+
+**Verdict**: PASS
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Issue | BLOCKER | HIGH | r | f.rb:1 | Yes |
+"""
+        passed, reason = output_checks.has_review_summary_excludes_preexisting(content)
+        self.assertFalse(passed)
+        self.assertIn("Severity", reason)
+        self.assertIn("BLOCKER", reason)
+
+    def test_coverage_excludes_preexisting_rejects_uppercase_severity(self) -> None:
+        # Coverage-excludes-preexisting cross-check uses the same strict
+        # title-case severity enum on At-a-Glance rows. UPPERCASE rejected.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 1 Blocker / 0 Warnings / 0 Suggestions |
+
+## At-a-Glance Finding Table
+
+| # | Finding | Severity | Confidence | Reviewer | File | New? |
+|---|---------|----------|------------|----------|------|------|
+| 1 | Issue | WARNING | HIGH | ruby-reviewer | f.rb:1 | Yes |
+"""
+        passed, reason = output_checks.has_review_coverage_excludes_preexisting(content)
+        self.assertFalse(passed)
+        self.assertIn("Severity", reason)
+        self.assertIn("WARNING", reason)
+
     def test_empty_findings_pass_artifact_passes_validators(self) -> None:
         # Per `review-playbook.md` line 187-188: PASS reviews with
         # zero findings MUST still write the artifact. Validators
