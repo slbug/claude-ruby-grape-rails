@@ -27,7 +27,7 @@ Do NOT paste large doc content into thinking.
    enumerates fields that look like doc drift but are documented repo
    policy (e.g., `omitClaudeMd` on plugin agents, `rb:<slug>` colon
    names, plugin-scope `paths:`). Such items classify INFO, not
-   Warning — repo policy is the authoritative override.
+   WARNING — repo policy is the authoritative override.
 6. Substitution-variable findings (e.g., `${CLAUDE_PLUGIN_ROOT}`,
    `${CLAUDE_PLUGIN_DATA}`, `${CLAUDE_PROJECT_DIR}` in SKILL.md / agent
    bodies / hook commands) REQUIRE cross-checking BOTH `skills.md` § "Available string substitutions"
@@ -37,7 +37,7 @@ Do NOT paste large doc content into thinking.
    `plugins-reference.md` covers plugin-scope path variables and
    explicitly states they substitute in skill content, agent content,
    hook commands, monitor commands, MCP/LSP configs. Reading only one
-   page produces false-positive Warnings.
+   page produces false-positive WARNINGS.
 7. Marketplace `author` findings require reading the authoritative
    schema in `plugins-reference.md` § "Plugin manifest schema", NOT
    the marketplace quick-summary table. `plugin-marketplaces.md`
@@ -62,8 +62,8 @@ Return summary (≤ 300 words) classifying findings:
 
 | Level | Meaning |
 |---|---|
-| `Blocker` | current plugin shape invalid per docs |
-| `Warning` | compatibility risk |
+| `BLOCKER` | current plugin shape invalid per docs |
+| `WARNING` | compatibility risk |
 | `INFO` | new doc-described capability |
 | `PASS` | no issues |
 
@@ -79,7 +79,7 @@ Each finding answers:
 1. Do not paste large cached docs or full plugin files into prompts.
 2. Cached docs beat stale local assumptions.
 3. `claude plugin validate` is the deterministic baseline.
-4. `Blocker` means docs say current plugin shape is invalid now.
+4. `BLOCKER` means docs say current plugin shape is invalid now.
 5. New documented features are `INFO` until the repo adopts them.
 
 ## Stop Rule

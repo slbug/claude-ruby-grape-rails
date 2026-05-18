@@ -337,10 +337,10 @@ NOT flag the fallback chain as over-engineered.
   unless agent has documented contributor-only privilege need
 - Shipped skill bodies (`plugins/ruby-grape-rails/.../SKILL.md`)
   referencing contributor doctrine paths (`.claude/rules/*-development.md`,
-  `.github/instructions/*.instructions.md`) — flag as Blocker
-- Agent frontmatter declaring `Agent` in `tools:` list — flag as Blocker
+  `.github/instructions/*.instructions.md`) — flag as BLOCKER
+- Agent frontmatter declaring `Agent` in `tools:` list — flag as BLOCKER
 - Agent body containing `Agent(...)` or `subagent_type:` calls — flag as
-  Blocker
+  BLOCKER
 - Agent or skill bodies that restate tool-batching discipline (preferred
   batched git diff / grep / bundle info, exclude noise via pathspec,
   prefer Read/Grep/Glob over `cat`/`find -exec`) — preference injection
@@ -397,9 +397,9 @@ NOT flag the fallback chain as over-engineered.
   one consolidated verdict per artifact.
 - `run_in_background: true` on any `Agent(...)` call in shipped
   skill bodies, fanout templates, or example snippets — flag as
-  Blocker. Plugin agents dispatch foreground only.
+  BLOCKER. Plugin agents dispatch foreground only.
 - Raw `mv`, `cp`, `jq -i`, `rm`, or improvised shell against any
   `RUN-CURRENT.json` path or per-agent artifact path in shipped skill
-  bodies, hook scripts, or examples — flag as Blocker. All manifest
+  bodies, hook scripts, or examples — flag as BLOCKER. All manifest
   mutations and stale-stub rotations MUST go through
   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update`.
