@@ -146,19 +146,22 @@ HEDGE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 SEVERITY_CRITICAL_PATTERN = re.compile(
-    # Structured severity labels only — avoid matching generic uses like
-    # "this is critical for correctness". Matches:
-    #   - **Severity**: Critical    (markdown bold label)
-    #   - Severity: Critical         (plain label)
-    #   - severity=critical          (kv form)
-    #   - ### 🔴 CRITICAL            (markdown heading w/ or w/o emoji)
-    #   - ## Critical Issue          (markdown heading starting with Critical)
-    #   - **CRITICAL**               (bold standalone severity word)
+    # Structured top-severity labels only — avoid matching generic uses
+    # like "this is critical for correctness". Matches either the legacy
+    # `Critical` form or the current shipped vocabulary `Blocker`
+    # (post severity-vocab migration). Both indicate false positives on
+    # clean diffs. Matches:
+    #   - **Severity**: Critical / Blocker    (markdown bold label)
+    #   - Severity: Critical / Blocker         (plain label)
+    #   - severity=critical / severity=blocker (kv form)
+    #   - ### 🔴 CRITICAL / BLOCKER            (markdown heading)
+    #   - ## Critical Issue / ## Blocker Issue (markdown heading)
+    #   - **CRITICAL** / **BLOCKER**           (bold standalone)
     r"(?:"
-    r"\bseverity[\s:=]*critical"  # label: severity: critical / severity=critical
-    r"|\*\*\s*severity\s*\*\*\s*[:=]\s*critical"  # bold-label: **Severity**: critical
-    "|^#+\\s*\\*?\\*?\\s*(?:\U0001f534\\s*)?critical\\b"  # heading: ## Critical / ### 🔴 critical
-    r"|\*\*\s*critical\s*\*\*"  # bold standalone: **Critical**
+    r"\bseverity[\s:=]*(?:critical|blocker)"
+    r"|\*\*\s*severity\s*\*\*\s*[:=]\s*(?:critical|blocker)"
+    "|^#+\\s*\\*?\\*?\\s*(?:\U0001f534\\s*)?(?:critical|blocker)\\b"
+    r"|\*\*\s*(?:critical|blocker)\s*\*\*"
     r")",
     re.IGNORECASE | re.MULTILINE,
 )

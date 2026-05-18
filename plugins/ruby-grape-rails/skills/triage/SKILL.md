@@ -222,10 +222,10 @@ prompt, bucket shortcuts first then individual items:
 
 | Option label | Effect |
 |---|---|
-| `All Warnings` | Select every NEW Warning finding. Leave Suggestions selections untouched. |
-| `All Suggestions` | Select every NEW Suggestion finding. Leave Warnings selections untouched. |
-| `Skip all Warnings` | Defer every NEW Warning finding. Leave Suggestions selections untouched. |
-| `Skip all Suggestions` | Defer every NEW Suggestion finding. Leave Warnings selections untouched. |
+| `All Warnings` | Select every NEW Warning finding. Leave Suggestion selections untouched. |
+| `All Suggestions` | Select every NEW Suggestion finding. Leave Warning selections untouched. |
+| `Skip all Warnings` | Defer every NEW Warning finding. Leave Suggestion selections untouched. |
+| `Skip all Suggestions` | Defer every NEW Suggestion finding. Leave Warning selections untouched. |
 | `Group by file` | Re-render the option list grouped by file. Do NOT change selection state. |
 | `W<n>` / `S<n>` (one row per finding) | Select the individual NEW Warning / Suggestion. Description: file, line, one-line reason. |
 
