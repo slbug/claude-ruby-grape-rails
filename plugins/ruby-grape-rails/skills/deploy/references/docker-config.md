@@ -259,7 +259,7 @@ end
 
 # app/controllers/health_controller.rb
 class HealthController < ActionController::Base
-  rescue_from(Exception) { render_down }
+  rescue_from(StandardError) { render_down }
 
   def index
     render json: { status: "ok", version: Rails.version }

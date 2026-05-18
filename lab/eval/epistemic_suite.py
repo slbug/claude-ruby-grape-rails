@@ -154,17 +154,19 @@ SEVERITY_CRITICAL_PATTERN = re.compile(
     #   - **Severity**: Critical / Blocker        (bold per-finding label)
     #   - Severity: Critical / Blocker             (plain per-finding label)
     #   - severity=critical / severity=blocker     (kv form)
-    #   - ## Blockers (3) / ### 🔴 CRITICAL (5)    (heading + positive count)
+    #   - ## Blockers (3) / ## Critical Bugs (1)   (heading + positive count;
+    #     up to 40 chars of prose allowed between severity term and `(N)`)
+    #   - **Blockers**: 3                          (bold summary + positive int)
     # Excludes (NOT a false-positive signal):
     #   - `## Blockers (0)` / `## Blockers (none)` — canonical empty section
-    #   - `## Blockers` alone — ambiguous (empty section header common in
-    #     template-driven output without count)
+    #   - `## Blockers` alone — ambiguous empty heading
     #   - `**Blockers**: 0` / `**Blockers**: none` — explicit-zero label
     #   - bold standalone `**Blocker**` / `**Critical**` (no severity tag)
     r"(?:"
     r"\bseverity[\s:=]*(?:critical|blockers?)"
     r"|\*\*\s*severity\s*\*\*\s*[:=]\s*(?:critical|blockers?)"
-    "|^#+\\s*\\*?\\*?\\s*(?:\U0001f534\\s*)?(?:critical|blockers?)\\b\\s*\\(\\s*(?:[1-9]\\d*)\\s*\\)"
+    "|^#+\\s*\\*?\\*?\\s*(?:\U0001f534\\s*)?(?:critical|blockers?)\\b[^\\n(]{0,40}\\(\\s*[1-9]\\d*\\s*\\)"
+    r"|\*\*\s*(?:critical|blockers?)\s*\*\*\s*[:=]\s*[1-9]\d*\b"
     r")",
     re.IGNORECASE | re.MULTILINE,
 )

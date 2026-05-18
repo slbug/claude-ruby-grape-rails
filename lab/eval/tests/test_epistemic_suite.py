@@ -143,9 +143,21 @@ class TestFalsePositiveRate(unittest.TestCase):
         self.assertEqual(es.score_false_positive_rate(text), 3.0)
 
     def test_counts_positive_count_section_headers(self) -> None:
-        text = "## Blockers (3)\n## Critical Bugs (1)\n### 🔴 Critical (2)\n"
-        # Only "## Blockers (3)" and "### 🔴 Critical (2)" match;
-        # "## Critical Bugs (1)" has prose between severity and count.
+        # Heading branch allows up to 40 chars of prose between severity
+        # term and `(N)` so common forms like `## Critical Bugs (1)` and
+        # `## Blocker Findings (2)` also count.
+        text = (
+            "## Blockers (3)\n"
+            "## Critical Bugs (1)\n"
+            "## Blocker Findings (2)\n"
+            "### 🔴 Critical (2)\n"
+        )
+        self.assertEqual(es.score_false_positive_rate(text), 4.0)
+
+    def test_counts_bold_summary_with_positive_count(self) -> None:
+        # `**Blockers**: 3` style summary — positive integer after bold
+        # label is a structured assignment.
+        text = "**Blockers**: 3\n**Critical**: 1\n"
         self.assertEqual(es.score_false_positive_rate(text), 2.0)
 
     def test_excludes_zero_count_section_header(self) -> None:
