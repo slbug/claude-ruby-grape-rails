@@ -251,22 +251,20 @@ Per § "Worker Severity Mapping":
 - worker `Warning` introduced by this diff → counted Warning
 - worker `Suggestion` introduced by this diff → counted Suggestion
 
-Casing rule (title case for severity; UPPERCASE only for verdict
-4-set). Count-aware grammar enforced by `output_checks.py`: singular
-form ONLY when count == 1; plural form for count != 1 (including 0).
+Severity casing per surface. Count-aware = singular when count == 1;
+plural otherwise (including 0).
 
 | Surface | Form | Example |
 |---|---|---|
-| Per-finding `Severity:` tag (one finding per line) | always singular | `Severity: Blocker` |
-| At-a-Glance Severity column (one finding per row) | always singular | `\| 1 \| {title} \| Warning \| HIGH \| {agent} \| {file}:{line} \| Yes \|` |
+| Per-finding `Severity:` tag | singular | `Severity: Blocker` |
 | Counts mandatory prefix | count-aware | `**Counts:** 5 findings (1 Blocker, 3 Warnings, 1 Suggestion); 2 notes` |
-| Reviewer Coverage row count | count-aware, parser-locked | `0 Blockers / 1 Warning / 0 Suggestions` |
-| Summary table category column | always plural | `\| Blockers \| 0 \|` / `\| Warnings \| 1 \|` |
-| Consolidated section headers | always plural | `## Blockers (3)` / `## Warnings (1)` / `## Suggestions (0)` |
-| Verdict 4-set | UPPERCASE strict | `PASS \| PASS WITH WARNINGS \| REQUIRES CHANGES \| BLOCKED` |
+| Reviewer Coverage row count | count-aware | `0 Blockers / 1 Warning / 0 Suggestions` |
+| At-a-Glance Severity column | singular | `\| 1 \| {title} \| Warning \| HIGH \| {agent} \| {file}:{line} \| Yes \|` |
+| Summary table category column | plural | `\| Blockers \| 0 \|` / `\| Warnings \| 1 \|` |
+| Section headers | plural | `## Blockers (3)` / `## Warnings (1)` / `## Suggestions (0)` |
+| Verdict 4-set | UPPERCASE | `PASS \| PASS WITH WARNINGS \| REQUIRES CHANGES \| BLOCKED` |
 
-Invalid forms rejected by parser:
-`1 Blockers` (singular required for 1), `0 Blocker` (plural required for 0).
+Reject `1 Blockers` and `0 Blocker` — count-form must agree.
 
 ### STEP 4: Compute consolidated verdict deterministically
 

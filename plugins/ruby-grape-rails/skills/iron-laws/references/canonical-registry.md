@@ -1,7 +1,7 @@
 # Iron Laws Canonical Registry
 
-**Version**: 1.2.0
-**Last Updated**: 2026-05-04
+**Version**: 1.2.1
+**Last Updated**: 2026-05-18
 **Total Laws**: 22
 
 <!-- This file is a generated projection of iron-laws.yml — DO NOT EDIT DIRECTLY -->
@@ -70,8 +70,8 @@ For programmatic use, see [iron-laws.yml](../../../references/iron-laws.yml).
 17. **Supervise Background Processes** — SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers in production
    *Unsupervised processes crash silently and don't restart*
 
-18. **Rescue StandardError** — DON'T RESCUE Exception — only rescue StandardError or specific classes
-   *Rescuing Exception catches system signals (SIGTERM, etc.) and SyntaxError*
+18. **No Rescue Exception** — DON'T `rescue Exception` — catches `SystemExit` / `SignalException`. Bare `rescue` defaults to `StandardError` and is safe.
+   *`rescue Exception` swallows SIGTERM/SIGINT/exits; bare `rescue` and `rescue StandardError` are equivalent (StandardError subtree, no signals).*
 
 ### Hotwire/Turbo (2 laws)
 

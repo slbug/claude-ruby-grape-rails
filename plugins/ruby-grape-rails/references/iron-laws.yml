@@ -20,8 +20,8 @@
 #   detector_id: which programmatic detector checks this (null if behavioral only)
 #   reference_files: markdown files with detailed examples
 
-version: "1.2.0"
-last_updated: "2026-05-04"
+version: "1.2.1"
+last_updated: "2026-05-18"
 total_laws: 22
 
 categories:
@@ -280,14 +280,14 @@ laws:
 
   - id: 18
     category: ruby
-    title: "Rescue StandardError"
-    rule: "DON'T RESCUE Exception — only rescue StandardError or specific classes"
-    rationale: "Rescuing Exception catches system signals (SIGTERM, etc.) and SyntaxError"
+    title: "No Rescue Exception"
+    rule: "DON'T `rescue Exception` — catches `SystemExit` / `SignalException`. Bare `rescue` defaults to `StandardError` and is safe."
+    rationale: "`rescue Exception` swallows SIGTERM/SIGINT/exits; bare `rescue` and `rescue StandardError` are equivalent (StandardError subtree, no signals)."
     severity: high
     applies_to: ["*.rb"]
-    summary_text: "Only rescue StandardError, never Exception"
-    init_text: "DON'T RESCUE Exception — only rescue StandardError"
-    subagent_text: "Iron Law 18: DON'T RESCUE Exception — only rescue StandardError or specific classes"
+    summary_text: "Never `rescue Exception`; bare `rescue` is safe (defaults to StandardError)"
+    init_text: "DON'T `rescue Exception` — bare `rescue` defaults to StandardError and is safe"
+    subagent_text: "Iron Law 18: DON'T `rescue Exception` — bare `rescue` defaults to StandardError and is safe; explicit class naming is style preference, not Law 18"
     detector_id: null
     reference_files: ["skills/ruby-idioms/references/error-handling.md"]
 

@@ -79,21 +79,25 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `SessionStart` + `SubagentStart` via `inject-rules.sh` with its
   reference path bare on the next line — no need to restate or link
   from skill bodies.
-- Law 18 description corrected from "bare `rescue`" to
-  "`rescue Exception`" across all surfaces:
-  `agents/iron-law-judge.md` (Blocker table + Detection Patterns),
-  `skills/iron-laws/references/violation-patterns.md` (Law 18
-  section + Detection Patterns), `skills/triage/SKILL.md`,
-  `skills/triage/references/triage-patterns.md`,
-  `skills/intro/references/tutorial-content.md`,
-  `skills/plan/SKILL.md` (no-bare-rescue checklist clarified as
-  style preference vs Law 18 technical rule),
-  `skills/review/references/review-playbook.md` (Ruby Files
-  checklist same clarification + `conventions.md` Warnings casing),
-  `skills/ruby-idioms/references/method-chaining.md` (detached
-  bare-rescue style from Law 18 attribution). Bare `rescue`
-  defaults to `StandardError` and is safe; only the explicit
-  `Exception` form swallows `SignalException` / `SystemExit`.
+- Law 18 canonical rule text rewritten in `iron-laws.yml` (version
+  bumped 1.2.0 → 1.2.1; last_updated 2026-05-18). Title: "Rescue
+  StandardError" → "No Rescue Exception". Rule: "DON'T `rescue
+  Exception` — catches `SystemExit` / `SignalException`. Bare
+  `rescue` defaults to `StandardError` and is safe." Previous canon
+  ("only rescue StandardError or specific classes") was ambiguous —
+  could be misread as requiring the literal word `StandardError`.
+  Regenerated `inject-rules.sh`, `canonical-registry.md`,
+  `tutorial-content.md`, `iron-law-judge.md` IRON_LAWS_JUDGE marker
+  block, `iron-laws/SKILL.md` to match. Corresponding cross-doc
+  alignment: `agents/iron-law-judge.md` (Blocker + Detection
+  pattern tables), `skills/iron-laws/references/violation-patterns.md`,
+  `skills/triage/SKILL.md`, `skills/triage/references/triage-patterns.md`,
+  `skills/intro/references/tutorial-content.md`, `skills/plan/SKILL.md`
+  (no-bare-rescue checklist now clarifies style preference vs Law 18),
+  `skills/review/references/review-playbook.md` (same clarification,
+  with `conventions.md` casing alignment),
+  `skills/ruby-idioms/references/method-chaining.md`
+  (detached bare-rescue style from Law 18 attribution).
 - `skills/iron-laws/references/fix-priority.md` + cross-ref label
   in `skills/iron-laws/SKILL.md` + `agents/iron-law-judge.md` Fix
   Priority section rewritten to match D1 doctrine: all 22 Iron Law
