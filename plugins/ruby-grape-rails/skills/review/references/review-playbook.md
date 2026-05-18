@@ -425,14 +425,20 @@ Write the synthesized review to the path read via
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 3 Blockers / 0 Warnings / 0 Suggestions |
-| security-analyzer | stub-replaced | 0 Blockers / 1 Warning / 0 Suggestions |
-| testing-reviewer | stub-no-output | 0 Blockers / 0 Warnings / 0 Suggestions |
+| {agent-slug} | {recovery-state} | {n} Blockers / {n} Warnings / {n} Suggestions |
 
-Recovery State is one of `artifact | stub-replaced |
-recovered-from-return | stub-no-output`. Findings column uses title
-case with count-aware grammar: each bucket count uses singular form
-only when its value is exactly 1, plural otherwise (including 0).
+One row per reviewer from the manifest's `agents` map. Recovery
+State is one of `artifact | stub-replaced | recovered-from-return |
+stub-no-output`. Findings column uses title case with count-aware
+grammar: each bucket count uses singular form only when its value is
+exactly 1, plural otherwise (including 0). Reject `1 Blockers` and
+`0 Blocker` — count-form must agree.
+
+Example rows (not copy targets, for shape reference only):
+`| ruby-reviewer | artifact | 3 Blockers / 0 Warnings / 0 Suggestions |`,
+`| security-analyzer | stub-replaced | 0 Blockers / 1 Warning / 0 Suggestions |`,
+`| testing-reviewer | stub-no-output | 0 Blockers / 0 Warnings / 0 Suggestions |`.
+
 Counts NEW findings only
 (diff-introduced). Pre-existing findings attributed to the
 reviewer appear in `## Pre-existing Issues` and the at-a-glance

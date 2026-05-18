@@ -42,8 +42,8 @@ on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`; handles custom
 remotes, non-standard default branches, fetches before resolving).
 Use emitted values as substitutions: run
 `git merge-base HEAD BASE_REF_VALUE` and capture the result.
-Run `git diff --name-only --diff-filter=A <merge-base> HEAD -- '*.rb'` to
-list new Ruby files added on the current branch.
+Run `git diff --name-only --diff-filter=A MERGE_BASE_VALUE HEAD -- '*.rb'`
+to list new Ruby files added on the current branch.
 
 If NO new `.rb` files were added (only modifications), skip the full
 audit and report: "No new modules — documentation coverage unchanged."

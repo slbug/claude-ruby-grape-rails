@@ -174,24 +174,28 @@ end
 
 ### Law 18: No Rescue Exception
 
-**Pattern**: `rescue Exception` or `rescue ::Exception` — both rescue
-the top-level `Exception` class, catching `SignalException` /
-`SystemExit`, hanging processes on interrupt, hiding crashes. Bare
-`rescue` defaults to `StandardError` and is not a Law 18 violation
-(silent swallow without re-raise is still a bug — orthogonal to Law
-18).
+**Pattern**: `Exception` (or `::Exception`) appearing as a rescued
+class in any `begin/rescue` clause or Rails `rescue_from`, including
+multi-class lists. All forms catch `SignalException` / `SystemExit`,
+hanging processes on interrupt and hiding crashes. Bare `rescue`
+defaults to `StandardError` and is not a Law 18 violation. Silent
+swallow without re-raise is a separate bug, orthogonal to Law 18.
 
 ```ruby
-rescue Exception => e  # catches SIGINT, SystemExit — DANGEROUS
+rescue Exception => e             # catches SIGINT, SystemExit — DANGEROUS
+rescue ::Exception => e           # same — DANGEROUS
+rescue IOError, Exception => e    # multi-class list — DANGEROUS
+rescue_from Exception              # Rails controller form — DANGEROUS
+rescue_from ActiveRecord::RecordNotFound, Exception, with: :foo  # DANGEROUS
 ```
 
 **Fix**:
 
 ```ruby
-rescue => e  # defaults to StandardError — not a Law 18 violation
-# or
+rescue => e                # defaults to StandardError — not a Law 18 violation
 rescue SomeSpecificError => e
-# Either form handles or re-raises; silent swallow is a separate bug.
+rescue_from SomeSpecificError, with: :foo
+# Either form handles or re-raises. Silent swallow is a separate bug.
 ```
 
 ### Law 19: DB Queries in Turbo Streams
@@ -277,12 +281,14 @@ raw\(
 
 ### Law 18
 
-Covers `rescue Exception`, `rescue ::Exception`,
-`rescue_from(Exception)`, `rescue_from ::Exception`. Bare `rescue`
-defaults to `StandardError` and is not a Law 18 violation.
+Matches `Exception` as a rescued class anywhere in the clause —
+single class, multi-class list, or Rails `rescue_from(Exception)`.
+Bare `rescue` defaults to `StandardError` and does NOT match.
+`MyException` / `Exception::Foo` / `MyApp::Exception` may surface as
+false positives — confirm by reading the hit.
 
 ```regex
-(?:rescue\s+|rescue_from\s*\(?\s*):{0,2}Exception\b
+\b(?:rescue|rescue_from)\b[^#\n]*?(?<![A-Za-z_]):{0,2}Exception\b
 ```
 
 ### Law 19 (path: `app/views/*.turbo_stream.*`)

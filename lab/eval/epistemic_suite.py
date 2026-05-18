@@ -157,16 +157,20 @@ SEVERITY_CRITICAL_PATTERN = re.compile(
     #   - ## Blockers (3) / ## Critical Bugs (1)   (heading + positive count;
     #     up to 40 chars of prose allowed between severity term and `(N)`)
     #   - **Blockers**: 3                          (bold summary + positive int)
+    #   - **Counts:** N findings (1 Blocker, ...)  (mandatory reviewer
+    #     Counts prefix with a positive Blocker count)
     # Excludes (NOT a false-positive signal):
     #   - `## Blockers (0)` / `## Blockers (none)` — canonical empty section
     #   - `## Blockers` alone — ambiguous empty heading
     #   - `**Blockers**: 0` / `**Blockers**: none` — explicit-zero label
     #   - bold standalone `**Blocker**` / `**Critical**` (no severity tag)
+    #   - `(0 Blockers, ...)` inside Counts prefix
     r"(?:"
     r"\bseverity[\s:=]*(?:critical|blockers?)"
     r"|\*\*\s*severity\s*\*\*\s*[:=]\s*(?:critical|blockers?)"
     "|^#+\\s*\\*?\\*?\\s*(?:\U0001f534\\s*)?(?:critical|blockers?)\\b[^\\n(]{0,40}\\(\\s*[1-9]\\d*\\s*\\)"
     r"|\*\*\s*(?:critical|blockers?)\s*\*\*\s*[:=]\s*[1-9]\d*\b"
+    r"|\(\s*[1-9]\d*\s+Blockers?\b"
     r")",
     re.IGNORECASE | re.MULTILINE,
 )

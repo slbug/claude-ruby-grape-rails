@@ -188,6 +188,24 @@ class TestFalsePositiveRate(unittest.TestCase):
         text = "This is critical for correctness. The fix is critical.\n"
         self.assertEqual(es.score_false_positive_rate(text), 0.0)
 
+    def test_counts_prefix_positive_blocker_count(self) -> None:
+        # Reviewer mandatory Counts prefix with a positive Blocker count.
+        text = "**Counts:** 3 findings (1 Blocker, 2 Warnings, 0 Suggestions) — 1 note\n"
+        self.assertEqual(es.score_false_positive_rate(text), 1.0)
+
+    def test_counts_prefix_zero_blocker_excluded(self) -> None:
+        # Zero blockers inside the Counts prefix is the clean-diff case.
+        text = "**Counts:** 1 finding (0 Blockers, 1 Warning, 0 Suggestions) — 0 notes\n"
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
+    def test_counts_prefix_multi_blocker_singular_or_plural(self) -> None:
+        # Both `1 Blocker` (singular) and `5 Blockers` (plural) score.
+        text = (
+            "**Counts:** 1 finding (1 Blocker, 0 Warnings, 0 Suggestions) — 0 notes\n"
+            "**Counts:** 5 findings (5 Blockers, 0 Warnings, 0 Suggestions) — 0 notes\n"
+        )
+        self.assertEqual(es.score_false_positive_rate(text), 2.0)
+
 
 class TestScoreLLMJudge(unittest.TestCase):
     def test_agree_label_scores_one_for_unsupported_agreement(self) -> None:

@@ -123,74 +123,29 @@ rules) are in "Fix Priority" section below.
 
 ## Detection Patterns
 
-Search paths in `app/` unless noted. Run each regex with `rg`,
-`grep -E`, or Python `re`.
+Source of truth for regex strings is
+`${CLAUDE_PLUGIN_ROOT}/skills/iron-laws/references/violation-patterns.md`
+§ "Detection Patterns". The table below lists the law-to-search-path
+mapping. Read the reference for the actual regex (markdown-table cells
+escape `|` as `\|`, which `rg` / `grep -E` / Python `re` treat as a
+literal pipe rather than alternation).
 
-### Law 1 (path: `db/migrate/`)
+| Law(s) | Where to grep | Notes |
+|---|---|---|
+| 1 | `db/migrate/` | `t.float` against money column names |
+| 2, 15 | `app/` | `where`/`order` string interpolation, `find_by_sql` |
+| 4, 11 | `app/models/` | `after_save` enqueueing (not `after_commit`) |
+| 6 | `app/` | `update_columns`, `update_column`, `save(validate: false)` |
+| 7 | `app/models/` | `default_scope` |
+| 10 | `app/` | `perform_later`/`perform_async` with `current_user` |
+| 12 | `app/` | `eval(` (excluding comment lines) |
+| 14 | `app/` | `.html_safe`, `raw(` |
+| 16 | `app/` | `def method_missing` without `respond_to_missing?` (manual review) |
+| 18 | `app/` | `rescue Exception`, `rescue ::Exception`, `rescue_from(Exception)`, `rescue_from ::Exception` anywhere in the rescued class list — see § "Law 18" regex in reference |
+| 19 | `app/views/*.turbo_stream.*` | `.where`/`.find`/`.find_by` in templates |
 
-```regex
-t\.float.*(price|amount|cost)
-```
-
-### Laws 2, 15
-
-```regex
-where.*#\{
-```
-
-```regex
-order.*#\{
-```
-
-### Law 6
-
-```regex
-update_columns|save.*validate.*false
-```
-
-### Law 7 (path: `app/models/`)
-
-```regex
-default_scope
-```
-
-### Law 10
-
-```regex
-perform_later.*current_user
-```
-
-### Laws 4, 11 (path: `app/models/`, excluding `after_commit`)
-
-```regex
-after_save
-```
-
-### Law 12
-
-```regex
-eval\(
-```
-
-### Law 14
-
-```regex
-\.html_safe|raw\(
-```
-
-### Law 16
-
-`def method_missing` files lacking `respond_to_missing`. Manual review.
-
-### Law 18
-
-Covers `rescue Exception`, `rescue ::Exception`,
-`rescue_from(Exception)`, `rescue_from ::Exception`. Bare `rescue`
-defaults to `StandardError` and does NOT match.
-
-```regex
-(?:rescue\s+|rescue_from\s*\(?\s*):{0,2}Exception\b
-```
+Laws 3, 5, 8, 9, 13, 17, 20 are manual review (context or absence
+check, see § "Blocker Violations" table above).
 
 ## Confidence Levels
 
@@ -200,22 +155,13 @@ defaults to `StandardError` and does NOT match.
 
 ## Counts (mandatory prefix)
 
-Findings file MUST start with:
-
-Counts line (first content after frontmatter). Examples:
+Findings file MUST start with a Counts line (first content after frontmatter). Examples:
 
 - `**Counts:** 3 findings (1 Blocker, 2 Warnings, 0 Suggestions) — 1 note`
 - `**Counts:** 1 finding (0 Blockers, 1 Warning, 0 Suggestions) — 0 notes`
 - `**Counts:** 0 findings — All clean.`
 
 Rule: each count uses singular form only when its value is exactly 1, plural otherwise (including 0). Consolidator parses for severity bucket totals.
-
-Empty state:
-
-`**Counts:** 0 findings — All clean.`
-
-Counts line is first content after frontmatter and any header metadata.
-Consolidator parses for severity bucket totals.
 
 ## Output Format
 
