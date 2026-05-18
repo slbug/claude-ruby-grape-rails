@@ -179,7 +179,7 @@ Scripts resolve `timeout` → `gtimeout` → no-timeout fallback via
 
 - Any new/renamed `*.sh` under `hooks/scripts/` → check
   `hooks/hooks.json` references and any other script that sources it
-  via `source "${BASH_SOURCE[0]%/*}/<lib>.sh"`
+  via `source "${BASH_SOURCE[0]%/*}/LIB_NAME.sh"`
 - Edit to `inject-rules.sh` directly → reject; it is generated.
   Source change must go through `references/iron-laws.yml` /
   `preferences.yml` + `scripts/generate-iron-law-outputs.sh`

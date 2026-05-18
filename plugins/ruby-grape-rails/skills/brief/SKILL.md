@@ -138,13 +138,14 @@ What to do now:
 - Canonical verdict (PASS / PASS WITH WARNINGS / REQUIRES CHANGES / BLOCKED)
 - Most severe finding
 
-**Format** (`Blocker[s] / Warning[s] / Suggestion[s]` count-aware:
-singular when N == 1, plural otherwise including 0):
+**Format**. Each bucket count uses singular form only when its value
+is exactly 1, plural otherwise (including 0). Example summary:
+`3 Blockers, 1 Warning, 0 Suggestions`.
 
 ```
 ## Review Brief: {Feature Name}
 
-**Summary**: {N} Blocker[s], {N} Warning[s], {N} Suggestion[s]
+**Summary**: 3 Blockers, 1 Warning, 0 Suggestions
 
 **Blockers**:
 1. {description} ({file}:{line})

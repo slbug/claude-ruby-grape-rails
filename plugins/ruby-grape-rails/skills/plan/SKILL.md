@@ -259,7 +259,7 @@ When resuming:
 
 Before finalizing the plan, verify:
 
-- [ ] Iron Law 18: no `rescue Exception` (catches `SystemExit` / `SignalException`)
+- [ ] Iron Law 18: no `rescue Exception` / `rescue_from(Exception)` (catches `SystemExit` / `SignalException`)
 - [ ] Style: rescue clauses name an explicit class (`rescue StandardError => e` / `rescue SpecificError => e`) instead of bare `rescue`
 - [ ] Failed jobs can be retried safely (idempotent)
 - [ ] Database transactions wrap multi-step operations
@@ -289,7 +289,7 @@ Before finalizing the plan, verify:
   `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
   on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`); use emitted
   values as substitutions in
-  `bundle exec pronto run -c "$(git merge-base HEAD <BASE_REF>)"`
+  `bundle exec pronto run -c "$(git merge-base HEAD BASE_REF_VALUE)"`
 - `bundle exec rspec` or `bin/rails test` - full test suite
 - Migration safety check (for production deployments)
 

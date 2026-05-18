@@ -75,7 +75,7 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 
 16. **method_missing Requires respond_to_missing?** — NO method_missing without respond_to_missing? — breaks introspection
 17. **Supervise Background Processes** — SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers in production
-18. **No Rescue Exception** — DON'T rescue `Exception` (`rescue Exception` or `::Exception`) — catches `SystemExit`/`SignalException`. Bare `rescue` defaults to `StandardError`, not a Law 18 violation.
+18. **No Rescue Exception** — DON'T rescue `Exception` (in `begin/rescue` or Rails `rescue_from`) — catches `SystemExit`/`SignalException`. Bare `rescue` defaults to `StandardError`, not a Law 18 violation.
 
 ### Hotwire/Turbo (2 laws)
 
@@ -117,25 +117,80 @@ rules) are in "Fix Priority" section below.
 | 14 | `user_input.html_safe`, `raw(user_input)` | XSS attacks |
 | 16 | `method_missing` without `respond_to_missing?` | Broken introspection |
 | 17 | Unsupervised background process (manual review) | Production outage on crash |
-| 18 | `rescue Exception` or `rescue ::Exception` (bare `rescue` defaults to `StandardError`, not a Law 18 violation) | Lost SIGINT, hung processes |
+| 18 | `rescue Exception`, `rescue ::Exception`, `rescue_from(Exception)`, `rescue_from ::Exception` (bare `rescue` defaults to `StandardError`, not a Law 18 violation) | Lost SIGINT, hung processes |
 | 19 | DB queries in turbo_stream templates | Lock / deadlock under load |
 | 20 | Missing `turbo_frame_tag` for partial updates — manual review (absence check) | Degraded UX, full page reloads |
 
 ## Detection Patterns
 
-| Law(s) | Pattern | Search path |
-|---|---|---|
-| 1 | `t\.float.*(price\|amount\|cost)` | `db/migrate/` |
-| 2, 15 | `where.*#{` | `app/` |
-| 2, 15 | `order.*#{` | `app/` |
-| 14 | `\.html_safe\|raw(` | `app/` |
-| 6 | `update_columns\|save.*validate.*false` | `app/` |
-| 7 | `default_scope` | `app/models/` |
-| 10 | `perform_later.*current_user` | `app/` |
-| 4, 11 | `after_save` (excluding `after_commit`) | `app/models/` |
-| 12 | `eval(` | `app/` |
-| 16 | `def method_missing` files lacking `respond_to_missing` | `app/` |
-| 18 | `(?:rescue\s+\|rescue_from\s*\(?\s*):{0,2}Exception\b` regex — covers `rescue Exception`, `rescue ::Exception`, `rescue_from(Exception)`, `rescue_from ::Exception` (Rails controller form); bare `rescue` defaults to `StandardError` and does NOT match | `app/` |
+Search paths in `app/` unless noted. Run each regex with `rg`,
+`grep -E`, or Python `re`.
+
+### Law 1 (path: `db/migrate/`)
+
+```regex
+t\.float.*(price|amount|cost)
+```
+
+### Laws 2, 15
+
+```regex
+where.*#\{
+```
+
+```regex
+order.*#\{
+```
+
+### Law 6
+
+```regex
+update_columns|save.*validate.*false
+```
+
+### Law 7 (path: `app/models/`)
+
+```regex
+default_scope
+```
+
+### Law 10
+
+```regex
+perform_later.*current_user
+```
+
+### Laws 4, 11 (path: `app/models/`, excluding `after_commit`)
+
+```regex
+after_save
+```
+
+### Law 12
+
+```regex
+eval\(
+```
+
+### Law 14
+
+```regex
+\.html_safe|raw\(
+```
+
+### Law 16
+
+`def method_missing` files lacking `respond_to_missing`. Manual review.
+
+### Law 18
+
+Covers `rescue Exception`, `rescue ::Exception`,
+`rescue_from(Exception)`, `rescue_from ::Exception`. Bare `rescue`
+defaults to `StandardError` and does NOT match.
+
+```regex
+(?:rescue\s+|rescue_from\s*\(?\s*):{0,2}Exception\b
+```
 
 ## Confidence Levels
 
@@ -147,7 +202,13 @@ rules) are in "Fix Priority" section below.
 
 Findings file MUST start with:
 
-`**Counts:** N findings (X Blocker[s], Y Warning[s], Z Suggestion[s]); M notes` (singular when count == 1, plural otherwise — including 0)
+Counts line (first content after frontmatter). Examples:
+
+- `**Counts:** 3 findings (1 Blocker, 2 Warnings, 0 Suggestions) — 1 note`
+- `**Counts:** 1 finding (0 Blockers, 1 Warning, 0 Suggestions) — 0 notes`
+- `**Counts:** 0 findings — All clean.`
+
+Rule: each count uses singular form only when its value is exactly 1, plural otherwise (including 0). Consolidator parses for severity bucket totals.
 
 Empty state:
 

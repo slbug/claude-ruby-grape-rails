@@ -139,9 +139,10 @@ data[:key] || raise(KeyError, "Missing key: :key")  # Explicit
 # WRONG: Silent swallow of every StandardError hides errors
 begin
   risky_operation
-rescue => e  # Bare rescue catches the StandardError subtree;
-              # silent swallow without re-raise hides the failure.
-              # (Not a Law 18 violation per se — Law 18 is `rescue Exception`.)
+rescue => e  # Bare rescue catches the StandardError subtree.
+              # Silent swallow without re-raise hides the failure.
+              # (Not a Law 18 violation per se — Law 18 is `rescue Exception`
+              # or `rescue_from(Exception)`.)
   :error
 end
 

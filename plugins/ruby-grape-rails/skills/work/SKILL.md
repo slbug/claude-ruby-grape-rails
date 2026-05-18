@@ -167,7 +167,7 @@ For domain-specific implementation patterns and deeper checklists, see
   `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
   on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`); use emitted
   values as substitutions in
-  `bundle exec pronto run -c "$(git merge-base HEAD <BASE_REF>)"`
+  `bundle exec pronto run -c "$(git merge-base HEAD BASE_REF_VALUE)"`
 - Static analysis: `bundle exec rails_best_practices`
 
 ## Error Handling & Recovery

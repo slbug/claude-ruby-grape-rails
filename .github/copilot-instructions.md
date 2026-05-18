@@ -148,7 +148,7 @@ the PR.
 - **Hook renamed / added / removed** under
   `plugins/ruby-grape-rails/hooks/scripts/` → also check
   `hooks/hooks.json` references, sourcing in other `*.sh` files
-  (`source ".../<lib>.sh"`), matching tests under
+  (`source ".../LIB_NAME.sh"`), matching tests under
   `lab/eval/tests/test_runtime_scripts.py`.
 - **`bin/<exec>` renamed / added / removed** → also check
   `plugins/ruby-grape-rails/settings.json` (statusline command path),

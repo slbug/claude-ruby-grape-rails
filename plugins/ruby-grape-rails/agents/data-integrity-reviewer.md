@@ -42,7 +42,13 @@ disallowed — you cannot modify source code.
 
 Findings file MUST start with:
 
-`**Counts:** N findings (X Blocker[s], Y Warning[s], Z Suggestion[s]); M notes` (singular when count == 1, plural otherwise — including 0)
+Counts line (first content after frontmatter). Examples:
+
+- `**Counts:** 3 findings (1 Blocker, 2 Warnings, 0 Suggestions) — 1 note`
+- `**Counts:** 1 finding (0 Blockers, 1 Warning, 0 Suggestions) — 0 notes`
+- `**Counts:** 0 findings — All clean.`
+
+Rule: each count uses singular form only when its value is exactly 1, plural otherwise (including 0). Consolidator parses for severity bucket totals.
 
 Empty state:
 

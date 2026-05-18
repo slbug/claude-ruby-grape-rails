@@ -13,138 +13,156 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Severity vocabulary normalized to title case across review,
   triage, brief, work, full skill surfaces, all 11 `/rb:review`
-  reviewer agents (and `deep-bug-investigator` for `/rb:investigate`),
-  `lab/eval/output_checks.py` parsers, fixtures, and tests. Rule: title
-  case `Blocker / Warning / Suggestion` for per-finding `Severity:`
-  tags + At-a-Glance Severity column (always singular, one finding
-  per row); count-aware grammar for `**Counts:**` prefix +
-  Reviewer Coverage row count (singular when count == 1, plural
-  otherwise — `0 Blockers / 1 Warning / 0 Suggestions`); title
-  case plural `Blockers / Warnings / Suggestions` for consolidated
-  section headers + Summary table + triage multi-select labels
-  (`All Warnings`, `Skip all Suggestions`). Verdict 4-set
+  reviewer agents and `deep-bug-investigator` for `/rb:investigate`,
+  plus `lab/eval/output_checks.py` parsers, fixtures, and tests.
+  Per-finding `Severity:` tags and the At-a-Glance Severity column
+  use singular `Blocker / Warning / Suggestion`. The `**Counts:**`
+  prefix and Reviewer Coverage row use count-aware grammar (singular
+  only when count equals 1, plural otherwise — including 0).
+  Consolidated section headers, the Summary table, and triage
+  multi-select labels (`All Warnings`, `Skip all Suggestions`) use
+  plural `Blockers / Warnings / Suggestions`. The verdict 4-set
   (`PASS / PASS WITH WARNINGS / REQUIRES CHANGES / BLOCKED`) stays
-  UPPERCASE. Drops the prior 3-way UPPERCASE/lowercase/title-case
-  split and the `Critical / Warning / Info` worker-form vocabulary.
-  Parsers use strict casing + alternation regex
-  (`Blockers?` / `Warnings?` / `Suggestions?`); no case
-  normalization, no backward compat. NOTE: contributor-tool internal
-  vocabularies keep their UPPERCASE forms — distinct concepts from
-  shipped review-artifact finding severity:
-  - `.github/copilot-instructions.md` "Review Priorities" table:
-    `CRITICAL / IMPORTANT / SUGGESTION`
-  - `.claude/agents/docs-surface-validator.md` +
-    `.claude/skills/docs-check/references/validation-rules.md`:
-    `BLOCKER / WARNING / INFO / PASS` (docs-check classification)
-  - `.claude/skills/cc-changelog/SKILL.md`:
-    `BREAKING / OPPORTUNITY / RELEVANT FIX / DEPRECATION / INFO`
-    (CC changelog impact classification)
-  - `.github/instructions/plugin-review.instructions.md`:
-    `BLOCKER / WARNING` (contributor PR-reviewer flag terms; cites
-    shipped vocabulary in title case where referring to the
-    `/rb:review` artifact contract).
+  UPPERCASE. The prior 3-way UPPERCASE / lowercase / title-case
+  split and the `Critical / Warning / Info` worker-form vocabulary
+  are dropped. Parsers now enforce strict casing plus alternation
+  regex (`Blockers?` / `Warnings?` / `Suggestions?`), so old
+  artifacts using prior mixed casings must be re-emitted under the
+  new convention. Contributor-tool internal vocabularies keep their
+  UPPERCASE forms because they are distinct concepts from shipped
+  review-artifact finding severity. Affected internal vocabularies —
+  `.github/copilot-instructions.md` "Review Priorities" table
+  (`CRITICAL / IMPORTANT / SUGGESTION`),
+  `.claude/agents/docs-surface-validator.md` and
+  `.claude/skills/docs-check/references/validation-rules.md`
+  docs-check classification (`BLOCKER / WARNING / INFO / PASS`),
+  `.claude/skills/cc-changelog/SKILL.md` CC changelog impact
+  classification (`BREAKING / OPPORTUNITY / RELEVANT FIX /
+  DEPRECATION / INFO`), and
+  `.github/instructions/plugin-review.instructions.md` contributor
+  PR-reviewer flag terms (`BLOCKER / WARNING`), which cite the
+  shipped vocabulary in title case where referring to the
+  `/rb:review` artifact contract.
 - `bin/resolve-base-ref` invocation unified across all 7 caller
-  sites (`review`, `verify`, `document`, `plan`, `work` SKILL +
-  `verification-runner` agent ×2): "Run script → 3 `KEY=value`
-  lines on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`); use
-  emitted values as substitutions." Drops `eval "$(...)"` from
-  agent-facing instructions; agent reads stdout and substitutes
-  literal values into subsequent commands. Skill bodies use
-  `<BASE_REF>` / `<MERGE_BASE>` literal-substitution markers
-  instead of `$BASE_REF` / `$MERGE_BASE` shell vars (which would
-  not persist across separate Bash tool calls).
-  `skills/verify/references/verification-profiles.md` retains
-  `eval` — it runs as one self-contained shell script.
-
-- `iron-law-judge`: Laws 3 (N+1), 18 (`rescue Exception`), 19 (DB
-  queries in Turbo Streams), 20 (missing `turbo_frame_tag`)
-  promoted from Warning Violations to Blocker Violations. All
-  Iron Law violations are now Blockers — matches
-  `triage-patterns.md` § "Always Fix". Fix Priority section
-  collapsed accordingly: all 22 Iron Law violations block merge
-  (Laws 1-20 = code-pattern violation rules; Law 21 = verification
-  discipline; Law 22 = surgical-change discipline). Blocker pattern
-  table extended to cover Laws 5, 8, 9, 17 (manual review rows) so
-  the judge has guidance for non-grep-detectable laws.
+  sites (`review`, `verify`, `document`, `plan`, `work` SKILL plus
+  `verification-runner` agent ×2). Script writes 3 `KEY=value` lines
+  on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`), and the agent
+  reads stdout and substitutes literal values into subsequent
+  commands. `eval "$(...)"` is dropped from agent-facing
+  instructions. Skill bodies use `BASE_REF_VALUE` /
+  `MERGE_BASE_VALUE` literal-substitution markers instead of
+  `$BASE_REF` / `$MERGE_BASE` shell vars (which would not persist
+  across separate Bash tool calls) or `<BASE_REF>` / `<MERGE_BASE>`
+  angle-bracket placeholders (which Bash parses as input
+  redirection). `skills/verify/references/verification-profiles.md`
+  retains `eval` because it runs as one self-contained shell
+  script.
+- `iron-law-judge` Laws 3 (N+1), 18 (`rescue Exception`), 19 (DB
+  queries in Turbo Streams), and 20 (missing `turbo_frame_tag`)
+  are promoted from Warning Violations to Blocker Violations. All
+  22 Iron Law violations are now Blockers per `triage-patterns.md`
+  § "Always Fix". Fix Priority is collapsed into three rule groups
+  that all block merge: Laws 1-20 are code-pattern violation rules,
+  Law 21 is verification discipline, and Law 22 is surgical-change
+  discipline. The Blocker pattern table is extended to cover Laws
+  5, 8, 9, and 17 as manual-review rows so the judge has guidance
+  for non-grep-detectable laws.
 
 ### Removed
 
-- Sample-output blocks in `iron-law-judge`,
-  `data-integrity-reviewer`, `migration-safety-reviewer` (3 of 11
-  reviewer agents had them; the other 8 never did). Counts
-  contract section + playbook Consolidated Review Format template
-  are now the sole authoritative source.
+- Sample-output blocks removed from `iron-law-judge`,
+  `data-integrity-reviewer`, and `migration-safety-reviewer`. Only
+  3 of 11 reviewer agents had them — the other 8 never did. The
+  Counts contract section and the playbook Consolidated Review
+  Format template are now the sole authoritative source.
 
 ### Fixed
 
-- `/rb:init` external-tool detection: replaced multi-arg
+- `/rb:init` external-tool detection replaces the multi-arg
   `command -v betterleaks rtk dcg shellfirm` (POSIX exits non-zero
-  on any missing arg → cancels sibling parallel Bash calls) with a
-  single inline `for t in …; do command -v "$t" …; done` loop.
-  Added BAD/GOOD pair to
-  `references/preferences/tool-batching.md` under
-  "Multi-tool detection".
-- `/rb:review` fanout step 9 + Gotchas: dropped inline Read-over-cat
-  instruction. `tool-batching.md` preference is already injected at
-  `SessionStart` + `SubagentStart` via `inject-rules.sh` with its
-  reference path bare on the next line — no need to restate or link
-  from skill bodies.
-- Law 18 canonical rule text rewritten in `iron-laws.yml` (version
-  bumped 1.2.0 → 1.2.1; last_updated 2026-05-18). Title: "Rescue
-  StandardError" → "No Rescue Exception". Rule: "DON'T `rescue
-  Exception` — catches `SystemExit` / `SignalException`. Bare
-  `rescue` defaults to `StandardError` and is not a Law 18
-  violation." Previous canon ("only rescue StandardError or specific
-  classes") was ambiguous — could be misread as requiring the
-  literal word `StandardError`. Silent swallow without re-raise
-  remains a separate bug (not Law 18).
-  Regenerated `inject-rules.sh`, `canonical-registry.md`,
-  `tutorial-content.md`, `iron-law-judge.md` IRON_LAWS_JUDGE marker
-  block, `iron-laws/SKILL.md` to match. Corresponding cross-doc
-  alignment: `agents/iron-law-judge.md` (Blocker + Detection
-  pattern tables), `skills/iron-laws/references/violation-patterns.md`,
-  `skills/triage/SKILL.md`, `skills/triage/references/triage-patterns.md`,
-  `skills/intro/references/tutorial-content.md`, `skills/plan/SKILL.md`
-  (no-bare-rescue checklist now clarifies style preference vs Law 18),
-  `skills/review/references/review-playbook.md` (same clarification,
-  with `conventions.md` casing alignment),
-  `skills/ruby-idioms/references/method-chaining.md`
-  (detached bare-rescue style from Law 18 attribution).
-- `skills/iron-laws/references/fix-priority.md` + cross-ref label
-  in `skills/iron-laws/SKILL.md` + `agents/iron-law-judge.md` Fix
-  Priority section rewritten: all 22 Iron Law violations are
-  Blockers per `triage-patterns.md` § "Always Fix". Three rule
-  groups: Laws 1-20
-  (code-pattern violation rules), Law 21 (verification discipline
-  — "should work" claims without test/lint evidence block merge;
-  failed tests/lint when run are themselves separate Blockers),
+  on any missing arg, cancelling sibling parallel Bash calls) with
+  a single inline `for t in ...; do command -v "$t" ...; done`
+  loop. A BAD / GOOD pair is added to
+  `references/preferences/tool-batching.md` under "Multi-tool
+  detection".
+- `/rb:review` fanout step 9 and Gotchas drop the inline
+  Read-over-cat instruction. The `tool-batching.md` preference is
+  already injected at `SessionStart` and `SubagentStart` via
+  `inject-rules.sh` with its reference path bare on the next line,
+  so skill bodies do not need to restate or link it.
+- Law 18 canonical rule text is rewritten in `iron-laws.yml`
+  (version bumped 1.2.0 → 1.2.1, last_updated 2026-05-18). The
+  title changes from "Rescue StandardError" to "No Rescue
+  Exception". The rule now covers `rescue Exception`,
+  `rescue ::Exception`, `rescue_from(Exception)`, and
+  `rescue_from ::Exception` — all of which catch `SystemExit` /
+  `SignalException`. Bare `rescue` defaults to `StandardError` and
+  is not a Law 18 violation. The previous canon ("only rescue
+  StandardError or specific classes") was ambiguous and could be
+  misread as requiring the literal word `StandardError`. Silent
+  swallow without re-raise remains a separate bug, not Law 18.
+  Generator regenerates `inject-rules.sh`, `canonical-registry.md`,
+  `tutorial-content.md`, the `iron-law-judge.md` IRON_LAWS_JUDGE
+  marker block, and `iron-laws/SKILL.md` to match. Cross-doc
+  alignment covers `agents/iron-law-judge.md` Blocker and Detection
+  pattern tables, `skills/iron-laws/references/violation-patterns.md`,
+  `skills/triage/SKILL.md`,
+  `skills/triage/references/triage-patterns.md`,
+  `skills/intro/references/tutorial-content.md`,
+  `skills/plan/SKILL.md` (no-bare-rescue checklist now clarifies
+  style preference versus Law 18),
+  `skills/review/references/review-playbook.md`,
+  `skills/investigate/references/incident-playbook.md`,
+  `skills/ruby-idioms/references/error-handling.md`,
+  `skills/ruby-idioms/references/method-chaining.md` (detaches
+  bare-rescue style from Law 18 attribution), and
+  `skills/ruby-idioms/references/anti-patterns.md`.
+- Detection-pattern regexes containing alternation are moved out of
+  markdown table cells into per-law fenced code blocks in
+  `agents/iron-law-judge.md` and
+  `skills/iron-laws/references/violation-patterns.md`. Markdown
+  table cells require pipe characters to be escaped as `\|`, which
+  regex engines (`rg`, Python `re`, `grep -E`) treat as a literal
+  pipe rather than alternation. Affected Laws: 1, 4, 6, 10-11, 14,
+  18, and 19.
+- `skills/iron-laws/references/fix-priority.md`,
+  `skills/iron-laws/SKILL.md` cross-ref label, and the
+  `agents/iron-law-judge.md` Fix Priority section are rewritten so
+  all 22 Iron Law violations are Blockers per `triage-patterns.md`
+  § "Always Fix". The three rule groups are Laws 1-20 (code-pattern
+  violation rules), Law 21 (verification discipline — "should work"
+  claims without test or lint evidence block merge, and failed
+  tests or lint when run are themselves separate Blockers), and
   Law 22 (surgical-change discipline — out-of-scope edits in the
   diff block merge until reverted or split).
-- `skills/iron-laws/references/violation-patterns.md`: heading
-  "## Critical Violations (Must Fix)" renamed to
-  "## Blocker Violations (Must Fix)". Lead prose clarifies
-  subsections cover Laws 1-20; Detection Patterns table holds grep
-  regex for Laws 1, 2, 4, 6, 7, 10-12, 14-16, 18-19; Laws 3, 5, 8,
-  9, 13, 17, 20 require manual review — context check or absence
-  check (see `iron-law-judge.md` Blocker table). Laws 21 + 22
-  (discipline rules) equally Blockers per `fix-priority.md`.
-- `references/iron-laws.yml`: schema comment for `severity:` field
-  clarified — `critical | high | medium` are intra-Blocker priority
-  hints for fix ordering, NOT severity-bucket values. Every Iron
-  Law violation is a Blocker per `triage-patterns.md` § "Always Fix".
+- `skills/iron-laws/references/violation-patterns.md` renames the
+  heading "## Critical Violations (Must Fix)" to "## Blocker
+  Violations (Must Fix)". Lead prose clarifies that subsections
+  cover Laws 1-20. Detection Patterns now uses per-law fenced code
+  blocks for the grep regexes of Laws 1, 2, 4-6, 10-12, 14-16,
+  18, and 19. Laws 3, 5, 8, 9, 13, 17, and 20 require manual
+  review (context check or absence check, see `iron-law-judge.md`
+  Blocker table). Laws 21 and 22 are equally Blockers per
+  `fix-priority.md`.
+- `references/iron-laws.yml` schema comment for the `severity:`
+  field is clarified. `critical | high | medium` are
+  intra-Blocker priority hints for fix ordering, NOT
+  severity-bucket values. Every Iron Law violation is a Blocker
+  per `triage-patterns.md` § "Always Fix".
 - `skills/full/SKILL.md:72` and `triage/SKILL.md` grammar agreement
   fixed to plural `Blockers`.
-- `output_checks.py` count-form validator paired with 4 new
-  unittest cases: `0 Blocker` rejected, `1 Blockers` rejected,
-  mismatched pairs (`2 Warning` / `1 Suggestions`) rejected, mixed
-  valid forms accepted.
+- `output_checks.py` count-form validator is paired with 4 new
+  unittest cases. Forms `0 Blocker` and `1 Blockers` are rejected,
+  mismatched pairs (`2 Warning` / `1 Suggestions`) are rejected,
+  and mixed valid forms are accepted.
 - `review-playbook.md` Coverage row template uses placeholder
   `{n} Blocker[s] / {n} Warning[s] / {n} Suggestion[s]` instead of
-  hardcoded example counts (which agents could copy literally).
+  hardcoded example counts that agents could copy literally.
 - `review-playbook.md` fenced bash blocks no longer contain
-  `<BASE_REF>` / `<MERGE_BASE>` placeholders (parsed as shell
-  redirect). Replaced with `BASE_REF_VALUE` / `MERGE_BASE_VALUE`
-  literal markers + prose substitution instruction.
+  `<BASE_REF>` / `<MERGE_BASE>` placeholders, which Bash would
+  parse as shell redirection. They are replaced with `BASE_REF_VALUE`
+  / `MERGE_BASE_VALUE` literal markers and a prose substitution
+  instruction.
 
 ## [1.16.12] - 2026-05-17
 

@@ -41,7 +41,7 @@ Run `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
 on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`; handles custom
 remotes, non-standard default branches, fetches before resolving).
 Use emitted values as substitutions: run
-`git merge-base HEAD <BASE_REF>` and capture the result.
+`git merge-base HEAD BASE_REF_VALUE` and capture the result.
 Run `git diff --name-only --diff-filter=A <merge-base> HEAD -- '*.rb'` to
 list new Ruby files added on the current branch.
 

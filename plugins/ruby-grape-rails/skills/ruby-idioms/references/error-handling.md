@@ -41,11 +41,12 @@ Exception
 └── SystemExit
 ```
 
-**Iron Law 18**: Never `rescue Exception` — catches `SystemExit` /
+**Iron Law 18**: Never `rescue Exception` — applies to `begin/rescue`
+and Rails `rescue_from(Exception)`. Catches `SystemExit` /
 `SignalException`. Bare `rescue` defaults to `StandardError` and is
 not a Law 18 violation. `rescue StandardError` (whole subtree) and
-`rescue SpecificError` (narrower) are both acceptable under Law 18;
-choose narrowest class that matches the failure mode.
+`rescue SpecificError` (narrower) are both acceptable under Law 18.
+Choose narrowest class that matches the failure mode.
 
 ## Custom Exceptions
 

@@ -208,22 +208,88 @@ rescue SomeSpecificError => e
 
 ## Detection Patterns
 
-| Law(s) | Pattern | Search path |
-|---|---|---|
-| 1 | `t\.float.*(price\|amount\|cost\|balance)` | `db/migrate/` |
-| 2, 15 | `where.*#{` | `app/` |
-| 2, 15 | `order.*#{` | `app/` |
-| 2, 15 | `find_by_sql` | `app/` |
-| 14 | `\.html_safe` | `app/` |
-| 14 | `raw(` | `app/` |
-| 6 | `update_columns\|update_column\|save.*validate.*false` | `app/` |
-| 7 | `default_scope` | `app/models/` |
-| 10 | `perform_later.*current_user\|perform_async.*current_user` | `app/` |
-| 4, 11 | `after_save.*:\|after_save do` (excluding `after_commit`) | `app/models/` |
-| 12 | `eval(` (excluding lines containing `# eval`) | `app/` |
-| 16 | `def method_missing` files lacking `respond_to_missing` | `app/` |
-| 18 | `(?:rescue\s+\|rescue_from\s*\(?\s*):{0,2}Exception\b` regex — covers `rescue Exception`, `rescue ::Exception`, `rescue_from(Exception)`, `rescue_from ::Exception` (Rails controller form); bare `rescue` defaults to `StandardError`, not a Law 18 violation | `app/` |
-| 19 | `\.where\|\.find\|\.find_by` | `app/views/*.turbo_stream.*` |
+Search paths in `app/` unless noted. Run each regex with `rg`,
+`grep -E`, or Python `re`.
+
+### Law 1 (path: `db/migrate/`)
+
+```regex
+t\.float.*(price|amount|cost|balance)
+```
+
+### Laws 2, 15
+
+```regex
+where.*#\{
+```
+
+```regex
+order.*#\{
+```
+
+```regex
+find_by_sql
+```
+
+### Law 6
+
+```regex
+update_columns|update_column|save.*validate.*false
+```
+
+### Law 7 (path: `app/models/`)
+
+```regex
+default_scope
+```
+
+### Law 10
+
+```regex
+perform_later.*current_user|perform_async.*current_user
+```
+
+### Laws 4, 11 (path: `app/models/`, excluding `after_commit`)
+
+```regex
+after_save.*:|after_save do
+```
+
+### Law 12 (excluding lines containing `# eval`)
+
+```regex
+eval\(
+```
+
+### Law 14
+
+```regex
+\.html_safe
+```
+
+```regex
+raw\(
+```
+
+### Law 16
+
+`def method_missing` files lacking `respond_to_missing`. Manual review.
+
+### Law 18
+
+Covers `rescue Exception`, `rescue ::Exception`,
+`rescue_from(Exception)`, `rescue_from ::Exception`. Bare `rescue`
+defaults to `StandardError` and is not a Law 18 violation.
+
+```regex
+(?:rescue\s+|rescue_from\s*\(?\s*):{0,2}Exception\b
+```
+
+### Law 19 (path: `app/views/*.turbo_stream.*`)
+
+```regex
+\.where|\.find|\.find_by
+```
 
 ## Confidence Levels
 

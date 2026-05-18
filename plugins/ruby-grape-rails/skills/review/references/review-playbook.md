@@ -74,7 +74,7 @@ file-type-specific checklists without bloating the main routing surface.
 
 - [ ] `ruby -c` passes
 - [ ] formatter is clean (`standardrb` or `rubocop`)
-- [ ] no `rescue Exception` (Iron Law 18); explicit exception class on every rescue clause (style)
+- [ ] no `rescue Exception` or `rescue_from(Exception)` (Iron Law 18, applies to `begin/rescue` and Rails `rescue_from`). Explicit exception class on every rescue clause (style)
 - [ ] names and control flow stay readable
 - [ ] duplication is avoided
 
@@ -157,8 +157,8 @@ includes this prompt template:
 Task: review {file list} for {scope}.
 
 Scope: $CHANGED_FILES (from main session diff collection)
-Base ref: <BASE_REF>
-Merge base: <MERGE_BASE>
+Base ref: BASE_REF_VALUE
+Merge base: MERGE_BASE_VALUE
 Diff stat (preview):
 $DIFF_STAT
 
@@ -257,7 +257,7 @@ plural otherwise (including 0).
 | Surface | Form | Example |
 |---|---|---|
 | Per-finding `Severity:` tag | singular | `Severity: Blocker` |
-| Counts mandatory prefix | count-aware | `**Counts:** 5 findings (1 Blocker, 3 Warnings, 1 Suggestion); 2 notes` |
+| Counts mandatory prefix | count-aware | `**Counts:** 5 findings (1 Blocker, 3 Warnings, 1 Suggestion) — 2 notes` |
 | Reviewer Coverage row count | count-aware | `0 Blockers / 1 Warning / 0 Suggestions` |
 | At-a-Glance Severity column | singular | `\| 1 \| {title} \| Warning \| HIGH \| {agent} \| {file}:{line} \| Yes \|` |
 | Summary table category column | plural | `\| Blockers \| 0 \|` / `\| Warnings \| 1 \|` |
@@ -425,13 +425,15 @@ Write the synthesized review to the path read via
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output | {n} Blocker[s] / {n} Warning[s] / {n} Suggestion[s] |
+| ruby-reviewer | artifact | 3 Blockers / 0 Warnings / 0 Suggestions |
+| security-analyzer | stub-replaced | 0 Blockers / 1 Warning / 0 Suggestions |
+| testing-reviewer | stub-no-output | 0 Blockers / 0 Warnings / 0 Suggestions |
 
-Findings column uses title case + count-aware grammar (singular
-when count == 1, plural otherwise — including 0). Form examples:
-`0 Blockers / 1 Warning / 0 Suggestions`,
-`3 Blockers / 0 Warnings / 0 Suggestions`,
-`1 Blocker / 2 Warnings / 1 Suggestion`. Counts NEW findings only
+Recovery State is one of `artifact | stub-replaced |
+recovered-from-return | stub-no-output`. Findings column uses title
+case with count-aware grammar: each bucket count uses singular form
+only when its value is exactly 1, plural otherwise (including 0).
+Counts NEW findings only
 (diff-introduced). Pre-existing findings attributed to the
 reviewer appear in `## Pre-existing Issues` and the at-a-glance
 table with `New? = Pre-existing`. State definitions:
@@ -660,7 +662,7 @@ Collection step).
 
 On `DIFF_LOC=0` (legitimate via pure rename / mode change / binary diff):
 
-- Run `git diff --numstat <MERGE_BASE>...HEAD`
+- Run `git diff --numstat MERGE_BASE_VALUE...HEAD`
 - File count > 0 → tier by file count (Simple minimum)
 - File count = 0 AND zero `--numstat` entries → reject; require `all`
   argument (per `argument-hint:`)

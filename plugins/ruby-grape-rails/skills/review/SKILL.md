@@ -24,9 +24,9 @@ Run `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
 on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Use emitted values
 as substitutions in subsequent commands. Then capture:
 
-- `MERGE_BASE` via `git merge-base HEAD <BASE_REF>`
-- `CHANGED_FILES` via `git diff --name-only --diff-filter=ACMR <MERGE_BASE>...HEAD`
-- `DIFF_STAT` via `git diff --stat <MERGE_BASE>...HEAD`
+- `MERGE_BASE` via `git merge-base HEAD BASE_REF_VALUE`
+- `CHANGED_FILES` via `git diff --name-only --diff-filter=ACMR MERGE_BASE_VALUE...HEAD`
+- `DIFF_STAT` via `git diff --stat MERGE_BASE_VALUE...HEAD`
 
 Pass the captured `CHANGED_FILES`, `BASE_REF`, `MERGE_BASE`, and
 `DIFF_STAT` values to every spawned reviewer. Reviewers scope
@@ -51,10 +51,10 @@ message.
 2. Select core + conditional reviewers per matrix below. Derive
    `review-slug`. Use the `BASE_REF` value captured in §
    "Collecting Changed Files" — substitute literally into shell
-   commands below (e.g. `--base-ref=<BASE_REF>`).
+   commands below (e.g. `--base-ref=BASE_REF_VALUE`).
 3. Run
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run --skill=rb:review
-   --slug=<REVIEW_SLUG> --base-ref=<BASE_REF> --agents=<csv-of-reviewer-slugs>`.
+   --slug=REVIEW_SLUG_VALUE --base-ref=BASE_REF_VALUE --agents=AGENTS_CSV_VALUE`.
    Captures stdout as `$MANIFEST` (absolute manifest path). Helper
    archives any prior manifest, computes datesuffix, agent paths,
    consolidated path, git pins; writes fresh manifest atomically.
@@ -119,7 +119,7 @@ Critical-path files force escalation regardless of count or LOC.
 | **Medium** | 4-10 | 201-1000 | Core + conditional by file type | 4-8 |
 | **Complex** | 11+ | > 1000 | All relevant reviewers, detailed output | 8-11 |
 
-Compute `DIFF_LOC = git diff --shortstat <MERGE_BASE>...HEAD | awk '{n=$4+$6} END{print n+0}'`.
+Compute `DIFF_LOC = git diff --shortstat MERGE_BASE_VALUE...HEAD | awk '{n=$4+$6} END{print n+0}'`.
 Columns 4 + 6 are insertions + deletions. `END{print n+0}` emits `0`
 on empty diff. Range matches `$DIFF_STAT` and `$CHANGED_FILES`.
 
@@ -171,7 +171,7 @@ Every Agent() call must include in its prompt:
 - Task: review the file list for the requested scope
 - `$CHANGED_FILES` (the diff manifest from main session)
 - `BASE_REF` value (from resolve-base-ref stdout)
-- `MERGE_BASE` value (from `git merge-base HEAD <BASE_REF>`)
+- `MERGE_BASE` value (from `git merge-base HEAD BASE_REF_VALUE`)
 - `$DIFF_STAT` (from `git diff --stat`)
 - **Absolute artifact path** read from
   `manifest-update spawn-paths "$MANIFEST"` (one row per agent slug).

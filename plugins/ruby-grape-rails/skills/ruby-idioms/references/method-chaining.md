@@ -89,11 +89,12 @@ rescue InventoryError
 end
 ```
 
-Iron Law 18: never `rescue Exception` (catches `SystemExit` /
-`SignalException`). Bare `rescue` defaults to `StandardError` and is not a Law 18
-violation; explicit class naming (`rescue SpecificError => e` or
-class-only `rescue SpecificError`) is a style preference for clarity,
-not a Law 18 violation.
+Iron Law 18: never `rescue Exception` — applies to `begin/rescue`
+and Rails `rescue_from(Exception)`. Catches `SystemExit` /
+`SignalException`. Bare `rescue` defaults to `StandardError` and is
+not a Law 18 violation. Explicit class naming (`rescue SpecificError
+=> e` or class-only `rescue SpecificError`) is a style preference for
+clarity, not a Law 18 violation.
 
 ### Result-object early return
 

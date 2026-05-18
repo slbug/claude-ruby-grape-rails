@@ -98,7 +98,7 @@ Required fields (review only — git-pinned skill): `branch`,
 `branch_head_sha`, `base_ref`, `base_sha`. Omitted for plan,
 brainstorm, and research (TTL-only staleness).
 
-`base_sha` = output of `git merge-base HEAD <BASE_REF>` at run start
+`base_sha` = output of `git merge-base HEAD BASE_REF_VALUE` at run start
 (substitute resolved `BASE_REF` value from `resolve-base-ref` stdout).
 Stored to detect rebase drift on resume.
 

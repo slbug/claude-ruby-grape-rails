@@ -16,7 +16,7 @@ Verification is tiered to balance speed and safety:
 | Scope | Verification Steps |
 |-------|-------------------|
 | Full Rails app | `bundle exec rails zeitwerk:check` |
-| Always | `bundle exec rspec <affected_test_files>` |
+| Always | `bundle exec rspec FILE_LIST_VALUE` |
 | Always | Configured direct linter (`bundle exec standardrb` or `bundle exec rubocop`) |
 
 **Final gate** (after all phases): `bundle exec rspec` (full suite)

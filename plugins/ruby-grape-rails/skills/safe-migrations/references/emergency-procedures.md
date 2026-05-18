@@ -5,7 +5,7 @@
 | Goal | Command |
 |---|---|
 | Find the migration process | `ps aux \| grep migrate` |
-| Kill it (last resort) | `kill -9 <pid>` |
+| Kill it (last resort) | `kill -9 PID_VALUE` |
 | Check migration status | `rails db:migrate:status` |
 | If stuck, manually drop the row | `rails dbconsole` then `DELETE FROM schema_migrations WHERE version = '20240101120000';` |
 
