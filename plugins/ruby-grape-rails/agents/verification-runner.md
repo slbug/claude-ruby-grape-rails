@@ -75,10 +75,11 @@ When parsing JSON, YAML, text, or command output during verification:
 3. Prefer direct linting: `bundle exec standardrb` if configured, else `bundle exec rubocop` if configured
 4. Prefer direct security scanning: `bundle exec brakeman` if configured
 5. `bundle exec rspec` if `spec/` exists, else `bin/rails test`
-6. Optional final diff-scoped review:
-   `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"` populates
-   `$BASE_REF`, `$REMOTE`, `$DEFAULT_BRANCH`; then
-   `bundle exec pronto run -c "$(git merge-base HEAD "$BASE_REF")"`
+6. Optional final diff-scoped review: run
+   `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
+   on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`); use emitted
+   values as substitutions in
+   `bundle exec pronto run -c "$(git merge-base HEAD <BASE_REF>)"`
    if configured
 
 Use `lefthook run <hook>` only when cached runtime state shows:
@@ -99,9 +100,10 @@ Operational selection rules:
 - Else if `RUBOCOP_AVAILABLE=true`, lint with `bundle exec rubocop`
 - If `BRAKEMAN_AVAILABLE=true`, run `bundle exec brakeman`
 - If `PRONTO_AVAILABLE=true`, run
-  `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"` (populates
-  `$BASE_REF`, `$REMOTE`, `$DEFAULT_BRANCH`); then
-  `bundle exec pronto run -c "$(git merge-base HEAD "$BASE_REF")"`
+  `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
+  on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`); use emitted
+  values as substitutions in
+  `bundle exec pronto run -c "$(git merge-base HEAD <BASE_REF>)"`
   as the optional final diff-scoped step
 - Treat `LEFTHOOK_*` as an optional wrapper hint, not as a reason to skip direct tools by default
 

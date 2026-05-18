@@ -153,28 +153,6 @@ Consolidator parses for severity bucket totals.
 When invoked by `/rb:review`, write `.claude/reviews/iron-law-judge/{review-slug}-{datesuffix}.md`.
 Always write an artifact, even for a clean pass. Never write review artifacts under `.claude/plans/...`.
 
-```markdown
-### Iron Law Violations
-
-#### Blockers
-
-##### Law 1: Float for Money
-**File**: `db/migrate/xxx.rb:15`
-**Severity**: blocker
-**Confidence**: HIGH
-**Violation**: `t.float :total_amount`
-**Fix**: `t.decimal :total_amount, precision: 15, scale: 2`
-
-#### Warnings
-
-##### Law 3: N+1 Query
-**File**: `app/controllers/orders.rb:18`
-**Severity**: warning
-**Confidence**: MEDIUM
-**Violation**: Loop accessing association without includes
-**Fix**: `@orders = Order.includes(:items)`
-```
-
 ## Fix Priority
 
 1. **Blockers** (Laws 1, 2, 4, 6, 7, 10, 11, 12, 13, 14, 15, 16): Security, data integrity — Fix immediately

@@ -11,36 +11,50 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- `/rb:review` skill body now inlines the verbatim
-  `eval "$(.../bin/resolve-base-ref)"` block in § "Collecting Changed
-  Files". Previously the body referred readers to
-  `references/review-playbook.md` § "Diff Collection" without showing
-  the snippet, so a naive `BASE_REF=$(.../resolve-base-ref)` capture
-  pulled the full three-line variable-assignment block and broke
-  `git merge-base`. The playbook section now points back at the
-  SKILL body as canonical.
-- `/rb:review` Counts-line drift across reviewers. Worker-form
-  vocabulary (`Critical | Warning | Info`) is dropped in favor of a
-  single severity vocabulary: lowercase `blocker | warning |
-  suggestion` per-finding; uppercase `BLOCKER | WARNING | SUGGESTION`
-  in consolidated headers and tables. Synthesis applies a diff-status
-  filter only (new vs pre-existing); no vocabulary translation step.
-  Touches `skills/review/SKILL.md`, `review-playbook.md`, and
-  reviewer agent bodies (`iron-law-judge`, `data-integrity-reviewer`,
-  `migration-safety-reviewer`) where sample outputs still referenced
-  the old `Critical | Warning | Info` form.
-- `/rb:init` detection block now uses an explicit `for t in
-  betterleaks rtk dcg shellfirm; do command -v "$t" …; done` loop
-  instead of a multi-arg `command -v betterleaks rtk dcg shellfirm`.
-  The multi-arg form exits non-zero on any missing argument and
-  cancels sibling parallel Bash calls. Added matching BAD/GOOD pair
-  to `references/preferences/tool-batching.md` under "Multi-tool
-  detection".
+- `bin/resolve-base-ref` invocation pattern unified across all 7
+  caller sites (`review`, `verify`, `document`, `plan`, `work` SKILL
+  bodies + `verification-runner` agent ×2). Each site now reads:
+  "Run `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value`
+  lines on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Use
+  emitted values as substitutions." No reliance on `eval` or
+  shell-variable persistence across separate Bash tool calls — the
+  agent reads stdout values and substitutes them literally into
+  subsequent `git merge-base` / `git diff` / Pronto commands.
+  Script docstring updated with both usage patterns (agent
+  stdout-read; shell-script `eval`). `verify-profiles.md` keeps
+  `eval` because it runs as a single self-contained shell script.
+- `/rb:review` severity vocabulary aligned across all 10 reviewer
+  agents, SKILL body, playbook, and `example-review.md`. Single
+  rule: lowercase `blocker | warning | suggestion` for per-finding
+  `Severity:` tags + the mandatory `**Counts:**` prefix; title case
+  `Blockers | Warnings | Suggestions` for consolidated section
+  headers, Summary table, Reviewer Coverage row counts, and
+  At-a-Glance Finding Table. Verdict 4-set (`PASS | PASS WITH
+  WARNINGS | REQUIRES CHANGES | BLOCKED`) stays UPPERCASE.
+  Eliminates the prior `Critical | Warning | Info` worker-form
+  vocabulary (per playbook § "Worker Severity Mapping" backward
+  compatibility note) which was already ignored by 9/10 reviewers
+  in practice.
+- Reviewer sample-output blocks removed from `iron-law-judge`,
+  `data-integrity-reviewer`, `migration-safety-reviewer` agent
+  bodies. 7 of 10 reviewer agents already shipped without sample
+  blocks; the 3 outliers omitted the mandatory `**Counts:**` first
+  line their own contract section prescribed, training the agent
+  on parser-incompatible output. The Counts contract section + the
+  playbook Consolidated Review Format template are now the sole
+  authoritative source.
+- `/rb:init` external-tool detection block now uses an explicit
+  `for t in betterleaks rtk dcg shellfirm; do command -v "$t" …;
+  done` loop instead of a multi-arg `command -v betterleaks rtk
+  dcg shellfirm`. The multi-arg form exits non-zero on any missing
+  argument and cancels sibling parallel Bash calls. Added matching
+  BAD/GOOD pair to `references/preferences/tool-batching.md` under
+  "Multi-tool detection".
 - `/rb:review` fanout step 9 + Gotchas now state explicitly that
   reviewer artifacts must be read one per path from
   `manifest-update spawn-paths`, never bulk-`cat`ted. Bulk-cat of
-  ~10 reviewer artifacts (~6-8 KB each) overflows the Read token cap
-  and forces offset/limit pagination.
+  ~10 reviewer artifacts (~6-8 KB each) overflows the Read token
+  cap and forces offset/limit pagination.
 
 ## [1.16.12] - 2026-05-17
 

@@ -167,28 +167,6 @@ end
 Write findings to `.claude/reviews/migration-safety-reviewer/{review-slug}-{datesuffix}.md`.
 Always write an artifact, even for a clean pass. Never write review artifacts under `.claude/plans/...`.
 
-```markdown
-# Schema Drift Review
-
-## Files Reviewed
-- db/migrate/xxx_add_column.rb
-
-## Findings
-
-### [SEVERITY] Issue Title
-**File**: `db/migrate/xxx_add_column.rb:12`
-**Problem**: Description
-**Recommendation**: Fix
-**Risk**: What could go wrong
-
-## Summary
-| Category | Count |
-|----------|-------|
-| Blocker | 0 |
-| Warning | 2 |
-| Suggestion | 1 |
-```
-
 ## Report Findings
 
 Provide severity classification:

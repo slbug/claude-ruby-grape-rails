@@ -247,30 +247,6 @@ end
 Write findings to `.claude/reviews/data-integrity-reviewer/{review-slug}-{datesuffix}.md`.
 Always write an artifact, even for a clean pass. Never write review artifacts under `.claude/plans/...`.
 
-```markdown
-# Data Integrity Review
-
-## Files Reviewed
-- app/models/order.rb
-- db/migrate/xxx_add_orders.rb
-- app/services/order_processor.rb
-
-## Findings
-
-### [SEVERITY] Missing Foreign Key
-**File**: `db/migrate/xxx_add_orders.rb:15`
-**Problem**: Orders table has user_id column but no foreign key constraint
-**Recommendation**: Add `add_foreign_key :orders, :users`
-**Risk**: Orphaned records, inconsistent data
-
-## Summary
-| Category | Count |
-|----------|-------|
-| Blocker | 0 |
-| Warning | 3 |
-| Suggestion | 2 |
-```
-
 ## Severity Levels
 
 - **blocker**: Data loss or corruption risk, constraint violations

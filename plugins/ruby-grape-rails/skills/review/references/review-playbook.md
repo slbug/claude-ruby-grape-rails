@@ -246,14 +246,15 @@ Issues` section and the At-a-Glance Finding Table with
 
 Per § "Worker Severity Mapping":
 
-- worker `blocker` introduced by this diff → BLOCKER (counted)
-- worker `blocker` on unchanged code → Pre-existing BLOCKER (reported only)
-- worker `warning` introduced by this diff → WARNING (counted)
-- worker `suggestion` introduced by this diff → SUGGESTION (counted)
+- worker `blocker` introduced by this diff → counted Blocker
+- worker `blocker` on unchanged code → Pre-existing Blocker (reported only)
+- worker `warning` introduced by this diff → counted Warning
+- worker `suggestion` introduced by this diff → counted Suggestion
 
-Uppercase `BLOCKER | WARNING | SUGGESTION` in consolidated headers,
-Coverage row, Summary table, At-a-Glance Finding Table, and section
-headers. Per-agent artifacts keep their lowercase per-finding wording.
+Title case `Blockers | Warnings | Suggestions` in consolidated section
+headers + Summary table category column + Reviewer Coverage row count
+(e.g. `3 Blocker / 1 Warning / 0 Suggestion`). Per-finding `Severity:`
+tags + Counts prefix stay lowercase per agent contract.
 
 ### STEP 4: Compute consolidated verdict deterministically
 
@@ -291,7 +292,7 @@ Format"). REQUIRES CHANGES chat script reads that section verbatim.
   file paths, concrete evidence.
 - Dedupe overlapping findings across agents; cite all sources.
 - Keep highest confidence among duplicates.
-- Sort findings: BLOCKER → WARNING → SUGGESTION;
+- Sort findings: Blockers → Warnings → Suggestions;
   HIGH → MEDIUM → LOW within bucket.
 - Preserve "Pre-existing Issues" section.
 
@@ -321,29 +322,30 @@ Schema + per-skill staleness rules:
 
 | Severity | Description | Action |
 |----------|-------------|--------|
-| **BLOCKER** | Must fix before merge — Iron Law violations, security vulnerabilities, data-loss risks, production-outage risks, critical correctness | Surface in chat with one-line impact |
-| **WARNING** | Should fix — performance issues, maintainability problems, potential bugs | Note in review with recommendation |
+| **Blocker** | Must fix before merge — Iron Law violations, security vulnerabilities, data-loss risks, production-outage risks, critical correctness | Surface in chat with one-line impact |
+| **Warning** | Should fix — performance issues, maintainability problems, potential bugs | Note in review with recommendation |
 | **REQUIRES CHANGES** (verdict only) | Code works but new public behavior lacks test coverage | List affected methods/endpoints/jobs |
-| **SUGGESTION** | Style, refactor, or doc improvements | Brief note, no action required |
+| **Suggestion** | Style, refactor, or doc improvements | Brief note, no action required |
 
 ## Worker Severity Mapping
 
 Reviewer agents emit `blocker | warning | suggestion` (lowercase).
 Synthesis applies diff-status filter only — no vocabulary translation:
 
-| Worker output | Diff status | Consolidated bucket |
+| Worker output | Diff status | Counted into Summary? |
 |---|---|---|
-| blocker | introduced by this diff | BLOCKER (counted) |
-| blocker | unchanged code | Pre-existing BLOCKER (reported; does not affect verdict) |
-| warning | introduced by this diff | WARNING (counted) |
-| warning | unchanged code | Pre-existing WARNING (reported only) |
-| suggestion | introduced by this diff | SUGGESTION (counted) |
-| suggestion | unchanged code | Pre-existing SUGGESTION (reported only) |
+| blocker | introduced by this diff | yes — Blocker |
+| blocker | unchanged code | no — Pre-existing Blocker (reported only) |
+| warning | introduced by this diff | yes — Warning |
+| warning | unchanged code | no — Pre-existing Warning (reported only) |
+| suggestion | introduced by this diff | yes — Suggestion |
+| suggestion | unchanged code | no — Pre-existing Suggestion (reported only) |
 | New public behavior without tests | any | REQUIRES CHANGES verdict trigger (not a per-finding bucket) |
 
-Worker per-finding tags stay lowercase. Consolidated headers, Coverage
-row, Summary table, At-a-Glance Finding Table use uppercase
-`BLOCKER | WARNING | SUGGESTION` and the verdict-only `REQUIRES CHANGES`.
+Per-finding `Severity:` tags + Counts prefix stay lowercase per agent
+contract. Section headers + Summary table + Reviewer Coverage row
+count use title case `Blockers | Warnings | Suggestions`.
+Verdict 4-set stays UPPERCASE (`REQUIRES CHANGES` etc).
 
 ## Review Scope
 
@@ -411,9 +413,9 @@ Write the synthesized review to the path read via
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output | {n} BLOCKER / {n} WARNING / {n} SUGGESTION |
+| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output | {n} Blocker / {n} Warning / {n} Suggestion |
 
-Findings column uses bucket form (`BLOCKER / WARNING / SUGGESTION`)
+Findings column uses title case (`Blocker / Warning / Suggestion`)
 and counts NEW findings only (diff-introduced). Pre-existing
 findings attributed to the reviewer appear in `## Pre-existing
 Issues` and the at-a-glance table with `New? = Pre-existing`.
@@ -510,7 +512,7 @@ introduced by this diff with no test coverage.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | {title} | BLOCKER \| WARNING \| SUGGESTION | HIGH \| MEDIUM \| LOW | {agent} | {path}:{line} | Yes \| Pre-existing |
+| 1 | {title} | Blocker \| Warning \| Suggestion | HIGH \| MEDIUM \| LOW | {agent} | {path}:{line} | Yes \| Pre-existing |
 ````
 
 Every consolidated review MUST include the at-a-glance table, even for one

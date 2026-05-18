@@ -4,14 +4,17 @@
 # Handles: custom remote names, non-standard default branches,
 # stale local refs (fetches before resolving).
 #
-# Usage:
-#   eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"
-#   git diff "$BASE_REF"...HEAD
-#
-# Output (eval-safe):
+# Output (3 KEY=value lines on stdout, eval-safe shell-quoted):
 #   REMOTE=origin
 #   DEFAULT_BRANCH=main
 #   BASE_REF=origin/main
+#
+# Usage from agent (recommended): read the 3 stdout lines and
+# substitute the values into following commands directly.
+#
+# Usage from shell script (single-process): eval into local vars.
+#   eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"
+#   git diff "$BASE_REF"...HEAD
 #
 # Exit codes:
 #   0 — resolved successfully

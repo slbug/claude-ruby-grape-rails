@@ -20,17 +20,17 @@ Reviews catch issues before they reach production. Each specialist focuses on th
 
 ## Collecting Changed Files
 
-`eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"` populates
-`$BASE_REF`, `$REMOTE`, `$DEFAULT_BRANCH`. Then capture in the same
-shell session:
+Run `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
+on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Use emitted values
+as substitutions in subsequent commands. Then capture:
 
-- `$MERGE_BASE` via `git merge-base HEAD "$BASE_REF"`
-- `$CHANGED_FILES` via `git diff --name-only --diff-filter=ACMR "$MERGE_BASE"...HEAD`
-- `$DIFF_STAT` via `git diff --stat "$MERGE_BASE"...HEAD`
+- `MERGE_BASE` via `git merge-base HEAD <BASE_REF>`
+- `CHANGED_FILES` via `git diff --name-only --diff-filter=ACMR <MERGE_BASE>...HEAD`
+- `DIFF_STAT` via `git diff --stat <MERGE_BASE>...HEAD`
 
-Pass `$CHANGED_FILES`, `$BASE_REF`, `$MERGE_BASE`, and `$DIFF_STAT` to
-every spawned reviewer. Reviewers scope analysis to `$CHANGED_FILES`
-and NEVER scan unchanged files.
+Pass the captured `CHANGED_FILES`, `BASE_REF`, `MERGE_BASE`, and
+`DIFF_STAT` values to every spawned reviewer. Reviewers scope
+analysis to the file list and NEVER scan unchanged files.
 
 Reviewers own diff strategy. For reviewer diff discipline, see
 `${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Diff Collection".
@@ -194,7 +194,10 @@ For full briefing template (verbatim text to use in prompts), see
 3. **Deduplicate overlapping findings** - merge similar issues from different agents
 4. **Keep noise low** - prefer findings a senior Ruby reviewer would care about
 5. **Be specific** - cite line numbers, provide examples
-6. **Prioritize** — single severity vocabulary: `blocker | warning | suggestion` per-finding; `BLOCKER | WARNING | SUGGESTION` in consolidated headers + tables
+6. **Prioritize** — single severity vocabulary: lowercase
+   `blocker | warning | suggestion` in per-finding tags + Counts
+   prefix; title case `Blockers | Warnings | Suggestions` in
+   consolidated section headers + Summary table
 7. **Contextualize** - explain why it matters, not just what's wrong
 8. **Identify package + ORM first** - do not apply flat Rails / Active Record advice to Sequel or modular packages
 
@@ -303,8 +306,8 @@ worker counts (any `blocker` → `BLOCKED`; else any `warning` →
 
 Use canonical strings only for manifest status enum (`pending`,
 `in-flight`, `artifact`, `stub-replaced`, `recovered-from-return`,
-`stub-no-output`, `complete`) and severity buckets (`BLOCKER`,
-`WARNING`, `SUGGESTION`). The synthesizing skill body owns this
+`stub-no-output`, `complete`) and severity tags (`blocker`,
+`warning`, `suggestion`). The synthesizing skill body owns this
 discipline; `bin/manifest-update` does not validate enums on patch.
 
 Decision rules + chat scripts:
