@@ -190,6 +190,66 @@ Use the maintained upstream path.
         self.assertFalse(passed)
         self.assertIn("Blocker[s] / {n} Warning[s] / {n} Suggestion[s]", reason)
 
+    def test_reviewer_coverage_rejects_singular_form_with_count_zero(self) -> None:
+        # Count == 0 requires plural form. `0 Blocker` is invalid grammar.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 0 Blocker / 0 Warnings / 0 Suggestions |
+"""
+        passed, reason = output_checks.has_review_reviewer_coverage(content)
+        self.assertFalse(passed)
+        self.assertIn("singular only when count == 1", reason)
+
+    def test_reviewer_coverage_rejects_plural_form_with_count_one(self) -> None:
+        # Count == 1 requires singular form. `1 Blockers` is invalid grammar.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 1 Blockers / 0 Warnings / 0 Suggestions |
+"""
+        passed, reason = output_checks.has_review_reviewer_coverage(content)
+        self.assertFalse(passed)
+        self.assertIn("singular only when count == 1", reason)
+
+    def test_reviewer_coverage_rejects_mismatched_count_form_pairs(self) -> None:
+        # `2 Warning` (plural count, singular form) invalid; surfaces the
+        # exact field in the error message.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| ruby-reviewer | artifact | 1 Blocker / 2 Warning / 1 Suggestions |
+"""
+        passed, reason = output_checks.has_review_reviewer_coverage(content)
+        self.assertFalse(passed)
+        # Two mismatches: `2 Warning` (need plural) + `1 Suggestions`
+        # (need singular). Validator reports first mismatch encountered.
+        self.assertIn("singular only when count == 1", reason)
+
+    def test_reviewer_coverage_accepts_all_valid_count_forms(self) -> None:
+        # Count == 1 → singular; count != 1 (including 0 and 2+) → plural.
+        content = """# Review: x
+
+## Reviewer Coverage
+
+| Reviewer | Recovery State | Findings |
+|---|---|---|
+| a | artifact | 0 Blockers / 1 Warning / 2 Suggestions |
+| b | artifact | 1 Blocker / 0 Warnings / 0 Suggestions |
+| c | artifact | 5 Blockers / 3 Warnings / 7 Suggestions |
+"""
+        passed, _ = output_checks.has_review_reviewer_coverage(content)
+        self.assertTrue(passed)
+
     def test_reviewer_verdicts_rejects_non_canonical_verdict(self) -> None:
         content = """# Review: x
 

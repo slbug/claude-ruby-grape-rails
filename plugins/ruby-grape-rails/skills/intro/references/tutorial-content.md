@@ -305,7 +305,7 @@ What it catches with automated detection (regex patterns from
 - `after_save :enqueue_*` (should be `after_commit`) (Laws 4/11)
 - `eval(...)` (Law 12)
 - `def method_missing` without `respond_to_missing?` (Law 16)
-- bare `rescue` / `rescue Exception` (Law 18)
+- `rescue Exception` (Law 18 — bare `rescue` is safe, defaults to `StandardError`)
 
 ### Layer 6: Planning Sets Structure Early
 

@@ -2,16 +2,20 @@
 
 ## Priority Order
 
-All Iron Law violations are Blockers — non-negotiable per
+Iron Laws 1-20 are violation rules — every violation is a Blocker
+(non-negotiable per
 `plugins/ruby-grape-rails/skills/triage/references/triage-patterns.md`
-§ "Always Fix".
+§ "Always Fix"). Laws 21 and 22 are workflow gates, not severity
+classifications.
 
 1. **Blockers** (Laws 1-20): Every violation blocks merge. Single
    severity — no internal critical/warning split.
-2. **Verification** (Law 21): Run the actual test/lint stack before
-   claiming done.
-3. **Surgical Changes** (Law 22): Every changed line must trace to
-   the user's request.
+2. **Verification gate** (Law 21): Run the actual test/lint stack
+   before claiming done. Failure here halts the workflow, not the
+   merge.
+3. **Surgical Changes gate** (Law 22): Every changed line must trace
+   to the user's request. Out-of-scope edits are flagged but routed
+   to `/rb:techdebt`, not blocked.
 
 ## Blocker Laws
 

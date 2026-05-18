@@ -43,13 +43,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `skills/verify/references/verification-profiles.md` retains
   `eval` — it runs as one self-contained shell script.
 
-- `iron-law-judge`: Laws 3 (N+1), 18 (bare `rescue`), 19 (DB
+- `iron-law-judge`: Laws 3 (N+1), 18 (`rescue Exception`), 19 (DB
   queries in Turbo Streams), 20 (missing `turbo_frame_tag`)
   promoted from Warning Violations to Blocker Violations. All
-  Iron Law violations are now Blockers — matches
+  Iron Law violations (Laws 1-20) are now Blockers — matches
   `triage-patterns.md` § "Always Fix" doctrine. Fix Priority
-  section collapsed accordingly (Laws 1-16, 18-20 = Blockers; Law
-  21 = Verification; Law 22 = Surgical Changes).
+  section collapsed accordingly (Laws 1-20 = Blockers; Law 21 =
+  Verification gate; Law 22 = Surgical Changes gate). Blocker
+  pattern table extended to cover Laws 5, 8, 9, 17 (manual review
+  rows) so the judge has guidance for non-grep-detectable laws.
 
 ### Removed
 
@@ -73,18 +75,33 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `SessionStart` + `SubagentStart` via `inject-rules.sh` with its
   reference path bare on the next line — no need to restate or link
   from skill bodies.
-- `iron-law-judge` Law 18 description corrected from "Bare `rescue`
-  (catches Exception)" to "`rescue Exception` (catches interrupts +
-  system exits)". Bare `rescue` defaults to `StandardError` and is
-  safe; only the explicit `Exception` form swallows
-  `SignalException` / `SystemExit`.
-- `skills/iron-laws/references/fix-priority.md` rewritten to match
-  D1 doctrine: all Iron Law violations are Blockers (Laws 1-20);
-  Verification (Law 21) and Surgical Changes (Law 22) are separate
-  completion gates. Cross-reference label in `iron-laws/SKILL.md`
-  updated.
-- `skills/full/SKILL.md:72` and `triage/SKILL.md` ("If all findings
-  are Blocker") grammar agreement fixed to plural `Blockers`.
+- Law 18 description corrected from "bare `rescue`" to
+  "`rescue Exception`" across all surfaces:
+  `agents/iron-law-judge.md` (Blocker table + Detection Patterns),
+  `skills/iron-laws/references/violation-patterns.md` (Law 18
+  section + Detection Patterns), `skills/triage/SKILL.md`,
+  `skills/triage/references/triage-patterns.md`,
+  `skills/intro/references/tutorial-content.md`. Bare `rescue`
+  defaults to `StandardError` and is safe; only the explicit
+  `Exception` form swallows `SignalException` / `SystemExit`.
+- `skills/iron-laws/references/fix-priority.md` + cross-ref label
+  in `skills/iron-laws/SKILL.md` rewritten to match D1 doctrine: all
+  Iron Law violations (Laws 1-20) are Blockers; Verification (Law
+  21) and Surgical Changes (Law 22) are separate workflow gates,
+  not severity classifications.
+- `skills/full/SKILL.md:72` and `triage/SKILL.md` grammar agreement
+  fixed to plural `Blockers`.
+- `output_checks.py` count-form validator paired with 4 new
+  unittest cases: `0 Blocker` rejected, `1 Blockers` rejected,
+  mismatched pairs (`2 Warning` / `1 Suggestions`) rejected, mixed
+  valid forms accepted.
+- `review-playbook.md` Coverage row template uses placeholder
+  `{n} Blocker[s] / {n} Warning[s] / {n} Suggestion[s]` instead of
+  hardcoded example counts (which agents could copy literally).
+- `review-playbook.md` fenced bash blocks no longer contain
+  `<BASE_REF>` / `<MERGE_BASE>` placeholders (parsed as shell
+  redirect). Replaced with `BASE_REF_VALUE` / `MERGE_BASE_VALUE`
+  literal markers + prose substitution instruction.
 
 ## [1.16.12] - 2026-05-17
 

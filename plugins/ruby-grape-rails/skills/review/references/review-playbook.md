@@ -312,10 +312,13 @@ Format"). REQUIRES CHANGES chat script reads that section verbatim.
 
 Single helper call at fanout entry:
 
-```bash
+Substitute the literal `BASE_REF` value (from `resolve-base-ref`
+stdout) for `BASE_REF_VALUE` before running:
+
+```
 MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
   --skill=rb:review --slug="$REVIEW_SLUG" \
-  --base-ref=<BASE_REF> \
+  --base-ref=BASE_REF_VALUE \
   --agents="$AGENTS_CSV")
 ```
 
@@ -424,7 +427,7 @@ Write the synthesized review to the path read via
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output | 0 Blockers / 1 Warning / 0 Suggestions |
+| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output | {n} Blocker[s] / {n} Warning[s] / {n} Suggestion[s] |
 
 Findings column uses title case + count-aware grammar (singular
 when count == 1, plural otherwise — including 0). Form examples:
@@ -647,8 +650,10 @@ parent SKILL.md.
 
 ### Compute diff LOC
 
+Substitute the captured `MERGE_BASE` value for `MERGE_BASE_VALUE`:
+
 ```
-DIFF_LOC=$(git diff --shortstat <MERGE_BASE>...HEAD | awk '{n=$4+$6} END{print n+0}')
+DIFF_LOC=$(git diff --shortstat MERGE_BASE_VALUE...HEAD | awk '{n=$4+$6} END{print n+0}')
 ```
 
 Columns 4 + 6 are insertions + deletions. `END{print n+0}` emits `0`

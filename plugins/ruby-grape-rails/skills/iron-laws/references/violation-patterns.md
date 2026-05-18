@@ -163,18 +163,22 @@ end
 @users.each { |u| puts u.orders.count }
 ```
 
-### Law 18: Bare Rescue
+### Law 18: Rescue Exception
 
-**Pattern**: `rescue` without specifying exception class.
+**Pattern**: `rescue Exception` — catches `SignalException` / `SystemExit`,
+hangs processes on interrupt, hides crashes. Bare `rescue` already
+defaults to `StandardError` and is safe.
 
 ```ruby
-rescue  # Catches Exception!
+rescue Exception => e  # catches SIGINT, SystemExit — DANGEROUS
 ```
 
 **Fix**:
 
 ```ruby
-rescue StandardError => e
+rescue => e  # defaults to StandardError — safe
+# or
+rescue SomeSpecificError => e
 ```
 
 ### Law 19: DB Queries in Turbo Streams
@@ -205,7 +209,7 @@ rescue StandardError => e
 | 4, 11 | `after_save.*:\|after_save do` (excluding `after_commit`) | `app/models/` |
 | 12 | `eval(` (excluding lines containing `# eval`) | `app/` |
 | 16 | `def method_missing` files lacking `respond_to_missing` | `app/` |
-| 18 | bare `rescue` (matching `rescue$` or `rescue =>`, excluding `StandardError`) | `app/` |
+| 18 | `rescue Exception` literal (bare `rescue` already defaults to `StandardError` — safe) | `app/` |
 | 19 | `\.where\|\.find\|\.find_by` | `app/views/*.turbo_stream.*` |
 
 ## Confidence Levels

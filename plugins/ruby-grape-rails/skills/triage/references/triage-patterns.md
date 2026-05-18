@@ -24,7 +24,7 @@ to "Usually Fix":
 - `after_save` enqueueing instead of after-commit hook (Iron Law 11)
 - `method_missing` without `respond_to_missing?` (Iron Law 16)
 - Unsupervised background processes (Iron Law 17)
-- Bare `rescue` / `rescue Exception` (Iron Law 18)
+- `rescue Exception` (Iron Law 18 — bare `rescue` is safe, defaults to `StandardError`)
 - DB queries inside Turbo Stream responses (Iron Law 19)
 - Partial updates without `turbo_frame_tag` (Iron Law 20)
 - "Should work" claims without test output (Iron Law 21)
