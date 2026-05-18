@@ -92,13 +92,13 @@ If BREAKING or DEPRECATION found, offer to create a plan.
 1. ALWAYS fetch before analyzing — never analyze stale cache.
 2. NEVER auto-update state — user confirms after reviewing report.
 3. ALWAYS cross-reference plugin files — map impact, not just summarize.
-4. BREAKING changes are BLOCKERS — surface first, prominently.
+4. BREAKING changes are Blockers — surface first, prominently.
 5. State file is the source of truth for audit version.
 
 ## Epistemic Posture
 
 Direct language for breaking-change analysis. CC version that removes
-or renames a plugin API the repo uses → label BLOCKER without
+or renames a plugin API the repo uses → label Blocker without
 softening. Deprecations labeled `deprecated` in the CC changelog →
 direct flag, not "consider migrating eventually". No apology cascades,
 no hedge chains.

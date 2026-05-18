@@ -47,7 +47,7 @@ Skips directly to P2-T3 regardless of earlier unchecked tasks.
 /rb:work .claude/plans/auth/plan.md --skip-blockers
 ```
 
-Continues past tasks that previously failed with BLOCKER status.
+Continues past tasks that previously failed with Blocker status.
 
 ## Resume from Interrupted Session
 

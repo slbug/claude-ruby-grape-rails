@@ -78,7 +78,7 @@ Do NOT flag issues already caught by CI:
 | IMPORTANT | convention violations, missing frontmatter, incorrect tool access |
 | IMPORTANT | unsupported agreement with author's framing when diff or evidence points elsewhere → review defect; challenge false premises directly |
 | IMPORTANT | direct correction over soft alignment; HIGH-confidence findings use direct language; reserve "might" / "potentially" for genuine uncertainty |
-| SUGGESTION | readability improvements, description wording, minor optimizations |
+| Suggestion | readability improvements, description wording, minor optimizations |
 
 ## Cross-File Consistency (Drift Check)
 

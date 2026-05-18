@@ -103,7 +103,7 @@ Plugin files:
 Write findings to .claude/docs-check/reports/{surface}-report.md
 ```
 
-Agent body owns BLOCKER/WARNING/INFO/PASS classification, "no large
+Agent body owns Blocker/Warning/INFO/PASS classification, "no large
 docs paste" rule, "stop after returning". Call site stays minimal.
 
 ### 6. Structural Baseline (Always)

@@ -62,7 +62,7 @@ $ /rb:full Add magic link authentication
 [REVIEWING] Spawning 4 review agents...
   ✓ ruby-reviewer: PASS (2 SUGGESTIONs noted)
   ✓ testing-reviewer: PASS
-  ✓ security-analyzer: PASS (1 SUGGESTION: token expiry)
+  ✓ security-analyzer: PASS (1 Suggestion: token expiry)
   ✓ verification-runner: All tests pass
 
 [REVIEWING] Synthesized **Verdict**: PASS

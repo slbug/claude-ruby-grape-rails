@@ -49,10 +49,12 @@ message.
 
 1. Classify complexity (tier + critical-path escalation).
 2. Select core + conditional reviewers per matrix below. Derive
-   `review-slug`. Use `$BASE_REF` from § "Collecting Changed Files".
+   `review-slug`. Use the `BASE_REF` value captured in §
+   "Collecting Changed Files" — substitute literally into shell
+   commands below (e.g. `--base-ref=<BASE_REF>`).
 3. Run
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run --skill=rb:review
-   --slug="$REVIEW_SLUG" --base-ref="$BASE_REF" --agents=<csv-of-reviewer-slugs>`.
+   --slug=<REVIEW_SLUG> --base-ref=<BASE_REF> --agents=<csv-of-reviewer-slugs>`.
    Captures stdout as `$MANIFEST` (absolute manifest path). Helper
    archives any prior manifest, computes datesuffix, agent paths,
    consolidated path, git pins; writes fresh manifest atomically.
@@ -119,7 +121,7 @@ Critical-path files force escalation regardless of count or LOC.
 | **Medium** | 4-10 | 201-1000 | Core + conditional by file type | 4-8 |
 | **Complex** | 11+ | > 1000 | All relevant reviewers, detailed output | 8-11 |
 
-Compute `DIFF_LOC = git diff --shortstat "$MERGE_BASE"...HEAD | awk '{n=$4+$6} END{print n+0}'`.
+Compute `DIFF_LOC = git diff --shortstat <MERGE_BASE>...HEAD | awk '{n=$4+$6} END{print n+0}'`.
 Columns 4 + 6 are insertions + deletions. `END{print n+0}` emits `0`
 on empty diff. Range matches `$DIFF_STAT` and `$CHANGED_FILES`.
 
@@ -170,8 +172,8 @@ Every Agent() call must include in its prompt:
 
 - Task: review the file list for the requested scope
 - `$CHANGED_FILES` (the diff manifest from main session)
-- `$BASE_REF` (from resolve-base-ref output)
-- `$MERGE_BASE` (from `git merge-base HEAD "$BASE_REF"`)
+- `BASE_REF` value (from resolve-base-ref stdout)
+- `MERGE_BASE` value (from `git merge-base HEAD <BASE_REF>`)
 - `$DIFF_STAT` (from `git diff --stat`)
 - **Absolute artifact path** read from
   `manifest-update spawn-paths "$MANIFEST"` (one row per agent slug).
@@ -194,10 +196,13 @@ For full briefing template (verbatim text to use in prompts), see
 3. **Deduplicate overlapping findings** - merge similar issues from different agents
 4. **Keep noise low** - prefer findings a senior Ruby reviewer would care about
 5. **Be specific** - cite line numbers, provide examples
-6. **Prioritize** — single severity vocabulary: lowercase
-   `blocker | warning | suggestion` in per-finding tags + Counts
-   prefix; title case `Blockers | Warnings | Suggestions` in
-   consolidated section headers + Summary table
+6. **Prioritize** — title case singular `Blocker | Warning |
+   Suggestion` in per-finding `Severity:` tags + Counts prefix +
+   Reviewer Coverage row count + At-a-Glance Severity column; title
+   case plural `Blockers | Warnings | Suggestions` in consolidated
+   section headers + Summary table category column; verdict 4-set
+   (`PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED`) stays
+   UPPERCASE
 7. **Contextualize** - explain why it matters, not just what's wrong
 8. **Identify package + ORM first** - do not apply flat Rails / Active Record advice to Sequel or modular packages
 
@@ -301,13 +306,13 @@ or compress:
 | `OK`, `LGTM`, `Approved` | `PASS` |
 
 `Needs fixes` does NOT auto-route to `REQUIRES CHANGES` — infer per
-worker counts (any `blocker` → `BLOCKED`; else any `warning` →
+worker counts (any `Blocker` → `BLOCKED`; else any `Warning` →
 `PASS WITH WARNINGS`; else `PASS`).
 
 Use canonical strings only for manifest status enum (`pending`,
 `in-flight`, `artifact`, `stub-replaced`, `recovered-from-return`,
-`stub-no-output`, `complete`) and severity tags (`blocker`,
-`warning`, `suggestion`). The synthesizing skill body owns this
+`stub-no-output`, `complete`) and severity tags (`Blocker`,
+`Warning`, `Suggestion`). The synthesizing skill body owns this
 discipline; `bin/manifest-update` does not validate enums on patch.
 
 Decision rules + chat scripts:
@@ -345,8 +350,8 @@ When a finding cites a sidecar, read the sidecar's `trust_state` (see
 - Missing `**Counts:**` line. Reviewers MUST emit Counts: first.
   Missing line breaks consolidator severity-bucket counts.
 - Bulk-cat of artifacts. Reviewer artifacts run ~6-8KB each;
-  10 reviewers ≈ 60-80KB combined. Combined stream overflows Read
-  token cap. Use one Read per artifact path from `spawn-paths`.
+  up to 11 reviewers ≈ 65-90KB combined. Combined stream overflows
+  Read token cap. Use one Read per artifact path from `spawn-paths`.
 
 ## References
 

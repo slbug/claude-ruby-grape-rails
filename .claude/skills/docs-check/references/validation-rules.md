@@ -23,8 +23,8 @@ docs win.
 
 | Level | Use for |
 |-------|---------|
-| `BLOCKER` | plugin uses something current docs reject or no longer support |
-| `WARNING` | docs allow it, but pattern is deprecated, version-gated, or misleading |
+| `Blocker` | plugin uses something current docs reject or no longer support |
+| `Warning` | docs allow it, but pattern is deprecated, version-gated, or misleading |
 | `INFO` | docs now support something repo may want to adopt |
 | `PASS` | current repo behavior matches current docs |
 
@@ -39,7 +39,7 @@ Authoritative cached docs:
 
 | Surface | Rule |
 |---|---|
-| Agent frontmatter (`plugins/**/agents/*.md`, `.claude/agents/*.md`) | `tools:` MUST NOT include `Agent`. Body MUST NOT contain `Agent(...)` / `subagent_type:` calls. BLOCKER if found. |
+| Agent frontmatter (`plugins/**/agents/*.md`, `.claude/agents/*.md`) | `tools:` MUST NOT include `Agent`. Body MUST NOT contain `Agent(...)` / `subagent_type:` calls. Blocker if found. |
 | Skill bodies + skill references (`plugins/**/skills/*/SKILL.md`, `plugins/**/skills/*/references/*.md`, `.claude/skills/*/SKILL.md`) | MAY contain `Agent(...)` calls when describing main-session fanout. Allowed. |
 
 Source: `sub-agents.md` (cached docs).
@@ -119,7 +119,7 @@ Notes:
   the charset as lowercase letters, numbers, hyphens only; repo accepts
   colons in practice. Migration to hyphen names with aliases is the
   fallback if CC enforces the documented charset. Treat as INFO (repo
-  policy override of doc charset), NOT a WARNING — see
+  policy override of doc charset), NOT a Warning — see
   `.claude/rules/skill-development.md` § "Colon Naming"
 - **Two substitution layers, not one.** Skill substitution questions
   REQUIRE reading BOTH cached pages — `skills.md` covers only
@@ -169,9 +169,9 @@ Checks:
 3. Continue treating `triggers:` as invalid — skills docs do not support it.
 4. Flag `when_to_use:` on a plugin SKILL.md as drift — single `description` only.
 5. Flag plugin-scope `paths:` as drift (non-functional at plugin scope).
-6. Colon names (`rb:<slug>`) are repo policy — classify INFO, not WARNING.
+6. Colon names (`rb:<slug>`) are repo policy — classify INFO, not Warning.
 7. Skill `description` over 1,024 characters → `ERROR` (agentskills.io cap).
-   Over 250 characters → `WARNING` (cached docs say Claude truncates them
+   Over 250 characters → `Warning` (cached docs say Claude truncates them
    in skill listing).
 
 ## Hook Validation
@@ -228,8 +228,8 @@ Important constraints:
 Checks:
 
 1. Confirm `hooks/hooks.json` only uses documented events + types.
-2. Flag undocumented events / hook types as `BLOCKER`.
-3. `if` outside tool events → `WARNING` or `BLOCKER` (depending on whether handler is disabled).
+2. Flag undocumented events / hook types as `Blocker`.
+3. `if` outside tool events → `Warning` or `Blocker` (depending on whether handler is disabled).
 4. Async on non-`command` hooks → docs issue.
 5. Async hook + control output → not supported unless cached docs explicitly say.
 6. Validate `${CLAUDE_PLUGIN_ROOT}` references against real repo paths:

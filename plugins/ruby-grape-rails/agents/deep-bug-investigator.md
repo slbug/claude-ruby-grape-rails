@@ -53,7 +53,7 @@ are disallowed — you cannot modify source code.
 
 Findings file MUST start with:
 
-`**Counts:** N findings (X blocker, Y warning, Z suggestion); M notes`
+`**Counts:** N findings (X Blocker, Y Warning, Z Suggestion); M notes`
 
 Empty state:
 

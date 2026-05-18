@@ -74,10 +74,10 @@ def _walk_phase_sections(text: str):
 
 class TriagePlanTemplateDriftTests(unittest.TestCase):
     def test_iron_law_refs_only_in_blockers_phase(self) -> None:
-        """`Iron Law N` MUST NOT appear in non-BLOCKER task lines.
+        """`Iron Law N` MUST NOT appear in non-Blocker task lines.
 
         Per `triage-patterns.md` § "Always Fix": ALL Iron Law
-        violations are non-negotiable BLOCKERs. A canonical task
+        violations are non-negotiable Blockers. A canonical task
         example referencing `Iron Law N` under `## Phase 2: Warnings`
         / `## Deferred Findings` would teach the agent to defer or
         downgrade an Iron Law violation. The `## Pre-existing Issues
@@ -107,7 +107,7 @@ class TriagePlanTemplateDriftTests(unittest.TestCase):
                     bad.append(f"{heading!r} contains Iron Law task: {line.strip()!r}")
         self.assertFalse(
             bad,
-            "Iron Law violations are BLOCKER per triage-patterns; canonical "
+            "Iron Law violations are Blocker per triage-patterns; canonical "
             "examples MUST NOT place them in non-Blockers phases (incl. "
             "Phase 1 Test Coverage Gaps, which is for coverage gaps, not "
             "Iron Law violations). Drifted lines: " + "; ".join(bad),

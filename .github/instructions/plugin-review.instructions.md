@@ -337,10 +337,10 @@ NOT flag the fallback chain as over-engineered.
   unless agent has documented contributor-only privilege need
 - Shipped skill bodies (`plugins/ruby-grape-rails/.../SKILL.md`)
   referencing contributor doctrine paths (`.claude/rules/*-development.md`,
-  `.github/instructions/*.instructions.md`) — flag as BLOCKER
-- Agent frontmatter declaring `Agent` in `tools:` list — flag as BLOCKER
+  `.github/instructions/*.instructions.md`) — flag as Blocker
+- Agent frontmatter declaring `Agent` in `tools:` list — flag as Blocker
 - Agent body containing `Agent(...)` or `subagent_type:` calls — flag as
-  BLOCKER
+  Blocker
 - Agent or skill bodies that restate tool-batching discipline (preferred
   batched git diff / grep / bundle info, exclude noise via pathspec,
   prefer Read/Grep/Glob over `cat`/`find -exec`) — preference injection
@@ -361,7 +361,7 @@ NOT flag the fallback chain as over-engineered.
 - Consolidated review missing `## Reviewer Coverage` or
   `## Reviewer Verdicts`. Coverage MUST be 3-col
   (`Reviewer | Recovery State | Findings`); findings cell shape
-  `{n} BLOCKER / {n} WARNING / {n} SUGGESTION`. Verdicts MUST be
+  `{n} Blocker / {n} Warning / {n} Suggestion`. Verdicts MUST be
   3-col (`Reviewer | Raw Verdict | Canonical`); canonical ∈
   `{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}`.
   `stub-no-output` rows (per Coverage): both Raw Verdict and
@@ -395,9 +395,9 @@ NOT flag the fallback chain as over-engineered.
   one consolidated verdict per artifact.
 - `run_in_background: true` on any `Agent(...)` call in shipped
   skill bodies, fanout templates, or example snippets — flag as
-  BLOCKER. Plugin agents dispatch foreground only.
+  Blocker. Plugin agents dispatch foreground only.
 - Raw `mv`, `cp`, `jq -i`, `rm`, or improvised shell against any
   `RUN-CURRENT.json` path or per-agent artifact path in shipped skill
-  bodies, hook scripts, or examples — flag as BLOCKER. All manifest
+  bodies, hook scripts, or examples — flag as Blocker. All manifest
   mutations and stale-stub rotations MUST go through
   `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update`.

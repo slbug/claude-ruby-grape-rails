@@ -113,7 +113,7 @@ Stop on the first failure, summarize the key error, and suggest the narrowest re
 
 Findings file MUST start with:
 
-`**Counts:** N findings (X blocker, Y warning, Z suggestion); M notes`
+`**Counts:** N findings (X Blocker, Y Warning, Z Suggestion); M notes`
 
 Empty state:
 

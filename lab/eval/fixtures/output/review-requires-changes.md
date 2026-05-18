@@ -9,8 +9,8 @@
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
-| testing-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| testing-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## Reviewer Verdicts
 

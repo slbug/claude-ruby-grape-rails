@@ -28,10 +28,10 @@ Verification is tiered to balance speed and safety:
 3. **RuboCop warning**: Auto-fix if possible, else flag
 4. **After 3 retries**: Log blocker, skip task, continue
 
-## BLOCKER Format
+## Blocker Format
 
 ```markdown
-## BLOCKER: Task could not be completed
+## Blocker: Task could not be completed
 
 **Task ID**: P2-T3
 **Task**: Implement User.register
@@ -51,13 +51,13 @@ sessions don't re-try the same failed approach:
   - Tried: {approach attempted}
   - Failed because: {root cause}
   - Attempts: 3
-  - See BLOCKER in progress.md for full error
+  - See Blocker in progress.md for full error
 ```
 
 Append under the existing `## Dead Ends` section in
 `.claude/plans/{slug}/scratchpad.md`.
 
-## Recovery After BLOCKER
+## Recovery After Blocker
 
 When user resolves a blocker and resumes:
 

@@ -2,7 +2,7 @@
 
 Emit `.claude/plans/{slug}/plan.md` matching the structure below.
 Buckets use canonical review vocabulary
-(`BLOCKER | WARNING | SUGGESTION`). Pre-existing findings go in
+(`Blocker | Warning | Suggestion`). Pre-existing findings go in
 `## Pre-existing Issues (informational)` only — never auto-included
 in any phase.
 
@@ -13,7 +13,7 @@ mapping:
 
 | Phase | Heading shape | Findings | Task IDs |
 |---|---|---|---|
-| Phase 1 | `## Phase 1: Blockers [PENDING]` (BLOCKED verdict) OR `## Phase 1: Test Coverage Gaps [PENDING]` (REQUIRES CHANGES verdict). Omitted for PASS / PASS WITH WARNINGS. | every NEW BLOCKER OR every Test Coverage Gap row (auto-included; mutually exclusive per playbook STEP 4) | `P1-T1`, `P1-T2`, ... |
+| Phase 1 | `## Phase 1: Blockers [PENDING]` (BLOCKED verdict) OR `## Phase 1: Test Coverage Gaps [PENDING]` (REQUIRES CHANGES verdict). Omitted for PASS / PASS WITH WARNINGS. | every NEW Blocker OR every Test Coverage Gap row (auto-included; mutually exclusive per playbook STEP 4) | `P1-T1`, `P1-T2`, ... |
 | Phase 2 | `## Phase 2: Warnings (selected) [PENDING]`. Omit when zero selected. | NEW WARNINGs the user selected at SKILL Step 4 | `P2-T1`, ... |
 | Phase 3 | `## Phase 3: Suggestions (selected) [PENDING]`. Omit when zero selected. | NEW SUGGESTIONs the user selected via `S<n>` at SKILL Step 4 | `P3-T1`, ... |
 
@@ -45,9 +45,9 @@ are descriptive narrative, not plan annotations.
 
 | Bucket | Total | Selected | Deferred | Excluded |
 |---|---|---|---|---|
-| BLOCKER | 3 | 3 | 0 | 0 |
-| WARNING | 4 | 1 | 3 | 0 |
-| SUGGESTION | 2 | 1 | 1 | 0 |
+| Blocker | 3 | 3 | 0 | 0 |
+| Warning | 4 | 1 | 3 | 0 |
+| Suggestion | 2 | 1 | 1 | 0 |
 | **Total** | **9** | **5** | **4** | **0** |
 
 Counts NEW findings only. Pre-existing tracked in
@@ -93,7 +93,7 @@ gate `/rb:work` on these.
 
 ## Next Steps
 
-1. Run `/rb:work` to fix the 5 selected items (3 BLOCKER + 1 WARNING + 1 SUGGESTION)
+1. Run `/rb:work` to fix the 5 selected items (3 Blocker + 1 Warning + 1 Suggestion)
 2. Estimated time: 45 minutes
 3. Review deferred items in future sprint
 ````

@@ -139,7 +139,7 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 
 Findings file MUST start with:
 
-`**Counts:** N findings (X blocker, Y warning, Z suggestion); M notes`
+`**Counts:** N findings (X Blocker, Y Warning, Z Suggestion); M notes`
 
 Empty state:
 

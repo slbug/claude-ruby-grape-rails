@@ -42,7 +42,7 @@ disallowed — you cannot modify source code.
 
 Findings file MUST start with:
 
-`**Counts:** N findings (X blocker, Y warning, Z suggestion); M notes`
+`**Counts:** N findings (X Blocker, Y Warning, Z Suggestion); M notes`
 
 Empty state:
 
@@ -171,6 +171,6 @@ Always write an artifact, even for a clean pass. Never write review artifacts un
 
 Provide severity classification:
 
-- **blocker**: Migration will fail in production or cause data loss
-- **warning**: Performance risk or maintenance burden
-- **suggestion**: Best practice suggestion
+- **Blocker**: Migration will fail in production or cause data loss
+- **Warning**: Performance risk or maintenance burden
+- **Suggestion**: Best practice suggestion

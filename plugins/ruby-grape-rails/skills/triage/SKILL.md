@@ -1,6 +1,6 @@
 ---
 name: rb:triage
-description: "Triaging review findings: pick fix now, skip, or defer. Prioritizes BLOCKER (Iron Law violations, security). Triggers: \"triage\", \"which to fix\", \"prioritize findings\"."
+description: "Triaging review findings: pick fix now, skip, or defer. Prioritizes Blocker (Iron Law violations, security). Triggers: \"triage\", \"which to fix\", \"prioritize findings\"."
 argument-hint: "[path to review file]"
 effort: low
 ---
@@ -21,14 +21,14 @@ Batch-select findings from the review before creating follow-up work.
 ```
 Review File
     ↓
-Parse Findings (BLOCKER / WARNING / SUGGESTION)
+Parse Findings (Blocker / Warning / Suggestion)
     ↓
 ┌─────────────────┐
 │ Auto-Categorize │
 ├─────────────────┤
-│ • BLOCKER       │ → always include (auto, never optional)
-│ • WARNING       │ → recommend (default selected; user may defer)
-│ • SUGGESTION    │ → defer (default unselected; user may include)
+│ • Blocker       │ → always include (auto, never optional)
+│ • Warning       │ → recommend (default selected; user may defer)
+│ • Suggestion    │ → defer (default unselected; user may include)
 └─────────────────┘
     ↓
 Present Grouped Findings
@@ -42,7 +42,7 @@ Next Action
 
 ## Severity Classification
 
-Map review buckets (`BLOCKER | WARNING | SUGGESTION`) to triage
+Map review buckets (`Blocker | Warning | Suggestion`) to triage
 priorities. Within each bucket, order **security findings only** by
 `evidence_mode` (defined in
 `${CLAUDE_PLUGIN_ROOT}/skills/security/SKILL.md` § "Evidence Mode" and
@@ -56,7 +56,7 @@ priorities. Within each bucket, order **security findings only** by
 Non-security findings carry no `evidence_mode`. Retain agent-emitted
 order within the bucket.
 
-### BLOCKER → Always Include
+### Blocker → Always Include
 
 - **Iron Law violations**: transaction safety, after_commit discipline, JSON-safe args
 - **Security issues**: SQL injection, XSS, mass assignment, hardcoded secrets
@@ -64,16 +64,16 @@ order within the bucket.
 - **N+1 queries**: database performance killers
 - **Transaction safety**: operations outside transactions that should be inside
 
-### WARNING → Recommend Include
+### Warning → Recommend Include
 
-- **Error handling (non-Iron-Law)**: missing error handling on external API calls (bare `rescue` / `rescue Exception` is Iron Law 18 → BLOCKER, not WARNING)
+- **Error handling (non-Iron-Law)**: missing error handling on external API calls (bare `rescue` / `rescue Exception` is Iron Law 18 → Blocker, not Warning)
 - **Test coverage**: missing tests for critical paths
 - **API contract**: breaking changes to public APIs
 - **Documentation**: missing docs for public methods
 - **Refactoring opportunities**: complex methods, Law of Demeter violations
 - **Naming**: unclear variable/method names
 
-### SUGGESTION → Defer by Default
+### Suggestion → Defer by Default
 
 - **Code style**: inconsistent formatting (if not auto-fixable)
 - **Performance**: without profiling evidence
@@ -159,7 +159,7 @@ field. `/rb:work` parser routes on the canonical Set A only.
 
 ### Step 2: Auto-Categorize via Review Bucket
 
-Read each finding's bucket (`BLOCKER | WARNING | SUGGESTION`) AND
+Read each finding's bucket (`Blocker | Warning | Suggestion`) AND
 its `New?` column. Apply this filter FIRST:
 
 - `New? = Pre-existing` → informational only; never auto-include,
@@ -169,15 +169,15 @@ its `New?` column. Apply this filter FIRST:
 
 For NEW findings:
 
-- BLOCKER → always include (auto-selected, never optional)
-- WARNING → recommend (default selected; user may defer)
-- SUGGESTION → defer (default unselected; user may include)
+- Blocker → always include (auto-selected, never optional)
+- Warning → recommend (default selected; user may defer)
+- Suggestion → defer (default unselected; user may include)
 
 ### Step 2b: Verdict gate + Phase 1 auto-include source
 
 | Consolidated `**Verdict**:` | Phase 1 source (auto-include) |
 |---|---|
-| `BLOCKED` | every NEW BLOCKER row from At-a-Glance + matched `## Blockers` detail |
+| `BLOCKED` | every NEW Blocker row from At-a-Glance + matched `## Blockers` detail |
 | `REQUIRES CHANGES` | every row from `## Test Coverage Gaps ({n})` |
 | `PASS WITH WARNINGS` / `PASS` | none — Phase 1 heading omitted entirely |
 
@@ -208,7 +208,7 @@ per Step 2b verdict gate:
 
 | Verdict | Auto-include (no UI) | Present in selection UI |
 |---|---|---|
-| `BLOCKED` | every NEW BLOCKER (`B<n>`) | NEW WARNINGs (`W<n>`), NEW SUGGESTIONs (`S<n>`) |
+| `BLOCKED` | every NEW Blocker (`B<n>`) | NEW WARNINGs (`W<n>`), NEW SUGGESTIONs (`S<n>`) |
 | `REQUIRES CHANGES` | every Test Coverage Gap row (`G<n>`) | NEW WARNINGs (`W<n>`), NEW SUGGESTIONs (`S<n>`) |
 | `PASS WITH WARNINGS` / `PASS` | none | NEW WARNINGs (`W<n>`), NEW SUGGESTIONs (`S<n>`) |
 
@@ -219,17 +219,17 @@ prompt, bucket shortcuts first then individual items:
 
 | Option label | Effect |
 |---|---|
-| `All WARNING` | Select every NEW WARNING. Leave SUGGESTION selections untouched. |
-| `All SUGGESTION` | Select every NEW SUGGESTION. Leave WARNING selections untouched. |
-| `Skip all WARNING` | Defer every NEW WARNING. Leave SUGGESTION selections untouched. |
-| `Skip all SUGGESTION` | Defer every NEW SUGGESTION. Leave WARNING selections untouched. |
+| `All Warning` | Select every NEW Warning. Leave Suggestion selections untouched. |
+| `All Suggestion` | Select every NEW Suggestion. Leave Warning selections untouched. |
+| `Skip all Warning` | Defer every NEW Warning. Leave Suggestion selections untouched. |
+| `Skip all Suggestion` | Defer every NEW Suggestion. Leave Warning selections untouched. |
 | `Group by file` | Re-render the option list grouped by file. Do NOT change selection state. |
-| `W<n>` / `S<n>` (one row per finding) | Select the individual NEW WARNING / SUGGESTION. Description: file, line, one-line reason. |
+| `W<n>` / `S<n>` (one row per finding) | Select the individual NEW Warning / Suggestion. Description: file, line, one-line reason. |
 
 Accept combinations of shortcuts and individual picks in one
-response (e.g., `All WARNING` + `S2` + `S5`). Resolve combinations
-in selection order: cancel an earlier `All WARNING` when a later
-`Skip all WARNING` follows; let individual `W<n>` / `S<n>` picks
+response (e.g., `All Warning` + `S2` + `S5`). Resolve combinations
+in selection order: cancel an earlier `All Warning` when a later
+`Skip all Warning` follows; let individual `W<n>` / `S<n>` picks
 override their bucket-level skip. Split into multiple screens when
 > 6 selectable items.
 
@@ -252,7 +252,7 @@ template's full surface in this order:
 3. `## Metadata` (Source Review, Generated By, Triaged By).
 4. `## Summary` table (Bucket / Total / Selected / Deferred / Excluded).
 5. Phase 1 (auto-include; heading per Step 2b verdict gate):
-   - `## Phase 1: Blockers [PENDING]` (BLOCKED verdict) — task lines `- [ ] [P1-Tn][annotation] ...` per NEW BLOCKER.
+   - `## Phase 1: Blockers [PENDING]` (BLOCKED verdict) — task lines `- [ ] [P1-Tn][annotation] ...` per NEW Blocker.
    - `## Phase 1: Test Coverage Gaps [PENDING]` (REQUIRES CHANGES verdict) — task lines `- [ ] [P1-Tn][test] ...` per gap row.
    - Phase 1 heading OMITTED entirely for PASS / PASS WITH WARNINGS verdicts (no auto-include source).
 6. `## Phase 2: Warnings (selected) [PENDING]` — task lines `- [ ] [P2-Tn][annotation] ...` (only NEW WARNINGs the user selected at Step 4). Omit the heading when zero warnings selected.
@@ -272,14 +272,14 @@ Read the review's existing bucket per finding. Override only when
 the bucket is missing or ambiguous:
 
 ```
-Review bucket = BLOCKER?
+Review bucket = Blocker?
 ├── YES → always include
 │         └── never optional
 │
-└── NO → bucket = WARNING?
+└── NO → bucket = Warning?
           ├── YES → recommend (default selected; user can defer)
           │
-          └── NO → bucket = SUGGESTION?
+          └── NO → bucket = Suggestion?
                     ├── YES → defer (default unselected; user can include)
                     │
                     └── NO → bucket missing / ambiguous → ask user
@@ -290,12 +290,12 @@ Review bucket = BLOCKER?
 ### Select All in Bucket
 
 BLOCKERs are auto-included by Step 4; do NOT surface a "Select All
-BLOCKER" shortcut in the selection UI. Offer only WARNING /
-SUGGESTION + cross-cutting filters:
+Blocker" shortcut in the selection UI. Offer only Warning /
+Suggestion + cross-cutting filters:
 
 ```
-[Select All WARNING]
-[Select All SUGGESTION]
+[Select All Warning]
+[Select All Suggestion]
 [Select All in File: app/models/user.rb]
 [Select All of Type: N+1]
 ```
@@ -332,7 +332,7 @@ beyond that tuple — do NOT invent one.
 
 ### Direct to Work
 
-If triage generated a plan with selected BLOCKER items:
+If triage generated a plan with selected Blocker items:
 
 ```
 /rb:work .claude/plans/fix-user-model/plan.md
@@ -352,9 +352,9 @@ No findings selected. Options:
 [Cancel]
 ```
 
-### All BLOCKER
+### All Blocker
 
-If all findings are BLOCKER:
+If all findings are Blocker:
 
 ```
 All 5 findings are BLOCKERs and must be addressed.
@@ -426,7 +426,7 @@ selected at Step 4.
 
 ## Best Practices
 
-1. **Always explain why** a finding is BLOCKER
+1. **Always explain why** a finding is Blocker
 2. **Show estimated effort** for each item
 3. **Group by location** when possible for efficient fixing
 4. **Preserve excluded items** for future reference
@@ -440,7 +440,7 @@ selected at Step 4.
 | `/rb:triage` | Triage most recent consolidated review |
 | `/rb:triage <file>` | Triage specific review file |
 
-For in-UI bucket shortcuts (`All WARNING`, `Skip all WARNING`,
+For in-UI bucket shortcuts (`All Warning`, `Skip all Warning`,
 `Group by file`, …), surface them as `AskUserQuestion` option labels
 per § "Step 4: Present Multi-Select UI"; never prompt the user to
 type them as commands.

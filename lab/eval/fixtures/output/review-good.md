@@ -9,8 +9,8 @@
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
-| testing-reviewer | artifact | 0 BLOCKER / 1 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| testing-reviewer | artifact | 0 Blocker / 1 Warning / 0 Suggestion |
 
 ## Reviewer Verdicts
 
@@ -46,4 +46,4 @@ No additional suggestions.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Retry policy change is not covered by a focused spec | WARNING | HIGH | testing-reviewer | `app/jobs/sync_customer_job.rb:14` | Yes |
+| 1 | Retry policy change is not covered by a focused spec | Warning | HIGH | testing-reviewer | `app/jobs/sync_customer_job.rb:14` | Yes |

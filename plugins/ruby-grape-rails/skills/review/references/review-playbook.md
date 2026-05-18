@@ -157,8 +157,8 @@ includes this prompt template:
 Task: review {file list} for {scope}.
 
 Scope: $CHANGED_FILES (from main session diff collection)
-Base ref: $BASE_REF
-Merge base: $MERGE_BASE
+Base ref: <BASE_REF>
+Merge base: <MERGE_BASE>
 Diff stat (preview):
 $DIFF_STAT
 
@@ -185,7 +185,7 @@ Required output:
 
 Findings format:
 - file:line — Title
-- Severity: blocker | warning | suggestion
+- Severity: Blocker | Warning | Suggestion
 - Confidence: HIGH | MEDIUM | LOW
 - Description, current code, suggested code, why it matters
 
@@ -222,15 +222,15 @@ Scan each per-agent artifact for verdict prose. Map non-canonical
 forms to the canonical 4-set BEFORE writing the consolidated header:
 
 Use ONLY the worker artifact's verdict prose + the worker's own
-finding-counts (bucket form `blocker | warning | suggestion` per §
+finding-counts (bucket form `Blocker | Warning | Suggestion` per §
 "Worker Briefing Template"). Diff-status filter (new vs pre-existing)
 applies in STEP 3.
 
 | Non-canonical form (preserve verbatim in metadata) | Canonical mapping rule |
 |---|---|
-| `CONDITIONAL PASS`, `PASS WITH CAVEATS`, `PASS-WITH-WARNS` | infer from worker counts: any `blocker` → `BLOCKED`; else any `warning` → `PASS WITH WARNINGS`; else `PASS` |
-| `Approved`, `LGTM`, `looks good` | `PASS` if worker reports zero `blocker` and zero `warning`; else map per worker counts |
-| `Needs fixes`, `fix before merge`, `not ready` | infer from worker counts: any `blocker` → `BLOCKED`; else any `warning` → `PASS WITH WARNINGS`; else `PASS`. Do NOT auto-route to `REQUIRES CHANGES` — that verdict is reserved for missing test coverage on NEW public behavior (per § "Verdict Decision Rules"). Only emit `REQUIRES CHANGES` when the worker explicitly flagged a `New public behavior without tests` finding. |
+| `CONDITIONAL PASS`, `PASS WITH CAVEATS`, `PASS-WITH-WARNS` | infer from worker counts: any `Blocker` → `BLOCKED`; else any `Warning` → `PASS WITH WARNINGS`; else `PASS` |
+| `Approved`, `LGTM`, `looks good` | `PASS` if worker reports zero `Blocker` and zero `Warning`; else map per worker counts |
+| `Needs fixes`, `fix before merge`, `not ready` | infer from worker counts: any `Blocker` → `BLOCKED`; else any `Warning` → `PASS WITH WARNINGS`; else `PASS`. Do NOT auto-route to `REQUIRES CHANGES` — that verdict is reserved for missing test coverage on NEW public behavior (per § "Verdict Decision Rules"). Only emit `REQUIRES CHANGES` when the worker explicitly flagged a `New public behavior without tests` finding. |
 | `BLOCK`, `BLOCKER` (verdict, not severity tag) | `BLOCKED` |
 
 Preserve the agent's raw verdict text VERBATIM in the
@@ -246,15 +246,20 @@ Issues` section and the At-a-Glance Finding Table with
 
 Per § "Worker Severity Mapping":
 
-- worker `blocker` introduced by this diff → counted Blocker
-- worker `blocker` on unchanged code → Pre-existing Blocker (reported only)
-- worker `warning` introduced by this diff → counted Warning
-- worker `suggestion` introduced by this diff → counted Suggestion
+- worker `Blocker` introduced by this diff → counted Blocker
+- worker `Blocker` on unchanged code → Pre-existing Blocker (reported only)
+- worker `Warning` introduced by this diff → counted Warning
+- worker `Suggestion` introduced by this diff → counted Suggestion
 
-Title case `Blockers | Warnings | Suggestions` in consolidated section
-headers + Summary table category column + Reviewer Coverage row count
-(e.g. `3 Blocker / 1 Warning / 0 Suggestion`). Per-finding `Severity:`
-tags + Counts prefix stay lowercase per agent contract.
+Casing rule (single direction, title case throughout severity):
+
+- Per-finding `Severity:` tag (worker artifact body): `Blocker | Warning | Suggestion` (singular)
+- Counts mandatory prefix: `**Counts:** N findings (X Blocker, Y Warning, Z Suggestion); M notes`
+- Reviewer Coverage row count: `{n} Blocker / {n} Warning / {n} Suggestion` (parser-locked, `output_checks.py`)
+- Summary table category column: `Blockers | Warnings | Suggestions` (plural)
+- Consolidated section headers: `## Blockers ({n})` / `## Warnings ({n})` / `## Suggestions ({n})` (plural)
+- At-a-Glance Severity column: `Blocker | Warning | Suggestion` (singular)
+- Verdict 4-set: UPPERCASE `PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED` (unchanged)
 
 ### STEP 4: Compute consolidated verdict deterministically
 
@@ -303,7 +308,7 @@ Single helper call at fanout entry:
 ```bash
 MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
   --skill=rb:review --slug="$REVIEW_SLUG" \
-  --base-ref="$BASE_REF" \
+  --base-ref=<BASE_REF> \
   --agents="$AGENTS_CSV")
 ```
 
@@ -329,23 +334,22 @@ Schema + per-skill staleness rules:
 
 ## Worker Severity Mapping
 
-Reviewer agents emit `blocker | warning | suggestion` (lowercase).
-Synthesis applies diff-status filter only — no vocabulary translation:
+Reviewer agents emit `Blocker | Warning | Suggestion` (title case
+singular). Synthesis applies diff-status filter only — no vocabulary
+translation:
 
 | Worker output | Diff status | Counted into Summary? |
 |---|---|---|
-| blocker | introduced by this diff | yes — Blocker |
-| blocker | unchanged code | no — Pre-existing Blocker (reported only) |
-| warning | introduced by this diff | yes — Warning |
-| warning | unchanged code | no — Pre-existing Warning (reported only) |
-| suggestion | introduced by this diff | yes — Suggestion |
-| suggestion | unchanged code | no — Pre-existing Suggestion (reported only) |
+| Blocker | introduced by this diff | yes — Blocker |
+| Blocker | unchanged code | no — Pre-existing Blocker (reported only) |
+| Warning | introduced by this diff | yes — Warning |
+| Warning | unchanged code | no — Pre-existing Warning (reported only) |
+| Suggestion | introduced by this diff | yes — Suggestion |
+| Suggestion | unchanged code | no — Pre-existing Suggestion (reported only) |
 | New public behavior without tests | any | REQUIRES CHANGES verdict trigger (not a per-finding bucket) |
 
-Per-finding `Severity:` tags + Counts prefix stay lowercase per agent
-contract. Section headers + Summary table + Reviewer Coverage row
-count use title case `Blockers | Warnings | Suggestions`.
-Verdict 4-set stays UPPERCASE (`REQUIRES CHANGES` etc).
+Casing canon — title case throughout severity. See STEP 3 casing rule
+above for per-surface form. Verdict 4-set stays UPPERCASE.
 
 ## Review Scope
 
@@ -634,7 +638,7 @@ parent SKILL.md.
 ### Compute diff LOC
 
 ```
-DIFF_LOC=$(git diff --shortstat "$MERGE_BASE"...HEAD | awk '{n=$4+$6} END{print n+0}')
+DIFF_LOC=$(git diff --shortstat <MERGE_BASE>...HEAD | awk '{n=$4+$6} END{print n+0}')
 ```
 
 Columns 4 + 6 are insertions + deletions. `END{print n+0}` emits `0`
@@ -643,7 +647,7 @@ Collection step).
 
 On `DIFF_LOC=0` (legitimate via pure rename / mode change / binary diff):
 
-- Run `git diff --numstat "$MERGE_BASE"...HEAD`
+- Run `git diff --numstat <MERGE_BASE>...HEAD`
 - File count > 0 → tier by file count (Simple minimum)
 - File count = 0 AND zero `--numstat` entries → reject; require `all`
   argument (per `argument-hint:`)

@@ -5,7 +5,7 @@
 ### Always Fix (auto-approve, don't even ask)
 
 ALL Iron Law violations + security issues. Iron Laws are
-non-negotiable per the review BLOCKER contract; do NOT downgrade them
+non-negotiable per the review Blocker contract; do NOT downgrade them
 to "Usually Fix":
 
 - SQL injection / XSS via `.html_safe` or `raw()` with untrusted content (Iron Law 14)
@@ -70,10 +70,10 @@ Coverage`, and the consolidated verdict per
 `plugins/ruby-grape-rails/skills/review/references/review-playbook.md`
 § "Pre-existing Issues". Triage routes them to the plan's
 `## Pre-existing Issues (informational)` section only. NEVER
-auto-include in any Phase. Do NOT relabel a pre-existing BLOCKER as
-WARNING / SUGGESTION.
+auto-include in any Phase. Do NOT relabel a pre-existing Blocker as
+Warning / Suggestion.
 
-### Downgrade from BLOCKER (non-Iron-Law, non-security, NEW findings only) when
+### Downgrade from Blocker (non-Iron-Law, non-security, NEW findings only) when
 
 - The issue is in code that's not yet reachable
 - There's an existing workaround in production
@@ -88,7 +88,7 @@ class on these grounds:
   XSS, missing authorization, `eval` with user input, mass-assignment
   on protected fields, SSRF, secrets leakage
 
-### Upgrade from SUGGESTION when
+### Upgrade from Suggestion when
 
 - The pattern will be copied by future developers
 - It affects a security-sensitive code path

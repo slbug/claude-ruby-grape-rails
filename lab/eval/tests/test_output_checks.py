@@ -157,7 +157,7 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
 | testing-reviewer | artifact |
 """
         passed, reason = output_checks.has_review_reviewer_coverage(content)
@@ -171,7 +171,7 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | unknown-state | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | unknown-state | 0 Blocker / 0 Warning / 0 Suggestion |
 """
         passed, reason = output_checks.has_review_reviewer_coverage(content)
         self.assertFalse(passed)
@@ -188,7 +188,7 @@ Use the maintained upstream path.
 """
         passed, reason = output_checks.has_review_reviewer_coverage(content)
         self.assertFalse(passed)
-        self.assertIn("BLOCKER / {n} WARNING / {n} SUGGESTION", reason)
+        self.assertIn("Blocker / {n} Warning / {n} Suggestion", reason)
 
     def test_reviewer_verdicts_rejects_non_canonical_verdict(self) -> None:
         content = """# Review: x
@@ -213,7 +213,7 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## Reviewer Verdicts
 
@@ -234,7 +234,7 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings | Extra |
 |---|---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION | junk |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion | junk |
 """
         passed, reason = output_checks.has_review_reviewer_coverage(content)
         self.assertFalse(passed)
@@ -262,9 +262,9 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
-| testing-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| testing-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## Reviewer Verdicts
 
@@ -286,7 +286,7 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## Reviewer Verdicts
 
@@ -307,8 +307,8 @@ Use the maintained upstream path.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
-| testing-reviewer | artifact | 0 BLOCKER / 1 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| testing-reviewer | artifact | 0 Blocker / 1 Warning / 0 Suggestion |
 
 ## Reviewer Verdicts
 
@@ -356,7 +356,7 @@ Another instance:
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## Reviewer Verdicts
 
@@ -384,8 +384,8 @@ Another instance:
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
-| security-analyzer | stub-no-output | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| security-analyzer | stub-no-output | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## Reviewer Verdicts
 
@@ -407,7 +407,7 @@ Another instance:
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## Reviewer Verdicts
 
@@ -444,8 +444,8 @@ Another instance:
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| testing-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| testing-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## Reviewer Verdicts
 
@@ -550,7 +550,7 @@ Some prose.
 
 | # | Finding | Severity | Reviewer | File | New? |
 |---|---------|----------|----------|------|------|
-| 1 | Issue | WARNING | r | f.rb:1 | Yes |
+| 1 | Issue | Warning | r | f.rb:1 | Yes |
 """
         passed, reason = output_checks.has_review_mandatory_table(content)
         self.assertFalse(passed)
@@ -563,7 +563,7 @@ Some prose.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Issue | WARNING | HIGH | r | f.rb:1 | Yes |
+| 1 | Issue | Warning | HIGH | r | f.rb:1 | Yes |
 """
         passed, _ = output_checks.has_review_mandatory_table(content)
         self.assertTrue(passed)
@@ -578,7 +578,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## Suggestions (1)
 
@@ -650,7 +650,7 @@ Some prose.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Issue | WARNING | HIGH | r | f.rb:1 | Yes |
+| 1 | Issue | Warning | HIGH | r | f.rb:1 | Yes |
 """
         passed, reason = output_checks.has_review_mandatory_table(content)
         self.assertFalse(passed)
@@ -669,7 +669,7 @@ Some prose.
 ````markdown
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Example | WARNING | LOW | r | f.rb:1 | Yes |
+| 1 | Example | Warning | LOW | r | f.rb:1 | Yes |
 ````
 """
         passed, _ = output_checks.has_review_mandatory_table(content)
@@ -878,7 +878,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## Reviewer Verdicts
 
@@ -908,12 +908,12 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| security-analyzer | stub-no-output | 1 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| security-analyzer | stub-no-output | 1 Blocker / 0 Warning / 0 Suggestion |
 """
         passed, reason = output_checks.has_review_reviewer_coverage(content)
         self.assertFalse(passed)
         self.assertIn("stub-no-output", reason)
-        self.assertIn("0 BLOCKER / 0 WARNING / 0 SUGGESTION", reason)
+        self.assertIn("0 Blocker / 0 Warning / 0 Suggestion", reason)
 
     def test_reviewer_coverage_accepts_stub_no_output_with_all_zero_findings(self) -> None:
         content = """# Review: x
@@ -922,7 +922,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| security-analyzer | stub-no-output | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| security-analyzer | stub-no-output | 0 Blocker / 0 Warning / 0 Suggestion |
 """
         passed, _ = output_checks.has_review_reviewer_coverage(content)
         self.assertTrue(passed)
@@ -947,7 +947,7 @@ Some prose.
         self.assertIn("preamble", reason)
 
     def test_summary_excludes_preexisting_rejects_preexisting_counted_in_summary(self) -> None:
-        # At-a-Glance shows 1 BLOCKER row marked Pre-existing and 0 NEW
+        # At-a-Glance shows 1 Blocker row marked Pre-existing and 0 NEW
         # blocker rows. Summary counts the pre-existing one → contract
         # violation per playbook STEP 3 + § "Pre-existing Issues".
         content = """# Review: x
@@ -966,7 +966,7 @@ Some prose.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Old issue | BLOCKER | HIGH | r | f.rb:1 | Pre-existing |
+| 1 | Old issue | Blocker | HIGH | r | f.rb:1 | Pre-existing |
 """
         passed, reason = output_checks.has_review_summary_excludes_preexisting(content)
         self.assertFalse(passed)
@@ -992,8 +992,8 @@ Some prose.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | New issue | BLOCKER | HIGH | r | f.rb:1 | Yes |
-| 2 | Old issue | BLOCKER | HIGH | r | f.rb:9 | Pre-existing |
+| 1 | New issue | Blocker | HIGH | r | f.rb:1 | Yes |
+| 2 | Old issue | Blocker | HIGH | r | f.rb:9 | Pre-existing |
 """
         passed, _ = output_checks.has_review_summary_excludes_preexisting(content)
         self.assertTrue(passed)
@@ -1017,8 +1017,8 @@ Some prose.
         self.assertTrue(passed)
 
     def test_coverage_excludes_preexisting_rejects_preexisting_counted_in_coverage(self) -> None:
-        # ruby-reviewer's Coverage row reports 1 BLOCKER. At-a-Glance
-        # shows 0 NEW BLOCKER rows for ruby-reviewer (only a Pre-existing
+        # ruby-reviewer's Coverage row reports 1 Blocker. At-a-Glance
+        # shows 0 NEW Blocker rows for ruby-reviewer (only a Pre-existing
         # one). Coverage MUST exclude pre-existing per playbook STEP 3.
         content = """# Review: x
 
@@ -1026,18 +1026,18 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 1 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 1 Blocker / 0 Warning / 0 Suggestion |
 
 ## At-a-Glance Finding Table
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Old issue | BLOCKER | HIGH | ruby-reviewer | f.rb:1 | Pre-existing |
+| 1 | Old issue | Blocker | HIGH | ruby-reviewer | f.rb:1 | Pre-existing |
 """
         passed, reason = output_checks.has_review_coverage_excludes_preexisting(content)
         self.assertFalse(passed)
         self.assertIn("ruby-reviewer", reason)
-        self.assertIn("BLOCKER", reason)
+        self.assertIn("Blocker", reason)
         self.assertIn("pre-existing", reason)
 
     def test_coverage_excludes_preexisting_accepts_matching_per_reviewer_new_counts(self) -> None:
@@ -1047,16 +1047,16 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 1 BLOCKER / 0 WARNING / 0 SUGGESTION |
-| testing-reviewer | artifact | 0 BLOCKER / 1 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 1 Blocker / 0 Warning / 0 Suggestion |
+| testing-reviewer | artifact | 0 Blocker / 1 Warning / 0 Suggestion |
 
 ## At-a-Glance Finding Table
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | New issue | BLOCKER | HIGH | ruby-reviewer | f.rb:1 | Yes |
-| 2 | Old issue | BLOCKER | HIGH | ruby-reviewer | f.rb:9 | Pre-existing |
-| 3 | Test gap | WARNING | MEDIUM | testing-reviewer | spec.rb:5 | Yes |
+| 1 | New issue | Blocker | HIGH | ruby-reviewer | f.rb:1 | Yes |
+| 2 | Old issue | Blocker | HIGH | ruby-reviewer | f.rb:9 | Pre-existing |
+| 3 | Test gap | Warning | MEDIUM | testing-reviewer | spec.rb:5 | Yes |
 """
         passed, _ = output_checks.has_review_coverage_excludes_preexisting(content)
         self.assertTrue(passed)
@@ -1071,13 +1071,13 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| security-analyzer | stub-no-output | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| security-analyzer | stub-no-output | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## At-a-Glance Finding Table
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Issue | BLOCKER | HIGH | security-analyzer | f.rb:1 | Yes |
+| 1 | Issue | Blocker | HIGH | security-analyzer | f.rb:1 | Yes |
 """
         passed, reason = output_checks.has_review_coverage_excludes_preexisting(content)
         self.assertFalse(passed)
@@ -1094,13 +1094,13 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| security-analyzer | stub-no-output | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| security-analyzer | stub-no-output | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## At-a-Glance Finding Table
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Old issue | BLOCKER | HIGH | security-analyzer | f.rb:9 | Pre-existing |
+| 1 | Old issue | Blocker | HIGH | security-analyzer | f.rb:9 | Pre-existing |
 """
         passed, reason = output_checks.has_review_coverage_excludes_preexisting(content)
         self.assertFalse(passed)
@@ -1117,8 +1117,8 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
-| security-analyzer | stub-no-output | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
+| security-analyzer | stub-no-output | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## At-a-Glance Finding Table
 
@@ -1135,7 +1135,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
 """
         passed, _ = output_checks.has_review_coverage_excludes_preexisting(content)
         self.assertTrue(passed)
@@ -1150,7 +1150,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| security-analyzer | stub-no-output | 0 BLOCKER  /  0 WARNING  /  0 SUGGESTION |
+| security-analyzer | stub-no-output | 0 Blocker  /  0 Warning  /  0 Suggestion |
 """
         passed, _ = output_checks.has_review_reviewer_coverage(content)
         self.assertTrue(passed)
@@ -1176,7 +1176,7 @@ Some prose.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Issue | BLOCKER | HIGH | r | f.rb:1 | No |
+| 1 | Issue | Blocker | HIGH | r | f.rb:1 | No |
 """
         passed, reason = output_checks.has_review_summary_excludes_preexisting(content)
         self.assertFalse(passed)
@@ -1200,7 +1200,7 @@ Some prose.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Issue | BLOCKER | HIGH | r | f.rb:1 |  |
+| 1 | Issue | Blocker | HIGH | r | f.rb:1 |  |
 """
         passed, reason = output_checks.has_review_summary_excludes_preexisting(content)
         self.assertFalse(passed)
@@ -1213,13 +1213,13 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 0 Suggestion |
 
 ## At-a-Glance Finding Table
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Issue | BLOCKER | HIGH | ruby-reviewer | f.rb:1 | maybe |
+| 1 | Issue | Blocker | HIGH | ruby-reviewer | f.rb:1 | maybe |
 """
         passed, reason = output_checks.has_review_coverage_excludes_preexisting(content)
         self.assertFalse(passed)
@@ -1236,7 +1236,7 @@ Some prose.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Issue | BLOCKER | HIGH | r | f.rb:1 |
+| 1 | Issue | Blocker | HIGH | r | f.rb:1 |
 """
         passed, reason = output_checks.has_review_mandatory_table(content)
         self.assertFalse(passed)
@@ -1249,8 +1249,8 @@ Some prose.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Issue | BLOCKER | HIGH | r | f.rb:1 | Yes |
-| 2 | Other | WARNING | MEDIUM | r | g.rb:5 | Pre-existing |
+| 1 | Issue | Blocker | HIGH | r | f.rb:1 | Yes |
+| 2 | Other | Warning | MEDIUM | r | g.rb:5 | Pre-existing |
 """
         passed, reason = output_checks.has_review_mandatory_table(content)
         self.assertTrue(passed)
@@ -1405,7 +1405,7 @@ Some prose.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Idea | SUGGESTION | LOW | r | f.rb:1 | Yes |
+| 1 | Idea | Suggestion | LOW | r | f.rb:1 | Yes |
 """
         passed, reason = output_checks.has_review_summary_excludes_preexisting(content)
         self.assertFalse(passed)
@@ -1704,7 +1704,7 @@ PASS
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Retry policy lacks spec coverage | WARNING | HIGH | r | app/foo.rb:1 | Yes |
+| 1 | Retry policy lacks spec coverage | Warning | HIGH | r | app/foo.rb:1 | Yes |
 """
         passed, reason = output_checks.has_review_finding_titles_match_glance(content)
         self.assertFalse(passed)
@@ -1724,7 +1724,7 @@ PASS
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Retry policy change is not covered by a focused spec | WARNING | HIGH | r | app/foo.rb:1 | Yes |
+| 1 | Retry policy change is not covered by a focused spec | Warning | HIGH | r | app/foo.rb:1 | Yes |
 """
         passed, _ = output_checks.has_review_finding_titles_match_glance(content)
         self.assertTrue(passed)
@@ -1737,7 +1737,7 @@ PASS
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | Old issue summary | BLOCKER | HIGH | r | app/foo.rb:1 | Pre-existing |
+| 1 | Old issue summary | Blocker | HIGH | r | app/foo.rb:1 | Pre-existing |
 """
         passed, _ = output_checks.has_review_finding_titles_match_glance(content)
         self.assertTrue(passed)

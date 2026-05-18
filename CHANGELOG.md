@@ -23,21 +23,23 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Script docstring updated with both usage patterns (agent
   stdout-read; shell-script `eval`). `verify-profiles.md` keeps
   `eval` because it runs as a single self-contained shell script.
-- `/rb:review` severity vocabulary aligned across all 10 reviewer
-  agents, SKILL body, playbook, and `example-review.md`. Single
-  rule: lowercase `blocker | warning | suggestion` for per-finding
-  `Severity:` tags + the mandatory `**Counts:**` prefix; title case
+- `/rb:review` severity vocabulary normalized to title case across
+  all 11 reviewer agents, SKILL body, playbook, `example-review.md`,
+  output-check parsers, fixtures, and tests. Single rule: title case
+  singular `Blocker | Warning | Suggestion` for per-finding
+  `Severity:` tags, Counts prefix, Reviewer Coverage row count, and
+  At-a-Glance Severity column; title case plural
   `Blockers | Warnings | Suggestions` for consolidated section
-  headers, Summary table, Reviewer Coverage row counts, and
-  At-a-Glance Finding Table. Verdict 4-set (`PASS | PASS WITH
-  WARNINGS | REQUIRES CHANGES | BLOCKED`) stays UPPERCASE.
-  Eliminates the prior `Critical | Warning | Info` worker-form
-  vocabulary (per playbook § "Worker Severity Mapping" backward
-  compatibility note) which was already ignored by 9/10 reviewers
-  in practice.
+  headers + Summary table category column. Verdict 4-set
+  (`PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED`) stays
+  UPPERCASE. Eliminates the prior `Critical | Warning | Info`
+  worker-form vocabulary (per playbook § "Worker Severity Mapping"
+  backward compatibility note) which workers ignored in practice,
+  plus the prior UPPERCASE/lowercase/title-case split between
+  worker artifacts, Coverage row, and Summary table.
 - Reviewer sample-output blocks removed from `iron-law-judge`,
   `data-integrity-reviewer`, `migration-safety-reviewer` agent
-  bodies. 7 of 10 reviewer agents already shipped without sample
+  bodies. 8 of 11 reviewer agents already shipped without sample
   blocks; the 3 outliers omitted the mandatory `**Counts:**` first
   line their own contract section prescribed, training the agent
   on parser-incompatible output. The Counts contract section + the
@@ -53,7 +55,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `/rb:review` fanout step 9 + Gotchas now state explicitly that
   reviewer artifacts must be read one per path from
   `manifest-update spawn-paths`, never bulk-`cat`ted. Bulk-cat of
-  ~10 reviewer artifacts (~6-8 KB each) overflows the Read token
+  ~10-11 reviewer artifacts (~6-8 KB each) overflows the Read token
   cap and forces offset/limit pagination.
 
 ## [1.16.12] - 2026-05-17
