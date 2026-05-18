@@ -93,16 +93,18 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 
 All 22 Iron Law violations are Blockers — non-negotiable per
 `${CLAUDE_PLUGIN_ROOT}/skills/triage/references/triage-patterns.md`
-§ "Always Fix". The table below covers Laws 1-20 (code-pattern
-violation rules) with grep-detectable patterns; Laws 5, 8, 9, 17
-require manual judgment but are equally Blockers. Laws 21 + 22
-(discipline rules) are in "Fix Priority" section below.
+§ "Always Fix". The table below lists Blocker rules for Laws 1-20
+(code-pattern violation rules). Grep-detectable patterns appear in
+§ "Detection Patterns" below. Laws 3, 5, 8, 9, 13, 17, 20 require
+manual judgment (context check or absence check — no single grep
+covers them) but are equally Blockers. Laws 21 + 22 (discipline
+rules) are in "Fix Priority" section below.
 
 | Law | Pattern | Risk |
 |-----|---------|------|
 | 1 | `t.float :price` | Financial errors |
 | 2, 15 | `where("id = #{id}")` | SQL injection |
-| 3 | N+1 queries (loop without `includes`) | Performance / DB load |
+| 3 | N+1 queries (loop without `includes`) — manual review (context check) | Performance / DB load |
 | 4, 11 | `after_save :enqueue_job` | Data races |
 | 5 | Multi-step DB writes without `transaction` block | Partial-write corruption (manual review) |
 | 6 | `update_columns`, `save(validate: false)` | Data integrity |
@@ -111,13 +113,13 @@ require manual judgment but are equally Blockers. Laws 21 + 22
 | 9 | Symbol / Date / ActiveRecord in `perform_async` args | Sidekiq JSON deserialization failure |
 | 10 | `perform_later(current_user)` | Serialization failures |
 | 12 | `eval(params[:code])` | Code execution |
-| 13 | Missing `authorize` in controller | Unauthorized access |
+| 13 | Missing `authorize` in controller — manual review (absence check) | Unauthorized access |
 | 14 | `user_input.html_safe`, `raw(user_input)` | XSS attacks |
 | 16 | `method_missing` without `respond_to_missing?` | Broken introspection |
 | 17 | Unsupervised background process (manual review) | Production outage on crash |
 | 18 | `rescue Exception` or `rescue ::Exception` (bare `rescue` defaults to `StandardError`, not a Law 18 violation) | Lost SIGINT, hung processes |
 | 19 | DB queries in turbo_stream templates | Lock / deadlock under load |
-| 20 | Missing `turbo_frame_tag` for partial updates | Degraded UX, full page reloads |
+| 20 | Missing `turbo_frame_tag` for partial updates — manual review (absence check) | Degraded UX, full page reloads |
 
 ## Detection Patterns
 
