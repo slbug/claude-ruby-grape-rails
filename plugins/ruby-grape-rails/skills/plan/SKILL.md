@@ -260,7 +260,7 @@ When resuming:
 Before finalizing the plan, verify:
 
 - [ ] Iron Law 18: no `rescue Exception` (catches `SystemExit` / `SignalException`)
-- [ ] Style: rescue clauses name an explicit class (`rescue StandardError =>` / `rescue SpecificError =>`) instead of bare `rescue`
+- [ ] Style: rescue clauses name an explicit class (`rescue StandardError => e` / `rescue SpecificError => e`) instead of bare `rescue`
 - [ ] Failed jobs can be retried safely (idempotent)
 - [ ] Database transactions wrap multi-step operations
 - [ ] Sidekiq jobs use the active ORM's commit-safe hook, not `after_save` or inline before commit

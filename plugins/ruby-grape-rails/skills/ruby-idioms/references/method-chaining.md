@@ -91,8 +91,9 @@ end
 
 Iron Law 18: never `rescue Exception` (catches `SystemExit` /
 `SignalException`). Bare `rescue` defaults to `StandardError` and is not a Law 18
-violation; explicit class naming (`rescue SpecificError =>`)
-is a style preference for clarity, not a Law 18 violation.
+violation; explicit class naming (`rescue SpecificError => e` or
+class-only `rescue SpecificError`) is a style preference for clarity,
+not a Law 18 violation.
 
 ### Result-object early return
 
