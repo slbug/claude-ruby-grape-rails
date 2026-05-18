@@ -107,7 +107,7 @@ All Iron Law violations are Blockers — non-negotiable per
 | 13 | Missing `authorize` in controller | Unauthorized access |
 | 14 | `user_input.html_safe`, `raw(user_input)` | XSS attacks |
 | 16 | `method_missing` without `respond_to_missing?` | Broken introspection |
-| 18 | Bare `rescue` (catches Exception) | Hidden bugs / lost interrupts |
+| 18 | `rescue Exception` (catches interrupts + system exits) | Hidden bugs, lost SIGINT, hung processes |
 | 19 | DB queries in turbo_stream templates | Lock / deadlock under load |
 | 20 | Missing `turbo_frame_tag` for partial updates | Degraded UX, full page reloads |
 
@@ -125,7 +125,7 @@ All Iron Law violations are Blockers — non-negotiable per
 | 4, 11 | `after_save` (excluding `after_commit`) | `app/models/` |
 | 12 | `eval(` | `app/` |
 | 16 | `def method_missing` files lacking `respond_to_missing` | `app/` |
-| 18 | bare `rescue` (matching `rescue$` or `rescue =>`, excluding `StandardError`) | `app/` |
+| 18 | `rescue Exception` (literal — bare `rescue` already defaults to `StandardError`) | `app/` |
 
 ## Confidence Levels
 

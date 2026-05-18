@@ -2,23 +2,39 @@
 
 ## Priority Order
 
-1. **Critical** (Laws 1, 2, 4, 6, 7, 10, 11, 12, 13, 14, 15): Security, data integrity, correctness — Fix immediately
-2. **Warnings** (Laws 3, 5, 8, 9, 16, 17, 18, 19, 20): Performance, maintainability — Fix before merge
-3. **Verification & Discipline** (Laws 21, 22): Testing + surgical-change discipline — Required for completion
+All Iron Law violations are Blockers — non-negotiable per
+`plugins/ruby-grape-rails/skills/triage/references/triage-patterns.md`
+§ "Always Fix".
 
-## Critical Laws
+1. **Blockers** (Laws 1-20): Every violation blocks merge. Single
+   severity — no internal critical/warning split.
+2. **Verification** (Law 21): Run the actual test/lint stack before
+   claiming done.
+3. **Surgical Changes** (Law 22): Every changed line must trace to
+   the user's request.
 
-| Law | Category | Why Critical |
-|-----|----------|--------------|
+## Blocker Laws
+
+| Law | Category | Why Blocker |
+|-----|----------|-------------|
 | 1 | Money as float | Financial data corruption |
 | 2, 15 | SQL injection | Security vulnerability |
+| 3 | N+1 queries | Performance / DB load |
 | 4, 11 | after_commit for jobs | Data race conditions |
+| 5 | Transaction boundaries | Partial-write data corruption |
 | 6 | Validation bypass | Data integrity loss |
 | 7 | default_scope | Unexpected query behavior |
+| 8 | Idempotent jobs | Retry-safety; double-effect risk |
+| 9 | JSON-safe Sidekiq args | Serialization failures |
 | 10 | Objects in job args | Serialization failures |
 | 12 | Eval with user input | Remote code execution |
 | 13 | Missing authorization | Unauthorized access |
 | 14 | Unsafe HTML | XSS attacks |
+| 16 | method_missing without respond_to_missing? | Broken introspection |
+| 17 | Supervise background processes | Production outage on crash |
+| 18 | `rescue Exception` | Lost interrupts, hung processes |
+| 19 | DB queries in Turbo Streams | Lock / deadlock under load |
+| 20 | Missing `turbo_frame_tag` | Degraded UX, full page reloads |
 
 ## Additional Heuristics
 

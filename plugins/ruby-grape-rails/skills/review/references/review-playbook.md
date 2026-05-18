@@ -251,15 +251,22 @@ Per § "Worker Severity Mapping":
 - worker `Warning` introduced by this diff → counted Warning
 - worker `Suggestion` introduced by this diff → counted Suggestion
 
-Casing rule (single direction, title case throughout severity):
+Casing rule (title case for severity; UPPERCASE only for verdict
+4-set). Count-aware grammar enforced by `output_checks.py`: singular
+form ONLY when count == 1; plural form for count != 1 (including 0).
 
-- Per-finding `Severity:` tag (worker artifact body): `Blocker | Warning | Suggestion` (singular)
-- Counts mandatory prefix: `**Counts:** N findings (X Blocker, Y Warning, Z Suggestion); M notes`
-- Reviewer Coverage row count: `{n} Blocker / {n} Warning / {n} Suggestion` (parser-locked, `output_checks.py`)
-- Summary table category column: `Blockers | Warnings | Suggestions` (plural)
-- Consolidated section headers: `## Blockers ({n})` / `## Warnings ({n})` / `## Suggestions ({n})` (plural)
-- At-a-Glance Severity column: `Blocker | Warning | Suggestion` (singular)
-- Verdict 4-set: UPPERCASE `PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED` (unchanged)
+| Surface | Form | Example |
+|---|---|---|
+| Per-finding `Severity:` tag (one finding per line) | always singular | `Severity: Blocker` |
+| At-a-Glance Severity column (one finding per row) | always singular | `\| 1 \| {title} \| Warning \| HIGH \| {agent} \| {file}:{line} \| Yes \|` |
+| Counts mandatory prefix | count-aware | `**Counts:** 5 findings (1 Blocker, 3 Warnings, 1 Suggestion); 2 notes` |
+| Reviewer Coverage row count | count-aware, parser-locked | `0 Blockers / 1 Warning / 0 Suggestions` |
+| Summary table category column | always plural | `\| Blockers \| 0 \|` / `\| Warnings \| 1 \|` |
+| Consolidated section headers | always plural | `## Blockers (3)` / `## Warnings (1)` / `## Suggestions (0)` |
+| Verdict 4-set | UPPERCASE strict | `PASS \| PASS WITH WARNINGS \| REQUIRES CHANGES \| BLOCKED` |
+
+Invalid forms rejected by parser:
+`1 Blockers` (singular required for 1), `0 Blocker` (plural required for 0).
 
 ### STEP 4: Compute consolidated verdict deterministically
 
@@ -417,13 +424,16 @@ Write the synthesized review to the path read via
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output | {n} Blocker / {n} Warning / {n} Suggestion |
+| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output | 0 Blockers / 1 Warning / 0 Suggestions |
 
-Findings column uses title case (`Blocker / Warning / Suggestion`)
-and counts NEW findings only (diff-introduced). Pre-existing
-findings attributed to the reviewer appear in `## Pre-existing
-Issues` and the at-a-glance table with `New? = Pre-existing`.
-Zero-pad when a bucket is empty. State definitions:
+Findings column uses title case + count-aware grammar (singular
+when count == 1, plural otherwise — including 0). Form examples:
+`0 Blockers / 1 Warning / 0 Suggestions`,
+`3 Blockers / 0 Warnings / 0 Suggestions`,
+`1 Blocker / 2 Warnings / 1 Suggestion`. Counts NEW findings only
+(diff-introduced). Pre-existing findings attributed to the
+reviewer appear in `## Pre-existing Issues` and the at-a-glance
+table with `New? = Pre-existing`. State definitions:
 
 - `artifact` — on-disk file ≥ 1000 bytes; trust as-is
 - `stub-replaced` — on-disk stub overwritten with larger findings from agent return text

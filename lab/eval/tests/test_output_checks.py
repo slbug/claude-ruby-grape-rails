@@ -1150,7 +1150,7 @@ Some prose.
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| security-analyzer | stub-no-output | 0 Blockers / 0 Warnings / 0 Suggestions |
+| security-analyzer | stub-no-output | 0 Blockers  /  0 Warnings  /  0 Suggestions |
 """
         passed, _ = output_checks.has_review_reviewer_coverage(content)
         self.assertTrue(passed)

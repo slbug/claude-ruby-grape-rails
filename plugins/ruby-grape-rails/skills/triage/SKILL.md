@@ -354,7 +354,7 @@ No findings selected. Options:
 
 ### All Blockers
 
-If all findings are Blocker:
+If all findings are Blockers:
 
 ```
 All 5 findings are Blockers and must be addressed.

@@ -107,7 +107,7 @@ class TriagePlanTemplateDriftTests(unittest.TestCase):
                     bad.append(f"{heading!r} contains Iron Law task: {line.strip()!r}")
         self.assertFalse(
             bad,
-            "Iron Law violations are Blocker per triage-patterns; canonical "
+            "Iron Law violations are Blockers per triage-patterns; canonical "
             "examples MUST NOT place them in non-Blockers phases (incl. "
             "Phase 1 Test Coverage Gaps, which is for coverage gaps, not "
             "Iron Law violations). Drifted lines: " + "; ".join(bad),

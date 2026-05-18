@@ -68,11 +68,23 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Added BAD/GOOD pair to
   `references/preferences/tool-batching.md` under
   "Multi-tool detection".
-- `/rb:review` fanout step 9 + Gotchas now link to
-  `references/preferences/tool-batching.md` for Read-over-cat
-  discipline rather than restating it inline. Bulk-cat of ~10-11
-  reviewer artifacts (~6-8 KB each) overflows the Read token cap
-  and forces offset/limit pagination.
+- `/rb:review` fanout step 9 + Gotchas: dropped inline Read-over-cat
+  instruction. `tool-batching.md` preference is already injected at
+  `SessionStart` + `SubagentStart` via `inject-rules.sh` with its
+  reference path bare on the next line — no need to restate or link
+  from skill bodies.
+- `iron-law-judge` Law 18 description corrected from "Bare `rescue`
+  (catches Exception)" to "`rescue Exception` (catches interrupts +
+  system exits)". Bare `rescue` defaults to `StandardError` and is
+  safe; only the explicit `Exception` form swallows
+  `SignalException` / `SystemExit`.
+- `skills/iron-laws/references/fix-priority.md` rewritten to match
+  D1 doctrine: all Iron Law violations are Blockers (Laws 1-20);
+  Verification (Law 21) and Surgical Changes (Law 22) are separate
+  completion gates. Cross-reference label in `iron-laws/SKILL.md`
+  updated.
+- `skills/full/SKILL.md:72` and `triage/SKILL.md` ("If all findings
+  are Blocker") grammar agreement fixed to plural `Blockers`.
 
 ## [1.16.12] - 2026-05-17
 

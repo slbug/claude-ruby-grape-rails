@@ -12,9 +12,9 @@
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 Blocker / 0 Warning / 1 Suggestion |
-| testing-reviewer | artifact | 0 Blocker / 1 Warning / 0 Suggestion |
-| security-analyzer | stub-replaced | 1 Blocker / 1 Warning / 0 Suggestion |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 1 Suggestion |
+| testing-reviewer | artifact | 0 Blockers / 1 Warning / 0 Suggestions |
+| security-analyzer | stub-replaced | 1 Blocker / 1 Warning / 0 Suggestions |
 
 ## Reviewer Verdicts
 

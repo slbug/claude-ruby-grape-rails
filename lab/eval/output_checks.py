@@ -232,8 +232,13 @@ _RECOVERY_STATES = frozenset(
 _CANONICAL_VERDICTS = frozenset(
     {"PASS", "PASS WITH WARNINGS", "REQUIRES CHANGES", "BLOCKED"}
 )
+# Coverage findings cell grammar: count-aware. Each count's bucket
+# form MUST agree in number with its count — singular only when
+# count == 1, plural otherwise (including 0). Regex captures both
+# count + form pairs so `_validate_coverage_findings` can enforce
+# agreement; bare `Blockers?` would let `1 Blockers` slip through.
 _COVERAGE_FINDINGS_RE = re.compile(
-    r"^\d+\s+Blockers?\s*/\s*\d+\s+Warnings?\s*/\s*\d+\s+Suggestions?$"
+    r"^(\d+)\s+(Blocker|Blockers)\s*/\s*(\d+)\s+(Warning|Warnings)\s*/\s*(\d+)\s+(Suggestion|Suggestions)$"
 )
 # Whitespace-tolerant zero-counts gate for `stub-no-output` rows.
 # Mirrors `_COVERAGE_FINDINGS_RE` shape but pins every count to 0,
@@ -244,6 +249,31 @@ _STUB_NO_OUTPUT_FINDINGS_RE = re.compile(
     r"^0\s+Blockers\s*/\s*0\s+Warnings\s*/\s*0\s+Suggestions$"
 )
 _STUB_NO_OUTPUT_FINDINGS = "0 Blockers / 0 Warnings / 0 Suggestions"
+
+
+def _validate_coverage_findings(findings: str) -> tuple[bool, str | None]:
+    """Return (valid, reason). Enforces count-form agreement.
+
+    Singular form valid only when count == 1; plural form valid for
+    count != 1 (including 0). Rejects mismatches like `1 Blockers` or
+    `0 Blocker`.
+    """
+    m = _COVERAGE_FINDINGS_RE.match(findings)
+    if not m:
+        return False, "shape mismatch"
+    for count_str, form, singular in (
+        (m.group(1), m.group(2), "Blocker"),
+        (m.group(3), m.group(4), "Warning"),
+        (m.group(5), m.group(6), "Suggestion"),
+    ):
+        n = int(count_str)
+        expected = singular if n == 1 else singular + "s"
+        if form != expected:
+            return False, (
+                f"count {n} requires {expected!r}, got {form!r} "
+                "(singular only when count == 1; plural otherwise)"
+            )
+    return True, None
 
 
 def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
@@ -271,8 +301,9 @@ def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
         if recovery not in _RECOVERY_STATES:
             bad.append(f"{slug}: invalid recovery state {recovery!r}")
             continue
-        if not _COVERAGE_FINDINGS_RE.match(findings):
-            bad.append(f"{slug}: findings cell {findings!r} not in `{{n}} Blocker[s] / {{n}} Warning[s] / {{n}} Suggestion[s]` form")
+        ok, reason = _validate_coverage_findings(findings)
+        if not ok:
+            bad.append(f"{slug}: findings cell {findings!r} invalid — {reason} (form: `{{n}} Blocker[s] / {{n}} Warning[s] / {{n}} Suggestion[s]`)")
             continue
         if recovery == "stub-no-output" and not _STUB_NO_OUTPUT_FINDINGS_RE.match(findings):
             bad.append(
@@ -805,7 +836,7 @@ def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
 
 
 _COVERAGE_FINDINGS_PARSE_RE = re.compile(
-    r"^(\d+)\s+Blockers?\s*/\s*(\d+)\s+Warnings?\s*/\s*(\d+)\s+Suggestions?$"
+    r"^(\d+)\s+(?:Blocker|Blockers)\s*/\s*(\d+)\s+(?:Warning|Warnings)\s*/\s*(\d+)\s+(?:Suggestion|Suggestions)$"
 )
 
 

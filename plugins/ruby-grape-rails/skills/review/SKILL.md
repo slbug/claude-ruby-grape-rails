@@ -194,13 +194,14 @@ For full briefing template (verbatim text to use in prompts), see
 3. **Deduplicate overlapping findings** - merge similar issues from different agents
 4. **Keep noise low** - prefer findings a senior Ruby reviewer would care about
 5. **Be specific** - cite line numbers, provide examples
-6. **Prioritize** — title case singular `Blocker | Warning |
-   Suggestion` in per-finding `Severity:` tags + Counts prefix +
-   Reviewer Coverage row count + At-a-Glance Severity column; title
-   case plural `Blockers | Warnings | Suggestions` in consolidated
-   section headers + Summary table category column; verdict 4-set
-   (`PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED`) stays
-   UPPERCASE
+6. **Prioritize** — title case severity (always singular for
+   per-finding `Severity:` tags + At-a-Glance Severity column;
+   count-aware for Counts prefix + Reviewer Coverage row, e.g.
+   `0 Blockers / 1 Warning / 0 Suggestions`; always plural for
+   consolidated section headers + Summary table category). Verdict
+   4-set (`PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED`)
+   stays UPPERCASE. Full rule:
+   `${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "STEP 3"
 7. **Contextualize** - explain why it matters, not just what's wrong
 8. **Identify package + ORM first** - do not apply flat Rails / Active Record advice to Sequel or modular packages
 
