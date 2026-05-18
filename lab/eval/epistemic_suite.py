@@ -151,17 +151,20 @@ SEVERITY_CRITICAL_PATTERN = re.compile(
     # `Critical` form or the current shipped vocabulary `Blocker` /
     # `Blockers` (post severity-vocab migration; section headers use the
     # plural form `## Blockers (n)`). Both indicate false positives on
-    # clean diffs. Matches:
+    # clean diffs. The heading branch excludes `(0)` count suffix —
+    # the canonical consolidated-review template emits `## Blockers (0)`
+    # on clean reviews; matching it would treat a correctly-empty section
+    # as a false positive. Matches:
     #   - **Severity**: Critical / Blocker    (markdown bold label)
     #   - Severity: Critical / Blocker         (plain label)
     #   - severity=critical / severity=blocker (kv form)
-    #   - ### 🔴 CRITICAL / BLOCKER(S)         (markdown heading)
-    #   - ## Critical Issue / ## Blockers (3) (markdown heading)
+    #   - ### 🔴 CRITICAL / BLOCKER(S)         (markdown heading, count != 0)
+    #   - ## Critical Issue / ## Blockers (3) (markdown heading, count != 0)
     #   - **CRITICAL** / **BLOCKER(S)**        (bold standalone)
     r"(?:"
     r"\bseverity[\s:=]*(?:critical|blockers?)"
     r"|\*\*\s*severity\s*\*\*\s*[:=]\s*(?:critical|blockers?)"
-    "|^#+\\s*\\*?\\*?\\s*(?:\U0001f534\\s*)?(?:critical|blockers?)\\b"
+    "|^#+\\s*\\*?\\*?\\s*(?:\U0001f534\\s*)?(?:critical|blockers?)\\b(?!\\s*\\(0\\))"
     r"|\*\*\s*(?:critical|blockers?)\s*\*\*"
     r")",
     re.IGNORECASE | re.MULTILINE,

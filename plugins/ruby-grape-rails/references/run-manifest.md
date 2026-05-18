@@ -98,7 +98,8 @@ Required fields (review only — git-pinned skill): `branch`,
 `branch_head_sha`, `base_ref`, `base_sha`. Omitted for plan,
 brainstorm, and research (TTL-only staleness).
 
-`base_sha` = output of `git merge-base HEAD "$BASE_REF"` at run start.
+`base_sha` = output of `git merge-base HEAD <BASE_REF>` at run start
+(substitute resolved `BASE_REF` value from `resolve-base-ref` stdout).
 Stored to detect rebase drift on resume.
 
 `status` enum: `in-flight` | `complete`.
@@ -119,12 +120,12 @@ computes everything: manifest path, datesuffix, agent paths,
 consolidated path, git pins. Outputs absolute manifest path.
 
 Substitute the captured `BASE_REF` value (from `resolve-base-ref`
-stdout) for `<BASE_REF>` before running:
+stdout) for `BASE_REF_VALUE` before running:
 
 ```bash
 MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
   --skill=rb:review --slug="$SLUG" \
-  --base-ref=<BASE_REF> \
+  --base-ref=BASE_REF_VALUE \
   --agents="$AGENTS_CSV")
 ```
 
@@ -289,14 +290,17 @@ any prior manifest, inits fresh, outputs the path on stdout. Skill
 body uses output for subsequent `field` / `spawn-paths` / `patch` /
 `prepare-respawn` calls.
 
-Substitute the captured `BASE_REF` value (from `resolve-base-ref`
-stdout) for `<BASE_REF>` before running (review skill only — plan /
-brainstorm / research skip the `--base-ref` flag):
+`prepare-run` options:
+
+- `--skill`: one of `rb:review`, `rb:plan`, `rb:brainstorm`, `rb:research`. Substitute the actual skill name for `SKILL_NAME` in the example below.
+- `--base-ref`: review skill ONLY. Substitute `BASE_REF_VALUE` with the captured `BASE_REF` from `resolve-base-ref` stdout. Plan / brainstorm / research OMIT the entire `--base-ref` line (TTL-only staleness).
+- `--slug`: per-skill slug (review-slug for reviews, plan-slug for plan/brainstorm, topic-slug for research).
+- `--agents`: comma-separated agent slug list computed by the calling skill from its own selection logic.
 
 ```bash
 MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
-  --skill=<rb:review|rb:plan|rb:brainstorm|rb:research> --slug="$SLUG" \
-  [--base-ref=<BASE_REF>] \
+  --skill=SKILL_NAME --slug="$SLUG" \
+  --base-ref=BASE_REF_VALUE \
   --agents="$AGENTS_CSV")
 ```
 
