@@ -74,7 +74,7 @@ file-type-specific checklists without bloating the main routing surface.
 
 - [ ] `ruby -c` passes
 - [ ] formatter is clean (`standardrb` or `rubocop`)
-- [ ] no bare `rescue`
+- [ ] no `rescue Exception` (Iron Law 18); explicit exception class on every rescue clause (style)
 - [ ] names and control flow stay readable
 - [ ] duplication is avoided
 

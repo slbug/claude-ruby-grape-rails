@@ -90,8 +90,9 @@ end
 ```
 
 Iron Law 18: never `rescue Exception` (catches `SystemExit` /
-`SignalException`) and never bare `rescue` (silently swallows every
-`StandardError`). Always name the specific subclass.
+`SignalException`). Bare `rescue` defaults to `StandardError` and is
+technically safe; explicit class naming (`rescue SpecificError =>`)
+is a style preference for clarity, not a Law 18 violation.
 
 ### Result-object early return
 

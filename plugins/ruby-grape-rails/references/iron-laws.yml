@@ -8,7 +8,11 @@
 #   title: short human-readable name
 #   rule: the actual rule text
 #   rationale: why this matters
-#   severity: critical, high, medium
+#   severity: critical, high, medium — intra-Blocker priority hint only.
+#     Per D1 doctrine, every Iron Law violation is a Blocker (review
+#     severity bucket). This field is internal fix-order priority for
+#     human prioritization within the Blocker bucket; it does NOT map
+#     to the review severity vocabulary (Blocker | Warning | Suggestion).
 #   applies_to: file patterns where relevant
 #   summary_text: short form for summaries/cheat sheets
 #   init_text: form for CLAUDE.md injection template

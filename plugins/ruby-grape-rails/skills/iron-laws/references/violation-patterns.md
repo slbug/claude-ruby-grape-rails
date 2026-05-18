@@ -2,7 +2,10 @@
 
 Detailed patterns for detecting Iron Law violations.
 
-## Critical Violations (Must Fix)
+## Blocker Violations (Must Fix)
+
+All Iron Law violations (Laws 1-20) are Blockers per D1 doctrine.
+The subsections below are organized by Law number, not severity.
 
 ### Law 1: Float for Money
 

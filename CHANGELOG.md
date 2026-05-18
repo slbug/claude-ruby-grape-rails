@@ -81,7 +81,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `skills/iron-laws/references/violation-patterns.md` (Law 18
   section + Detection Patterns), `skills/triage/SKILL.md`,
   `skills/triage/references/triage-patterns.md`,
-  `skills/intro/references/tutorial-content.md`. Bare `rescue`
+  `skills/intro/references/tutorial-content.md`,
+  `skills/plan/SKILL.md` (no-bare-rescue checklist clarified as
+  style preference vs Law 18 technical rule),
+  `skills/review/references/review-playbook.md` (Ruby Files
+  checklist same clarification),
+  `skills/ruby-idioms/references/method-chaining.md` (detached
+  bare-rescue style from Law 18 attribution). Bare `rescue`
   defaults to `StandardError` and is safe; only the explicit
   `Exception` form swallows `SignalException` / `SystemExit`.
 - `skills/iron-laws/references/fix-priority.md` + cross-ref label
@@ -89,6 +95,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Iron Law violations (Laws 1-20) are Blockers; Verification (Law
   21) and Surgical Changes (Law 22) are separate workflow gates,
   not severity classifications.
+- `skills/iron-laws/references/violation-patterns.md`: heading
+  "## Critical Violations (Must Fix)" renamed to
+  "## Blocker Violations (Must Fix)". Lead prose clarifies
+  subsections organize by Law number, not severity.
+- `references/iron-laws.yml`: schema comment for `severity:` field
+  clarified — `critical | high | medium` are intra-Blocker priority
+  hints for fix ordering, NOT severity-bucket values. Every Iron
+  Law violation is a Blocker per D1.
 - `skills/full/SKILL.md:72` and `triage/SKILL.md` grammar agreement
   fixed to plural `Blockers`.
 - `output_checks.py` count-form validator paired with 4 new
