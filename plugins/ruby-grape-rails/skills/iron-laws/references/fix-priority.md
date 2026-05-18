@@ -61,6 +61,6 @@ Document exceptions with comments:
 - `raw()` for trusted admin templates
 - `eval` in controlled DSL contexts
 
-`rescue Exception` has NO valid exception per current Law 18 —
+`rescue Exception` has NO valid exemption per current Law 18 —
 top-level handlers must rescue specific subclasses or use
 `SignalException`/`SystemExit` handlers from the language explicitly.

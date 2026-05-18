@@ -115,7 +115,7 @@ require manual judgment but are equally Blockers. Laws 21 + 22
 | 14 | `user_input.html_safe`, `raw(user_input)` | XSS attacks |
 | 16 | `method_missing` without `respond_to_missing?` | Broken introspection |
 | 17 | Unsupervised background process (manual review) | Production outage on crash |
-| 18 | `rescue Exception` (literal — bare `rescue` defaults to `StandardError`, safe) | Lost SIGINT, hung processes |
+| 18 | `rescue Exception` (literal — bare `rescue` defaults to `StandardError`, not a Law 18 violation) | Lost SIGINT, hung processes |
 | 19 | DB queries in turbo_stream templates | Lock / deadlock under load |
 | 20 | Missing `turbo_frame_tag` for partial updates | Degraded UX, full page reloads |
 

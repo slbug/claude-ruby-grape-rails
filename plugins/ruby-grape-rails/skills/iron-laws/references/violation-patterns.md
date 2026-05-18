@@ -5,9 +5,10 @@ Detailed patterns for detecting Iron Law violations.
 ## Blocker Violations (Must Fix)
 
 All Iron Law violations are Blockers per D1 doctrine. Subsections
-below cover Laws 1-20 (code-pattern violation rules) by detection
-pattern, not Law number. Laws 21 (verification discipline) + 22
-(surgical-change discipline) are equally Blockers — see
+below cover grep-detectable patterns (Laws 1-4, 6, 7, 10-16, 18-20)
+by detection-pattern, not Law number. Laws 5, 8, 9, 17 require
+manual review — see `iron-law-judge.md` Blocker Violations table.
+Laws 21 + 22 (discipline rules) are equally Blockers — see
 `fix-priority.md`.
 
 ### Law 1: Float for Money
@@ -214,7 +215,7 @@ rescue SomeSpecificError => e
 | 4, 11 | `after_save.*:\|after_save do` (excluding `after_commit`) | `app/models/` |
 | 12 | `eval(` (excluding lines containing `# eval`) | `app/` |
 | 16 | `def method_missing` files lacking `respond_to_missing` | `app/` |
-| 18 | `rescue Exception` literal (bare `rescue` already defaults to `StandardError` — safe) | `app/` |
+| 18 | `rescue Exception` literal (bare `rescue` defaults to `StandardError` — not a Law 18 violation) | `app/` |
 | 19 | `\.where\|\.find\|\.find_by` | `app/views/*.turbo_stream.*` |
 
 ## Confidence Levels

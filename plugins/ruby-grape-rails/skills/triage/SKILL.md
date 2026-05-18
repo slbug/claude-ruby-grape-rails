@@ -1,6 +1,6 @@
 ---
 name: rb:triage
-description: "Triaging review findings: pick fix now, skip, or defer. Prioritizes Blocker (Iron Law violations, security). Triggers: \"triage\", \"which to fix\", \"prioritize findings\"."
+description: "Triaging review findings: pick fix now, skip, or defer. Prioritizes Blockers (Iron Law violations, security). Triggers: \"triage\", \"which to fix\", \"prioritize findings\"."
 argument-hint: "[path to review file]"
 effort: low
 ---
@@ -66,7 +66,7 @@ order within the bucket.
 
 ### Warning → Recommend Include
 
-- **Error handling (non-Iron-Law)**: missing error handling on external API calls (`rescue Exception` is Iron Law 18 → Blocker; bare `rescue` is safe — defaults to `StandardError`)
+- **Error handling (non-Iron-Law)**: missing error handling on external API calls (`rescue Exception` is Iron Law 18 → Blocker; bare `rescue` defaults to `StandardError`, not a Law 18 violation)
 - **Test coverage**: missing tests for critical paths
 - **API contract**: breaking changes to public APIs
 - **Documentation**: missing docs for public methods
@@ -294,10 +294,10 @@ Blocker" shortcut in the selection UI. Offer only Warning /
 Suggestion + cross-cutting filters:
 
 ```
-[Select All Warnings]
-[Select All Suggestions]
-[Select All in File: app/models/user.rb]
-[Select All of Type: N+1]
+[All Warnings]
+[All Suggestions]
+[All in File: app/models/user.rb]
+[All of Type: N+1]
 ```
 
 ### Smart Grouping
