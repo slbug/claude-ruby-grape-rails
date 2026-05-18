@@ -9,54 +9,56 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.16.13] - 2026-05-18
 
+### Changed
+
+- Severity vocabulary normalized to title case across review,
+  triage, brief, work, full skill surfaces + all 12 reviewer agent
+  bodies + `lab/eval/output_checks.py` parsers + fixtures + tests +
+  contributor instructions (`.github/`, `.claude/`). Rule: title
+  case singular `Blocker | Warning | Suggestion` for per-finding
+  `Severity:` tags, `**Counts:**` prefix, Reviewer Coverage row
+  count, and At-a-Glance Severity column; title case plural
+  `Blockers | Warnings | Suggestions` for consolidated section
+  headers + Summary table. Verdict 4-set (`PASS | PASS WITH
+  WARNINGS | REQUIRES CHANGES | BLOCKED`) stays UPPERCASE. Drops
+  the prior 3-way UPPERCASE/lowercase/title-case split and the
+  `Critical | Warning | Info` worker-form vocabulary. Parsers use
+  strict equality (no case normalization); no backward compat.
+- `bin/resolve-base-ref` invocation unified across all 7 caller
+  sites (`review`, `verify`, `document`, `plan`, `work` SKILL +
+  `verification-runner` agent ×2): "Run script → 3 `KEY=value`
+  lines on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`); use
+  emitted values as substitutions." Drops `eval "$(...)"` from
+  agent-facing instructions; agent reads stdout and substitutes
+  literal values into subsequent commands. Skill bodies use
+  `<BASE_REF>` / `<MERGE_BASE>` literal-substitution markers
+  instead of `$BASE_REF` / `$MERGE_BASE` shell vars (which would
+  not persist across separate Bash tool calls).
+  `verify-profiles.md` retains `eval` — it runs as one
+  self-contained shell script.
+
+### Removed
+
+- Sample-output blocks in `iron-law-judge`,
+  `data-integrity-reviewer`, `migration-safety-reviewer` (3 of 11
+  reviewer agents had them; the other 8 never did). Counts
+  contract section + playbook Consolidated Review Format template
+  are now the sole authoritative source.
+
 ### Fixed
 
-- `bin/resolve-base-ref` invocation pattern unified across all 7
-  caller sites (`review`, `verify`, `document`, `plan`, `work` SKILL
-  bodies + `verification-runner` agent ×2). Each site now reads:
-  "Run `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value`
-  lines on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Use
-  emitted values as substitutions." No reliance on `eval` or
-  shell-variable persistence across separate Bash tool calls — the
-  agent reads stdout values and substitutes them literally into
-  subsequent `git merge-base` / `git diff` / Pronto commands.
-  Script docstring updated with both usage patterns (agent
-  stdout-read; shell-script `eval`). `verify-profiles.md` keeps
-  `eval` because it runs as a single self-contained shell script.
-- `/rb:review` severity vocabulary normalized to title case across
-  all 11 reviewer agents, SKILL body, playbook, `example-review.md`,
-  output-check parsers, fixtures, and tests. Single rule: title case
-  singular `Blocker | Warning | Suggestion` for per-finding
-  `Severity:` tags, Counts prefix, Reviewer Coverage row count, and
-  At-a-Glance Severity column; title case plural
-  `Blockers | Warnings | Suggestions` for consolidated section
-  headers + Summary table category column. Verdict 4-set
-  (`PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED`) stays
-  UPPERCASE. Eliminates the prior `Critical | Warning | Info`
-  worker-form vocabulary (per playbook § "Worker Severity Mapping"
-  backward compatibility note) which workers ignored in practice,
-  plus the prior UPPERCASE/lowercase/title-case split between
-  worker artifacts, Coverage row, and Summary table.
-- Reviewer sample-output blocks removed from `iron-law-judge`,
-  `data-integrity-reviewer`, `migration-safety-reviewer` agent
-  bodies. 8 of 11 reviewer agents already shipped without sample
-  blocks; the 3 outliers omitted the mandatory `**Counts:**` first
-  line their own contract section prescribed, training the agent
-  on parser-incompatible output. The Counts contract section + the
-  playbook Consolidated Review Format template are now the sole
-  authoritative source.
-- `/rb:init` external-tool detection block now uses an explicit
-  `for t in betterleaks rtk dcg shellfirm; do command -v "$t" …;
-  done` loop instead of a multi-arg `command -v betterleaks rtk
-  dcg shellfirm`. The multi-arg form exits non-zero on any missing
-  argument and cancels sibling parallel Bash calls. Added matching
-  BAD/GOOD pair to `references/preferences/tool-batching.md` under
+- `/rb:init` external-tool detection: replaced multi-arg
+  `command -v betterleaks rtk dcg shellfirm` (POSIX exits non-zero
+  on any missing arg → cancels sibling parallel Bash calls) with a
+  single inline `for t in …; do command -v "$t" …; done` loop.
+  Added BAD/GOOD pair to
+  `references/preferences/tool-batching.md` under
   "Multi-tool detection".
-- `/rb:review` fanout step 9 + Gotchas now state explicitly that
-  reviewer artifacts must be read one per path from
-  `manifest-update spawn-paths`, never bulk-`cat`ted. Bulk-cat of
-  ~10-11 reviewer artifacts (~6-8 KB each) overflows the Read token
-  cap and forces offset/limit pagination.
+- `/rb:review` fanout step 9 + Gotchas now link to
+  `references/preferences/tool-batching.md` for Read-over-cat
+  discipline rather than restating it inline. Bulk-cat of ~10-11
+  reviewer artifacts (~6-8 KB each) overflows the Read token cap
+  and forces offset/limit pagination.
 
 ## [1.16.12] - 2026-05-17
 
