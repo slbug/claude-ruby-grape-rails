@@ -146,26 +146,25 @@ HEDGE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 SEVERITY_CRITICAL_PATTERN = re.compile(
-    # Structured top-severity labels only — avoid matching generic uses
-    # like "this is critical for correctness". Matches either the legacy
-    # `Critical` form or the current shipped vocabulary `Blocker` /
-    # `Blockers` (post severity-vocab migration; section headers use the
-    # plural form `## Blockers (n)`). Both indicate false positives on
-    # clean diffs. The heading branch excludes `(0)` count suffix —
-    # the canonical consolidated-review template emits `## Blockers (0)`
-    # on clean reviews; matching it would treat a correctly-empty section
-    # as a false positive. Matches:
-    #   - **Severity**: Critical / Blocker    (markdown bold label)
-    #   - Severity: Critical / Blocker         (plain label)
-    #   - severity=critical / severity=blocker (kv form)
-    #   - ### 🔴 CRITICAL / BLOCKER(S)         (markdown heading, count != 0)
-    #   - ## Critical Issue / ## Blockers (3) (markdown heading, count != 0)
-    #   - **CRITICAL** / **BLOCKER(S)**        (bold standalone)
+    # Structured top-severity FINDING signals only. Counts true false
+    # positives on clean diffs (legacy `Critical` or current `Blocker` /
+    # `Blockers` vocab post severity-vocab migration). Each branch must
+    # represent an actual severity assignment, not an empty section
+    # header or a zero/none label. Matches:
+    #   - **Severity**: Critical / Blocker        (bold per-finding label)
+    #   - Severity: Critical / Blocker             (plain per-finding label)
+    #   - severity=critical / severity=blocker     (kv form)
+    #   - ## Blockers (3) / ### 🔴 CRITICAL (5)    (heading + positive count)
+    # Excludes (NOT a false-positive signal):
+    #   - `## Blockers (0)` / `## Blockers (none)` — canonical empty section
+    #   - `## Blockers` alone — ambiguous (empty section header common in
+    #     template-driven output without count)
+    #   - `**Blockers**: 0` / `**Blockers**: none` — explicit-zero label
+    #   - bold standalone `**Blocker**` / `**Critical**` (no severity tag)
     r"(?:"
     r"\bseverity[\s:=]*(?:critical|blockers?)"
     r"|\*\*\s*severity\s*\*\*\s*[:=]\s*(?:critical|blockers?)"
-    "|^#+\\s*\\*?\\*?\\s*(?:\U0001f534\\s*)?(?:critical|blockers?)\\b(?!\\s*\\(0\\))"
-    r"|\*\*\s*(?:critical|blockers?)\s*\*\*"
+    "|^#+\\s*\\*?\\*?\\s*(?:\U0001f534\\s*)?(?:critical|blockers?)\\b\\s*\\(\\s*(?:[1-9]\\d*)\\s*\\)"
     r")",
     re.IGNORECASE | re.MULTILINE,
 )

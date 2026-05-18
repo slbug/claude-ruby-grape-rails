@@ -28,6 +28,7 @@ to "Usually Fix":
 - DB queries inside Turbo Stream responses (Iron Law 19)
 - Partial updates without `turbo_frame_tag` (Iron Law 20)
 - "Should work" claims without test output (Iron Law 21)
+- Out-of-scope / drive-by edits in the diff (Iron Law 22)
 - `bundle exec rails zeitwerk:check` failures
 - Hard-coded credentials / API keys (cleartext secrets — security issue)
 

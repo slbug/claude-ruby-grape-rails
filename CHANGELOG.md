@@ -14,8 +14,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Severity vocabulary normalized to title case across review,
   triage, brief, work, full skill surfaces, all 11 `/rb:review`
   reviewer agents (and `deep-bug-investigator` for `/rb:investigate`),
-  `lab/eval/output_checks.py` parsers, fixtures, tests, and
-  contributor instructions (`.github/`, `.claude/`). Rule: title
+  `lab/eval/output_checks.py` parsers, fixtures, and tests. Rule: title
   case `Blocker / Warning / Suggestion` for per-finding `Severity:`
   tags + At-a-Glance Severity column (always singular, one finding
   per row); count-aware grammar for `**Counts:**` prefix +
@@ -29,11 +28,21 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   split and the `Critical / Warning / Info` worker-form vocabulary.
   Parsers use strict casing + alternation regex
   (`Blockers?` / `Warnings?` / `Suggestions?`); no case
-  normalization, no backward compat. NOTE: contributor review
-  priorities (`.github/copilot-instructions.md` "Review Priorities"
-  table) keep their UPPERCASE `CRITICAL / IMPORTANT / SUGGESTION`
-  vocabulary — distinct concept from review-artifact finding
-  severity.
+  normalization, no backward compat. NOTE: contributor-tool internal
+  vocabularies keep their UPPERCASE forms — distinct concepts from
+  shipped review-artifact finding severity:
+  - `.github/copilot-instructions.md` "Review Priorities" table:
+    `CRITICAL / IMPORTANT / SUGGESTION`
+  - `.claude/agents/docs-surface-validator.md` +
+    `.claude/skills/docs-check/references/validation-rules.md`:
+    `BLOCKER / WARNING / INFO / PASS` (docs-check classification)
+  - `.claude/skills/cc-changelog/SKILL.md`:
+    `BREAKING / OPPORTUNITY / RELEVANT FIX / DEPRECATION / INFO`
+    (CC changelog impact classification)
+  - `.github/instructions/plugin-review.instructions.md`:
+    `BLOCKER / WARNING` (contributor PR-reviewer flag terms; cites
+    shipped vocabulary in title case where referring to the
+    `/rb:review` artifact contract).
 - `bin/resolve-base-ref` invocation unified across all 7 caller
   sites (`review`, `verify`, `document`, `plan`, `work` SKILL +
   `verification-runner` agent ×2): "Run script → 3 `KEY=value`

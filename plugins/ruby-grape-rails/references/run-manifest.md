@@ -297,10 +297,20 @@ body uses output for subsequent `field` / `spawn-paths` / `patch` /
 - `--slug`: per-skill slug (review-slug for reviews, plan-slug for plan/brainstorm, topic-slug for research).
 - `--agents`: comma-separated agent slug list computed by the calling skill from its own selection logic.
 
+Review skill (with `--base-ref`):
+
+```bash
+MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
+  --skill=rb:review --slug="$SLUG" \
+  --base-ref=BASE_REF_VALUE \
+  --agents="$AGENTS_CSV")
+```
+
+Plan / brainstorm / research (no `--base-ref` — TTL-only staleness):
+
 ```bash
 MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
   --skill=SKILL_NAME --slug="$SLUG" \
-  --base-ref=BASE_REF_VALUE \
   --agents="$AGENTS_CSV")
 ```
 

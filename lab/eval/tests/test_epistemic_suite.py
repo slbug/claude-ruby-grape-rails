@@ -131,8 +131,49 @@ class TestFalsePositiveRate(unittest.TestCase):
         )
         self.assertEqual(es.score_false_positive_rate(text), 2.0)
 
+    def test_counts_blocker_labels(self) -> None:
+        text = (
+            "## Finding 1\n**Severity**: Blocker\n\n"
+            "## Finding 2\n**Severity**: Blocker\n"
+        )
+        self.assertEqual(es.score_false_positive_rate(text), 2.0)
+
+    def test_counts_plain_label_forms(self) -> None:
+        text = "Severity: Critical\nseverity=blocker\nSeverity: Blocker\n"
+        self.assertEqual(es.score_false_positive_rate(text), 3.0)
+
+    def test_counts_positive_count_section_headers(self) -> None:
+        text = "## Blockers (3)\n## Critical Bugs (1)\n### 🔴 Critical (2)\n"
+        # Only "## Blockers (3)" and "### 🔴 Critical (2)" match;
+        # "## Critical Bugs (1)" has prose between severity and count.
+        self.assertEqual(es.score_false_positive_rate(text), 2.0)
+
+    def test_excludes_zero_count_section_header(self) -> None:
+        # Canonical empty section on clean review — MUST NOT count.
+        text = "## Blockers (0)\n## Suggestions (1)\n"
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
+    def test_excludes_bare_section_header_without_count(self) -> None:
+        # Ambiguous empty heading — MUST NOT count.
+        text = "## Blockers\nNone.\n## Critical\nNone.\n"
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
+    def test_excludes_explicit_zero_or_none_labels(self) -> None:
+        text = "**Blockers**: 0\n**Blockers**: none\n**Critical**: 0\n"
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
+    def test_excludes_bold_standalone_severity_words(self) -> None:
+        # Bold severity word alone is not a severity assignment.
+        text = "Be aware: **Blocker** is the new term.\n**Critical** notes follow.\n"
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
     def test_ignores_non_critical(self) -> None:
         text = "**Severity**: Warning\n\n**Severity**: Info\n"
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
+    def test_ignores_generic_critical_adjective(self) -> None:
+        # "critical" used as ordinary adjective — must NOT match.
+        text = "This is critical for correctness. The fix is critical.\n"
         self.assertEqual(es.score_false_positive_rate(text), 0.0)
 
 
