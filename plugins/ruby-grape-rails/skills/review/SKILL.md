@@ -20,15 +20,13 @@ Reviews catch issues before they reach production. Each specialist focuses on th
 
 ## Collecting Changed Files
 
-Capture base ref + diff scope in ONE shell session:
+`eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"` populates
+`$BASE_REF`, `$REMOTE`, `$DEFAULT_BRANCH`. Then capture in the same
+shell session:
 
-```
-# Populates $BASE_REF, $REMOTE, $DEFAULT_BRANCH via eval (3 vars in one pass).
-eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"
-MERGE_BASE=$(git merge-base HEAD "$BASE_REF")
-CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$MERGE_BASE"...HEAD)
-DIFF_STAT=$(git diff --stat "$MERGE_BASE"...HEAD)
-```
+- `$MERGE_BASE` via `git merge-base HEAD "$BASE_REF"`
+- `$CHANGED_FILES` via `git diff --name-only --diff-filter=ACMR "$MERGE_BASE"...HEAD`
+- `$DIFF_STAT` via `git diff --stat "$MERGE_BASE"...HEAD`
 
 Pass `$CHANGED_FILES`, `$BASE_REF`, `$MERGE_BASE`, and `$DIFF_STAT` to
 every spawned reviewer. Reviewers scope analysis to `$CHANGED_FILES`
