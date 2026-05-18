@@ -46,7 +46,7 @@ START ──▶ READ PLAN ──▶ ANALYZE CONTEXT ──▶ PICK TASK
               [SUCCESS]            [FAILURE]
                     │                   │
                     ▼                   ▼
-           CHECK OFF TASK ◀─── CREATE BLOCKER
+           CHECK OFF TASK ◀─── CREATE Blocker
                     │         (after 3 tries)
                     ▼
               MORE TASKS?

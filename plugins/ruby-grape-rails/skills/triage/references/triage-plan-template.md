@@ -14,8 +14,8 @@ mapping:
 | Phase | Heading shape | Findings | Task IDs |
 |---|---|---|---|
 | Phase 1 | `## Phase 1: Blockers [PENDING]` (BLOCKED verdict) OR `## Phase 1: Test Coverage Gaps [PENDING]` (REQUIRES CHANGES verdict). Omitted for PASS / PASS WITH WARNINGS. | every NEW Blocker OR every Test Coverage Gap row (auto-included; mutually exclusive per playbook STEP 4) | `P1-T1`, `P1-T2`, ... |
-| Phase 2 | `## Phase 2: Warnings (selected) [PENDING]`. Omit when zero selected. | NEW WARNINGs the user selected at SKILL Step 4 | `P2-T1`, ... |
-| Phase 3 | `## Phase 3: Suggestions (selected) [PENDING]`. Omit when zero selected. | NEW SUGGESTIONs the user selected via `S<n>` at SKILL Step 4 | `P3-T1`, ... |
+| Phase 2 | `## Phase 2: Warnings (selected) [PENDING]`. Omit when zero selected. | NEW Warnings the user selected at SKILL Step 4 | `P2-T1`, ... |
+| Phase 3 | `## Phase 3: Suggestions (selected) [PENDING]`. Omit when zero selected. | NEW Suggestions the user selected via `S<n>` at SKILL Step 4 | `P3-T1`, ... |
 
 `## Deferred Findings` lists NEW Warnings + Suggestions the user did
 NOT select; these are excluded from any Phase. `## Pre-existing

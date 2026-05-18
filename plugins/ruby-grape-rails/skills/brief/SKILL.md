@@ -163,7 +163,7 @@ What to do now:
 1. **Be concise** - 30 seconds to read
 2. **Be specific** - Cite files, line numbers
 3. **Be actionable** - Clear next step
-4. **Prioritize** - BLOCKERs first, then WARNINGs, then SUGGESTIONs (per review bucket vocabulary)
+4. **Prioritize** - Blockers first, then Warnings, then Suggestions (per review bucket vocabulary)
 5. **Contextualize** - Why it matters
 
 ## What to Skip

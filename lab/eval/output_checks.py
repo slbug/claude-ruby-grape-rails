@@ -756,7 +756,7 @@ def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
     for idx, row in enumerate(rows, start=1):
         if len(row) != 7:
             continue
-        severity = row[2].strip().title()
+        severity = row[2].strip()
         new_state = row[6].strip().lower()
         if severity not in new_counts:
             bad_enum.append(
@@ -840,7 +840,7 @@ def has_review_coverage_excludes_preexisting(content: str) -> tuple[bool, str]:
     for idx, row in enumerate(glance_rows, start=1):
         if len(row) != 7:
             continue
-        severity = row[2].strip().title()
+        severity = row[2].strip()
         reviewer = row[4].strip()
         new_state = row[6].strip().lower()
         if severity not in {"Blocker", "Warning", "Suggestion"}:

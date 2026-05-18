@@ -76,10 +76,9 @@ message.
    field with its recovery-state value (`artifact` |
    `stub-replaced` | `recovered-from-return` | `stub-no-output`).
 9. Read each verified artifact directly via the absolute path from
-   `manifest-update spawn-paths "$MANIFEST"`. Issue one `Read` per
-   path. Do NOT `cat` artifacts into a combined stream — bulk-cat
-   overflows the Read token cap on > 5 reviewers and forces
-   offset/limit pagination. Read consolidated path via
+   `manifest-update spawn-paths "$MANIFEST"`. Per
+   `${CLAUDE_PLUGIN_ROOT}/references/preferences/tool-batching.md`,
+   issue one `Read` per path. Read consolidated path via
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
    Write the consolidated review to that path.
 10. Patch manifest `status: complete`.
@@ -180,7 +179,7 @@ Every Agent() call must include in its prompt:
   Worker MUST use the exact path passed to it — do NOT invent,
   modify, shorten, or extension-change the filename.
 - Required output: write artifact (always — even on PASS) and return summary
-- Findings format: `file:line`, `Severity (blocker|warning|suggestion)`,
+- Findings format: `file:line`, `Severity (Blocker|Warning|Suggestion)`,
   `Confidence (HIGH|MEDIUM|LOW)`, description, current code, suggested
   code. Synthesis applies diff-status filter only (new vs pre-existing)
   per playbook § "Worker Severity Mapping".
@@ -351,7 +350,9 @@ When a finding cites a sidecar, read the sidecar's `trust_state` (see
   Missing line breaks consolidator severity-bucket counts.
 - Bulk-cat of artifacts. Reviewer artifacts run ~6-8KB each;
   up to 11 reviewers ≈ 65-90KB combined. Combined stream overflows
-  Read token cap. Use one Read per artifact path from `spawn-paths`.
+  Read token cap. See
+  `${CLAUDE_PLUGIN_ROOT}/references/preferences/tool-batching.md`
+  for Read-over-cat discipline.
 
 ## References
 

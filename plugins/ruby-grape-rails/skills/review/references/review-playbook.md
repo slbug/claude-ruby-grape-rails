@@ -138,14 +138,14 @@ file-type-specific checklists without bloating the main routing surface.
 
 ## Diff Collection
 
-Capture shell block lives in `../SKILL.md` § "Collecting Changed Files".
-Skill body is canonical; do NOT duplicate the eval/merge-base/changed-files
-recipe here.
+`resolve-base-ref` invocation + diff-stat capture procedure lives in
+`../SKILL.md` § "Collecting Changed Files". Skill body is canonical;
+do NOT duplicate here.
 
 ### Diff strategy (reviewer-owned)
 
-Triage with `$DIFF_STAT` first to identify high-noise paths
-(cassettes, fixtures, schema dumps, lockfiles, generated files)
+Triage with the captured DIFF_STAT value first to identify high-noise
+paths (cassettes, fixtures, schema dumps, lockfiles, generated files)
 before running any `git diff`.
 
 ## Worker Briefing Template
@@ -543,7 +543,7 @@ How would you like to proceed?
 - /rb:compound — Capture solution (default).
 - /rb:learn — Capture lessons.
 - /rb:triage .claude/reviews/{review-slug}-{datesuffix}.md
-    — Opt in to suggestions (NEW SUGGESTIONs only; no warnings or blockers to handle).
+    — Opt in to suggestions (NEW Suggestions only; no warnings or blockers to handle).
 - I'll handle it myself
 ```
 

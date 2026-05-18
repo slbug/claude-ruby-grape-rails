@@ -7,7 +7,7 @@
 - `[x]` = completed
 - `[ ]` = pending
 - Phase status `[COMPLETED|IN_PROGRESS|PENDING]` tracks phase progress
-- BLOCKERs in progress file track failed tasks
+- Blockers in progress file track failed tasks
 
 ## Resume Modes
 

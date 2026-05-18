@@ -227,8 +227,8 @@ remotes, non-standard default branches, fetches before resolving).
 Use emitted values as substitutions:
 `bundle exec pronto run -c "$(git merge-base HEAD <BASE_REF>)"`.
 
-Use the first base ref that exists. Pronto is a last-step changed-files pass,
-not a replacement for StandardRB/RuboCop or Brakeman.
+Pronto is a last-step changed-files pass, not a replacement for
+StandardRB/RuboCop or Brakeman.
 
 ## Verification Profiles
 

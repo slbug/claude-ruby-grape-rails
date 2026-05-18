@@ -208,9 +208,9 @@ per Step 2b verdict gate:
 
 | Verdict | Auto-include (no UI) | Present in selection UI |
 |---|---|---|
-| `BLOCKED` | every NEW Blocker (`B<n>`) | NEW WARNINGs (`W<n>`), NEW SUGGESTIONs (`S<n>`) |
-| `REQUIRES CHANGES` | every Test Coverage Gap row (`G<n>`) | NEW WARNINGs (`W<n>`), NEW SUGGESTIONs (`S<n>`) |
-| `PASS WITH WARNINGS` / `PASS` | none | NEW WARNINGs (`W<n>`), NEW SUGGESTIONs (`S<n>`) |
+| `BLOCKED` | every NEW Blocker (`B<n>`) | NEW Warnings (`W<n>`), NEW Suggestions (`S<n>`) |
+| `REQUIRES CHANGES` | every Test Coverage Gap row (`G<n>`) | NEW Warnings (`W<n>`), NEW Suggestions (`S<n>`) |
+| `PASS WITH WARNINGS` / `PASS` | none | NEW Warnings (`W<n>`), NEW Suggestions (`S<n>`) |
 
 Never surface pre-existing findings in the selection UI. Drive
 selection entirely through `AskUserQuestion` options; never accept
@@ -255,9 +255,9 @@ template's full surface in this order:
    - `## Phase 1: Blockers [PENDING]` (BLOCKED verdict) — task lines `- [ ] [P1-Tn][annotation] ...` per NEW Blocker.
    - `## Phase 1: Test Coverage Gaps [PENDING]` (REQUIRES CHANGES verdict) — task lines `- [ ] [P1-Tn][test] ...` per gap row.
    - Phase 1 heading OMITTED entirely for PASS / PASS WITH WARNINGS verdicts (no auto-include source).
-6. `## Phase 2: Warnings (selected) [PENDING]` — task lines `- [ ] [P2-Tn][annotation] ...` (only NEW WARNINGs the user selected at Step 4). Omit the heading when zero warnings selected.
+6. `## Phase 2: Warnings (selected) [PENDING]` — task lines `- [ ] [P2-Tn][annotation] ...` (only NEW Warnings the user selected at Step 4). Omit the heading when zero warnings selected.
 7. `## Phase 3: Suggestions (selected) [PENDING]` — task lines
-   `- [ ] [P3-Tn][annotation] ...` (only NEW SUGGESTIONs the user
+   `- [ ] [P3-Tn][annotation] ...` (only NEW Suggestions the user
    selected via `S<n>` at Step 4). Omit the entire phase heading
    when zero suggestions selected.
 8. `## Deferred Findings` (NEW Warnings + Suggestions the user did NOT select; excluded entirely from any Phase).
@@ -289,7 +289,7 @@ Review bucket = Blocker?
 
 ### Select All in Bucket
 
-BLOCKERs are auto-included by Step 4; do NOT surface a "Select All
+Blockers are auto-included by Step 4; do NOT surface a "Select All
 Blocker" shortcut in the selection UI. Offer only Warning /
 Suggestion + cross-cutting filters:
 
@@ -357,7 +357,7 @@ No findings selected. Options:
 If all findings are Blocker:
 
 ```
-All 5 findings are BLOCKERs and must be addressed.
+All 5 findings are Blockers and must be addressed.
 Estimated time: 2 hours
 
 [Start Work]

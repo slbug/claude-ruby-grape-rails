@@ -60,13 +60,13 @@ $ /rb:full Add magic link authentication
 [VERIFYING] All gates passed
 
 [REVIEWING] Spawning 4 review agents...
-  ✓ ruby-reviewer: PASS (2 SUGGESTIONs noted)
+  ✓ ruby-reviewer: PASS (2 Suggestions noted)
   ✓ testing-reviewer: PASS
   ✓ security-analyzer: PASS (1 Suggestion: token expiry)
   ✓ verification-runner: All tests pass
 
 [REVIEWING] Synthesized **Verdict**: PASS
-            (no NEW BLOCKERs, no WARNINGs introduced; 3 SUGGESTIONs noted)
+            (no NEW Blockers, no Warnings introduced; 3 Suggestions noted)
             → continue to COMPOUNDING (no autonomous re-work loop)
 
 [COMPOUNDING] Captured: "Magic link tokens should expire within 24 hours"

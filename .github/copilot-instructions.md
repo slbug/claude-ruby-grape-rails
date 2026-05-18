@@ -74,10 +74,10 @@ Do NOT flag issues already caught by CI:
 
 | Priority | Scope |
 |---|---|
-| CRITICAL | security vulnerabilities, data loss risks, breaking plugin schema |
-| IMPORTANT | convention violations, missing frontmatter, incorrect tool access |
-| IMPORTANT | unsupported agreement with author's framing when diff or evidence points elsewhere → review defect; challenge false premises directly |
-| IMPORTANT | direct correction over soft alignment; HIGH-confidence findings use direct language; reserve "might" / "potentially" for genuine uncertainty |
+| Critical | security vulnerabilities, data loss risks, breaking plugin schema |
+| Important | convention violations, missing frontmatter, incorrect tool access |
+| Important | unsupported agreement with author's framing when diff or evidence points elsewhere → review defect; challenge false premises directly |
+| Important | direct correction over soft alignment; HIGH-confidence findings use direct language; reserve "might" / "potentially" for genuine uncertainty |
 | Suggestion | readability improvements, description wording, minor optimizations |
 
 ## Cross-File Consistency (Drift Check)

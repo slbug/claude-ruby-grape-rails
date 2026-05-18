@@ -80,7 +80,7 @@ Warning / Suggestion.
 - The fix requires a separate migration/PR
 
 Iron Law violations + security issues are both non-negotiable
-BLOCKERs per the "Always Fix" list above. Do NOT downgrade EITHER
+Blockers per the "Always Fix" list above. Do NOT downgrade EITHER
 class on these grounds:
 
 - Iron Laws (1-22): listed under "Always Fix"
@@ -107,7 +107,7 @@ selective about what's worth fixing now.
 
 If you skip more than 70% of findings, the review wasn't
 useful or you're cutting too many corners. At minimum, fix
-all BLOCKERs and most WARNINGs.
+all Blockers and most Warnings.
 
 ### Triaging without reading
 
@@ -118,8 +118,8 @@ pattern-matching on severity alone, you're missing context.
 
 When a review has 15+ findings:
 
-1. First pass: Auto-approve all BLOCKERs
-2. Second pass: Present WARNINGs for decision
-3. Third pass: Batch SUGGESTIONs — "Skip all suggestions?"
+1. First pass: Auto-approve all Blockers
+2. Second pass: Present Warnings for decision
+3. Third pass: Batch Suggestions — "Skip all suggestions?"
 
 This prevents decision fatigue on large reviews.
