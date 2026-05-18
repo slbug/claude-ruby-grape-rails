@@ -84,9 +84,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   bumped 1.2.0 → 1.2.1; last_updated 2026-05-18). Title: "Rescue
   StandardError" → "No Rescue Exception". Rule: "DON'T `rescue
   Exception` — catches `SystemExit` / `SignalException`. Bare
-  `rescue` defaults to `StandardError` and is safe." Previous canon
-  ("only rescue StandardError or specific classes") was ambiguous —
-  could be misread as requiring the literal word `StandardError`.
+  `rescue` defaults to `StandardError` and is not a Law 18
+  violation." Previous canon ("only rescue StandardError or specific
+  classes") was ambiguous — could be misread as requiring the
+  literal word `StandardError`. Silent swallow without re-raise
+  remains a separate bug (not Law 18).
   Regenerated `inject-rules.sh`, `canonical-registry.md`,
   `tutorial-content.md`, `iron-law-judge.md` IRON_LAWS_JUDGE marker
   block, `iron-laws/SKILL.md` to match. Corresponding cross-doc

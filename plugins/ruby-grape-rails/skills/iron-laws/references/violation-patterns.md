@@ -183,9 +183,10 @@ rescue Exception => e  # catches SIGINT, SystemExit — DANGEROUS
 **Fix**:
 
 ```ruby
-rescue => e  # defaults to StandardError — safe
+rescue => e  # defaults to StandardError — not a Law 18 violation
 # or
 rescue SomeSpecificError => e
+# Either form handles or re-raises; silent swallow is a separate bug.
 ```
 
 ### Law 19: DB Queries in Turbo Streams
