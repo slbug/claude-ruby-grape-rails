@@ -4,8 +4,11 @@ Detailed patterns for detecting Iron Law violations.
 
 ## Blocker Violations (Must Fix)
 
-All Iron Law violations (Laws 1-20) are Blockers per D1 doctrine.
-The subsections below are organized by Law number, not severity.
+All Iron Law violations are Blockers per D1 doctrine. Subsections
+below cover Laws 1-20 (code-pattern violation rules) organized by
+Law number, not severity. Laws 21 (verification discipline) + 22
+(surgical-change discipline) are equally Blockers — see
+`fix-priority.md`.
 
 ### Law 1: Float for Money
 

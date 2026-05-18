@@ -91,11 +91,12 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 
 ## Blocker Violations (Must Fix Immediately)
 
-All 20 Iron Law violations (Laws 1-20) are Blockers — non-negotiable
-per `${CLAUDE_PLUGIN_ROOT}/skills/triage/references/triage-patterns.md`
-§ "Always Fix". The table below covers Laws with grep-detectable
-patterns; Laws 5, 8, 9, 17 require manual judgment but are equally
-Blockers.
+All 22 Iron Law violations are Blockers — non-negotiable per
+`${CLAUDE_PLUGIN_ROOT}/skills/triage/references/triage-patterns.md`
+§ "Always Fix". The table below covers Laws 1-20 (code-pattern
+violation rules) with grep-detectable patterns; Laws 5, 8, 9, 17
+require manual judgment but are equally Blockers. Laws 21 + 22
+(discipline rules) are in "Fix Priority" section below.
 
 | Law | Pattern | Risk |
 |-----|---------|------|
@@ -160,9 +161,16 @@ Always write an artifact, even for a clean pass. Never write review artifacts un
 
 ## Fix Priority
 
-1. **Blockers** (Laws 1-20): All Iron Law violations block merge
-2. **Verification** (Law 21): Testing discipline — Required
-3. **Surgical Changes** (Law 22): Out-of-scope edits flagged separately
+All 22 Iron Law violations block merge. Three rule groups, all
+Blockers:
+
+1. **Violation rules** (Laws 1-20): Code patterns that introduce
+   bugs, security holes, or data corruption
+2. **Verification discipline** (Law 21): "Should work" claims
+   without test/lint evidence; failed tests/lint when run are
+   separate Blockers
+3. **Surgical-change discipline** (Law 22): Out-of-scope edits
+   present in the diff; revert or split into separate change
 
 ## Additional Heuristics
 

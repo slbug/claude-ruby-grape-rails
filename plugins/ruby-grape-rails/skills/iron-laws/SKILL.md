@@ -72,4 +72,4 @@ Should I apply this fix?
   asks for the complete law list, per-law rationale, or enforcement
   tiers.
 - `references/violation-patterns.md` — Detailed detection patterns and grep commands
-- `references/fix-priority.md` — All Iron Law violations are Blockers (Laws 1-20); Verification (21) + Surgical Changes (22) are separate completion gates
+- `references/fix-priority.md` — All 22 Iron Law violations are Blockers; Laws 1-20 = violation rules, Laws 21 + 22 = discipline rules

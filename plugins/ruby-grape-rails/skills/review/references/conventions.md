@@ -43,7 +43,7 @@ At review start, if `.claude/conventions.md` exists:
 1. Read the file
 2. **SUPPRESS** entries: Skip findings that match the pattern. Do NOT
    report them as issues — they are intentionally accepted.
-3. **ENFORCE** entries: Flag violations of enforced patterns as WARNINGS.
+3. **ENFORCE** entries: Flag violations of enforced patterns as Warnings.
    These are project-specific rules beyond Iron Laws.
 
 ## Interactive Extraction Flow

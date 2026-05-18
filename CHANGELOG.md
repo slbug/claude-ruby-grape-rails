@@ -29,7 +29,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   split and the `Critical / Warning / Info` worker-form vocabulary.
   Parsers use strict casing + alternation regex
   (`Blockers?` / `Warnings?` / `Suggestions?`); no case
-  normalization, no backward compat.
+  normalization, no backward compat. NOTE: contributor review
+  priorities (`.github/copilot-instructions.md` "Review Priorities"
+  table) keep their UPPERCASE `CRITICAL / IMPORTANT / SUGGESTION`
+  vocabulary — distinct concept from review-artifact finding
+  severity.
 - `bin/resolve-base-ref` invocation unified across all 7 caller
   sites (`review`, `verify`, `document`, `plan`, `work` SKILL +
   `verification-runner` agent ×2): "Run script → 3 `KEY=value`
@@ -85,20 +89,26 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `skills/plan/SKILL.md` (no-bare-rescue checklist clarified as
   style preference vs Law 18 technical rule),
   `skills/review/references/review-playbook.md` (Ruby Files
-  checklist same clarification),
+  checklist same clarification + `conventions.md` Warnings casing),
   `skills/ruby-idioms/references/method-chaining.md` (detached
   bare-rescue style from Law 18 attribution). Bare `rescue`
   defaults to `StandardError` and is safe; only the explicit
   `Exception` form swallows `SignalException` / `SystemExit`.
 - `skills/iron-laws/references/fix-priority.md` + cross-ref label
-  in `skills/iron-laws/SKILL.md` rewritten to match D1 doctrine: all
-  Iron Law violations (Laws 1-20) are Blockers; Verification (Law
-  21) and Surgical Changes (Law 22) are separate workflow gates,
-  not severity classifications.
+  in `skills/iron-laws/SKILL.md` + `agents/iron-law-judge.md` Fix
+  Priority section rewritten to match D1 doctrine: all 22 Iron Law
+  violations are Blockers. Three rule groups: Laws 1-20
+  (code-pattern violation rules), Law 21 (verification discipline
+  — "should work" claims without test/lint evidence block merge;
+  failed tests/lint when run are themselves separate Blockers),
+  Law 22 (surgical-change discipline — out-of-scope edits in the
+  diff block merge until reverted or split).
 - `skills/iron-laws/references/violation-patterns.md`: heading
   "## Critical Violations (Must Fix)" renamed to
   "## Blocker Violations (Must Fix)". Lead prose clarifies
-  subsections organize by Law number, not severity.
+  subsections cover Laws 1-20 (code-pattern violation rules) by Law
+  number; Laws 21 + 22 (discipline rules) equally Blockers per
+  `fix-priority.md`.
 - `references/iron-laws.yml`: schema comment for `severity:` field
   clarified — `critical | high | medium` are intra-Blocker priority
   hints for fix ordering, NOT severity-bucket values. Every Iron
