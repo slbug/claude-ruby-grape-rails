@@ -429,7 +429,7 @@ selected at Step 4.
 
 ## Best Practices
 
-1. **Always explain why** a finding is Blocker
+1. **Always explain why** a finding is a Blocker
 2. **Show estimated effort** for each item
 3. **Group by location** when possible for efficient fixing
 4. **Preserve excluded items** for future reference

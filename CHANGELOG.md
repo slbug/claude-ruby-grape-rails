@@ -114,10 +114,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `skills/iron-laws/references/violation-patterns.md`: heading
   "## Critical Violations (Must Fix)" renamed to
   "## Blocker Violations (Must Fix)". Lead prose clarifies
-  subsections cover grep-detectable patterns (Laws 1-4, 6, 7, 10-16,
-  18-20); Laws 5, 8, 9, 17 require manual review (see
-  `iron-law-judge.md` Blocker table); Laws 21 + 22 (discipline rules)
-  equally Blockers per `fix-priority.md`.
+  subsections cover Laws 1-20; Detection Patterns table holds grep
+  regex for Laws 1, 2, 4, 6, 7, 10-12, 14-16, 18-19; Laws 3, 5, 8,
+  9, 13, 17, 20 require manual review — context check or absence
+  check (see `iron-law-judge.md` Blocker table). Laws 21 + 22
+  (discipline rules) equally Blockers per `fix-priority.md`.
 - `references/iron-laws.yml`: schema comment for `severity:` field
   clarified — `critical | high | medium` are intra-Blocker priority
   hints for fix ordering, NOT severity-bucket values. Every Iron

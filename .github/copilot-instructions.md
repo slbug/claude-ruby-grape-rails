@@ -72,8 +72,9 @@ Do NOT flag issues already caught by CI:
 
 ## Review Priorities
 
-Review-priority labels (distinct vocabulary from finding-severity
-`Blocker / Warning / Suggestion`):
+Treat review-priority labels below as a separate vocabulary from
+review-artifact finding severity (`Blocker / Warning / Suggestion`).
+Do NOT conflate the two:
 
 | Priority | Scope |
 |---|---|

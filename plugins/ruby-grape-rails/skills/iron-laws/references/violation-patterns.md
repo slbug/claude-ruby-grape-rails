@@ -6,12 +6,14 @@ Detailed patterns for detecting Iron Law violations.
 
 All Iron Law violations are Blockers per
 `plugins/ruby-grape-rails/skills/triage/references/triage-patterns.md`
-§ "Always Fix". Subsections below cover grep-detectable patterns
-(Laws 1, 2, 4, 6, 7, 10-12, 14-16, 18-19) by detection pattern, not
-Law number. Laws 3, 5, 8, 9, 13, 17, 20 require manual review (no
-single grep covers them — context check or absence check) — see
-`iron-law-judge.md` Blocker Violations table. Laws 21 + 22
-(discipline rules) are equally Blockers — see `fix-priority.md`.
+§ "Always Fix". Subsections below cover Laws 1-20 by detection
+pattern, not Law number. Detection Patterns table at the bottom
+contains grep-detectable regex for Laws 1, 2, 4, 6, 7, 10-12, 14-16,
+18-19; Laws 3, 5, 8, 9, 13, 17, 20 require manual review (context
+check or absence check — no single grep covers them) — see
+`plugins/ruby-grape-rails/agents/iron-law-judge.md` Blocker
+Violations table. Laws 21 + 22 (discipline rules) are equally
+Blockers — see `fix-priority.md`.
 
 ### Law 1: Float for Money
 
@@ -220,7 +222,7 @@ rescue SomeSpecificError => e
 | 4, 11 | `after_save.*:\|after_save do` (excluding `after_commit`) | `app/models/` |
 | 12 | `eval(` (excluding lines containing `# eval`) | `app/` |
 | 16 | `def method_missing` files lacking `respond_to_missing` | `app/` |
-| 18 | `rescue\s+::?Exception\b` regex (covers `rescue Exception` and `rescue ::Exception`; bare `rescue` defaults to `StandardError` — not a Law 18 violation) | `app/` |
+| 18 | `rescue\s+:{0,2}Exception\b` regex — covers both `rescue Exception` and `rescue ::Exception` (bare `rescue` defaults to `StandardError`, not a Law 18 violation) | `app/` |
 | 19 | `\.where\|\.find\|\.find_by` | `app/views/*.turbo_stream.*` |
 
 ## Confidence Levels

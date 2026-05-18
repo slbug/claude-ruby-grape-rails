@@ -477,9 +477,9 @@ def score_finding_recall(response: str, seeded_issues: list[str]) -> float:
             r"n\+1|n-plus-one|n plus one",
             r"preload|includes|eager",
         ],
-        "bare rescue Exception in PaymentJob": [
-            r"rescue\s+exception",
-            r"swallow|bare\s+rescue",
+        "rescue Exception in PaymentJob": [
+            r"rescue\s+:{0,2}[Ee]xception",
+            r"swallow.*signal|catches.*system|hung.*process|swallows\s+SIG",
         ],
     }
     detected = 0

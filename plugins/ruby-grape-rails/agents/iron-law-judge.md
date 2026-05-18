@@ -135,7 +135,7 @@ rules) are in "Fix Priority" section below.
 | 4, 11 | `after_save` (excluding `after_commit`) | `app/models/` |
 | 12 | `eval(` | `app/` |
 | 16 | `def method_missing` files lacking `respond_to_missing` | `app/` |
-| 18 | `rescue\s+::?Exception\b` regex (bare `rescue` already defaults to `StandardError`) | `app/` |
+| 18 | `rescue\s+:{0,2}Exception\b` regex — covers both `rescue Exception` and `rescue ::Exception` (bare `rescue` defaults to `StandardError`) | `app/` |
 
 ## Confidence Levels
 

@@ -99,12 +99,12 @@ class TestFindingRecall(unittest.TestCase):
         response = (
             "SQL injection via string interpolation. "
             "N+1 query that needs preload. "
-            "bare rescue Exception swallows everything."
+            "rescue Exception swallows SIGTERM and hangs processes."
         )
         seeded = [
             "SQL injection via string interpolation in User.where",
             "N+1 query in Post#comments_with_authors",
-            "bare rescue Exception in PaymentJob",
+            "rescue Exception in PaymentJob",
         ]
         self.assertEqual(es.score_finding_recall(response, seeded), 1.0)
 
@@ -113,7 +113,7 @@ class TestFindingRecall(unittest.TestCase):
         seeded = [
             "SQL injection via string interpolation in User.where",
             "N+1 query in Post#comments_with_authors",
-            "bare rescue Exception in PaymentJob",
+            "rescue Exception in PaymentJob",
         ]
         self.assertAlmostEqual(
             es.score_finding_recall(response, seeded), 1 / 3, places=4
