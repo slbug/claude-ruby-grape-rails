@@ -20,19 +20,21 @@ Reviews catch issues before they reach production. Each specialist focuses on th
 
 ## Collecting Changed Files
 
-Resolve the base ref via `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref`,
-compute `$MERGE_BASE`, then capture in ONE shell session:
+Capture base ref + diff scope in ONE shell session:
 
-- `$CHANGED_FILES` (file list, `--name-only --diff-filter=ACMR`)
-- `$DIFF_STAT` (`git diff --stat`)
+```
+# Populates $BASE_REF, $REMOTE, $DEFAULT_BRANCH via eval (3 vars in one pass).
+eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"
+MERGE_BASE=$(git merge-base HEAD "$BASE_REF")
+CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$MERGE_BASE"...HEAD)
+DIFF_STAT=$(git diff --stat "$MERGE_BASE"...HEAD)
+```
 
 Pass `$CHANGED_FILES`, `$BASE_REF`, `$MERGE_BASE`, and `$DIFF_STAT` to
 every spawned reviewer. Reviewers scope analysis to `$CHANGED_FILES`
 and NEVER scan unchanged files.
 
-Reviewers own diff strategy.
-
-For exact shell commands + reviewer diff discipline, see
+Reviewers own diff strategy. For reviewer diff discipline, see
 `${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Diff Collection".
 
 ## Main-Session Fanout
@@ -49,8 +51,7 @@ message.
 
 1. Classify complexity (tier + critical-path escalation).
 2. Select core + conditional reviewers per matrix below. Derive
-   `review-slug`. Resolve `BASE_REF` via
-   `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref`.
+   `review-slug`. Use `$BASE_REF` from § "Collecting Changed Files".
 3. Run
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run --skill=rb:review
    --slug="$REVIEW_SLUG" --base-ref="$BASE_REF" --agents=<csv-of-reviewer-slugs>`.
@@ -74,7 +75,11 @@ message.
    `Reviewer`). Patch each agent's `status`
    field with its recovery-state value (`artifact` |
    `stub-replaced` | `recovered-from-return` | `stub-no-output`).
-9. Read each verified artifact. Read consolidated path via
+9. Read each verified artifact directly via the absolute path from
+   `manifest-update spawn-paths "$MANIFEST"`. Issue one `Read` per
+   path. Do NOT `cat` artifacts into a combined stream — bulk-cat
+   overflows the Read token cap on > 5 reviewers and forces
+   offset/limit pagination. Read consolidated path via
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
    Write the consolidated review to that path.
 10. Patch manifest `status: complete`.
@@ -175,10 +180,10 @@ Every Agent() call must include in its prompt:
   Worker MUST use the exact path passed to it — do NOT invent,
   modify, shorten, or extension-change the filename.
 - Required output: write artifact (always — even on PASS) and return summary
-- Findings format: `file:line`, `Severity (Critical|Warning|Info)`,
+- Findings format: `file:line`, `Severity (blocker|warning|suggestion)`,
   `Confidence (HIGH|MEDIUM|LOW)`, description, current code, suggested
-  code. Synthesis maps Critical/Warning/Info into consolidated
-  BLOCKER/WARNING/SUGGESTION per playbook § "Worker Severity Mapping".
+  code. Synthesis applies diff-status filter only (new vs pre-existing)
+  per playbook § "Worker Severity Mapping".
 - Constraint: stop after returning; do NOT call Agent() — leaf review
 
 For full briefing template (verbatim text to use in prompts), see
@@ -191,7 +196,7 @@ For full briefing template (verbatim text to use in prompts), see
 3. **Deduplicate overlapping findings** - merge similar issues from different agents
 4. **Keep noise low** - prefer findings a senior Ruby reviewer would care about
 5. **Be specific** - cite line numbers, provide examples
-6. **Prioritize** — workers emit `Critical | Warning | Info`; synthesis maps to `BLOCKER | WARNING | SUGGESTION` per playbook § "Worker Severity Mapping"
+6. **Prioritize** — single severity vocabulary: `blocker | warning | suggestion` per-finding; `BLOCKER | WARNING | SUGGESTION` in consolidated headers + tables
 7. **Contextualize** - explain why it matters, not just what's wrong
 8. **Identify package + ORM first** - do not apply flat Rails / Active Record advice to Sequel or modular packages
 
@@ -295,8 +300,8 @@ or compress:
 | `OK`, `LGTM`, `Approved` | `PASS` |
 
 `Needs fixes` does NOT auto-route to `REQUIRES CHANGES` — infer per
-worker counts (`Critical` → `BLOCKED`; else `Warning` → `PASS WITH WARNINGS`;
-else `PASS`).
+worker counts (any `blocker` → `BLOCKED`; else any `warning` →
+`PASS WITH WARNINGS`; else `PASS`).
 
 Use canonical strings only for manifest status enum (`pending`,
 `in-flight`, `artifact`, `stub-replaced`, `recovered-from-return`,
@@ -338,6 +343,9 @@ When a finding cites a sidecar, read the sidecar's `trust_state` (see
   before retry vs respawn.
 - Missing `**Counts:**` line. Reviewers MUST emit Counts: first.
   Missing line breaks consolidator severity-bucket counts.
+- Bulk-cat of artifacts. Reviewer artifacts run ~6-8KB each;
+  10 reviewers ≈ 60-80KB combined. Combined stream overflows Read
+  token cap. Use one Read per artifact path from `spawn-paths`.
 
 ## References
 

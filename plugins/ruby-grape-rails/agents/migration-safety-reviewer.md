@@ -184,15 +184,15 @@ Always write an artifact, even for a clean pass. Never write review artifacts un
 ## Summary
 | Category | Count |
 |----------|-------|
-| Blocking | 0 |
+| Blocker | 0 |
 | Warning | 2 |
-| Info | 1 |
+| Suggestion | 1 |
 ```
 
 ## Report Findings
 
 Provide severity classification:
 
-- **BLOCKING**: Migration will fail in production or cause data loss
-- **WARNING**: Performance risk or maintenance burden
-- **INFO**: Best practice suggestion
+- **blocker**: Migration will fail in production or cause data loss
+- **warning**: Performance risk or maintenance burden
+- **suggestion**: Best practice suggestion

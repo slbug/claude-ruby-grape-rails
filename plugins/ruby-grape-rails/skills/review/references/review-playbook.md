@@ -138,19 +138,9 @@ file-type-specific checklists without bloating the main routing surface.
 
 ## Diff Collection
 
-`/rb:review` skill body resolves the base ref and captures the file
-list + stat ONCE. Reviewers own the diff strategy from there.
-
-```bash
-eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"
-MERGE_BASE=$(git merge-base HEAD "$BASE_REF")
-CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$MERGE_BASE"...HEAD)
-DIFF_STAT=$(git diff --stat "$MERGE_BASE"...HEAD)
-```
-
-Pass `$CHANGED_FILES`, `$BASE_REF`, `$MERGE_BASE`, and `$DIFF_STAT` to
-every spawned reviewer Agent() call. Reviewers scope all
-reads/grep/analysis to `$CHANGED_FILES` and NEVER scan unchanged files.
+Capture shell block lives in `../SKILL.md` § "Collecting Changed Files".
+Skill body is canonical; do NOT duplicate the eval/merge-base/changed-files
+recipe here.
 
 ### Diff strategy (reviewer-owned)
 
@@ -195,7 +185,7 @@ Required output:
 
 Findings format:
 - file:line — Title
-- Severity: Critical | Warning | Info
+- Severity: blocker | warning | suggestion
 - Confidence: HIGH | MEDIUM | LOW
 - Description, current code, suggested code, why it matters
 
@@ -232,40 +222,38 @@ Scan each per-agent artifact for verdict prose. Map non-canonical
 forms to the canonical 4-set BEFORE writing the consolidated header:
 
 Use ONLY the worker artifact's verdict prose + the worker's own
-finding-counts (`Critical | Warning | Info` form, not yet mapped —
-mapping is STEP 3). Do NOT cross-reference bucket-form counts here;
-bucket-form is introduced in STEP 3.
+finding-counts (bucket form `blocker | warning | suggestion` per §
+"Worker Briefing Template"). Diff-status filter (new vs pre-existing)
+applies in STEP 3.
 
 | Non-canonical form (preserve verbatim in metadata) | Canonical mapping rule |
 |---|---|
-| `CONDITIONAL PASS`, `PASS WITH CAVEATS`, `PASS-WITH-WARNS` | infer from worker `Critical / Warning / Info` counts: any `Critical` → `BLOCKED`; else any `Warning` → `PASS WITH WARNINGS`; else `PASS` |
-| `Approved`, `LGTM`, `looks good` | `PASS` if worker reports zero `Critical` and zero `Warning`; else map per worker counts |
-| `Needs fixes`, `fix before merge`, `not ready` | infer from worker counts: any `Critical` → `BLOCKED`; else any `Warning` → `PASS WITH WARNINGS`; else `PASS`. Do NOT auto-route to `REQUIRES CHANGES` — that verdict is reserved for missing test coverage on NEW public behavior (per § "Verdict Decision Rules"). Only emit `REQUIRES CHANGES` when the worker explicitly flagged a `New public behavior without tests` finding. |
-| `Critical`, `BLOCK`, `BLOCKER` (verdict, not severity) | `BLOCKED` |
+| `CONDITIONAL PASS`, `PASS WITH CAVEATS`, `PASS-WITH-WARNS` | infer from worker counts: any `blocker` → `BLOCKED`; else any `warning` → `PASS WITH WARNINGS`; else `PASS` |
+| `Approved`, `LGTM`, `looks good` | `PASS` if worker reports zero `blocker` and zero `warning`; else map per worker counts |
+| `Needs fixes`, `fix before merge`, `not ready` | infer from worker counts: any `blocker` → `BLOCKED`; else any `warning` → `PASS WITH WARNINGS`; else `PASS`. Do NOT auto-route to `REQUIRES CHANGES` — that verdict is reserved for missing test coverage on NEW public behavior (per § "Verdict Decision Rules"). Only emit `REQUIRES CHANGES` when the worker explicitly flagged a `New public behavior without tests` finding. |
+| `BLOCK`, `BLOCKER` (verdict, not severity tag) | `BLOCKED` |
 
 Preserve the agent's raw verdict text VERBATIM in the
 `Reviewer Verdicts` metadata table at top of the consolidated
 artifact. Normalize only the consolidated header.
 
-### STEP 3: Map worker severity to bucket form
-
-Reviewer Coverage row counts MUST use bucket form
-(`BLOCKER | WARNING | SUGGESTION`), NOT worker form
-(`Critical | Warning | Info`). Per § "Worker Severity Mapping":
-
-- worker `Critical` introduced by this diff → `BLOCKER`
-- worker `Critical` on unchanged code → tracked in `## Pre-existing Issues` only; NOT in Coverage row, NOT in Summary table
-- worker `Warning` → `WARNING`
-- worker `Info` → `SUGGESTION`
+### STEP 3: Filter diff-introduced vs pre-existing
 
 Coverage row counts + Summary table counts use NEW findings only
 (diff-introduced). Pre-existing findings appear in `## Pre-existing
 Issues` section and the At-a-Glance Finding Table with
 `New? = Pre-existing`. They never affect the consolidated verdict.
 
-Apply bucket form across Coverage row, Summary table, At-a-Glance
-Finding Table, and section headers. Per-agent artifacts keep their
-original wording.
+Per § "Worker Severity Mapping":
+
+- worker `blocker` introduced by this diff → BLOCKER (counted)
+- worker `blocker` on unchanged code → Pre-existing BLOCKER (reported only)
+- worker `warning` introduced by this diff → WARNING (counted)
+- worker `suggestion` introduced by this diff → SUGGESTION (counted)
+
+Uppercase `BLOCKER | WARNING | SUGGESTION` in consolidated headers,
+Coverage row, Summary table, At-a-Glance Finding Table, and section
+headers. Per-agent artifacts keep their lowercase per-finding wording.
 
 ### STEP 4: Compute consolidated verdict deterministically
 
@@ -340,20 +328,22 @@ Schema + per-skill staleness rules:
 
 ## Worker Severity Mapping
 
-Reviewer agents emit `Critical | Warning | Info`. Synthesis maps each
-finding into a consolidated bucket using this rule table:
+Reviewer agents emit `blocker | warning | suggestion` (lowercase).
+Synthesis applies diff-status filter only — no vocabulary translation:
 
 | Worker output | Diff status | Consolidated bucket |
 |---|---|---|
-| Critical | introduced by this diff | BLOCKER |
-| Critical | unchanged code | Pre-existing BLOCKER (report; do not affect verdict) |
-| Warning | any | WARNING |
-| Info | any | SUGGESTION |
+| blocker | introduced by this diff | BLOCKER (counted) |
+| blocker | unchanged code | Pre-existing BLOCKER (reported; does not affect verdict) |
+| warning | introduced by this diff | WARNING (counted) |
+| warning | unchanged code | Pre-existing WARNING (reported only) |
+| suggestion | introduced by this diff | SUGGESTION (counted) |
+| suggestion | unchanged code | Pre-existing SUGGESTION (reported only) |
 | New public behavior without tests | any | REQUIRES CHANGES verdict trigger (not a per-finding bucket) |
 
-Worker prompts keep `Critical | Warning | Info` for backward
-compatibility. Consolidated artifacts use `BLOCKER | WARNING |
-SUGGESTION` and the verdict-only `REQUIRES CHANGES`.
+Worker per-finding tags stay lowercase. Consolidated headers, Coverage
+row, Summary table, At-a-Glance Finding Table use uppercase
+`BLOCKER | WARNING | SUGGESTION` and the verdict-only `REQUIRES CHANGES`.
 
 ## Review Scope
 

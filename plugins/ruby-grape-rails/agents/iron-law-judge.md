@@ -89,7 +89,7 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 
 <!-- IRON_LAWS_JUDGE_END -->
 
-## Critical Violations (Must Fix Immediately)
+## Blocker Violations (Must Fix Immediately)
 
 | Law | Pattern | Risk |
 |-----|---------|------|
@@ -131,9 +131,9 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 
 ## Confidence Levels
 
-- **High**: Unambiguous violation (`t.float :price`, `where("id = #{id}")`)
-- **Medium**: Likely violation, needs context (`update_columns` in controller)
-- **Low**: Might be okay, flag for review (`raw()` with hardcoded string)
+- **HIGH**: Unambiguous violation (`t.float :price`, `where("id = #{id}")`)
+- **MEDIUM**: Likely violation, needs context (`update_columns` in controller)
+- **LOW**: Might be okay, flag for review (`raw()` with hardcoded string)
 
 ## Counts (mandatory prefix)
 
@@ -156,11 +156,12 @@ Always write an artifact, even for a clean pass. Never write review artifacts un
 ```markdown
 ### Iron Law Violations
 
-#### Critical
+#### Blockers
 
 ##### Law 1: Float for Money
 **File**: `db/migrate/xxx.rb:15`
-**Confidence**: High
+**Severity**: blocker
+**Confidence**: HIGH
 **Violation**: `t.float :total_amount`
 **Fix**: `t.decimal :total_amount, precision: 15, scale: 2`
 
@@ -168,14 +169,15 @@ Always write an artifact, even for a clean pass. Never write review artifacts un
 
 ##### Law 3: N+1 Query
 **File**: `app/controllers/orders.rb:18`
-**Confidence**: Medium
+**Severity**: warning
+**Confidence**: MEDIUM
 **Violation**: Loop accessing association without includes
 **Fix**: `@orders = Order.includes(:items)`
 ```
 
 ## Fix Priority
 
-1. **Critical** (Laws 1, 2, 4, 6, 7, 10, 11, 12, 13, 14, 15, 16): Security, data integrity — Fix immediately
+1. **Blockers** (Laws 1, 2, 4, 6, 7, 10, 11, 12, 13, 14, 15, 16): Security, data integrity — Fix immediately
 2. **Warnings** (Laws 3, 18, 19, 20): Performance, maintainability — Fix before merge
 3. **Verification** (Law 21): Testing discipline — Required
 

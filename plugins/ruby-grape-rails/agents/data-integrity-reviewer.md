@@ -266,13 +266,13 @@ Always write an artifact, even for a clean pass. Never write review artifacts un
 ## Summary
 | Category | Count |
 |----------|-------|
-| Blocking | 0 |
+| Blocker | 0 |
 | Warning | 3 |
-| Info | 2 |
+| Suggestion | 2 |
 ```
 
 ## Severity Levels
 
-- **BLOCKING**: Data loss or corruption risk, constraint violations
-- **WARNING**: Race conditions, partial integrity enforcement
-- **INFO**: Best practices for maintainability
+- **blocker**: Data loss or corruption risk, constraint violations
+- **warning**: Race conditions, partial integrity enforcement
+- **suggestion**: Best practices for maintainability

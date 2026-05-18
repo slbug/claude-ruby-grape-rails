@@ -7,6 +7,41 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.13] - 2026-05-18
+
+### Fixed
+
+- `/rb:review` skill body now inlines the verbatim
+  `eval "$(.../bin/resolve-base-ref)"` block in § "Collecting Changed
+  Files". Previously the body referred readers to
+  `references/review-playbook.md` § "Diff Collection" without showing
+  the snippet, so a naive `BASE_REF=$(.../resolve-base-ref)` capture
+  pulled the full three-line variable-assignment block and broke
+  `git merge-base`. The playbook section now points back at the
+  SKILL body as canonical.
+- `/rb:review` Counts-line drift across reviewers. Worker-form
+  vocabulary (`Critical | Warning | Info`) is dropped in favor of a
+  single severity vocabulary: lowercase `blocker | warning |
+  suggestion` per-finding; uppercase `BLOCKER | WARNING | SUGGESTION`
+  in consolidated headers and tables. Synthesis applies a diff-status
+  filter only (new vs pre-existing); no vocabulary translation step.
+  Touches `skills/review/SKILL.md`, `review-playbook.md`, and
+  reviewer agent bodies (`iron-law-judge`, `data-integrity-reviewer`,
+  `migration-safety-reviewer`) where sample outputs still referenced
+  the old `Critical | Warning | Info` form.
+- `/rb:init` detection block now uses an explicit `for t in
+  betterleaks rtk dcg shellfirm; do command -v "$t" …; done` loop
+  instead of a multi-arg `command -v betterleaks rtk dcg shellfirm`.
+  The multi-arg form exits non-zero on any missing argument and
+  cancels sibling parallel Bash calls. Added matching BAD/GOOD pair
+  to `references/preferences/tool-batching.md` under "Multi-tool
+  detection".
+- `/rb:review` fanout step 9 + Gotchas now state explicitly that
+  reviewer artifacts must be read one per path from
+  `manifest-update spawn-paths`, never bulk-`cat`ted. Bulk-cat of
+  ~10 reviewer artifacts (~6-8 KB each) overflows the Read token cap
+  and forces offset/limit pagination.
+
 ## [1.16.12] - 2026-05-17
 
 ### Fixed
@@ -2872,7 +2907,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.12...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.13...HEAD
+[1.16.13]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.12...v1.16.13
 [1.16.12]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.11...v1.16.12
 [1.16.11]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.10...v1.16.11
 [1.16.10]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.9...v1.16.10
