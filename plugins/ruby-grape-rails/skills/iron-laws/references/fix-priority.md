@@ -38,7 +38,7 @@ checks, not by severity.
 | 14 | Unsafe HTML | XSS attacks |
 | 16 | method_missing without respond_to_missing? | Broken introspection |
 | 17 | Supervise background processes | Production outage on crash |
-| 18 | `rescue Exception` | Lost interrupts, hung processes |
+| 18 | `rescue Exception` or `rescue ::Exception` | Lost interrupts, hung processes |
 | 19 | DB queries in Turbo Streams | Lock / deadlock under load |
 | 20 | Missing `turbo_frame_tag` | Degraded UX, full page reloads |
 
@@ -61,6 +61,7 @@ Document exceptions with comments:
 - `raw()` for trusted admin templates
 - `eval` in controlled DSL contexts
 
-`rescue Exception` has NO valid exemption per current Law 18 —
-top-level handlers must rescue specific subclasses or use
-`SignalException`/`SystemExit` handlers from the language explicitly.
+`rescue Exception` and `rescue ::Exception` have NO valid exemption
+per current Law 18 — top-level handlers must rescue specific
+subclasses or use `SignalException`/`SystemExit` handlers from the
+language explicitly.

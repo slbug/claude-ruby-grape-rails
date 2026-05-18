@@ -66,7 +66,10 @@ order within the bucket.
 
 ### Warning → Recommend Include
 
-- **Error handling (non-Iron-Law)**: missing error handling on external API calls (`rescue Exception` is Iron Law 18 → Blocker; bare `rescue` defaults to `StandardError`, not a Law 18 violation)
+- **Error handling (non-Iron-Law)**: missing error handling on
+  external API calls. `rescue Exception` / `rescue ::Exception` is
+  Iron Law 18 → Blocker. Bare `rescue` defaults to `StandardError`,
+  not a Law 18 violation.
 - **Test coverage**: missing tests for critical paths
 - **API contract**: breaking changes to public APIs
 - **Documentation**: missing docs for public methods

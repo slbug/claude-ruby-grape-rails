@@ -171,10 +171,12 @@ end
 
 ### Law 18: No Rescue Exception
 
-**Pattern**: `rescue Exception` — catches `SignalException` / `SystemExit`,
-hangs processes on interrupt, hides crashes. Bare `rescue` defaults
-to `StandardError` and is not a Law 18 violation (silent swallow
-without re-raise is still a bug — orthogonal to Law 18).
+**Pattern**: `rescue Exception` or `rescue ::Exception` — both rescue
+the top-level `Exception` class, catching `SignalException` /
+`SystemExit`, hanging processes on interrupt, hiding crashes. Bare
+`rescue` defaults to `StandardError` and is not a Law 18 violation
+(silent swallow without re-raise is still a bug — orthogonal to Law
+18).
 
 ```ruby
 rescue Exception => e  # catches SIGINT, SystemExit — DANGEROUS
@@ -217,7 +219,7 @@ rescue SomeSpecificError => e
 | 4, 11 | `after_save.*:\|after_save do` (excluding `after_commit`) | `app/models/` |
 | 12 | `eval(` (excluding lines containing `# eval`) | `app/` |
 | 16 | `def method_missing` files lacking `respond_to_missing` | `app/` |
-| 18 | `rescue Exception` literal (bare `rescue` defaults to `StandardError` — not a Law 18 violation) | `app/` |
+| 18 | `rescue\s+::?Exception\b` regex (covers `rescue Exception` and `rescue ::Exception`; bare `rescue` defaults to `StandardError` — not a Law 18 violation) | `app/` |
 | 19 | `\.where\|\.find\|\.find_by` | `app/views/*.turbo_stream.*` |
 
 ## Confidence Levels

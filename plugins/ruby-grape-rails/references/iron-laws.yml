@@ -282,13 +282,13 @@ laws:
   - id: 18
     category: ruby
     title: "No Rescue Exception"
-    rule: "DON'T `rescue Exception` — catches `SystemExit` / `SignalException`. Bare `rescue` defaults to `StandardError` and is not a Law 18 violation."
-    rationale: "`rescue Exception` swallows signals/exits. Bare `rescue` resolves to StandardError subtree (no signals). Silent swallow without re-raise is a separate bug, not Law 18."
+    rule: "DON'T rescue `Exception` (`rescue Exception` or `::Exception`) — catches `SystemExit`/`SignalException`. Bare `rescue` defaults to `StandardError`, not a Law 18 violation."
+    rationale: "Rescuing `Exception` (qualified or not) swallows signals/exits. Bare `rescue` resolves to StandardError subtree (no signals). Silent swallow without re-raise is a separate bug, not Law 18."
     severity: high
     applies_to: ["*.rb"]
-    summary_text: "Never `rescue Exception`; bare `rescue` is not a Law 18 violation"
-    init_text: "DON'T `rescue Exception` — bare `rescue` defaults to StandardError, not a Law 18 violation"
-    subagent_text: "Iron Law 18: DON'T `rescue Exception` — bare `rescue` defaults to StandardError, not a Law 18 violation; explicit class naming is style preference"
+    summary_text: "Never rescue `Exception` (or `::Exception`); bare `rescue` is not a Law 18 violation"
+    init_text: "DON'T rescue `Exception` (or `::Exception`) — bare `rescue` defaults to StandardError, not a Law 18 violation"
+    subagent_text: "Iron Law 18: DON'T rescue `Exception` (or `::Exception`) — bare `rescue` defaults to StandardError, not a Law 18 violation"
     detector_id: null
     reference_files: ["skills/ruby-idioms/references/error-handling.md"]
 

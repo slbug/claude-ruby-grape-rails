@@ -75,7 +75,7 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 
 16. **method_missing Requires respond_to_missing?** — NO method_missing without respond_to_missing? — breaks introspection
 17. **Supervise Background Processes** — SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers in production
-18. **No Rescue Exception** — DON'T `rescue Exception` — catches `SystemExit` / `SignalException`. Bare `rescue` defaults to `StandardError` and is not a Law 18 violation.
+18. **No Rescue Exception** — DON'T rescue `Exception` (`rescue Exception` or `::Exception`) — catches `SystemExit`/`SignalException`. Bare `rescue` defaults to `StandardError`, not a Law 18 violation.
 
 ### Hotwire/Turbo (2 laws)
 
@@ -115,7 +115,7 @@ require manual judgment but are equally Blockers. Laws 21 + 22
 | 14 | `user_input.html_safe`, `raw(user_input)` | XSS attacks |
 | 16 | `method_missing` without `respond_to_missing?` | Broken introspection |
 | 17 | Unsupervised background process (manual review) | Production outage on crash |
-| 18 | `rescue Exception` (literal — bare `rescue` defaults to `StandardError`, not a Law 18 violation) | Lost SIGINT, hung processes |
+| 18 | `rescue Exception` or `rescue ::Exception` (bare `rescue` defaults to `StandardError`, not a Law 18 violation) | Lost SIGINT, hung processes |
 | 19 | DB queries in turbo_stream templates | Lock / deadlock under load |
 | 20 | Missing `turbo_frame_tag` for partial updates | Degraded UX, full page reloads |
 
@@ -133,7 +133,7 @@ require manual judgment but are equally Blockers. Laws 21 + 22
 | 4, 11 | `after_save` (excluding `after_commit`) | `app/models/` |
 | 12 | `eval(` | `app/` |
 | 16 | `def method_missing` files lacking `respond_to_missing` | `app/` |
-| 18 | `rescue Exception` (literal — bare `rescue` already defaults to `StandardError`) | `app/` |
+| 18 | `rescue\s+::?Exception\b` regex (bare `rescue` already defaults to `StandardError`) | `app/` |
 
 ## Confidence Levels
 

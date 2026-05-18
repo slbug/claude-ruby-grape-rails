@@ -37,7 +37,7 @@ These 22 rules are NEVER violated. If code would violate them, STOP and explain 
 
 16. **method_missing Requires respond_to_missing?** — NO method_missing without respond_to_missing? — breaks introspection
 17. **Supervise Background Processes** — SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers in production
-18. **No Rescue Exception** — DON'T `rescue Exception` — catches `SystemExit` / `SignalException`. Bare `rescue` defaults to `StandardError` and is not a Law 18 violation.
+18. **No Rescue Exception** — DON'T rescue `Exception` (`rescue Exception` or `::Exception`) — catches `SystemExit`/`SignalException`. Bare `rescue` defaults to `StandardError`, not a Law 18 violation.
 
 ### Hotwire/Turbo (2 laws)
 
