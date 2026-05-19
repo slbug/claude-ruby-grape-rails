@@ -63,14 +63,11 @@ Use Ruby for detection (avoids fragile shell pipelines):
    booleans: `RTK_AVAILABLE`, `DCG_AVAILABLE`, `SHELLFIRM_AVAILABLE`.
 3. When cached values absent, probe each tool in one Bash call with
    explicit per-tool clauses so a missing tool does not cancel
-   sibling parallel calls:
-
-   ```bash
-   command -v betterleaks >/dev/null 2>&1 && echo "betterleaks=true" || echo "betterleaks=false"
-   command -v rtk         >/dev/null 2>&1 && echo "rtk=true"         || echo "rtk=false"
-   command -v dcg         >/dev/null 2>&1 && echo "dcg=true"         || echo "dcg=false"
-   command -v shellfirm   >/dev/null 2>&1 && echo "shellfirm=true"   || echo "shellfirm=false"
-   ```
+   sibling parallel calls. Send these four commands together:
+   - `command -v betterleaks >/dev/null 2>&1 && echo "betterleaks=true" || echo "betterleaks=false"`
+   - `command -v rtk >/dev/null 2>&1 && echo "rtk=true" || echo "rtk=false"`
+   - `command -v dcg >/dev/null 2>&1 && echo "dcg=true" || echo "dcg=false"`
+   - `command -v shellfirm >/dev/null 2>&1 && echo "shellfirm=true" || echo "shellfirm=false"`
 
    Do NOT use multi-arg `command -v betterleaks rtk dcg shellfirm` —
    exits non-zero on any missing arg under POSIX.
