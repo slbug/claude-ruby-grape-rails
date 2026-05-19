@@ -51,10 +51,7 @@ are disallowed — you cannot modify source code.
 
 ## Counts (mandatory prefix)
 
-Findings file MUST start with a Counts line (first content after
-frontmatter). The `/rb:investigate` skill body reads this artifact
-directly — no consolidator parses bucket totals. Counts serve as a
-human-readable summary. Examples:
+Findings file MUST start with a Counts line (first content after frontmatter). Examples:
 
 - `**Counts:** 3 findings (1 Blocker, 2 Warnings, 0 Suggestions) — 1 note`
 - `**Counts:** 1 finding (0 Blockers, 1 Warning, 0 Suggestions) — 0 notes`

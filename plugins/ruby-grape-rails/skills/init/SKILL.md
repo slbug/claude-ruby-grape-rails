@@ -61,9 +61,11 @@ Use Ruby for detection (avoids fragile shell pipelines):
 1. Run `${CLAUDE_PLUGIN_ROOT}/bin/detect-stack` to detect Ruby version and stack dependencies.
 2. Read `.claude/.runtime_env` (if present and non-symlink) for cached external tool
    booleans: `RTK_AVAILABLE`, `DCG_AVAILABLE`, `SHELLFIRM_AVAILABLE`.
-3. When cached values absent, probe each tool independently per the
-   tool-batching preference (injected at `SessionStart` /
-   `SubagentStart`).
+3. When cached values absent, probe each tool with a single Bash
+   call so one missing tool does not cancel sibling parallel calls:
+   `for t in betterleaks rtk dcg shellfirm; do command -v "$t" >/dev/null 2>&1 && echo "$t=true" || echo "$t=false"; done`.
+   Multi-arg `command -v betterleaks rtk dcg shellfirm` exits
+   non-zero on any missing arg under POSIX — do not use that form.
 
 When building the injected header:
 

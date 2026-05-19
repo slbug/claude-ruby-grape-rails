@@ -251,8 +251,7 @@ Per § "Worker Severity Mapping":
 - worker `Warning` introduced by this diff → counted Warning
 - worker `Suggestion` introduced by this diff → counted Suggestion
 
-Severity casing per surface. Count-aware = singular when count == 1;
-plural otherwise (including 0).
+Count-aware = singular when count == 1, plural otherwise (including 0).
 
 | Surface | Form | Example |
 |---|---|---|

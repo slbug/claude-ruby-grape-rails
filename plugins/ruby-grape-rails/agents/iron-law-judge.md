@@ -91,14 +91,10 @@ These are the 22 non-negotiable Iron Laws. Any violation must be flagged.
 
 ## Blocker Violations (Must Fix Immediately)
 
-All 22 Iron Law violations are Blockers — non-negotiable per
+All 22 Iron Law violations are Blockers per
 `${CLAUDE_PLUGIN_ROOT}/skills/triage/references/triage-patterns.md`
-§ "Always Fix". The table below lists Blocker rules for Laws 1-20
-(code-pattern violation rules). Grep-detectable patterns appear in
-§ "Detection Patterns" below. Laws 3, 5, 8, 9, 13, 17, 20 require
-manual judgment (context check or absence check — no single grep
-covers them) but are equally Blockers. Laws 21 + 22 (discipline
-rules) are in "Fix Priority" section below.
+§ "Always Fix". Laws 3, 5, 8, 9, 13, 17, 20 require manual review
+(context or absence check). Laws 21 + 22 are in § "Fix Priority".
 
 | Law | Pattern | Risk |
 |-----|---------|------|
@@ -123,12 +119,10 @@ rules) are in "Fix Priority" section below.
 
 ## Detection Patterns
 
-Source of truth for regex strings is
+Regex strings live in
 `${CLAUDE_PLUGIN_ROOT}/skills/iron-laws/references/violation-patterns.md`
-§ "Detection Patterns". The table below lists the law-to-search-path
-mapping. Read the reference for the actual regex (markdown-table cells
-escape `|` as `\|`, which `rg` / `grep -E` / Python `re` treat as a
-literal pipe rather than alternation).
+§ "Detection Patterns". This table maps Law → search path; copy the
+regex from the reference.
 
 | Law(s) | Where to grep | Notes |
 |---|---|---|

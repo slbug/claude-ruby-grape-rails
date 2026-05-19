@@ -88,9 +88,6 @@ order within the bucket.
 
 ## Triage Process
 
-Follow these 5 steps. Each reads from the review artifact, classifies
-via review bucket, writes selected items to a fix plan.
-
 ### Step 1: Load Review File
 
 Argument resolution FIRST. Triage operates ONLY on a consolidated
