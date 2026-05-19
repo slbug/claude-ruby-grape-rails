@@ -309,8 +309,8 @@ Format"). REQUIRES CHANGES chat script reads that section verbatim.
 
 Single helper call at fanout entry:
 
-Substitute the literal `BASE_REF` value (from `resolve-base-ref`
-stdout) for `BASE_REF_VALUE` before running:
+Substitute the `BASE_REF` value (from `resolve-base-ref` stdout) for
+`BASE_REF_VALUE` in the command:
 
 ```
 MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \

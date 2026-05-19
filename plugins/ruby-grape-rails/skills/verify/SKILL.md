@@ -222,9 +222,8 @@ Run `bundle exec rbs validate` to validate type signatures.
 Run this only after direct lint/security checks pass:
 
 Run `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
-on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`; handles custom
-remotes, non-standard default branches, fetches before resolving).
-Use emitted values as substitutions:
+on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Substitute the
+values into subsequent Bash commands:
 `bundle exec pronto run -c "$(git merge-base HEAD BASE_REF_VALUE)"`.
 
 Pronto is a last-step changed-files pass, not a replacement for

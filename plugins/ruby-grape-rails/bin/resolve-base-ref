@@ -4,17 +4,27 @@
 # Handles: custom remote names, non-standard default branches,
 # stale local refs (fetches before resolving).
 #
-# Output (3 KEY=value lines on stdout, eval-safe shell-quoted):
+# Output (3 KEY=value lines on stdout, `printf %q`-quoted):
 #   REMOTE=origin
 #   DEFAULT_BRANCH=main
 #   BASE_REF=origin/main
 #
-# Usage from agent (recommended): read the 3 stdout lines and
-# substitute the values into following commands directly.
+# The `%q` quoting makes each value safe under TWO consumption modes:
 #
-# Usage from shell script (single-process): eval into local vars.
-#   eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"
-#   git diff "$BASE_REF"...HEAD
+#  1. Agent direct substitution (recommended): agent reads the value
+#     text from stdout and pastes it verbatim into a subsequent Bash
+#     command. Bash dequotes during command execution, so the running
+#     `git` process receives the correct ref string even when the ref
+#     contains shell-special characters permitted by
+#     `git check-ref-format` (whitespace, `;`, `$`, backtick).
+#
+#  2. Shell-script eval (single-process):
+#       eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"
+#       git diff "$BASE_REF"...HEAD
+#
+# Do NOT pass the value into a non-shell context (Ruby, Python,
+# config file) without first dequoting via Bash or a `%q`-aware
+# parser.
 #
 # Exit codes:
 #   0 — resolved successfully

@@ -99,7 +99,8 @@ Required fields (review only — git-pinned skill): `branch`,
 brainstorm, and research (TTL-only staleness).
 
 `base_sha` = output of `git merge-base HEAD BASE_REF_VALUE` at run start
-(substitute resolved `BASE_REF` value from `resolve-base-ref` stdout).
+(substitute the `BASE_REF` value from `resolve-base-ref` stdout for
+`BASE_REF_VALUE` in the command).
 Stored to detect rebase drift on resume.
 
 `status` enum: `in-flight` | `complete`.
@@ -119,8 +120,8 @@ Main session calls `prepare-run` once with structured args. Helper
 computes everything: manifest path, datesuffix, agent paths,
 consolidated path, git pins. Outputs absolute manifest path.
 
-Substitute the captured `BASE_REF` value (from `resolve-base-ref`
-stdout) for `BASE_REF_VALUE` before running:
+Substitute the `BASE_REF` value (from `resolve-base-ref` stdout) for
+`BASE_REF_VALUE` in the command:
 
 ```bash
 MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
@@ -293,7 +294,10 @@ body uses output for subsequent `field` / `spawn-paths` / `patch` /
 `prepare-run` options:
 
 - `--skill`: one of `rb:review`, `rb:plan`, `rb:brainstorm`, `rb:research`. Substitute the actual skill name for `SKILL_NAME` in the example below.
-- `--base-ref`: review skill ONLY. Substitute `BASE_REF_VALUE` with the captured `BASE_REF` from `resolve-base-ref` stdout. Plan / brainstorm / research OMIT the entire `--base-ref` line (TTL-only staleness).
+- `--base-ref`: review skill ONLY. Substitute the `BASE_REF` value
+  (from `resolve-base-ref` stdout) for `BASE_REF_VALUE` in the
+  command. Plan / brainstorm / research OMIT the entire `--base-ref`
+  line (TTL-only staleness).
 - `--slug`: per-skill slug (review-slug for reviews, plan-slug for plan/brainstorm, topic-slug for research).
 - `--agents`: comma-separated agent slug list computed by the calling skill from its own selection logic.
 

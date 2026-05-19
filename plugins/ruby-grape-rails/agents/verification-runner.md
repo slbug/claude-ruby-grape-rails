@@ -77,8 +77,8 @@ When parsing JSON, YAML, text, or command output during verification:
 5. `bundle exec rspec` if `spec/` exists, else `bin/rails test`
 6. Optional final diff-scoped review: run
    `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
-   on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`); use emitted
-   values as substitutions in
+   on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Substitute the
+   values into subsequent Bash commands:
    `bundle exec pronto run -c "$(git merge-base HEAD BASE_REF_VALUE)"`
    if configured
 
@@ -101,8 +101,8 @@ Operational selection rules:
 - If `BRAKEMAN_AVAILABLE=true`, run `bundle exec brakeman`
 - If `PRONTO_AVAILABLE=true`, run
   `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
-  on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`); use emitted
-  values as substitutions in
+  on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Substitute the
+  values into subsequent Bash commands:
   `bundle exec pronto run -c "$(git merge-base HEAD BASE_REF_VALUE)"`
   as the optional final diff-scoped step
 - Treat `LEFTHOOK_*` as an optional wrapper hint, not as a reason to skip direct tools by default

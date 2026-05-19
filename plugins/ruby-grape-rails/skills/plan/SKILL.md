@@ -287,8 +287,8 @@ Before finalizing the plan, verify:
 - `bundle exec brakeman` if present for security-sensitive work
 - optional final diff-scoped review: run
   `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
-  on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`); use emitted
-  values as substitutions in
+  on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Substitute the
+  values into subsequent Bash commands:
   `bundle exec pronto run -c "$(git merge-base HEAD BASE_REF_VALUE)"`
 - `bundle exec rspec` or `bin/rails test` - full test suite
 - Migration safety check (for production deployments)

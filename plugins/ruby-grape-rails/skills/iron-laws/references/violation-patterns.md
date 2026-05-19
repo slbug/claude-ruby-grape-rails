@@ -208,7 +208,7 @@ rescue_from SomeSpecificError, with: :foo
 
 Search paths in `app/` unless noted. Run each regex with `rg`
 (default) or Python `re`. POSIX `grep -E` does not support `\b`
-word boundaries or lazy quantifiers `*?` used in Law 18.
+word boundaries used in Law 18.
 
 ### Law 1 (path: `db/migrate/`)
 
@@ -283,7 +283,7 @@ Bare `rescue` defaults to `StandardError` and does NOT match.
 false positives — confirm by reading the hit.
 
 ```regex
-\b(?:rescue|rescue_from)\b[^#\n]*?[\s,(]:{0,2}Exception\b
+\b(?:rescue|rescue_from)\b[^#\n]*[\s,(]:{0,2}Exception\b
 ```
 
 ### Law 19 (path: `app/views/*.turbo_stream.*`)

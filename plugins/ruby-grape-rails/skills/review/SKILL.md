@@ -21,8 +21,8 @@ Reviews catch issues before they reach production. Each specialist focuses on th
 ## Collecting Changed Files
 
 Run `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
-on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Use emitted values
-as substitutions in subsequent commands. Then capture:
+on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Substitute the
+values into subsequent Bash commands. Then capture:
 
 - `MERGE_BASE` via `git merge-base HEAD BASE_REF_VALUE`
 - `CHANGED_FILES` via `git diff --name-only --diff-filter=ACMR MERGE_BASE_VALUE...HEAD`
