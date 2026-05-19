@@ -259,8 +259,8 @@ When resuming:
 
 Before finalizing the plan, verify:
 
-- [ ] No bare `rescue` - always specify exception classes
-- [ ] `StandardError` caught, not `Exception`
+- [ ] Iron Law 18: no `rescue Exception`, `rescue ::Exception`, `rescue_from(Exception)`, or `rescue_from ::Exception` (catches `SystemExit` / `SignalException`)
+- [ ] Style: rescue clauses name an explicit class (`rescue StandardError => e` / `rescue SpecificError => e`) instead of bare `rescue`
 - [ ] Failed jobs can be retried safely (idempotent)
 - [ ] Database transactions wrap multi-step operations
 - [ ] Sidekiq jobs use the active ORM's commit-safe hook, not `after_save` or inline before commit
@@ -285,7 +285,11 @@ Before finalizing the plan, verify:
 - formatter/linter if configured (`standardrb` or `rubocop`); use Lefthook only when its config covers lint + security/static-analysis checks
 - targeted specs or tests for changed behavior
 - `bundle exec brakeman` if present for security-sensitive work
-- optional final diff-scoped review: `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"` then `bundle exec pronto run -c "$(git merge-base HEAD "$BASE_REF")"`
+- optional final diff-scoped review: run
+  `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
+  on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Substitute the
+  values into subsequent Bash commands:
+  `bundle exec pronto run -c "$(git merge-base HEAD BASE_REF_VALUE)"`
 - `bundle exec rspec` or `bin/rails test` - full test suite
 - Migration safety check (for production deployments)
 

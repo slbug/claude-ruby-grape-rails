@@ -28,7 +28,7 @@ effort: medium
   `expect(record.created_at).to eq Time.current` — race on test
   runner clock. Use `freeze_time` or `Timecop.freeze`.
 - RSpec random order seed. Test passing alone but failing in suite is
-  order-dependent. Reproduce with `rspec --seed <N>`; fix via
+  order-dependent. Reproduce with `rspec --seed SEED_VALUE`; fix via
   `before(:each) do; reset_state; end` or split tests.
 
 ## References

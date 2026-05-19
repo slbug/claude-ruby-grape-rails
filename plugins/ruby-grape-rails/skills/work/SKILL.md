@@ -163,7 +163,11 @@ For domain-specific implementation patterns and deeper checklists, see
 
 - Full test suite: `bundle exec rspec` or `bin/rails test`
 - Security scan: `bundle exec brakeman` (if available)
-- Optional final diff-scoped review: `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"` then `bundle exec pronto run -c "$(git merge-base HEAD "$BASE_REF")"`
+- Optional final diff-scoped review: run
+  `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
+  on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Substitute the
+  values into subsequent Bash commands:
+  `bundle exec pronto run -c "$(git merge-base HEAD BASE_REF_VALUE)"`
 - Static analysis: `bundle exec rails_best_practices`
 
 ## Error Handling & Recovery

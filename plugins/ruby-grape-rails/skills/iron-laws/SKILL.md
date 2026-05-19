@@ -37,7 +37,7 @@ These 22 rules are NEVER violated. If code would violate them, STOP and explain 
 
 16. **method_missing Requires respond_to_missing?** — NO method_missing without respond_to_missing? — breaks introspection
 17. **Supervise Background Processes** — SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers in production
-18. **Rescue StandardError** — DON'T RESCUE Exception — only rescue StandardError or specific classes
+18. **No Rescue Exception** — DON'T rescue `Exception` (in `begin/rescue` or Rails `rescue_from`) — catches `SystemExit`/`SignalException`. Bare `rescue` defaults to `StandardError`, not a Law 18 violation.
 
 ### Hotwire/Turbo (2 laws)
 
@@ -72,4 +72,4 @@ Should I apply this fix?
   asks for the complete law list, per-law rationale, or enforcement
   tiers.
 - `references/violation-patterns.md` — Detailed detection patterns and grep commands
-- `references/fix-priority.md` — Critical vs warning violations and fix order
+- `references/fix-priority.md` — All 22 Iron Law violations are Blockers; Laws 1-20 = violation rules, Laws 21 + 22 = discipline rules

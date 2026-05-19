@@ -75,7 +75,12 @@ When parsing JSON, YAML, text, or command output during verification:
 3. Prefer direct linting: `bundle exec standardrb` if configured, else `bundle exec rubocop` if configured
 4. Prefer direct security scanning: `bundle exec brakeman` if configured
 5. `bundle exec rspec` if `spec/` exists, else `bin/rails test`
-6. Optional final diff-scoped review: `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"` then `bundle exec pronto run -c "$(git merge-base HEAD "$BASE_REF")"` if configured
+6. Optional final diff-scoped review: run
+   `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
+   on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Substitute the
+   values into subsequent Bash commands:
+   `bundle exec pronto run -c "$(git merge-base HEAD BASE_REF_VALUE)"`
+   if configured
 
 Use `lefthook run <hook>` only when cached runtime state shows:
 
@@ -94,23 +99,25 @@ Operational selection rules:
 - If `STANDARDRB_AVAILABLE=true`, lint with `bundle exec standardrb`
 - Else if `RUBOCOP_AVAILABLE=true`, lint with `bundle exec rubocop`
 - If `BRAKEMAN_AVAILABLE=true`, run `bundle exec brakeman`
-- If `PRONTO_AVAILABLE=true`, run `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"` then `bundle exec pronto run -c "$(git merge-base HEAD "$BASE_REF")"` as the optional final diff-scoped step
+- If `PRONTO_AVAILABLE=true`, run
+  `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
+  on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Substitute the
+  values into subsequent Bash commands:
+  `bundle exec pronto run -c "$(git merge-base HEAD BASE_REF_VALUE)"`
+  as the optional final diff-scoped step
 - Treat `LEFTHOOK_*` as an optional wrapper hint, not as a reason to skip direct tools by default
 
 Stop on the first failure, summarize the key error, and suggest the narrowest rerun command.
 
 ## Counts (mandatory prefix)
 
-Findings file MUST start with:
+Findings file MUST start with a Counts line (first content after frontmatter). Examples:
 
-`**Counts:** N findings (X blocker, Y warning, Z suggestion); M notes`
+- `**Counts:** 3 findings (1 Blocker, 2 Warnings, 0 Suggestions) — 1 note`
+- `**Counts:** 1 finding (0 Blockers, 1 Warning, 0 Suggestions) — 0 notes`
+- `**Counts:** 0 findings — All clean.`
 
-Empty state:
-
-`**Counts:** 0 findings — All clean.`
-
-Counts line is first content after frontmatter and any header metadata.
-Consolidator parses for severity bucket totals.
+Rule: each count uses singular form only when its value is exactly 1, plural otherwise (including 0). Consolidator parses for severity bucket totals.
 
 ## Review Artifact Contract
 

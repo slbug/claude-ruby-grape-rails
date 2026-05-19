@@ -47,16 +47,13 @@ disallowed — you cannot modify source code.
 
 ## Counts (mandatory prefix)
 
-Findings file MUST start with:
+Findings file MUST start with a Counts line (first content after frontmatter). Examples:
 
-`**Counts:** N findings (X blocker, Y warning, Z suggestion); M notes`
+- `**Counts:** 3 findings (1 Blocker, 2 Warnings, 0 Suggestions) — 1 note`
+- `**Counts:** 1 finding (0 Blockers, 1 Warning, 0 Suggestions) — 0 notes`
+- `**Counts:** 0 findings — All clean.`
 
-Empty state:
-
-`**Counts:** 0 findings — All clean.`
-
-Counts line is first content after frontmatter and any header metadata.
-Consolidator parses for severity bucket totals.
+Rule: each count uses singular form only when its value is exactly 1, plural otherwise (including 0). Consolidator parses for severity bucket totals.
 
 ## Evidence Mode (mandatory)
 

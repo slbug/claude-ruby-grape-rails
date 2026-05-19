@@ -91,7 +91,7 @@ Append one block per finding. One file per scan run.
 | Hub | Where techdebt surfaces |
 |---|---|
 | `audit` | Findings flow into a techdebt artifact when audit categorises an item as debt rather than blocking quality issue |
-| `review` | Pre-existing items the reviewer flags as WARNING (not blocker) route here for logging without blocking the review |
+| `review` | Pre-existing items the reviewer flags as Warning (not Blocker) route here for logging without blocking the review |
 | `rb-boundaries` | Boundary analysis emits architectural-debt entries; techdebt logs them with `/rb:boundaries` as suggested action |
 | `investigate` | Edge cases noticed during root-cause work that are outside the immediate fix scope log here |
 | `quick` | Adjacent debt seen during a one-line fix routes here so the quick fix stays narrow |

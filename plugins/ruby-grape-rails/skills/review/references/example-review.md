@@ -12,9 +12,9 @@
 
 | Reviewer | Recovery State | Findings |
 |---|---|---|
-| ruby-reviewer | artifact | 0 BLOCKER / 0 WARNING / 1 SUGGESTION |
-| testing-reviewer | artifact | 0 BLOCKER / 1 WARNING / 0 SUGGESTION |
-| security-analyzer | stub-replaced | 1 BLOCKER / 1 WARNING / 0 SUGGESTION |
+| ruby-reviewer | artifact | 0 Blockers / 0 Warnings / 1 Suggestion |
+| testing-reviewer | artifact | 0 Blockers / 1 Warning / 0 Suggestions |
+| security-analyzer | stub-replaced | 1 Blocker / 1 Warning / 0 Suggestions |
 
 ## Reviewer Verdicts
 
@@ -95,9 +95,9 @@ constant + scope for reuse and test clarity.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---|---|---|---|---|---|
-| 1 | Magic Token Never Expires | BLOCKER | HIGH | security-analyzer | `app/models/magic_token.rb:45` | Yes |
-| 2 | Missing Rate Limiting | WARNING | MEDIUM | security-analyzer | `app/controllers/magic_links_controller.rb:18` | Yes |
-| 3 | Test Coverage Gap on Expiration | WARNING | HIGH | testing-reviewer | `spec/models/magic_token_spec.rb:12` | Yes |
-| 4 | Extract Magic-Token TTL Constant | SUGGESTION | LOW | ruby-reviewer | `app/models/magic_token.rb` | Yes |
-| 5 | Duplicate-email returns nil | BLOCKER | HIGH | ruby-reviewer | `app/models/user.rb:67` | Pre-existing |
+| 1 | Magic Token Never Expires | Blocker | HIGH | security-analyzer | `app/models/magic_token.rb:45` | Yes |
+| 2 | Missing Rate Limiting | Warning | MEDIUM | security-analyzer | `app/controllers/magic_links_controller.rb:18` | Yes |
+| 3 | Test Coverage Gap on Expiration | Warning | HIGH | testing-reviewer | `spec/models/magic_token_spec.rb:12` | Yes |
+| 4 | Extract Magic-Token TTL Constant | Suggestion | LOW | ruby-reviewer | `app/models/magic_token.rb` | Yes |
+| 5 | Duplicate-email returns nil | Blocker | HIGH | ruby-reviewer | `app/models/user.rb:67` | Pre-existing |
 ````

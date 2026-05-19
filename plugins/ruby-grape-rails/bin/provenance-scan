@@ -25,9 +25,9 @@ STATE_PRIORITY = { 'conflicted' => 0, 'missing' => 1, 'weak' => 2, 'clean' => 3 
 ALLOWED_KINDS = %w[primary secondary tool-output].freeze
 SIDECAR_GLOB = '**/*.provenance.md'
 
-# Line-aware `---` frontmatter extractor. Mirrors lab/eval/frontmatter.py
-# semantics: only `---` on its own line counts as a delimiter, so `---`
-# inside a YAML value cannot mis-split the block.
+# Line-aware `---` frontmatter extractor. Only `---` on its own line
+# counts as a delimiter, so `---` inside a YAML value cannot mis-split
+# the block.
 def extract_frontmatter_block(content)
   lines = content.lines(chomp: true)
   return nil if lines.empty? || lines.first.strip != '---'

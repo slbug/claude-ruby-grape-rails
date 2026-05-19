@@ -2,23 +2,38 @@
 
 ## Priority Order
 
-1. **Critical** (Laws 1, 2, 4, 6, 7, 10, 11, 12, 13, 14, 15): Security, data integrity, correctness — Fix immediately
-2. **Warnings** (Laws 3, 5, 8, 9, 16, 17, 18, 19, 20): Performance, maintainability — Fix before merge
-3. **Verification & Discipline** (Laws 21, 22): Testing + surgical-change discipline — Required for completion
+Every Iron Law violation (Laws 1-22) is a Blocker per
+`plugins/ruby-grape-rails/skills/triage/references/triage-patterns.md`
+§ "Always Fix". Three groups:
 
-## Critical Laws
+1. **Violation rules** (Laws 1-20): Code patterns. Block merge.
+2. **Verification discipline** (Law 21): No "should work" claims
+   without test/lint output. Failed runs are separate Blockers.
+3. **Surgical-change discipline** (Law 22): Out-of-scope edits in
+   the diff block merge until reverted or split.
 
-| Law | Category | Why Critical |
-|-----|----------|--------------|
+## Blocker Laws
+
+| Law | Category | Why Blocker |
+|-----|----------|-------------|
 | 1 | Money as float | Financial data corruption |
 | 2, 15 | SQL injection | Security vulnerability |
+| 3 | N+1 queries | Performance / DB load |
 | 4, 11 | after_commit for jobs | Data race conditions |
+| 5 | Transaction boundaries | Partial-write data corruption |
 | 6 | Validation bypass | Data integrity loss |
 | 7 | default_scope | Unexpected query behavior |
+| 8 | Idempotent jobs | Retry-safety; double-effect risk |
+| 9 | JSON-safe Sidekiq args | Serialization failures |
 | 10 | Objects in job args | Serialization failures |
 | 12 | Eval with user input | Remote code execution |
 | 13 | Missing authorization | Unauthorized access |
 | 14 | Unsafe HTML | XSS attacks |
+| 16 | method_missing without respond_to_missing? | Broken introspection |
+| 17 | Supervise background processes | Production outage on crash |
+| 18 | `rescue Exception`, `rescue ::Exception`, `rescue_from(Exception)`, `rescue_from ::Exception` | Lost interrupts, hung processes |
+| 19 | DB queries in Turbo Streams | Lock / deadlock under load |
+| 20 | Missing `turbo_frame_tag` | Degraded UX, full page reloads |
 
 ## Additional Heuristics
 
@@ -37,5 +52,9 @@ Document exceptions with comments:
 
 - `update_columns` for background migrations
 - `raw()` for trusted admin templates
-- `rescue Exception` in top-level error handlers
 - `eval` in controlled DSL contexts
+
+`rescue Exception` and `rescue ::Exception` — in either `begin/rescue`
+or Rails `rescue_from` — have NO valid exemption per current Law 18.
+Top-level handlers must rescue specific subclasses or use
+`SignalException`/`SystemExit` handlers from the language explicitly.

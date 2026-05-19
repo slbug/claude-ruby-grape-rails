@@ -69,7 +69,7 @@ A workflow is COMPLETED when:
 - [ ] All planned tasks completed or explicitly deferred
 - [ ] Verification suite passes
 - [ ] Reviews complete with consolidated `**Verdict**:` ∈
-      {`PASS`, `PASS WITH WARNINGS`} — no NEW BLOCKERs introduced by
+      {`PASS`, `PASS WITH WARNINGS`} — no NEW Blockers introduced by
       this diff (per
       `${CLAUDE_PLUGIN_ROOT}/skills/review/references/review-playbook.md`
       § "Verdict Decision Rules"). All other paths halt the cycle.

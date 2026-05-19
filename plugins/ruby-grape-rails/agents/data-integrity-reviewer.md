@@ -40,16 +40,13 @@ disallowed — you cannot modify source code.
 
 ## Counts (mandatory prefix)
 
-Findings file MUST start with:
+Findings file MUST start with a Counts line (first content after frontmatter). Examples:
 
-`**Counts:** N findings (X blocker, Y warning, Z suggestion); M notes`
+- `**Counts:** 3 findings (1 Blocker, 2 Warnings, 0 Suggestions) — 1 note`
+- `**Counts:** 1 finding (0 Blockers, 1 Warning, 0 Suggestions) — 0 notes`
+- `**Counts:** 0 findings — All clean.`
 
-Empty state:
-
-`**Counts:** 0 findings — All clean.`
-
-Counts line is first content after frontmatter and any header metadata.
-Consolidator parses for severity bucket totals.
+Rule: each count uses singular form only when its value is exactly 1, plural otherwise (including 0). Consolidator parses for severity bucket totals.
 
 ## Review Checklist
 
@@ -247,32 +244,8 @@ end
 Write findings to `.claude/reviews/data-integrity-reviewer/{review-slug}-{datesuffix}.md`.
 Always write an artifact, even for a clean pass. Never write review artifacts under `.claude/plans/...`.
 
-```markdown
-# Data Integrity Review
-
-## Files Reviewed
-- app/models/order.rb
-- db/migrate/xxx_add_orders.rb
-- app/services/order_processor.rb
-
-## Findings
-
-### [SEVERITY] Missing Foreign Key
-**File**: `db/migrate/xxx_add_orders.rb:15`
-**Problem**: Orders table has user_id column but no foreign key constraint
-**Recommendation**: Add `add_foreign_key :orders, :users`
-**Risk**: Orphaned records, inconsistent data
-
-## Summary
-| Category | Count |
-|----------|-------|
-| Blocking | 0 |
-| Warning | 3 |
-| Info | 2 |
-```
-
 ## Severity Levels
 
-- **BLOCKING**: Data loss or corruption risk, constraint violations
-- **WARNING**: Race conditions, partial integrity enforcement
-- **INFO**: Best practices for maintainability
+- **Blocker**: Data loss or corruption risk, constraint violations
+- **Warning**: Race conditions, partial integrity enforcement
+- **Suggestion**: Best practices for maintainability

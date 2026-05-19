@@ -20,19 +20,19 @@ Reviews catch issues before they reach production. Each specialist focuses on th
 
 ## Collecting Changed Files
 
-Resolve the base ref via `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref`,
-compute `$MERGE_BASE`, then capture in ONE shell session:
+Run `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
+on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Substitute the
+values into subsequent Bash commands. Then capture:
 
-- `$CHANGED_FILES` (file list, `--name-only --diff-filter=ACMR`)
-- `$DIFF_STAT` (`git diff --stat`)
+- `MERGE_BASE` via `git merge-base HEAD BASE_REF_VALUE`
+- `CHANGED_FILES` via `git diff --name-only --diff-filter=ACMR MERGE_BASE_VALUE...HEAD`
+- `DIFF_STAT` via `git diff --stat MERGE_BASE_VALUE...HEAD`
 
-Pass `$CHANGED_FILES`, `$BASE_REF`, `$MERGE_BASE`, and `$DIFF_STAT` to
-every spawned reviewer. Reviewers scope analysis to `$CHANGED_FILES`
-and NEVER scan unchanged files.
+Pass the captured `CHANGED_FILES`, `BASE_REF`, `MERGE_BASE`, and
+`DIFF_STAT` values to every spawned reviewer. Reviewers scope
+analysis to the file list and NEVER scan unchanged files.
 
-Reviewers own diff strategy.
-
-For exact shell commands + reviewer diff discipline, see
+Reviewers own diff strategy. For reviewer diff discipline, see
 `${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "Diff Collection".
 
 ## Main-Session Fanout
@@ -49,11 +49,12 @@ message.
 
 1. Classify complexity (tier + critical-path escalation).
 2. Select core + conditional reviewers per matrix below. Derive
-   `review-slug`. Resolve `BASE_REF` via
-   `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref`.
+   `review-slug`. Use the `BASE_REF` value captured in §
+   "Collecting Changed Files" — substitute literally into shell
+   commands below (e.g. `--base-ref=BASE_REF_VALUE`).
 3. Run
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run --skill=rb:review
-   --slug="$REVIEW_SLUG" --base-ref="$BASE_REF" --agents=<csv-of-reviewer-slugs>`.
+   --slug=REVIEW_SLUG_VALUE --base-ref=BASE_REF_VALUE --agents=AGENTS_CSV_VALUE`.
    Captures stdout as `$MANIFEST` (absolute manifest path). Helper
    archives any prior manifest, computes datesuffix, agent paths,
    consolidated path, git pins; writes fresh manifest atomically.
@@ -74,7 +75,9 @@ message.
    `Reviewer`). Patch each agent's `status`
    field with its recovery-state value (`artifact` |
    `stub-replaced` | `recovered-from-return` | `stub-no-output`).
-9. Read each verified artifact. Read consolidated path via
+9. Read each verified artifact via the absolute path from
+   `manifest-update spawn-paths "$MANIFEST"`. Read consolidated
+   path via
    `${CLAUDE_PLUGIN_ROOT}/bin/manifest-update field "$MANIFEST" consolidated_path`.
    Write the consolidated review to that path.
 10. Patch manifest `status: complete`.
@@ -116,7 +119,7 @@ Critical-path files force escalation regardless of count or LOC.
 | **Medium** | 4-10 | 201-1000 | Core + conditional by file type | 4-8 |
 | **Complex** | 11+ | > 1000 | All relevant reviewers, detailed output | 8-11 |
 
-Compute `DIFF_LOC = git diff --shortstat "$MERGE_BASE"...HEAD | awk '{n=$4+$6} END{print n+0}'`.
+Compute `DIFF_LOC = git diff --shortstat MERGE_BASE_VALUE...HEAD | awk '{n=$4+$6} END{print n+0}'`.
 Columns 4 + 6 are insertions + deletions. `END{print n+0}` emits `0`
 on empty diff. Range matches `$DIFF_STAT` and `$CHANGED_FILES`.
 
@@ -167,18 +170,18 @@ Every Agent() call must include in its prompt:
 
 - Task: review the file list for the requested scope
 - `$CHANGED_FILES` (the diff manifest from main session)
-- `$BASE_REF` (from resolve-base-ref output)
-- `$MERGE_BASE` (from `git merge-base HEAD "$BASE_REF"`)
+- `BASE_REF` value (from resolve-base-ref stdout)
+- `MERGE_BASE` value (from `git merge-base HEAD BASE_REF_VALUE`)
 - `$DIFF_STAT` (from `git diff --stat`)
 - **Absolute artifact path** read from
   `manifest-update spawn-paths "$MANIFEST"` (one row per agent slug).
   Worker MUST use the exact path passed to it — do NOT invent,
   modify, shorten, or extension-change the filename.
 - Required output: write artifact (always — even on PASS) and return summary
-- Findings format: `file:line`, `Severity (Critical|Warning|Info)`,
+- Findings format: `file:line`, `Severity (Blocker|Warning|Suggestion)`,
   `Confidence (HIGH|MEDIUM|LOW)`, description, current code, suggested
-  code. Synthesis maps Critical/Warning/Info into consolidated
-  BLOCKER/WARNING/SUGGESTION per playbook § "Worker Severity Mapping".
+  code. Synthesis applies diff-status filter only (new vs pre-existing)
+  per playbook § "Worker Severity Mapping".
 - Constraint: stop after returning; do NOT call Agent() — leaf review
 
 For full briefing template (verbatim text to use in prompts), see
@@ -191,7 +194,14 @@ For full briefing template (verbatim text to use in prompts), see
 3. **Deduplicate overlapping findings** - merge similar issues from different agents
 4. **Keep noise low** - prefer findings a senior Ruby reviewer would care about
 5. **Be specific** - cite line numbers, provide examples
-6. **Prioritize** — workers emit `Critical | Warning | Info`; synthesis maps to `BLOCKER | WARNING | SUGGESTION` per playbook § "Worker Severity Mapping"
+6. **Prioritize** — title case severity (always singular for
+   per-finding `Severity:` tags + At-a-Glance Severity column;
+   count-aware for Counts prefix + Reviewer Coverage row, e.g.
+   `0 Blockers / 1 Warning / 0 Suggestions`; always plural for
+   consolidated section headers + Summary table category). Verdict
+   4-set (`PASS | PASS WITH WARNINGS | REQUIRES CHANGES | BLOCKED`)
+   stays UPPERCASE. Full rule:
+   `${CLAUDE_SKILL_DIR}/references/review-playbook.md` § "STEP 3"
 7. **Contextualize** - explain why it matters, not just what's wrong
 8. **Identify package + ORM first** - do not apply flat Rails / Active Record advice to Sequel or modular packages
 
@@ -295,13 +305,13 @@ or compress:
 | `OK`, `LGTM`, `Approved` | `PASS` |
 
 `Needs fixes` does NOT auto-route to `REQUIRES CHANGES` — infer per
-worker counts (`Critical` → `BLOCKED`; else `Warning` → `PASS WITH WARNINGS`;
-else `PASS`).
+worker counts (any `Blocker` → `BLOCKED`; else any `Warning` →
+`PASS WITH WARNINGS`; else `PASS`).
 
 Use canonical strings only for manifest status enum (`pending`,
 `in-flight`, `artifact`, `stub-replaced`, `recovered-from-return`,
-`stub-no-output`, `complete`) and severity buckets (`BLOCKER`,
-`WARNING`, `SUGGESTION`). The synthesizing skill body owns this
+`stub-no-output`, `complete`) and severity tags (`Blocker`,
+`Warning`, `Suggestion`). The synthesizing skill body owns this
 discipline; `bin/manifest-update` does not validate enums on patch.
 
 Decision rules + chat scripts:

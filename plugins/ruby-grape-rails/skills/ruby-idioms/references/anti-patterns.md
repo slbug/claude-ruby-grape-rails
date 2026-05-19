@@ -136,10 +136,14 @@ data.fetch(:key)  # Raises KeyError if missing
 data.fetch(:key, default_value)  # Or provide default
 data[:key] || raise(KeyError, "Missing key: :key")  # Explicit
 
-# WRONG: Catch-all rescue hides errors
+# WRONG: Silent swallow of every StandardError hides errors
 begin
   risky_operation
-rescue => e  # Catches EVERYTHING!
+rescue => e  # Bare rescue catches the StandardError subtree.
+              # Silent swallow without re-raise hides the failure.
+              # (Not a Law 18 violation per se — Law 18 is `rescue Exception`,
+              # `rescue ::Exception`, `rescue_from(Exception)`, or
+              # `rescue_from ::Exception`.)
   :error
 end
 

@@ -125,7 +125,7 @@ Notes:
   REQUIRE reading BOTH cached pages — `skills.md` covers only
   skill-scope dynamic values; `plugins-reference.md` § "Environment
   variables" covers plugin-scope path variables. Conflating the layers
-  produces false-positive WARNINGs:
+  produces false-positive WARNINGS:
 
   | Layer | Source page | Variables |
   |---|---|---|

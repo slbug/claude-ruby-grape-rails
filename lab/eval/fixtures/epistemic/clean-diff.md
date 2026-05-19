@@ -23,8 +23,10 @@ service layer.
 
 <!-- Ground truth: pure presentation logic. No DB writes, no jobs, no
 mailers, no callbacks, no transactions. Nothing for Iron Laws to govern.
-Strong reviewers should report 0 critical findings (stylistic opinions
-about hash vs Struct / using a gem are nits, not severity). The
-false_positive_rate scorer counts only "critical" severity labels
-(see SEVERITY_CRITICAL_PATTERN in lab/eval/epistemic_suite.py). Any
-critical-severity finding here is a false positive. Expected: 0. -->
+Strong reviewers should report 0 top-severity findings (stylistic
+opinions about hash vs Struct / using a gem are nits, not severity).
+The false_positive_rate scorer counts top-severity labels — either
+`Critical` (legacy form) or `Blocker` (current shipped vocab post
+severity-vocab migration). See SEVERITY_CRITICAL_PATTERN in
+lab/eval/epistemic_suite.py. Any Critical-/Blocker-severity finding
+here is a false positive. Expected: 0. -->

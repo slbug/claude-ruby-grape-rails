@@ -5635,7 +5635,7 @@ class InjectRulesTests(unittest.TestCase):
         bare paths reach the LLM as absolute filesystem paths. CC does
         NOT re-substitute plugin variables in hook return strings —
         expansion must happen inside the script before the JSON is
-        emitted. Regression guard for the off-by-default BLOCKER fix."""
+        emitted. Regression guard for the off-by-default Blocker fix."""
         env = dict(os.environ)
         env["CLAUDE_PLUGIN_ROOT"] = "/expanded/plugin/root"
         result = subprocess.run(

@@ -132,18 +132,20 @@ What to do now:
 
 **Extract**:
 
-- BLOCKER count (new findings only)
-- WARNING count
-- SUGGESTION count
+- Blocker count (new findings only)
+- Warning count
+- Suggestion count
 - Canonical verdict (PASS / PASS WITH WARNINGS / REQUIRES CHANGES / BLOCKED)
 - Most severe finding
 
-**Format**:
+**Format**. Each bucket count uses singular form only when its value
+is exactly 1, plural otherwise (including 0). Example summary:
+`3 Blockers, 1 Warning, 0 Suggestions`.
 
 ```
 ## Review Brief: {Feature Name}
 
-**Summary**: {N} BLOCKER, {N} WARNING, {N} SUGGESTION
+**Summary**: 3 Blockers, 1 Warning, 0 Suggestions
 
 **Blockers**:
 1. {description} ({file}:{line})
@@ -163,7 +165,7 @@ What to do now:
 1. **Be concise** - 30 seconds to read
 2. **Be specific** - Cite files, line numbers
 3. **Be actionable** - Clear next step
-4. **Prioritize** - BLOCKERs first, then WARNINGs, then SUGGESTIONs (per review bucket vocabulary)
+4. **Prioritize** - Blockers first, then Warnings, then Suggestions (per review bucket vocabulary)
 5. **Contextualize** - Why it matters
 
 ## What to Skip
@@ -202,7 +204,7 @@ Don't include in briefs:
 
 **Key Risks**:
 - Session storage (HIGH) - need Redis config
-- Password hashing (BLOCKER) - use bcrypt, not MD5
+- Password hashing (Blocker) - use bcrypt, not MD5
 
 **Next Step**: Run `/rb:work .claude/plans/user-auth/plan.md`
 ```
@@ -212,7 +214,7 @@ Don't include in briefs:
 ```
 ## Review Brief: Payment Processing
 
-**Summary**: 3 BLOCKERS, 2 WARNINGS, 2 SUGGESTIONS
+**Summary**: 3 Blockers, 2 Warnings, 2 Suggestions
 
 **Blockers**:
 1. Float used for money calculation (app/models/order.rb:45)

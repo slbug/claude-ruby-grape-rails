@@ -126,6 +126,30 @@ find app -name '*.rb' -exec cat {} +
 GOOD — `ugrep` (or `Grep` tool) to scope inspection. `Read` tool for
 full content of the few files that matter.
 
+## Multi-tool detection
+
+BAD — multi-arg `command -v`:
+
+```bash
+command -v betterleaks rtk dcg shellfirm
+```
+
+POSIX exits non-zero on any missing argument. In parallel Bash batches
+the non-zero exit cancels sibling calls.
+
+GOOD — one Bash call, explicit per-tool clauses:
+
+```bash
+command -v betterleaks >/dev/null 2>&1 && echo "betterleaks=true" || echo "betterleaks=false"
+command -v rtk         >/dev/null 2>&1 && echo "rtk=true"         || echo "rtk=false"
+command -v dcg         >/dev/null 2>&1 && echo "dcg=true"         || echo "dcg=false"
+command -v shellfirm   >/dev/null 2>&1 && echo "shellfirm=true"   || echo "shellfirm=false"
+```
+
+Each clause is independent — one missing tool does not cancel the
+others. Listing the tools explicitly keeps the set obvious; do not
+re-introduce a `for` loop just to shorten this.
+
 ## When > 5 shell calls
 
 Stop. Check whether wider batching, `bfs`, `ugrep`, the `Glob` /

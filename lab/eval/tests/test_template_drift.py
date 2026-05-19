@@ -74,10 +74,10 @@ def _walk_phase_sections(text: str):
 
 class TriagePlanTemplateDriftTests(unittest.TestCase):
     def test_iron_law_refs_only_in_blockers_phase(self) -> None:
-        """`Iron Law N` MUST NOT appear in non-BLOCKER task lines.
+        """`Iron Law N` MUST NOT appear in non-Blocker task lines.
 
         Per `triage-patterns.md` § "Always Fix": ALL Iron Law
-        violations are non-negotiable BLOCKERs. A canonical task
+        violations are non-negotiable Blockers. A canonical task
         example referencing `Iron Law N` under `## Phase 2: Warnings`
         / `## Deferred Findings` would teach the agent to defer or
         downgrade an Iron Law violation. The `## Pre-existing Issues
@@ -107,7 +107,7 @@ class TriagePlanTemplateDriftTests(unittest.TestCase):
                     bad.append(f"{heading!r} contains Iron Law task: {line.strip()!r}")
         self.assertFalse(
             bad,
-            "Iron Law violations are BLOCKER per triage-patterns; canonical "
+            "Iron Law violations are Blockers per triage-patterns; canonical "
             "examples MUST NOT place them in non-Blockers phases (incl. "
             "Phase 1 Test Coverage Gaps, which is for coverage gaps, not "
             "Iron Law violations). Drifted lines: " + "; ".join(bad),
@@ -332,7 +332,7 @@ class FullCycleExampleRunDriftTests(unittest.TestCase):
     Shipped canonical worked example loaded into agent context when
     `/rb:full` reads its detail references. Verdict math drift here
     teaches `/rb:full` to misclassify reviews (e.g., emit
-    `PASS WITH WARNINGS` for a review that has only SUGGESTIONs).
+    `PASS WITH WARNINGS` for a review that has only Suggestions).
     """
 
     def test_synthesized_verdict_uses_canonical_4_set(self) -> None:
@@ -344,9 +344,9 @@ class FullCycleExampleRunDriftTests(unittest.TestCase):
                       f"Synthesized verdict {verdict!r} not in canonical 4-set")
 
     def test_pass_with_warnings_only_when_warnings_present(self) -> None:
-        """Per playbook STEP 4: PASS WITH WARNINGS requires WARNINGs > 0.
+        """Per playbook STEP 4: PASS WITH WARNINGS requires Warnings > 0.
 
-        SUGGESTIONs alone (no WARNINGs / no BLOCKERs) → PASS, not
+        Suggestions alone (no Warnings / no Blockers) → PASS, not
         PASS WITH WARNINGS. The parenthetical note must cite a
         POSITIVE warning count; negation/zero patterns ("no warnings",
         "0 warnings", "zero warnings") fail the gate even when they
@@ -374,8 +374,8 @@ class FullCycleExampleRunDriftTests(unittest.TestCase):
                 self.fail(
                     "Synthesized **Verdict**: PASS WITH WARNINGS but "
                     f"parenthetical note negates warnings (matched {pat!r}). "
-                    "Per playbook STEP 4, WARNINGs > 0 required for this "
-                    "verdict; SUGGESTIONs alone → PASS."
+                    "Per playbook STEP 4, Warnings > 0 required for this "
+                    "verdict; Suggestions alone → PASS."
                 )
 
         positive_count = re.search(r"\b([1-9]\d*)\s+warnings?\b", note)
@@ -383,7 +383,7 @@ class FullCycleExampleRunDriftTests(unittest.TestCase):
             self.fail(
                 "Synthesized **Verdict**: PASS WITH WARNINGS without a "
                 "positive warning count in the parenthetical note. Per "
-                "playbook STEP 4, WARNINGs > 0 required for this verdict; "
+                "playbook STEP 4, Warnings > 0 required for this verdict; "
                 "cite the count explicitly (e.g., '2 warnings, 1 suggestion')."
             )
 

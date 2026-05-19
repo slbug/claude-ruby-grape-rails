@@ -203,7 +203,7 @@ After each task, also run domain-appropriate checks:
 | `[security]` task | Verify authorization in every controller action |
 
 If verification fails, fix the issue and re-verify. After 3 failed
-attempts, create a BLOCKER (see error-recovery.md).
+attempts, create a Blocker (see error-recovery.md).
 
 ## Proactive Patterns
 
@@ -260,7 +260,7 @@ After each task passes verification:
 phase complete, mark it `[COMPLETED]` and IMMEDIATELY start the
 next phase. Do NOT stop to ask the user. Do NOT output a summary
 between phases. Just keep going until all phases are done or a
-BLOCKER is hit.
+Blocker is hit.
 
 ```markdown
 # Before
@@ -310,12 +310,12 @@ git checkout -b feature/{feature-slug}
 
 If first attempt fails, retry with error context in the prompt.
 
-### Escalate to BLOCKER
+### Escalate to Blocker
 
 After 3 failures, create blocker in progress file:
 
 ```markdown
-## BLOCKER
+## Blocker
 
 **Task ID**: P2-T3
 **Description**: Implement User.register

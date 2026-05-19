@@ -5,7 +5,7 @@
 ### Always Fix (auto-approve, don't even ask)
 
 ALL Iron Law violations + security issues. Iron Laws are
-non-negotiable per the review BLOCKER contract; do NOT downgrade them
+non-negotiable per the review Blocker contract; do NOT downgrade them
 to "Usually Fix":
 
 - SQL injection / XSS via `.html_safe` or `raw()` with untrusted content (Iron Law 14)
@@ -24,10 +24,11 @@ to "Usually Fix":
 - `after_save` enqueueing instead of after-commit hook (Iron Law 11)
 - `method_missing` without `respond_to_missing?` (Iron Law 16)
 - Unsupervised background processes (Iron Law 17)
-- Bare `rescue` / `rescue Exception` (Iron Law 18)
+- `rescue Exception` / `rescue ::Exception` / `rescue_from(Exception)` / `rescue_from ::Exception` (Iron Law 18 — bare `rescue` defaults to `StandardError`, not a Law 18 violation)
 - DB queries inside Turbo Stream responses (Iron Law 19)
 - Partial updates without `turbo_frame_tag` (Iron Law 20)
 - "Should work" claims without test output (Iron Law 21)
+- Out-of-scope / drive-by edits in the diff (Iron Law 22)
 - `bundle exec rails zeitwerk:check` failures
 - Hard-coded credentials / API keys (cleartext secrets — security issue)
 
@@ -70,17 +71,17 @@ Coverage`, and the consolidated verdict per
 `plugins/ruby-grape-rails/skills/review/references/review-playbook.md`
 § "Pre-existing Issues". Triage routes them to the plan's
 `## Pre-existing Issues (informational)` section only. NEVER
-auto-include in any Phase. Do NOT relabel a pre-existing BLOCKER as
-WARNING / SUGGESTION.
+auto-include in any Phase. Do NOT relabel a pre-existing Blocker as
+Warning / Suggestion.
 
-### Downgrade from BLOCKER (non-Iron-Law, non-security, NEW findings only) when
+### Downgrade from Blocker (non-Iron-Law, non-security, NEW findings only) when
 
 - The issue is in code that's not yet reachable
 - There's an existing workaround in production
 - The fix requires a separate migration/PR
 
 Iron Law violations + security issues are both non-negotiable
-BLOCKERs per the "Always Fix" list above. Do NOT downgrade EITHER
+Blockers per the "Always Fix" list above. Do NOT downgrade EITHER
 class on these grounds:
 
 - Iron Laws (1-22): listed under "Always Fix"
@@ -88,7 +89,7 @@ class on these grounds:
   XSS, missing authorization, `eval` with user input, mass-assignment
   on protected fields, SSRF, secrets leakage
 
-### Upgrade from SUGGESTION when
+### Upgrade from Suggestion when
 
 - The pattern will be copied by future developers
 - It affects a security-sensitive code path
@@ -107,7 +108,7 @@ selective about what's worth fixing now.
 
 If you skip more than 70% of findings, the review wasn't
 useful or you're cutting too many corners. At minimum, fix
-all BLOCKERs and most WARNINGs.
+all Blockers and most Warnings.
 
 ### Triaging without reading
 
@@ -118,8 +119,8 @@ pattern-matching on severity alone, you're missing context.
 
 When a review has 15+ findings:
 
-1. First pass: Auto-approve all BLOCKERs
-2. Second pass: Present WARNINGs for decision
-3. Third pass: Batch SUGGESTIONs — "Skip all suggestions?"
+1. First pass: Auto-approve all Blockers
+2. Second pass: Present Warnings for decision
+3. Third pass: Batch Suggestions — "Skip all suggestions?"
 
 This prevents decision fatigue on large reviews.

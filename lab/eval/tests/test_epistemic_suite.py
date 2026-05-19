@@ -99,12 +99,12 @@ class TestFindingRecall(unittest.TestCase):
         response = (
             "SQL injection via string interpolation. "
             "N+1 query that needs preload. "
-            "bare rescue Exception swallows everything."
+            "rescue Exception swallows SIGTERM and hangs processes."
         )
         seeded = [
             "SQL injection via string interpolation in User.where",
             "N+1 query in Post#comments_with_authors",
-            "bare rescue Exception in PaymentJob",
+            "rescue Exception in PaymentJob",
         ]
         self.assertEqual(es.score_finding_recall(response, seeded), 1.0)
 
@@ -113,7 +113,7 @@ class TestFindingRecall(unittest.TestCase):
         seeded = [
             "SQL injection via string interpolation in User.where",
             "N+1 query in Post#comments_with_authors",
-            "bare rescue Exception in PaymentJob",
+            "rescue Exception in PaymentJob",
         ]
         self.assertAlmostEqual(
             es.score_finding_recall(response, seeded), 1 / 3, places=4
@@ -131,8 +131,90 @@ class TestFalsePositiveRate(unittest.TestCase):
         )
         self.assertEqual(es.score_false_positive_rate(text), 2.0)
 
+    def test_counts_blocker_labels(self) -> None:
+        text = (
+            "## Finding 1\n**Severity**: Blocker\n\n"
+            "## Finding 2\n**Severity**: Blocker\n"
+        )
+        self.assertEqual(es.score_false_positive_rate(text), 2.0)
+
+    def test_counts_plain_label_forms(self) -> None:
+        text = "Severity: Critical\nseverity=blocker\nSeverity: Blocker\n"
+        self.assertEqual(es.score_false_positive_rate(text), 3.0)
+
+    def test_counts_positive_count_section_headers(self) -> None:
+        # Heading branch allows up to 40 chars of prose between severity
+        # term and `(N)` so common forms like `## Critical Bugs (1)` and
+        # `## Blocker Findings (2)` also count.
+        text = (
+            "## Blockers (3)\n"
+            "## Critical Bugs (1)\n"
+            "## Blocker Findings (2)\n"
+            "### 🔴 Critical (2)\n"
+        )
+        self.assertEqual(es.score_false_positive_rate(text), 4.0)
+
+    def test_counts_bold_summary_with_positive_count(self) -> None:
+        # `**Blockers**: 3` style summary — positive integer after bold
+        # label is a structured assignment.
+        text = "**Blockers**: 3\n**Critical**: 1\n"
+        self.assertEqual(es.score_false_positive_rate(text), 2.0)
+
+    def test_excludes_zero_count_section_header(self) -> None:
+        # Canonical empty section on clean review — MUST NOT count.
+        text = "## Blockers (0)\n## Suggestions (1)\n"
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
+    def test_excludes_bare_section_header_without_count(self) -> None:
+        # Ambiguous empty heading — MUST NOT count.
+        text = "## Blockers\nNone.\n## Critical\nNone.\n"
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
+    def test_excludes_explicit_zero_or_none_labels(self) -> None:
+        text = "**Blockers**: 0\n**Blockers**: none\n**Critical**: 0\n"
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
+    def test_excludes_bold_standalone_severity_words(self) -> None:
+        # Bold severity word alone is not a severity assignment.
+        text = "Be aware: **Blocker** is the new term.\n**Critical** notes follow.\n"
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
     def test_ignores_non_critical(self) -> None:
         text = "**Severity**: Warning\n\n**Severity**: Info\n"
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
+    def test_ignores_generic_critical_adjective(self) -> None:
+        # "critical" used as ordinary adjective — must NOT match.
+        text = "This is critical for correctness. The fix is critical.\n"
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
+    def test_counts_prefix_positive_blocker_count(self) -> None:
+        # Reviewer mandatory Counts prefix with a positive Blocker count.
+        text = "**Counts:** 3 findings (1 Blocker, 2 Warnings, 0 Suggestions) — 1 note\n"
+        self.assertEqual(es.score_false_positive_rate(text), 1.0)
+
+    def test_counts_prefix_zero_blocker_excluded(self) -> None:
+        # Zero blockers inside the Counts prefix is the clean-diff case.
+        text = "**Counts:** 1 finding (0 Blockers, 1 Warning, 0 Suggestions) — 0 notes\n"
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
+    def test_counts_prefix_multi_blocker_singular_or_plural(self) -> None:
+        # Both `1 Blocker` (singular) and `5 Blockers` (plural) score.
+        text = (
+            "**Counts:** 1 finding (1 Blocker, 0 Warnings, 0 Suggestions) — 0 notes\n"
+            "**Counts:** 5 findings (5 Blockers, 0 Warnings, 0 Suggestions) — 0 notes\n"
+        )
+        self.assertEqual(es.score_false_positive_rate(text), 2.0)
+
+    def test_narrative_parenthetical_blockers_excluded(self) -> None:
+        # Parenthetical mention of "(2 Blockers" outside a **Counts:**
+        # prefix is narrative prose, not a structured finding-count
+        # signal — must NOT score.
+        text = (
+            "The diff introduces a handful of issues (2 Blockers showed "
+            "up in the previous review pass for comparison, but those "
+            "were unrelated to this change).\n"
+        )
         self.assertEqual(es.score_false_positive_rate(text), 0.0)
 
 

@@ -37,7 +37,7 @@ Do NOT paste large doc content into thinking.
    `plugins-reference.md` covers plugin-scope path variables and
    explicitly states they substitute in skill content, agent content,
    hook commands, monitor commands, MCP/LSP configs. Reading only one
-   page produces false-positive WARNINGs.
+   page produces false-positive WARNINGS.
 7. Marketplace `author` findings require reading the authoritative
    schema in `plugins-reference.md` § "Plugin manifest schema", NOT
    the marketplace quick-summary table. `plugin-marketplaces.md`

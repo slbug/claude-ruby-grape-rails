@@ -232,17 +232,48 @@ _RECOVERY_STATES = frozenset(
 _CANONICAL_VERDICTS = frozenset(
     {"PASS", "PASS WITH WARNINGS", "REQUIRES CHANGES", "BLOCKED"}
 )
+# Coverage findings cell grammar: count-aware. Each count's bucket
+# form MUST agree in number with its count — singular only when
+# count == 1, plural otherwise (including 0). Regex captures both
+# count + form pairs so `_validate_coverage_findings` can enforce
+# agreement; bare `Blockers?` would let `1 Blockers` slip through.
 _COVERAGE_FINDINGS_RE = re.compile(
-    r"^\d+\s+BLOCKER\s*/\s*\d+\s+WARNING\s*/\s*\d+\s+SUGGESTION$"
+    r"^(\d+)\s+(Blocker|Blockers)\s*/\s*(\d+)\s+(Warning|Warnings)\s*/\s*(\d+)\s+(Suggestion|Suggestions)$"
 )
 # Whitespace-tolerant zero-counts gate for `stub-no-output` rows.
 # Mirrors `_COVERAGE_FINDINGS_RE` shape but pins every count to 0,
-# so `0 BLOCKER  /  0 WARNING /  0 SUGGESTION` (extra inner spaces)
-# matches the same way the shape-only check does.
+# so `0 Blockers  /  0 Warnings /  0 Suggestions` (extra inner spaces)
+# matches the same way the shape-only check does. 0 takes plural form
+# (count-aware grammar: singular only when count == 1).
 _STUB_NO_OUTPUT_FINDINGS_RE = re.compile(
-    r"^0\s+BLOCKER\s*/\s*0\s+WARNING\s*/\s*0\s+SUGGESTION$"
+    r"^0\s+Blockers\s*/\s*0\s+Warnings\s*/\s*0\s+Suggestions$"
 )
-_STUB_NO_OUTPUT_FINDINGS = "0 BLOCKER / 0 WARNING / 0 SUGGESTION"
+_STUB_NO_OUTPUT_FINDINGS = "0 Blockers / 0 Warnings / 0 Suggestions"
+
+
+def _validate_coverage_findings(findings: str) -> tuple[bool, str | None]:
+    """Return (valid, reason). Enforces count-form agreement.
+
+    Singular form valid only when count == 1; plural form valid for
+    count != 1 (including 0). Rejects mismatches like `1 Blockers` or
+    `0 Blocker`.
+    """
+    m = _COVERAGE_FINDINGS_RE.match(findings)
+    if not m:
+        return False, "shape mismatch"
+    for count_str, form, singular in (
+        (m.group(1), m.group(2), "Blocker"),
+        (m.group(3), m.group(4), "Warning"),
+        (m.group(5), m.group(6), "Suggestion"),
+    ):
+        n = int(count_str)
+        expected = singular if n == 1 else singular + "s"
+        if form != expected:
+            return False, (
+                f"count {n} requires {expected!r}, got {form!r} "
+                "(singular only when count == 1; plural otherwise)"
+            )
+    return True, None
 
 
 def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
@@ -251,7 +282,8 @@ def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
         return False, "Missing ## Reviewer Coverage section"
     # Contract: `| <slug> | <recovery-state> | <findings-counts> |`
     # where recovery-state ∈ _RECOVERY_STATES and findings-counts matches
-    # `{n} BLOCKER / {n} WARNING / {n} SUGGESTION`. `stub-no-output`
+    # `{n} Blocker[s] / {n} Warning[s] / {n} Suggestion[s]` (count-aware
+    # grammar: singular when count == 1, plural otherwise). `stub-no-output`
     # rows MUST carry the all-zero findings cell — synthesis recovered
     # no usable output, so the reviewer cannot have contributed findings.
     rows = _table_data_rows(body)
@@ -269,8 +301,9 @@ def has_review_reviewer_coverage(content: str) -> tuple[bool, str]:
         if recovery not in _RECOVERY_STATES:
             bad.append(f"{slug}: invalid recovery state {recovery!r}")
             continue
-        if not _COVERAGE_FINDINGS_RE.match(findings):
-            bad.append(f"{slug}: findings cell {findings!r} not in `{{n}} BLOCKER / {{n}} WARNING / {{n}} SUGGESTION` form")
+        ok, reason = _validate_coverage_findings(findings)
+        if not ok:
+            bad.append(f"{slug}: findings cell {findings!r} invalid — {reason} (form: `{{n}} Blocker[s] / {{n}} Warning[s] / {{n}} Suggestion[s]`)")
             continue
         if recovery == "stub-no-output" and not _STUB_NO_OUTPUT_FINDINGS_RE.match(findings):
             bad.append(
@@ -721,9 +754,9 @@ def has_review_verdict_matches_summary(content: str) -> tuple[bool, str]:
 
 
 _AT_A_GLANCE_SUMMARY_LABELS = (
-    ("BLOCKER", "Blockers"),
-    ("WARNING", "Warnings"),
-    ("SUGGESTION", "Suggestions"),
+    ("Blocker", "Blockers"),
+    ("Warning", "Warnings"),
+    ("Suggestion", "Suggestions"),
 )
 
 
@@ -756,12 +789,12 @@ def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
     for idx, row in enumerate(rows, start=1):
         if len(row) != 7:
             continue
-        severity = row[2].upper()
+        severity = row[2].strip()
         new_state = row[6].strip().lower()
         if severity not in new_counts:
             bad_enum.append(
                 f"At-a-Glance row {idx}: `Severity` cell {row[2]!r} not in "
-                "{`BLOCKER`, `WARNING`, `SUGGESTION`} — malformed enum"
+                "{`Blocker`, `Warning`, `Suggestion`} — malformed enum"
             )
             continue
         if new_state not in _VALID_NEW_STATES:
@@ -798,12 +831,12 @@ def has_review_summary_excludes_preexisting(content: str) -> tuple[bool, str]:
     return (
         True,
         f"Summary counts match At-a-Glance NEW rows "
-        f"(B={new_counts['BLOCKER']} W={new_counts['WARNING']} S={new_counts['SUGGESTION']})",
+        f"(B={new_counts['Blocker']} W={new_counts['Warning']} S={new_counts['Suggestion']})",
     )
 
 
 _COVERAGE_FINDINGS_PARSE_RE = re.compile(
-    r"^(\d+)\s+BLOCKER\s*/\s*(\d+)\s+WARNING\s*/\s*(\d+)\s+SUGGESTION$"
+    r"^(\d+)\s+(?:Blocker|Blockers)\s*/\s*(\d+)\s+(?:Warning|Warnings)\s*/\s*(\d+)\s+(?:Suggestion|Suggestions)$"
 )
 
 
@@ -840,13 +873,13 @@ def has_review_coverage_excludes_preexisting(content: str) -> tuple[bool, str]:
     for idx, row in enumerate(glance_rows, start=1):
         if len(row) != 7:
             continue
-        severity = row[2].upper()
+        severity = row[2].strip()
         reviewer = row[4].strip()
         new_state = row[6].strip().lower()
-        if severity not in {"BLOCKER", "WARNING", "SUGGESTION"}:
+        if severity not in {"Blocker", "Warning", "Suggestion"}:
             bad_enum.append(
                 f"At-a-Glance row {idx}: `Severity` cell {row[2]!r} not in "
-                "{`BLOCKER`, `WARNING`, `SUGGESTION`} — malformed enum"
+                "{`Blocker`, `Warning`, `Suggestion`} — malformed enum"
             )
             continue
         if not reviewer:
@@ -860,7 +893,7 @@ def has_review_coverage_excludes_preexisting(content: str) -> tuple[bool, str]:
         total_per_reviewer[reviewer] = total_per_reviewer.get(reviewer, 0) + 1
         if new_state == "yes":
             bucket = new_per_reviewer.setdefault(
-                reviewer, {"BLOCKER": 0, "WARNING": 0, "SUGGESTION": 0}
+                reviewer, {"Blocker": 0, "Warning": 0, "Suggestion": 0}
             )
             bucket[severity] += 1
     if bad_enum:
@@ -891,14 +924,14 @@ def has_review_coverage_excludes_preexisting(content: str) -> tuple[bool, str]:
         if not m:
             continue
         coverage_counts = {
-            "BLOCKER": int(m.group(1)),
-            "WARNING": int(m.group(2)),
-            "SUGGESTION": int(m.group(3)),
+            "Blocker": int(m.group(1)),
+            "Warning": int(m.group(2)),
+            "Suggestion": int(m.group(3)),
         }
         new_counts = new_per_reviewer.get(
-            slug, {"BLOCKER": 0, "WARNING": 0, "SUGGESTION": 0}
+            slug, {"Blocker": 0, "Warning": 0, "Suggestion": 0}
         )
-        for severity in ("BLOCKER", "WARNING", "SUGGESTION"):
+        for severity in ("Blocker", "Warning", "Suggestion"):
             if coverage_counts[severity] != new_counts[severity]:
                 bad.append(
                     f"{slug}: Coverage {severity} count {coverage_counts[severity]} "

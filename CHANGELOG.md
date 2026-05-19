@@ -7,6 +7,81 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.13] - 2026-05-18
+
+Review-artifact vocabulary normalized to title case
+(`Blocker / Warning / Suggestion`) with count-aware singular/plural
+grammar. All 22 Iron Laws are Blockers. Law 18 canon rewritten to
+ban `rescue Exception`, `rescue ::Exception`, `rescue_from(Exception)`,
+and `rescue_from ::Exception` (bare `rescue` is not a Law 18
+violation). Old artifacts using prior casings must be re-emitted.
+
+### Changed
+
+- Severity vocabulary: title case across review, triage, brief, work,
+  full surfaces, 11 reviewer agents, `deep-bug-investigator`, and
+  `lab/eval/output_checks.py` parsers + fixtures + tests. Per-finding
+  `Severity:` and At-a-Glance column use singular. `**Counts:**` and
+  Coverage row use count-aware grammar (singular only when count
+  equals 1). Section headers, Summary table, triage multi-selects
+  use plural. Verdict 4-set stays UPPERCASE. Contributor-tool
+  internal vocabularies (`CRITICAL / IMPORTANT / SUGGESTION` in
+  copilot-instructions, `BLOCKER / WARNING / INFO / PASS` in
+  docs-check, `BREAKING / OPPORTUNITY / RELEVANT FIX / DEPRECATION /
+  INFO` in cc-changelog, `BLOCKER / WARNING` in plugin-review) keep
+  UPPERCASE — distinct from shipped review severity.
+- `bin/resolve-base-ref` invocation: 7 caller sites unified to read
+  3 `KEY=value` lines from stdout and substitute literal values into
+  subsequent commands. `eval "$(...)"` dropped from agent
+  instructions. Skill bodies use `BASE_REF_VALUE` / `MERGE_BASE_VALUE`
+  markers (not `$BASE_REF` shell vars, not `<BASE_REF>` angle
+  brackets). `verification-profiles.md` keeps `eval` (single
+  self-contained script).
+- All 22 Iron Laws promoted to Blocker. Fix Priority collapsed:
+  Laws 1-20 violation rules, Law 21 verification, Law 22 surgical
+  change. Blocker pattern table extended to manual-review rows for
+  Laws 5, 8, 9, 17.
+
+### Removed
+
+- Sample-output blocks from `iron-law-judge`,
+  `data-integrity-reviewer`, `migration-safety-reviewer` (3 of 11
+  reviewer agents). Counts contract + playbook Consolidated Review
+  Format are the sole sources.
+
+### Fixed
+
+- `/rb:init` external-tool detection: per-tool loop replaces
+  multi-arg `command -v`, which exits non-zero on any missing arg
+  and cancels parallel sibling Bash calls.
+- `/rb:review` fanout step 9 + Gotchas: inline Read-over-cat
+  instruction dropped (preference is injected at SessionStart /
+  SubagentStart).
+- Law 18 canon rewritten in `iron-laws.yml` (1.2.0 → 1.2.1).
+  Covers all four `Exception` forms in `begin/rescue` or Rails
+  `rescue_from`. Bare `rescue` is not a Law 18 violation. Silent
+  swallow without re-raise remains a separate bug. Regenerated
+  artifacts (`inject-rules.sh`, `canonical-registry.md`,
+  `tutorial-content.md`, judge marker block, iron-laws SKILL) plus
+  manual cross-doc alignment.
+- Detection-pattern regexes with alternation moved into per-law
+  fenced blocks in `violation-patterns.md` (markdown table cells
+  escape `|` as `\|`, which regex engines treat as literal pipe).
+  Judge keeps a law → search-path mapping table and points to the
+  reference as regex source of truth.
+- Law 18 regex widened to detect `Exception` anywhere in a rescued
+  class list (including multi-class `rescue X, Exception => e` and
+  Rails `rescue_from A, Exception, with: :foo`).
+- `iron-laws.yml` `severity:` schema comment clarified —
+  `critical | high | medium` are intra-Blocker priority hints, NOT
+  severity-bucket values.
+- `output_checks.py` count-form validator + 4 unittest cases:
+  `0 Blocker`, `1 Blockers`, mismatched pairs rejected; mixed valid
+  forms accepted.
+- `epistemic_suite.py` false-positive scorer extended to catch the
+  reviewer Counts prefix `(N Blocker, ...)` with positive N; 3 new
+  unittest cases.
+
 ## [1.16.12] - 2026-05-17
 
 ### Fixed
@@ -2872,7 +2947,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.12...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.13...HEAD
+[1.16.13]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.12...v1.16.13
 [1.16.12]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.11...v1.16.12
 [1.16.11]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.10...v1.16.11
 [1.16.10]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.9...v1.16.10

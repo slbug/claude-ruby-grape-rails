@@ -74,7 +74,7 @@ file-type-specific checklists without bloating the main routing surface.
 
 - [ ] `ruby -c` passes
 - [ ] formatter is clean (`standardrb` or `rubocop`)
-- [ ] no bare `rescue`
+- [ ] no `rescue Exception`, `rescue ::Exception`, `rescue_from(Exception)`, or `rescue_from ::Exception` (Iron Law 18). Explicit exception class on every rescue clause (style)
 - [ ] names and control flow stay readable
 - [ ] duplication is avoided
 
@@ -138,24 +138,14 @@ file-type-specific checklists without bloating the main routing surface.
 
 ## Diff Collection
 
-`/rb:review` skill body resolves the base ref and captures the file
-list + stat ONCE. Reviewers own the diff strategy from there.
-
-```bash
-eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"
-MERGE_BASE=$(git merge-base HEAD "$BASE_REF")
-CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR "$MERGE_BASE"...HEAD)
-DIFF_STAT=$(git diff --stat "$MERGE_BASE"...HEAD)
-```
-
-Pass `$CHANGED_FILES`, `$BASE_REF`, `$MERGE_BASE`, and `$DIFF_STAT` to
-every spawned reviewer Agent() call. Reviewers scope all
-reads/grep/analysis to `$CHANGED_FILES` and NEVER scan unchanged files.
+`resolve-base-ref` invocation + diff-stat capture procedure lives in
+`../SKILL.md` § "Collecting Changed Files". Skill body is canonical;
+do NOT duplicate here.
 
 ### Diff strategy (reviewer-owned)
 
-Triage with `$DIFF_STAT` first to identify high-noise paths
-(cassettes, fixtures, schema dumps, lockfiles, generated files)
+Triage with the captured DIFF_STAT value first to identify high-noise
+paths (cassettes, fixtures, schema dumps, lockfiles, generated files)
 before running any `git diff`.
 
 ## Worker Briefing Template
@@ -167,8 +157,8 @@ includes this prompt template:
 Task: review {file list} for {scope}.
 
 Scope: $CHANGED_FILES (from main session diff collection)
-Base ref: $BASE_REF
-Merge base: $MERGE_BASE
+Base ref: BASE_REF_VALUE
+Merge base: MERGE_BASE_VALUE
 Diff stat (preview):
 $DIFF_STAT
 
@@ -195,7 +185,7 @@ Required output:
 
 Findings format:
 - file:line — Title
-- Severity: Critical | Warning | Info
+- Severity: Blocker | Warning | Suggestion
 - Confidence: HIGH | MEDIUM | LOW
 - Description, current code, suggested code, why it matters
 
@@ -232,40 +222,48 @@ Scan each per-agent artifact for verdict prose. Map non-canonical
 forms to the canonical 4-set BEFORE writing the consolidated header:
 
 Use ONLY the worker artifact's verdict prose + the worker's own
-finding-counts (`Critical | Warning | Info` form, not yet mapped —
-mapping is STEP 3). Do NOT cross-reference bucket-form counts here;
-bucket-form is introduced in STEP 3.
+finding-counts (bucket form `Blocker | Warning | Suggestion` per §
+"Worker Briefing Template"). Diff-status filter (new vs pre-existing)
+applies in STEP 3.
 
 | Non-canonical form (preserve verbatim in metadata) | Canonical mapping rule |
 |---|---|
-| `CONDITIONAL PASS`, `PASS WITH CAVEATS`, `PASS-WITH-WARNS` | infer from worker `Critical / Warning / Info` counts: any `Critical` → `BLOCKED`; else any `Warning` → `PASS WITH WARNINGS`; else `PASS` |
-| `Approved`, `LGTM`, `looks good` | `PASS` if worker reports zero `Critical` and zero `Warning`; else map per worker counts |
-| `Needs fixes`, `fix before merge`, `not ready` | infer from worker counts: any `Critical` → `BLOCKED`; else any `Warning` → `PASS WITH WARNINGS`; else `PASS`. Do NOT auto-route to `REQUIRES CHANGES` — that verdict is reserved for missing test coverage on NEW public behavior (per § "Verdict Decision Rules"). Only emit `REQUIRES CHANGES` when the worker explicitly flagged a `New public behavior without tests` finding. |
-| `Critical`, `BLOCK`, `BLOCKER` (verdict, not severity) | `BLOCKED` |
+| `CONDITIONAL PASS`, `PASS WITH CAVEATS`, `PASS-WITH-WARNS` | infer from worker counts: any `Blocker` → `BLOCKED`; else any `Warning` → `PASS WITH WARNINGS`; else `PASS` |
+| `Approved`, `LGTM`, `looks good` | `PASS` if worker reports zero `Blocker` and zero `Warning`; else map per worker counts |
+| `Needs fixes`, `fix before merge`, `not ready` | infer from worker counts: any `Blocker` → `BLOCKED`; else any `Warning` → `PASS WITH WARNINGS`; else `PASS`. Do NOT auto-route to `REQUIRES CHANGES` — that verdict is reserved for missing test coverage on NEW public behavior (per § "Verdict Decision Rules"). Only emit `REQUIRES CHANGES` when the worker explicitly flagged a `New public behavior without tests` finding. |
+| `BLOCK`, `BLOCKER` (verdict, not severity tag) | `BLOCKED` |
 
 Preserve the agent's raw verdict text VERBATIM in the
 `Reviewer Verdicts` metadata table at top of the consolidated
 artifact. Normalize only the consolidated header.
 
-### STEP 3: Map worker severity to bucket form
-
-Reviewer Coverage row counts MUST use bucket form
-(`BLOCKER | WARNING | SUGGESTION`), NOT worker form
-(`Critical | Warning | Info`). Per § "Worker Severity Mapping":
-
-- worker `Critical` introduced by this diff → `BLOCKER`
-- worker `Critical` on unchanged code → tracked in `## Pre-existing Issues` only; NOT in Coverage row, NOT in Summary table
-- worker `Warning` → `WARNING`
-- worker `Info` → `SUGGESTION`
+### STEP 3: Filter diff-introduced vs pre-existing
 
 Coverage row counts + Summary table counts use NEW findings only
 (diff-introduced). Pre-existing findings appear in `## Pre-existing
 Issues` section and the At-a-Glance Finding Table with
 `New? = Pre-existing`. They never affect the consolidated verdict.
 
-Apply bucket form across Coverage row, Summary table, At-a-Glance
-Finding Table, and section headers. Per-agent artifacts keep their
-original wording.
+Per § "Worker Severity Mapping":
+
+- worker `Blocker` introduced by this diff → counted Blocker
+- worker `Blocker` on unchanged code → Pre-existing Blocker (reported only)
+- worker `Warning` introduced by this diff → counted Warning
+- worker `Suggestion` introduced by this diff → counted Suggestion
+
+Count-aware = singular when count == 1, plural otherwise (including 0).
+
+| Surface | Form | Example |
+|---|---|---|
+| Per-finding `Severity:` tag | singular | `Severity: Blocker` |
+| Counts mandatory prefix | count-aware | `**Counts:** 5 findings (1 Blocker, 3 Warnings, 1 Suggestion) — 2 notes` |
+| Reviewer Coverage row count | count-aware | `0 Blockers / 1 Warning / 0 Suggestions` |
+| At-a-Glance Severity column | singular | `\| 1 \| {title} \| Warning \| HIGH \| {agent} \| {file}:{line} \| Yes \|` |
+| Summary table category column | plural | `\| Blockers \| 0 \|` / `\| Warnings \| 1 \|` |
+| Section headers | plural | `## Blockers (3)` / `## Warnings (1)` / `## Suggestions (0)` |
+| Verdict 4-set | UPPERCASE | `PASS \| PASS WITH WARNINGS \| REQUIRES CHANGES \| BLOCKED` |
+
+Reject `1 Blockers` and `0 Blocker` — count-form must agree.
 
 ### STEP 4: Compute consolidated verdict deterministically
 
@@ -303,7 +301,7 @@ Format"). REQUIRES CHANGES chat script reads that section verbatim.
   file paths, concrete evidence.
 - Dedupe overlapping findings across agents; cite all sources.
 - Keep highest confidence among duplicates.
-- Sort findings: BLOCKER → WARNING → SUGGESTION;
+- Sort findings: Blockers → Warnings → Suggestions;
   HIGH → MEDIUM → LOW within bucket.
 - Preserve "Pre-existing Issues" section.
 
@@ -311,10 +309,13 @@ Format"). REQUIRES CHANGES chat script reads that section verbatim.
 
 Single helper call at fanout entry:
 
-```bash
+Substitute the `BASE_REF` value (from `resolve-base-ref` stdout) for
+`BASE_REF_VALUE` in the command:
+
+```
 MANIFEST=$(${CLAUDE_PLUGIN_ROOT}/bin/manifest-update prepare-run \
   --skill=rb:review --slug="$REVIEW_SLUG" \
-  --base-ref="$BASE_REF" \
+  --base-ref=BASE_REF_VALUE \
   --agents="$AGENTS_CSV")
 ```
 
@@ -333,27 +334,29 @@ Schema + per-skill staleness rules:
 
 | Severity | Description | Action |
 |----------|-------------|--------|
-| **BLOCKER** | Must fix before merge — Iron Law violations, security vulnerabilities, data-loss risks, production-outage risks, critical correctness | Surface in chat with one-line impact |
-| **WARNING** | Should fix — performance issues, maintainability problems, potential bugs | Note in review with recommendation |
+| **Blocker** | Must fix before merge — Iron Law violations, security vulnerabilities, data-loss risks, production-outage risks, critical correctness | Surface in chat with one-line impact |
+| **Warning** | Should fix — performance issues, maintainability problems, potential bugs | Note in review with recommendation |
 | **REQUIRES CHANGES** (verdict only) | Code works but new public behavior lacks test coverage | List affected methods/endpoints/jobs |
-| **SUGGESTION** | Style, refactor, or doc improvements | Brief note, no action required |
+| **Suggestion** | Style, refactor, or doc improvements | Brief note, no action required |
 
 ## Worker Severity Mapping
 
-Reviewer agents emit `Critical | Warning | Info`. Synthesis maps each
-finding into a consolidated bucket using this rule table:
+Reviewer agents emit `Blocker | Warning | Suggestion` (title case
+singular). Synthesis applies diff-status filter only — no vocabulary
+translation:
 
-| Worker output | Diff status | Consolidated bucket |
+| Worker output | Diff status | Counted into Summary? |
 |---|---|---|
-| Critical | introduced by this diff | BLOCKER |
-| Critical | unchanged code | Pre-existing BLOCKER (report; do not affect verdict) |
-| Warning | any | WARNING |
-| Info | any | SUGGESTION |
+| Blocker | introduced by this diff | yes — Blocker |
+| Blocker | unchanged code | no — Pre-existing Blocker (reported only) |
+| Warning | introduced by this diff | yes — Warning |
+| Warning | unchanged code | no — Pre-existing Warning (reported only) |
+| Suggestion | introduced by this diff | yes — Suggestion |
+| Suggestion | unchanged code | no — Pre-existing Suggestion (reported only) |
 | New public behavior without tests | any | REQUIRES CHANGES verdict trigger (not a per-finding bucket) |
 
-Worker prompts keep `Critical | Warning | Info` for backward
-compatibility. Consolidated artifacts use `BLOCKER | WARNING |
-SUGGESTION` and the verdict-only `REQUIRES CHANGES`.
+Casing canon — title case throughout severity. See STEP 3 casing rule
+above for per-surface form. Verdict 4-set stays UPPERCASE.
 
 ## Review Scope
 
@@ -419,15 +422,27 @@ Write the synthesized review to the path read via
 
 ## Reviewer Coverage
 
-| Reviewer | Recovery State | Findings |
-|---|---|---|
-| {agent-slug} | artifact \| stub-replaced \| recovered-from-return \| stub-no-output | {n} BLOCKER / {n} WARNING / {n} SUGGESTION |
+One row per reviewer from the manifest's `agents` map. Columns:
+Reviewer (agent slug), Recovery State (one of `artifact |
+stub-replaced | recovered-from-return | stub-no-output`), and
+Findings (count-aware: singular only when count equals 1, plural
+otherwise including 0).
 
-Findings column uses bucket form (`BLOCKER / WARNING / SUGGESTION`)
-and counts NEW findings only (diff-introduced). Pre-existing
-findings attributed to the reviewer appear in `## Pre-existing
-Issues` and the at-a-glance table with `New? = Pre-existing`.
-Zero-pad when a bucket is empty. State definitions:
+Example rows (shape reference, not copy targets — slugs and counts
+must match the actual manifest and reviewer output):
+
+```
+| ruby-reviewer | artifact | 3 Blockers / 0 Warnings / 0 Suggestions |
+| security-analyzer | stub-replaced | 0 Blockers / 1 Warning / 0 Suggestions |
+| testing-reviewer | stub-no-output | 0 Blockers / 0 Warnings / 0 Suggestions |
+```
+
+Reject `1 Blockers` and `0 Blocker` — count-form must agree.
+
+Counts NEW findings only
+(diff-introduced). Pre-existing findings attributed to the
+reviewer appear in `## Pre-existing Issues` and the at-a-glance
+table with `New? = Pre-existing`. State definitions:
 
 - `artifact` — on-disk file ≥ 1000 bytes; trust as-is
 - `stub-replaced` — on-disk stub overwritten with larger findings from agent return text
@@ -520,7 +535,7 @@ introduced by this diff with no test coverage.
 
 | # | Finding | Severity | Confidence | Reviewer | File | New? |
 |---|---------|----------|------------|----------|------|------|
-| 1 | {title} | BLOCKER \| WARNING \| SUGGESTION | HIGH \| MEDIUM \| LOW | {agent} | {path}:{line} | Yes \| Pre-existing |
+| 1 | {title} | Blocker \| Warning \| Suggestion | HIGH \| MEDIUM \| LOW | {agent} | {path}:{line} | Yes \| Pre-existing |
 ````
 
 Every consolidated review MUST include the at-a-glance table, even for one
@@ -547,7 +562,7 @@ How would you like to proceed?
 - /rb:compound — Capture solution (default).
 - /rb:learn — Capture lessons.
 - /rb:triage .claude/reviews/{review-slug}-{datesuffix}.md
-    — Opt in to suggestions (NEW SUGGESTIONs only; no warnings or blockers to handle).
+    — Opt in to suggestions (NEW Suggestions only; no warnings or blockers to handle).
 - I'll handle it myself
 ```
 
@@ -641,8 +656,10 @@ parent SKILL.md.
 
 ### Compute diff LOC
 
+Substitute the captured `MERGE_BASE` value for `MERGE_BASE_VALUE`:
+
 ```
-DIFF_LOC=$(git diff --shortstat "$MERGE_BASE"...HEAD | awk '{n=$4+$6} END{print n+0}')
+DIFF_LOC=$(git diff --shortstat MERGE_BASE_VALUE...HEAD | awk '{n=$4+$6} END{print n+0}')
 ```
 
 Columns 4 + 6 are insertions + deletions. `END{print n+0}` emits `0`
@@ -651,7 +668,7 @@ Collection step).
 
 On `DIFF_LOC=0` (legitimate via pure rename / mode change / binary diff):
 
-- Run `git diff --numstat "$MERGE_BASE"...HEAD`
+- Run `git diff --numstat MERGE_BASE_VALUE...HEAD`
 - File count > 0 → tier by file count (Simple minimum)
 - File count = 0 AND zero `--numstat` entries → reject; require `all`
   argument (per `argument-hint:`)

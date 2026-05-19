@@ -37,12 +37,12 @@ Generate documentation for newly implemented features.
 
 ### Step 0: Pre-check (avoid no-op runs)
 
-Resolve the base ref: run `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"`
-to get `$BASE_REF` (handles custom remotes, non-standard default branches,
-fetches before resolving). Then run `git merge-base HEAD "$BASE_REF"` and
-capture the result.
-Run `git diff --name-only --diff-filter=A <merge-base> HEAD -- '*.rb'` to
-list new Ruby files added on the current branch.
+Run `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
+on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Substitute the
+values into subsequent Bash commands: run
+`git merge-base HEAD BASE_REF_VALUE` and capture the result.
+Run `git diff --name-only --diff-filter=A MERGE_BASE_VALUE HEAD -- '*.rb'`
+to list new Ruby files added on the current branch.
 
 If NO new `.rb` files were added (only modifications), skip the full
 audit and report: "No new modules — documentation coverage unchanged."

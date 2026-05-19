@@ -72,6 +72,10 @@ Do NOT flag issues already caught by CI:
 
 ## Review Priorities
 
+Treat review-priority labels below as a separate vocabulary from
+review-artifact finding severity (`Blocker / Warning / Suggestion`).
+Do NOT conflate the two:
+
 | Priority | Scope |
 |---|---|
 | CRITICAL | security vulnerabilities, data loss risks, breaking plugin schema |
@@ -144,7 +148,7 @@ the PR.
 - **Hook renamed / added / removed** under
   `plugins/ruby-grape-rails/hooks/scripts/` → also check
   `hooks/hooks.json` references, sourcing in other `*.sh` files
-  (`source ".../<lib>.sh"`), matching tests under
+  (`source ".../LIB_NAME.sh"`), matching tests under
   `lab/eval/tests/test_runtime_scripts.py`.
 - **`bin/<exec>` renamed / added / removed** → also check
   `plugins/ruby-grape-rails/settings.json` (statusline command path),

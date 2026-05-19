@@ -361,7 +361,9 @@ NOT flag the fallback chain as over-engineered.
 - Consolidated review missing `## Reviewer Coverage` or
   `## Reviewer Verdicts`. Coverage MUST be 3-col
   (`Reviewer | Recovery State | Findings`); findings cell shape
-  `{n} BLOCKER / {n} WARNING / {n} SUGGESTION`. Verdicts MUST be
+  `{n} Blocker[s] / {n} Warning[s] / {n} Suggestion[s]` (count-aware:
+  singular when count == 1, plural otherwise — e.g.
+  `0 Blockers / 1 Warning / 0 Suggestions`). Verdicts MUST be
   3-col (`Reviewer | Raw Verdict | Canonical`); canonical ∈
   `{PASS, PASS WITH WARNINGS, REQUIRES CHANGES, BLOCKED}`.
   `stub-no-output` rows (per Coverage): both Raw Verdict and

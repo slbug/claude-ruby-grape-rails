@@ -146,19 +146,33 @@ HEDGE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 SEVERITY_CRITICAL_PATTERN = re.compile(
-    # Structured severity labels only — avoid matching generic uses like
-    # "this is critical for correctness". Matches:
-    #   - **Severity**: Critical    (markdown bold label)
-    #   - Severity: Critical         (plain label)
-    #   - severity=critical          (kv form)
-    #   - ### 🔴 CRITICAL            (markdown heading w/ or w/o emoji)
-    #   - ## Critical Issue          (markdown heading starting with Critical)
-    #   - **CRITICAL**               (bold standalone severity word)
+    # Structured top-severity FINDING signals only. Counts true false
+    # positives on clean diffs (legacy `Critical` or current `Blocker` /
+    # `Blockers` vocab post severity-vocab migration). Each branch must
+    # represent an actual severity assignment, not an empty section
+    # header or a zero/none label. Matches:
+    #   - **Severity**: Critical / Blocker        (bold per-finding label)
+    #   - Severity: Critical / Blocker             (plain per-finding label)
+    #   - severity=critical / severity=blocker     (kv form)
+    #   - ## Blockers (3) / ## Critical Bugs (1)   (heading + positive count;
+    #     up to 40 chars of prose allowed between severity term and `(N)`)
+    #   - **Blockers**: 3                          (bold summary + positive int)
+    #   - **Counts:** N findings (1 Blocker, ...)  (mandatory reviewer
+    #     Counts prefix with a positive Blocker count)
+    # Excludes (NOT a false-positive signal):
+    #   - `## Blockers (0)` / `## Blockers (none)` — canonical empty section
+    #   - `## Blockers` alone — ambiguous empty heading
+    #   - `**Blockers**: 0` / `**Blockers**: none` — explicit-zero label
+    #   - bold standalone `**Blocker**` / `**Critical**` (no severity tag)
+    #   - `(0 Blockers, ...)` inside Counts prefix
+    #   - parenthetical `(2 Blockers ...)` in narrative prose unrelated
+    #     to a `**Counts:**` line
     r"(?:"
-    r"\bseverity[\s:=]*critical"  # label: severity: critical / severity=critical
-    r"|\*\*\s*severity\s*\*\*\s*[:=]\s*critical"  # bold-label: **Severity**: critical
-    "|^#+\\s*\\*?\\*?\\s*(?:\U0001f534\\s*)?critical\\b"  # heading: ## Critical / ### 🔴 critical
-    r"|\*\*\s*critical\s*\*\*"  # bold standalone: **Critical**
+    r"\bseverity[\s:=]*(?:critical|blockers?)"
+    r"|\*\*\s*severity\s*\*\*\s*[:=]\s*(?:critical|blockers?)"
+    "|^#+\\s*\\*?\\*?\\s*(?:\U0001f534\\s*)?(?:critical|blockers?)\\b[^\\n(]{0,40}\\(\\s*[1-9]\\d*\\s*\\)"
+    r"|\*\*\s*(?:critical|blockers?)\s*\*\*\s*[:=]\s*[1-9]\d*\b"
+    r"|\*\*Counts:\*\*[^\n]*?\(\s*[1-9]\d*\s+Blockers?\b"
     r")",
     re.IGNORECASE | re.MULTILINE,
 )
@@ -477,9 +491,9 @@ def score_finding_recall(response: str, seeded_issues: list[str]) -> float:
             r"n\+1|n-plus-one|n plus one",
             r"preload|includes|eager",
         ],
-        "bare rescue Exception in PaymentJob": [
-            r"rescue\s+exception",
-            r"swallow|bare\s+rescue",
+        "rescue Exception in PaymentJob": [
+            r"rescue\s+:{0,2}[Ee]xception",
+            r"swallow.*signal|catches.*system|hung.*process|swallows\s+SIG",
         ],
     }
     detected = 0

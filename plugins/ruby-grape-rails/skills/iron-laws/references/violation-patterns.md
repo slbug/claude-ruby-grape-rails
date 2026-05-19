@@ -2,7 +2,12 @@
 
 Detailed patterns for detecting Iron Law violations.
 
-## Critical Violations (Must Fix)
+## Blocker Violations (Must Fix)
+
+All Iron Law violations are Blockers per
+`plugins/ruby-grape-rails/skills/triage/references/triage-patterns.md`
+§ "Always Fix". Laws 3, 5, 8, 9, 13, 17, 20 require manual review
+(context or absence check). Laws 21 + 22 are in `fix-priority.md`.
 
 ### Law 1: Float for Money
 
@@ -145,8 +150,6 @@ end
 
 **Fix**: Add authorization in every action or use `before_action` with per-action verification.
 
-## Warning Violations (Should Fix)
-
 ### Law 3: N+1 Queries
 
 **Pattern**: Loop accessing associations without eager loading.
@@ -163,18 +166,30 @@ end
 @users.each { |u| puts u.orders.count }
 ```
 
-### Law 18: Bare Rescue
+### Law 18: No Rescue Exception
 
-**Pattern**: `rescue` without specifying exception class.
+**Pattern**: `Exception` (or `::Exception`) appearing as a rescued
+class in any `begin/rescue` clause or Rails `rescue_from`, including
+multi-class lists. All forms catch `SignalException` / `SystemExit`,
+hanging processes on interrupt and hiding crashes. Bare `rescue`
+defaults to `StandardError` and is not a Law 18 violation. Silent
+swallow without re-raise is a separate bug, orthogonal to Law 18.
 
 ```ruby
-rescue  # Catches Exception!
+rescue Exception => e             # catches SIGINT, SystemExit — DANGEROUS
+rescue ::Exception => e           # same — DANGEROUS
+rescue IOError, Exception => e    # multi-class list — DANGEROUS
+rescue_from Exception              # Rails controller form — DANGEROUS
+rescue_from ActiveRecord::RecordNotFound, Exception, with: :foo  # DANGEROUS
 ```
 
 **Fix**:
 
 ```ruby
-rescue StandardError => e
+rescue => e                # defaults to StandardError — not a Law 18 violation
+rescue SomeSpecificError => e
+rescue_from SomeSpecificError, with: :foo
+# Either form handles or re-raises. Silent swallow is a separate bug.
 ```
 
 ### Law 19: DB Queries in Turbo Streams
@@ -191,22 +206,91 @@ rescue StandardError => e
 
 ## Detection Patterns
 
-| Law(s) | Pattern | Search path |
-|---|---|---|
-| 1 | `t\.float.*(price\|amount\|cost\|balance)` | `db/migrate/` |
-| 2, 15 | `where.*#{` | `app/` |
-| 2, 15 | `order.*#{` | `app/` |
-| 2, 15 | `find_by_sql` | `app/` |
-| 14 | `\.html_safe` | `app/` |
-| 14 | `raw(` | `app/` |
-| 6 | `update_columns\|update_column\|save.*validate.*false` | `app/` |
-| 7 | `default_scope` | `app/models/` |
-| 10 | `perform_later.*current_user\|perform_async.*current_user` | `app/` |
-| 4, 11 | `after_save.*:\|after_save do` (excluding `after_commit`) | `app/models/` |
-| 12 | `eval(` (excluding lines containing `# eval`) | `app/` |
-| 16 | `def method_missing` files lacking `respond_to_missing` | `app/` |
-| 18 | bare `rescue` (matching `rescue$` or `rescue =>`, excluding `StandardError`) | `app/` |
-| 19 | `\.where\|\.find\|\.find_by` | `app/views/*.turbo_stream.*` |
+Search paths in `app/` unless noted. Run each regex with `rg`
+(default) or Python `re`. POSIX `grep -E` does not support `\b`
+word boundaries used in Law 18.
+
+### Law 1 (path: `db/migrate/`)
+
+```regex
+t\.float.*(price|amount|cost|balance)
+```
+
+### Laws 2, 15
+
+```regex
+where.*#\{
+```
+
+```regex
+order.*#\{
+```
+
+```regex
+find_by_sql
+```
+
+### Law 6
+
+```regex
+update_columns|update_column|save.*validate.*false
+```
+
+### Law 7 (path: `app/models/`)
+
+```regex
+default_scope
+```
+
+### Law 10
+
+```regex
+perform_later.*current_user|perform_async.*current_user
+```
+
+### Laws 4, 11 (path: `app/models/`, excluding `after_commit`)
+
+```regex
+after_save.*:|after_save do
+```
+
+### Law 12 (excluding lines containing `# eval`)
+
+```regex
+eval\(
+```
+
+### Law 14
+
+```regex
+\.html_safe
+```
+
+```regex
+raw\(
+```
+
+### Law 16
+
+`def method_missing` files lacking `respond_to_missing`. Manual review.
+
+### Law 18
+
+Matches `Exception` as a rescued class anywhere in the clause —
+single class, multi-class list, or Rails `rescue_from(Exception)`.
+Bare `rescue` defaults to `StandardError` and does NOT match.
+`MyException` / `Exception::Foo` / `MyApp::Exception` may surface as
+false positives — confirm by reading the hit.
+
+```regex
+\b(?:rescue|rescue_from)\b[^#\n]*[\s,(]:{0,2}Exception\b
+```
+
+### Law 19 (path: `app/views/*.turbo_stream.*`)
+
+```regex
+\.where|\.find|\.find_by
+```
 
 ## Confidence Levels
 

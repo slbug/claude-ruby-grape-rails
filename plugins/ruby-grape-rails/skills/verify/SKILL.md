@@ -38,7 +38,7 @@ When cached runtime state is available:
 - `STANDARDRB_AVAILABLE=true` → prefer `bundle exec standardrb`
 - else `RUBOCOP_AVAILABLE=true` → prefer `bundle exec rubocop`
 - `BRAKEMAN_AVAILABLE=true` → run `bundle exec brakeman`
-- `PRONTO_AVAILABLE=true` → allow optional final `bundle exec pronto run -c <base>`
+- `PRONTO_AVAILABLE=true` → allow optional final `bundle exec pronto run -c MERGE_BASE_VALUE`
 - `VERIFY_COMPOSITE_AVAILABLE=true` → treat that as a hint that a repo-native
   composite verifier may exist, then re-detect it from the working tree before
   running it
@@ -221,13 +221,13 @@ Run `bundle exec rbs validate` to validate type signatures.
 
 Run this only after direct lint/security checks pass:
 
-Resolve the base ref: run `eval "$(${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref)"`
-to get `$BASE_REF` (handles custom remotes, non-standard default branches,
-fetches before resolving). Then run
-`bundle exec pronto run -c "$(git merge-base HEAD "$BASE_REF")"`.
+Run `${CLAUDE_PLUGIN_ROOT}/bin/resolve-base-ref` → 3 `KEY=value` lines
+on stdout (`BASE_REF`, `REMOTE`, `DEFAULT_BRANCH`). Substitute the
+values into subsequent Bash commands:
+`bundle exec pronto run -c "$(git merge-base HEAD BASE_REF_VALUE)"`.
 
-Use the first base ref that exists. Pronto is a last-step changed-files pass,
-not a replacement for StandardRB/RuboCop or Brakeman.
+Pronto is a last-step changed-files pass, not a replacement for
+StandardRB/RuboCop or Brakeman.
 
 ## Verification Profiles
 
@@ -349,7 +349,7 @@ See: [references/ci-cd-troubleshooting.md](references/ci-cd-troubleshooting.md) 
 | `bundle exec standardrb --fix` | Auto-fix style when StandardRB is configured |
 | `bundle exec rubocop` | Check style when RuboCop is configured |
 | `bundle exec brakeman` | Security scan when Brakeman is configured |
-| `bundle exec pronto run -c <base>` | Diff-scoped final pass |
+| `bundle exec pronto run -c MERGE_BASE_VALUE` | Diff-scoped final pass |
 | `bundle exec rspec` | Run tests |
 | `bundle exec rails test` | Run Minitest |
 | `bundle exec rails db:migrate:status` | Check migrations |

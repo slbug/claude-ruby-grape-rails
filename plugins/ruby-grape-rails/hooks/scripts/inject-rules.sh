@@ -10,7 +10,7 @@ set -o pipefail
 # leaves the receiver without injected context — fail-open by
 # design, no guardrail semantics.
 # GENERATED FROM iron-laws.yml + preferences.yml — DO NOT EDIT
-# Source versions: iron-laws=1.2.0 preferences=1.3.0
+# Source versions: iron-laws=1.2.1 preferences=1.3.0
 
 # End-user opt-out: skip injection entirely. Useful when the plugin
 # is installed at user scope but the active project is not Ruby/Rails/
@@ -69,7 +69,7 @@ Iron Law 14: NEVER use html_safe or raw with untrusted content — XSS vulnerabi
 Iron Law 15: NO SQL string concatenation — always use parameterized queries
 Iron Law 16: NO method_missing without respond_to_missing? — breaks introspection
 Iron Law 17: SUPERVISE ALL BACKGROUND PROCESSES — use proper process managers
-Iron Law 18: DON'T RESCUE Exception — only rescue StandardError or specific classes
+Iron Law 18: DON'T rescue `Exception` (or `::Exception`) in either `begin/rescue` or `rescue_from` — bare `rescue` defaults to StandardError, not a Law 18 violation
   `${CLAUDE_PLUGIN_ROOT}/skills/ruby-idioms/references/error-handling.md`
 Iron Law 19: NEVER query DB in Turbo Stream responses — pre-compute everything
   `${CLAUDE_PLUGIN_ROOT}/skills/hotwire-patterns/references/channels-presence.md`

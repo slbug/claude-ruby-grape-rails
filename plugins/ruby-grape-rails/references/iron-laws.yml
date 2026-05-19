@@ -8,7 +8,12 @@
 #   title: short human-readable name
 #   rule: the actual rule text
 #   rationale: why this matters
-#   severity: critical, high, medium
+#   severity: critical, high, medium — intra-Blocker priority hint only.
+#     Every Iron Law violation is a Blocker (review severity bucket)
+#     per `skills/triage/references/triage-patterns.md` § "Always Fix".
+#     This field is internal fix-order priority for human
+#     prioritization within the Blocker bucket; it does NOT map to the
+#     review severity vocabulary (Blocker | Warning | Suggestion).
 #   applies_to: file patterns where relevant
 #   summary_text: short form for summaries/cheat sheets
 #   init_text: form for CLAUDE.md injection template
@@ -16,8 +21,8 @@
 #   detector_id: which programmatic detector checks this (null if behavioral only)
 #   reference_files: markdown files with detailed examples
 
-version: "1.2.0"
-last_updated: "2026-05-04"
+version: "1.2.1"
+last_updated: "2026-05-18"
 total_laws: 22
 
 categories:
@@ -276,14 +281,14 @@ laws:
 
   - id: 18
     category: ruby
-    title: "Rescue StandardError"
-    rule: "DON'T RESCUE Exception — only rescue StandardError or specific classes"
-    rationale: "Rescuing Exception catches system signals (SIGTERM, etc.) and SyntaxError"
+    title: "No Rescue Exception"
+    rule: "DON'T rescue `Exception` (in `begin/rescue` or Rails `rescue_from`) — catches `SystemExit`/`SignalException`. Bare `rescue` defaults to `StandardError`, not a Law 18 violation."
+    rationale: "Rescuing `Exception` (any form) swallows signals/exits. Bare `rescue` resolves to StandardError subtree. Silent swallow without re-raise is a separate bug, not Law 18."
     severity: high
     applies_to: ["*.rb"]
-    summary_text: "Only rescue StandardError, never Exception"
-    init_text: "DON'T RESCUE Exception — only rescue StandardError"
-    subagent_text: "Iron Law 18: DON'T RESCUE Exception — only rescue StandardError or specific classes"
+    summary_text: "Never rescue `Exception` (or `::Exception`) in `begin/rescue` or Rails `rescue_from` — bare `rescue` is not a Law 18 violation"
+    init_text: "DON'T rescue `Exception` (or `::Exception`) in either `begin/rescue` or `rescue_from` — bare `rescue` defaults to StandardError, not a Law 18 violation"
+    subagent_text: "Iron Law 18: DON'T rescue `Exception` (or `::Exception`) in either `begin/rescue` or `rescue_from` — bare `rescue` defaults to StandardError, not a Law 18 violation"
     detector_id: null
     reference_files: ["skills/ruby-idioms/references/error-handling.md"]
 

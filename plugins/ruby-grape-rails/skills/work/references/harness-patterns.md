@@ -27,7 +27,7 @@ Attempt → Verify → FAIL
 
 - **Attempt 1**: Normal retry with error context
 - **Attempt 2**: Pause. Compare errors. Same root cause = wrong mental model
-- **Attempt 3**: Full critic analysis before BLOCKER decision
+- **Attempt 3**: Full critic analysis before Blocker decision
 
 ### Critic Analysis Template
 
@@ -87,7 +87,7 @@ without addressing the root cause:
 Attempt 1: bundle exec rspec → FAIL
 Attempt 2: tweak code → bundle exec rspec → FAIL (same error)
 Attempt 3: tweak more → bundle exec rspec → FAIL (same error)
-→ BLOCKER (3 attempts wasted)
+→ Blocker (3 attempts wasted)
 ```
 
 Use the critic-refiner cycle instead — structured analysis between

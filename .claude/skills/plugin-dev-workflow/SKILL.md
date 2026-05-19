@@ -48,9 +48,9 @@ Run checks matching the files touched:
 | Files touched | Run |
 |---|---|
 | Markdown docs / skills / agents | `npx markdownlint <touched-files>` |
-| Shell hooks | `bash -n plugins/ruby-grape-rails/hooks/scripts/<file>.sh`, `shellcheck -x plugins/ruby-grape-rails/hooks/scripts/<file>.sh` |
-| `bin/` executables | `bash -n plugins/ruby-grape-rails/bin/<name>`, `shellcheck plugins/ruby-grape-rails/bin/<name>`, mock-test via crafted stdin when the executable reads hook-style JSON |
-| Ruby scripts | `ruby -c <file>` |
+| Shell hooks | `bash -n plugins/ruby-grape-rails/hooks/scripts/FILE_NAME.sh`, `shellcheck -x plugins/ruby-grape-rails/hooks/scripts/FILE_NAME.sh` |
+| `bin/` executables | `bash -n plugins/ruby-grape-rails/bin/BIN_NAME`, `shellcheck plugins/ruby-grape-rails/bin/BIN_NAME`, mock-test via crafted stdin when the executable reads hook-style JSON |
+| Ruby scripts | `ruby -c FILE_PATH` |
 | Shipped plugin shape | `claude plugin validate plugins/ruby-grape-rails` |
 | Contributor eval tooling | `make eval`, `make eval-all`, `make eval-ci-deterministic`, `make eval-output`, `make security-injection`, `make eval-tests`, `make eval-overlap`, `make eval-hard-corpus` |
 

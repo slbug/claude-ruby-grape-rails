@@ -89,7 +89,7 @@ Use `plugins/ruby-grape-rails/skills/compound/references/schema.md` +
 
 ## Iron Laws referenced
 
-- Iron Law 18 — DON'T RESCUE Exception
+- Iron Law 18 — DON'T `rescue Exception` (or `::Exception`) in `begin/rescue` or Rails `rescue_from`. Bare `rescue` defaults to StandardError, not a Law 18 violation
 - Iron Law 21 — VERIFY BEFORE CLAIMING DONE
 - Iron Law 22 — SURGICAL CHANGES ONLY
 

@@ -40,16 +40,13 @@ disallowed — you cannot modify source code.
 
 ## Counts (mandatory prefix)
 
-Findings file MUST start with:
+Findings file MUST start with a Counts line (first content after frontmatter). Examples:
 
-`**Counts:** N findings (X blocker, Y warning, Z suggestion); M notes`
+- `**Counts:** 3 findings (1 Blocker, 2 Warnings, 0 Suggestions) — 1 note`
+- `**Counts:** 1 finding (0 Blockers, 1 Warning, 0 Suggestions) — 0 notes`
+- `**Counts:** 0 findings — All clean.`
 
-Empty state:
-
-`**Counts:** 0 findings — All clean.`
-
-Counts line is first content after frontmatter and any header metadata.
-Consolidator parses for severity bucket totals.
+Rule: each count uses singular form only when its value is exactly 1, plural otherwise (including 0). Consolidator parses for severity bucket totals.
 
 ## Review Checklist
 
@@ -167,32 +164,10 @@ end
 Write findings to `.claude/reviews/migration-safety-reviewer/{review-slug}-{datesuffix}.md`.
 Always write an artifact, even for a clean pass. Never write review artifacts under `.claude/plans/...`.
 
-```markdown
-# Schema Drift Review
-
-## Files Reviewed
-- db/migrate/xxx_add_column.rb
-
-## Findings
-
-### [SEVERITY] Issue Title
-**File**: `db/migrate/xxx_add_column.rb:12`
-**Problem**: Description
-**Recommendation**: Fix
-**Risk**: What could go wrong
-
-## Summary
-| Category | Count |
-|----------|-------|
-| Blocking | 0 |
-| Warning | 2 |
-| Info | 1 |
-```
-
 ## Report Findings
 
 Provide severity classification:
 
-- **BLOCKING**: Migration will fail in production or cause data loss
-- **WARNING**: Performance risk or maintenance burden
-- **INFO**: Best practice suggestion
+- **Blocker**: Migration will fail in production or cause data loss
+- **Warning**: Performance risk or maintenance burden
+- **Suggestion**: Best practice suggestion
