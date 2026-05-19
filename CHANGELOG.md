@@ -119,12 +119,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `skills/ruby-idioms/references/anti-patterns.md`.
 - Detection-pattern regexes containing alternation are moved out of
   markdown table cells into per-law fenced code blocks in
-  `agents/iron-law-judge.md` and
   `skills/iron-laws/references/violation-patterns.md`. Markdown
   table cells require pipe characters to be escaped as `\|`, which
   regex engines (`rg`, Python `re`, `grep -E`) treat as a literal
-  pipe rather than alternation. Affected Laws: 1, 4, 6, 10-11, 14,
-  18, and 19.
+  pipe rather than alternation. `agents/iron-law-judge.md` keeps its
+  Detection Patterns section as a law → search-path mapping table and
+  points to the reference as the regex source of truth. Affected
+  Laws: 1, 4, 6, 10-11, 14, 18, and 19.
 - `skills/iron-laws/references/fix-priority.md`,
   `skills/iron-laws/SKILL.md` cross-ref label, and the
   `agents/iron-law-judge.md` Fix Priority section are rewritten so

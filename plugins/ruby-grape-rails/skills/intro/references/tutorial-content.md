@@ -293,8 +293,8 @@ The `iron-law-judge` agent does **pattern-based violation
 detection** — it scans your changed files for known anti-patterns.
 Runs only when you invoke `/rb:review`.
 
-What it catches with automated detection (regex patterns from
-`agents/iron-law-judge.md`):
+What it catches with automated detection (regex patterns canonical in
+`plugins/ruby-grape-rails/skills/iron-laws/references/violation-patterns.md`):
 
 - `t.float :price` / `t.float :amount` in migrations (Law 1)
 - SQL string interpolation: `where("id = #{id}")` (Laws 2/15)
@@ -305,7 +305,7 @@ What it catches with automated detection (regex patterns from
 - `after_save :enqueue_*` (should be `after_commit`) (Laws 4/11)
 - `eval(...)` (Law 12)
 - `def method_missing` without `respond_to_missing?` (Law 16)
-- `rescue Exception` / `rescue ::Exception` / `rescue_from(Exception)` (Law 18 — bare `rescue` defaults to `StandardError`, not a Law 18 violation)
+- `rescue Exception`, `rescue ::Exception`, `rescue_from(Exception)`, `rescue_from ::Exception` (Law 18 — bare `rescue` defaults to `StandardError`, not a Law 18 violation)
 
 ### Layer 6: Planning Sets Structure Early
 

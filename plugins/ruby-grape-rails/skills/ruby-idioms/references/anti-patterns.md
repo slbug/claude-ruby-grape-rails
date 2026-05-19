@@ -141,8 +141,9 @@ begin
   risky_operation
 rescue => e  # Bare rescue catches the StandardError subtree.
               # Silent swallow without re-raise hides the failure.
-              # (Not a Law 18 violation per se — Law 18 is `rescue Exception`
-              # or `rescue_from(Exception)`.)
+              # (Not a Law 18 violation per se — Law 18 is `rescue Exception`,
+              # `rescue ::Exception`, `rescue_from(Exception)`, or
+              # `rescue_from ::Exception`.)
   :error
 end
 

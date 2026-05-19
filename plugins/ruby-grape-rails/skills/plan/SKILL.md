@@ -259,7 +259,7 @@ When resuming:
 
 Before finalizing the plan, verify:
 
-- [ ] Iron Law 18: no `rescue Exception` / `rescue_from(Exception)` (catches `SystemExit` / `SignalException`)
+- [ ] Iron Law 18: no `rescue Exception`, `rescue ::Exception`, `rescue_from(Exception)`, or `rescue_from ::Exception` (catches `SystemExit` / `SignalException`)
 - [ ] Style: rescue clauses name an explicit class (`rescue StandardError => e` / `rescue SpecificError => e`) instead of bare `rescue`
 - [ ] Failed jobs can be retried safely (idempotent)
 - [ ] Database transactions wrap multi-step operations

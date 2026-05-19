@@ -89,8 +89,9 @@ rescue InventoryError
 end
 ```
 
-Iron Law 18: never `rescue Exception` — applies to `begin/rescue`
-and Rails `rescue_from(Exception)`. Catches `SystemExit` /
+Iron Law 18: never rescue `Exception` in any form —
+`rescue Exception`, `rescue ::Exception`, `rescue_from(Exception)`,
+or `rescue_from ::Exception`. All four catch `SystemExit` /
 `SignalException`. Bare `rescue` defaults to `StandardError` and is
 not a Law 18 violation. Explicit class naming (`rescue SpecificError
 => e` or class-only `rescue SpecificError`) is a style preference for

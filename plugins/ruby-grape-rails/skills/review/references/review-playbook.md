@@ -74,7 +74,7 @@ file-type-specific checklists without bloating the main routing surface.
 
 - [ ] `ruby -c` passes
 - [ ] formatter is clean (`standardrb` or `rubocop`)
-- [ ] no `rescue Exception` or `rescue_from(Exception)` (Iron Law 18, applies to `begin/rescue` and Rails `rescue_from`). Explicit exception class on every rescue clause (style)
+- [ ] no `rescue Exception`, `rescue ::Exception`, `rescue_from(Exception)`, or `rescue_from ::Exception` (Iron Law 18). Explicit exception class on every rescue clause (style)
 - [ ] names and control flow stay readable
 - [ ] duplication is avoided
 
@@ -423,21 +423,22 @@ Write the synthesized review to the path read via
 
 ## Reviewer Coverage
 
-| Reviewer | Recovery State | Findings |
-|---|---|---|
-| {agent-slug} | {recovery-state} | {n} Blockers / {n} Warnings / {n} Suggestions |
+One row per reviewer from the manifest's `agents` map. Columns:
+Reviewer (agent slug), Recovery State (one of `artifact |
+stub-replaced | recovered-from-return | stub-no-output`), and
+Findings (count-aware: singular only when count equals 1, plural
+otherwise including 0).
 
-One row per reviewer from the manifest's `agents` map. Recovery
-State is one of `artifact | stub-replaced | recovered-from-return |
-stub-no-output`. Findings column uses title case with count-aware
-grammar: each bucket count uses singular form only when its value is
-exactly 1, plural otherwise (including 0). Reject `1 Blockers` and
-`0 Blocker` — count-form must agree.
+Example rows (shape reference, not copy targets — slugs and counts
+must match the actual manifest and reviewer output):
 
-Example rows (not copy targets, for shape reference only):
-`| ruby-reviewer | artifact | 3 Blockers / 0 Warnings / 0 Suggestions |`,
-`| security-analyzer | stub-replaced | 0 Blockers / 1 Warning / 0 Suggestions |`,
-`| testing-reviewer | stub-no-output | 0 Blockers / 0 Warnings / 0 Suggestions |`.
+```
+| ruby-reviewer | artifact | 3 Blockers / 0 Warnings / 0 Suggestions |
+| security-analyzer | stub-replaced | 0 Blockers / 1 Warning / 0 Suggestions |
+| testing-reviewer | stub-no-output | 0 Blockers / 0 Warnings / 0 Suggestions |
+```
+
+Reject `1 Blockers` and `0 Blocker` — count-form must agree.
 
 Counts NEW findings only
 (diff-introduced). Pre-existing findings attributed to the

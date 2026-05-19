@@ -7,13 +7,12 @@ Detailed patterns for detecting Iron Law violations.
 All Iron Law violations are Blockers per
 `plugins/ruby-grape-rails/skills/triage/references/triage-patterns.md`
 § "Always Fix". Subsections below cover Laws 1-20 by detection
-pattern, not Law number. Detection Patterns table at the bottom
-contains grep-detectable regex for Laws 1, 2, 4, 6, 7, 10-12, 14-16,
-18-19; Laws 3, 5, 8, 9, 13, 17, 20 require manual review (context
-check or absence check — no single grep covers them) — see
-`plugins/ruby-grape-rails/agents/iron-law-judge.md` Blocker
-Violations table. Laws 21 + 22 (discipline rules) are equally
-Blockers — see `fix-priority.md`.
+pattern, not Law number. The "Detection Patterns" section at the
+bottom contains per-law fenced regex blocks for Laws 1, 2, 4, 6, 7,
+10-12, 14-16, 18-19. Laws 3, 5, 8, 9, 13, 17, 20 require manual
+review (context check or absence check — no single grep covers
+them). Laws 21 + 22 (discipline rules) are equally Blockers — see
+`fix-priority.md`.
 
 ### Law 1: Float for Money
 
@@ -288,7 +287,7 @@ Bare `rescue` defaults to `StandardError` and does NOT match.
 false positives — confirm by reading the hit.
 
 ```regex
-\b(?:rescue|rescue_from)\b[^#\n]*?(?<![A-Za-z_]):{0,2}Exception\b
+\b(?:rescue|rescue_from)\b[^#\n]*?[\s,(]:{0,2}Exception\b
 ```
 
 ### Law 19 (path: `app/views/*.turbo_stream.*`)
