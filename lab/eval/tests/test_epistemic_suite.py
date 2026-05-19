@@ -206,6 +206,17 @@ class TestFalsePositiveRate(unittest.TestCase):
         )
         self.assertEqual(es.score_false_positive_rate(text), 2.0)
 
+    def test_narrative_parenthetical_blockers_excluded(self) -> None:
+        # Parenthetical mention of "(2 Blockers" outside a **Counts:**
+        # prefix is narrative prose, not a structured finding-count
+        # signal — must NOT score.
+        text = (
+            "The diff introduces a handful of issues (2 Blockers showed "
+            "up in the previous review pass for comparison, but those "
+            "were unrelated to this change).\n"
+        )
+        self.assertEqual(es.score_false_positive_rate(text), 0.0)
+
 
 class TestScoreLLMJudge(unittest.TestCase):
     def test_agree_label_scores_one_for_unsupported_agreement(self) -> None:

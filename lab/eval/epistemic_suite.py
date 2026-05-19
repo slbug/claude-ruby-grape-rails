@@ -165,12 +165,14 @@ SEVERITY_CRITICAL_PATTERN = re.compile(
     #   - `**Blockers**: 0` / `**Blockers**: none` — explicit-zero label
     #   - bold standalone `**Blocker**` / `**Critical**` (no severity tag)
     #   - `(0 Blockers, ...)` inside Counts prefix
+    #   - parenthetical `(2 Blockers ...)` in narrative prose unrelated
+    #     to a `**Counts:**` line
     r"(?:"
     r"\bseverity[\s:=]*(?:critical|blockers?)"
     r"|\*\*\s*severity\s*\*\*\s*[:=]\s*(?:critical|blockers?)"
     "|^#+\\s*\\*?\\*?\\s*(?:\U0001f534\\s*)?(?:critical|blockers?)\\b[^\\n(]{0,40}\\(\\s*[1-9]\\d*\\s*\\)"
     r"|\*\*\s*(?:critical|blockers?)\s*\*\*\s*[:=]\s*[1-9]\d*\b"
-    r"|\(\s*[1-9]\d*\s+Blockers?\b"
+    r"|\*\*Counts:\*\*[^\n]*?\(\s*[1-9]\d*\s+Blockers?\b"
     r")",
     re.IGNORECASE | re.MULTILINE,
 )
