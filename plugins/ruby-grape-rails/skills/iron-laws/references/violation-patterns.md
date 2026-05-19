@@ -206,8 +206,9 @@ rescue_from SomeSpecificError, with: :foo
 
 ## Detection Patterns
 
-Search paths in `app/` unless noted. Run each regex with `rg`,
-`grep -E`, or Python `re`.
+Search paths in `app/` unless noted. Run each regex with `rg`
+(default) or Python `re`. POSIX `grep -E` does not support `\b`
+word boundaries or lazy quantifiers `*?` used in Law 18.
 
 ### Law 1 (path: `db/migrate/`)
 
