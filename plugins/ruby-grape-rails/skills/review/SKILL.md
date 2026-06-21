@@ -119,7 +119,7 @@ Critical-path files force escalation regardless of count or LOC.
 | **Medium** | 4-10 | 201-1000 | Core + conditional by file type | 4-8 |
 | **Complex** | 11+ | > 1000 | All relevant reviewers, detailed output | 8-11 |
 
-Compute `DIFF_LOC = git diff --shortstat MERGE_BASE_VALUE...HEAD | awk '{n=$4+$6} END{print n+0}'`.
+Compute `DIFF_LOC = git diff --shortstat MERGE_BASE_VALUE...HEAD | awk '{n=\$4+\$6} END{print n+0}'`.
 Columns 4 + 6 are insertions + deletions. `END{print n+0}` emits `0`
 on empty diff. Range matches `$DIFF_STAT` and `$CHANGED_FILES`.
 
@@ -180,8 +180,9 @@ Every Agent() call must include in its prompt:
 - Required output: write artifact (always — even on PASS) and return summary
 - Findings format: `file:line`, `Severity (Blocker|Warning|Suggestion)`,
   `Confidence (HIGH|MEDIUM|LOW)`, description, current code, suggested
-  code. Synthesis applies diff-status filter only (new vs pre-existing)
-  per playbook § "Worker Severity Mapping".
+  code. Workers set severity only and never self-classify diff-status —
+  synthesis owns new-vs-pre-existing per playbook § "Worker Severity
+  Mapping".
 - Constraint: stop after returning; do NOT call Agent() — leaf review
 
 For full briefing template (verbatim text to use in prompts), see

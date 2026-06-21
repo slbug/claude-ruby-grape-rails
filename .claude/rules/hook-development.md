@@ -27,6 +27,11 @@ Add or update a short policy comment near the top of the hook when behavior chan
 - `PostToolUse` stdout is verbose-mode only — use `exit 2` + stderr to feed messages to Claude
 - `PreCompact` has no context injection path — use user-facing stderr reminder only, rely on `PostCompact` to re-read artifacts
 - `SessionStart` stdout IS added to Claude's context (exception along with `UserPromptSubmit`)
+- `SessionStart` can also set the session title via JSON
+  `hookSpecificOutput.sessionTitle` (honored only on `startup`/`resume`,
+  ignored on `clear`/`compact`). Use the JSON form to combine it with
+  `additionalContext`. Read input `session_title` first to avoid clobbering
+  a user `/rename` (see `check-scratchpad.sh`)
 - `SubagentStart` uses `hookSpecificOutput.additionalContext` to inject context into subagents
 - `PostToolUseFailure` uses `hookSpecificOutput.additionalContext` for debugging hints
 

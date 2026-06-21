@@ -14,6 +14,11 @@ Imperative-only. Tables for command/option lists.
 - `claude --plugin-dir ./plugins/ruby-grape-rails` — test local working-tree changes directly
 - Marketplace install flow: `/plugin marketplace add .` then `/plugin install ruby-grape-rails`
   (uses git-subdir source, not uncommitted working tree)
+- Contributor-only skills under `.claude/skills/` (cc-changelog, docs-check,
+  plugin-dev-workflow) auto-load when working in-repo — no `--plugin-dir` or
+  marketplace install needed for those. This does NOT cover shipped plugin
+  skills under `plugins/ruby-grape-rails/skills/`; those still require
+  `--plugin-dir` (above) or install.
 
 ## Testing Workflow
 

@@ -26,15 +26,15 @@ Imperative-only. Tables for category and shape lists.
 
 ### Step 1: Fetch New Entries
 
-Run `bash scripts/fetch-cc-changelog.sh` (or `--all` for full re-fetch).
+From repo root: `bash ./scripts/fetch-cc-changelog.sh` (or `--all` for full re-fetch).
 
 | Output prefix | Action |
 |---|---|
 | `STATUS: UP_TO_DATE` | report "No new CC versions" and stop |
 | `STATUS: NEW_VERSIONS` | continue with content below the header |
 
-`--all` flag → `bash scripts/fetch-cc-changelog.sh --all`.
-`--set=X` flag → `bash scripts/fetch-cc-changelog.sh --set=X`, then re-run without flag.
+`--all` flag → `bash ./scripts/fetch-cc-changelog.sh --all`.
+`--set=X` flag → `bash ./scripts/fetch-cc-changelog.sh --set=X`, then re-run without flag.
 
 ### Step 2: Analyze Impact
 
@@ -83,7 +83,7 @@ After user reviews the report, ask:
 
 > "Update last checked version to {latest}? [Yes/No]"
 
-If yes: run `bash scripts/fetch-cc-changelog.sh --set={latest}`.
+If yes: run `bash ./scripts/fetch-cc-changelog.sh --set={latest}`.
 
 If BREAKING or DEPRECATION found, offer to create a plan.
 

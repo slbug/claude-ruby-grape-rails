@@ -36,6 +36,13 @@ skills/{name}/
   - `test_registry_visibility_sync.py` catches drift between SKILL.md DMI flag and registry bucket; `test_registry_in_sync.py` catches drift between registry and generated artifacts
 - Description <= 1,024 chars (agentskills.io cap); front-load WHEN the skill applies, include real-query phrases as Triggers, include negative exclusion clauses as Do NOT use for
 - For plugin-wide executables in `bin/`, use explicit `${CLAUDE_PLUGIN_ROOT}/bin/<cmd>` when the skill also references `${CLAUDE_SKILL_DIR}` (bare names can be conflated with skill-local files)
+- **Literal `$` before a digit in SKILL.md bodies must be escaped `\$`**:
+  `$0`–`$9` are substituted with positional invocation arguments
+  (`$N` = `$ARGUMENTS[N]`, unconditional — no `arguments:` frontmatter
+  needed). A literal `$N` meant for shell/awk (e.g. `awk '{print $4}'`)
+  renders EMPTY when the skill is invoked with fewer args — write `\$N`.
+  Substitution applies to SKILL.md content ONLY. `references/*.md` load
+  via Read with no substitution, so leave `$N` unescaped there.
 - **Cross-reference path rules** (substitution scope per CC docs):
 
   | Source file | Target | Pattern |

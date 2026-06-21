@@ -189,6 +189,10 @@ Findings format:
 - Confidence: HIGH | MEDIUM | LOW
 - Description, current code, suggested code, why it matters
 
+Report every finding at its natural severity. Do NOT downgrade, skip, or
+tag findings as pre-existing/unchanged — set severity, leave diff-status
+to synthesis.
+
 Stop after returning. Do NOT call Agent() — this is a leaf review.
 ```
 
@@ -354,6 +358,19 @@ translation:
 | Suggestion | introduced by this diff | yes — Suggestion |
 | Suggestion | unchanged code | no — Pre-existing Suggestion (reported only) |
 | New public behavior without tests | any | REQUIRES CHANGES verdict trigger (not a per-finding bucket) |
+
+### Diff-status decision (synthesizer-owned)
+
+Assign each finding's `New?` from the diff, never from a worker label.
+Per finding:
+
+1. File not in `$CHANGED_FILES` → `Pre-existing`.
+2. File in `$CHANGED_FILES`, no `:line` cited → `Yes`.
+3. File in `$CHANGED_FILES` with `:line` → `Yes` when the line is inside an
+   added/changed hunk of `git diff --unified=0 MERGE_BASE_VALUE...HEAD --
+   <file>`. Unchanged line inside a changed file → `Pre-existing`.
+
+Discard any new/pre-existing tag a worker emitted.
 
 Casing canon — title case throughout severity. See STEP 3 casing rule
 above for per-surface form. Verdict 4-set stays UPPERCASE.

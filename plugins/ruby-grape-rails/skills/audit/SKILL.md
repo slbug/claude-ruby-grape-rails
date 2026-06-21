@@ -6,13 +6,22 @@ disable-model-invocation: true
 ---
 # Audit
 
-Review five areas:
+Review five categories:
 
-- boundaries and code ownership
-- security and auth surfaces
-- data integrity and query quality
-- test depth and flake risk
-- deploy/runtime readiness
+- Architecture — boundaries, fan-in/out, module coupling
+- Performance — N+1, indexes, preloads, Sidekiq bottlenecks
+- Security — Brakeman findings, authorization, secrets handling
+- Test Quality — coverage, flake risk, factory discipline
+- Dependencies — bundle-audit, CVEs, version freshness
+
+## Preconditions
+
+- Before emitting any A-F grade or weighted composite, Read
+  `references/scoring-methodology.md` for canonical category weights
+  and deduction rules.
+- Before architecture / boundary findings, Read
+  `references/architecture-checks.md` for the service-object health
+  matrix and fan-in/out thresholds.
 
 ## Gotchas
 
@@ -24,6 +33,9 @@ Review five areas:
 - Unverified third-party claims. "Library X handles Y safely" — verify
   against current docs (Context7 MCP) or Brakeman scan, never against
   training-data assumption.
+- Gem version / release-status claims (current stable, pre-release,
+  deprecated, EOL) require `gem info <name>`, rubygems.org, or
+  Context7 lookup — never extrapolate from training data.
 - Schema drift. Iron Laws / preferences references must match current
   generator output. Regen via
   `bash scripts/generate-iron-law-outputs.sh all` if mismatched.
