@@ -163,10 +163,14 @@ the PR.
   counts updated.
 - **devDependency bump that raises a Node-engine floor** (a dep declaring
   `engines.node` above the current floor — e.g. markdownlint-cli 0.49 ⇒
-  `node >=22`) → bump `package.json` `engines.node`, every `node-version`
-  in `.github/workflows/*.yml`, and any contributor Node-version doc in
-  one PR. A dep floor above `engines.node`, or `engines.node` above CI
-  `node-version`, → drift defect (CI installs/runs on unsupported Node).
+  `node >=22.12.0`) → bump `package.json` `engines.node`, every
+  `node-version` in `.github/workflows/*.yml`, and any contributor
+  Node-version doc in one PR. Pin each CI `node-version` to a range that
+  enforces the floor (e.g. `>=22.12.0`), NOT a bare major like `22` — a
+  bare major only resolves to the latest release of that major, which does
+  not guarantee the `engines.node` minimum. A dep floor above
+  `engines.node`, or a CI `node-version` that does not enforce
+  `engines.node`, → drift defect.
 - **Eval module added / renamed under `lab/eval/`** → also check
   `lab/eval/run_eval.sh`, `Makefile`, `package.json` `scripts:` block,
   `.claude/rules/eval-workflow.md`,
