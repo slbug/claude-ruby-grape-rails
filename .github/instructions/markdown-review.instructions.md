@@ -78,10 +78,9 @@ Flag any `${CLAUDE_*}` literal in `references/*.md` plain prose / cross-referenc
 ## CHANGELOG Conventions
 
 - Format: Keep a Changelog (<https://keepachangelog.com/>)
-- Categories (Keep a Changelog canonical set, all six valid): Added,
-  Changed, Deprecated, Removed, Fixed, Security. Do NOT flag `Security` or
-  `Deprecated` as off-convention — the repo most often uses Added / Changed
-  / Fixed / Removed but the full set is permitted
+- Categories — any Keep a Changelog category valid: Added, Changed,
+  Deprecated, Removed, Fixed, Security. Do NOT flag `Security` or
+  `Deprecated` as off-convention
 - Version links at bottom must include all version entries
 - Versions must align across plugin.json, marketplace.json, package.json
 
