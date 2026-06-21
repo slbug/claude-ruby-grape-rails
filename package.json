@@ -1,6 +1,6 @@
 {
   "name": "ruby-grape-rails-plugin",
-  "version": "1.16.13",
+  "version": "1.16.14",
   "private": true,
   "description": "Specialist agents, Iron Laws, parallel code review, and plan→work→verify→review→compound workflow for Ruby, Rails, Grape, Sidekiq, Hotwire, Active Record, and Sequel projects.",
   "scripts": {
@@ -56,7 +56,10 @@
   },
   "devDependencies": {
     "husky": "^9.1.7",
-    "markdownlint-cli": "^0.48.0"
+    "markdownlint-cli": "^0.49.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   },
   "repository": {
     "type": "git",

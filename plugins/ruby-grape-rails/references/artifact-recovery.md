@@ -41,6 +41,9 @@ plan/brainstorm: research topic; research: aspect identifier).
 ## Rules
 
 - Decide from the filesystem, not Agent return-text claims.
+- Size checks use the manifest `size_bytes` field (set by
+  `bin/manifest-update`) or a bare `[ -s "$path" ]` test — never `wc -l` /
+  `wc -c` inside a `while read` pipe.
 - NEVER copy or symlink prior-run artifacts to the current-run path.
 - Never re-spawn.
 - After each entry's recovery decision, patch its `status`:

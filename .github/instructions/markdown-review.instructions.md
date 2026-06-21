@@ -28,8 +28,8 @@ not standard markdown metadata.
 
 Valid frontmatter fields for skills: name, description (single field
 per agentskills.io canon — no `when_to_use`), argument-hint, arguments,
-effort, disable-model-invocation, user-invocable, allowed-tools, model,
-context, agent, hooks, shell. The `paths:` field is documented in CC
+effort, disable-model-invocation, user-invocable, allowed-tools,
+disallowed-tools, model, context, agent, hooks, shell. The `paths:` field is documented in CC
 skill schema but empirically non-functional at plugin scope; do NOT
 add it to plugin SKILL.md (project-level `.claude/rules/*.md` `paths:`
 remains functional and is a separate mechanism).
@@ -78,7 +78,9 @@ Flag any `${CLAUDE_*}` literal in `references/*.md` plain prose / cross-referenc
 ## CHANGELOG Conventions
 
 - Format: Keep a Changelog (<https://keepachangelog.com/>)
-- Categories: Added, Changed, Fixed, Removed
+- Categories — any Keep a Changelog category valid: Added, Changed,
+  Deprecated, Removed, Fixed, Security. Do NOT flag `Security` or
+  `Deprecated` as off-convention
 - Version links at bottom must include all version entries
 - Versions must align across plugin.json, marketplace.json, package.json
 

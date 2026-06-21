@@ -6,7 +6,8 @@ set -o pipefail
 
 
 # SessionStart hook: Surface existing scratchpads, auto-initialize missing
-# scratchpads for active/resumable plans, and highlight dead-end-heavy plans.
+# scratchpads for active/resumable plans, highlight dead-end-heavy plans, and
+# name the session after the sole active plan when no title is set yet.
 
 command -v grep >/dev/null 2>&1 || {
   echo "Warning: skipping check-scratchpad.sh because grep is unavailable" >&2
@@ -67,8 +68,9 @@ shopt -u nullglob
 
 COUNT=${#scratchpads[@]}
 
+OUTPUT=""
 if [[ "$COUNT" -gt 0 ]]; then
-  echo "Scratchpad notes ready in $COUNT plan(s):"
+  OUTPUT="Scratchpad notes ready in $COUNT plan(s):"
   for file in "${scratchpads[@]}"; do
     [[ -f "$file" ]] || continue
     plan_dir=$(path_dirname "$file")
@@ -87,9 +89,37 @@ if [[ "$COUNT" -gt 0 ]]; then
     fi
 
     if [[ -n "$marker" ]]; then
-      echo "  • $plan_slug (${marker})"
+      OUTPUT+=$'\n'"  • $plan_slug (${marker})"
     else
-      echo "  • $plan_slug"
+      OUTPUT+=$'\n'"  • $plan_slug"
     fi
   done
+fi
+
+# Name the session after the sole active plan, unless a title is already
+# set (do not clobber a user /rename). CC honors sessionTitle only on
+# startup/resume and ignores it on clear/compact. Requires jq to JSON-encode
+# the notes and read the existing title; without jq, fall back to the plain
+# stdout notes (SessionStart stdout already reaches Claude) with no title.
+existing_title=""
+if command -v jq >/dev/null 2>&1 && [[ -n "$INPUT" ]]; then
+  existing_title=$(printf '%s' "$INPUT" | jq -r '.session_title // empty' 2>/dev/null || true)
+fi
+want_title=false
+if [[ -n "$ACTIVE_SLUG" && -z "$existing_title" && -n "$INPUT" ]]; then
+  want_title=true
+fi
+
+if command -v jq >/dev/null 2>&1 && { [[ -n "$OUTPUT" ]] || [[ "$want_title" == "true" ]]; }; then
+  jq -nc \
+    --arg ctx "$OUTPUT" \
+    --arg title "$ACTIVE_SLUG" \
+    --argjson want_title "$want_title" \
+    '{hookSpecificOutput: (
+        {hookEventName: "SessionStart"}
+        + (if ($ctx | length) > 0 then {additionalContext: $ctx} else {} end)
+        + (if $want_title then {sessionTitle: $title} else {} end)
+      )}'
+elif [[ -n "$OUTPUT" ]]; then
+  printf '%s\n' "$OUTPUT"
 fi

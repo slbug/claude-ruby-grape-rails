@@ -142,8 +142,9 @@ the PR.
 - **Plugin version bump** in any of `package.json`,
   `.claude-plugin/marketplace.json`,
   `plugins/ruby-grape-rails/.claude-plugin/plugin.json` → all three MUST
-  match; `CHANGELOG.md` MUST have a section for the new version
-  (categories: Added, Changed, Fixed, Removed). Validated by
+  match; `CHANGELOG.md` MUST have a section for the new version (any Keep a
+  Changelog category: Added, Changed, Deprecated, Removed, Fixed, Security
+  — do NOT flag `Security` or `Deprecated`). Validated by
   `scripts/check-release-metadata.py`; flag locally before CI.
 - **Hook renamed / added / removed** under
   `plugins/ruby-grape-rails/hooks/scripts/` → also check

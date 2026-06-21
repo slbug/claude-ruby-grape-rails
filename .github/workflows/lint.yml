@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: ">=22.12.0"
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -69,7 +69,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: ">=22.12.0"
 
       - name: Setup Python
         uses: actions/setup-python@v6

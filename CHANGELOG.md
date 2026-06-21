@@ -7,6 +7,43 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.14] - 2026-06-21
+
+### Added
+
+- `/rb:review` synthesis applies a deterministic, synthesizer-owned
+  diff-status rule (file in the changed set plus a `git diff --unified=0`
+  hunk test), so new-versus-pre-existing classification no longer varies
+  between reviewers.
+
+### Changed
+
+- Reviewers set severity only and no longer self-classify diff-status. The
+  worker briefing and `/rb:review` findings format state this explicitly.
+- `/rb:audit` reviews five named categories (Architecture, Performance,
+  Security, Test Quality, Dependencies), requires reading the
+  scoring-methodology and architecture-checks references before grading,
+  and bars gem version/release-status claims drawn from training data.
+- The SessionStart scratchpad hook names the session after the sole active
+  plan when no title is set yet.
+- Artifact-recovery size checks specify manifest `size_bytes` or `[ -s ]`
+  over `wc` inside a `while read` pipe.
+
+### Fixed
+
+- `/rb:review` complexity classification produced an empty `DIFF_LOC`: the
+  `awk '{n=$4+$6}'` snippet had `$4`/`$6` consumed as skill-argument
+  substitutions and rendered blank. Escaped to `\$4`/`\$6`.
+
+### Security
+
+- Bumped the `markdownlint-cli` dev dependency to `^0.49.0`, clearing four
+  moderate-severity DoS advisories (js-yaml, markdown-it, brace-expansion)
+  in the markdown-lint toolchain. Dev-only contributor tooling — not part
+  of the shipped plugin, so no plugin user was exposed. Raises the
+  contributor Node floor to 22.12+ (`engines.node` + CI `node-version`),
+  since markdownlint-cli 0.49 requires Node 22.
+
 ## [1.16.13] - 2026-05-18
 
 Review-artifact vocabulary normalized to title case
@@ -2947,7 +2984,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.13...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.14...HEAD
+[1.16.14]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.13...v1.16.14
 [1.16.13]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.12...v1.16.13
 [1.16.12]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.11...v1.16.12
 [1.16.11]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.10...v1.16.11
