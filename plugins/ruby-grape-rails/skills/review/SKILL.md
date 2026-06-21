@@ -178,7 +178,8 @@ Every Agent() call must include in its prompt:
   Worker MUST use the exact path passed to it — do NOT invent,
   modify, shorten, or extension-change the filename.
 - Required output: write artifact (always — even on PASS) and return summary
-- Findings format: `file:line`, `Severity (Blocker|Warning|Suggestion)`,
+- Findings format: `file:line` (Blockers + Warnings require `:line`; a
+  file-level Suggestion may omit it), `Severity (Blocker|Warning|Suggestion)`,
   `Confidence (HIGH|MEDIUM|LOW)`, description, current code, suggested
   code. Workers set severity only and never self-classify diff-status —
   synthesis owns new-vs-pre-existing per playbook § "Worker Severity
@@ -191,7 +192,7 @@ For full briefing template (verbatim text to use in prompts), see
 ## Iron Laws
 
 1. **Never fix code inside `/rb:review`** - findings only, fixes later
-2. **Focus on changed lines first** - label unchanged issues as pre-existing
+2. **Focus on changed lines first** — synthesis (not workers) labels unchanged-code issues as pre-existing
 3. **Deduplicate overlapping findings** - merge similar issues from different agents
 4. **Keep noise low** - prefer findings a senior Ruby reviewer would care about
 5. **Be specific** - cite line numbers, provide examples

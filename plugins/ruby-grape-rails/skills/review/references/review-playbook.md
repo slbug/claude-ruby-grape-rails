@@ -184,7 +184,7 @@ Required output:
    `CONDITIONAL PASS`, or any abbreviation.
 
 Findings format:
-- file:line — Title
+- file:line — Title (Blockers/Warnings require a line number; a file-level Suggestion may omit it)
 - Severity: Blocker | Warning | Suggestion
 - Confidence: HIGH | MEDIUM | LOW
 - Description, current code, suggested code, why it matters
