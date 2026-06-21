@@ -143,8 +143,10 @@ the PR.
   `.claude-plugin/marketplace.json`,
   `plugins/ruby-grape-rails/.claude-plugin/plugin.json` → all three MUST
   match; `CHANGELOG.md` MUST have a section for the new version
-  (categories: Added, Changed, Fixed, Removed). Validated by
-  `scripts/check-release-metadata.py`; flag locally before CI.
+  (Keep a Changelog canonical categories — all six valid: Added, Changed,
+  Deprecated, Removed, Fixed, Security). Validated by
+  `scripts/check-release-metadata.py` (version alignment + footer links
+  only — it does NOT restrict the category set); flag locally before CI.
 - **Hook renamed / added / removed** under
   `plugins/ruby-grape-rails/hooks/scripts/` → also check
   `hooks/hooks.json` references, sourcing in other `*.sh` files
@@ -159,6 +161,12 @@ the PR.
   `lab/eval/evals/`, `lab/eval/triggers/`, `lab/eval/dimensions/`
   artifacts exist; intro tutorial mentions it; CLAUDE.md skill/agent
   counts updated.
+- **devDependency bump that raises a Node-engine floor** (a dep declaring
+  `engines.node` above the current floor — e.g. markdownlint-cli 0.49 ⇒
+  `node >=22`) → bump `package.json` `engines.node`, every `node-version`
+  in `.github/workflows/*.yml`, and any contributor Node-version doc in
+  one PR. A dep floor above `engines.node`, or `engines.node` above CI
+  `node-version`, → drift defect (CI installs/runs on unsupported Node).
 - **Eval module added / renamed under `lab/eval/`** → also check
   `lab/eval/run_eval.sh`, `Makefile`, `package.json` `scripts:` block,
   `.claude/rules/eval-workflow.md`,

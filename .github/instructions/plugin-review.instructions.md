@@ -61,7 +61,7 @@ Exception files (human-facing, narrative OK): `README.md`,
   argument-hint (command skills), arguments (positional `$name`
   substitution, space-separated string or YAML list), effort,
   user-invocable, disable-model-invocation. Also valid per CC docs:
-  allowed-tools, model, context, agent, hooks, shell
+  allowed-tools, disallowed-tools, model, context, agent, hooks, shell
 - No `triggers:` field — skills docs do not support it
 - No `when_to_use:` field — single `description` field per agentskills.io
   canon

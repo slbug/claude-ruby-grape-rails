@@ -51,6 +51,11 @@ conventions — rule applies to markdown review checklist itself.
 - PostToolUse stdout is verbose-mode only — use `exit 2` + stderr to feed
   messages to Claude
 - SessionStart stdout IS added to Claude's context
+- SessionStart may also set the session title via output
+  `hookSpecificOutput.sessionTitle` (camelCase). The matching INPUT field
+  is `session_title` (snake_case) — a hook reads `.session_title` to skip
+  clobbering a user `/rename`. Do NOT flag a `.session_title` input read as
+  a typo for `sessionTitle`; the two are distinct (input vs output)
 - SubagentStart uses `hookSpecificOutput.additionalContext`
 - PostToolUseFailure uses `hookSpecificOutput.additionalContext`
 - PreCompact uses stderr for context reminders; exit 2 blocks compaction

@@ -40,7 +40,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Bumped the `markdownlint-cli` dev dependency to `^0.49.0`, clearing four
   moderate-severity DoS advisories (js-yaml, markdown-it, brace-expansion)
   in the markdown-lint toolchain. Dev-only contributor tooling — not part
-  of the shipped plugin, so no plugin user was exposed.
+  of the shipped plugin, so no plugin user was exposed. Raises the
+  contributor Node floor to 22.12+ (`engines.node` + CI `node-version`),
+  since markdownlint-cli 0.49 requires Node 22.
 
 ## [1.16.13] - 2026-05-18
 

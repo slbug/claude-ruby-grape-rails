@@ -106,7 +106,7 @@ if command -v jq >/dev/null 2>&1 && [[ -n "$INPUT" ]]; then
   existing_title=$(printf '%s' "$INPUT" | jq -r '.session_title // empty' 2>/dev/null || true)
 fi
 want_title=false
-if [[ -n "$ACTIVE_SLUG" && -z "$existing_title" ]]; then
+if [[ -n "$ACTIVE_SLUG" && -z "$existing_title" && -n "$INPUT" ]]; then
   want_title=true
 fi
 
