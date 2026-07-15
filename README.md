@@ -189,14 +189,13 @@ rules for the tools they need.
           "Bash(*/bin/manifest-update *)",
           "Grep(*)",
           "Read(*)",
-          "Glob(*)",
-          "Write(**/.claude/plans/**)",
-          "Write(**/.claude/reviews/**)",
-          "Write(**/.claude/audit/**)",
-          "Write(**/.claude/research/**)",
-          "Write(**/.claude/solutions/**)",
-          "Write(**/.claude/skill-metrics/**)",
-          "Write(**/.claude/investigations/**)"
+          "Edit(**/.claude/plans/**)",
+          "Edit(**/.claude/reviews/**)",
+          "Edit(**/.claude/audit/**)",
+          "Edit(**/.claude/research/**)",
+          "Edit(**/.claude/solutions/**)",
+          "Edit(**/.claude/skill-metrics/**)",
+          "Edit(**/.claude/investigations/**)"
        ]
      }
    }
@@ -205,11 +204,14 @@ rules for the tools they need.
    Recursive `**/.claude/<ns>/**` globs are required: plugin skills
    write artifacts under nested per-agent subdirs (e.g.,
    `.claude/reviews/{agent-slug}/{slug}-{datesuffix}.md`). Shallow
-   `Write(.claude/<ns>/*)` globs do not match.
+   `Edit(.claude/<ns>/*)` globs do not match. Use `Edit(path)` rules,
+   not `Write(path)`: `Edit` rules cover every file-editing tool, while
+   scoped `Write(path)` rules emit a startup warning and are ignored by
+   the file-permission check.
 
 2. Run `/rb:permissions` to scan recent prompts and propose safer
    `settings.json` allowlists instead of growing them blindly
-3. Run `/update-config` to add the recommended Write rules above to
+3. Run `/update-config` to add the recommended Edit rules above to
    `settings.json` without hand-editing
 4. Use `--plugin-dir` for local development while iterating on the plugin itself
 
