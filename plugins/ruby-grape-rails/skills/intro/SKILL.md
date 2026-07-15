@@ -34,14 +34,16 @@ This is a security restriction — plugin agents follow your session permission 
    - Command rules: `Bash(bundle *)`, `Bash(rails *)`, `Bash(rake *)`,
      `Bash(mkdir -p **/.claude/**)`,
      `Bash(*/bin/manifest-update *)`,
-     `Read(*)`, `Grep(*)`, `Glob(*)`
-   - Recursive Write rules for plugin artifact namespaces:
-     `Write(**/.claude/plans/**)`, `Write(**/.claude/reviews/**)`,
-     `Write(**/.claude/audit/**)`, `Write(**/.claude/research/**)`,
-     `Write(**/.claude/solutions/**)`,
-     `Write(**/.claude/skill-metrics/**)`,
-     `Write(**/.claude/investigations/**)`
-2. Run `/update-config` to apply the recommended Write allowlist without hand-editing
+     `Read(*)`, `Grep(*)`
+   - Recursive Edit rules for plugin artifact namespaces (`Edit(path)`
+     covers the Write tool; scoped `Write(path)` rules emit a startup
+     warning and are not consulted by the file-permission check):
+     `Edit(**/.claude/plans/**)`, `Edit(**/.claude/reviews/**)`,
+     `Edit(**/.claude/audit/**)`, `Edit(**/.claude/research/**)`,
+     `Edit(**/.claude/solutions/**)`,
+     `Edit(**/.claude/skill-metrics/**)`,
+     `Edit(**/.claude/investigations/**)`
+2. Run `/update-config` to apply the recommended Edit allowlist without hand-editing
 3. Run `/rb:permissions` to generate a narrower project allowlist from recent usage
 4. Use `--plugin-dir` for local development while iterating on the plugin itself
 5. Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in your shell. Enables

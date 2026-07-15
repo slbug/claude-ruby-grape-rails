@@ -7,6 +7,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.15] - 2026-07-15
+
+### Fixed
+
+- Recommended permission allowlist (`/rb:init`, `/rb:intro`, README) now
+  uses `Edit(**/.claude/<ns>/**)` instead of scoped `Write(**/.claude/<ns>/**)`
+  and drops `Glob(*)`. Per Claude Code, `Edit(path)` rules cover every
+  file-editing tool while scoped `Write(path)`/`Glob(path)`/`NotebookEdit(path)`
+  rules are ignored by the file-permission check and emit a startup warning
+  (CC 2.1.210); `Read(*)` already covers Glob.
+
 ## [1.16.14] - 2026-06-21
 
 ### Added
@@ -2984,7 +2995,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.14...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.15...HEAD
+[1.16.15]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.14...v1.16.15
 [1.16.14]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.13...v1.16.14
 [1.16.13]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.12...v1.16.13
 [1.16.12]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.11...v1.16.12

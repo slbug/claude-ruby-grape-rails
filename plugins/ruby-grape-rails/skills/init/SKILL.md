@@ -198,7 +198,7 @@ authoring rules.
 
 ## Recommended Permission Allowlist
 
-Prompt the user to run `/update-config` to add these recursive Write
+Prompt the user to run `/update-config` to add these recursive Edit
 rules to `.claude/settings.json`:
 
 ```json
@@ -212,23 +212,24 @@ rules to `.claude/settings.json`:
       "Bash(*/bin/manifest-update *)",
       "Read(*)",
       "Grep(*)",
-      "Glob(*)",
-      "Write(**/.claude/plans/**)",
-      "Write(**/.claude/reviews/**)",
-      "Write(**/.claude/audit/**)",
-      "Write(**/.claude/research/**)",
-      "Write(**/.claude/solutions/**)",
-      "Write(**/.claude/skill-metrics/**)",
-      "Write(**/.claude/investigations/**)"
+      "Edit(**/.claude/plans/**)",
+      "Edit(**/.claude/reviews/**)",
+      "Edit(**/.claude/audit/**)",
+      "Edit(**/.claude/research/**)",
+      "Edit(**/.claude/solutions/**)",
+      "Edit(**/.claude/skill-metrics/**)",
+      "Edit(**/.claude/investigations/**)"
     ]
   }
 }
 ```
 
-Use recursive `**/.claude/<ns>/**` globs. Shallow `Write(.claude/<ns>/*)`
-does not match nested artifact paths.
+Use recursive `**/.claude/<ns>/**` globs. Shallow `Edit(.claude/<ns>/*)`
+does not match nested artifact paths. `Edit(path)` rules cover every
+file-editing tool (Write, Edit, NotebookEdit); scoped `Write(path)` rules
+are not consulted by the file-permission check and emit a startup warning.
 
-Tell the user: `Run /update-config to add the recommended Write
+Tell the user: `Run /update-config to add the recommended Edit
 permission allowlist for plugin artifact namespaces.`
 
 ## Recommended Claude Code env vars
