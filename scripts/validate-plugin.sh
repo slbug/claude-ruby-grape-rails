@@ -15,4 +15,8 @@ require_command() {
 
 require_command claude
 
-exec claude plugin validate plugins/ruby-grape-rails
+# --strict fails on unrecognized fields and missing metadata, which the
+# runtime tolerates silently. Validate the marketplace manifest too: the
+# plugin-directory run does not cover `.claude-plugin/marketplace.json`.
+claude plugin validate --strict plugins/ruby-grape-rails
+exec claude plugin validate --strict .

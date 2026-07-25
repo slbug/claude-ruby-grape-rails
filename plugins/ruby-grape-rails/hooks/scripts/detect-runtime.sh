@@ -4,7 +4,8 @@ set -o pipefail
 
 # Detect Ruby runtime environment and available tooling.
 # This hook populates context at SessionStart and refreshes .runtime_env when
-# watched files change.
+# watched files change, when the working directory changes, and when a new
+# working directory is registered mid-session.
 # Policy: advisory runtime snapshot; dependency/setup failures warn and keep the
 # session running instead of blocking startup.
 

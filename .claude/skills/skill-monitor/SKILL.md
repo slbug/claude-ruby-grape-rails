@@ -20,7 +20,7 @@ on its own.
 
 Before trusting the dashboard:
 
-1. `claude plugin validate plugins/ruby-grape-rails`
+1. `claude plugin validate --strict plugins/ruby-grape-rails`
 2. `make eval` or `make eval-all`
 3. `/docs-check` if Claude docs drift suspected
 4. `/skill-monitor` — corroborating observational input

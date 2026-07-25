@@ -7,6 +7,59 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.16] - 2026-07-25
+
+### Added
+
+- `DirectoryAdded` hook registration for the runtime re-detection handler.
+  `/add-dir` (and the SDK `register_repo_root` control request) registers an
+  additional working directory without moving the session cwd, so
+  `CwdChanged` never fired and `.runtime_env` kept describing the original
+  directory. The handler reads no event-specific payload field — only the
+  base `.cwd` during workspace-root resolution, which falls back to
+  `CLAUDE_PROJECT_DIR` and `$PWD` — so it does not depend on this event's
+  schema while the event is absent from the published hooks reference.
+- `relevance` block on the `ruby-grape-rails` marketplace entry, so Claude
+  Code can suggest the plugin when a session matches Ruby/Rails signals:
+  `cli` (`bundle`, `rails`, `rake`, `rspec`, `sidekiq`, `rubocop`,
+  `brakeman`), `filesRead` (`**/*.rb`, `**/*.rake`, `**/Gemfile`,
+  `**/*.gemspec`, `**/config/routes.rb`), and a `manifestDeps` Gemfile
+  matcher for `rails`/`grape`/`sidekiq`/`sequel`. Suggestions stay dormant
+  until an administrator allowlists the marketplace via
+  `pluginSuggestionMarketplaces` in managed settings.
+
+### Fixed
+
+- `security-reminder.sh` post-edit routing for config files now uses
+  `Edit(**/config/**)` / `Write(**/config/**)` instead of single-segment
+  `Edit(config/**)` / `Write(config/**)`. Claude Code changed single-segment
+  `dir/**` hook `if:` conditions to match only `<cwd>/dir`, which silently
+  dropped the reminder for engine and modular-monolith layouts
+  (`packages/*/config/`, `engines/*/config/`).
+
+### Changed
+
+- `scripts/validate-plugin.sh` and the CI lint job now run
+  `claude plugin validate --strict`, which promotes unrecognized-field and
+  missing-metadata warnings to errors, and additionally validate
+  `.claude-plugin/marketplace.json` — previously unchecked, since a
+  plugin-directory run does not cover the marketplace manifest. Contributor
+  workflow docs name the same two commands.
+- `/rb:init` skill-listing budget guidance drops dated model IDs and
+  describes 1M-context versus 200K-context model selection instead.
+- Contributor hook rules (`.claude/rules/hook-development.md`,
+  `.github/instructions/hooks-review.instructions.md`) and the
+  `/docs-check` validation rules now require `**/dir/**` for directory
+  globs in hook `if:` filters, and state that permission `deny`/`ask`
+  rules are exempt.
+- Contributor docs cache adds nine Claude Code pages: `plugin-relevance`,
+  `plugin-hints`, `agents`, `workflows`, `sessions`, `headless`,
+  `prompt-caching`, `large-codebases`, `security-guidance`.
+- `.claude/rules/eval-workflow.md` prompt-cache guidance corrected against
+  current docs: the 1-hour TTL is automatic on a Claude subscription and
+  `ENABLE_PROMPT_CACHING_1H` applies to API-key and gateway auth only;
+  subagents always use the 5-minute TTL.
+
 ## [1.16.15] - 2026-07-15
 
 ### Fixed
@@ -2995,7 +3048,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.15...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.16...HEAD
+[1.16.16]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.15...v1.16.16
 [1.16.15]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.14...v1.16.15
 [1.16.14]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.13...v1.16.14
 [1.16.13]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.12...v1.16.13

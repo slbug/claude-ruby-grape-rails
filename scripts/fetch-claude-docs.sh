@@ -105,6 +105,15 @@ PAGES=(
   "goal.md"                     # /goal slash command — overlap check with /rb:full workflow
   "routines.md"                 # Remote routines / scheduled remote agents — schedule skill cross-ref
   "auto-mode-config.md"         # Auto-mode env context + block/allow rules — permissions adjacent
+  "plugin-relevance.md"         # marketplace.json relevance block — plugin suggestion matching
+  "plugin-hints.md"             # CLI-emitted install marker for plugin recommendation
+  "agents.md"                   # Parallelism comparison hub: subagents vs agent view vs teams vs workflows
+  "workflows.md"                # Dynamic workflows + size guideline — fanout skill cross-ref
+  "sessions.md"                 # Session fork/branch/resume semantics — SessionStart `source` contract
+  "headless.md"                 # `claude -p`, stream-json, subagent text forwarding — lab/eval harness contract
+  "prompt-caching.md"           # Cache TTL + model-switch semantics behind eval-workflow caching env vars
+  "large-codebases.md"          # Monorepo layout, nested CLAUDE.md, per-package skills — /rb:init alignment
+  "security-guidance.md"        # Bundled security-guidance plugin — overlap check with /rb:review security pass
 )
 
 # Parse arguments

@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Claude Code plugins by Alexander Grebennik",
-    "version": "1.16.15"
+    "version": "1.16.16"
   },
   "plugins": [
     {
@@ -19,7 +19,20 @@
         "source": "git-subdir",
         "url": "slbug/claude-ruby-grape-rails",
         "path": "plugins/ruby-grape-rails",
-        "ref": "v1.16.15"
+        "ref": "v1.16.16"
+      },
+      "relevance": {
+        "topic": "Rails",
+        "signals": {
+          "cli": ["bundle", "rails", "rake", "rspec", "sidekiq", "rubocop", "brakeman"],
+          "filesRead": ["**/*.rb", "**/*.rake", "**/Gemfile", "**/*.gemspec", "**/config/routes.rb"],
+          "manifestDeps": [
+            {
+              "file": "[/\\\\]Gemfile$",
+              "pattern": "gem\\s+[\"'](rails|grape|sidekiq|sequel)[\"']"
+            }
+          ]
+        }
       },
       "category": "development",
       "tags": ["ruby", "rails", "grape", "sidekiq", "hotwire", "turbo", "stimulus", "active-record", "sequel", "postgres", "redis", "rspec", "minitest", "brakeman", "rubocop", "karafka", "solid-queue", "tidewave", "iron-laws", "code-review", "specialist-agents", "plan-work-verify"]

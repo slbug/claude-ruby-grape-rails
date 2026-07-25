@@ -8,7 +8,12 @@ docs win.
 
 ## First Principles
 
-1. Run `claude plugin validate plugins/ruby-grape-rails` first.
+1. Run `claude plugin validate --strict plugins/ruby-grape-rails` and
+   `claude plugin validate --strict .` first. `--strict` turns
+   unrecognized-field warnings into errors; the marketplace manifest needs
+   its own run. A bogus hook event name fails as
+   `hooks.<Name>: Invalid key in record`, so the validator is authoritative
+   on event names even when `hooks.md` lags.
 2. Cached docs are the authority for current Claude Code behavior.
 3. Separate schema truth from repo policy:
 
@@ -212,8 +217,21 @@ Documented hook events:
 - `PostCompact`
 - `Elicitation`
 - `ElicitationResult`
+- `MessageDisplay`
 
 Documented hook types: `command`, `http`, `mcp_tool`, `prompt`, `agent`.
+
+Known runtime-ahead-of-docs events — do NOT flag as undocumented:
+
+| Event | Status |
+|---|---|
+| `DirectoryAdded` | Announced in the CC changelog, absent from `hooks.md`. Fires after `/add-dir` or the SDK `register_repo_root` control request registers a new working directory mid-session. Registered in `hooks.json` for the runtime re-detection handler. Re-verify against `hooks.md` on each `/docs-check` run and delete this row once documented. |
+
+A handler on such an event MUST NOT read event-specific payload fields, and
+MUST be advisory (exit 0 on every path), so an unannounced schema cannot
+break a session. Reading base fields common to all hook events (for example
+`.cwd` via `resolve_workspace_root`) is allowed, provided the handler still
+succeeds when the payload is missing, empty, or unparseable.
 
 Important constraints:
 
@@ -222,6 +240,7 @@ Important constraints:
 | handler-level `if` filters | documented + useful |
 | `if` version gate | requires CC `v2.1.85+`, only works on tool events: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest` |
 | `FileChanged` matcher | matcher = watched filenames (NOT a tool matcher); do not lint as one |
+| single-segment `dir/**` in `if` | matches ONLY `<cwd>/dir`, not `dir/` at any depth. Any-depth intent requires `**/dir/**`. `deny`/`ask` permission rules keep their any-depth match — do NOT generalize this rule to permission rules |
 | `async` | documented only for `type: "command"` hooks |
 | async control | async hooks cannot block / control Claude after start; `decision`, `permissionDecision`, `continue` MUST NOT be treated as meaningful on async handlers |
 
@@ -230,9 +249,10 @@ Checks:
 1. Confirm `hooks/hooks.json` only uses documented events + types.
 2. Flag undocumented events / hook types as `BLOCKER`.
 3. `if` outside tool events → `WARNING` or `BLOCKER` (depending on whether handler is disabled).
-4. Async on non-`command` hooks → docs issue.
-5. Async hook + control output → not supported unless cached docs explicitly say.
-6. Validate `${CLAUDE_PLUGIN_ROOT}` references against real repo paths:
+4. Single-segment `dir/**` path glob in any `if` filter → `BLOCKER` when the handler is meant to fire for nested Rails layouts (engines, modular monolith packages). Expect `**/dir/**`.
+5. Async on non-`command` hooks → docs issue.
+6. Async hook + control output → not supported unless cached docs explicitly say.
+7. Validate `${CLAUDE_PLUGIN_ROOT}` references against real repo paths:
 
    | Context | Path |
    |---|---|
