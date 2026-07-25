@@ -45,21 +45,20 @@ after deterministic gates pass. See `.claude/rules/development.md`
 - `eval-output` is part of `eval-ci-deterministic`; can also be invoked standalone
 - `--include-untracked` makes results non-comparable; NOT part of `eval-ci-deterministic`
 - `check-dynamic-injection.sh` expects git metadata for tracked-file scans
-- Long contributor eval runs (`make eval-all`, `make eval-behavioral-fresh`)
-  span gaps that can outlive the prompt cache. TTL selection follows the
-  session's auth, not the eval harness:
+- Before long runs (`make eval-all`, `make eval-behavioral-fresh`), set the
+  prompt-cache TTL from the session's auth, NOT the eval harness:
 
   | Auth | Default TTL | Action |
   |---|---|---|
-  | Claude subscription | 1 hour, automatic | none — `ENABLE_PROMPT_CACHING_1H` is a no-op |
-  | subscription over plan limit (usage credits) | drops to 5 minutes | expect uncached turns after gaps |
-  | API key / Bedrock / Vertex / Foundry / AWS | 5 minutes | `ENABLE_PROMPT_CACHING_1H=1` opts into 1 hour; cache writes bill at a higher rate |
+  | Claude subscription | 1 hour, automatic | set nothing — `ENABLE_PROMPT_CACHING_1H` is a no-op |
+  | subscription over plan limit (usage credits) | 5 minutes | expect uncached turns after gaps |
+  | API key / Bedrock / Vertex / Foundry / AWS | 5 minutes | set `ENABLE_PROMPT_CACHING_1H=1` for 1 hour; cache writes bill at a higher rate |
 
-  `FORCE_PROMPT_CACHING_5M=1` forces the 5-minute TTL regardless of auth —
-  use when comparing TTL behavior or overriding a managed-settings
-  `ENABLE_PROMPT_CACHING_1H`. Subagents always use the 5-minute TTL, even
-  on a subscription, so fanout-heavy runs gain nothing from the 1-hour
-  setting.
+- Set `FORCE_PROMPT_CACHING_5M=1` to force the 5-minute TTL on any auth. Use
+  when comparing TTL behavior or overriding a managed-settings
+  `ENABLE_PROMPT_CACHING_1H`.
+- Do NOT set `ENABLE_PROMPT_CACHING_1H` for fanout-heavy runs. Subagents use
+  the 5-minute TTL on every auth, including subscriptions.
 
 ## Current Scope
 
