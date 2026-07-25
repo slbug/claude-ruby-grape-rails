@@ -42,7 +42,7 @@ Primary cached pages (plugin-critical):
 | `security.md` | Plugin-facing security guidance — alignment for `block-dangerous-ops.sh` / `secret-scan.sh` policy |
 | `checkpointing.md` | File checkpointing semantics affecting hook ordering assumptions |
 | `remote-control.md` | `CronCreate` / scheduled trigger surface — `schedule` skill validation |
-| `model-config.md` | Agent/skill `model:` frontmatter validity (opus-4-7, sonnet-4-6, haiku-4-5) |
+| `model-config.md` | Agent/skill `model:` frontmatter validity — authority for accepted alias and pinned-ID values |
 | `ultraplan.md` | Bundled `/ultraplan` — overlap check with plugin `/rb:plan` |
 | `ultrareview.md` | Bundled `/ultrareview` — overlap check with plugin `/rb:review` |
 | `changelog.md` | Canonical CC changelog — authoritative source for `cc-changelog` skill |
@@ -50,6 +50,9 @@ Primary cached pages (plugin-critical):
 | `channels.md` | `channels` field in `plugin.json` — push events into running session |
 | `channels-reference.md` | MCP-server channel contract: capability declaration, notification events, reply tools, sender gating, permission relay |
 | `debug-your-config.md` | `/context`, `/doctor`, `/hooks`, `/mcp`, `/plugin details` enumeration of loaded plugin items — cross-ref for surface visibility claims |
+| `plugin-relevance.md` | `relevance` block in `marketplace.json`: `topic`, `signals.cwd`/`cli`/`hosts`/`filesRead`/`manifestDeps`, managed-settings allowlist gate |
+| `plugin-hints.md` | CLI-emitted install marker recommending a plugin — `bin/` executable surface |
+| `sessions.md` | Session fork / branch / resume semantics — authority for `SessionStart` `source` values consumed by plugin startup hooks |
 
 Additional cached pages (context/reference):
 
@@ -63,7 +66,7 @@ Additional cached pages (context/reference):
 | `overview.md` | High-level Claude Code overview |
 | `permission-modes.md` | Permission modes and implications for plugins |
 | `permissions.md` | Comprehensive permissions guide |
-| `fast-mode.md` | `/fast` Opus 4.6 semantics — relates to `effort: max` skill settings |
+| `fast-mode.md` | `/fast` semantics and eligible models — relates to `effort: max` skill settings |
 | `output-styles.md` | Output-style surface adjacent to statusline + `subagentStatusLine` |
 | `troubleshooting.md` | Hook failure diagnosis patterns |
 | `common-workflows.md` | Plan/Work/Review lifecycle comparison with `/rb:*` workflows |
@@ -78,6 +81,12 @@ Additional cached pages (context/reference):
 | `goal.md` | `/goal` slash command — overlap check with plugin `/rb:full` |
 | `routines.md` | Remote routines / scheduled remote agents — `schedule` skill cross-ref |
 | `auto-mode-config.md` | Auto-mode env context, block/allow rules — permissions adjacent |
+| `agents.md` | Parallelism comparison hub: subagents vs agent view vs teams vs dynamic workflows |
+| `workflows.md` | Dynamic workflows and size guideline — cross-ref for `/rb:review` and `/rb:research` fanout |
+| `headless.md` | `claude -p`, stream-json output, subagent text forwarding — `lab/eval` harness contract |
+| `prompt-caching.md` | Cache TTL and model-switch semantics behind the `eval-workflow` caching env vars |
+| `large-codebases.md` | Monorepo layout, nested CLAUDE.md, per-package skills — `/rb:init` stack-notes alignment |
+| `security-guidance.md` | Bundled security-guidance plugin — overlap check with the `/rb:review` security pass |
 
 ## Which Pages To Read
 
@@ -235,7 +244,7 @@ Use:
 Questions this answers:
 
 - Is `effort: max` valid for the model chosen in a given skill's frontmatter?
-- Does `/fast` Opus 4.6 behavior match assumptions in workflow skills?
+- Do the models eligible for `/fast` match assumptions in workflow skills?
 - Are agent/skill `model:` frontmatter values still supported?
 
 ### Plugin Best Practices

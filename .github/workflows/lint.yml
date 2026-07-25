@@ -56,7 +56,10 @@ jobs:
         run: npm install -g @anthropic-ai/claude-code
 
       - name: Validate plugin structure
-        run: claude plugin validate plugins/ruby-grape-rails
+        run: claude plugin validate --strict plugins/ruby-grape-rails
+
+      - name: Validate marketplace manifest
+        run: claude plugin validate --strict .
 
   eval:
     name: Eval CI

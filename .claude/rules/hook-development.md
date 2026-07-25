@@ -35,6 +35,18 @@ Add or update a short policy comment near the top of the hook when behavior chan
 - `SubagentStart` uses `hookSpecificOutput.additionalContext` to inject context into subagents
 - `PostToolUseFailure` uses `hookSpecificOutput.additionalContext` for debugging hints
 
+## Hook `if:` Path Filters
+
+- Directory globs must be written `**/dir/**`. A single-segment
+  `dir/**` matches ONLY `<cwd>/dir` — it does not match `dir/` at any
+  depth. Rails engine and modular-monolith layouts keep `config/`,
+  `app/`, and `spec/` under nested package roots, so single-segment
+  patterns silently skip them.
+- `deny` / `ask` permission rules keep their any-depth match. Do NOT
+  carry this rule over to `settings.json` permission entries.
+- `*.ext` and `*Name` filename globs are depth-independent and need no
+  `**/` prefix.
+
 ## Deletion Safety Rule
 
 - `rm -f` only for `mktemp` outputs or exact fixed plugin-owned paths

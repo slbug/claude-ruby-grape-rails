@@ -20,7 +20,7 @@ Imperative-only. Tables for category and shape lists.
 |---|---|
 | `/cc-changelog` | check for new CC versions, analyze impact |
 | `/cc-changelog --all` | re-analyze all versions (ignore last check) |
-| `/cc-changelog --set=2.1.85` | reset last checked version, then re-run |
+| `/cc-changelog --set=<version>` | reset last checked version, then re-run |
 
 ## Execution Flow
 

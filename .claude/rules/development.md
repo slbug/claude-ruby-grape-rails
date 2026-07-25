@@ -62,7 +62,7 @@ Imperative-only. Tables for command/option lists.
 
 For skill / agent / hook quality assessment, run in order:
 
-1. `claude plugin validate plugins/ruby-grape-rails`
+1. `claude plugin validate --strict plugins/ruby-grape-rails`
 2. `make eval-ci-deterministic`
 3. `make eval-output`
 4. `/docs-check`

@@ -51,14 +51,15 @@ Run checks matching the files touched:
 | Shell hooks | `bash -n plugins/ruby-grape-rails/hooks/scripts/FILE_NAME.sh`, `shellcheck -x plugins/ruby-grape-rails/hooks/scripts/FILE_NAME.sh` |
 | `bin/` executables | `bash -n plugins/ruby-grape-rails/bin/BIN_NAME`, `shellcheck plugins/ruby-grape-rails/bin/BIN_NAME`, mock-test via crafted stdin when the executable reads hook-style JSON |
 | Ruby scripts | `ruby -c FILE_PATH` |
-| Shipped plugin shape | `claude plugin validate plugins/ruby-grape-rails` |
+| Shipped plugin shape | `claude plugin validate --strict plugins/ruby-grape-rails` |
+| Marketplace manifest | `claude plugin validate --strict .` (not covered by the plugin-directory run) |
 | Contributor eval tooling | `make eval`, `make eval-all`, `make eval-ci-deterministic`, `make eval-output`, `make security-injection`, `make eval-tests`, `make eval-overlap`, `make eval-hard-corpus` |
 
 Multiple shipped surfaces touched → run plugin validator + file-type-specific checks.
 
 Trust order before contributor-analytics conclusions:
 
-1. `claude plugin validate plugins/ruby-grape-rails`
+1. `claude plugin validate --strict plugins/ruby-grape-rails`
 2. `make eval` or `make eval-all`
 3. `make eval-output` (deterministic research/review artifact fixtures)
 4. `/docs-check` when Claude docs / plugin schema assumptions may have changed

@@ -36,6 +36,9 @@ DETECT_RUNTIME_FAST = (
 DETECT_RUNTIME_ASYNC = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime-async.sh"
 )
+DETECT_RUNTIME_FILE_CHANGED = (
+    REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/detect-runtime-file-changed.sh"
+)
 DEBUG_STATEMENT_WARNING = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/debug-statement-warning.sh"
 )
@@ -5709,6 +5712,57 @@ class InjectRulesTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0)
                 self.assertEqual(result.stdout, "")
                 self.assertEqual(result.stderr, "")
+
+
+class RuntimeRedetectionWiringTests(unittest.TestCase):
+    """`detect-runtime-file-changed.sh` is the shared re-detection handler.
+    It must stay wired under every event that can invalidate the runtime
+    snapshot mid-session. `DirectoryAdded` covers `/add-dir`, which
+    `CwdChanged` misses because the session cwd does not move."""
+
+    REDETECTION_EVENTS = ("FileChanged", "CwdChanged", "DirectoryAdded")
+
+    def _commands_for(self, event: str) -> list[str]:
+        hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]
+        return [
+            hook.get("command", "")
+            for group in hooks.get(event, [])
+            for hook in group.get("hooks", [])
+        ]
+
+    def test_redetection_handler_wired_for_every_event(self) -> None:
+        for event in self.REDETECTION_EVENTS:
+            with self.subTest(event=event):
+                self.assertTrue(
+                    any(
+                        cmd.endswith("/detect-runtime-file-changed.sh")
+                        for cmd in self._commands_for(event)
+                    ),
+                    f"{event} is not wired to detect-runtime-file-changed.sh",
+                )
+
+    def test_redetection_handler_reads_no_payload_fields(self) -> None:
+        """The handler runs on `DirectoryAdded`, whose payload schema is not
+        yet in `hooks.md`. Reading no payload keeps it schema-agnostic."""
+        code = "\n".join(
+            line
+            for line in DETECT_RUNTIME_FILE_CHANGED.read_text(
+                encoding="utf-8"
+            ).splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        for forbidden in (
+            "jq",
+            "hook_event_name",
+            "read_hook_input",
+            "/dev/stdin",
+            "read -",
+        ):
+            self.assertNotIn(
+                forbidden,
+                code,
+                f"detect-runtime-file-changed.sh must not consume {forbidden!r}",
+            )
 
 
 if __name__ == "__main__":

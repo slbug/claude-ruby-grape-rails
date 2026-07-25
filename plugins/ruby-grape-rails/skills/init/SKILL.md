@@ -252,12 +252,13 @@ See `${CLAUDE_PLUGIN_ROOT}/skills/intro/references/tutorial-content.md`
 
 ## Skill Listing Budget
 
-Plugin targets 1M context (sonnet[1m] / opus 4.7 1M). Default
+Plugin targets 1M-context models (current default Opus, or any model
+selected with the `[1m]` suffix). Default
 `skillListingBudgetFraction=0.01` × 1M = 10,000-char budget covers
 shipped skills.
 
-**200K-context users** (`claude-sonnet-4-5` / `claude-opus-4-7` without
-`[1m]`): default 1% × 200K = 2,000-char budget overflows. Either raise
+**200K-context models** (any model selected without a 1M variant):
+default 1% × 200K = 2,000-char budget overflows. Either raise
 in `~/.claude/settings.json`:
 
 ```json

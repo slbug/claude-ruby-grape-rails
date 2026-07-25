@@ -78,7 +78,7 @@ Each finding answers:
 
 1. Do not paste large cached docs or full plugin files into prompts.
 2. Cached docs beat stale local assumptions.
-3. `claude plugin validate` is the deterministic baseline.
+3. `claude plugin validate --strict` is the deterministic baseline.
 4. `BLOCKER` means docs say current plugin shape is invalid now.
 5. New documented features are `INFO` until the repo adopts them.
 

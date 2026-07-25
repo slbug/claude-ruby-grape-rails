@@ -175,6 +175,17 @@ Exit code 124 from `timeout`/`gtimeout` is handled explicitly:
 Scripts resolve `timeout` → `gtimeout` → no-timeout fallback via
 `run_with_timeout()` for macOS compatibility.
 
+## Hook `if:` Path Filters in `hooks.json`
+
+- Flag single-segment directory globs (`Edit(config/**)`,
+  `Write(app/**)`) — they match only `<cwd>/config`, never a nested
+  `config/` under an engine or modular-monolith package. Expect
+  `**/config/**`.
+- Do NOT flag `settings.json` `deny` / `ask` permission rules for the
+  same shape; permission rules keep any-depth matching.
+- Do NOT flag `*.rb` / `*Gemfile` filename globs for a missing `**/`
+  prefix; those are already depth-independent.
+
 ## Cross-File Drift Around Hook Changes
 
 - Any new/renamed `*.sh` under `hooks/scripts/` → check
