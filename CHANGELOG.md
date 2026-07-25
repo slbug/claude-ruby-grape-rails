@@ -15,8 +15,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `/add-dir` (and the SDK `register_repo_root` control request) registers an
   additional working directory without moving the session cwd, so
   `CwdChanged` never fired and `.runtime_env` kept describing the original
-  directory. The handler reads no hook payload, so it stays schema-agnostic
-  while the event is absent from the published hooks reference.
+  directory. The handler reads no event-specific payload field — only the
+  base `.cwd` during workspace-root resolution, which falls back to
+  `CLAUDE_PROJECT_DIR` and `$PWD` — so it does not depend on this event's
+  schema while the event is absent from the published hooks reference.
 - `relevance` block on the `ruby-grape-rails` marketplace entry, so Claude
   Code can suggest the plugin when a session matches Ruby/Rails signals:
   `cli` (`bundle`, `rails`, `rake`, `rspec`, `sidekiq`, `rubocop`,
@@ -25,15 +27,6 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   matcher for `rails`/`grape`/`sidekiq`/`sequel`. Suggestions stay dormant
   until an administrator allowlists the marketplace via
   `pluginSuggestionMarketplaces` in managed settings.
-
-### Changed
-
-- `scripts/validate-plugin.sh` and the CI lint job now run
-  `claude plugin validate --strict`, which promotes unrecognized-field and
-  missing-metadata warnings to errors, and additionally validate
-  `.claude-plugin/marketplace.json` — previously unchecked, since a
-  plugin-directory run does not cover the marketplace manifest. Contributor
-  workflow docs name the same two commands.
 
 ### Fixed
 
@@ -46,6 +39,12 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `scripts/validate-plugin.sh` and the CI lint job now run
+  `claude plugin validate --strict`, which promotes unrecognized-field and
+  missing-metadata warnings to errors, and additionally validate
+  `.claude-plugin/marketplace.json` — previously unchecked, since a
+  plugin-directory run does not cover the marketplace manifest. Contributor
+  workflow docs name the same two commands.
 - `/rb:init` skill-listing budget guidance drops dated model IDs and
   describes 1M-context versus 200K-context model selection instead.
 - Contributor hook rules (`.claude/rules/hook-development.md`,

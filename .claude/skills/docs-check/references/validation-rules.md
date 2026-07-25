@@ -227,9 +227,11 @@ Known runtime-ahead-of-docs events — do NOT flag as undocumented:
 |---|---|
 | `DirectoryAdded` | Announced in the CC changelog, absent from `hooks.md`. Fires after `/add-dir` or the SDK `register_repo_root` control request registers a new working directory mid-session. Registered in `hooks.json` for the runtime re-detection handler. Re-verify against `hooks.md` on each `/docs-check` run and delete this row once documented. |
 
-A handler on such an event MUST read no payload fields and MUST be
-advisory (exit 0 on every path), so an unannounced schema cannot break a
-session.
+A handler on such an event MUST NOT read event-specific payload fields, and
+MUST be advisory (exit 0 on every path), so an unannounced schema cannot
+break a session. Reading base fields common to all hook events (for example
+`.cwd` via `resolve_workspace_root`) is allowed, provided the handler still
+succeeds when the payload is missing, empty, or unparseable.
 
 Important constraints:
 

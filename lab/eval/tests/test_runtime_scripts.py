@@ -402,10 +402,13 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertTrue(broad_commands["log-progress.sh"].get("async", False))
 
         # security-reminder.sh is narrowed to code/config files via
-        # separate Edit and Write groups with per-pattern if filters
+        # separate Edit and Write groups with per-pattern if filters.
+        # The directory pattern must stay `**/config/**`: a single-segment
+        # `config/**` matches only <cwd>/config, skipping engine and
+        # modular-monolith package roots.
         security_expected = {
             "*.rb", "*.rake", "*Gemfile", "*Rakefile",
-            "config/**", "*.yml", "*.env*", "*.json",
+            "**/config/**", "*.yml", "*.env*", "*.json",
         }
         for matcher in ("Edit", "Write"):
             security_group = next(
@@ -5741,9 +5744,17 @@ class RuntimeRedetectionWiringTests(unittest.TestCase):
                     f"{event} is not wired to detect-runtime-file-changed.sh",
                 )
 
-    def test_redetection_handler_reads_no_payload_fields(self) -> None:
-        """The handler runs on `DirectoryAdded`, whose payload schema is not
-        yet in `hooks.md`. Reading no payload keeps it schema-agnostic."""
+    def test_redetection_wrapper_itself_parses_no_hook_input(self) -> None:
+        """Scope: the wrapper script ONLY. It must stay a thin exec shim that
+        parses no hook input of its own.
+
+        This does NOT assert the whole chain ignores the payload. The exec
+        target `detect-runtime.sh` calls `read_hook_input` and hands the
+        payload to `resolve_workspace_root`, which reads the base `.cwd`
+        field. What keeps the chain safe on `DirectoryAdded` — whose schema
+        is not yet in `hooks.md` — is that no *event-specific* field is read
+        and workspace-root resolution falls back to `CLAUDE_PROJECT_DIR`
+        then `$PWD`, not the absence of payload reads."""
         code = "\n".join(
             line
             for line in DETECT_RUNTIME_FILE_CHANGED.read_text(
@@ -5761,7 +5772,9 @@ class RuntimeRedetectionWiringTests(unittest.TestCase):
             self.assertNotIn(
                 forbidden,
                 code,
-                f"detect-runtime-file-changed.sh must not consume {forbidden!r}",
+                f"the detect-runtime-file-changed.sh wrapper must not itself "
+                f"consume {forbidden!r}; payload handling belongs to the exec "
+                f"target, which reads base fields only",
             )
 
 
