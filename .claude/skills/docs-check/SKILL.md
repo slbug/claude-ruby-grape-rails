@@ -38,11 +38,18 @@ cached Claude Code docs. Contributor maintenance — NOT user-facing.
 
 ### 1. Run Deterministic Baseline
 
-Run `claude plugin validate --strict plugins/ruby-grape-rails` then
-`claude plugin validate --strict .` to catch structural schema issues
-without docs interpretation. `--strict` promotes unrecognized-field and
-missing-metadata warnings to errors; the second run covers
-`.claude-plugin/marketplace.json`, which the plugin-directory run skips.
+Run all three, in order, to catch structural schema issues without docs
+interpretation:
+
+| Command | Covers |
+|---|---|
+| `claude plugin validate --strict plugins/ruby-grape-rails` | shipped plugin manifest + components |
+| `claude plugin validate --strict .` | `.claude-plugin/marketplace.json`, which the plugin-directory run skips |
+| `claude plugin validate --strict .claude` | contributor-only components under `.claude/`, validated as a bare component directory |
+
+`--strict` promotes unrecognized-field and missing-metadata warnings to
+errors. `npm run validate` runs the same three via
+`scripts/validate-plugin.sh`; CI runs them as separate lint-job steps.
 
 ### 2. Refresh Cached Docs (Unless `--quick`)
 
@@ -113,8 +120,8 @@ docs paste" rule, "stop after returning". Call site stays minimal.
 
 Keep these results in view while synthesizing:
 
-- `claude plugin validate --strict plugins/ruby-grape-rails` and
-  `claude plugin validate --strict .` (deterministic)
+- all three `claude plugin validate --strict` runs from step 1
+  (`plugins/ruby-grape-rails`, `.`, `.claude`) — deterministic
 - basic file existence / JSON / markdown sanity checks
 
 Stale local rules MUST NOT override deterministic validator output.

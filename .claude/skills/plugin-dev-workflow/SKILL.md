@@ -53,6 +53,7 @@ Run checks matching the files touched:
 | Ruby scripts | `ruby -c FILE_PATH` |
 | Shipped plugin shape | `claude plugin validate --strict plugins/ruby-grape-rails` |
 | Marketplace manifest | `claude plugin validate --strict .` (not covered by the plugin-directory run) |
+| Contributor components under `.claude/` | `claude plugin validate --strict .claude` (bare component directory; reports SKILL.md frontmatter that fails to parse) |
 | Contributor eval tooling | `make eval`, `make eval-all`, `make eval-ci-deterministic`, `make eval-output`, `make security-injection`, `make eval-tests`, `make eval-overlap`, `make eval-hard-corpus` |
 
 Multiple shipped surfaces touched → run plugin validator + file-type-specific checks.

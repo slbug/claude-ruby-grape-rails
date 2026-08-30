@@ -31,6 +31,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   components under `.claude/` in addition to the shipped plugin and the
   marketplace manifest. Claude Code validates a bare component directory as
   components and reports SKILL.md files whose frontmatter fails to parse.
+  The `docs-check` deterministic baseline and the `plugin-dev-workflow`
+  validation matrix list the same third gate, so contributor sessions and CI
+  run one baseline rather than two.
 - CI actions bumped to `actions/checkout@v7`, `actions/setup-node@v7`, and
   `actions/setup-python@v7` (all Node 24 runtimes). The workflow triggers on
   `push` and `pull_request` only, so the v7 checkout block on fork

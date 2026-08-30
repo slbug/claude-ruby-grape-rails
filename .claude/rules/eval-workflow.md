@@ -67,18 +67,18 @@ after deterministic gates pass. See `.claude/rules/development.md`
 - Set `FORCE_PROMPT_CACHING_5M=1` to force the 5-minute TTL on any auth. Use
   when comparing TTL behavior or overriding a managed-settings
   `ENABLE_PROMPT_CACHING_1H`.
-- Fanout-heavy runs: subagent TTL is set separately from the main
-  conversation. `ENABLE_PROMPT_CACHING_1H` alone no longer decides it — set
-  `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL=1h` to keep spawn-heavy fanouts warm,
-  or `5m` to hold subagent cache writes at the lower rate while the main
-  conversation stays on 1 hour.
-- Per-agent override: `experimental.cacheTtl` (`5m` / `1h`) in a subagent
-  file's frontmatter applies when no subagent TTL setting is configured. Read
-  only from subagent files; `1h` is ignored while a Claude subscription draws
-  on usage credits. Do NOT add it to `plugins/ruby-grape-rails/agents/*.md` —
-  `plugins-reference.md` omits `experimental` from the plugin-shipped agent
-  field set, so Claude Code drops it silently. Use
-  `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` for plugin agent fanouts.
+- Set `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` for every fanout-heavy run:
+  `1h` keeps spawn-heavy fanouts warm, `5m` holds subagent cache writes at
+  the lower rate while the main conversation stays on 1 hour. Do NOT rely on
+  `ENABLE_PROMPT_CACHING_1H` for the subagent bucket — it is outranked.
+- Set `experimental.cacheTtl` (`5m` / `1h`) in a subagent file's frontmatter
+  to override the TTL for that one agent. It takes effect only when no
+  subagent TTL setting is configured, and `1h` is ignored while a Claude
+  subscription draws on usage credits. Do NOT add it to
+  `plugins/ruby-grape-rails/agents/*.md` — `plugins-reference.md` omits
+  `experimental` from the plugin-shipped agent field set, so Claude Code
+  drops it silently. Use `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` for plugin
+  agent fanouts instead.
 
 ## Current Scope
 
