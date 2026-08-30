@@ -19,4 +19,10 @@ require_command claude
 # runtime tolerates silently. Validate the marketplace manifest too: the
 # plugin-directory run does not cover `.claude-plugin/marketplace.json`.
 claude plugin validate --strict plugins/ruby-grape-rails
-exec claude plugin validate --strict .
+claude plugin validate --strict .
+
+# Contributor-only components under `.claude/` ship to nobody but load into
+# every in-repo session. A bare component directory is validated as
+# components, not as a plugin manifest, and reports SKILL.md files whose
+# frontmatter fails to parse.
+exec claude plugin validate --strict .claude

@@ -7,6 +7,37 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.17] - 2026-08-30
+
+### Removed
+
+- `effort: low` from `verification-runner` and `web-researcher`. Both run on
+  `model: haiku`, and Claude Code's effort-level table lists no Haiku row —
+  models absent from that table support no effort level, so the field
+  selected nothing. The documented fallback to the highest supported level
+  at or below the requested one applies only to models that support effort.
+
+### Changed
+
+- Contributor eval rule now documents per-bucket prompt-cache TTL control.
+  `CLAUDE_CODE_PROMPT_CACHE_TTL` (main conversation) and
+  `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` (subagents, workflows, background
+  work) take precedence over `ENABLE_PROMPT_CACHING_1H`, with
+  `promptCacheTtl` / `subagentPromptCacheTtl` settings equivalents and an
+  `experimental.cacheTtl` per-subagent frontmatter override. The previous
+  guidance — subagents always run on the 5-minute TTL, so never set a 1-hour
+  TTL for fanout-heavy runs — no longer holds.
+- `scripts/validate-plugin.sh` and the CI lint job validate contributor
+  components under `.claude/` in addition to the shipped plugin and the
+  marketplace manifest. Claude Code validates a bare component directory as
+  components and reports SKILL.md files whose frontmatter fails to parse.
+- CI actions bumped to `actions/checkout@v7`, `actions/setup-node@v7`, and
+  `actions/setup-python@v7` (all Node 24 runtimes). The workflow triggers on
+  `push` and `pull_request` only, so the v7 checkout block on fork
+  `pull_request_target` / `workflow_run` checkouts does not apply, and neither
+  the removed `setup-python` `pip-install` input nor the removed
+  `setup-node` dummy `NODE_AUTH_TOKEN` export was in use.
+
 ## [1.16.16] - 2026-07-25
 
 ### Added
@@ -3048,7 +3079,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.16...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.17...HEAD
+[1.16.17]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.16...v1.16.17
 [1.16.16]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.15...v1.16.16
 [1.16.15]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.14...v1.16.15
 [1.16.14]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.13...v1.16.14

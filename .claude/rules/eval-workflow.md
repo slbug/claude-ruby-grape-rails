@@ -51,14 +51,34 @@ after deterministic gates pass. See `.claude/rules/development.md`
   | Auth | Default TTL | Action |
   |---|---|---|
   | Claude subscription | 1 hour, automatic | set nothing — `ENABLE_PROMPT_CACHING_1H` is a no-op |
-  | subscription over plan limit (usage credits) | 5 minutes | expect uncached turns after gaps |
+  | subscription over plan limit (usage credits) | 5 minutes | set `ENABLE_PROMPT_CACHING_1H=1` to keep the 1-hour TTL, else expect uncached turns after gaps |
   | API key / Bedrock / Vertex / Foundry / AWS | 5 minutes | set `ENABLE_PROMPT_CACHING_1H=1` for 1 hour; cache writes bill at a higher rate |
 
+- Choose the TTL per request bucket instead of globally. Both take precedence
+  over `ENABLE_PROMPT_CACHING_1H`; `FORCE_PROMPT_CACHING_5M` overrides both:
+
+  | Variable | Bucket |
+  |---|---|
+  | `CLAUDE_CODE_PROMPT_CACHE_TTL` | main conversation — interactive, `-p`, SDK turns, inline helpers |
+  | `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` | everything outside the main conversation — subagents, workflows, background work |
+
+  Accepted values: `5m`, `1h`. Settings-file equivalents: `promptCacheTtl`,
+  `subagentPromptCacheTtl`.
 - Set `FORCE_PROMPT_CACHING_5M=1` to force the 5-minute TTL on any auth. Use
   when comparing TTL behavior or overriding a managed-settings
   `ENABLE_PROMPT_CACHING_1H`.
-- Do NOT set `ENABLE_PROMPT_CACHING_1H` for fanout-heavy runs. Subagents use
-  the 5-minute TTL on every auth, including subscriptions.
+- Fanout-heavy runs: subagent TTL is set separately from the main
+  conversation. `ENABLE_PROMPT_CACHING_1H` alone no longer decides it — set
+  `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL=1h` to keep spawn-heavy fanouts warm,
+  or `5m` to hold subagent cache writes at the lower rate while the main
+  conversation stays on 1 hour.
+- Per-agent override: `experimental.cacheTtl` (`5m` / `1h`) in a subagent
+  file's frontmatter applies when no subagent TTL setting is configured. Read
+  only from subagent files; `1h` is ignored while a Claude subscription draws
+  on usage credits. Do NOT add it to `plugins/ruby-grape-rails/agents/*.md` —
+  `plugins-reference.md` omits `experimental` from the plugin-shipped agent
+  field set, so Claude Code drops it silently. Use
+  `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` for plugin agent fanouts.
 
 ## Current Scope
 
