@@ -37,13 +37,12 @@ Primary cached pages (plugin-critical):
 | `discover-plugins.md` | Marketplace install flow, `git-subdir` path resolution |
 | `sandboxing.md` | Bash sandboxing semantics affecting hook side-effect guarantees |
 | `context-window.md` | PreCompact/PostCompact hook timing and payload |
-| `code-review.md` | Built-in `/code-review` flow — overlap check with plugin `/rb:review` |
+| `code-review.md` | Built-in `/code-review` flow (`/review` is an alias) — overlap check with plugin `/rb:review` |
 | `best-practices.md` | Plugin development best practices — contributor baseline for authoring guidelines |
 | `security.md` | Plugin-facing security guidance — alignment for `block-dangerous-ops.sh` / `secret-scan.sh` policy |
 | `checkpointing.md` | File checkpointing semantics affecting hook ordering assumptions |
 | `remote-control.md` | `CronCreate` / scheduled trigger surface — `schedule` skill validation |
 | `model-config.md` | Agent/skill `model:` frontmatter validity — authority for accepted alias and pinned-ID values |
-| `ultraplan.md` | Bundled `/ultraplan` — overlap check with plugin `/rb:plan` |
 | `ultrareview.md` | Bundled `/ultrareview` — overlap check with plugin `/rb:review` |
 | `changelog.md` | Canonical CC changelog — authoritative source for `cc-changelog` skill |
 | `worktrees.md` | `isolation: worktree` agent frontmatter, Agent-tool `isolation` parameter, `.worktreeinclude`, subagent isolation semantics |
@@ -198,14 +197,13 @@ Questions this answers:
 Use:
 
 - `code-review.md`
-- `ultraplan.md`
 - `ultrareview.md`
 - `common-workflows.md`
 
 Questions this answers:
 
 - Does a plugin `/rb:*` command duplicate or conflict with a built-in CC
-  command (e.g., `/code-review`, `/ultraplan`, `/ultrareview`)?
+  command (e.g., `/code-review`, `/ultrareview`)?
 - Is a plugin workflow step already covered by a documented CC lifecycle?
 
 ### CC Version Tracking

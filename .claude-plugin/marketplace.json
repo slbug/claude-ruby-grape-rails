@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Claude Code plugins by Alexander Grebennik",
-    "version": "1.16.16"
+    "version": "1.16.17"
   },
   "plugins": [
     {
@@ -19,7 +19,7 @@
         "source": "git-subdir",
         "url": "slbug/claude-ruby-grape-rails",
         "path": "plugins/ruby-grape-rails",
-        "ref": "v1.16.16"
+        "ref": "v1.16.17"
       },
       "relevance": {
         "topic": "Rails",

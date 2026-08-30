@@ -70,6 +70,11 @@ agents — do NOT recommend in plugin agent frontmatter:
   set in `plugins-reference.md` does NOT include it
 - `initialPrompt` — fires only when an agent runs as the main session
   agent via `--agent` / settings; inert for plugin subagents
+- `experimental` (including its `cacheTtl` key) — `sub-agents.md`
+  documents the map for subagent files generally; the plugin-supported
+  set in `plugins-reference.md` does NOT include it. Re-verify against
+  `plugins-reference.md` on each run and move it to the supported list
+  once it appears there
 
 Important constraints:
 
@@ -81,6 +86,11 @@ Important constraints:
 - `Agent(...)` is current syntax for restricting spawned subagents
   - `Task(...)` may appear as historical alias in docs; contributor guidance prefers `Agent(...)`
 - `omitClaudeMd` is repo policy (not cached-docs baseline) unless cached docs document it later
+- `effort` only applies on models `model-config.md` § effort levels
+  lists. That table currently omits Haiku, and the page states models
+  absent from it do not support effort. `effort` on such a model is
+  inert configuration — classify `WARNING` (dead config), never
+  `BLOCKER`, since the field itself stays documented
 
 Checks:
 
@@ -100,7 +110,7 @@ Authoritative cached docs:
 Currently-supported skill frontmatter (per agentskills.io canon):
 
 - `name`
-- `description` (single field; replaces former `description` + `when_to_use` split)
+- `description` (single field — repo policy; see the `when_to_use` note below)
 - `argument-hint`
 - `disable-model-invocation`
 - `user-invocable`
@@ -114,8 +124,16 @@ Currently-supported skill frontmatter (per agentskills.io canon):
 
 Notes:
 
-- `when_to_use` is no longer a supported field — content folds into the
-  single `description` field
+- `when_to_use` is REPO POLICY to avoid, not a removed Claude Code
+  field. Cached `skills.md` § Frontmatter reference still documents it
+  (appended to `description` in the skill listing, counted toward the
+  combined listing cap). Avoid it because the portable agentskills.io
+  set — `name`, `description`, `license`, `compatibility`, `metadata`,
+  `allowed-tools` — excludes it, so a skill using it stops being
+  portable to claude.ai uploads, the Skills API, and `package_skill.py`.
+  Fold the content into the single `description` field. Encountering
+  `when_to_use` on a plugin SKILL.md is a repo-policy finding, NOT a
+  docs incompatibility
 - `paths:` is documented in CC skill schema but empirically non-functional
   at plugin scope; project-level `.claude/rules/*.md` `paths:` is a
   separate, functional mechanism
@@ -172,12 +190,18 @@ Checks:
 1. Flag undocumented skill frontmatter as docs issue.
 2. Do NOT flag documented fields (`effort`, `shell`).
 3. Continue treating `triggers:` as invalid — skills docs do not support it.
-4. Flag `when_to_use:` on a plugin SKILL.md as drift — single `description` only.
+4. Flag `when_to_use:` on a plugin SKILL.md as a repo-policy violation
+   (portability), NOT as docs drift — Claude Code still documents the field.
 5. Flag plugin-scope `paths:` as drift (non-functional at plugin scope).
 6. Colon names (`rb:<slug>`) are repo policy — classify INFO, not WARNING.
-7. Skill `description` over 1,024 characters → `ERROR` (agentskills.io cap).
-   Over 250 characters → `WARNING` (cached docs say Claude truncates them
-   in skill listing).
+7. Skill `description` length — three separate limits, none superseding
+   another:
+
+   | Limit | Source | Level |
+   |---|---|---|
+   | 1,024 characters | agentskills.io spec cap; NOT stated in cached `skills.md` — treat as unverified against the cache until a cited source is added | `ERROR` |
+   | 1,536 characters | cached `skills.md` § Frontmatter reference — combined `description` + `when_to_use` truncation in the skill listing, adjustable via `skillListingMaxDescChars` | `ERROR` |
+   | 250 characters | repo authoring target for routing quality | `WARNING` |
 
 ## Hook Validation
 
@@ -202,6 +226,8 @@ Documented hook events:
 - `Notification`
 - `SubagentStart`
 - `SubagentStop`
+- `PreModelSwitch`
+- `PostModelSwitch`
 - `TaskCreated`
 - `TaskCompleted`
 - `Stop`
@@ -211,6 +237,7 @@ Documented hook events:
 - `ConfigChange`
 - `CwdChanged`
 - `FileChanged`
+- `DirectoryAdded`
 - `WorktreeCreate`
 - `WorktreeRemove`
 - `PreCompact`
@@ -225,7 +252,10 @@ Known runtime-ahead-of-docs events — do NOT flag as undocumented:
 
 | Event | Status |
 |---|---|
-| `DirectoryAdded` | Announced in the CC changelog, absent from `hooks.md`. Fires after `/add-dir` or the SDK `register_repo_root` control request registers a new working directory mid-session. Registered in `hooks.json` for the runtime re-detection handler. Re-verify against `hooks.md` on each `/docs-check` run and delete this row once documented. |
+| (none) | `DirectoryAdded` graduated on 2026-08-30 — now documented in `hooks.md` main event table, its own section, and `agent-sdk/hooks.md`. |
+
+Add a row when the CC changelog announces an event `hooks.md` does not
+yet carry; delete the row once the event reaches `hooks.md`.
 
 A handler on such an event MUST NOT read event-specific payload fields, and
 MUST be advisory (exit 0 on every path), so an unannounced schema cannot
@@ -243,6 +273,8 @@ Important constraints:
 | single-segment `dir/**` in `if` | matches ONLY `<cwd>/dir`, not `dir/` at any depth. Any-depth intent requires `**/dir/**`. `deny`/`ask` permission rules keep their any-depth match — do NOT generalize this rule to permission rules |
 | `async` | documented only for `type: "command"` hooks |
 | async control | async hooks cannot block / control Claude after start; `decision`, `permissionDecision`, `continue` MUST NOT be treated as meaningful on async handlers |
+| `PreModelSwitch` | blocking (10s budget; a timeout also blocks). Matcher compares the canonical target-model name — aliases, dated IDs, provider IDs, and the `[1m]` suffix all normalize. When no canonical name resolves, every handler runs regardless of matcher, so a blocking handler MUST read `to_model` itself. Does NOT fire for Claude-initiated switches (auto-fallback, resume-restore) |
+| `PostModelSwitch` | non-blocking, side-effect only — the model already changed. Receives the Claude-initiated switches `PreModelSwitch` skips |
 
 Checks:
 
@@ -279,6 +311,7 @@ Checks for `.claude-plugin/plugin.json`:
    - `lspServers`
    - `userConfig`
    - `channels`
+   - `workflows` (custom Workflow-tool script directories)
 3. Path behavior:
    - custom `commands`, `agents`, `skills`, `outputStyles` REPLACE defaults
    - arrays can keep default path + add extras

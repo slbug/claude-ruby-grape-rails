@@ -77,17 +77,16 @@ PAGES=(
   "discover-plugins.md"         # Marketplace install flow and git-subdir path resolution
   "sandboxing.md"               # Bash sandboxing semantics impacting hook side-effect guarantees
   "context-window.md"           # PreCompact/PostCompact hook timing and payload context
-  "code-review.md"              # Built-in /code-review flow — overlap check with plugin /rb:review
+  "code-review.md"              # Built-in /code-review flow (/review is an alias) — overlap check with plugin /rb:review
   "best-practices.md"           # Plugin development best practices — contribution guide baseline
   "security.md"                 # Security guidance — alignment for block-dangerous-ops / secret-scan policy
-  "ultraplan.md"                # Bundled /ultraplan — overlap surface vs /rb:plan
   "ultrareview.md"              # Bundled /ultrareview — overlap surface vs /rb:review
   "changelog.md"                # Claude Code changelog — canonical cache for cc-changelog skill
   "checkpointing.md"            # File checkpointing semantics — hook ordering assumptions
   "whats-new/index.md"          # Weekly release notes index — cc-changelog + docs-check feed
   "remote-control.md"           # CronCreate / scheduled triggers surface — schedule skill validation
-  "model-config.md"             # Agent/model frontmatter validity (opus-4-7, sonnet-4-6, haiku-4-5)
-  "fast-mode.md"                # /fast Opus 4.6 — relates to effort:max skill settings
+  "model-config.md"             # Agent/model frontmatter validity — accepted family aliases and pinned model IDs
+  "fast-mode.md"                # /fast model support surface — relates to effort:max skill settings
   "output-styles.md"            # Output-style surface adjacent to statusline + subagentStatusLine
   "troubleshooting.md"          # Hook failure diagnosis patterns
   "common-workflows.md"         # Plan/Work/Review lifecycle comparison with /rb: workflows

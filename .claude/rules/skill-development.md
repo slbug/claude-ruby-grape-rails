@@ -27,14 +27,21 @@ skills/{name}/
 
 - Include an "Iron Laws" section for critical rules
 - No `triggers:` field — use `description` for routing
-- No `when_to_use:` field — single `description` field per agentskills.io canon
+- No `when_to_use:` field — single `description` field. Claude Code
+  still documents `when_to_use` (appended to `description` in the skill
+  listing); avoid it because the portable agentskills.io field set
+  excludes it, so a skill using it stops being portable to claude.ai
+  uploads, the Skills API, and `package_skill.py`
 - No `paths:` field on plugin SKILL.md — empirically non-functional at plugin scope (the `.claude/rules/*.md` `paths:` mechanism is distinct and remains functional)
 - **Registry sync on visibility flips**: toggling `disable-model-invocation`, renaming, or adding/removing a skill REQUIRES updating `plugins/ruby-grape-rails/references/skill-registry.yml`:
   - DMI on → entry under `hidden_skills` with `aliases:`, `advertise_in:`, `symptom:`, `rationale:`
   - DMI off (or absent) → entry under `visible_skills` with `name`, `folder`, `rationale` only (no `advertise_in` — auto-routed via description)
   - After edit: run `bash scripts/generate-skill-routing.sh` to propagate to intent-detection routing table, hub footers, and tutorial inventory
   - `test_registry_visibility_sync.py` catches drift between SKILL.md DMI flag and registry bucket; `test_registry_in_sync.py` catches drift between registry and generated artifacts
-- Description <= 1,024 chars (agentskills.io cap); front-load WHEN the skill applies, include real-query phrases as Triggers, include negative exclusion clauses as Do NOT use for
+- Description <= 1,024 chars (agentskills.io spec cap; Claude Code
+  separately truncates the skill listing at 1,536 chars — the tighter
+  limit governs); front-load WHEN the skill applies, include real-query
+  phrases as Triggers, include negative exclusion clauses as Do NOT use for
 - For plugin-wide executables in `bin/`, use explicit `${CLAUDE_PLUGIN_ROOT}/bin/<cmd>` when the skill also references `${CLAUDE_SKILL_DIR}` (bare names can be conflated with skill-local files)
 - **Literal `$` before a digit in SKILL.md bodies must be escaped `\$`**:
   `$0`–`$9` are substituted with positional invocation arguments

@@ -153,7 +153,9 @@ Solution docs use YAML frontmatter — schema:
 - [ ] "Iron Laws" section
 - [ ] `references/` for details
 - [ ] No `triggers:` field
-- [ ] Description ≤ 1,024 chars (single `description` field per agentskills.io canon; no `when_to_use`; front-load WHEN the skill applies + include Triggers + Do NOT use for)
+- [ ] Description ≤ 1,024 chars (agentskills.io spec cap — tighter than Claude Code's own 1,536-char skill-listing truncation, so it governs)
+- [ ] Single `description` field, no `when_to_use` — Claude Code still supports it, but the portable agentskills.io field set excludes it
+- [ ] Front-load WHEN the skill applies + include Triggers + Do NOT use for
 
 ### New workflow skill
 

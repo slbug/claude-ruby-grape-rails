@@ -4,7 +4,6 @@ description: Fetches and extracts information from focused web sources efficient
 tools: WebSearch, WebFetch, Write
 disallowedTools: Edit, NotebookEdit, Bash
 model: haiku
-effort: low
 maxTurns: 10
 omitClaudeMd: true
 ---

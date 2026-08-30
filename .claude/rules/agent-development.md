@@ -20,6 +20,10 @@ command/option lists.
 - **opus**: security-critical agents only (e.g., security-analyzer)
 - **haiku**: mechanical tasks — compression, verification, dependency analysis
 
+Pair `effort:` only with a model listed in `model-config.md` § effort
+levels. Haiku is absent from that table and supports no effort level, so
+`effort:` on a haiku agent is inert — omit it.
+
 ## Tool Access
 
 Prefer denylist-only over `tools:` allowlists (follows built-in agent pattern).
