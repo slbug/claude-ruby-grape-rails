@@ -2998,6 +2998,40 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("CLAUDE.local.md", result.stdout)
         self.assertIn("not writable", result.stdout)
 
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the writability check",
+    )
+    def test_check_plugin_version_reports_unwritable_root_block_without_pin(
+        self,
+    ) -> None:
+        # No CLAUDE.local.md, and the read-only CLAUDE.md block carries no pin,
+        # so pin selection finds nothing — the unrewritable block must still be
+        # reported rather than exiting silently.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            root_md = Path(tmpdir) / "CLAUDE.md"
+            root_md.write_text(
+                textwrap.dedent(
+                    """
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:START -->
+
+                    Managed content with no version marker.
+
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:END -->
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            root_md.chmod(0o444)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                root_md.chmod(0o600)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("CLAUDE.md holds a managed block and is not writable", result.stdout)
+
     def test_check_plugin_version_migration_notice_omits_duplicate_claim(self) -> None:
         # Only CLAUDE.md carries a block: moving it changes nothing about
         # context size, so the notice must not claim a wasted second copy.

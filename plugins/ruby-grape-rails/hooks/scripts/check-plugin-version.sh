@@ -130,12 +130,16 @@ if usable_memory_file "$LOCAL_MD" && usable_memory_file "$ROOT_MD" \
   MIGRATION_PENDING=true
 fi
 
-# /rb:init stops rather than writing `CLAUDE.md` underneath a local block it
-# cannot rewrite, so detect that state independently of pin selection: an
-# unpinned local block never supplies the pin, yet it still blocks `--update`.
+# `--update` rewrites whichever file holds the block, so an unwritable block
+# blocks the run on either side. Detect both independently of pin selection:
+# an unpinned block never supplies the pin, yet still stops `--update`.
 REPAIR_LOCAL=false
 if [[ "$LOCAL_HAS_BLOCK" == "true" ]] && ! usable_memory_file "$LOCAL_MD"; then
   REPAIR_LOCAL=true
+fi
+REPAIR_ROOT=false
+if [[ "$ROOT_HAS_BLOCK" == "true" ]] && ! usable_memory_file "$ROOT_MD"; then
+  REPAIR_ROOT=true
 fi
 
 # /rb:init writes its managed block into `CLAUDE.local.md` when the project
@@ -153,15 +157,15 @@ for CANDIDATE in "$LOCAL_MD" "$ROOT_MD"; do
   break
 done
 
-# `--update` rewrites the block in place, so a block in a file it cannot write
-# turns the usual recommendation into a command that stops. Name that file and
-# say what to fix first. The local block outranks the pin source: it is what
-# makes `--update` refuse the whole run.
+# Name the file to fix. `CLAUDE.local.md` outranks `CLAUDE.md`: it is the
+# preferred target, and its block is what makes `--update` refuse the whole
+# run. Both checks are pin-independent, so a block with no valid pin is still
+# reported.
 BLOCKED_NAME=""
 if [[ "$REPAIR_LOCAL" == "true" ]]; then
   BLOCKED_NAME="CLAUDE.local.md"
-elif [[ -n "$MEMORY_FILE" ]] && ! usable_memory_file "$MEMORY_FILE"; then
-  BLOCKED_NAME="${MEMORY_FILE##*/}"
+elif [[ "$REPAIR_ROOT" == "true" ]]; then
+  BLOCKED_NAME="CLAUDE.md"
 fi
 
 # No readable pin anywhere: still report a pending migration or an unwritable
