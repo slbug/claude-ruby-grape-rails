@@ -3142,6 +3142,58 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("/rb:init --update", result.stdout)
 
+    def test_check_plugin_version_newer_root_pin_outranks_matching_local_pin(
+        self,
+    ) -> None:
+        # CLAUDE.local.md matches the installed plugin while CLAUDE.md pins a
+        # newer one. Recommending migration here would have `--update` delete
+        # the newer block, so the downgrade safeguard wins.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "99.0.0")
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v99.0.0", result.stdout)
+        self.assertIn("downgraded", result.stdout)
+        self.assertIn("CLAUDE.md", result.stdout)
+
+    def test_check_plugin_version_newer_local_pin_outranks_outdated_root_pin(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "0.1.0")
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), "99.0.0", filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v99.0.0", result.stdout)
+        self.assertIn("downgraded", result.stdout)
+
+    @unittest.skipUnless(shutil.which("git"), "git required to set ignore status")
+    def test_check_plugin_version_reports_tracked_local_block(self) -> None:
+        # A writable but git-tracked CLAUDE.local.md holding a block fails the
+        # Target File contract, so `--update` stops: say so, and name the
+        # gitignore remedy rather than a permission one.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            subprocess.run(
+                ["git", "init", "-q", tmpdir], check=True, capture_output=True
+            )
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("not confirmed to be ignored by git", result.stdout)
+        self.assertIn(".gitignore", result.stdout)
+
     def test_check_plugin_version_migration_notice_omits_duplicate_claim(self) -> None:
         # Only CLAUDE.md carries a block: moving it changes nothing about
         # context size, so the notice must not claim a wasted second copy.

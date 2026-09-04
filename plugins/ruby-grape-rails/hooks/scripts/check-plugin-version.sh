@@ -152,42 +152,43 @@ if usable_memory_file "$LOCAL_MD" && usable_memory_file "$ROOT_MD" \
   MIGRATION_PENDING=true
 fi
 
-# `--update` rewrites whichever file holds the block, so an unwritable block
-# blocks the run on either side. Detect both independently of pin selection:
-# an unpinned block never supplies the pin, yet still stops `--update`.
-REPAIR_LOCAL=false
-if [[ "$LOCAL_HAS_BLOCK" == "true" ]] && ! usable_memory_file "$LOCAL_MD"; then
-  REPAIR_LOCAL=true
+# `--update` rewrites whichever file holds the block, so a block `/rb:init`
+# refuses to touch stops the run. Name the first such file and why, matching
+# the skill's Target File contract: `CLAUDE.local.md` must be writable AND in
+# personal scope; `CLAUDE.md` must be writable. Both checks are pin
+# independent, so a block with no valid pin is still reported.
+BLOCKED_NAME=""
+BLOCKED_REASON=""
+if [[ "$LOCAL_HAS_BLOCK" == "true" ]]; then
+  if ! usable_memory_file "$LOCAL_MD"; then
+    BLOCKED_NAME="CLAUDE.local.md"
+    BLOCKED_REASON="is not writable"
+  elif ! local_file_is_personal_scope; then
+    BLOCKED_NAME="CLAUDE.local.md"
+    BLOCKED_REASON="is not confirmed to be ignored by git"
+  fi
 fi
-REPAIR_ROOT=false
-if [[ "$ROOT_HAS_BLOCK" == "true" ]] && ! usable_memory_file "$ROOT_MD"; then
-  REPAIR_ROOT=true
+if [[ -z "$BLOCKED_NAME" && "$ROOT_HAS_BLOCK" == "true" ]] \
+  && ! usable_memory_file "$ROOT_MD"; then
+  BLOCKED_NAME="CLAUDE.md"
+  BLOCKED_REASON="is not writable"
 fi
 
 # /rb:init writes its managed block into `CLAUDE.local.md` when the project
-# has one and falls back to `CLAUDE.md`. Take the pin from the first candidate
-# that yields a valid one, `CLAUDE.local.md` first, so a stale block left in
-# `CLAUDE.md` does not shadow the file /rb:init --update maintains — and a
-# malformed or unpinned local block does not shadow a `CLAUDE.md` block that
-# still reports real drift.
+# has one and falls back to `CLAUDE.md`. Read BOTH pins: the preferred one
+# drives the drift report, and the other still has to be checked for a newer
+# version, or recommending a migration would silently delete a block newer
+# than the installed plugin.
+LOCAL_PIN=$(pinned_version "$LOCAL_MD") || LOCAL_PIN=""
+ROOT_PIN=$(pinned_version "$ROOT_MD") || ROOT_PIN=""
 MEMORY_FILE=""
 PINNED=""
-for CANDIDATE in "$LOCAL_MD" "$ROOT_MD"; do
-  CANDIDATE_PIN=$(pinned_version "$CANDIDATE") || continue
-  MEMORY_FILE="$CANDIDATE"
-  PINNED="$CANDIDATE_PIN"
-  break
-done
-
-# Name the file to fix. `CLAUDE.local.md` outranks `CLAUDE.md`: it is the
-# preferred target, and its block is what makes `--update` refuse the whole
-# run. Both checks are pin-independent, so a block with no valid pin is still
-# reported.
-BLOCKED_NAME=""
-if [[ "$REPAIR_LOCAL" == "true" ]]; then
-  BLOCKED_NAME="CLAUDE.local.md"
-elif [[ "$REPAIR_ROOT" == "true" ]]; then
-  BLOCKED_NAME="CLAUDE.md"
+if [[ -n "$LOCAL_PIN" ]]; then
+  MEMORY_FILE="$LOCAL_MD"
+  PINNED="$LOCAL_PIN"
+elif [[ -n "$ROOT_PIN" ]]; then
+  MEMORY_FILE="$ROOT_MD"
+  PINNED="$ROOT_PIN"
 fi
 
 # Whatever blocks the version comparison — no pin, no plugin.json, no version
@@ -227,17 +228,27 @@ fi
 # Semver build metadata (`+...`) MUST NOT affect equality or precedence per
 # https://semver.org/#spec-item-10. Strip it before comparison, keep the
 # original strings for the user-facing message.
+version_exceeds_current() {
+  local candidate="${1%%+*}" highest
+  [[ -n "$candidate" ]] || return 1
+  [[ "$candidate" != "$CURRENT_COMPARE" ]] || return 1
+  # Semver-aware compare via `sort -V` (natural version sort). Handles semver
+  # pre-release precedence correctly: `1.13.1-rc1` sorts below `1.13.1`.
+  highest=$(printf '%s\n%s\n' "$candidate" "$CURRENT_COMPARE" | "$SORT_BIN" -V | tail -n 1)
+  [[ "$highest" == "$candidate" ]]
+}
+
 if [[ -z "$DIRECTION" ]]; then
   PINNED_COMPARE="${PINNED%%+*}"
   CURRENT_COMPARE="${CURRENT%%+*}"
   [[ -n "$PINNED_COMPARE" && -n "$CURRENT_COMPARE" ]] || exit 0
 
-  # Semver-aware compare via `sort -V` (natural version sort). Handles semver
-  # pre-release precedence correctly: `1.13.1-rc1` sorts below `1.13.1`.
-  if [[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" ]]; then
+  if [[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" && "${ROOT_PIN%%+*}" == "$CURRENT_COMPARE" ]] \
+    || [[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" && -z "$ROOT_PIN" ]]; then
+    # Nothing to order: every pin present equals the installed version.
     DIRECTION=$(fallback_direction) || exit 0
   else
-    # Versions differ but no `sort -V` can order them. Staying silent is the
+    # Some pin differs but no `sort -V` can order them. Staying silent is the
     # only safe answer: the migration and repair notices both end in
     # `/rb:init --update`, which overwrites a newer managed block with an
     # older template — exactly what the `newer` branch exists to prevent.
@@ -245,13 +256,32 @@ if [[ -z "$DIRECTION" ]]; then
   fi
 fi
 
+# A pin newer than the installed plugin outranks every other direction, in
+# EITHER file. `--update` deletes the `CLAUDE.md` copy during migration and
+# rewrites the block during refresh, so a newer pin hiding behind the
+# preferred pin would be destroyed by the very command those notices
+# recommend. Report the highest such pin and its file.
 if [[ -z "$DIRECTION" ]]; then
-  HIGHEST=$(printf '%s\n%s\n' "$PINNED_COMPARE" "$CURRENT_COMPARE" | "$SORT_BIN" -V | tail -n 1)
-  [[ -n "$HIGHEST" ]] || exit 0
-  if [[ "$HIGHEST" == "$CURRENT_COMPARE" ]]; then
-    DIRECTION="outdated"
-  else
+  if version_exceeds_current "$ROOT_PIN" \
+    && { [[ -z "$LOCAL_PIN" ]] || ! version_exceeds_current "$LOCAL_PIN" \
+      || [[ "$(printf '%s\n%s\n' "${ROOT_PIN%%+*}" "${LOCAL_PIN%%+*}" | "$SORT_BIN" -V | tail -n 1)" == "${ROOT_PIN%%+*}" ]]; }; then
+    MEMORY_FILE="$ROOT_MD"
+    MEMORY_NAME="CLAUDE.md"
+    PINNED="$ROOT_PIN"
     DIRECTION="newer"
+  elif version_exceeds_current "$LOCAL_PIN"; then
+    MEMORY_FILE="$LOCAL_MD"
+    MEMORY_NAME="CLAUDE.local.md"
+    PINNED="$LOCAL_PIN"
+    DIRECTION="newer"
+  fi
+fi
+
+if [[ -z "$DIRECTION" ]]; then
+  if [[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" ]]; then
+    DIRECTION=$(fallback_direction) || exit 0
+  else
+    DIRECTION="outdated"
   fi
 fi
 
@@ -309,14 +339,17 @@ fi
 WRITE_BLOCKED_LINE=""
 REPAIR_HINT=""
 if [[ -n "$BLOCKED_NAME" ]]; then
-  if [[ "$BLOCKED_NAME" == "CLAUDE.local.md" ]]; then
+  if [[ "$BLOCKED_NAME" != "CLAUDE.local.md" ]]; then
+    REPAIR_HINT="restore write access to ${BLOCKED_NAME}"
+  elif [[ "$BLOCKED_REASON" == "is not writable" ]]; then
     REPAIR_HINT="restore write access to CLAUDE.local.md, or delete its managed block so
 CLAUDE.md becomes the target"
   else
-    REPAIR_HINT="restore write access to ${BLOCKED_NAME}"
+    REPAIR_HINT="add CLAUDE.local.md to .gitignore, or delete its managed block so CLAUDE.md
+becomes the target"
   fi
-  WRITE_BLOCKED_LINE="${BLOCKED_NAME} holds a managed block and is not writable, so /rb:init --update
-stops instead of refreshing it. Have the user ${REPAIR_HINT} first."
+  WRITE_BLOCKED_LINE="${BLOCKED_NAME} holds a managed block and ${BLOCKED_REASON}, so
+/rb:init --update stops instead of refreshing it. Have the user ${REPAIR_HINT} first."
 fi
 
 case "$DIRECTION" in
