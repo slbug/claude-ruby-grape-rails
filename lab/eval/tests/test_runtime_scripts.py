@@ -2917,6 +2917,56 @@ class RuntimeScriptTests(unittest.TestCase):
 
     @unittest.skipIf(
         hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the writability check",
+    )
+    def test_check_plugin_version_skips_migration_for_read_only_files(self) -> None:
+        # `--update` must write the destination and strip the source, so a
+        # read-only file on either side means the move cannot happen — do not
+        # recommend it every session.
+        current = self._current_plugin_version()
+        for read_only in ("CLAUDE.local.md", "CLAUDE.md"):
+            with self.subTest(read_only=read_only):
+                with (
+                    tempfile.TemporaryDirectory() as tmpdir,
+                    tempfile.TemporaryDirectory() as data,
+                ):
+                    self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+                    local_md = Path(tmpdir) / "CLAUDE.local.md"
+                    local_md.write_text("# Personal notes\n", encoding="utf-8")
+                    target = Path(tmpdir) / read_only
+                    target.chmod(0o444)
+                    try:
+                        result = self._run_check_plugin_version(tmpdir, data_dir=data)
+                    finally:
+                        target.chmod(0o600)
+
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout, "")
+
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the writability check",
+    )
+    def test_check_plugin_version_reports_unwritable_pin_source(self) -> None:
+        # The pin still reads out of a read-only CLAUDE.local.md, so the drift
+        # is real — but `--update` cannot rewrite it, so say what to fix first.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), "0.1.0", filename="CLAUDE.local.md"
+            )
+            local_md = Path(tmpdir) / "CLAUDE.local.md"
+            local_md.chmod(0o444)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                local_md.chmod(0o600)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertIn("not writable", result.stdout)
+
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
         "root bypasses the unreadable-file check",
     )
     def test_check_plugin_version_ignores_unreadable_claude_local_md(self) -> None:

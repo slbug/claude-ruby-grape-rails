@@ -3,13 +3,16 @@ set -o nounset
 set -o pipefail
 
 # SessionStart hook: warn when the project memory file pins a different plugin
-# version than the installed plugin. Outdated pin emits a refresh reminder;
-# newer pin flags a possible plugin downgrade.
+# version than the installed plugin, or when its managed block sits in a file
+# /rb:init no longer targets. Outdated pin emits a refresh reminder; newer pin
+# flags a possible plugin downgrade; a movable `CLAUDE.md` block emits a
+# migration reminder even with no readable pin and no readable plugin.json.
 # Policy: advisory — silent on missing memory file, missing plugin marker,
-# missing plugin.json, tool unavailability, or lock conflicts. Degraded
-# payload/root resolution must not block session startup. Fires at most once
-# per session via atomic per-session lock directory under CLAUDE_PLUGIN_DATA
-# (or the workspace `.claude/.hook-state/` fallback).
+# tool unavailability, or lock conflicts, and on a missing plugin.json unless
+# a migration is pending. Degraded payload/root resolution must not block
+# session startup. Fires at most once per session via atomic per-session lock
+# directory under CLAUDE_PLUGIN_DATA (or the workspace `.claude/.hook-state/`
+# fallback).
 command -v jq >/dev/null 2>&1 || exit 0
 command -v grep >/dev/null 2>&1 || exit 0
 command -v sed >/dev/null 2>&1 || exit 0
@@ -63,11 +66,17 @@ SEMVER_PRE='(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-
 SEMVER_BUILD='(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?'
 ANCHORED_SEMVER="^${SEMVER_CORE}${SEMVER_PRE}${SEMVER_BUILD}$"
 
-# A memory file is usable only as a readable regular non-symlink file — the
-# same validity contract /rb:init applies before writing.
-usable_memory_file() {
+# A memory file is readable only as a regular non-symlink file. /rb:init also
+# requires write access before it targets one, so keep the two predicates
+# separate: the pin can still be read from a file `--update` cannot rewrite.
+readable_memory_file() {
   local file="$1"
   [[ -f "$file" && ! -L "$file" && -r "$file" ]]
+}
+
+usable_memory_file() {
+  local file="$1"
+  readable_memory_file "$file" && [[ -w "$file" ]]
 }
 
 # Print the managed block, or fail. `sed` prints from START to EOF when the
@@ -76,7 +85,7 @@ usable_memory_file() {
 # trailing prose outside any block could supply a version token.
 managed_block() {
   local file="$1" block
-  usable_memory_file "$file" || return 1
+  readable_memory_file "$file" || return 1
   block=$(sed -n '/<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->/,/<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->/p' "$file" 2>/dev/null) || return 1
   [[ -n "$block" ]] || return 1
   printf '%s\n' "$block" | grep -q '<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->' || return 1
@@ -107,10 +116,13 @@ ROOT_MD="${REPO_ROOT}/CLAUDE.md"
 # `CLAUDE.md` block independently of which file supplies the pin: when both
 # files carry one, the pin comes from `CLAUDE.local.md` and the `CLAUDE.md`
 # copy is a leftover duplicate that still loads into context. Surface either
-# shape even when the pinned version matches, and only when `--update` could
-# actually perform the move.
+# shape even when the pinned version matches — but only when `--update` can
+# actually perform the move, which needs write access to the destination AND
+# to the source it strips the block from. Recommending a move neither file
+# permits would repeat every session with nothing the user can do about it.
 MIGRATION_PENDING=false
-if usable_memory_file "$LOCAL_MD" && managed_block "$ROOT_MD" >/dev/null; then
+if usable_memory_file "$LOCAL_MD" && usable_memory_file "$ROOT_MD" \
+  && managed_block "$ROOT_MD" >/dev/null; then
   MIGRATION_PENDING=true
 fi
 
@@ -136,6 +148,14 @@ if [[ -z "$PINNED" ]]; then
   DIRECTION="migrate"
 fi
 MEMORY_NAME="${MEMORY_FILE##*/}"
+
+# `--update` rewrites the block in place, so a pin read from a file it cannot
+# write turns the usual recommendation into a command that fails. Say what to
+# fix first instead.
+WRITE_BLOCKED=false
+if [[ -n "$MEMORY_FILE" ]] && ! usable_memory_file "$MEMORY_FILE"; then
+  WRITE_BLOCKED=true
+fi
 
 if [[ -z "${DIRECTION:-}" ]]; then
   CURRENT=""
@@ -216,12 +236,19 @@ if [[ "$MIGRATION_PENDING" == "true" ]]; then
 CLAUDE.local.md; /rb:init --update moves it there and removes the CLAUDE.md copy."
 fi
 
+WRITE_BLOCKED_LINE=""
+if [[ "$WRITE_BLOCKED" == "true" ]]; then
+  WRITE_BLOCKED_LINE="${MEMORY_NAME} is not writable, so /rb:init --update cannot refresh the block.
+Have the user restore write access to it (or delete the block) first."
+fi
+
 case "$DIRECTION" in
 outdated)
   cat <<NOTICE
 [Ruby/Rails/Grape plugin — user action required]
 Installed plugin v${CURRENT} is ahead of project ${MEMORY_NAME} pinned at v${PINNED}.
 ${MIGRATION_LINE}
+${WRITE_BLOCKED_LINE}
 Tell the user at the start of your next response, then recommend:
 /rb:init --update
 NOTICE
@@ -230,6 +257,7 @@ newer)
   cat <<NOTICE
 [Ruby/Rails/Grape plugin — user action required]
 Installed plugin v${CURRENT} is OLDER than project ${MEMORY_NAME} pinned at v${PINNED}.
+${WRITE_BLOCKED_LINE}
 The plugin may have been downgraded. Tell the user at the start of your next
 response; recommend verifying the install before running /rb:init --update
 (it would overwrite the newer marker content with the older template).

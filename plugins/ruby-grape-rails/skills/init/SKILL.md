@@ -7,7 +7,7 @@ effort: low
 # Plugin Initialization
 
 Write a managed block of project-specific stack notes into the
-project's memory file (`CLAUDE.local.md` when present, else
+project's memory file (`CLAUDE.local.md` when usable, else
 `CLAUDE.md` — see "Target File"). Do NOT write Iron Laws or Advisory
 Preferences into it — `inject-rules.sh` delivers them at
 runtime on `SessionStart` + `SubagentStart`.
@@ -130,23 +130,24 @@ Verification/tooling policy:
 
 ## Target File
 
-Resolve the target before writing. Both files load into the main
-session; `CLAUDE.local.md` is gitignored personal scope and loads
-last, so it wins for machine-local stack notes.
+Resolve the target before writing. Prefer `CLAUDE.local.md`: both
+files load into the main session, and the gitignored personal-scope
+file loads last, so machine-local stack notes belong there.
 
-`CLAUDE.local.md` counts as usable ONLY when it is a regular file and
-not a symlink. Any other shape (symlink, directory, unreadable) counts
-as absent — never write through it.
+Treat `CLAUDE.local.md` as usable ONLY when it is a regular file, not
+a symlink, readable, and writable. Treat any other shape (symlink,
+directory, unreadable, read-only) as absent and never write through
+it.
 
 | Project state | Target |
 |---|---|
 | usable `CLAUDE.local.md` | `CLAUDE.local.md` |
 | no `CLAUDE.local.md`, or present but not usable | `CLAUDE.md` |
 
-Do NOT create `CLAUDE.local.md` — only use it when the project
-already has one. Do NOT write the block into both files. When a
-present `CLAUDE.local.md` is not usable, target `CLAUDE.md` and tell
-the user which shape blocked it.
+Do NOT create `CLAUDE.local.md` — use it only when the project already
+has one. Do NOT write the block into both files. Target `CLAUDE.md`
+when a present `CLAUDE.local.md` is not usable, and name the blocking
+shape to the user.
 
 ## Install Modes
 
@@ -155,16 +156,24 @@ the user which shape blocked it.
 
 Update mode migration (`/rb:init --update`), automatic, no prompt:
 
-1. Find the marker pair in `CLAUDE.local.md` and `CLAUDE.md`.
-2. Marker in `CLAUDE.md` AND usable `CLAUDE.local.md` → write the
-   refreshed block to `CLAUDE.local.md` and delete the marker pair plus
-   its content from `CLAUDE.md`, leaving the rest of `CLAUDE.md` untouched.
-   Report the move.
-3. Marker in `CLAUDE.md` AND no usable `CLAUDE.local.md` → update in place
-   in `CLAUDE.md`. No migration.
-4. Markers in both files → keep `CLAUDE.local.md` as the live block,
-   delete the `CLAUDE.md` copy.
-5. Marker in neither → treat as fresh install against the resolved target.
+Find the marker pair in `CLAUDE.local.md` and `CLAUDE.md`, then take
+the FIRST matching row:
+
+| State | Action |
+|---|---|
+| marker in `CLAUDE.local.md`, `CLAUDE.local.md` NOT usable | STOP, change no file (see below) |
+| markers in both files, `CLAUDE.local.md` usable | refresh the `CLAUDE.local.md` block, delete the `CLAUDE.md` copy |
+| marker in `CLAUDE.md` only, usable `CLAUDE.local.md` | write the refreshed block to `CLAUDE.local.md`, strip the marker pair and its content from `CLAUDE.md`, report the move |
+| marker in `CLAUDE.md` only, no usable `CLAUDE.local.md` | update in place in `CLAUDE.md`, no migration |
+| marker in neither | fresh install against the resolved target |
+
+Leave every other line of `CLAUDE.md` untouched when stripping a block.
+
+On the STOP row, report which shape blocks the local file and the ways
+out: restore write access, replace the symlink with a regular file, or
+delete the local block so `CLAUDE.md` becomes the target. Writing
+`CLAUDE.md` instead would leave an unmaintainable local block loading
+after it.
 
 Confirm `CLAUDE.local.md` is gitignored before writing to it. When it
 is not, tell the user to add it to `.gitignore` — the block records
@@ -281,9 +290,9 @@ coverage gaps with no recovery path.
 ## CLAUDE.md sizing
 
 Keep root `CLAUDE.md` under ~200 lines. Heavy repo-level context inflates
-inference cost and can reduce task success. `CLAUDE.local.md` loads alongside
-it and counts against the same budget — moving the managed block there keeps
-`CLAUDE.md` shorter for the team but does not reduce per-session cost.
+inference cost and can reduce task success. Count `CLAUDE.local.md` against
+the same budget — it loads alongside `CLAUDE.md`, so moving the managed block
+there shortens the team-visible file without cutting per-session cost.
 Subtree-specific rules belong in `.claude/rules/*.md` with `paths:`
 frontmatter so they auto-load only when relevant.
 

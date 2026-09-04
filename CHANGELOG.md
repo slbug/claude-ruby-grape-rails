@@ -12,17 +12,21 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - `/rb:init` writes its managed stack-notes block into `CLAUDE.local.md` when
-  the project already has one, and falls back to `CLAUDE.md` otherwise. The
-  plugin never creates `CLAUDE.local.md`.
+  the project already has a usable one — a regular, readable, writable,
+  non-symlink file — and falls back to `CLAUDE.md` otherwise. The plugin never
+  creates `CLAUDE.local.md`. A local file carrying a managed block but failing
+  the usability check stops the run for repair instead of writing `CLAUDE.md`
+  underneath it.
 - `/rb:init --update` migrates existing installs without prompting: a block
-  found in `CLAUDE.md` while a `CLAUDE.local.md` exists moves to
-  `CLAUDE.local.md` and is removed from `CLAUDE.md`. Projects with no
+  found in `CLAUDE.md` while a usable `CLAUDE.local.md` exists moves to
+  `CLAUDE.local.md` and is removed from `CLAUDE.md`. Projects with no usable
   `CLAUDE.local.md` keep the block where it is.
-- `check-plugin-version.sh` reads the pinned version from `CLAUDE.local.md`
-  first, then `CLAUDE.md`, names the file it read in the drift notice, and
-  recommends `/rb:init --update` when the block still sits in `CLAUDE.md`
-  while the project has a `CLAUDE.local.md` — including when the pinned
-  version already matches.
+- `check-plugin-version.sh` takes the pinned version from the first memory
+  file that yields a valid one — `CLAUDE.local.md`, then `CLAUDE.md` — names
+  that file in the drift notice, and recommends `/rb:init --update` when a
+  movable `CLAUDE.md` block remains while a usable `CLAUDE.local.md` exists,
+  including when the pinned version already matches. A pin read from a file
+  the command cannot rewrite is reported as a permission fix instead.
 
 ## [1.16.17] - 2026-08-30
 
