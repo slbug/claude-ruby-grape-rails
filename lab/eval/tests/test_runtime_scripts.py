@@ -2793,6 +2793,22 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("CLAUDE.local.md", result.stdout)
         self.assertIn("/rb:init --update", result.stdout)
 
+    def test_check_plugin_version_flags_duplicate_block_on_version_match(self) -> None:
+        # Both files carry a managed block and CLAUDE.local.md pins the
+        # installed version: the CLAUDE.md copy is a leftover duplicate that
+        # still loads into context, so the migration notice must fire.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("CLAUDE.local.md", result.stdout)
+        self.assertIn("/rb:init --update", result.stdout)
+
     def test_check_plugin_version_silent_on_match_without_claude_local_md(self) -> None:
         current = self._current_plugin_version()
         with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:

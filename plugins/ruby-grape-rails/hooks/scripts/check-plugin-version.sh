@@ -60,12 +60,17 @@ done
 [[ -n "$MEMORY_FILE" ]] || exit 0
 MEMORY_NAME="${MEMORY_FILE##*/}"
 
-# Block still in `CLAUDE.md` while the project has a `CLAUDE.local.md`: a
-# pre-`CLAUDE.local.md` install that /rb:init --update migrates. Surface it
-# even when the pinned version matches.
+# A block in `CLAUDE.md` while the project has a `CLAUDE.local.md` is a
+# pre-`CLAUDE.local.md` install that /rb:init --update migrates. Detect the
+# `CLAUDE.md` marker independently of which file supplied the pin: when both
+# files carry a block, the pin comes from `CLAUDE.local.md` and the
+# `CLAUDE.md` copy is a leftover duplicate that still loads into context.
+# Surface either shape even when the pinned version matches.
 MIGRATION_PENDING=false
 LOCAL_MD="${REPO_ROOT}/CLAUDE.local.md"
-if [[ "$MEMORY_NAME" == "CLAUDE.md" && -f "$LOCAL_MD" && ! -L "$LOCAL_MD" ]]; then
+ROOT_MD="${REPO_ROOT}/CLAUDE.md"
+if [[ -f "$LOCAL_MD" && ! -L "$LOCAL_MD" && -f "$ROOT_MD" && ! -L "$ROOT_MD" && -r "$ROOT_MD" ]] \
+  && grep -q '<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->' "$ROOT_MD" 2>/dev/null; then
   MIGRATION_PENDING=true
 fi
 
@@ -166,8 +171,8 @@ mkdir -- "$SESSION_LOCK" 2>/dev/null || exit 0
 # reading the fact.
 MIGRATION_LINE=""
 if [[ "$MIGRATION_PENDING" == "true" ]]; then
-  MIGRATION_LINE="The managed block also still lives in CLAUDE.md while this project has a
-CLAUDE.local.md; /rb:init --update moves it there."
+  MIGRATION_LINE="A managed block also remains in CLAUDE.md while this project has a
+CLAUDE.local.md; /rb:init --update moves it there and removes the CLAUDE.md copy."
 fi
 
 case "$DIRECTION" in
@@ -192,9 +197,10 @@ NOTICE
 migrate)
   cat <<NOTICE
 [Ruby/Rails/Grape plugin — user action required]
-The managed block sits in CLAUDE.md while this project has a CLAUDE.local.md,
-which the plugin prefers for its stack notes. Tell the user at the start of
-your next response, then recommend:
+A managed block remains in CLAUDE.md while this project has a CLAUDE.local.md,
+which the plugin prefers for its stack notes. Both files load into context, so
+a duplicate block means stale stack notes. Tell the user at the start of your
+next response, then recommend:
 /rb:init --update
 NOTICE
   ;;
