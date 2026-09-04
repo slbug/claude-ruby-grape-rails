@@ -162,18 +162,22 @@ the FIRST matching row:
 | State | Action |
 |---|---|
 | marker in `CLAUDE.local.md`, `CLAUDE.local.md` NOT usable | STOP, change no file (see below) |
-| markers in both files, `CLAUDE.local.md` usable | refresh the `CLAUDE.local.md` block, delete the `CLAUDE.md` copy |
+| marker in `CLAUDE.md`, `CLAUDE.md` NOT usable | STOP, change no file (see below) |
+| markers in both files, both usable | refresh the `CLAUDE.local.md` block, delete the `CLAUDE.md` copy |
 | marker in `CLAUDE.md` only, usable `CLAUDE.local.md` | write the refreshed block to `CLAUDE.local.md`, strip the marker pair and its content from `CLAUDE.md`, report the move |
 | marker in `CLAUDE.md` only, no usable `CLAUDE.local.md` | update in place in `CLAUDE.md`, no migration |
 | marker in neither | fresh install against the resolved target |
 
+Both STOP rows outrank every write row: verify the source is writable
+BEFORE writing the destination, or a failed strip leaves the block in
+both files.
+
 Leave every other line of `CLAUDE.md` untouched when stripping a block.
 
-On the STOP row, report which shape blocks the local file and the ways
-out: restore write access, replace the symlink with a regular file, or
-delete the local block so `CLAUDE.md` becomes the target. Writing
-`CLAUDE.md` instead would leave an unmaintainable local block loading
-after it.
+On a STOP row, report which shape blocks the file and the ways out:
+restore write access, replace the symlink with a regular file, or
+delete the blocking managed block. Writing the other file instead would
+leave an unmaintainable block loading beside it.
 
 Confirm `CLAUDE.local.md` is gitignored before writing to it. When it
 is not, tell the user to add it to `.gitignore` — the block records

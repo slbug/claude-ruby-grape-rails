@@ -19,18 +19,21 @@ command -v sed >/dev/null 2>&1 || exit 0
 command -v tr >/dev/null 2>&1 || exit 0
 command -v head >/dev/null 2>&1 || exit 0
 command -v tail >/dev/null 2>&1 || exit 0
-# sort -V (natural version sort) is required. Commonly available via GNU
-# coreutils; on macOS the brew `coreutils` package ships it as `gsort`
-# rather than replacing `sort`. Prefer bare `sort -V`; fall back to
-# `gsort -V`; exit silently if neither supports it.
-SORT_BIN=""
-if command -v sort >/dev/null 2>&1 && printf 'a\n' | sort -V >/dev/null 2>&1; then
-  SORT_BIN="sort"
-elif command -v gsort >/dev/null 2>&1 && printf 'a\n' | gsort -V >/dev/null 2>&1; then
-  SORT_BIN="gsort"
-else
-  exit 0
-fi
+# `sort -V` (natural version sort) is needed ONLY to order two differing
+# versions. BSD `sort` on a stock macOS lacks it, and the brew `coreutils`
+# package ships GNU sort as `gsort` rather than replacing `sort` — so resolve
+# it lazily, at the comparison itself. Resolving it up front would suppress
+# the migration and repair notices, which need no comparison, on every machine
+# without GNU coreutils.
+resolve_sort_bin() {
+  if command -v sort >/dev/null 2>&1 && printf 'a\n' | sort -V >/dev/null 2>&1; then
+    printf 'sort'
+  elif command -v gsort >/dev/null 2>&1 && printf 'a\n' | gsort -V >/dev/null 2>&1; then
+    printf 'gsort'
+  else
+    return 1
+  fi
+}
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_LIB="${SCRIPT_DIR}/workspace-root-lib.sh"
@@ -168,21 +171,28 @@ elif [[ "$REPAIR_ROOT" == "true" ]]; then
   BLOCKED_NAME="CLAUDE.md"
 fi
 
-# No readable pin anywhere: still report a pending migration or an unwritable
-# local block, neither of which needs a version comparison. Same for a
-# plugin.json we cannot read.
-if [[ -z "$PINNED" ]]; then
+# Whatever blocks the version comparison — no pin, no plugin.json, no version
+# sort — a pending migration or an unwritable block is still worth reporting
+# on its own. Print that direction, or fail when there is nothing to say.
+# DIRECTION is initialized here so an exported variable of the same name from
+# the environment cannot skip the comparison below.
+DIRECTION=""
+fallback_direction() {
   if [[ "$MIGRATION_PENDING" == "true" ]]; then
-    DIRECTION="migrate"
+    printf 'migrate'
   elif [[ -n "$BLOCKED_NAME" ]]; then
-    DIRECTION="repair"
+    printf 'repair'
   else
-    exit 0
+    return 1
   fi
+}
+
+if [[ -z "$PINNED" ]]; then
+  DIRECTION=$(fallback_direction) || exit 0
 fi
 MEMORY_NAME="${MEMORY_FILE##*/}"
 
-if [[ -z "${DIRECTION:-}" ]]; then
+if [[ -z "$DIRECTION" ]]; then
   CURRENT=""
   if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]]; then
     PLUGIN_JSON="${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"
@@ -191,20 +201,14 @@ if [[ -z "${DIRECTION:-}" ]]; then
     fi
   fi
   if [[ -z "$CURRENT" ]]; then
-    if [[ "$MIGRATION_PENDING" == "true" ]]; then
-      DIRECTION="migrate"
-    elif [[ -n "$BLOCKED_NAME" ]]; then
-      DIRECTION="repair"
-    else
-      exit 0
-    fi
+    DIRECTION=$(fallback_direction) || exit 0
   fi
 fi
 
 # Semver build metadata (`+...`) MUST NOT affect equality or precedence per
 # https://semver.org/#spec-item-10. Strip it before comparison, keep the
 # original strings for the user-facing message.
-if [[ -z "${DIRECTION:-}" ]]; then
+if [[ -z "$DIRECTION" ]]; then
   PINNED_COMPARE="${PINNED%%+*}"
   CURRENT_COMPARE="${CURRENT%%+*}"
   [[ -n "$PINNED_COMPARE" && -n "$CURRENT_COMPARE" ]] || exit 0
@@ -212,21 +216,19 @@ if [[ -z "${DIRECTION:-}" ]]; then
   # Semver-aware compare via `sort -V` (natural version sort). Handles semver
   # pre-release precedence correctly: `1.13.1-rc1` sorts below `1.13.1`.
   if [[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" ]]; then
-    if [[ "$MIGRATION_PENDING" == "true" ]]; then
-      DIRECTION="migrate"
-    elif [[ -n "$BLOCKED_NAME" ]]; then
-      DIRECTION="repair"
-    else
-      exit 0
-    fi
+    DIRECTION=$(fallback_direction) || exit 0
   else
-    HIGHEST=$(printf '%s\n%s\n' "$PINNED_COMPARE" "$CURRENT_COMPARE" | "$SORT_BIN" -V | tail -n 1)
-    [[ -n "$HIGHEST" ]] || exit 0
-    if [[ "$HIGHEST" == "$CURRENT_COMPARE" ]]; then
-      DIRECTION="outdated"
-    else
-      DIRECTION="newer"
-    fi
+    SORT_BIN=$(resolve_sort_bin) || { DIRECTION=$(fallback_direction) || exit 0; }
+  fi
+fi
+
+if [[ -z "$DIRECTION" ]]; then
+  HIGHEST=$(printf '%s\n%s\n' "$PINNED_COMPARE" "$CURRENT_COMPARE" | "$SORT_BIN" -V | tail -n 1)
+  [[ -n "$HIGHEST" ]] || exit 0
+  if [[ "$HIGHEST" == "$CURRENT_COMPARE" ]]; then
+    DIRECTION="outdated"
+  else
+    DIRECTION="newer"
   fi
 fi
 
