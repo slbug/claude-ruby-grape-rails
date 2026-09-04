@@ -134,13 +134,19 @@ Resolve the target before writing. Both files load into the main
 session; `CLAUDE.local.md` is gitignored personal scope and loads
 last, so it wins for machine-local stack notes.
 
+`CLAUDE.local.md` counts as usable ONLY when it is a regular file and
+not a symlink. Any other shape (symlink, directory, unreadable) counts
+as absent — never write through it.
+
 | Project state | Target |
 |---|---|
-| `CLAUDE.local.md` exists (regular file, not symlink) | `CLAUDE.local.md` |
-| no `CLAUDE.local.md` | `CLAUDE.md` |
+| usable `CLAUDE.local.md` | `CLAUDE.local.md` |
+| no `CLAUDE.local.md`, or present but not usable | `CLAUDE.md` |
 
 Do NOT create `CLAUDE.local.md` — only use it when the project
-already has one. Do NOT write the block into both files.
+already has one. Do NOT write the block into both files. When a
+present `CLAUDE.local.md` is not usable, target `CLAUDE.md` and tell
+the user which shape blocked it.
 
 ## Install Modes
 
@@ -150,12 +156,12 @@ already has one. Do NOT write the block into both files.
 Update mode migration (`/rb:init --update`), automatic, no prompt:
 
 1. Find the marker pair in `CLAUDE.local.md` and `CLAUDE.md`.
-2. Marker in `CLAUDE.md` AND `CLAUDE.local.md` exists → write the
+2. Marker in `CLAUDE.md` AND usable `CLAUDE.local.md` → write the
    refreshed block to `CLAUDE.local.md` and delete the marker pair plus
    its content from `CLAUDE.md`, leaving the rest of `CLAUDE.md` untouched.
    Report the move.
-3. Marker in `CLAUDE.md` AND no `CLAUDE.local.md` → update in place in
-   `CLAUDE.md`. No migration.
+3. Marker in `CLAUDE.md` AND no usable `CLAUDE.local.md` → update in place
+   in `CLAUDE.md`. No migration.
 4. Markers in both files → keep `CLAUDE.local.md` as the live block,
    delete the `CLAUDE.md` copy.
 5. Marker in neither → treat as fresh install against the resolved target.

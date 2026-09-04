@@ -199,8 +199,9 @@ migrate)
 [Ruby/Rails/Grape plugin — user action required]
 A managed block remains in CLAUDE.md while this project has a CLAUDE.local.md,
 which the plugin prefers for its stack notes. Both files load into context, so
-a duplicate block means stale stack notes. Tell the user at the start of your
-next response, then recommend:
+a second copy wastes context and drifts into conflicting stack notes once one
+copy is refreshed. Tell the user at the start of your next response, then
+recommend:
 /rb:init --update
 NOTICE
   ;;
