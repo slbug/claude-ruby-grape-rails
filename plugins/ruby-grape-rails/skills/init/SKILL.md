@@ -1,19 +1,20 @@
 ---
 name: rb:init
-description: "Initializing the Ruby/Rails/Grape plugin: writes stack notes (queues, ORM-per-package, layout) into CLAUDE.md. Triggers: \"initialize plugin\", \"setup ruby plugin\", \"configure Claude for Rails\"."
+description: "Initializing Ruby/Rails/Grape plugin: writes stack notes (queues, ORM-per-package, layout) to project memory. Triggers: \"initialize plugin\", \"setup ruby plugin\", \"configure Claude for Rails\"."
 argument-hint: "[--update]"
 effort: low
 ---
 # Plugin Initialization
 
 Write a managed block of project-specific stack notes into the
-project's `CLAUDE.md`. Do NOT write Iron Laws or Advisory
-Preferences into `CLAUDE.md` — `inject-rules.sh` delivers them at
+project's memory file (`CLAUDE.local.md` when present, else
+`CLAUDE.md` — see "Target File"). Do NOT write Iron Laws or Advisory
+Preferences into it — `inject-rules.sh` delivers them at
 runtime on `SessionStart` + `SubagentStart`.
 
 Block-reach contract:
 
-| Consumer | Sees `CLAUDE.md` block? |
+| Consumer | Sees managed block? |
 |---|---|
 | Main session (interactive Claude) | YES |
 | Subagent spawned WITHOUT `omitClaudeMd: true` | YES |
@@ -127,10 +128,41 @@ Verification/tooling policy:
   first in `/rb:verify`; fall back to direct checks only when the wrapper
   itself is unavailable or broken locally
 
+## Target File
+
+Resolve the target before writing. Both files load into the main
+session; `CLAUDE.local.md` is gitignored personal scope and loads
+last, so it wins for machine-local stack notes.
+
+| Project state | Target |
+|---|---|
+| `CLAUDE.local.md` exists (regular file, not symlink) | `CLAUDE.local.md` |
+| no `CLAUDE.local.md` | `CLAUDE.md` |
+
+Do NOT create `CLAUDE.local.md` — only use it when the project
+already has one. Do NOT write the block into both files.
+
 ## Install Modes
 
-- Fresh install: append a managed block to `CLAUDE.md`
+- Fresh install: append a managed block to the resolved target file
 - Update mode: replace the content between markers only
+
+Update mode migration (`/rb:init --update`), automatic, no prompt:
+
+1. Find the marker pair in `CLAUDE.local.md` and `CLAUDE.md`.
+2. Marker in `CLAUDE.md` AND `CLAUDE.local.md` exists → write the
+   refreshed block to `CLAUDE.local.md` and delete the marker pair plus
+   its content from `CLAUDE.md`, leaving the rest of `CLAUDE.md` untouched.
+   Report the move.
+3. Marker in `CLAUDE.md` AND no `CLAUDE.local.md` → update in place in
+   `CLAUDE.md`. No migration.
+4. Markers in both files → keep `CLAUDE.local.md` as the live block,
+   delete the `CLAUDE.md` copy.
+5. Marker in neither → treat as fresh install against the resolved target.
+
+Confirm `CLAUDE.local.md` is gitignored before writing to it. When it
+is not, tell the user to add it to `.gitignore` — the block records
+machine-local detection results.
 
 Managed block markers:
 
@@ -145,7 +177,7 @@ Managed block markers:
 Iron Laws and Advisory Preferences are delivered at runtime by the
 plugin's `inject-rules.sh` hook, wired in `hooks.json` under both
 `SessionStart` (main-session delivery) and `SubagentStart` (per-subagent
-delivery). They are not written into `CLAUDE.md`. Running
+delivery). They are not written into the project memory file. Running
 `/rb:init --update` on a project that has the legacy inline blocks
 (from earlier plugin versions) replaces the whole managed block with
 the current template, removing the `<!-- IRON_LAWS_START -->` /
@@ -170,7 +202,7 @@ Do NOT inject anything from this row of the table:
 |---|---|
 | Iron Laws + Advisory Preferences | runtime hook `inject-rules.sh` on `SessionStart` + `SubagentStart` |
 | Skill workflow / spawn rules / verification commands | individual skill bodies (`/rb:plan`, `/rb:review`, `/rb:verify`, ...) |
-| Library defaults (Sidekiq base class, Turbo Frame patterns, etc.) | framework docs, not project CLAUDE.md |
+| Library defaults (Sidekiq base class, Turbo Frame patterns, etc.) | framework docs, not the project memory file |
 
 ## Template
 
@@ -243,9 +275,11 @@ coverage gaps with no recovery path.
 ## CLAUDE.md sizing
 
 Keep root `CLAUDE.md` under ~200 lines. Heavy repo-level context inflates
-inference cost and can reduce task success. Subtree-specific rules belong in
-`.claude/rules/*.md` with `paths:` frontmatter so they auto-load only when
-relevant.
+inference cost and can reduce task success. `CLAUDE.local.md` loads alongside
+it and counts against the same budget — moving the managed block there keeps
+`CLAUDE.md` shorter for the team but does not reduce per-session cost.
+Subtree-specific rules belong in `.claude/rules/*.md` with `paths:`
+frontmatter so they auto-load only when relevant.
 
 See `${CLAUDE_PLUGIN_ROOT}/skills/intro/references/tutorial-content.md`
 (Section 8) for the rule-of-thumb checklist and the scoped-rule template.

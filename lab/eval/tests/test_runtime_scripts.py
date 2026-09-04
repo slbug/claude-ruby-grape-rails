@@ -2710,9 +2710,9 @@ class RuntimeScriptTests(unittest.TestCase):
         )
 
     def _write_claude_md_with_pinned_version(
-        self, repo_root: Path, pinned: str
+        self, repo_root: Path, pinned: str, *, filename: str = "CLAUDE.md"
     ) -> None:
-        (repo_root / "CLAUDE.md").write_text(
+        (repo_root / filename).write_text(
             textwrap.dedent(
                 f"""
                 <!-- RUBY-GRAPE-RAILS-PLUGIN:START -->
@@ -2756,6 +2756,51 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("v99.0.0", result.stdout)
         self.assertIn("downgraded", result.stdout)
+
+    def test_check_plugin_version_reads_pin_from_claude_local_md(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), "0.1.0", filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertIn("CLAUDE.local.md", result.stdout)
+
+    def test_check_plugin_version_prefers_claude_local_md_over_claude_md(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "0.2.0")
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), "0.1.0", filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertNotIn("v0.2.0", result.stdout)
+
+    def test_check_plugin_version_flags_pending_migration_on_version_match(self) -> None:
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("CLAUDE.local.md", result.stdout)
+        self.assertIn("/rb:init --update", result.stdout)
+
+    def test_check_plugin_version_silent_on_match_without_claude_local_md(self) -> None:
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
 
     def test_check_plugin_version_silent_when_claude_md_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:

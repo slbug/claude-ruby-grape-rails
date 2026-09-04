@@ -2,10 +2,10 @@
 set -o nounset
 set -o pipefail
 
-# SessionStart hook: warn when project CLAUDE.md pins a different plugin
+# SessionStart hook: warn when the project memory file pins a different plugin
 # version than the installed plugin. Outdated pin emits a refresh reminder;
 # newer pin flags a possible plugin downgrade.
-# Policy: advisory — silent on missing CLAUDE.md, missing plugin marker,
+# Policy: advisory — silent on missing memory file, missing plugin marker,
 # missing plugin.json, tool unavailability, or lock conflicts. Degraded
 # payload/root resolution must not block session startup. Fires at most once
 # per session via atomic per-session lock directory under CLAUDE_PLUGIN_DATA
@@ -46,8 +46,28 @@ INPUT="${HOOK_INPUT_VALUE:-}"
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 
-CLAUDE_MD="${REPO_ROOT}/CLAUDE.md"
-[[ -f "$CLAUDE_MD" && ! -L "$CLAUDE_MD" && -r "$CLAUDE_MD" ]] || exit 0
+# /rb:init writes its managed block into `CLAUDE.local.md` when the project
+# has one and falls back to `CLAUDE.md`. Read the pin from whichever file
+# actually carries the marker, `CLAUDE.local.md` first, so a stale block left
+# in `CLAUDE.md` does not shadow the file /rb:init --update maintains.
+MEMORY_FILE=""
+for CANDIDATE in "${REPO_ROOT}/CLAUDE.local.md" "${REPO_ROOT}/CLAUDE.md"; do
+  [[ -f "$CANDIDATE" && ! -L "$CANDIDATE" && -r "$CANDIDATE" ]] || continue
+  grep -q '<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->' "$CANDIDATE" 2>/dev/null || continue
+  MEMORY_FILE="$CANDIDATE"
+  break
+done
+[[ -n "$MEMORY_FILE" ]] || exit 0
+MEMORY_NAME="${MEMORY_FILE##*/}"
+
+# Block still in `CLAUDE.md` while the project has a `CLAUDE.local.md`: a
+# pre-`CLAUDE.local.md` install that /rb:init --update migrates. Surface it
+# even when the pinned version matches.
+MIGRATION_PENDING=false
+LOCAL_MD="${REPO_ROOT}/CLAUDE.local.md"
+if [[ "$MEMORY_NAME" == "CLAUDE.md" && -f "$LOCAL_MD" && ! -L "$LOCAL_MD" ]]; then
+  MIGRATION_PENDING=true
+fi
 
 # Extract pinned version between plugin sentinels and strict-validate against
 # the official semver regex from
@@ -71,7 +91,7 @@ ANCHORED_SEMVER="^${SEMVER_CORE}${SEMVER_PRE}${SEMVER_BUILD}$"
 # `some-plugin v1.0.0` or `iplugin v2` inside the managed block do not
 # hijack the match (POSIX ERE has no portable `\b`; we approximate via
 # `(^|[^A-Za-z0-9_-])`).
-RAW=$(sed -n '/<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->/,/<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->/p' "$CLAUDE_MD" 2>/dev/null \
+RAW=$(sed -n '/<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->/,/<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->/p' "$MEMORY_FILE" 2>/dev/null \
   | grep -oE '(^|[^A-Za-z0-9_-])plugin v[0-9A-Za-z.+-]+' \
   | head -1 \
   | sed -E 's/.*plugin v//' || true)
@@ -96,14 +116,17 @@ CURRENT_COMPARE="${CURRENT%%+*}"
 
 # Semver-aware compare via `sort -V` (natural version sort). Handles semver
 # pre-release precedence correctly: `1.13.1-rc1` sorts below `1.13.1`.
-[[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" ]] && exit 0
-HIGHEST=$(printf '%s\n%s\n' "$PINNED_COMPARE" "$CURRENT_COMPARE" | "$SORT_BIN" -V | tail -n 1)
-[[ -n "$HIGHEST" ]] || exit 0
-
-if [[ "$HIGHEST" == "$CURRENT_COMPARE" ]]; then
-  DIRECTION="outdated"
+if [[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" ]]; then
+  [[ "$MIGRATION_PENDING" == "true" ]] || exit 0
+  DIRECTION="migrate"
 else
-  DIRECTION="newer"
+  HIGHEST=$(printf '%s\n%s\n' "$PINNED_COMPARE" "$CURRENT_COMPARE" | "$SORT_BIN" -V | tail -n 1)
+  [[ -n "$HIGHEST" ]] || exit 0
+  if [[ "$HIGHEST" == "$CURRENT_COMPARE" ]]; then
+    DIRECTION="outdated"
+  else
+    DIRECTION="newer"
+  fi
 fi
 
 SESSION_ID=$(printf '%s' "$INPUT" | jq -r '.session_id // .sessionId // "default"' 2>/dev/null) || SESSION_ID=""
@@ -141,11 +164,18 @@ mkdir -- "$SESSION_LOCK" 2>/dev/null || exit 0
 # Phrase the message as an imperative instruction so Claude surfaces the
 # drift to the user at the start of the next response instead of silently
 # reading the fact.
+MIGRATION_LINE=""
+if [[ "$MIGRATION_PENDING" == "true" ]]; then
+  MIGRATION_LINE="The managed block also still lives in CLAUDE.md while this project has a
+CLAUDE.local.md; /rb:init --update moves it there."
+fi
+
 case "$DIRECTION" in
 outdated)
   cat <<NOTICE
 [Ruby/Rails/Grape plugin — user action required]
-Installed plugin v${CURRENT} is ahead of project CLAUDE.md pinned at v${PINNED}.
+Installed plugin v${CURRENT} is ahead of project ${MEMORY_NAME} pinned at v${PINNED}.
+${MIGRATION_LINE}
 Tell the user at the start of your next response, then recommend:
 /rb:init --update
 NOTICE
@@ -153,10 +183,19 @@ NOTICE
 newer)
   cat <<NOTICE
 [Ruby/Rails/Grape plugin — user action required]
-Installed plugin v${CURRENT} is OLDER than project CLAUDE.md pinned at v${PINNED}.
+Installed plugin v${CURRENT} is OLDER than project ${MEMORY_NAME} pinned at v${PINNED}.
 The plugin may have been downgraded. Tell the user at the start of your next
 response; recommend verifying the install before running /rb:init --update
 (it would overwrite the newer marker content with the older template).
+NOTICE
+  ;;
+migrate)
+  cat <<NOTICE
+[Ruby/Rails/Grape plugin — user action required]
+The managed block sits in CLAUDE.md while this project has a CLAUDE.local.md,
+which the plugin prefers for its stack notes. Tell the user at the start of
+your next response, then recommend:
+/rb:init --update
 NOTICE
   ;;
 esac
