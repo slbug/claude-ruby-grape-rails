@@ -46,31 +46,47 @@ INPUT="${HOOK_INPUT_VALUE:-}"
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 
+# A memory file is usable only as a readable regular non-symlink file — the
+# same validity contract /rb:init applies before writing. It carries a managed
+# block only with BOTH sentinels present: a lone START would leave the pin
+# extraction below with an open-ended `sed` range, and a file that cannot yield
+# a pin must not shadow one that can.
+usable_memory_file() {
+  local file="$1"
+  [[ -f "$file" && ! -L "$file" && -r "$file" ]]
+}
+
+has_managed_block() {
+  local file="$1"
+  usable_memory_file "$file" || return 1
+  grep -q '<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->' "$file" 2>/dev/null || return 1
+  grep -q '<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->' "$file" 2>/dev/null || return 1
+}
+
 # /rb:init writes its managed block into `CLAUDE.local.md` when the project
 # has one and falls back to `CLAUDE.md`. Read the pin from whichever file
-# actually carries the marker, `CLAUDE.local.md` first, so a stale block left
+# actually carries the block, `CLAUDE.local.md` first, so a stale block left
 # in `CLAUDE.md` does not shadow the file /rb:init --update maintains.
 MEMORY_FILE=""
 for CANDIDATE in "${REPO_ROOT}/CLAUDE.local.md" "${REPO_ROOT}/CLAUDE.md"; do
-  [[ -f "$CANDIDATE" && ! -L "$CANDIDATE" && -r "$CANDIDATE" ]] || continue
-  grep -q '<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->' "$CANDIDATE" 2>/dev/null || continue
+  has_managed_block "$CANDIDATE" || continue
   MEMORY_FILE="$CANDIDATE"
   break
 done
 [[ -n "$MEMORY_FILE" ]] || exit 0
 MEMORY_NAME="${MEMORY_FILE##*/}"
 
-# A block in `CLAUDE.md` while the project has a `CLAUDE.local.md` is a
+# A block in `CLAUDE.md` while the project has a usable `CLAUDE.local.md` is a
 # pre-`CLAUDE.local.md` install that /rb:init --update migrates. Detect the
-# `CLAUDE.md` marker independently of which file supplied the pin: when both
-# files carry a block, the pin comes from `CLAUDE.local.md` and the
-# `CLAUDE.md` copy is a leftover duplicate that still loads into context.
-# Surface either shape even when the pinned version matches.
+# `CLAUDE.md` block independently of which file supplied the pin: when both
+# files carry one, the pin comes from `CLAUDE.local.md` and the `CLAUDE.md`
+# copy is a leftover duplicate that still loads into context. Surface either
+# shape even when the pinned version matches, and only when `--update` could
+# actually perform the move.
 MIGRATION_PENDING=false
 LOCAL_MD="${REPO_ROOT}/CLAUDE.local.md"
 ROOT_MD="${REPO_ROOT}/CLAUDE.md"
-if [[ -f "$LOCAL_MD" && ! -L "$LOCAL_MD" && -f "$ROOT_MD" && ! -L "$ROOT_MD" && -r "$ROOT_MD" ]] \
-  && grep -q '<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->' "$ROOT_MD" 2>/dev/null; then
+if usable_memory_file "$LOCAL_MD" && has_managed_block "$ROOT_MD"; then
   MIGRATION_PENDING=true
 fi
 

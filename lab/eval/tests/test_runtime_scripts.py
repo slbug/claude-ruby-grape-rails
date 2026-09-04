@@ -2809,6 +2809,59 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("CLAUDE.local.md", result.stdout)
         self.assertIn("/rb:init --update", result.stdout)
 
+    def test_check_plugin_version_ignores_claude_local_md_without_end_marker(self) -> None:
+        # A lone START sentinel in CLAUDE.local.md must not shadow the file
+        # that can actually yield a pin.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "0.1.0")
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->\n\nTruncated block.\n",
+                encoding="utf-8",
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertIn("CLAUDE.md", result.stdout)
+
+    def test_check_plugin_version_ignores_root_block_without_end_marker(self) -> None:
+        # A lone START sentinel in CLAUDE.md is not a block `--update` can
+        # move, so it must not trigger the migration notice.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="CLAUDE.local.md"
+            )
+            (Path(tmpdir) / "CLAUDE.md").write_text(
+                "<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->\n\nTruncated block.\n",
+                encoding="utf-8",
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the unreadable-file check",
+    )
+    def test_check_plugin_version_ignores_unreadable_claude_local_md(self) -> None:
+        # An unreadable CLAUDE.local.md fails /rb:init's validity contract, so
+        # `--update` would keep the block in CLAUDE.md — no migration notice.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            local_md = Path(tmpdir) / "CLAUDE.local.md"
+            local_md.write_text("# Personal notes\n", encoding="utf-8")
+            local_md.chmod(0o000)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                local_md.chmod(0o600)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
     def test_check_plugin_version_silent_on_match_without_claude_local_md(self) -> None:
         current = self._current_plugin_version()
         with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
