@@ -111,19 +111,31 @@ pinned_version() {
 LOCAL_MD="${REPO_ROOT}/CLAUDE.local.md"
 ROOT_MD="${REPO_ROOT}/CLAUDE.md"
 
+# Which files actually carry a block, independently of which one supplies the
+# pin below. Both answers drive the notice wording.
+LOCAL_HAS_BLOCK=false
+managed_block "$LOCAL_MD" >/dev/null 2>&1 && LOCAL_HAS_BLOCK=true
+ROOT_HAS_BLOCK=false
+managed_block "$ROOT_MD" >/dev/null 2>&1 && ROOT_HAS_BLOCK=true
+
 # A block in `CLAUDE.md` while the project has a usable `CLAUDE.local.md` is a
-# pre-`CLAUDE.local.md` install that /rb:init --update migrates. Detect the
-# `CLAUDE.md` block independently of which file supplies the pin: when both
-# files carry one, the pin comes from `CLAUDE.local.md` and the `CLAUDE.md`
-# copy is a leftover duplicate that still loads into context. Surface either
-# shape even when the pinned version matches — but only when `--update` can
-# actually perform the move, which needs write access to the destination AND
-# to the source it strips the block from. Recommending a move neither file
-# permits would repeat every session with nothing the user can do about it.
+# pre-`CLAUDE.local.md` install that /rb:init --update migrates. Surface it
+# even when the pinned version matches — but only when `--update` can actually
+# perform the move, which needs write access to the destination AND to the
+# source it strips the block from. Recommending a move neither file permits
+# would repeat every session with nothing the user can do about it.
 MIGRATION_PENDING=false
 if usable_memory_file "$LOCAL_MD" && usable_memory_file "$ROOT_MD" \
-  && managed_block "$ROOT_MD" >/dev/null; then
+  && [[ "$ROOT_HAS_BLOCK" == "true" ]]; then
   MIGRATION_PENDING=true
+fi
+
+# /rb:init stops rather than writing `CLAUDE.md` underneath a local block it
+# cannot rewrite, so detect that state independently of pin selection: an
+# unpinned local block never supplies the pin, yet it still blocks `--update`.
+REPAIR_LOCAL=false
+if [[ "$LOCAL_HAS_BLOCK" == "true" ]] && ! usable_memory_file "$LOCAL_MD"; then
+  REPAIR_LOCAL=true
 fi
 
 # /rb:init writes its managed block into `CLAUDE.local.md` when the project
@@ -141,21 +153,30 @@ for CANDIDATE in "$LOCAL_MD" "$ROOT_MD"; do
   break
 done
 
-# No readable pin anywhere: still report a pending migration, which needs no
-# version comparison. Same for a plugin.json we cannot read.
+# `--update` rewrites the block in place, so a block in a file it cannot write
+# turns the usual recommendation into a command that stops. Name that file and
+# say what to fix first. The local block outranks the pin source: it is what
+# makes `--update` refuse the whole run.
+BLOCKED_NAME=""
+if [[ "$REPAIR_LOCAL" == "true" ]]; then
+  BLOCKED_NAME="CLAUDE.local.md"
+elif [[ -n "$MEMORY_FILE" ]] && ! usable_memory_file "$MEMORY_FILE"; then
+  BLOCKED_NAME="${MEMORY_FILE##*/}"
+fi
+
+# No readable pin anywhere: still report a pending migration or an unwritable
+# local block, neither of which needs a version comparison. Same for a
+# plugin.json we cannot read.
 if [[ -z "$PINNED" ]]; then
-  [[ "$MIGRATION_PENDING" == "true" ]] || exit 0
-  DIRECTION="migrate"
+  if [[ "$MIGRATION_PENDING" == "true" ]]; then
+    DIRECTION="migrate"
+  elif [[ -n "$BLOCKED_NAME" ]]; then
+    DIRECTION="repair"
+  else
+    exit 0
+  fi
 fi
 MEMORY_NAME="${MEMORY_FILE##*/}"
-
-# `--update` rewrites the block in place, so a pin read from a file it cannot
-# write turns the usual recommendation into a command that fails. Say what to
-# fix first instead.
-WRITE_BLOCKED=false
-if [[ -n "$MEMORY_FILE" ]] && ! usable_memory_file "$MEMORY_FILE"; then
-  WRITE_BLOCKED=true
-fi
 
 if [[ -z "${DIRECTION:-}" ]]; then
   CURRENT=""
@@ -166,8 +187,13 @@ if [[ -z "${DIRECTION:-}" ]]; then
     fi
   fi
   if [[ -z "$CURRENT" ]]; then
-    [[ "$MIGRATION_PENDING" == "true" ]] || exit 0
-    DIRECTION="migrate"
+    if [[ "$MIGRATION_PENDING" == "true" ]]; then
+      DIRECTION="migrate"
+    elif [[ -n "$BLOCKED_NAME" ]]; then
+      DIRECTION="repair"
+    else
+      exit 0
+    fi
   fi
 fi
 
@@ -182,8 +208,13 @@ if [[ -z "${DIRECTION:-}" ]]; then
   # Semver-aware compare via `sort -V` (natural version sort). Handles semver
   # pre-release precedence correctly: `1.13.1-rc1` sorts below `1.13.1`.
   if [[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" ]]; then
-    [[ "$MIGRATION_PENDING" == "true" ]] || exit 0
-    DIRECTION="migrate"
+    if [[ "$MIGRATION_PENDING" == "true" ]]; then
+      DIRECTION="migrate"
+    elif [[ -n "$BLOCKED_NAME" ]]; then
+      DIRECTION="repair"
+    else
+      exit 0
+    fi
   else
     HIGHEST=$(printf '%s\n%s\n' "$PINNED_COMPARE" "$CURRENT_COMPARE" | "$SORT_BIN" -V | tail -n 1)
     [[ -n "$HIGHEST" ]] || exit 0
@@ -230,16 +261,33 @@ mkdir -- "$SESSION_LOCK" 2>/dev/null || exit 0
 # Phrase the message as an imperative instruction so Claude surfaces the
 # drift to the user at the start of the next response instead of silently
 # reading the fact.
+# The migration covers two shapes with different costs: a duplicate copy (both
+# files carry a block) wastes context and drifts once one copy is refreshed,
+# while a lone `CLAUDE.md` block simply sits in the file /rb:init no longer
+# targets. Do not claim duplicate cost for the lone-block case.
 MIGRATION_LINE=""
 if [[ "$MIGRATION_PENDING" == "true" ]]; then
-  MIGRATION_LINE="A managed block also remains in CLAUDE.md while this project has a
-CLAUDE.local.md; /rb:init --update moves it there and removes the CLAUDE.md copy."
+  if [[ "$LOCAL_HAS_BLOCK" == "true" ]]; then
+    MIGRATION_LINE="A second managed block also remains in CLAUDE.md, wasting context and drifting
+from the CLAUDE.local.md copy once either is refreshed; /rb:init --update
+deletes the CLAUDE.md copy."
+  else
+    MIGRATION_LINE="The managed block also still sits in CLAUDE.md rather than this project's
+CLAUDE.local.md; /rb:init --update moves it there."
+  fi
 fi
 
 WRITE_BLOCKED_LINE=""
-if [[ "$WRITE_BLOCKED" == "true" ]]; then
-  WRITE_BLOCKED_LINE="${MEMORY_NAME} is not writable, so /rb:init --update cannot refresh the block.
-Have the user restore write access to it (or delete the block) first."
+REPAIR_HINT=""
+if [[ -n "$BLOCKED_NAME" ]]; then
+  if [[ "$BLOCKED_NAME" == "CLAUDE.local.md" ]]; then
+    REPAIR_HINT="restore write access to CLAUDE.local.md, or delete its managed block so
+CLAUDE.md becomes the target"
+  else
+    REPAIR_HINT="restore write access to ${BLOCKED_NAME}"
+  fi
+  WRITE_BLOCKED_LINE="${BLOCKED_NAME} holds a managed block and is not writable, so /rb:init --update
+stops instead of refreshing it. Have the user ${REPAIR_HINT} first."
 fi
 
 case "$DIRECTION" in
@@ -266,12 +314,18 @@ NOTICE
 migrate)
   cat <<NOTICE
 [Ruby/Rails/Grape plugin — user action required]
-A managed block remains in CLAUDE.md while this project has a CLAUDE.local.md,
-which the plugin prefers for its stack notes. Both files load into context, so
-a second copy wastes context and drifts into conflicting stack notes once one
-copy is refreshed. Tell the user at the start of your next response, then
-recommend:
+${MIGRATION_LINE}
+CLAUDE.local.md is the file the plugin prefers for its stack notes. Tell the
+user at the start of your next response, then recommend:
 /rb:init --update
+NOTICE
+  ;;
+repair)
+  cat <<NOTICE
+[Ruby/Rails/Grape plugin — user action required]
+${WRITE_BLOCKED_LINE}
+Tell the user at the start of your next response, then recommend running
+/rb:init --update once that is done.
 NOTICE
   ;;
 esac

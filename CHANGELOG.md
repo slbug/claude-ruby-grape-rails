@@ -25,8 +25,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   file that yields a valid one — `CLAUDE.local.md`, then `CLAUDE.md` — names
   that file in the drift notice, and recommends `/rb:init --update` when a
   movable `CLAUDE.md` block remains while a usable `CLAUDE.local.md` exists,
-  including when the pinned version already matches. A pin read from a file
-  the command cannot rewrite is reported as a permission fix instead.
+  including when the pinned version already matches. A managed block in a file
+  the command cannot rewrite is reported as a permission fix instead, whether
+  or not that file supplied the pin.
 
 ## [1.16.17] - 2026-08-30
 

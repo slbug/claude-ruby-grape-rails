@@ -2919,29 +2919,112 @@ class RuntimeScriptTests(unittest.TestCase):
         hasattr(os, "geteuid") and os.geteuid() == 0,
         "root bypasses the writability check",
     )
-    def test_check_plugin_version_skips_migration_for_read_only_files(self) -> None:
-        # `--update` must write the destination and strip the source, so a
-        # read-only file on either side means the move cannot happen — do not
-        # recommend it every session.
+    def test_check_plugin_version_skips_migration_for_read_only_local(self) -> None:
+        # `--update` must write the destination, so a read-only CLAUDE.local.md
+        # with no managed block of its own means the move cannot happen and
+        # nothing is broken — stay silent rather than recommend it every
+        # session.
         current = self._current_plugin_version()
-        for read_only in ("CLAUDE.local.md", "CLAUDE.md"):
-            with self.subTest(read_only=read_only):
-                with (
-                    tempfile.TemporaryDirectory() as tmpdir,
-                    tempfile.TemporaryDirectory() as data,
-                ):
-                    self._write_claude_md_with_pinned_version(Path(tmpdir), current)
-                    local_md = Path(tmpdir) / "CLAUDE.local.md"
-                    local_md.write_text("# Personal notes\n", encoding="utf-8")
-                    target = Path(tmpdir) / read_only
-                    target.chmod(0o444)
-                    try:
-                        result = self._run_check_plugin_version(tmpdir, data_dir=data)
-                    finally:
-                        target.chmod(0o600)
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            local_md = Path(tmpdir) / "CLAUDE.local.md"
+            local_md.write_text("# Personal notes\n", encoding="utf-8")
+            local_md.chmod(0o444)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                local_md.chmod(0o600)
 
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(result.stdout, "")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the writability check",
+    )
+    def test_check_plugin_version_reports_read_only_root_block(self) -> None:
+        # `--update` strips the block from CLAUDE.md, so a read-only CLAUDE.md
+        # blocks the run: report the permission repair instead of the move.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            root_md = Path(tmpdir) / "CLAUDE.md"
+            root_md.chmod(0o444)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                root_md.chmod(0o600)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("CLAUDE.md holds a managed block and is not writable", result.stdout)
+        self.assertNotIn("becomes the target", result.stdout)
+
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the writability check",
+    )
+    def test_check_plugin_version_reports_unwritable_local_block_without_pin(
+        self,
+    ) -> None:
+        # A read-only CLAUDE.local.md block with no pin never supplies the pin,
+        # so selection falls back to CLAUDE.md — but `--update` still refuses
+        # the run, so recommend the permission repair, not the update.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "0.1.0")
+            local_md = Path(tmpdir) / "CLAUDE.local.md"
+            local_md.write_text(
+                textwrap.dedent(
+                    """
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:START -->
+
+                    Managed content with no version marker.
+
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:END -->
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            local_md.chmod(0o444)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                local_md.chmod(0o600)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("CLAUDE.local.md", result.stdout)
+        self.assertIn("not writable", result.stdout)
+
+    def test_check_plugin_version_migration_notice_omits_duplicate_claim(self) -> None:
+        # Only CLAUDE.md carries a block: moving it changes nothing about
+        # context size, so the notice must not claim a wasted second copy.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("/rb:init --update", result.stdout)
+        self.assertNotIn("second managed block", result.stdout)
+        self.assertNotIn("wasting context", result.stdout)
+
+    def test_check_plugin_version_migration_notice_reports_duplicate(self) -> None:
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("second managed block", result.stdout)
 
     @unittest.skipIf(
         hasattr(os, "geteuid") and os.geteuid() == 0,
