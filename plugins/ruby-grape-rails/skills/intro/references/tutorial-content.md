@@ -260,7 +260,7 @@ fits — that is always the strongest signal.
 
 Run `/rb:init` to write a managed block into the project memory file —
 `CLAUDE.local.md` when the project has a usable one (a regular,
-readable, writable, non-symlink file in personal scope), otherwise
+readable, writable, non-symlink file that git ignores), otherwise
 `CLAUDE.md`.
 Block contents: stack-version header + project-specific stack facts
 only.

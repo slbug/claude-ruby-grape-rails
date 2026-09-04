@@ -121,6 +121,17 @@ managed_block "$LOCAL_MD" >/dev/null 2>&1 && LOCAL_HAS_BLOCK=true
 ROOT_HAS_BLOCK=false
 managed_block "$ROOT_MD" >/dev/null 2>&1 && ROOT_HAS_BLOCK=true
 
+# `CLAUDE.local.md` is a migration target only in personal scope. Ask git when
+# it can answer; treat "no git, not a repo, or no answer" as eligible, since a
+# non-git project has no ignore status to violate and the previous target
+# (`CLAUDE.md`) is tracked anyway.
+local_file_is_tracked() {
+  command -v git >/dev/null 2>&1 || return 1
+  git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
+  git -C "$REPO_ROOT" check-ignore -q "$LOCAL_MD" 2>/dev/null && return 1
+  return 0
+}
+
 # A block in `CLAUDE.md` while the project has a usable `CLAUDE.local.md` is a
 # pre-`CLAUDE.local.md` install that /rb:init --update migrates. Surface it
 # even when the pinned version matches — but only when `--update` can actually
@@ -129,7 +140,7 @@ managed_block "$ROOT_MD" >/dev/null 2>&1 && ROOT_HAS_BLOCK=true
 # would repeat every session with nothing the user can do about it.
 MIGRATION_PENDING=false
 if usable_memory_file "$LOCAL_MD" && usable_memory_file "$ROOT_MD" \
-  && [[ "$ROOT_HAS_BLOCK" == "true" ]]; then
+  && [[ "$ROOT_HAS_BLOCK" == "true" ]] && ! local_file_is_tracked; then
   MIGRATION_PENDING=true
 fi
 
@@ -218,7 +229,11 @@ if [[ -z "$DIRECTION" ]]; then
   if [[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" ]]; then
     DIRECTION=$(fallback_direction) || exit 0
   else
-    SORT_BIN=$(resolve_sort_bin) || { DIRECTION=$(fallback_direction) || exit 0; }
+    # Versions differ but no `sort -V` can order them. Staying silent is the
+    # only safe answer: the migration and repair notices both end in
+    # `/rb:init --update`, which overwrites a newer managed block with an
+    # older template — exactly what the `newer` branch exists to prevent.
+    SORT_BIN=$(resolve_sort_bin) || exit 0
   fi
 fi
 

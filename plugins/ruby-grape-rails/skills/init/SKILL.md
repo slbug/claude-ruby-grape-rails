@@ -135,9 +135,11 @@ files load into the main session, and the gitignored personal-scope
 file loads last, so machine-local stack notes belong there.
 
 Treat `CLAUDE.local.md` as usable ONLY when it is a regular file, not
-a symlink, readable, and writable. Treat any other shape (symlink,
-directory, unreadable, read-only) as absent and never write through
-it.
+a symlink, readable, writable, and outside version control — git
+ignores it, or the project is not a git repo. Treat any other shape
+(symlink, directory, unreadable, read-only, tracked) as absent and
+never write through it. Check ignore status with
+`git check-ignore -q CLAUDE.local.md` before selecting the target.
 
 | Project state | Target |
 |---|---|
@@ -175,13 +177,10 @@ both files.
 Leave every other line of `CLAUDE.md` untouched when stripping a block.
 
 On a STOP row, report which shape blocks the file and the ways out:
-restore write access, replace the symlink with a regular file, or
-delete the blocking managed block. Writing the other file instead would
-leave an unmaintainable block loading beside it.
-
-Confirm `CLAUDE.local.md` is gitignored before writing to it. When it
-is not, tell the user to add it to `.gitignore` — the block records
-machine-local detection results.
+restore write access, replace the symlink with a regular file, add
+`CLAUDE.local.md` to `.gitignore`, or delete the blocking managed
+block. Writing the other file instead would leave an unmaintainable
+block loading beside it.
 
 Managed block markers:
 

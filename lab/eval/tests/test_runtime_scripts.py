@@ -3032,6 +3032,43 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("CLAUDE.md holds a managed block and is not writable", result.stdout)
 
+    @unittest.skipUnless(shutil.which("git"), "git required to set ignore status")
+    def test_check_plugin_version_skips_migration_for_tracked_local_file(self) -> None:
+        # A CLAUDE.local.md git does not ignore is not personal scope, so
+        # recommending a move of machine-local notes into it is wrong.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            subprocess.run(
+                ["git", "init", "-q", tmpdir], check=True, capture_output=True
+            )
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    @unittest.skipUnless(shutil.which("git"), "git required to set ignore status")
+    def test_check_plugin_version_migrates_into_ignored_local_file(self) -> None:
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            subprocess.run(
+                ["git", "init", "-q", tmpdir], check=True, capture_output=True
+            )
+            (Path(tmpdir) / ".gitignore").write_text(
+                "CLAUDE.local.md\n", encoding="utf-8"
+            )
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("/rb:init --update", result.stdout)
+
     def test_check_plugin_version_migration_notice_omits_duplicate_claim(self) -> None:
         # Only CLAUDE.md carries a block: moving it changes nothing about
         # context size, so the notice must not claim a wasted second copy.

@@ -13,7 +13,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - `/rb:init` writes its managed stack-notes block into `CLAUDE.local.md` when
   the project already has a usable one — a regular, readable, writable,
-  non-symlink file — and falls back to `CLAUDE.md` otherwise. The plugin never
+  non-symlink file that git ignores — and falls back to `CLAUDE.md` otherwise. The plugin never
   creates `CLAUDE.local.md`. A local file carrying a managed block but failing
   the usability check stops the run for repair instead of writing `CLAUDE.md`
   underneath it.
@@ -24,7 +24,8 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `check-plugin-version.sh` takes the pinned version from the first memory
   file that yields a valid one — `CLAUDE.local.md`, then `CLAUDE.md` — names
   that file in the drift notice, and recommends `/rb:init --update` when a
-  movable `CLAUDE.md` block remains while a usable `CLAUDE.local.md` exists,
+  movable `CLAUDE.md` block remains while a usable, git-ignored
+  `CLAUDE.local.md` exists,
   including when the pinned version already matches. A managed block in a file
   the command cannot rewrite is reported as a permission fix instead, whether
   or not that file supplied the pin.
