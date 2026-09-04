@@ -2824,6 +2824,80 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertIn("v0.1.0", result.stdout)
         self.assertIn("CLAUDE.md", result.stdout)
 
+    def test_check_plugin_version_ignores_reversed_sentinels(self) -> None:
+        # END before START never closes the sed range, so the emitted text runs
+        # to EOF. A version token in trailing prose outside any block must not
+        # be read as the pin; the valid CLAUDE.md block wins instead.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "0.1.0")
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                textwrap.dedent(
+                    """
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:END -->
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:START -->
+
+                    Trailing prose mentioning plugin v98.0.0 outside any block.
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertNotIn("v98.0.0", result.stdout)
+
+    def test_check_plugin_version_falls_back_when_local_block_has_no_pin(self) -> None:
+        # A well-formed CLAUDE.local.md block carrying no `plugin v` token must
+        # not shadow a CLAUDE.md block that still reports real drift.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "0.1.0")
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                textwrap.dedent(
+                    """
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:START -->
+
+                    Managed content with no version marker.
+
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:END -->
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertIn("CLAUDE.md", result.stdout)
+
+    def test_check_plugin_version_reports_migration_without_any_pin(self) -> None:
+        # Neither file yields a pin, but the CLAUDE.md block is still movable:
+        # report the pending migration instead of exiting silently.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            (Path(tmpdir) / "CLAUDE.md").write_text(
+                textwrap.dedent(
+                    """
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:START -->
+
+                    Managed content with no version marker.
+
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:END -->
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("CLAUDE.local.md", result.stdout)
+        self.assertIn("/rb:init --update", result.stdout)
+
     def test_check_plugin_version_ignores_root_block_without_end_marker(self) -> None:
         # A lone START sentinel in CLAUDE.md is not a block `--update` can
         # move, so it must not trigger the migration notice.

@@ -46,52 +46,7 @@ INPUT="${HOOK_INPUT_VALUE:-}"
 REPO_ROOT=$(resolve_workspace_root "$INPUT") || exit 0
 [[ -n "$REPO_ROOT" ]] || exit 0
 
-# A memory file is usable only as a readable regular non-symlink file — the
-# same validity contract /rb:init applies before writing. It carries a managed
-# block only with BOTH sentinels present: a lone START would leave the pin
-# extraction below with an open-ended `sed` range, and a file that cannot yield
-# a pin must not shadow one that can.
-usable_memory_file() {
-  local file="$1"
-  [[ -f "$file" && ! -L "$file" && -r "$file" ]]
-}
-
-has_managed_block() {
-  local file="$1"
-  usable_memory_file "$file" || return 1
-  grep -q '<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->' "$file" 2>/dev/null || return 1
-  grep -q '<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->' "$file" 2>/dev/null || return 1
-}
-
-# /rb:init writes its managed block into `CLAUDE.local.md` when the project
-# has one and falls back to `CLAUDE.md`. Read the pin from whichever file
-# actually carries the block, `CLAUDE.local.md` first, so a stale block left
-# in `CLAUDE.md` does not shadow the file /rb:init --update maintains.
-MEMORY_FILE=""
-for CANDIDATE in "${REPO_ROOT}/CLAUDE.local.md" "${REPO_ROOT}/CLAUDE.md"; do
-  has_managed_block "$CANDIDATE" || continue
-  MEMORY_FILE="$CANDIDATE"
-  break
-done
-[[ -n "$MEMORY_FILE" ]] || exit 0
-MEMORY_NAME="${MEMORY_FILE##*/}"
-
-# A block in `CLAUDE.md` while the project has a usable `CLAUDE.local.md` is a
-# pre-`CLAUDE.local.md` install that /rb:init --update migrates. Detect the
-# `CLAUDE.md` block independently of which file supplied the pin: when both
-# files carry one, the pin comes from `CLAUDE.local.md` and the `CLAUDE.md`
-# copy is a leftover duplicate that still loads into context. Surface either
-# shape even when the pinned version matches, and only when `--update` could
-# actually perform the move.
-MIGRATION_PENDING=false
-LOCAL_MD="${REPO_ROOT}/CLAUDE.local.md"
-ROOT_MD="${REPO_ROOT}/CLAUDE.md"
-if usable_memory_file "$LOCAL_MD" && has_managed_block "$ROOT_MD"; then
-  MIGRATION_PENDING=true
-fi
-
-# Extract pinned version between plugin sentinels and strict-validate against
-# the official semver regex from
+# Strict-validate every extracted pin against the official semver regex from
 # https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
 # translated to POSIX ERE:
 #   - MAJOR/MINOR/PATCH: `0` or a positive integer with no leading zeros
@@ -108,45 +63,115 @@ SEMVER_PRE='(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-
 SEMVER_BUILD='(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?'
 ANCHORED_SEMVER="^${SEMVER_CORE}${SEMVER_PRE}${SEMVER_BUILD}$"
 
-# Require a word-boundary before `plugin v` so foreign markers like
-# `some-plugin v1.0.0` or `iplugin v2` inside the managed block do not
-# hijack the match (POSIX ERE has no portable `\b`; we approximate via
-# `(^|[^A-Za-z0-9_-])`).
-RAW=$(sed -n '/<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->/,/<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->/p' "$MEMORY_FILE" 2>/dev/null \
-  | grep -oE '(^|[^A-Za-z0-9_-])plugin v[0-9A-Za-z.+-]+' \
-  | head -1 \
-  | sed -E 's/.*plugin v//' || true)
-[[ -n "$RAW" ]] || exit 0
-printf '%s' "$RAW" | grep -qE "$ANCHORED_SEMVER" || exit 0
-PINNED="$RAW"
-[[ -n "$PINNED" ]] || exit 0
+# A memory file is usable only as a readable regular non-symlink file — the
+# same validity contract /rb:init applies before writing.
+usable_memory_file() {
+  local file="$1"
+  [[ -f "$file" && ! -L "$file" && -r "$file" ]]
+}
 
-[[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]] || exit 0
-PLUGIN_JSON="${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"
-[[ -f "$PLUGIN_JSON" && ! -L "$PLUGIN_JSON" && -r "$PLUGIN_JSON" ]] || exit 0
+# Print the managed block, or fail. `sed` prints from START to EOF when the
+# range never closes, which covers both a missing END and an END that precedes
+# START, so require an END sentinel inside the emitted range — otherwise
+# trailing prose outside any block could supply a version token.
+managed_block() {
+  local file="$1" block
+  usable_memory_file "$file" || return 1
+  block=$(sed -n '/<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->/,/<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->/p' "$file" 2>/dev/null) || return 1
+  [[ -n "$block" ]] || return 1
+  printf '%s\n' "$block" | grep -q '<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->' || return 1
+  printf '%s\n' "$block"
+}
 
-CURRENT=$(jq -r '.version // empty' "$PLUGIN_JSON" 2>/dev/null) || exit 0
-[[ -n "$CURRENT" ]] || exit 0
+# Print the block's strict-semver pin, or fail. Require a word-boundary before
+# `plugin v` so foreign markers like `some-plugin v1.0.0` or `iplugin v2`
+# inside the managed block do not hijack the match (POSIX ERE has no portable
+# `\b`; we approximate via `(^|[^A-Za-z0-9_-])`).
+pinned_version() {
+  local file="$1" block raw
+  block=$(managed_block "$file") || return 1
+  raw=$(printf '%s\n' "$block" \
+    | grep -oE '(^|[^A-Za-z0-9_-])plugin v[0-9A-Za-z.+-]+' \
+    | head -1 \
+    | sed -E 's/.*plugin v//' || true)
+  [[ -n "$raw" ]] || return 1
+  printf '%s' "$raw" | grep -qE "$ANCHORED_SEMVER" || return 1
+  printf '%s' "$raw"
+}
+
+LOCAL_MD="${REPO_ROOT}/CLAUDE.local.md"
+ROOT_MD="${REPO_ROOT}/CLAUDE.md"
+
+# A block in `CLAUDE.md` while the project has a usable `CLAUDE.local.md` is a
+# pre-`CLAUDE.local.md` install that /rb:init --update migrates. Detect the
+# `CLAUDE.md` block independently of which file supplies the pin: when both
+# files carry one, the pin comes from `CLAUDE.local.md` and the `CLAUDE.md`
+# copy is a leftover duplicate that still loads into context. Surface either
+# shape even when the pinned version matches, and only when `--update` could
+# actually perform the move.
+MIGRATION_PENDING=false
+if usable_memory_file "$LOCAL_MD" && managed_block "$ROOT_MD" >/dev/null; then
+  MIGRATION_PENDING=true
+fi
+
+# /rb:init writes its managed block into `CLAUDE.local.md` when the project
+# has one and falls back to `CLAUDE.md`. Take the pin from the first candidate
+# that yields a valid one, `CLAUDE.local.md` first, so a stale block left in
+# `CLAUDE.md` does not shadow the file /rb:init --update maintains — and a
+# malformed or unpinned local block does not shadow a `CLAUDE.md` block that
+# still reports real drift.
+MEMORY_FILE=""
+PINNED=""
+for CANDIDATE in "$LOCAL_MD" "$ROOT_MD"; do
+  CANDIDATE_PIN=$(pinned_version "$CANDIDATE") || continue
+  MEMORY_FILE="$CANDIDATE"
+  PINNED="$CANDIDATE_PIN"
+  break
+done
+
+# No readable pin anywhere: still report a pending migration, which needs no
+# version comparison. Same for a plugin.json we cannot read.
+if [[ -z "$PINNED" ]]; then
+  [[ "$MIGRATION_PENDING" == "true" ]] || exit 0
+  DIRECTION="migrate"
+fi
+MEMORY_NAME="${MEMORY_FILE##*/}"
+
+if [[ -z "${DIRECTION:-}" ]]; then
+  CURRENT=""
+  if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]]; then
+    PLUGIN_JSON="${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"
+    if [[ -f "$PLUGIN_JSON" && ! -L "$PLUGIN_JSON" && -r "$PLUGIN_JSON" ]]; then
+      CURRENT=$(jq -r '.version // empty' "$PLUGIN_JSON" 2>/dev/null) || CURRENT=""
+    fi
+  fi
+  if [[ -z "$CURRENT" ]]; then
+    [[ "$MIGRATION_PENDING" == "true" ]] || exit 0
+    DIRECTION="migrate"
+  fi
+fi
 
 # Semver build metadata (`+...`) MUST NOT affect equality or precedence per
 # https://semver.org/#spec-item-10. Strip it before comparison, keep the
 # original strings for the user-facing message.
-PINNED_COMPARE="${PINNED%%+*}"
-CURRENT_COMPARE="${CURRENT%%+*}"
-[[ -n "$PINNED_COMPARE" && -n "$CURRENT_COMPARE" ]] || exit 0
+if [[ -z "${DIRECTION:-}" ]]; then
+  PINNED_COMPARE="${PINNED%%+*}"
+  CURRENT_COMPARE="${CURRENT%%+*}"
+  [[ -n "$PINNED_COMPARE" && -n "$CURRENT_COMPARE" ]] || exit 0
 
-# Semver-aware compare via `sort -V` (natural version sort). Handles semver
-# pre-release precedence correctly: `1.13.1-rc1` sorts below `1.13.1`.
-if [[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" ]]; then
-  [[ "$MIGRATION_PENDING" == "true" ]] || exit 0
-  DIRECTION="migrate"
-else
-  HIGHEST=$(printf '%s\n%s\n' "$PINNED_COMPARE" "$CURRENT_COMPARE" | "$SORT_BIN" -V | tail -n 1)
-  [[ -n "$HIGHEST" ]] || exit 0
-  if [[ "$HIGHEST" == "$CURRENT_COMPARE" ]]; then
-    DIRECTION="outdated"
+  # Semver-aware compare via `sort -V` (natural version sort). Handles semver
+  # pre-release precedence correctly: `1.13.1-rc1` sorts below `1.13.1`.
+  if [[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" ]]; then
+    [[ "$MIGRATION_PENDING" == "true" ]] || exit 0
+    DIRECTION="migrate"
   else
-    DIRECTION="newer"
+    HIGHEST=$(printf '%s\n%s\n' "$PINNED_COMPARE" "$CURRENT_COMPARE" | "$SORT_BIN" -V | tail -n 1)
+    [[ -n "$HIGHEST" ]] || exit 0
+    if [[ "$HIGHEST" == "$CURRENT_COMPARE" ]]; then
+      DIRECTION="outdated"
+    else
+      DIRECTION="newer"
+    fi
   fi
 fi
 
