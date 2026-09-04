@@ -258,9 +258,12 @@ fits — that is always the strongest signal.
 
 ### Layer 4: `/rb:init` (Project Stack Notes)
 
-Run `/rb:init` to write a managed block into the project
-`CLAUDE.md`. Block contents: stack-version header + project-specific
-stack facts only.
+Run `/rb:init` to write a managed block into the project memory file —
+`CLAUDE.local.md` when the project has a usable one (a regular,
+readable, writable, non-symlink file that git ignores), otherwise
+`CLAUDE.md`.
+Block contents: stack-version header + project-specific stack facts
+only.
 
 | Source | Examples |
 |---|---|
@@ -274,7 +277,7 @@ stack facts only.
 |---|---|
 | Iron Laws + Advisory Preferences | `inject-rules.sh` hook on every `SessionStart` + `SubagentStart` |
 | Skill workflow doctrine (complexity scoring, spawn rules, verification commands) | individual skill bodies (`/rb:plan`, `/rb:review`, `/rb:verify`) — load when skill invoked |
-| Library defaults (Sidekiq base class, Turbo Frame patterns) | framework docs, NOT project `CLAUDE.md` |
+| Library defaults (Sidekiq base class, Turbo Frame patterns) | framework docs, NOT the project memory file |
 
 ```bash
 /rb:init           # First-time setup
@@ -285,7 +288,11 @@ stack facts only.
 `<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->` and
 `<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->` markers, so legacy
 doctrine-heavy blocks from earlier plugin versions are migrated to
-the slim form automatically.
+the slim form automatically. When the block still sits in `CLAUDE.md`
+and the project has a usable `CLAUDE.local.md`, `--update` also moves
+the block to `CLAUDE.local.md` and removes it from `CLAUDE.md`.
+Projects without a usable `CLAUDE.local.md` keep the block in
+`CLAUDE.md`.
 
 ### Layer 5: `/rb:review` + Iron Law Judge (On-Demand)
 
@@ -335,7 +342,7 @@ AUTOMATIC (hooks):     Format check, security reminders, progress logging, failu
                        PreCompact rule preservation
 BEHAVIORAL (Claude):   Iron Laws, skill loading, stop-and-explain
 ON-DEMAND (commands):  /rb:review (iron-law-judge), /rb:verify (format/tests/zeitwerk for Rails)
-PROJECT CONTEXT:       /rb:init (writes detected project-stack facts into CLAUDE.md)
+PROJECT CONTEXT:       /rb:init (writes detected project-stack facts into a usable CLAUDE.local.md, else CLAUDE.md)
 ```
 
 Hooks deliver the rules. `/rb:review` catches what behavioral layer
@@ -373,7 +380,7 @@ boundaries) without restating any rule already injected at runtime.
 | `/rb:permissions` | Tune Claude Bash permissions from real session evidence |
 | `/rb:research <topic>` | Research with parallel workers, runtime tooling-first |
 | `/rb:pr-review <PR#>` | Address PR review comments |
-| `/rb:init` | Write project stack notes to CLAUDE.md (rules runtime-injected) |
+| `/rb:init` | Write project stack notes to CLAUDE.local.md when usable, else CLAUDE.md (rules runtime-injected) |
 | `/rb:runtime` | Runtime tooling (Tidewave integration) |
 | `/rb:secrets` | Scan for leaked credentials |
 | `/rb:document` | Generate YARD/RDoc, README, ADRs |

@@ -139,7 +139,7 @@ detected sensitive-path conventions.
 
 If the only available content is generic install instructions or
 generic command examples, omit the section. Generic Betterleaks usage
-belongs in `/rb:secrets` skill body, not in project `CLAUDE.md`.
+belongs in `/rb:secrets` skill body, not in the project memory file.
 
 ## Placeholder Substitution
 

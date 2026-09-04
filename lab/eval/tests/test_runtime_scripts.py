@@ -2710,9 +2710,9 @@ class RuntimeScriptTests(unittest.TestCase):
         )
 
     def _write_claude_md_with_pinned_version(
-        self, repo_root: Path, pinned: str
+        self, repo_root: Path, pinned: str, *, filename: str = "CLAUDE.md"
     ) -> None:
-        (repo_root / "CLAUDE.md").write_text(
+        (repo_root / filename).write_text(
             textwrap.dedent(
                 f"""
                 <!-- RUBY-GRAPE-RAILS-PLUGIN:START -->
@@ -2756,6 +2756,523 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("v99.0.0", result.stdout)
         self.assertIn("downgraded", result.stdout)
+
+    def test_check_plugin_version_reads_pin_from_claude_local_md(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), "0.1.0", filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertIn("CLAUDE.local.md", result.stdout)
+
+    def test_check_plugin_version_prefers_claude_local_md_over_claude_md(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "0.2.0")
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), "0.1.0", filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertNotIn("v0.2.0", result.stdout)
+
+    def test_check_plugin_version_flags_pending_migration_on_version_match(self) -> None:
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("CLAUDE.local.md", result.stdout)
+        self.assertIn("/rb:init --update", result.stdout)
+
+    def test_check_plugin_version_flags_duplicate_block_on_version_match(self) -> None:
+        # Both files carry a managed block and CLAUDE.local.md pins the
+        # installed version: the CLAUDE.md copy is a leftover duplicate that
+        # still loads into context, so the migration notice must fire.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("CLAUDE.local.md", result.stdout)
+        self.assertIn("/rb:init --update", result.stdout)
+
+    def test_check_plugin_version_ignores_claude_local_md_without_end_marker(self) -> None:
+        # A lone START sentinel in CLAUDE.local.md must not shadow the file
+        # that can actually yield a pin.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "0.1.0")
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->\n\nTruncated block.\n",
+                encoding="utf-8",
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertIn("CLAUDE.md", result.stdout)
+
+    def test_check_plugin_version_ignores_reversed_sentinels(self) -> None:
+        # END before START never closes the sed range, so the emitted text runs
+        # to EOF. A version token in trailing prose outside any block must not
+        # be read as the pin; the valid CLAUDE.md block wins instead.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "0.1.0")
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                textwrap.dedent(
+                    """
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:END -->
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:START -->
+
+                    Trailing prose mentioning plugin v98.0.0 outside any block.
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertNotIn("v98.0.0", result.stdout)
+
+    def test_check_plugin_version_falls_back_when_local_block_has_no_pin(self) -> None:
+        # A well-formed CLAUDE.local.md block carrying no `plugin v` token must
+        # not shadow a CLAUDE.md block that still reports real drift.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "0.1.0")
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                textwrap.dedent(
+                    """
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:START -->
+
+                    Managed content with no version marker.
+
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:END -->
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertIn("CLAUDE.md", result.stdout)
+
+    def test_check_plugin_version_reports_migration_without_any_pin(self) -> None:
+        # Neither file yields a pin, but the CLAUDE.md block is still movable:
+        # report the pending migration instead of exiting silently.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            (Path(tmpdir) / "CLAUDE.md").write_text(
+                textwrap.dedent(
+                    """
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:START -->
+
+                    Managed content with no version marker.
+
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:END -->
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("CLAUDE.local.md", result.stdout)
+        self.assertIn("/rb:init --update", result.stdout)
+
+    def test_check_plugin_version_ignores_root_block_without_end_marker(self) -> None:
+        # A lone START sentinel in CLAUDE.md is not a block `--update` can
+        # move, so it must not trigger the migration notice.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="CLAUDE.local.md"
+            )
+            (Path(tmpdir) / "CLAUDE.md").write_text(
+                "<!-- RUBY-GRAPE-RAILS-PLUGIN:START -->\n\nTruncated block.\n",
+                encoding="utf-8",
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the writability check",
+    )
+    def test_check_plugin_version_skips_migration_for_read_only_local(self) -> None:
+        # `--update` must write the destination, so a read-only CLAUDE.local.md
+        # with no managed block of its own means the move cannot happen and
+        # nothing is broken — stay silent rather than recommend it every
+        # session.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            local_md = Path(tmpdir) / "CLAUDE.local.md"
+            local_md.write_text("# Personal notes\n", encoding="utf-8")
+            local_md.chmod(0o444)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                local_md.chmod(0o600)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the writability check",
+    )
+    def test_check_plugin_version_reports_read_only_root_block(self) -> None:
+        # `--update` strips the block from CLAUDE.md, so a read-only CLAUDE.md
+        # blocks the run: report the permission repair instead of the move.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            root_md = Path(tmpdir) / "CLAUDE.md"
+            root_md.chmod(0o444)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                root_md.chmod(0o600)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("CLAUDE.md holds a managed block and is not writable", result.stdout)
+        self.assertNotIn("becomes the target", result.stdout)
+
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the writability check",
+    )
+    def test_check_plugin_version_reports_unwritable_local_block_without_pin(
+        self,
+    ) -> None:
+        # A read-only CLAUDE.local.md block with no pin never supplies the pin,
+        # so selection falls back to CLAUDE.md — but `--update` still refuses
+        # the run, so recommend the permission repair, not the update.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "0.1.0")
+            local_md = Path(tmpdir) / "CLAUDE.local.md"
+            local_md.write_text(
+                textwrap.dedent(
+                    """
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:START -->
+
+                    Managed content with no version marker.
+
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:END -->
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            local_md.chmod(0o444)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                local_md.chmod(0o600)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("CLAUDE.local.md", result.stdout)
+        self.assertIn("not writable", result.stdout)
+
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the writability check",
+    )
+    def test_check_plugin_version_reports_unwritable_root_block_without_pin(
+        self,
+    ) -> None:
+        # No CLAUDE.local.md, and the read-only CLAUDE.md block carries no pin,
+        # so pin selection finds nothing — the unrewritable block must still be
+        # reported rather than exiting silently.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            root_md = Path(tmpdir) / "CLAUDE.md"
+            root_md.write_text(
+                textwrap.dedent(
+                    """
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:START -->
+
+                    Managed content with no version marker.
+
+                    <!-- RUBY-GRAPE-RAILS-PLUGIN:END -->
+                    """
+                ).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            root_md.chmod(0o444)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                root_md.chmod(0o600)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("CLAUDE.md holds a managed block and is not writable", result.stdout)
+
+    @unittest.skipUnless(shutil.which("git"), "git required to set ignore status")
+    def test_check_plugin_version_skips_migration_for_tracked_local_file(self) -> None:
+        # A CLAUDE.local.md git does not ignore is not personal scope, so
+        # recommending a move of machine-local notes into it is wrong.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            subprocess.run(
+                ["git", "init", "-q", tmpdir], check=True, capture_output=True
+            )
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    def _run_check_plugin_version_without_git(
+        self, tmpdir: str, data: str
+    ) -> subprocess.CompletedProcess[str]:
+        bash_path = shutil.which("bash")
+        if bash_path is None:
+            self.skipTest("bash not available to build a git-free PATH")
+        bin_dir = Path(tmpdir) / "gitless-bin"
+        bin_dir.mkdir()
+        # Every external the hook and workspace-root-lib.sh reach for, minus
+        # git. Omitting one (dirname, say) makes the hook exit before the code
+        # under test and the assertion passes for the wrong reason.
+        for tool in (
+            "jq",
+            "grep",
+            "sed",
+            "tr",
+            "head",
+            "tail",
+            "sort",
+            "cat",
+            "mkdir",
+            "dirname",
+            "basename",
+        ):
+            resolved = shutil.which(tool)
+            if resolved is None:
+                self.skipTest(f"{tool} not available to build a git-free PATH")
+            (bin_dir / tool).symlink_to(resolved)
+
+        env = dict(os.environ)
+        env["CLAUDE_PROJECT_DIR"] = tmpdir
+        env["CLAUDE_PLUGIN_ROOT"] = str(PLUGIN_ROOT)
+        env["CLAUDE_PLUGIN_DATA"] = data
+        env["PATH"] = str(bin_dir)
+        return subprocess.run(
+            [bash_path, str(CHECK_PLUGIN_VERSION)],
+            input=json.dumps({"session_id": "no-git", "cwd": tmpdir}),
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+            env=env,
+        )
+
+    def test_check_plugin_version_migrates_without_git_outside_a_repo(self) -> None:
+        # No git binary and no .git at or above the workspace root: the project
+        # has no ignore status to violate, so the target is confirmed personal.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            result = self._run_check_plugin_version_without_git(tmpdir, data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("/rb:init --update", result.stdout)
+
+    def test_check_plugin_version_skips_migration_when_git_cannot_inspect(self) -> None:
+        # `.git` exists but git cannot be run, so ignore status is unknown and
+        # the migration recommendation fails closed.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            (Path(tmpdir) / ".git").mkdir()
+            result = self._run_check_plugin_version_without_git(tmpdir, data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    @unittest.skipUnless(shutil.which("git"), "git required to set ignore status")
+    def test_check_plugin_version_migrates_into_ignored_local_file(self) -> None:
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            subprocess.run(
+                ["git", "init", "-q", tmpdir], check=True, capture_output=True
+            )
+            (Path(tmpdir) / ".gitignore").write_text(
+                "CLAUDE.local.md\n", encoding="utf-8"
+            )
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("/rb:init --update", result.stdout)
+
+    def test_check_plugin_version_newer_root_pin_outranks_matching_local_pin(
+        self,
+    ) -> None:
+        # CLAUDE.local.md matches the installed plugin while CLAUDE.md pins a
+        # newer one. Recommending migration here would have `--update` delete
+        # the newer block, so the downgrade safeguard wins.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "99.0.0")
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v99.0.0", result.stdout)
+        self.assertIn("downgraded", result.stdout)
+        self.assertIn("CLAUDE.md", result.stdout)
+
+    def test_check_plugin_version_newer_local_pin_outranks_outdated_root_pin(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), "0.1.0")
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), "99.0.0", filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v99.0.0", result.stdout)
+        self.assertIn("downgraded", result.stdout)
+
+    @unittest.skipUnless(shutil.which("git"), "git required to set ignore status")
+    def test_check_plugin_version_reports_tracked_local_block(self) -> None:
+        # A writable but git-tracked CLAUDE.local.md holding a block fails the
+        # Target File contract, so `--update` stops: say so, and name the
+        # gitignore remedy rather than a permission one.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            subprocess.run(
+                ["git", "init", "-q", tmpdir], check=True, capture_output=True
+            )
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("not confirmed to be ignored by git", result.stdout)
+        self.assertIn(".gitignore", result.stdout)
+
+    def test_check_plugin_version_migration_notice_omits_duplicate_claim(self) -> None:
+        # Only CLAUDE.md carries a block: moving it changes nothing about
+        # context size, so the notice must not claim a wasted second copy.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("/rb:init --update", result.stdout)
+        self.assertNotIn("second managed block", result.stdout)
+        self.assertNotIn("wasting context", result.stdout)
+
+    def test_check_plugin_version_migration_notice_reports_duplicate(self) -> None:
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="CLAUDE.local.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("second managed block", result.stdout)
+
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the writability check",
+    )
+    def test_check_plugin_version_reports_unwritable_pin_source(self) -> None:
+        # The pin still reads out of a read-only CLAUDE.local.md, so the drift
+        # is real — but `--update` cannot rewrite it, so say what to fix first.
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), "0.1.0", filename="CLAUDE.local.md"
+            )
+            local_md = Path(tmpdir) / "CLAUDE.local.md"
+            local_md.chmod(0o444)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                local_md.chmod(0o600)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertIn("not writable", result.stdout)
+
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the unreadable-file check",
+    )
+    def test_check_plugin_version_ignores_unreadable_claude_local_md(self) -> None:
+        # An unreadable CLAUDE.local.md fails /rb:init's validity contract, so
+        # `--update` would keep the block in CLAUDE.md — no migration notice.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            local_md = Path(tmpdir) / "CLAUDE.local.md"
+            local_md.write_text("# Personal notes\n", encoding="utf-8")
+            local_md.chmod(0o000)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                local_md.chmod(0o600)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    def test_check_plugin_version_silent_on_match_without_claude_local_md(self) -> None:
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
 
     def test_check_plugin_version_silent_when_claude_md_missing(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:

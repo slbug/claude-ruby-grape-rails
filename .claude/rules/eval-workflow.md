@@ -79,6 +79,18 @@ after deterministic gates pass. See `.claude/rules/development.md`
   `experimental` from the plugin-shipped agent field set, so Claude Code
   drops it silently. Use `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` for plugin
   agent fanouts instead.
+- Keep `CLAUDE_CODE_SUBAGENT_MODEL_FORCE` unset for any run whose results are
+  compared against a baseline. It applies `CLAUDE_CODE_SUBAGENT_MODEL` (or the
+  main model) to every subagent and ignores agent-definition `model:` and
+  per-spawn overrides, so an exported value silently reassigns the models the
+  shipped agents pin and makes fanout results non-comparable. Plain
+  `CLAUDE_CODE_SUBAGENT_MODEL` is safe — agent `model:` still wins over it.
+  Use the force variable only for a deliberate single-model cost or capability
+  comparison, and record it with the result.
+- Diagnose per-run cache behavior with `/cost`: the prompt-cache line names the
+  likely cause of misses (changed tool definitions or system prompt, idle past
+  the TTL). Status line scripts read the same data from the `prompt_cache`
+  object.
 
 ## Current Scope
 

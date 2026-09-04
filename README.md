@@ -10,7 +10,7 @@ mixed Active Record + Sequel repos and Packwerk-style modular monoliths
 without flattening everything into generic Rails advice.
 
 The plugin also keeps the runtime path leaner than older builds: read-only
-specialist agents skip the project `CLAUDE.md` payload via `omitClaudeMd`,
+specialist agents skip the project memory payload via `omitClaudeMd`,
 session start writes a fast runtime snapshot before a quiet async refresh,
 and active plans keep structured scratchpads for dead ends, decisions, and
 handoffs.
@@ -313,7 +313,7 @@ The plugin supports an optional **Brainstorm** discovery step before the core **
 - **Agents are automatic.** The plugin spawns specialist agents behind the scenes. You don't manage them directly.
 - **Specialist agents stay lean.** Reviewers and analyzers set
   `omitClaudeMd: true` so subagents skip the entire project
-  `CLAUDE.md` payload (including the `/rb:init` stack notes —
+  memory payload (including the `/rb:init` stack notes —
   Iron Laws + Advisory Preferences still arrive on `SubagentStart`
   via `inject-rules.sh`). They are instructed to write only their
   own artifacts under `.claude/`, not edit project code.
@@ -649,7 +649,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | Command                  | Description                                                |
 | ------------------------ | ---------------------------------------------------------- |
 | `/rb:intro`              | Interactive plugin tutorial (8 sections, ~5 min)           |
-| `/rb:init`               | Write project stack notes to CLAUDE.md (rules runtime-injected) |
+| `/rb:init`               | Write project stack notes to CLAUDE.local.md when usable, else CLAUDE.md (rules runtime-injected) |
 | `/rb:quick <task>`       | Fast implementation, skip ceremony                         |
 | `/rb:investigate <bug>`  | Systematic bug debugging (4 parallel investigation tracks) |
 | `/rb:research <topic>`   | Research Ruby topics on the web                            |
