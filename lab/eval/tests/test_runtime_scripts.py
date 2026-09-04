@@ -3050,6 +3050,79 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "")
 
+    def _run_check_plugin_version_without_git(
+        self, tmpdir: str, data: str
+    ) -> subprocess.CompletedProcess[str]:
+        bash_path = shutil.which("bash")
+        if bash_path is None:
+            self.skipTest("bash not available to build a git-free PATH")
+        bin_dir = Path(tmpdir) / "gitless-bin"
+        bin_dir.mkdir()
+        # Every external the hook and workspace-root-lib.sh reach for, minus
+        # git. Omitting one (dirname, say) makes the hook exit before the code
+        # under test and the assertion passes for the wrong reason.
+        for tool in (
+            "jq",
+            "grep",
+            "sed",
+            "tr",
+            "head",
+            "tail",
+            "sort",
+            "cat",
+            "mkdir",
+            "dirname",
+            "basename",
+        ):
+            resolved = shutil.which(tool)
+            if resolved is None:
+                self.skipTest(f"{tool} not available to build a git-free PATH")
+            (bin_dir / tool).symlink_to(resolved)
+
+        env = dict(os.environ)
+        env["CLAUDE_PROJECT_DIR"] = tmpdir
+        env["CLAUDE_PLUGIN_ROOT"] = str(PLUGIN_ROOT)
+        env["CLAUDE_PLUGIN_DATA"] = data
+        env["PATH"] = str(bin_dir)
+        return subprocess.run(
+            [bash_path, str(CHECK_PLUGIN_VERSION)],
+            input=json.dumps({"session_id": "no-git", "cwd": tmpdir}),
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            check=False,
+            env=env,
+        )
+
+    def test_check_plugin_version_migrates_without_git_outside_a_repo(self) -> None:
+        # No git binary and no .git at or above the workspace root: the project
+        # has no ignore status to violate, so the target is confirmed personal.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            result = self._run_check_plugin_version_without_git(tmpdir, data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("/rb:init --update", result.stdout)
+
+    def test_check_plugin_version_skips_migration_when_git_cannot_inspect(self) -> None:
+        # `.git` exists but git cannot be run, so ignore status is unknown and
+        # the migration recommendation fails closed.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            (Path(tmpdir) / ".git").mkdir()
+            result = self._run_check_plugin_version_without_git(tmpdir, data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
     @unittest.skipUnless(shutil.which("git"), "git required to set ignore status")
     def test_check_plugin_version_migrates_into_ignored_local_file(self) -> None:
         current = self._current_plugin_version()

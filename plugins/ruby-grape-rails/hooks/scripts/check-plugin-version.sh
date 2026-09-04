@@ -8,9 +8,12 @@ set -o pipefail
 # flags a possible plugin downgrade; a movable `CLAUDE.md` block emits a
 # migration reminder even with no readable pin and no readable plugin.json.
 # Policy: advisory — silent on missing memory file, missing plugin marker,
-# tool unavailability, or lock conflicts, and on a missing plugin.json unless
-# a migration is pending. Degraded payload/root resolution must not block
-# session startup. Fires at most once per session via atomic per-session lock
+# tool unavailability, or lock conflicts. A missing plugin.json, an
+# unreadable pin, and a missing `sort -V` on matching versions are silent too,
+# EXCEPT when a migration is pending or a managed block sits in a file
+# `/rb:init --update` cannot rewrite: those two need no version comparison and
+# still report. Degraded payload/root resolution must not block session
+# startup. Fires at most once per session via atomic per-session lock
 # directory under CLAUDE_PLUGIN_DATA (or the workspace `.claude/.hook-state/`
 # fallback).
 command -v jq >/dev/null 2>&1 || exit 0
@@ -121,14 +124,19 @@ managed_block "$LOCAL_MD" >/dev/null 2>&1 && LOCAL_HAS_BLOCK=true
 ROOT_HAS_BLOCK=false
 managed_block "$ROOT_MD" >/dev/null 2>&1 && ROOT_HAS_BLOCK=true
 
-# `CLAUDE.local.md` is a migration target only in personal scope. Ask git when
-# it can answer; treat "no git, not a repo, or no answer" as eligible, since a
-# non-git project has no ignore status to violate and the previous target
-# (`CLAUDE.md`) is tracked anyway.
-local_file_is_tracked() {
-  command -v git >/dev/null 2>&1 || return 1
-  git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
-  git -C "$REPO_ROOT" check-ignore -q "$LOCAL_MD" 2>/dev/null && return 1
+# `CLAUDE.local.md` is a migration target only in personal scope, which means
+# one of two CONFIRMED answers: git ignores the file, or the project is not a
+# git repository at all. Anything else — a repository git cannot inspect, or a
+# `check-ignore` that errors — is unknown, and unknown fails closed:
+# recommending a move into a possibly tracked file is worse than staying
+# quiet. Repo detection comes from workspace-root-lib.sh.
+local_file_is_personal_scope() {
+  if git_can_inspect_repo "$REPO_ROOT"; then
+    # Exit 0 = ignored. Exit 1 = tracked. Anything else = inspection failure.
+    git -C "$REPO_ROOT" check-ignore -q -- "$LOCAL_MD" 2>/dev/null
+    return $(($? == 0 ? 0 : 1))
+  fi
+  git_metadata_present "$REPO_ROOT" && return 1
   return 0
 }
 
@@ -140,7 +148,7 @@ local_file_is_tracked() {
 # would repeat every session with nothing the user can do about it.
 MIGRATION_PENDING=false
 if usable_memory_file "$LOCAL_MD" && usable_memory_file "$ROOT_MD" \
-  && [[ "$ROOT_HAS_BLOCK" == "true" ]] && ! local_file_is_tracked; then
+  && [[ "$ROOT_HAS_BLOCK" == "true" ]] && local_file_is_personal_scope; then
   MIGRATION_PENDING=true
 fi
 

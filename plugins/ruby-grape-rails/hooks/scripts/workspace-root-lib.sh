@@ -134,6 +134,31 @@ ensure_safe_workspace_root() {
   printf '%s\n' "$root"
 }
 
+# True when git is runnable AND reports a repository at "$1". Exit status only
+# — git localizes its messages, so no caller parses them.
+git_can_inspect_repo() {
+  local dir="$1"
+  [[ -n "$dir" ]] || return 1
+
+  command -v git >/dev/null 2>&1 || return 1
+  git -C "$dir" rev-parse --git-dir >/dev/null 2>&1
+}
+
+# True when `.git` exists at "$1" or any ancestor. Separates a project with no
+# repository at all from one whose repository git cannot inspect (binary
+# absent, dubious ownership, damaged metadata) — `git_can_inspect_repo`
+# reports both the same way.
+git_metadata_present() {
+  local dir="$1"
+  [[ -n "$dir" ]] || return 1
+
+  while [[ -n "$dir" && "$dir" != "/" ]]; do
+    [[ -e "${dir}/.git" ]] && return 0
+    dir="${dir%/*}"
+  done
+  [[ -e "/.git" ]]
+}
+
 resolve_project_root_from_dir() {
   local dir="$1"
   local normalized_dir
