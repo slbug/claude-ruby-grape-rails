@@ -18,7 +18,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   from reading `AGENTS.md`. A `CLAUDE.md` symlinked to `AGENTS.md` targets
   `AGENTS.md` directly, on install and on `--update`. A present
   `CLAUDE.md` that is read-only, a directory, or any other symlink stops
-  the command instead of becoming an unwritable target.
+  the command instead of becoming an unwritable target. An unusable
+  `AGENTS.md` with no `CLAUDE.md` prompts the user instead of silently
+  creating a `CLAUDE.md` that hides it.
 - `/rb:init --update` moves a block from `AGENTS.md` into a usable
   `CLAUDE.local.md`, the same way it moves one from `CLAUDE.md`. A block
   in `CLAUDE.md` or `AGENTS.md` otherwise stays where the user put it;

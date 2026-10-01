@@ -265,7 +265,9 @@ readable, writable, non-symlink file that git ignores), otherwise
 whether to use `CLAUDE.md` or `AGENTS.md` — except when `CLAUDE.md` is
 a symlink to `AGENTS.md`, which targets `AGENTS.md` without asking. A
 present `CLAUDE.md` that is read-only, a directory, or any other
-symlink stops `/rb:init` until the user fixes it.
+symlink stops `/rb:init` until the user fixes it. An `AGENTS.md` that
+is not usable, with no `CLAUDE.md`, makes `/rb:init` ask whether to fix
+it first or create `CLAUDE.md`.
 Block contents: stack-version header + project-specific stack facts
 only.
 

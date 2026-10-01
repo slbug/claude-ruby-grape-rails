@@ -29,7 +29,9 @@ not standard markdown metadata.
 Valid frontmatter fields for skills: name, description (single field
 per agentskills.io canon — no `when_to_use`), argument-hint, arguments,
 effort, disable-model-invocation, user-invocable, allowed-tools,
-disallowed-tools, model, context, agent, hooks, shell. The `paths:` field is documented in CC
+disallowed-tools, model, context, agent, background (only with
+`context: fork`), hooks, shell, metadata, license, compatibility. The
+`paths:` field is documented in CC
 skill schema but empirically non-functional at plugin scope; do NOT
 add it to plugin SKILL.md (project-level `.claude/rules/*.md` `paths:`
 remains functional and is a separate mechanism).

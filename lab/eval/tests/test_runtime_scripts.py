@@ -394,6 +394,7 @@ class RuntimeScriptTests(unittest.TestCase):
                         self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", command)
                         args = hook.get("args")
                         if args is None:
+                            self.assertNotIn(command, interpreters.values())
                             continue
                         self.assertEqual(len(args), 1, args)
                         self.assertEqual(

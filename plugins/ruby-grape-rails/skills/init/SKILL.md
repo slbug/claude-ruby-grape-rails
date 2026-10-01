@@ -152,6 +152,7 @@ Take the FIRST matching row:
 | `CLAUDE.md` is a symlink to a usable `AGENTS.md` | `AGENTS.md` — do not ask |
 | `CLAUDE.md` present but NOT usable (read-only, directory, other symlink) | STOP, change no file, name the blocking shape |
 | usable `AGENTS.md` (with or without `CLAUDE.md`) | ASK the user: `CLAUDE.md` or `AGENTS.md` |
+| `AGENTS.md` present but NOT usable, no `CLAUDE.md` | ASK the user: fix `AGENTS.md` first (STOP, name the blocking shape), or create `CLAUDE.md` knowing it stops `AGENTS.md` from loading |
 | anything else | `CLAUDE.md` |
 
 When asking, state the loading rule so the user can choose: by
