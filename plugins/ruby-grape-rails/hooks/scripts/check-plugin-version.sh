@@ -5,8 +5,10 @@ set -o pipefail
 # SessionStart hook: warn when the project memory file pins a different plugin
 # version than the installed plugin, or when its managed block sits in a file
 # /rb:init no longer targets. Outdated pin emits a refresh reminder; newer pin
-# flags a possible plugin downgrade; a movable `CLAUDE.md` block emits a
-# migration reminder even with no readable pin and no readable plugin.json.
+# flags a possible plugin downgrade; a movable `CLAUDE.md` or `AGENTS.md` block
+# emits a migration reminder even with no readable pin and no readable
+# plugin.json. Memory-file precedence matches /rb:init: `CLAUDE.local.md`,
+# then `CLAUDE.md`, then `AGENTS.md`.
 # Policy: advisory — silent on missing memory file, missing plugin marker,
 # tool unavailability, or lock conflicts. A missing plugin.json, an
 # unreadable pin, and a missing `sort -V` on matching versions are silent too,
@@ -116,13 +118,16 @@ pinned_version() {
 
 LOCAL_MD="${REPO_ROOT}/CLAUDE.local.md"
 ROOT_MD="${REPO_ROOT}/CLAUDE.md"
+AGENTS_MD="${REPO_ROOT}/AGENTS.md"
 
 # Which files actually carry a block, independently of which one supplies the
-# pin below. Both answers drive the notice wording.
+# pin below. These answers drive the notice wording.
 LOCAL_HAS_BLOCK=false
 managed_block "$LOCAL_MD" >/dev/null 2>&1 && LOCAL_HAS_BLOCK=true
 ROOT_HAS_BLOCK=false
 managed_block "$ROOT_MD" >/dev/null 2>&1 && ROOT_HAS_BLOCK=true
+AGENTS_HAS_BLOCK=false
+managed_block "$AGENTS_MD" >/dev/null 2>&1 && AGENTS_HAS_BLOCK=true
 
 # `CLAUDE.local.md` is a migration target only in personal scope, which means
 # one of two CONFIRMED answers: git ignores the file, or the project is not a
@@ -147,16 +152,29 @@ local_file_is_personal_scope() {
 # source it strips the block from. Recommending a move neither file permits
 # would repeat every session with nothing the user can do about it.
 MIGRATION_PENDING=false
+ROOT_MIGRATION_PENDING=false
 if usable_memory_file "$LOCAL_MD" && usable_memory_file "$ROOT_MD" \
   && [[ "$ROOT_HAS_BLOCK" == "true" ]] && local_file_is_personal_scope; then
+  ROOT_MIGRATION_PENDING=true
+  MIGRATION_PENDING=true
+fi
+
+# An `AGENTS.md` block is one the user chose over `CLAUDE.md` at /rb:init
+# time, so it never moves into `CLAUDE.md`. A usable `CLAUDE.local.md` still
+# outranks both, matching the skill, so the block moves there. Same
+# write-access rule as above.
+AGENTS_MIGRATION_PENDING=false
+if [[ "$AGENTS_HAS_BLOCK" == "true" ]] && usable_memory_file "$AGENTS_MD" \
+  && usable_memory_file "$LOCAL_MD" && local_file_is_personal_scope; then
+  AGENTS_MIGRATION_PENDING=true
   MIGRATION_PENDING=true
 fi
 
 # `--update` rewrites whichever file holds the block, so a block `/rb:init`
 # refuses to touch stops the run. Name the first such file and why, matching
 # the skill's Target File contract: `CLAUDE.local.md` must be writable AND in
-# personal scope; `CLAUDE.md` must be writable. Both checks are pin
-# independent, so a block with no valid pin is still reported.
+# personal scope; `CLAUDE.md` and `AGENTS.md` must be writable. Every check
+# is pin independent, so a block with no valid pin is still reported.
 BLOCKED_NAME=""
 BLOCKED_REASON=""
 if [[ "$LOCAL_HAS_BLOCK" == "true" ]]; then
@@ -173,14 +191,20 @@ if [[ -z "$BLOCKED_NAME" && "$ROOT_HAS_BLOCK" == "true" ]] \
   BLOCKED_NAME="CLAUDE.md"
   BLOCKED_REASON="is not writable"
 fi
+if [[ -z "$BLOCKED_NAME" && "$AGENTS_HAS_BLOCK" == "true" ]] \
+  && ! usable_memory_file "$AGENTS_MD"; then
+  BLOCKED_NAME="AGENTS.md"
+  BLOCKED_REASON="is not writable"
+fi
 
 # /rb:init writes its managed block into `CLAUDE.local.md` when the project
-# has one and falls back to `CLAUDE.md`. Read BOTH pins: the preferred one
-# drives the drift report, and the other still has to be checked for a newer
-# version, or recommending a migration would silently delete a block newer
-# than the installed plugin.
+# has one, then `CLAUDE.md`, then an `AGENTS.md` the project already uses.
+# Read EVERY pin: the preferred one drives the drift report, and the others
+# still have to be checked for a newer version, or recommending a migration
+# would silently delete a block newer than the installed plugin.
 LOCAL_PIN=$(pinned_version "$LOCAL_MD") || LOCAL_PIN=""
 ROOT_PIN=$(pinned_version "$ROOT_MD") || ROOT_PIN=""
+AGENTS_PIN=$(pinned_version "$AGENTS_MD") || AGENTS_PIN=""
 MEMORY_FILE=""
 PINNED=""
 if [[ -n "$LOCAL_PIN" ]]; then
@@ -189,6 +213,9 @@ if [[ -n "$LOCAL_PIN" ]]; then
 elif [[ -n "$ROOT_PIN" ]]; then
   MEMORY_FILE="$ROOT_MD"
   PINNED="$ROOT_PIN"
+elif [[ -n "$AGENTS_PIN" ]]; then
+  MEMORY_FILE="$AGENTS_MD"
+  PINNED="$AGENTS_PIN"
 fi
 
 # Whatever blocks the version comparison — no pin, no plugin.json, no version
@@ -243,8 +270,11 @@ if [[ -z "$DIRECTION" ]]; then
   CURRENT_COMPARE="${CURRENT%%+*}"
   [[ -n "$PINNED_COMPARE" && -n "$CURRENT_COMPARE" ]] || exit 0
 
-  if [[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" && "${ROOT_PIN%%+*}" == "$CURRENT_COMPARE" ]] \
-    || [[ "$PINNED_COMPARE" == "$CURRENT_COMPARE" && -z "$ROOT_PIN" ]]; then
+  ALL_PINS_MATCH=true
+  for pin in "$LOCAL_PIN" "$ROOT_PIN" "$AGENTS_PIN"; do
+    [[ -z "$pin" || "${pin%%+*}" == "$CURRENT_COMPARE" ]] || ALL_PINS_MATCH=false
+  done
+  if [[ "$ALL_PINS_MATCH" == "true" ]]; then
     # Nothing to order: every pin present equals the installed version.
     DIRECTION=$(fallback_direction) || exit 0
   else
@@ -257,22 +287,32 @@ if [[ -z "$DIRECTION" ]]; then
 fi
 
 # A pin newer than the installed plugin outranks every other direction, in
-# EITHER file. `--update` deletes the `CLAUDE.md` copy during migration and
+# ANY file. `--update` deletes the non-target copies during migration and
 # rewrites the block during refresh, so a newer pin hiding behind the
 # preferred pin would be destroyed by the very command those notices
-# recommend. Report the highest such pin and its file.
+# recommend. Report the highest such pin and its file. Candidates are
+# visited `CLAUDE.md` first and replace an earlier one only when strictly
+# higher, so a tie reports the copy a migration would delete.
+NEWEST_PIN=""
+NEWEST_FILE=""
+consider_newer_pin() {
+  local file="$1" pin="$2"
+  version_exceeds_current "$pin" || return 0
+  if [[ -n "$NEWEST_PIN" ]]; then
+    [[ "${pin%%+*}" != "${NEWEST_PIN%%+*}" ]] || return 0
+    [[ "$(printf '%s\n%s\n' "${pin%%+*}" "${NEWEST_PIN%%+*}" | "$SORT_BIN" -V | tail -n 1)" == "${pin%%+*}" ]] || return 0
+  fi
+  NEWEST_PIN="$pin"
+  NEWEST_FILE="$file"
+}
 if [[ -z "$DIRECTION" ]]; then
-  if version_exceeds_current "$ROOT_PIN" \
-    && { [[ -z "$LOCAL_PIN" ]] || ! version_exceeds_current "$LOCAL_PIN" \
-      || [[ "$(printf '%s\n%s\n' "${ROOT_PIN%%+*}" "${LOCAL_PIN%%+*}" | "$SORT_BIN" -V | tail -n 1)" == "${ROOT_PIN%%+*}" ]]; }; then
-    MEMORY_FILE="$ROOT_MD"
-    MEMORY_NAME="CLAUDE.md"
-    PINNED="$ROOT_PIN"
-    DIRECTION="newer"
-  elif version_exceeds_current "$LOCAL_PIN"; then
-    MEMORY_FILE="$LOCAL_MD"
-    MEMORY_NAME="CLAUDE.local.md"
-    PINNED="$LOCAL_PIN"
+  consider_newer_pin "$ROOT_MD" "$ROOT_PIN"
+  consider_newer_pin "$LOCAL_MD" "$LOCAL_PIN"
+  consider_newer_pin "$AGENTS_MD" "$AGENTS_PIN"
+  if [[ -n "$NEWEST_PIN" ]]; then
+    MEMORY_FILE="$NEWEST_FILE"
+    MEMORY_NAME="${NEWEST_FILE##*/}"
+    PINNED="$NEWEST_PIN"
     DIRECTION="newer"
   fi
 fi
@@ -322,17 +362,30 @@ mkdir -- "$SESSION_LOCK" 2>/dev/null || exit 0
 # reading the fact.
 # The migration covers two shapes with different costs: a duplicate copy (both
 # files carry a block) wastes context and drifts once one copy is refreshed,
-# while a lone `CLAUDE.md` block simply sits in the file /rb:init no longer
-# targets. Do not claim duplicate cost for the lone-block case.
-MIGRATION_LINE=""
-if [[ "$MIGRATION_PENDING" == "true" ]]; then
+# while a lone `CLAUDE.md` / `AGENTS.md` block simply sits in a file /rb:init
+# no longer targets. Do not claim duplicate cost for the lone-block case.
+migration_line_for() {
+  local source="$1"
   if [[ "$LOCAL_HAS_BLOCK" == "true" ]]; then
-    MIGRATION_LINE="A second managed block also remains in CLAUDE.md, wasting context and drifting
+    printf '%s' "A second managed block also remains in ${source}, wasting context and drifting
 from the CLAUDE.local.md copy once either is refreshed; /rb:init --update
-deletes the CLAUDE.md copy."
+deletes the ${source} copy."
   else
-    MIGRATION_LINE="The managed block also still sits in CLAUDE.md rather than this project's
+    printf '%s' "The managed block also still sits in ${source} rather than this project's
 CLAUDE.local.md; /rb:init --update moves it there."
+  fi
+}
+MIGRATION_LINE=""
+if [[ "$ROOT_MIGRATION_PENDING" == "true" ]]; then
+  MIGRATION_LINE=$(migration_line_for "CLAUDE.md")
+fi
+if [[ "$AGENTS_MIGRATION_PENDING" == "true" ]]; then
+  AGENTS_LINE=$(migration_line_for "AGENTS.md")
+  if [[ -n "$MIGRATION_LINE" ]]; then
+    MIGRATION_LINE="${MIGRATION_LINE}
+${AGENTS_LINE}"
+  else
+    MIGRATION_LINE="$AGENTS_LINE"
   fi
 fi
 

@@ -7,6 +7,45 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.19] - 2026-10-01
+
+### Changed
+
+- `/rb:init` supports `AGENTS.md`. A usable `CLAUDE.local.md` still wins
+  without a prompt. Otherwise, when the project has an `AGENTS.md`, the
+  command asks whether the managed block goes into `CLAUDE.md` or
+  `AGENTS.md`, instead of creating a `CLAUDE.md` that stops Claude Code
+  from reading `AGENTS.md`. A `CLAUDE.md` symlinked to `AGENTS.md` targets
+  `AGENTS.md` directly.
+- `/rb:init --update` moves a block from `AGENTS.md` into a usable
+  `CLAUDE.local.md`, the same way it moves one from `CLAUDE.md`. A block
+  in `CLAUDE.md` or `AGENTS.md` otherwise stays where the user put it;
+  when both carry one, the command asks which to keep.
+- `check-plugin-version.sh` reads the pinned version from `AGENTS.md`
+  after `CLAUDE.local.md` and `CLAUDE.md`, reports a newer pin in any of
+  the three, recommends the `AGENTS.md` to `CLAUDE.local.md` move, and
+  names an unwritable `AGENTS.md` block as a repair.
+- The README, `/rb:init` and `/rb:intro` no longer recommend
+  `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. `SendMessage` resumes paused
+  agents without it, and enabling agent teams makes Claude launch named
+  subagents as teammates.
+- The `/rb:intro` built-in features section uses current command names
+  (`/fewer-permission-prompts`, `/output-style`), current effort
+  defaults and output styles, and drops version tags.
+
+### Fixed
+
+- Hook registrations in `hooks/hooks.json` use exec form (`bash` / `ruby`
+  plus the script path in `args`) instead of an unquoted
+  `${CLAUDE_PLUGIN_ROOT}` shell command. Hooks no longer break when the
+  plugin is installed under a path containing spaces, and
+  `claude plugin validate --strict` passes again.
+- `discovery-stats` reports silent trigger rules again when run through
+  the Bash tool, as `/rb:discovery-report` does. Claude Code exports
+  `CLAUDE_PLUGIN_ROOT` only to hook processes, so the CLI read no rule
+  list and printed "every configured rule matched at least once". It now
+  falls back to its own plugin root.
+
 ## [1.16.18] - 2026-09-04
 
 ### Changed
@@ -3105,7 +3144,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.18...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.19...HEAD
+[1.16.19]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.18...v1.16.19
 [1.16.18]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.17...v1.16.18
 [1.16.17]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.16...v1.16.17
 [1.16.16]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.15...v1.16.16

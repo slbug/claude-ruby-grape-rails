@@ -261,7 +261,8 @@ fits — that is always the strongest signal.
 Run `/rb:init` to write a managed block into the project memory file —
 `CLAUDE.local.md` when the project has a usable one (a regular,
 readable, writable, non-symlink file that git ignores), otherwise
-`CLAUDE.md`.
+`CLAUDE.md`. When the project has an `AGENTS.md`, `/rb:init` asks
+whether to use `CLAUDE.md` or `AGENTS.md`.
 Block contents: stack-version header + project-specific stack facts
 only.
 
@@ -289,10 +290,10 @@ only.
 `<!-- RUBY-GRAPE-RAILS-PLUGIN:END -->` markers, so legacy
 doctrine-heavy blocks from earlier plugin versions are migrated to
 the slim form automatically. When the block still sits in `CLAUDE.md`
-and the project has a usable `CLAUDE.local.md`, `--update` also moves
-the block to `CLAUDE.local.md` and removes it from `CLAUDE.md`.
-Projects without a usable `CLAUDE.local.md` keep the block in
-`CLAUDE.md`.
+or `AGENTS.md` and the project has a usable `CLAUDE.local.md`,
+`--update` also moves the block to `CLAUDE.local.md` and removes it
+from the source file. Projects without a usable `CLAUDE.local.md` keep
+the block where it is.
 
 ### Layer 5: `/rb:review` + Iron Law Judge (On-Demand)
 
@@ -342,7 +343,7 @@ AUTOMATIC (hooks):     Format check, security reminders, progress logging, failu
                        PreCompact rule preservation
 BEHAVIORAL (Claude):   Iron Laws, skill loading, stop-and-explain
 ON-DEMAND (commands):  /rb:review (iron-law-judge), /rb:verify (format/tests/zeitwerk for Rails)
-PROJECT CONTEXT:       /rb:init (writes detected project-stack facts into a usable CLAUDE.local.md, else CLAUDE.md)
+PROJECT CONTEXT:       /rb:init (writes detected project-stack facts into a usable CLAUDE.local.md, else CLAUDE.md or AGENTS.md)
 ```
 
 Hooks deliver the rules. `/rb:review` catches what behavioral layer
@@ -380,7 +381,7 @@ boundaries) without restating any rule already injected at runtime.
 | `/rb:permissions` | Tune Claude Bash permissions from real session evidence |
 | `/rb:research <topic>` | Research with parallel workers, runtime tooling-first |
 | `/rb:pr-review <PR#>` | Address PR review comments |
-| `/rb:init` | Write project stack notes to CLAUDE.local.md when usable, else CLAUDE.md (rules runtime-injected) |
+| `/rb:init` | Write project stack notes to CLAUDE.local.md when usable, else CLAUDE.md or AGENTS.md (rules runtime-injected) |
 | `/rb:runtime` | Runtime tooling (Tidewave integration) |
 | `/rb:secrets` | Scan for leaked credentials |
 | `/rb:document` | Generate YARD/RDoc, README, ADRs |
@@ -429,15 +430,17 @@ These rules exist because the Ruby community learned them the hard way
 
 These are Claude Code native, not plugin. They complement the plugin.
 
-- **`xhigh` effort** (Opus 4.7 default, CC 2.1.111) — between `high` and `max`; recommended default. Plugin's plan/audit/review/full skills use `effort: xhigh`.
-- **Auto mode** (CC 2.1.111) — no longer requires `--enable-auto-mode` flag. Used for subagent spawning.
-- **`/focus` command** (CC 2.1.110) — fullscreen TUI mode; keeps plugin SessionStart status-line output visible.
-- **`/recap` command** (CC 2.1.108) — summary when resuming a session. Useful between `/rb:plan` → `/rb:work` sessions across days.
-- **`/less-permission-prompts`** (CC 2.1.111) — interactive slider; the plugin's `/rb:permissions` skill produces analysis that feeds into this.
-- **`/output-styles`** — choose communication mode:
-  - `Default` — plugin's normal behavior
-  - `Explanatory` — Claude narrates thought process; good for learning
-  - `Learning` — interactive pair-programming; Claude stops for user to write `#TODO` sections
+- **`/effort` levels** — `low` → `medium` → `high` → `xhigh` → `max`. Opus 5.5 and Sonnet 5.5 default to `medium`. Plugin's plan/audit/review/full skills set `effort: xhigh` for their own turn.
+- **Auto mode** — built-in default permission mode for interactive sessions when no `defaultMode` is set. `Shift+Tab` cycles modes.
+- **`/focus` command** — focus view: last prompt, one-line tool-call summary, final response.
+- **`/recap` command** — one-line session summary on demand. Useful between `/rb:plan` → `/rb:work` sessions across days.
+- **`/fewer-permission-prompts`** — scans transcripts for common read-only Bash and MCP calls and adds a project allowlist. The plugin's `/rb:permissions` skill covers plugin-specific rules.
+- **`/output-style [style]`** — list or switch output styles:
+  - `default` — standard behavior
+  - `Proactive` — starts work right away, assumes routine decisions
+  - `Concise` — result first, no preamble or recap
+  - `Explanatory` — adds short `Insight` blocks explaining choices
+  - `Learning` — explains choices and leaves small pieces of code for the user to write
   - Recommend `Explanatory` or `Learning` when comprehension matters
     more than speed. Anthropic skill-formation RCT (n=52, Trio):
     conceptual-inquiry users score 65-86% mastery vs delegation <40%;

@@ -7,13 +7,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/log-progress.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/log-progress.sh"],
             "timeout": 15,
             "async": true
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/secret-scan.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/secret-scan.sh"],
             "timeout": 180
           }
         ]
@@ -21,27 +23,27 @@
       {
         "matcher": "Edit",
         "hooks": [
-          { "type": "command", "if": "Edit(*.rb)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Edit(*.rake)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Edit(*Gemfile)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Edit(*Rakefile)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Edit(**/config/**)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Edit(*.yml)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Edit(*.env*)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Edit(*.json)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 }
+          { "type": "command", "if": "Edit(*.rb)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Edit(*.rake)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Edit(*Gemfile)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Edit(*Rakefile)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Edit(**/config/**)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Edit(*.yml)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Edit(*.env*)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Edit(*.json)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 }
         ]
       },
       {
         "matcher": "Write",
         "hooks": [
-          { "type": "command", "if": "Write(*.rb)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Write(*.rake)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Write(*Gemfile)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Write(*Rakefile)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Write(**/config/**)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Write(*.yml)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Write(*.env*)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 },
-          { "type": "command", "if": "Write(*.json)", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh", "timeout": 15 }
+          { "type": "command", "if": "Write(*.rb)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Write(*.rake)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Write(*Gemfile)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Write(*Rakefile)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Write(**/config/**)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Write(*.yml)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Write(*.env*)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 },
+          { "type": "command", "if": "Write(*.json)", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/security-reminder.sh"], "timeout": 15 }
         ]
       },
       {
@@ -50,31 +52,36 @@
           {
             "type": "command",
             "if": "Edit(*.rb)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh"],
             "timeout": 600
           },
           {
             "type": "command",
             "if": "Edit(*.rake)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh"],
             "timeout": 600
           },
           {
             "type": "command",
             "if": "Edit(*Gemfile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh"],
             "timeout": 600
           },
           {
             "type": "command",
             "if": "Edit(*Rakefile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh"],
             "timeout": 600
           },
           {
             "type": "command",
             "if": "Edit(*config.ru)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh"],
             "timeout": 600
           }
         ]
@@ -85,37 +92,43 @@
           {
             "type": "command",
             "if": "Write(*.rb)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh"],
             "timeout": 600
           },
           {
             "type": "command",
             "if": "Write(*.rake)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh"],
             "timeout": 600
           },
           {
             "type": "command",
             "if": "Write(*Gemfile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh"],
             "timeout": 600
           },
           {
             "type": "command",
             "if": "Write(*Rakefile)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh"],
             "timeout": 600
           },
           {
             "type": "command",
             "if": "Write(*config.ru)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/rubyish-post-edit.sh"],
             "timeout": 600
           },
           {
             "type": "command",
             "if": "Write(*plan.md)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/plan-stop-reminder.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/plan-stop-reminder.sh"],
             "timeout": 15
           }
         ]
@@ -125,7 +138,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/compress-verify-output.rb",
+            "command": "ruby",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/compress-verify-output.rb"],
             "timeout": 30,
             "async": true
           }
@@ -136,7 +150,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "command": "ruby",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb"],
             "timeout": 15,
             "async": true
           }
@@ -147,7 +162,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "command": "ruby",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb"],
             "timeout": 15,
             "async": true
           }
@@ -158,7 +174,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "command": "ruby",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb"],
             "timeout": 15,
             "async": true
           }
@@ -171,7 +188,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-dangerous-ops.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-dangerous-ops.sh"],
             "timeout": 10
           }
         ]
@@ -181,7 +199,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-out-of-bounds-writes.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-out-of-bounds-writes.sh"],
             "timeout": 10
           }
         ]
@@ -193,7 +212,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-dangerous-ops.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-dangerous-ops.sh"],
             "timeout": 10
           }
         ]
@@ -203,7 +223,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-out-of-bounds-writes.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-out-of-bounds-writes.sh"],
             "timeout": 10
           }
         ]
@@ -215,7 +236,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-dangerous-ops.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-dangerous-ops.sh"],
             "timeout": 10
           }
         ]
@@ -225,7 +247,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-out-of-bounds-writes.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-out-of-bounds-writes.sh"],
             "timeout": 10
           }
         ]
@@ -238,121 +261,141 @@
           {
             "type": "command",
             "if": "Bash(bundle *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(rails *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(bin/rails *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(./bin/rails *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(rake *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(bin/rake *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(./bin/rake *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(ruby *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(rspec *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(bin/rspec *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(./bin/rspec *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(standardrb *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(bin/standardrb *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(./bin/standardrb *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(rubocop *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(bin/rubocop *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(./bin/rubocop *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(brakeman *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(bin/brakeman *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           },
           {
             "type": "command",
             "if": "Bash(./bin/brakeman *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ruby-post-tool-use-failure.sh"],
             "timeout": 30
           }
         ]
@@ -362,13 +405,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/compress-verify-output.rb",
+            "command": "ruby",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/compress-verify-output.rb"],
             "timeout": 30,
             "async": true
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "command": "ruby",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb"],
             "timeout": 15,
             "async": true
           }
@@ -381,7 +426,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/inject-rules.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/inject-rules.sh"],
             "timeout": 10
           }
         ]
@@ -393,34 +439,40 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/inject-rules.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/inject-rules.sh"],
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/setup-dirs.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/setup-dirs.sh"],
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/install-statusline-wrapper.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/install-statusline-wrapper.sh"],
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-fast.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-fast.sh"],
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-async.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-async.sh"],
             "timeout": 30,
             "statusMessage": "Refreshing Ruby runtime context...",
             "async": true
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/compression-data-status.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/compression-data-status.sh"],
             "timeout": 15
           }
         ]
@@ -430,17 +482,20 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-scratchpad.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-scratchpad.sh"],
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-resume.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-resume.sh"],
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-plugin-version.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-plugin-version.sh"],
             "timeout": 10
           },
           {
@@ -456,7 +511,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-file-changed.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-file-changed.sh"],
             "timeout": 15
           }
         ]
@@ -467,7 +523,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-file-changed.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-file-changed.sh"],
             "timeout": 15
           }
         ]
@@ -478,7 +535,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-file-changed.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/detect-runtime-file-changed.sh"],
             "timeout": 15
           }
         ]
@@ -489,12 +547,14 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session-title.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/session-title.sh"],
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "command": "ruby",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb"],
             "timeout": 15,
             "async": true
           }
@@ -506,7 +566,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "command": "ruby",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb"],
             "timeout": 15,
             "async": true
           }
@@ -518,7 +579,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb",
+            "command": "ruby",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/skill-discovery-observer.rb"],
             "timeout": 15,
             "async": true
           }
@@ -531,7 +593,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/precompact-rules.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/precompact-rules.sh"],
             "timeout": 15
           }
         ]
@@ -543,7 +606,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/postcompact-verify.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/postcompact-verify.sh"],
             "timeout": 15
           }
         ]
@@ -554,7 +618,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-pending-plans.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/check-pending-plans.sh"],
             "timeout": 15
           }
         ]
@@ -565,7 +630,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/stop-failure-log.sh",
+            "command": "bash",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/stop-failure-log.sh"],
             "timeout": 15
           }
         ]

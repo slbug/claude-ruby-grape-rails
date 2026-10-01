@@ -7,8 +7,8 @@ effort: low
 # Plugin Initialization
 
 Write a managed block of project-specific stack notes into the
-project's memory file (`CLAUDE.local.md` when usable, else
-`CLAUDE.md` — see "Target File"). Do NOT write Iron Laws or Advisory
+project's memory file (`CLAUDE.local.md` when usable, else `CLAUDE.md`
+or `AGENTS.md` — see "Target File"). Do NOT write Iron Laws or Advisory
 Preferences into it — `inject-rules.sh` delivers them at
 runtime on `SessionStart` + `SubagentStart`.
 
@@ -141,15 +141,29 @@ ignores it, or the project is not a git repo. Treat any other shape
 never write through it. Check ignore status with
 `git check-ignore -q CLAUDE.local.md` before selecting the target.
 
+Treat `CLAUDE.md` and `AGENTS.md` as usable when each is a regular
+file, not a symlink, readable, and writable. Tracked is fine.
+
+Take the FIRST matching row:
+
 | Project state | Target |
 |---|---|
-| usable `CLAUDE.local.md` | `CLAUDE.local.md` |
-| no `CLAUDE.local.md`, or present but not usable | `CLAUDE.md` |
+| usable `CLAUDE.local.md` | `CLAUDE.local.md` — do not ask |
+| `CLAUDE.md` is a symlink to a usable `AGENTS.md` | `AGENTS.md` — do not ask |
+| usable `AGENTS.md` (with or without `CLAUDE.md`) | ASK the user: `CLAUDE.md` or `AGENTS.md` |
+| anything else | `CLAUDE.md` |
+
+When asking, state the loading rule so the user can choose: by
+default Claude Code reads `AGENTS.md` only while no `CLAUDE.md` or
+`CLAUDE.local.md` exists, so creating `CLAUDE.md` stops `AGENTS.md`
+from loading unless `CLAUDE.md` imports it with `@AGENTS.md`. Do NOT
+pick for the user — a project can keep both files for different
+reasons.
 
 Do NOT create `CLAUDE.local.md` — use it only when the project already
-has one. Do NOT write the block into both files. Target `CLAUDE.md`
-when a present `CLAUDE.local.md` is not usable, and name the blocking
-shape to the user.
+has one. Do NOT write the block into more than one file. Target
+`CLAUDE.md` or `AGENTS.md` when a present `CLAUDE.local.md` is not
+usable, and name the blocking shape to the user.
 
 ## Install Modes
 
@@ -158,23 +172,23 @@ shape to the user.
 
 Update mode migration (`/rb:init --update`), automatic, no prompt:
 
-Find the marker pair in `CLAUDE.local.md` and `CLAUDE.md`, then take
-the FIRST matching row:
+Find the marker pair in `CLAUDE.local.md`, `CLAUDE.md`, and
+`AGENTS.md`, then take the FIRST matching row:
 
 | State | Action |
 |---|---|
-| marker in `CLAUDE.local.md`, `CLAUDE.local.md` NOT usable | STOP, change no file (see below) |
-| marker in `CLAUDE.md`, `CLAUDE.md` NOT usable | STOP, change no file (see below) |
-| markers in both files, both usable | refresh the `CLAUDE.local.md` block, delete the `CLAUDE.md` copy |
-| marker in `CLAUDE.md` only, usable `CLAUDE.local.md` | write the refreshed block to `CLAUDE.local.md`, strip the marker pair and its content from `CLAUDE.md`, report the move |
-| marker in `CLAUDE.md` only, no usable `CLAUDE.local.md` | update in place in `CLAUDE.md`, no migration |
-| marker in neither | fresh install against the resolved target |
+| marker in any file that is NOT usable | STOP, change no file (see below) |
+| marker in `CLAUDE.local.md` and in another file, all usable | refresh the `CLAUDE.local.md` block, delete the other copies |
+| marker in `CLAUDE.md` and/or `AGENTS.md`, usable `CLAUDE.local.md` | write the refreshed block to `CLAUDE.local.md`, strip the marker pair and its content from each source, report the move |
+| marker in both `CLAUDE.md` and `AGENTS.md`, no usable `CLAUDE.local.md` | ASK the user which file keeps the block; refresh it there, delete the other copy |
+| marker in `CLAUDE.md` or `AGENTS.md` only, no usable `CLAUDE.local.md` | update in place, no migration — the block location records the user's earlier choice |
+| marker in none | fresh install against the resolved target |
 
-Both STOP rows outrank every write row: verify the source is writable
+The STOP row outranks every write row: verify each source is writable
 BEFORE writing the destination, or a failed strip leaves the block in
-both files.
+two files.
 
-Leave every other line of `CLAUDE.md` untouched when stripping a block.
+Leave every other line of a source file untouched when stripping a block.
 
 On a STOP row, report which shape blocks the file and the ways out:
 restore write access, replace the symlink with a regular file, add
@@ -281,14 +295,6 @@ are not consulted by the file-permission check and emit a startup warning.
 
 Tell the user: `Run /update-config to add the recommended Edit
 permission allowlist for plugin artifact namespaces.`
-
-## Recommended Claude Code env vars
-
-Tell the user to set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in their
-shell environment. Required for spawn-fanout skills (`/rb:review`,
-`/rb:plan`, `/rb:brainstorm`, `/rb:investigate`) to resume agents that
-paused at their `maxTurns` cap. Without it, paused agents become
-coverage gaps with no recovery path.
 
 ## CLAUDE.md sizing
 

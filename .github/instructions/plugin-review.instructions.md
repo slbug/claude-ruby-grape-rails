@@ -25,12 +25,12 @@ Exception files (human-facing, narrative OK): `README.md`,
 
 - Agents use YAML frontmatter. Common: name, description, model,
   disallowedTools, omitClaudeMd, skills, memory. Also valid per CC docs:
-  tools, effort, maxTurns, background, isolation. The general subagent
-  reference (<https://docs.claude.com/en/docs/claude-code/sub-agents>)
-  also lists `color` and `initialPrompt`, but the plugin-supported set
-  documented at <https://docs.claude.com/en/docs/claude-code/plugins-reference>
-  does NOT include them — CC silently drops these on plugin-shipped
-  agents. Do NOT add them to plugin agents under `plugins/**/agents/`
+  tools, effort, maxTurns, background, isolation, color, and
+  `experimental.cacheTtl`. The plugin-supported set
+  (<https://code.claude.com/docs/en/plugins/components>, "Frontmatter
+  fields in plugin agents") ignores `permissionMode`, `hooks`,
+  `mcpServers`, and `initialPrompt`. Do NOT add those to plugin agents
+  under `plugins/**/agents/`
 - Prefer denylist-only (`disallowedTools:`) over allowlist (`tools:`).
   A missing `tools:` field is intentional — agents inherit all tools minus
   those in disallowedTools

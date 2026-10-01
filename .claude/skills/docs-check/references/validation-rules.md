@@ -37,7 +37,8 @@ docs win.
 
 Authoritative cached docs:
 
-- `plugins-reference.md` — plugin-shipped agent support
+- `plugins/components.md` § "Frontmatter fields in plugin agents" —
+  plugin-shipped agent support
 - `sub-agents.md` — tool syntax + agent behavior
 
 ### Agent / Skill Boundary Rule
@@ -61,31 +62,26 @@ Currently-supported plugin-agent frontmatter:
 - `skills`
 - `memory`
 - `background`
+- `omitClaudeMd`
 - `isolation`
+- `color`
+- `experimental.cacheTtl` (the only supported `experimental` key)
 
-Documented for general subagents but silently dropped on plugin-shipped
-agents — do NOT recommend in plugin agent frontmatter:
+Ignored on plugin-shipped agents (CC drops them) — do NOT recommend in
+plugin agent frontmatter:
 
-- `color` — listed in general `--agents` JSON spec; plugin-supported
-  set in `plugins-reference.md` does NOT include it
-- `initialPrompt` — fires only when an agent runs as the main session
-  agent via `--agent` / settings; inert for plugin subagents
-- `experimental` (including its `cacheTtl` key) — `sub-agents.md`
-  documents the map for subagent files generally; the plugin-supported
-  set in `plugins-reference.md` does NOT include it. Re-verify against
-  `plugins-reference.md` on each run and move it to the supported list
-  once it appears there
+- `permissionMode`
+- `hooks`
+- `mcpServers`
+- `initialPrompt`
 
 Important constraints:
 
 - `isolation` only documents `worktree`
-- plugin-shipped agents do NOT support these fields (CC silently drops):
-  - `hooks`
-  - `mcpServers`
-  - `permissionMode`
 - `Agent(...)` is current syntax for restricting spawned subagents
   - `Task(...)` may appear as historical alias in docs; contributor guidance prefers `Agent(...)`
-- `omitClaudeMd` is repo policy (not cached-docs baseline) unless cached docs document it later
+- `omitClaudeMd` is documented. Requiring it on every shipped specialist
+  is repo policy (`.claude/rules/agent-development.md`)
 - `effort` only applies on models `model-config.md` § effort levels
   lists. That table currently omits Haiku, and the page states models
   absent from it do not support effort. `effort` on such a model is
@@ -97,7 +93,7 @@ Checks:
 1. Confirm plugin agents only use fields currently documented for plugin agents.
 2. Confirm `tools` / `disallowedTools` use currently documented tool names. Missing `tools:` is expected (denylist-only) — agent inherits all tools minus `disallowedTools`.
 3. Confirm `skills:` references point to real shipped skills.
-4. `omitClaudeMd` enforcement is repo policy unless cached docs explicitly document it.
+4. Missing `omitClaudeMd: true` on a shipped specialist is a repo-policy finding, not docs drift.
 5. New documented fields → `INFO`, not automatic repo defects.
 
 ## Skill Validation
@@ -107,20 +103,29 @@ Authoritative cached docs:
 - `skills.md`
 - `hooks.md` + `hooks-guide.md` (skill-scoped hooks)
 
-Currently-supported skill frontmatter (per agentskills.io canon):
+Currently-supported skill frontmatter (cached `skills.md` § Frontmatter
+reference):
 
 - `name`
 - `description` (single field — repo policy; see the `when_to_use` note below)
+- `when_to_use` (documented; repo avoids it)
 - `argument-hint`
+- `arguments`
 - `disable-model-invocation`
 - `user-invocable`
 - `allowed-tools`
+- `disallowed-tools`
 - `model`
 - `effort`
 - `context`
 - `agent`
+- `background` (only with `context: fork`)
 - `hooks`
+- `paths` (documented; see the plugin-scope note below)
 - `shell`
+- `metadata`
+- `license`
+- `compatibility`
 
 Notes:
 
@@ -161,13 +166,11 @@ Notes:
   is fully documented behavior, NOT drift.
 
 - **Marketplace plugin entries inherit the full plugin.json schema.**
-  `plugin-marketplaces.md` § "Plugin entries" states: "You can include
-  any field from the plugin manifest schema". The quick-summary table
-  row "(`name` required, `email` optional)" is shorthand, NOT the
-  authoritative author shape. Authoritative `author` schema lives in
-  `plugins-reference.md` § "Plugin manifest schema" and includes
-  `name`, `email`, `url`. Do NOT flag `author.url` in
-  `marketplace.json` as drift.
+  `plugins/marketplace-reference.md` § "Plugin entries" states: "An
+  entry also accepts every `plugin.json` field". Authoritative `author`
+  schema lives in `plugins-reference.md` (manifest reference) field
+  table: `name` required, optional `email` and `url`. Do NOT flag
+  `author.url` in `marketplace.json` as drift.
 
 - **Artifact-writing agents intentionally retain `Write`.** Per
   `.claude/rules/agent-development.md` § "Tool Access":
@@ -268,7 +271,7 @@ Important constraints:
 | Constraint | Detail |
 |---|---|
 | handler-level `if` filters | documented + useful |
-| `if` version gate | requires CC `v2.1.85+`, only works on tool events: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest` |
+| `if` event scope | evaluated only on tool events: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`, `PermissionDenied`. On other events a hook with `if` never runs |
 | `FileChanged` matcher | matcher = watched filenames (NOT a tool matcher); do not lint as one |
 | single-segment `dir/**` in `if` | matches ONLY `<cwd>/dir`, not `dir/` at any depth. Any-depth intent requires `**/dir/**`. `deny`/`ask` permission rules keep their any-depth match — do NOT generalize this rule to permission rules |
 | `async` | documented only for `type: "command"` hooks |
@@ -295,23 +298,27 @@ Checks:
 
 Authoritative cached docs:
 
-- `plugins-reference.md`
-- `plugin-marketplaces.md`
+- `plugins-reference.md` (serves the manifest reference)
+- `plugins/marketplace-reference.md`
+- `plugins/components.md`
 - `plugins.md`
 - `mcp.md`
 - `settings.md` (only when finding depends on settings semantics)
 
 Checks for `.claude-plugin/plugin.json`:
 
-1. Confirm required manifest structure matches current docs.
-2. Currently-documented capabilities (when present):
-   - `hooks`
-   - `mcpServers`
-   - `outputStyles`
-   - `lspServers`
-   - `userConfig`
-   - `channels`
-   - `workflows` (custom Workflow-tool script directories)
+1. Confirm required manifest structure matches current docs. `name` is
+   the only required key.
+2. Currently-documented top-level keys (when present):
+   - metadata: `$schema`, `name`, `displayName`, `version`,
+     `description`, `author`, `homepage`, `repository`, `license`,
+     `keywords`, `metadata`, `defaultEnabled`, `dependencies`
+   - behavior: `settings` (only `agent` and `subagentStatusLine` take
+     effect), `userConfig`, `channels`
+   - components: `skills`, `commands`, `agents`, `hooks`, `mcpServers`,
+     `lspServers`, `outputStyles`, `workflows`
+   - `experimental.themes`, `experimental.monitors`, `experimental.evals`
+     (shape may still change)
 3. Path behavior:
    - custom `commands`, `agents`, `skills`, `outputStyles` REPLACE defaults
    - arrays can keep default path + add extras

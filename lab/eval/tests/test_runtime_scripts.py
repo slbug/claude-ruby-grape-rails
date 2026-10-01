@@ -43,6 +43,13 @@ DEBUG_STATEMENT_WARNING = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/debug-statement-warning.sh"
 )
 HOOKS_JSON = REPO_ROOT / "plugins/ruby-grape-rails/hooks/hooks.json"
+
+
+def hook_script(hook: dict) -> str:
+    """Script path a hooks.json entry runs: `args[0]` in exec form, else `command`."""
+    return (hook.get("args") or [hook.get("command", "")])[0]
+
+
 PRE_COMMIT_HOOK = REPO_ROOT / ".husky/pre-commit.bash"
 CHECK_PENDING_PLANS = (
     REPO_ROOT / "plugins/ruby-grape-rails/hooks/scripts/check-pending-plans.sh"
@@ -361,7 +368,7 @@ class RuntimeScriptTests(unittest.TestCase):
         for groups in hooks.values():
             for group in groups:
                 for hook in group.get("hooks", []):
-                    command = hook.get("command", "")
+                    command = hook_script(hook)
                     prefix = "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/"
                     if command.startswith(prefix):
                         relative = command[len("${CLAUDE_PLUGIN_ROOT}/") :]
@@ -372,6 +379,26 @@ class RuntimeScriptTests(unittest.TestCase):
         for path in sorted(command_paths):
             self.assertTrue(path.is_file(), path)
             self.assertTrue(os.access(path, os.X_OK), path)
+
+    def test_plugin_root_hooks_use_exec_form(self) -> None:
+        """Shell-form `${CLAUDE_PLUGIN_ROOT}` splits on plugin paths with
+        spaces and fails `claude plugin validate --strict`. Script hooks
+        must use exec form: interpreter in `command`, script in `args`."""
+        hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]
+        interpreters = {".sh": "bash", ".rb": "ruby"}
+        for event, groups in hooks.items():
+            for group in groups:
+                for hook in group.get("hooks", []):
+                    command = hook.get("command", "")
+                    with self.subTest(event=event, command=command):
+                        self.assertNotIn("${CLAUDE_PLUGIN_ROOT}", command)
+                        args = hook.get("args")
+                        if args is None:
+                            continue
+                        self.assertEqual(len(args), 1, args)
+                        self.assertEqual(
+                            command, interpreters[Path(args[0]).suffix], args
+                        )
 
     def test_rubyish_post_edit_delegates_are_executable(self) -> None:
         for path in (
@@ -392,7 +419,7 @@ class RuntimeScriptTests(unittest.TestCase):
             group for group in groups if group.get("matcher") == "Edit|Write"
         )
         broad_commands = {
-            hook.get("command", "").rsplit("/", 1)[-1]: hook
+            hook_script(hook).rsplit("/", 1)[-1]: hook
             for hook in broad_group.get("hooks", [])
         }
         self.assertEqual(
@@ -415,13 +442,13 @@ class RuntimeScriptTests(unittest.TestCase):
                 group for group in groups
                 if group.get("matcher") == matcher
                 and any(
-                    hook.get("command", "").endswith("/security-reminder.sh")
+                    hook_script(hook).endswith("/security-reminder.sh")
                     for hook in group.get("hooks", [])
                 )
             )
             security_hooks = [
                 hook for hook in security_group.get("hooks", [])
-                if hook.get("command", "").endswith("/security-reminder.sh")
+                if hook_script(hook).endswith("/security-reminder.sh")
             ]
             self.assertEqual(
                 {hook.get("if") for hook in security_hooks},
@@ -440,14 +467,14 @@ class RuntimeScriptTests(unittest.TestCase):
                 group for group in groups
                 if group.get("matcher") == matcher
                 and any(
-                    hook.get("command", "").endswith("/rubyish-post-edit.sh")
+                    hook_script(hook).endswith("/rubyish-post-edit.sh")
                     for hook in group.get("hooks", [])
                 )
             )
             rubyish_hooks = [
                 hook
                 for hook in rubyish_group.get("hooks", [])
-                if hook.get("command", "").endswith("/rubyish-post-edit.sh")
+                if hook_script(hook).endswith("/rubyish-post-edit.sh")
             ]
             self.assertEqual(
                 {hook.get("if") for hook in rubyish_hooks},
@@ -459,13 +486,13 @@ class RuntimeScriptTests(unittest.TestCase):
             if group.get("matcher") != "Write":
                 continue
             for hook in group.get("hooks", []):
-                if hook.get("command", "").endswith("/plan-stop-reminder.sh"):
+                if hook_script(hook).endswith("/plan-stop-reminder.sh"):
                     self.assertEqual(hook.get("if"), "Write(*plan.md)")
                     plan_hook_found = True
         self.assertTrue(plan_hook_found, "plan-stop-reminder.sh not found")
 
         direct_commands = {
-            hook.get("command", "")
+            hook_script(hook)
             for group in groups
             for hook in group.get("hooks", [])
         }
@@ -495,17 +522,17 @@ class RuntimeScriptTests(unittest.TestCase):
         ruby_failure_hooks = [
             hook
             for hook in hook_entries
-            if hook.get("command", "").endswith("/ruby-post-tool-use-failure.sh")
+            if hook_script(hook).endswith("/ruby-post-tool-use-failure.sh")
         ]
         compression_hooks = [
             hook
             for hook in hook_entries
-            if hook.get("command", "").endswith("/compress-verify-output.rb")
+            if hook_script(hook).endswith("/compress-verify-output.rb")
         ]
         discovery_hooks = [
             hook
             for hook in hook_entries
-            if hook.get("command", "").endswith("/skill-discovery-observer.rb")
+            if hook_script(hook).endswith("/skill-discovery-observer.rb")
         ]
         self.assertEqual(
             len(ruby_failure_hooks) + len(compression_hooks) + len(discovery_hooks),
@@ -724,18 +751,18 @@ class RuntimeScriptTests(unittest.TestCase):
             hook
             for group in hooks
             for hook in group.get("hooks", [])
-            if "detect-runtime" in hook.get("command", "")
+            if "detect-runtime" in hook_script(hook)
         ]
         self.assertEqual(len(commands), 2)
         fast_hook = next(
             hook
             for hook in commands
-            if hook["command"].endswith("detect-runtime-fast.sh")
+            if hook_script(hook).endswith("detect-runtime-fast.sh")
         )
         async_hook = next(
             hook
             for hook in commands
-            if hook["command"].endswith("detect-runtime-async.sh")
+            if hook_script(hook).endswith("detect-runtime-async.sh")
         )
         self.assertFalse(fast_hook.get("async", False))
         self.assertTrue(async_hook.get("async", False))
@@ -2779,6 +2806,83 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("v0.1.0", result.stdout)
         self.assertNotIn("v0.2.0", result.stdout)
+
+    def test_check_plugin_version_reads_pin_from_agents_md(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), "0.1.0", filename="AGENTS.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("v0.1.0", result.stdout)
+        self.assertIn("AGENTS.md", result.stdout)
+
+    def test_check_plugin_version_keeps_agents_block_beside_claude_md(self) -> None:
+        # The user picked AGENTS.md over CLAUDE.md at /rb:init time, so a
+        # current block there is not a migration candidate into CLAUDE.md.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="AGENTS.md"
+            )
+            (Path(tmpdir) / "CLAUDE.md").write_text("# Team notes\n", encoding="utf-8")
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    def test_check_plugin_version_migrates_agents_block_into_local(self) -> None:
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="AGENTS.md"
+            )
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("still sits in AGENTS.md", result.stdout)
+        self.assertIn("CLAUDE.local.md", result.stdout)
+        self.assertIn("/rb:init --update", result.stdout)
+
+    def test_check_plugin_version_newer_agents_pin_outranks_matching_local_pin(
+        self,
+    ) -> None:
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="CLAUDE.local.md"
+            )
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), "99.0.0", filename="AGENTS.md"
+            )
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("OLDER than project AGENTS.md pinned at v99.0.0", result.stdout)
+
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the writability check",
+    )
+    def test_check_plugin_version_reports_read_only_agents_block(self) -> None:
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="AGENTS.md"
+            )
+            agents_md = Path(tmpdir) / "AGENTS.md"
+            agents_md.chmod(0o444)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                agents_md.chmod(0o644)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("AGENTS.md holds a managed block and is not writable", result.stdout)
 
     def test_check_plugin_version_flags_pending_migration_on_version_match(self) -> None:
         current = self._current_plugin_version()
@@ -5882,7 +5986,7 @@ class BlockOutOfBoundsWritesTests(unittest.TestCase):
             groups = hooks.get(event, [])
             write_groups = [g for g in groups if g.get("matcher") == "Write"]
             commands = [
-                hook.get("command", "")
+                hook_script(hook)
                 for group in write_groups
                 for hook in group.get("hooks", [])
             ]
@@ -6201,7 +6305,7 @@ class InjectRulesTests(unittest.TestCase):
         hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]
         for event in ("SessionStart", "SubagentStart"):
             commands = [
-                hook.get("command", "")
+                hook_script(hook)
                 for group in hooks.get(event, [])
                 for hook in group.get("hooks", [])
             ]
@@ -6245,7 +6349,7 @@ class RuntimeRedetectionWiringTests(unittest.TestCase):
     def _commands_for(self, event: str) -> list[str]:
         hooks = json.loads(HOOKS_JSON.read_text(encoding="utf-8"))["hooks"]
         return [
-            hook.get("command", "")
+            hook_script(hook)
             for group in hooks.get(event, [])
             for hook in group.get("hooks", [])
         ]

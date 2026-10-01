@@ -214,8 +214,12 @@ end
 rotated = log_exists ? Dir.glob("#{log_path}.*").length : 0
 rows    = log_exists ? load_rows(log_path) : []
 
+# Claude Code exports CLAUDE_PLUGIN_ROOT to hook processes only, not to
+# commands run through the Bash tool, so fall back to this script's own
+# plugin root (bin/..).
 plugin_root = ENV.fetch('CLAUDE_PLUGIN_ROOT', nil)
-all_rule_ids = plugin_root ? load_rule_ids(plugin_root) : []
+plugin_root = File.expand_path('..', __dir__) if plugin_root.nil? || plugin_root.empty?
+all_rule_ids = load_rule_ids(plugin_root)
 
 report = aggregate(rows, all_rule_ids: all_rule_ids).merge(
   'log_path' => log_path || DEFAULT_GLOB,

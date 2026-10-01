@@ -74,11 +74,12 @@ after deterministic gates pass. See `.claude/rules/development.md`
 - Set `experimental.cacheTtl` (`5m` / `1h`) in a subagent file's frontmatter
   to override the TTL for that one agent. It takes effect only when no
   subagent TTL setting is configured, and `1h` is ignored while a Claude
-  subscription draws on usage credits. Do NOT add it to
-  `plugins/ruby-grape-rails/agents/*.md` — `plugins-reference.md` omits
-  `experimental` from the plugin-shipped agent field set, so Claude Code
-  drops it silently. Use `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` for plugin
-  agent fanouts instead.
+  subscription draws on usage credits. Plugin-shipped agents support it
+  (`plugins/components.md` § "Frontmatter fields in plugin agents"), but
+  do NOT add it to `plugins/ruby-grape-rails/agents/*.md` for eval runs —
+  it changes shipped behavior for every user. Use
+  `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` for plugin agent fanouts
+  instead.
 - Keep `CLAUDE_CODE_SUBAGENT_MODEL_FORCE` unset for any run whose results are
   compared against a baseline. It applies `CLAUDE_CODE_SUBAGENT_MODEL` (or the
   main model) to every subagent and ignores agent-definition `model:` and

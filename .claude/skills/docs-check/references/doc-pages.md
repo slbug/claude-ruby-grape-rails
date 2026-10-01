@@ -21,8 +21,12 @@ Primary cached pages (plugin-critical):
 | `skills.md` | Skill frontmatter, `paths`, `shell`, supporting-file conventions |
 | `hooks.md` | Hook events, hook types, handler schema, `if` examples |
 | `hooks-guide.md` | Hook best practices, version-gated `if` behavior, design guidance |
-| `plugins-reference.md` | Plugin manifest, plugin-shipped agent support, `userConfig`, `channels`, `${CLAUDE_PLUGIN_DATA}` |
-| `plugin-marketplaces.md` | Marketplace manifest structure and source forms |
+| `plugins-reference.md` | Plugin manifest field table, `userConfig`, `channels`, environment variables (`${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`) |
+| `plugins/components.md` | Component layout, plugin-shipped agent frontmatter support, hooks/MCP/LSP component rules |
+| `plugins/marketplace-reference.md` | Marketplace manifest structure, plugin entries, source forms |
+| `plugins/cli-reference.md` | `claude plugin` subcommands (`validate`, `details`, `eval`) |
+| `plugin-evals.md` | `claude plugin eval` suite format, graders, cost model |
+| `plugin-marketplaces.md` | Marketplace creation guide |
 | `plugin-dependencies.md` | `plugin.json` dependency version constraints |
 | `plugins.md` | Plugin structure, plugin creation guidance, high-level conventions |
 | `settings.md` | Settings semantics when a finding depends on permission or config behavior |
@@ -93,7 +97,7 @@ Additional cached pages (context/reference):
 
 Use:
 
-- `plugins-reference.md`
+- `plugins/components.md`
 - `sub-agents.md`
 - `worktrees.md` when the agent uses `isolation: worktree` or the finding touches subagent worktree semantics
 
@@ -135,7 +139,7 @@ Questions this answers:
 Use:
 
 - `plugins-reference.md`
-- `plugin-marketplaces.md`
+- `plugins/marketplace-reference.md`
 - `plugin-dependencies.md` when the question touches version constraints
 - `plugins.md`
 - `mcp.md` when MCP config is involved

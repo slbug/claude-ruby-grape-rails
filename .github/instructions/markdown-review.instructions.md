@@ -39,11 +39,11 @@ Valid frontmatter fields for agents (general subagent surface, see
 description, model, effort, maxTurns, tools, disallowedTools, skills,
 memory, background, isolation, omitClaudeMd, color, initialPrompt.
 Plugin-shipped agents under `plugins/**/agents/` are narrowed by the
-plugins reference
-(<https://docs.claude.com/en/docs/claude-code/plugins-reference>) to
-the subset CC honors on plugin agents — do not add `color` or
-`initialPrompt` to plugin-shipped agents (see
-`plugin-review.instructions.md` for the narrowed set).
+plugin components reference
+(<https://code.claude.com/docs/en/plugins/components>) to the subset
+CC honors on plugin agents — do not add `initialPrompt`,
+`permissionMode`, `hooks`, or `mcpServers` to plugin-shipped agents
+(see `plugin-review.instructions.md` for the narrowed set).
 
 ## Runtime Variables
 
@@ -58,7 +58,7 @@ These are NOT errors — they are resolved at runtime by Claude Code:
 | Surface | `${CLAUDE_*}` substitutes? | Pattern |
 |---|---|---|
 | SKILL.md body (any text + bash injection) | ✅ | OK to use |
-| `hooks.json` `command` field | ✅ | OK to use |
+| `hooks.json` `command` / `args` fields | ✅ | Use in exec-form `args`, never in shell-form `command` |
 | MCP/LSP/monitor config commands | ✅ | OK to use |
 | `references/*.md` plain Markdown text | ❌ | Use plain relative paths (sibling), `../SKILL.md` (parent), or `plugins/<plugin>/skills/<skill>/...` (cross-skill) |
 | `references/*.md` Bash code blocks for agent to run | ✅ at shell level | Env vars set by CC for Bash invocations |
