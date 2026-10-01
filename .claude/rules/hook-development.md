@@ -35,6 +35,15 @@ Add or update a short policy comment near the top of the hook when behavior chan
 - `SubagentStart` uses `hookSpecificOutput.additionalContext` to inject context into subagents
 - `PostToolUseFailure` uses `hookSpecificOutput.additionalContext` for debugging hints
 
+## Hook Command Form
+
+- Register script hooks in exec form: `"command": "bash"` (`.sh`) or
+  `"command": "ruby"` (`.rb`), plus `"args": ["${CLAUDE_PLUGIN_ROOT}/hooks/scripts/<name>"]`.
+- Do NOT put `${CLAUDE_PLUGIN_ROOT}` in a shell-form `command`. Unquoted, it
+  splits on plugin paths with spaces, and `claude plugin validate --strict`
+  fails on the warning.
+- Keep shell form only for commands with no placeholder (the `echo` banner).
+
 ## Hook `if:` Path Filters
 
 - Directory globs must be written `**/dir/**`. A single-segment

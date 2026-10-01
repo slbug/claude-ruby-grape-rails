@@ -175,6 +175,13 @@ Exit code 124 from `timeout`/`gtimeout` is handled explicitly:
 Scripts resolve `timeout` → `gtimeout` → no-timeout fallback via
 `run_with_timeout()` for macOS compatibility.
 
+## Hook Command Form in `hooks.json`
+
+- Flag any `command` containing `${CLAUDE_PLUGIN_ROOT}`. Expect exec
+  form: `"command": "bash"` or `"ruby"` with the script path in `args`.
+- Flag an interpreter that does not match the script extension
+  (`bash` for `.sh`, `ruby` for `.rb`).
+
 ## Hook `if:` Path Filters in `hooks.json`
 
 - Flag single-segment directory globs (`Edit(config/**)`,

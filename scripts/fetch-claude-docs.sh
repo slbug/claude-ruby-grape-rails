@@ -53,8 +53,12 @@ PAGES=(
   "skills.md"                   # Skill format and structure
   "hooks.md"                    # Hook events and types
   "hooks-guide.md"              # Hook patterns and examples
-  "plugins-reference.md"        # plugin.json schema
-  "plugin-marketplaces.md"      # marketplace.json schema
+  "plugins-reference.md"        # plugin.json schema (serves plugins/manifest-reference)
+  "plugins/components.md"       # Plugin component layout + plugin-agent frontmatter field set
+  "plugins/marketplace-reference.md" # marketplace.json schema
+  "plugins/cli-reference.md"    # `claude plugin` subcommands (validate, details, eval)
+  "plugin-evals.md"             # `claude plugin eval` suite format, graders, cost model
+  "plugin-marketplaces.md"      # Marketplace creation guide (serves plugins/create-marketplace)
   "plugins.md"                  # General plugin creation
   "plugin-dependencies.md"      # plugin.json dependency version constraints
   "settings.md"                 # Permission modes

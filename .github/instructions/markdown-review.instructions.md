@@ -29,7 +29,9 @@ not standard markdown metadata.
 Valid frontmatter fields for skills: name, description (single field
 per agentskills.io canon — no `when_to_use`), argument-hint, arguments,
 effort, disable-model-invocation, user-invocable, allowed-tools,
-disallowed-tools, model, context, agent, hooks, shell. The `paths:` field is documented in CC
+disallowed-tools, model, context, agent, background (only with
+`context: fork`), hooks, shell, metadata, license, compatibility. The
+`paths:` field is documented in CC
 skill schema but empirically non-functional at plugin scope; do NOT
 add it to plugin SKILL.md (project-level `.claude/rules/*.md` `paths:`
 remains functional and is a separate mechanism).
@@ -37,13 +39,14 @@ remains functional and is a separate mechanism).
 Valid frontmatter fields for agents (general subagent surface, see
 <https://docs.claude.com/en/docs/claude-code/sub-agents>): name,
 description, model, effort, maxTurns, tools, disallowedTools, skills,
-memory, background, isolation, omitClaudeMd, color, initialPrompt.
+memory, background, isolation, omitClaudeMd, color, initialPrompt,
+`experimental.cacheTtl`.
 Plugin-shipped agents under `plugins/**/agents/` are narrowed by the
-plugins reference
-(<https://docs.claude.com/en/docs/claude-code/plugins-reference>) to
-the subset CC honors on plugin agents — do not add `color` or
-`initialPrompt` to plugin-shipped agents (see
-`plugin-review.instructions.md` for the narrowed set).
+plugin components reference
+(<https://code.claude.com/docs/en/plugins/components>) to the subset
+CC honors on plugin agents — do not add `initialPrompt`,
+`permissionMode`, `hooks`, or `mcpServers` to plugin-shipped agents
+(see `plugin-review.instructions.md` for the narrowed set).
 
 ## Runtime Variables
 
@@ -58,7 +61,7 @@ These are NOT errors — they are resolved at runtime by Claude Code:
 | Surface | `${CLAUDE_*}` substitutes? | Pattern |
 |---|---|---|
 | SKILL.md body (any text + bash injection) | ✅ | OK to use |
-| `hooks.json` `command` field | ✅ | OK to use |
+| `hooks.json` `command` / `args` fields | ✅ | Use in exec-form `args`, never in shell-form `command` |
 | MCP/LSP/monitor config commands | ✅ | OK to use |
 | `references/*.md` plain Markdown text | ❌ | Use plain relative paths (sibling), `../SKILL.md` (parent), or `plugins/<plugin>/skills/<skill>/...` (cross-skill) |
 | `references/*.md` Bash code blocks for agent to run | ✅ at shell level | Env vars set by CC for Bash invocations |

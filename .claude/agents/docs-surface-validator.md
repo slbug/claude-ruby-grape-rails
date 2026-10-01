@@ -25,8 +25,7 @@ Do NOT paste large doc content into thinking.
 5. Before classifying any finding, read
    `.claude/skills/docs-check/references/validation-rules.md`. It
    enumerates fields that look like doc drift but are documented repo
-   policy (e.g., `omitClaudeMd` on plugin agents, `rb:<slug>` colon
-   names, plugin-scope `paths:`). Such items classify INFO, not
+   policy (e.g., `rb:<slug>` colon names, plugin-scope `paths:`). Such items classify INFO, not
    WARNING — repo policy is the authoritative override.
 6. Substitution-variable findings (e.g., `${CLAUDE_PLUGIN_ROOT}`,
    `${CLAUDE_PLUGIN_DATA}`, `${CLAUDE_PROJECT_DIR}` in SKILL.md / agent
@@ -39,10 +38,10 @@ Do NOT paste large doc content into thinking.
    hook commands, monitor commands, MCP/LSP configs. Reading only one
    page produces false-positive WARNINGS.
 7. Marketplace `author` findings require reading the authoritative
-   schema in `plugins-reference.md` § "Plugin manifest schema", NOT
-   the marketplace quick-summary table. `plugin-marketplaces.md`
-   states plugin entries inherit ALL fields from the plugin manifest
-   schema; the author shape supports `name`, `email`, `url`.
+   manifest field table in `plugins-reference.md`.
+   `plugins/marketplace-reference.md` § "Plugin entries" states an
+   entry accepts every `plugin.json` field; the author shape supports
+   `name`, `email`, `url`.
 8. Agent `disallowedTools` findings require comparing against sibling
    agents in the same directory before classifying. Reviewer-class
    agents intentionally retain `Write` to produce findings files

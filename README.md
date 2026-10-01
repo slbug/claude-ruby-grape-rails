@@ -229,12 +229,6 @@ Per-shell environment toggles (no `settings.json` edit required):
 Set per-shell, per-command, or via [direnv](https://direnv.net/) `.envrc`
 for project-scoped values.
 
-### Recommended Claude Code env vars
-
-| Env var | Effect |
-|---------|--------|
-| `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | `=1` enables the `SendMessage` tool. Required for spawn-fanout skills (`/rb:review`, `/rb:plan`, `/rb:brainstorm`, `/rb:investigate`) to resume agents that paused at their `maxTurns` cap. Without it, paused agents become coverage gaps with no recovery path. |
-
 ## Getting Started
 
 New to the plugin? Run the interactive tutorial:
@@ -649,7 +643,7 @@ See [full registry](plugins/ruby-grape-rails/skills/iron-laws/references/canonic
 | Command                  | Description                                                |
 | ------------------------ | ---------------------------------------------------------- |
 | `/rb:intro`              | Interactive plugin tutorial (8 sections, ~5 min)           |
-| `/rb:init`               | Write project stack notes to CLAUDE.local.md when usable, else CLAUDE.md (rules runtime-injected) |
+| `/rb:init`               | Write project stack notes to CLAUDE.local.md when usable, else CLAUDE.md or AGENTS.md (rules runtime-injected) |
 | `/rb:quick <task>`       | Fast implementation, skip ceremony                         |
 | `/rb:investigate <bug>`  | Systematic bug debugging (4 parallel investigation tracks) |
 | `/rb:research <topic>`   | Research Ruby topics on the web                            |
