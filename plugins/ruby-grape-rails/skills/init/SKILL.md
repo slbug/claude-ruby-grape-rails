@@ -172,7 +172,9 @@ usable, and name the blocking shape to the user.
 - Fresh install: append a managed block to the resolved target file
 - Update mode: replace the content between markers only
 
-Update mode migration (`/rb:init --update`), automatic, no prompt:
+Update mode migration (`/rb:init --update`) runs without a prompt,
+except when `CLAUDE.md` and `AGENTS.md` both carry a block and no usable
+`CLAUDE.local.md` exists — then ask which file keeps it:
 
 Find the marker pair in `CLAUDE.local.md`, `CLAUDE.md`, and
 `AGENTS.md`. When `CLAUDE.md` is a symlink to `AGENTS.md`, treat the
