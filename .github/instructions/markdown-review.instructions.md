@@ -37,7 +37,8 @@ remains functional and is a separate mechanism).
 Valid frontmatter fields for agents (general subagent surface, see
 <https://docs.claude.com/en/docs/claude-code/sub-agents>): name,
 description, model, effort, maxTurns, tools, disallowedTools, skills,
-memory, background, isolation, omitClaudeMd, color, initialPrompt.
+memory, background, isolation, omitClaudeMd, color, initialPrompt,
+`experimental.cacheTtl`.
 Plugin-shipped agents under `plugins/**/agents/` are narrowed by the
 plugin components reference
 (<https://code.claude.com/docs/en/plugins/components>) to the subset

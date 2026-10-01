@@ -150,6 +150,7 @@ Take the FIRST matching row:
 |---|---|
 | usable `CLAUDE.local.md` | `CLAUDE.local.md` — do not ask |
 | `CLAUDE.md` is a symlink to a usable `AGENTS.md` | `AGENTS.md` — do not ask |
+| `CLAUDE.md` present but NOT usable (read-only, directory, other symlink) | STOP, change no file, name the blocking shape |
 | usable `AGENTS.md` (with or without `CLAUDE.md`) | ASK the user: `CLAUDE.md` or `AGENTS.md` |
 | anything else | `CLAUDE.md` |
 

@@ -262,7 +262,10 @@ Run `/rb:init` to write a managed block into the project memory file —
 `CLAUDE.local.md` when the project has a usable one (a regular,
 readable, writable, non-symlink file that git ignores), otherwise
 `CLAUDE.md`. When the project has an `AGENTS.md`, `/rb:init` asks
-whether to use `CLAUDE.md` or `AGENTS.md`.
+whether to use `CLAUDE.md` or `AGENTS.md` — except when `CLAUDE.md` is
+a symlink to `AGENTS.md`, which targets `AGENTS.md` without asking. A
+present `CLAUDE.md` that is read-only, a directory, or any other
+symlink stops `/rb:init` until the user fixes it.
 Block contents: stack-version header + project-specific stack facts
 only.
 
