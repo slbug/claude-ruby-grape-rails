@@ -16,7 +16,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   command asks whether the managed block goes into `CLAUDE.md` or
   `AGENTS.md`, instead of creating a `CLAUDE.md` that stops Claude Code
   from reading `AGENTS.md`. A `CLAUDE.md` symlinked to `AGENTS.md` targets
-  `AGENTS.md` directly.
+  `AGENTS.md` directly, on install and on `--update`.
 - `/rb:init --update` moves a block from `AGENTS.md` into a usable
   `CLAUDE.local.md`, the same way it moves one from `CLAUDE.md`. A block
   in `CLAUDE.md` or `AGENTS.md` otherwise stays where the user put it;
@@ -24,7 +24,9 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `check-plugin-version.sh` reads the pinned version from `AGENTS.md`
   after `CLAUDE.local.md` and `CLAUDE.md`, reports a newer pin in any of
   the three, recommends the `AGENTS.md` to `CLAUDE.local.md` move, and
-  names an unwritable `AGENTS.md` block as a repair.
+  names an unwritable `AGENTS.md` block as a repair. A repair notice
+  outranks a pending migration, since `/rb:init --update` stops on the
+  unwritable file first.
 - The README, `/rb:init` and `/rb:intro` no longer recommend
   `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. `SendMessage` resumes paused
   agents without it, and enabling agent teams makes Claude launch named

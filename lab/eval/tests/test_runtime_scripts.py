@@ -2884,6 +2884,51 @@ class RuntimeScriptTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("AGENTS.md holds a managed block and is not writable", result.stdout)
 
+    def test_check_plugin_version_treats_claude_md_symlink_as_agents_alias(
+        self,
+    ) -> None:
+        # `CLAUDE.md -> AGENTS.md` is one file. The symlinked name must not
+        # surface as a second, unwritable block.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="AGENTS.md"
+            )
+            (Path(tmpdir) / "CLAUDE.md").symlink_to("AGENTS.md")
+            result = self._run_check_plugin_version(tmpdir, data_dir=data)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    @unittest.skipIf(
+        hasattr(os, "geteuid") and os.geteuid() == 0,
+        "root bypasses the writability check",
+    )
+    def test_check_plugin_version_repair_outranks_agents_migration(self) -> None:
+        # A movable AGENTS.md block beside an unwritable CLAUDE.md block:
+        # /rb:init --update STOPs on the unwritable source, so the notice must
+        # lead with the repair instead of a bare migration recommendation.
+        current = self._current_plugin_version()
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:
+            self._write_claude_md_with_pinned_version(
+                Path(tmpdir), current, filename="AGENTS.md"
+            )
+            self._write_claude_md_with_pinned_version(Path(tmpdir), current)
+            (Path(tmpdir) / "CLAUDE.local.md").write_text(
+                "# Personal notes\n", encoding="utf-8"
+            )
+            root_md = Path(tmpdir) / "CLAUDE.md"
+            root_md.chmod(0o444)
+            try:
+                result = self._run_check_plugin_version(tmpdir, data_dir=data)
+            finally:
+                root_md.chmod(0o644)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("CLAUDE.md holds a managed block and is not writable", result.stdout)
+        self.assertIn("once that is done", result.stdout)
+        self.assertIn("still sits in AGENTS.md", result.stdout)
+
     def test_check_plugin_version_flags_pending_migration_on_version_match(self) -> None:
         current = self._current_plugin_version()
         with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as data:

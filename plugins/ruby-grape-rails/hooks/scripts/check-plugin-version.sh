@@ -224,11 +224,14 @@ fi
 # DIRECTION is initialized here so an exported variable of the same name from
 # the environment cannot skip the comparison below.
 DIRECTION=""
+# Repair outranks migration: a movable `AGENTS.md` block can sit beside an
+# unwritable block in another file, and `--update` stops on that file
+# before it moves anything.
 fallback_direction() {
-  if [[ "$MIGRATION_PENDING" == "true" ]]; then
-    printf 'migrate'
-  elif [[ -n "$BLOCKED_NAME" ]]; then
+  if [[ -n "$BLOCKED_NAME" ]]; then
     printf 'repair'
+  elif [[ "$MIGRATION_PENDING" == "true" ]]; then
+    printf 'migrate'
   else
     return 1
   fi
@@ -439,6 +442,7 @@ repair)
   cat <<NOTICE
 [Ruby/Rails/Grape plugin — user action required]
 ${WRITE_BLOCKED_LINE}
+${MIGRATION_LINE}
 Tell the user at the start of your next response, then recommend running
 /rb:init --update once that is done.
 NOTICE

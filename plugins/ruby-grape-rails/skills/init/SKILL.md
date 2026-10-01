@@ -173,7 +173,10 @@ usable, and name the blocking shape to the user.
 Update mode migration (`/rb:init --update`), automatic, no prompt:
 
 Find the marker pair in `CLAUDE.local.md`, `CLAUDE.md`, and
-`AGENTS.md`, then take the FIRST matching row:
+`AGENTS.md`. When `CLAUDE.md` is a symlink to `AGENTS.md`, treat the
+two names as one file, `AGENTS.md`, and skip `CLAUDE.md` — the symlink
+is the supported alias, not an unusable copy. Then take the FIRST
+matching row:
 
 | State | Action |
 |---|---|
