@@ -77,7 +77,7 @@ PAGES=(
   "env-vars.md"                 # Environment variables including CLAUDE_PLUGIN_ROOT, CLAUDE_PLUGIN_DATA, CLAUDE_PROJECT_DIR
   "errors.md"                   # Error reference — hook failure classification and StopFailure taxonomy
   "cli-reference.md"            # `claude plugin validate`, `--plugin-dir` contract used by eval/doctor scripts
-  "statusline.md"               # Plugin-level subagentStatusLine setting
+  "statusline.md"               # Status line surface — plugin ships no status line setting
   "discover-plugins.md"         # Marketplace install flow and git-subdir path resolution
   "sandboxing.md"               # Bash sandboxing semantics impacting hook side-effect guarantees
   "context-window.md"           # PreCompact/PostCompact hook timing and payload context
@@ -91,7 +91,7 @@ PAGES=(
   "remote-control.md"           # CronCreate / scheduled triggers surface — schedule skill validation
   "model-config.md"             # Agent/model frontmatter validity — accepted family aliases and pinned model IDs
   "fast-mode.md"                # /fast model support surface — relates to effort:max skill settings
-  "output-styles.md"            # Output-style surface adjacent to statusline + subagentStatusLine
+  "output-styles.md"            # Output-style surface adjacent to the status line
   "troubleshooting.md"          # Hook failure diagnosis patterns
   "common-workflows.md"         # Plan/Work/Review lifecycle comparison with /rb: workflows
   "agent-sdk/hooks.md"          # SDK hook interface parity check

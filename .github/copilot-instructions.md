@@ -34,7 +34,6 @@ PR review: flag prose that violates this rule.
 | Hooks | `plugins/ruby-grape-rails/hooks/hooks.json` + `scripts/*` | Shell + Ruby triggered by CC events (PostToolUse, PostToolUseFailure, SessionStart, etc) |
 | Executables | `plugins/ruby-grape-rails/bin/*` | Plugin CLIs added to Bash PATH; no extension; chmod +x; mixed bash + Ruby |
 | Library | `plugins/ruby-grape-rails/lib/*.rb` | End-user runtime modules (Ruby ≥ 3.4, stdlib only) |
-| Plugin settings | `plugins/ruby-grape-rails/settings.json` | Only `agent` + `subagentStatusLine` keys supported per CC docs |
 | Eval | `lab/eval/` | Deterministic Python eval framework for plugin quality |
 | Contributor tooling | `.claude/` | NOT shipped; `.claude/rules/` (auto-loaded path-scoped rules), `.claude/skills/` (contributor-only skills) |
 
@@ -42,7 +41,6 @@ PR review: flag prose that violates this rule.
 
 | Binary | Purpose |
 |---|---|
-| `subagent-statusline` (bash) | advisory statusline renderer; fail-open |
 | `detect-stack` (Ruby) | `/rb:init` stack detection |
 | `extract-permissions` (Ruby) | transcript-based Bash permission recommender |
 | `resolve-base-ref` (bash) | eval-able BASE_REF resolver for diff comparisons |
@@ -151,10 +149,8 @@ the PR.
   `hooks/hooks.json` references, sourcing in other `*.sh` files
   (`source ".../LIB_NAME.sh"`), matching tests under
   `lab/eval/tests/test_runtime_scripts.py`.
-- **`bin/<exec>` renamed / added / removed** → also check
-  `plugins/ruby-grape-rails/settings.json` (statusline command path),
-  `plugins/ruby-grape-rails/hooks/scripts/install-statusline-wrapper.sh`,
-  any skill/agent/script that shells out, `CLAUDE.md` "Executables"
+- **`bin/<exec>` renamed / added / removed** → also check any
+  skill/agent/script that shells out, `CLAUDE.md` "Executables"
   enumeration.
 - **New skill / agent / hook added** → also check corresponding
   `lab/eval/evals/`, `lab/eval/triggers/`, `lab/eval/dimensions/`

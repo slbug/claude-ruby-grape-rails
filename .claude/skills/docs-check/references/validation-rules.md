@@ -313,8 +313,10 @@ Checks for `.claude-plugin/plugin.json`:
    - metadata: `$schema`, `name`, `displayName`, `version`,
      `description`, `author`, `homepage`, `repository`, `license`,
      `keywords`, `metadata`, `defaultEnabled`, `dependencies`
-   - behavior: `settings` (only `agent` and `subagentStatusLine` take
-     effect), `userConfig`, `channels`
+   - behavior: `userConfig`, `channels`. The plugin ships no
+     `settings.json` — `subagentStatusLine` is removed (loads, no
+     effect) and a plugin's `agent` setting is deprecated (warns in
+     `claude plugin validate`)
    - components: `skills`, `commands`, `agents`, `hooks`, `mcpServers`,
      `lspServers`, `outputStyles`, `workflows`
    - `experimental.themes`, `experimental.monitors`, `experimental.evals`

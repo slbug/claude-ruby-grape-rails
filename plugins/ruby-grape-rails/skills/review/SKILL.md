@@ -41,9 +41,11 @@ Reviewers own diff strategy. For reviewer diff discipline, see
 parallel. Subagents are leaf workers — they return findings; they do not
 spawn further agents.
 
-**MUST spawn in foreground.** Never pass `run_in_background: true` on
-any Agent call. Use parallel via multiple Agent tool calls in a single
-message.
+**Never request background dispatch.** Never pass
+`run_in_background: true` on any Agent call. Use parallel via multiple
+Agent tool calls in a single message. Interactive sessions run the
+reviewers in the background regardless and notify on completion — do
+NOT read artifacts or consolidate until every reviewer has completed.
 
 ### Fanout Pattern
 

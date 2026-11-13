@@ -136,7 +136,9 @@ See `references/research-integration.md` for the full pattern.
      "How does this codebase handle {topics}?"
    - **`web-researcher`** for `web-research` topic:
      "Ruby/Rails approaches to {topics}".
-   Pass each absolute path verbatim in the spawn prompt.
+   Pass each absolute path verbatim in the spawn prompt. Wait for both
+   agents to complete before step 6 — interactive sessions run them in
+   the background and notify on completion.
 6. Apply Artifact Recovery per
    `${CLAUDE_PLUGIN_ROOT}/references/artifact-recovery.md`
    (coverage-noun `Research`). Patch each entry's `status` field with

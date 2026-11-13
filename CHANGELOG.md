@@ -7,6 +7,27 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.20] - 2026-11-13
+
+### Removed
+
+- Custom subagent status line. Claude Code removed the
+  `subagentStatusLine` setting, so subagent rows always use the default
+  look. The plugin no longer ships `settings.json`,
+  `bin/subagent-statusline`, or the `install-statusline-wrapper.sh`
+  `SessionStart` hook. A leftover
+  `~/.claude/ruby-grape-rails-subagent-statusline` wrapper is unused and
+  safe to delete by hand.
+
+### Changed
+
+- `/rb:review` and `/rb:brainstorm` state that reviewers and research
+  agents run in the background in interactive sessions and that
+  artifacts are read only after every agent completes.
+- Contributor tooling: `markdownlint-cli` raised to `^0.50.0`, with
+  `overrides` pinning `minimatch` and `katex` to patched releases.
+  `npm audit` reports 0 vulnerabilities.
+
 ## [1.16.19] - 2026-10-01
 
 ### Changed
@@ -3150,7 +3171,8 @@ Prevents context exhaustion with 3 compression strategies
 - 100+ reference documents across all skill domains
 - Plugin development guide with size guidelines and checklists
 
-[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.19...HEAD
+[Unreleased]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.20...HEAD
+[1.16.20]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.19...v1.16.20
 [1.16.19]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.18...v1.16.19
 [1.16.18]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.17...v1.16.18
 [1.16.17]: https://github.com/slbug/claude-ruby-grape-rails/compare/v1.16.16...v1.16.17

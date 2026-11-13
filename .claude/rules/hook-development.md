@@ -32,6 +32,16 @@ Add or update a short policy comment near the top of the hook when behavior chan
   ignored on `clear`/`compact`). Use the JSON form to combine it with
   `additionalContext`. Read input `session_title` first to avoid clobbering
   a user `/rename` (see `check-scratchpad.sh`)
+- `UserPromptSubmit` receives a typed skill or slash command as the
+  line the user typed (`/rb:plan ...`, `/ruby-grape-rails:plan ...`),
+  NOT the expanded skill body, and runs before the expansion. Match
+  both prefixes on `.prompt` (see `session-title.sh`). Use
+  `UserPromptExpansion` to match on the resolved command name
+- `PostToolUse` command hooks get 10 seconds, whatever their `timeout`,
+  when the user ends the turn with `Ctrl+Enter` while the tool runs.
+  CC kills a hook still running at that point. Only `async: true` hooks
+  outlive it. Keep every blocking `PostToolUse` hook safe to kill
+  mid-run — no partial writes, temp files cleaned by `trap`
 - `SubagentStart` uses `hookSpecificOutput.additionalContext` to inject context into subagents
 - `PostToolUseFailure` uses `hookSpecificOutput.additionalContext` for debugging hints
 

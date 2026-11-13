@@ -69,10 +69,19 @@ completed.
 
 ## Foreground Dispatch
 
-Plugin agents are spawned foreground only. No skill body, fanout
-template, or example MAY pass `run_in_background: true` on an
-`Agent(...)` call. Parallel = multiple Agent tool calls in one
-message; never the background flag.
+No skill body, fanout template, or example MAY pass
+`run_in_background: true` on an `Agent(...)` call. Parallel = multiple
+Agent tool calls in one message; never the background flag.
+
+| Session | Runtime behavior |
+|---|---|
+| Interactive terminal, VS Code, desktop (fork mode on, the default) | Main-conversation subagents start in the background. The Agent tool exposes no `run_in_background` parameter. Completion arrives as a notification |
+| `claude -p`, Agent SDK, or `CLAUDE_CODE_FORK_SUBAGENT=0` | Claude chooses foreground or background. The flag exists — the prohibition above applies |
+
+Every fanout skill MUST carry an explicit "wait for all agents to
+complete" step between the spawn step and the first artifact read or
+Artifact Recovery step. Without it, a background fanout is consolidated
+before its artifacts exist.
 
 ## Memory
 
