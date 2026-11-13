@@ -41,7 +41,10 @@ Add or update a short policy comment near the top of the hook when behavior chan
   when the user ends the turn with `Ctrl+Enter` while the tool runs.
   CC kills a hook still running at that point. Only `async: true` hooks
   outlive it. Keep every blocking `PostToolUse` hook safe to kill
-  mid-run — no partial writes, temp files cleaned by `trap`
+  mid-run — no partial writes, temp files cleaned by `trap <fn> EXIT`.
+  Register cleanup on `EXIT` only: bash runs the `EXIT` trap when a
+  signal terminates it, while a cleanup-only handler on `HUP`/`INT`/`TERM`
+  swallows the signal and the script continues to its normal exit
 - `SubagentStart` uses `hookSpecificOutput.additionalContext` to inject context into subagents
 - `PostToolUseFailure` uses `hookSpecificOutput.additionalContext` for debugging hints
 

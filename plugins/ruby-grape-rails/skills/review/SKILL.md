@@ -225,7 +225,8 @@ review itself are enough and no provenance sidecar is needed.
 When used:
 
 1. write the draft consolidated review
-2. run `output-verifier` against the draft
+2. run `output-verifier` against the draft and wait for it to complete
+   before step 3
 3. save the result to `.claude/reviews/{review-slug}-{datesuffix}.provenance.md`
 4. remove or soften unsupported external claims before presenting the final review
 
