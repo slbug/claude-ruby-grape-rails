@@ -48,7 +48,9 @@ investigation, use `deep-bug-investigator`
 pass an explicit output path in the prompt
 (`.claude/investigations/deep-bug-investigator/{slug}-{datesuffix}.md`);
 the agent writes its findings to that file and returns a ≤300-word chat
-summary. Read the file for the full report.
+summary. Wait for the agent to complete — interactive sessions run it in
+the background and notify on completion — then read the file for the
+full report.
 
 If the agent's return text matches the pause signature in
 `${CLAUDE_PLUGIN_ROOT}/references/agent-resume.md`, follow that protocol

@@ -67,7 +67,7 @@ one model response count as one turn. The `Complete analysis by turn
 ~M` rule is satisfied when the agent's M-th model invocation has
 completed.
 
-## Foreground Dispatch
+## Agent Dispatch
 
 No skill body, fanout template, or example MAY pass
 `run_in_background: true` on an `Agent(...)` call. Parallel = multiple
@@ -78,10 +78,11 @@ Agent tool calls in one message; never the background flag.
 | Interactive terminal, VS Code, desktop (fork mode on, the default) | Main-conversation subagents start in the background. The Agent tool exposes no `run_in_background` parameter. Completion arrives as a notification |
 | `claude -p`, Agent SDK, or `CLAUDE_CODE_FORK_SUBAGENT=0` | Claude chooses foreground or background. The flag exists — the prohibition above applies |
 
-Every fanout skill MUST carry an explicit "wait for all agents to
-complete" step between the spawn step and the first artifact read or
-Artifact Recovery step. Without it, a background fanout is consolidated
-before its artifacts exist.
+Every skill that spawns an agent and consumes its result — fanout or
+single agent — MUST carry an explicit "wait for the agent(s) to
+complete" step between the spawn step and the first artifact read,
+Artifact Recovery step, or use of the return text. Without it, a
+background agent's result is consumed before it exists.
 
 ## Memory
 

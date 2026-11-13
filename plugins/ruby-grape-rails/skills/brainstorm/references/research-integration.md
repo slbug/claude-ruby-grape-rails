@@ -5,7 +5,7 @@
 ### Step 1: Diverge (Generate Diverse Approaches)
 
 Spawn 2 agents via two Agent tool calls in ONE Tool Use block
-(foreground parallel, NOT `run_in_background: true`):
+(parallel, NOT `run_in_background: true`):
 
 Both agents receive their absolute artifact path from
 `manifest-update spawn-paths "$MANIFEST"`. Paths resolve to
@@ -24,6 +24,9 @@ namespace convention.
 
 **Iron Law: MAX 2 agents in first research cycle.** Keep it fast (~2-3 min).
 Do NOT spawn additional specialists in the first cycle.
+
+Wait for both agents to complete before Step 2 — interactive sessions
+run them in the background and notify on completion.
 
 ### Step 2: Evaluate (Thesis + Antithesis per Approach)
 
@@ -67,6 +70,7 @@ When user picks "Research" again after the first cycle:
 - Spawn 1-2 targeted agents for specific questions
 - Focus on gaps identified during evaluation
 - Deeper dives into specific libraries, patterns, or trade-offs
+- Wait for every spawned agent to complete before evaluating
 
 ## Research Log
 

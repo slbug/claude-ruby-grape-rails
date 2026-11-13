@@ -87,9 +87,10 @@ skills/{name}/
   `run_in_background: true` on any `Agent(...)` call. Parallel = many
   Agent tool calls in a single message, NOT the background flag.
   Interactive sessions start main-conversation subagents in the
-  background regardless, so every fanout skill MUST state an explicit
-  wait-for-all-agents step before its first artifact read. See
-  `.claude/rules/agent-development.md` § "Foreground Dispatch".
+  background regardless, so every skill that spawns an agent and
+  consumes its result — fanout or single agent — MUST state an explicit
+  wait-for-completion step before its first artifact read. See
+  `.claude/rules/agent-development.md` § "Agent Dispatch".
 
 ## Colon Naming
 

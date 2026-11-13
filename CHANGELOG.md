@@ -21,9 +21,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- `/rb:review` and `/rb:brainstorm` state that reviewers and research
-  agents run in the background in interactive sessions and that
-  artifacts are read only after every agent completes.
+- `/rb:review`, `/rb:brainstorm`, `/rb:investigate`, and the
+  `/rb:research` provenance step state that spawned agents run in the
+  background in interactive sessions and that results are read only
+  after every agent completes. The "foreground" wording is dropped from
+  the `/rb:plan` and `/rb:brainstorm` spawn steps.
+
+### Fixed
+
+- `format-ruby.sh` removes its `ruby-format.*` stderr capture when the
+  hook is killed or exits mid-formatter, instead of only after the
+  formatter returns.
 - Contributor tooling: `markdownlint-cli` raised to `^0.50.0`, with
   `overrides` pinning `minimatch` and `katex` to patched releases.
   `npm audit` reports 0 vulnerabilities.

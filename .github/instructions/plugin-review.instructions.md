@@ -375,10 +375,11 @@ Notes:
 - `run_in_background: true` on any `Agent(...)` call in shipped
   skill bodies, fanout templates, or example snippets — flag as
   BLOCKER.
-- A fanout skill whose spawn step is followed by an artifact read or
-  Artifact Recovery step with no explicit wait-for-all-agents step
-  between them. Interactive sessions run main-conversation subagents in
-  the background, so the read would precede the artifacts.
+- A skill — fanout or single agent — whose spawn step is followed by an
+  artifact read, Artifact Recovery step, or use of the return text with
+  no explicit wait-for-completion step between them. Interactive
+  sessions run main-conversation subagents in the background, so the
+  read would precede the result.
 - Raw `mv`, `cp`, `jq -i`, `rm`, or improvised shell against any
   `RUN-CURRENT.json` path or per-agent artifact path in shipped skill
   bodies, hook scripts, or examples — flag as BLOCKER. All manifest

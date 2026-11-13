@@ -131,7 +131,7 @@ See `references/research-integration.md` for the full pattern.
 3. Patch each entry `status: in-flight` via stdin `patch`.
 4. Read paths via `manifest-update spawn-paths "$MANIFEST"`.
 5. Spawn both via two Agent tool calls in ONE Tool Use block
-   (foreground parallel, NOT `run_in_background: true`):
+   (parallel, NOT `run_in_background: true`):
    - **`rails-patterns-analyst`** for `codebase-scan` topic:
      "How does this codebase handle {topics}?"
    - **`web-researcher`** for `web-research` topic:
