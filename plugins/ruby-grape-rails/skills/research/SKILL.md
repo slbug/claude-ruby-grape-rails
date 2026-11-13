@@ -319,7 +319,8 @@ provenance is optional.
 When you use it:
 
 1. Write the draft research artifact first.
-2. Spawn `output-verifier` against that artifact.
+2. Spawn `output-verifier` against that artifact. Wait for it to
+   complete before step 3.
 3. Save the verifier result alongside the research as:
    - `.claude/research/{topic-slug}.provenance.md` for reusable research
    - `.claude/plans/{slug}/research/{topic-slug}.provenance.md` for plan-local research

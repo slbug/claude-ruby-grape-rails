@@ -41,9 +41,11 @@ Reviewers own diff strategy. For reviewer diff discipline, see
 parallel. Subagents are leaf workers — they return findings; they do not
 spawn further agents.
 
-**MUST spawn in foreground.** Never pass `run_in_background: true` on
-any Agent call. Use parallel via multiple Agent tool calls in a single
-message.
+**Never request background dispatch.** Never pass
+`run_in_background: true` on any Agent call. Use parallel via multiple
+Agent tool calls in a single message. Interactive sessions run the
+reviewers in the background regardless and notify on completion — do
+NOT read artifacts or consolidate until every reviewer has completed.
 
 ### Fanout Pattern
 
@@ -223,7 +225,8 @@ review itself are enough and no provenance sidecar is needed.
 When used:
 
 1. write the draft consolidated review
-2. run `output-verifier` against the draft
+2. run `output-verifier` against the draft and wait for it to complete
+   before step 3
 3. save the result to `.claude/reviews/{review-slug}-{datesuffix}.provenance.md`
 4. remove or soften unsupported external claims before presenting the final review
 

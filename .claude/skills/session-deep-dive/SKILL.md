@@ -81,6 +81,7 @@ Spawn one analysis subagent per transcript. Include:
 - reminder that metrics are heuristic
 
 Write each report to `.claude/session-analysis/{short_id}-report.md`.
+Wait for every subagent to complete before step 5.
 
 ### 5. Compress When Needed
 

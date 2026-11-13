@@ -37,7 +37,7 @@ Primary cached pages (plugin-critical):
 | `env-vars.md` | Environment variable contract: `CLAUDE_PLUGIN_ROOT`, `CLAUDE_PLUGIN_DATA`, `CLAUDE_PROJECT_DIR`, etc. |
 | `errors.md` | Error taxonomy driving hook failure classification and `StopFailure` matchers |
 | `cli-reference.md` | `claude plugin validate`, `--plugin-dir`, flags used by eval/doctor scripts |
-| `statusline.md` | Plugin-level `subagentStatusLine` setting schema |
+| `statusline.md` | Status line surface — confirms no plugin-level status line setting has returned |
 | `discover-plugins.md` | Marketplace install flow, `git-subdir` path resolution |
 | `sandboxing.md` | Bash sandboxing semantics affecting hook side-effect guarantees |
 | `context-window.md` | PreCompact/PostCompact hook timing and payload |
@@ -70,7 +70,7 @@ Additional cached pages (context/reference):
 | `permission-modes.md` | Permission modes and implications for plugins |
 | `permissions.md` | Comprehensive permissions guide |
 | `fast-mode.md` | `/fast` semantics and eligible models — relates to `effort: max` skill settings |
-| `output-styles.md` | Output-style surface adjacent to statusline + `subagentStatusLine` |
+| `output-styles.md` | Output-style surface adjacent to the status line |
 | `troubleshooting.md` | Hook failure diagnosis patterns |
 | `common-workflows.md` | Plan/Work/Review lifecycle comparison with `/rb:*` workflows |
 | `whats-new/index.md` | Weekly release notes index — `cc-changelog` + docs-check feed |
@@ -194,7 +194,7 @@ Use:
 Questions this answers:
 
 - Is the `claude plugin ...` subcommand used by doctor/eval still documented?
-- Does plugin-level `subagentStatusLine` match the documented schema?
+- Do docs reintroduce a plugin-level status line or plugin `settings.json` key? The plugin ships none.
 
 ### Built-in Feature Overlap
 

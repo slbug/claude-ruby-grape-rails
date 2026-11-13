@@ -83,9 +83,14 @@ skills/{name}/
   subdir-per-topic (research per-aspect). See
   `plugins/ruby-grape-rails/references/run-manifest.md` for schema,
   staleness rules, and write protocol.
-- Agent dispatch: foreground only. Skill bodies MUST NOT pass
+- Agent dispatch: skill bodies MUST NOT pass
   `run_in_background: true` on any `Agent(...)` call. Parallel = many
   Agent tool calls in a single message, NOT the background flag.
+  Interactive sessions start main-conversation subagents in the
+  background regardless, so every skill that spawns an agent and
+  consumes its result — fanout or single agent — MUST state an explicit
+  wait-for-completion step before its first artifact read. See
+  `.claude/rules/agent-development.md` § "Agent Dispatch".
 
 ## Colon Naming
 

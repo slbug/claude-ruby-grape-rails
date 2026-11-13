@@ -110,7 +110,7 @@ agents' job -- let them handle pattern discovery.
   `Gemfile.lock` or gem source directly instead
 
 **CRITICAL**: Spawn ALL applicable agents via multiple Agent tool
-calls in ONE Tool Use block (foreground parallel — do NOT use
+calls in ONE Tool Use block (parallel — do NOT use
 `run_in_background: true`). Minimum 1 agent spawned.
 
 **Agent prompts must be FOCUSED.** Scope each prompt to the
@@ -341,7 +341,7 @@ plan with deeper research instead of creating a new one.
    `manifest-update spawn-paths "$MANIFEST"` verbatim in the spawn
    prompt. Each agent writes its detailed output to that path and
    returns ONLY a 500-word summary. Spawn via multiple Agent tool
-   calls in ONE Tool Use block (foreground parallel — do NOT use
+   calls in ONE Tool Use block (parallel — do NOT use
    `run_in_background: true`)
 4. **Wait for ALL agents** -- You'll be notified as each completes.
    Read each agent's output file. Do NOT proceed until all complete

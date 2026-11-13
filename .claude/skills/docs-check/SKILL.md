@@ -116,6 +116,10 @@ Write findings to .claude/docs-check/reports/{surface}-report.md
 Agent body owns BLOCKER/WARNING/INFO/PASS classification, "no large
 docs paste" rule, "stop after returning". Call site stays minimal.
 
+Wait for every `docs-surface-validator` to complete before step 7 —
+interactive sessions run them in the background and notify on
+completion. A report is MISSING only after its worker has completed.
+
 ### 6. Structural Baseline (Always)
 
 Keep these results in view while synthesizing:

@@ -181,6 +181,14 @@ if [[ "$BASE_NAME" == "Gemfile" || "$BASE_NAME" == "Gemfile.lock" ]]; then
   fi
 fi
 
+# Registered on EXIT right after each mktemp so a hook killed mid-formatter
+# does not leave its stderr capture behind. EXIT only: a handler on
+# HUP/INT/TERM would swallow the signal and let the script run on to its
+# normal result handling.
+cleanup_format_err_file() {
+  safe_remove_temp_file "${ERR_FILE:-}" "${TMPDIR:-/tmp}/ruby-format.*" || true
+}
+
 if has_gem standard; then
   if ! command -v bundle >/dev/null 2>&1; then
     echo "BLOCKED: ${HOOK_NAME} could not run automatic Ruby formatting for ${FILE_PATH} because Bundler is not available." >&2
@@ -192,6 +200,7 @@ if has_gem standard; then
     emit_tempfile_failure_warning
     exit 2
   }
+  trap cleanup_format_err_file EXIT
   (cd "$REPO_ROOT" && run_with_timeout "$RUBY_PLUGIN_FORMATTER_TIMEOUT" bundle exec standardrb --fix -- "$FILE_PATH") 2>"$ERR_FILE"
   FMT_STATUS=$?
   if [[ -n "$TIMEOUT_CMD" && "$FMT_STATUS" -eq 124 ]]; then
@@ -217,6 +226,7 @@ elif has_gem rubocop; then
     emit_tempfile_failure_warning
     exit 2
   }
+  trap cleanup_format_err_file EXIT
   (cd "$REPO_ROOT" && run_with_timeout "$RUBY_PLUGIN_FORMATTER_TIMEOUT" bundle exec rubocop --force-exclusion -a -- "$FILE_PATH") 2>"$ERR_FILE"
   FMT_STATUS=$?
   if [[ -n "$TIMEOUT_CMD" && "$FMT_STATUS" -eq 124 ]]; then

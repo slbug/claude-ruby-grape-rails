@@ -121,17 +121,14 @@ Exception files (human-facing, narrative OK): `README.md`,
   the shebang; rescue at process boundary, never use `Kernel#eval` /
   `Kernel#system` with unvalidated input (Iron Law 12)
 - Advisory fail-open pattern (empty stdout, exit 0 on any error) is
-  intentional for statusline and similar advisory executables — do NOT
-  flag as "missing error handling"
+  intentional for advisory executables — do NOT flag as "missing error
+  handling"
 - From `hooks.json`, `.mcp.json`, `monitors/monitors.json`, template
   expansion is supported; reference bundled scripts via
   `${CLAUDE_PLUGIN_ROOT}/...`
 
 ### Currently shipped binaries (plugins/ruby-grape-rails/bin/)
 
-- `subagent-statusline` (bash) — advisory, fail-open. Empty stdout +
-  exit 0 on any error. Referenced from `settings.json` indirectly via
-  `~/.claude/ruby-grape-rails-subagent-statusline` wrapper
 - `detect-stack` (Ruby) — `/rb:init` stack detection. Outputs
   `key=value` pairs; treats unreadable manifests as absent
 - `extract-permissions` (Ruby) — analyzes session transcripts to
@@ -288,32 +285,12 @@ Notes:
 
 ## Plugin Settings (plugins/**/settings.json)
 
-- Only `agent` and `subagentStatusLine` keys are supported per CC docs
-  (`plugins-reference.md` standard plugin layout)
-- Unknown keys are silently ignored by CC — do NOT flag partial coverage
-  of other settings fields
-- `subagentStatusLine.command` does NOT expand `${CLAUDE_PLUGIN_ROOT}`
-  and CC does NOT export `CLAUDE_PLUGIN_ROOT` to the statusline
-  subprocess nor add plugin `bin/` to its PATH. Plugin-bundled
-  statusline scripts therefore require a SessionStart hook that writes
-  a small wrapper at `~/.claude/<plugin-id>-subagent-statusline`
-  pointing at the current absolute plugin path. The plugin
-  `settings.json` then references that stable user-home path. The
-  wrapper must be rewritten only when its content differs from the
-  desired content (plugin version changes change the absolute path).
-  Do NOT flag this indirection as unnecessary — it is required by the
-  documented CC substitution scope
-
-### subagentStatusLine payload schema (as observed, not fully documented)
-
-The statusline subprocess receives base hook fields plus `columns` and a
-`tasks[]` array. Each task provides `id`, `type` (e.g. `local_agent`),
-`status`, `description`, `label` (usually the same text as `description`),
-`startTime` as epoch milliseconds (13-digit integer), `tokenCount`,
-`tokenSamples` as a number array, and `cwd`. The docs also list `.name`
-but current CC payloads do NOT include it — match emoji/label from
-`.label` first, falling back to `.description` and finally `.name`. Do
-NOT flag the fallback chain as over-engineered.
+- The plugin ships NO `settings.json`. Flag any PR that adds one
+- `subagentStatusLine` is removed from CC — the key loads and has no
+  effect. Flag any reintroduced statusline script, wrapper, or setting
+- A plugin's `agent` setting is deprecated in CC — it still applies and
+  warns at startup, in `claude plugin list`, and in
+  `claude plugin validate`. Flag any PR that adds it
 
 ## Do NOT Flag
 
@@ -322,8 +299,6 @@ NOT flag the fallback chain as over-engineered.
 - `omitClaudeMd: true` on specialist agents (intentional context savings)
 - Colon-namespaced skill names like `rb:plan` (known compatibility item)
 - Advisory fail-open (empty stdout, exit 0) in `bin/` and advisory hooks
-- Partial coverage in plugin `settings.json` (only `agent` and
-  `subagentStatusLine` are documented as supported)
 - Pointer-only links to `references/preferences/tool-batching.md`
   from skill or agent bodies (canonical examples doc for the
   tool-batching preference). Pointer = the link without restating
@@ -399,7 +374,12 @@ NOT flag the fallback chain as over-engineered.
   one consolidated verdict per artifact.
 - `run_in_background: true` on any `Agent(...)` call in shipped
   skill bodies, fanout templates, or example snippets — flag as
-  BLOCKER. Plugin agents dispatch foreground only.
+  BLOCKER.
+- A skill — fanout or single agent — whose spawn step is followed by an
+  artifact read, Artifact Recovery step, or use of the return text with
+  no explicit wait-for-completion step between them. Interactive
+  sessions run main-conversation subagents in the background, so the
+  read would precede the result.
 - Raw `mv`, `cp`, `jq -i`, `rm`, or improvised shell against any
   `RUN-CURRENT.json` path or per-agent artifact path in shipped skill
   bodies, hook scripts, or examples — flag as BLOCKER. All manifest
